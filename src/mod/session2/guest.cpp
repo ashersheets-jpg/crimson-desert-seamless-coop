@@ -81,7 +81,7 @@ constexpr uint16_t kOpLoginCharacterToFieldServerReq = 3093;  // u8 | u64 charac
 constexpr uint16_t kOpReserveShutDownServerReq = 2790;
 // g_ServerFrameworkMode (opcion-d-d0.md §1.1): the u32 the host's server writes
 // into its 2002 (0x1051F1E0); the client uses it as PostPacket's index (§1.3).
-constexpr uintptr_t kServerFrameworkMode = 0x6A65564;
+constexpr uintptr_t kServerFrameworkMode = 0x6EAB858;
 constexpr uint64_t kMaxDecisionLogged = 32, kMaxInternalLogged = 16, kMaxLoginLogged = 8;
 
 uintptr_t g_base = 0;
@@ -1371,7 +1371,7 @@ DWORD WINAPI install_thread(LPVOID) {
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(g_base);
     const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(g_base + dos->e_lfanew);
-    if (g_base != off::kImageBase || nt->FileHeader.TimeDateStamp != off::kPeTimestampUnported) {
+    if (g_base != off::kImageBase || nt->FileHeader.TimeDateStamp != off::kPeTimestamp) {
         log::error("Session2 guest: unsupported game build; P8 off");
         return 0;
     }
@@ -1473,7 +1473,7 @@ DWORD WINAPI report_guard_thread(LPVOID) {
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
     const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(base + dos->e_lfanew);
-    if (base != off::kImageBase || nt->FileHeader.TimeDateStamp != off::kPeTimestampUnported) {
+    if (base != off::kImageBase || nt->FileHeader.TimeDateStamp != off::kPeTimestamp) {
         log::error("Session2 guest: unsupported game build; the report guard (K1) is NOT on: move "
                    "crashpad_handler.exe out (K2) before playing");
         return 0;
