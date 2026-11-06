@@ -40,7 +40,7 @@ constexpr uint32_t kActorComponents = 0x68;
 constexpr uint32_t kComponentsTransformSync = 0x1A0;
 constexpr uint32_t kTsFieldMoverField = 0x508 + 0x10;  // field_share.h kTsFieldMover + kFmField (Co-op+ port 3549; 2976: 0x4F0)
 constexpr uint32_t kFieldOwner = 0x180;
-constexpr uintptr_t kVtServerSequencerStageManager = 0x5B17A58;
+constexpr uintptr_t kVtServerSequencerStageManager = 0x5EDE980;  // 3549 (2976 0x5B17A58)
 constexpr uint64_t kDropLines = 16;
 
 std::atomic<uint8_t> g_host_mode{0};
@@ -93,19 +93,22 @@ std::string fmt_key(uint32_t k) { return k ? std::format("0x{:08X}", k) : std::s
 // 0x655110's entry (verified with capstone on the 2976 exe, p8-impl-viaje-rapido.md §3): mov [rsp+0x18],rbx ;
 // mov [rsp+0x10],edx ; mov [rsp+8],rcx ; push rbp ; push rsi ; push rdi ; push r14 ; push r15 ;
 // lea rbp,[rsp-0x1B0] ; sub rsp,0x2B0. No rip-relative instruction among them.
-constexpr uintptr_t kFastTravel = 0x655110;
-constexpr uint8_t kFastTravelBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x18, 0x89, 0x54, 0x24, 0x10, 0x48, 0x89,
-                                        0x4C, 0x24, 0x08, 0x55, 0x56, 0x57, 0x41, 0x56, 0x41, 0x57, 0x48,
-                                        0x8D, 0xAC, 0x24, 0x50, 0xFE, 0xFF, 0xFF, 0x48, 0x81, 0xEC, 0xB0,
-                                        0x02, 0x00, 0x00};
-constexpr uint32_t kFastTravelBoundaries[] = {5, 9, 14, 15, 16, 17, 19, 21, 29, 36};
+// Co-op+ port 1.0.0.3549: the entry is 0x721B90 (same arguments: rcx, edx point, r8d index, r9d actor; it tests r9d
+// first and sends the point through 0xBA5B50 at 0x721FC2; the actor path calls the RideOff thunk 0x23FDCC0 like
+// 2976's): mov [rsp+0x10],rbx ; mov [rsp+8],rcx ; push rbp ; push rsi ; push r12 ; push r14 ; push r15 ;
+// lea rbp,[rsp-0x190] ; sub rsp,0x290. No rip-relative instruction among them.
+constexpr uintptr_t kFastTravel = 0x721B90;
+constexpr uint8_t kFastTravelBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x4C, 0x24, 0x08, 0x55,
+                                        0x56, 0x41, 0x54, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8D, 0xAC, 0x24,
+                                        0x70, 0xFE, 0xFF, 0xFF, 0x48, 0x81, 0xEC, 0x90, 0x02, 0x00, 0x00};
+constexpr uint32_t kFastTravelBoundaries[] = {5, 10, 11, 12, 14, 16, 18, 26, 33};
 // Its callee that sends the point's 2283 (called from 0x6555C6 only), checked too so the lines can name it.
-constexpr uintptr_t kFastTravelPoint = 0xA9A860;
-constexpr uint8_t kFastTravelPointBytes[] = {0x44, 0x89, 0x4C, 0x24, 0x20, 0x44, 0x89, 0x44, 0x24, 0x18,
-                                             0x89, 0x54, 0x24, 0x10, 0x55, 0x53, 0x56, 0x57, 0x41, 0x56};
+constexpr uintptr_t kFastTravelPoint = 0xBA5B50;  // 3549 (2976 0xA9A860): it calls 0xD329F0, which writes opcode 3074
+constexpr uint8_t kFastTravelPointBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x44, 0x89, 0x4C, 0x24, 0x20,
+                                             0x44, 0x89, 0x44, 0x24, 0x18, 0x55, 0x56, 0x57, 0x41, 0x56};
 // The call 0x6555C6 (E8 rel32 -> 0xA9A860) inside 0x655110.
-constexpr uintptr_t kPointCall = 0x6555C6;
-constexpr uint8_t kPointCallBytes[] = {0xE8, 0x95, 0x52, 0x44, 0x00};
+constexpr uintptr_t kPointCall = 0x721FC2;  // 3549 (2976 0x6555C6)
+constexpr uint8_t kPointCallBytes[] = {0xE8, 0x89, 0x3B, 0x48, 0x00};
 
 std::atomic<uint8_t> g_guest_mode{0};
 std::atomic<bool> g_guest_started{false}, g_guest_on{false};
@@ -195,7 +198,7 @@ DWORD WINAPI guest_thread(LPVOID) {
     IMAGE_NT_HEADERS64 nt{};
     std::vector<gad::Section> secs;
     if (base != g2976::kImageBase || !peek(base, dos) || !peek(base + dos.e_lfanew, nt) ||
-        nt.FileHeader.TimeDateStamp != g2976::kPeTimestampUnported || !p8_exe_sections(base, secs)) {
+        nt.FileHeader.TimeDateStamp != g2976::kPeTimestamp || !p8_exe_sections(base, secs)) {
         log::error("GuestFastTravel: unsupported game build or unreadable sections; guest_fast_travel_veto stays off");
         return 0;
     }
