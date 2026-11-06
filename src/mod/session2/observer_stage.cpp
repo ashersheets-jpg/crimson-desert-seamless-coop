@@ -43,44 +43,44 @@ namespace p = p8p;
 // Co-op+ port 1.0.0.3549: the four server writers kept their bodies (every context point at the same offset from
 // its function; the opcode immediates are 3549's: 0x94C, 0x8F4, 0xB68, 0x950). MoveFieldCompleteCore is 0x2E6A700
 // with the field in R15 (mov r15,r8 at 0x2E6A72D; 2976 R13) and the traveller in R14 (0x2E6A739).
-constexpr uintptr_t kPrepare = 0x2CDA580;
+constexpr uintptr_t kPrepare = 0x2CDB1F0;
 constexpr uint8_t kPrepareBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x4C, 0x89, 0x4C,
                                      0x24, 0x20, 0x4C, 0x89, 0x44, 0x24, 0x18, 0x55};
-constexpr uintptr_t kPrepareLoop = 0x2CDA6B4;  // mov eax,[r13+8] ; test eax,eax ; je ; mov r14d,eax ; nop ; mov rdi,[r13+0]
+constexpr uintptr_t kPrepareLoop = 0x2CDB324;  // mov eax,[r13+8] ; test eax,eax ; je ; mov r14d,eax ; nop ; mov rdi,[r13+0]
 constexpr uint8_t kPrepareLoopBytes[] = {0x41, 0x8B, 0x45, 0x08, 0x85, 0xC0, 0x74, 0x73, 0x44,
                                          0x8B, 0xF0, 0x90, 0x49, 0x8B, 0x7D, 0x00};
-constexpr uintptr_t kPrepareOpcode = 0x2CDA72F;  // mov word [r15],0x94C (2380)
+constexpr uintptr_t kPrepareOpcode = 0x2CDB39F;  // mov word [r15],0x94C (2380)
 constexpr uint8_t kPrepareOpcodeBytes[] = {0x66, 0x41, 0xC7, 0x07, 0x4C, 0x09};
 
 // DeleteSequencerAck 2810's serializer (only caller 0x2879819 in 0x2879440):
 //   0x2A4E4C0 mov [rsp+8],rbx ; mov [rsp+0x20],r9 ; push rbp ...                  patch 5
 // 0x2A4E4E1 mov r12,r8 ... 0x2A4E5C2 mov rax,[r12] (the u64 sequencer id).
-constexpr uintptr_t kDelete = 0x2CDAB60;
+constexpr uintptr_t kDelete = 0x2CDB7D0;
 constexpr uint8_t kDeleteBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x4C, 0x89, 0x4C,
                                     0x24, 0x20, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41};
-constexpr uintptr_t kDeleteSeq = 0x2CDAC62;  // mov rax,[r12]
+constexpr uintptr_t kDeleteSeq = 0x2CDB8D2;  // mov rax,[r12]
 constexpr uint8_t kDeleteSeqBytes[] = {0x49, 0x8B, 0x04, 0x24};
-constexpr uintptr_t kDeleteOpcode = 0x2CDACAC;  // mov word [r14],0x8F4 (2292)
+constexpr uintptr_t kDeleteOpcode = 0x2CDB91C;  // mov word [r14],0x8F4 (2292)
 constexpr uint8_t kDeleteOpcodeBytes[] = {0x66, 0x41, 0xC7, 0x06, 0xF4, 0x08};
 
 // StageBranchStateAck 2981's serializer (only caller .xtls 0x103FB3FD: observed, never called):
 //   0x2A4F2D0 mov [rsp+8],rbx ; mov [rsp+0x20],r9 ; mov [rsp+0x18],r8 ; push rbp   patch 5
 // 0x2A4F3F8 mov rcx,[rbp+0x67] (r8's home) ; mov rax,[rcx] -> the u64 sequencer id; r9 -> the u32
 // written next (0x2A4F2F6 mov r13,r9 ... 0x2A4F41F mov rdx,r13 ; r8d = 4).
-constexpr uintptr_t kBranch = 0x2CDB980;
+constexpr uintptr_t kBranch = 0x2CDC5F0;
 constexpr uint8_t kBranchBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x4C, 0x89, 0x4C,
                                     0x24, 0x20, 0x4C, 0x89, 0x44, 0x24, 0x18, 0x55};
-constexpr uintptr_t kBranchSeq = 0x2CDBAA8;
+constexpr uintptr_t kBranchSeq = 0x2CDC718;
 constexpr uint8_t kBranchSeqBytes[] = {0x48, 0x8B, 0x4D, 0x67, 0x48, 0x8B, 0x01};
-constexpr uintptr_t kBranchOpcode = 0x2CDBB36;  // mov word [r15],0xB68 (2920)
+constexpr uintptr_t kBranchOpcode = 0x2CDC7A6;  // mov word [r15],0xB68 (2920)
 constexpr uint8_t kBranchOpcodeBytes[] = {0x66, 0x41, 0xC7, 0x07, 0x68, 0x0B};
 
 // PlayAllPreLoadSequencerAck 2322's emitter (only direct caller 0x287F1D4 in 0x287EF60):
 //   0x2999D80 mov [rsp+8],rbx ; push rbp ; push rsi ...                           patch 5
-constexpr uintptr_t kMilestone = 0x2C142A0;
+constexpr uintptr_t kMilestone = 0x2C14F10;
 constexpr uint8_t kMilestoneBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x55, 0x56, 0x57,
                                        0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57};
-constexpr uintptr_t kMilestoneOpcode = 0x2C14397;  // mov word [r14],0x950 (2384)
+constexpr uintptr_t kMilestoneOpcode = 0x2C15007;  // mov word [r14],0x950 (2384)
 constexpr uint8_t kMilestoneOpcodeBytes[] = {0x66, 0x41, 0xC7, 0x06, 0x50, 0x09};
 
 // MoveFieldCompleteCore 0x2BC7670 (r13 = field from r8 at 0x2BC769E, r14 = the travelling
@@ -89,21 +89,21 @@ constexpr uint8_t kMilestoneOpcodeBytes[] = {0x66, 0x41, 0xC7, 0x06, 0x50, 0x09}
 //             path falls through after 0x2BC84D4 call 0x287EF60)
 //   0x2BC84E2 mov rax,[r13+0x2D0]                                                patch 7
 // Outside every range the P8 probes patch or check (0x2BC8452..0x2BC8479, 0x2BC84D4..0x2BC84D8).
-constexpr uintptr_t kEntry = 0x2E6B675;  // 3549: mov rax,[r15+0x2D8] (the level entry; 2976 [r13+0x2D0])
+constexpr uintptr_t kEntry = 0x2E6C2E5;  // 3549: mov rax,[r15+0x2D8] (the level entry; 2976 [r13+0x2D0])
 constexpr uint32_t kEntryPatch = 7;
 constexpr uint8_t kEntryBytes[] = {0x49, 0x8B, 0x87, 0xD8, 0x02, 0x00, 0x00, 0x48, 0x85, 0xC0, 0x75, 0x07, 0xB8, 0xFF, 0xFF, 0x00};
-constexpr uintptr_t kEntryPred = 0x2E6B66C;  // mov rcx,[rdi+0x18] ; call 0x2A8A410
-constexpr uint8_t kEntryPredBytes[] = {0x48, 0x8B, 0x4F, 0x18, 0xE8, 0x9B, 0xED, 0xC1, 0xFF};
-constexpr uintptr_t kEntryR13 = 0x2E6A72D;  // mov r15,r8 (3549: the field is R15)
+constexpr uintptr_t kEntryPred = 0x2E6C2DC;  // mov rcx,[rdi+0x18] ; call 0x2A8A410
+constexpr uint8_t kEntryPredBytes[] = {0x48, 0x8B, 0x4F, 0x18, 0xE8, 0x7B, 0xED, 0xC1, 0xFF};
+constexpr uintptr_t kEntryR13 = 0x2E6B39D;  // mov r15,r8 (3549: the field is R15)
 constexpr uint8_t kEntryR13Bytes[] = {0x4D, 0x8B, 0xF8};
-constexpr uintptr_t kEntryR14 = 0x2E6A739;  // mov r14,[rcx+8]
+constexpr uintptr_t kEntryR14 = 0x2E6B3A9;  // mov r14,[rcx+8]
 constexpr uint8_t kEntryR14Bytes[] = {0x4C, 0x8B, 0x71, 0x08};
 
 constexpr uint32_t kPatch5 = 5;
 
 // pa::ToTargetSendTargetFinder's vtable (0x287D003 / 0x2BC78E3 lea) and its base ISendTargetFinder.
-constexpr uintptr_t kVtToTarget = 0x5EEC840;  // 3549 (2976 0x5B25438)
-constexpr uintptr_t kVtFinderBase = 0x5EEC860;  // 3549 (2976 0x5B253F8)
+constexpr uintptr_t kVtToTarget = 0x5EEEA60;  // 3549 (2976 0x5B25438)
+constexpr uintptr_t kVtFinderBase = 0x5EEEA80;  // 3549 (2976 0x5B253F8)
 
 constexpr uint32_t kActor_Key = 0x60, kActor_User = 0xA0, kUser_Key = 0x60;
 constexpr uint32_t kField_Owner = 0x180, kField_Key = 0x2D0;  // 3549 key (2976 0x2C8)

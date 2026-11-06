@@ -836,33 +836,33 @@ namespace {
 
 // Entries and body instructions checked against the copy analysed for D-53
 // (prologues alone repeat; companeros-publicacion.md §1.2-§1.3, §2).
-constexpr uintptr_t kNotifyAppear = 0x2D96BB0;
+constexpr uintptr_t kNotifyAppear = 0x2D97820;
 constexpr uint8_t kNotifyAppearHead[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74, 0x24, 0x10, 0x48, 0x89,
                                          0x7C, 0x24, 0x18, 0x55, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57,
                                          0x48, 0x8B, 0xEC, 0x48, 0x83, 0xEC, 0x50, 0x4D, 0x8B, 0xE0, 0x4C, 0x8B,
                                          0xF2, 0x45, 0x33, 0xED};
-constexpr uintptr_t kNotifyReadSessions = 0x2D96CBC;  // mov rbx,[rsi] ; mov eax,[rsi+8]
+constexpr uintptr_t kNotifyReadSessions = 0x2D9792C;  // mov rbx,[rsi] ; mov eax,[rsi+8]
 constexpr uint8_t kNotifyReadSessionsBytes[] = {0x49, 0x8B, 0x1E, 0x41, 0x8B, 0x46};
-constexpr uintptr_t kNotifyReadKeys = 0x2D96D27;  // mov rax,[r15] ; mov [rbp-0x10],rax ; mov eax,[r15+8]
+constexpr uintptr_t kNotifyReadKeys = 0x2D97997;  // mov rax,[r15] ; mov [rbp-0x10],rax ; mov eax,[r15+8]
 constexpr uint8_t kNotifyReadKeysBytes[] = {0x49, 0x8B, 0x04, 0x24, 0x48, 0x89, 0x45, 0xF0, 0x41, 0x8B, 0x44};
-constexpr uintptr_t kNotifyFindCall = 0x2D96D3F;  // call 0x2B060E0 (keys -> actors, owner filter)
+constexpr uintptr_t kNotifyFindCall = 0x2D979AF;  // call 0x2B060E0 (keys -> actors, owner filter)
 constexpr uint8_t kNotifyFindCallBytes[] = {0xE8, 0x8C, 0x84, 0x00, 0x00};
-constexpr uintptr_t kCallerNewObservers = 0x2D8F38B;  // call 0x2B000C0
+constexpr uintptr_t kCallerNewObservers = 0x2D8FFFB;  // call 0x2B000C0
 constexpr uint8_t kCallerNewObserversBytes[] = {0xE8, 0x20, 0x78, 0x00, 0x00};
-constexpr uintptr_t kCallerMovingUser = 0x2D8F58C;  // call 0x2B000C0
+constexpr uintptr_t kCallerMovingUser = 0x2D901FC;  // call 0x2B000C0
 constexpr uint8_t kCallerMovingUserBytes[] = {0xE8, 0x1F, 0x76, 0x00, 0x00};
-constexpr uintptr_t kStartAction = 0x2BE08C0;  // TrocTrStartActionReq::vf2 (this, int* res, ctx*) -> res
+constexpr uintptr_t kStartAction = 0x2BE1530;  // TrocTrStartActionReq::vf2 (this, int* res, ctx*) -> res
 constexpr uint8_t kStartActionHead[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55,
                                         0x41, 0x56, 0x41, 0x57, 0x48, 0x8D, 0xAC, 0x24, 0xD0, 0xFC, 0xFF, 0xFF,
                                         0x48, 0x81, 0xEC, 0x40, 0x04, 0x00, 0x00, 0x4D, 0x8B, 0xE0, 0x4C, 0x8B,
                                         0xF2, 0x4C, 0x8B, 0xF9};
-constexpr uintptr_t kStartActionVtable = 0x5EEC638;  // .?AVTrocTrStartActionReq@pa@@, vf2 at +0x10
-constexpr uintptr_t kRestoreWrite = 0x251905A;  // mov rax,[r14+0x40] ; mov byte [rax+0x30],1 (the only writer)
+constexpr uintptr_t kStartActionVtable = 0x5EEE318;  // .?AVTrocTrStartActionReq@pa@@, vf2 at +0x10
+constexpr uintptr_t kRestoreWrite = 0x2519E2A;  // mov rax,[r14+0x40] ; mov byte [rax+0x30],1 (the only writer)
 constexpr uint8_t kRestoreWriteBytes[] = {0x49, 0x8B, 0x47, 0x40, 0xC6, 0x40, 0x30, 0x01};
 // ServerRunThread's entry 0x2773390 marks its thread as the server's realm
 // (TLS block 0 +0x1EC = 1) before its loop; NotifyAppear's key lookup picks the
 // server's actor manager by that byte (0x2B06147).
-constexpr uintptr_t kServerRealmSet = 0x29AAF36;  // mov eax,0x1EB ; mov byte [rax+rbx],1 (Co-op+ port 3549; 2976: 0x27733A6, 0x1EC)
+constexpr uintptr_t kServerRealmSet = 0x29ABB86;  // mov eax,0x1EB ; mov byte [rax+rbx],1 (Co-op+ port 3549; 2976: 0x27733A6, 0x1EC)
 constexpr uint8_t kServerRealmSetBytes[] = {0xB8, 0xEB, 0x01, 0x00, 0x00, 0xC6, 0x04, 0x18, 0x01};
 constexpr uint32_t kTlsServerRealm = 0x1EB;  // Co-op+ port 3549 (2976: 0x1EC)
 

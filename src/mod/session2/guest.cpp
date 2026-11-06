@@ -81,7 +81,7 @@ constexpr uint16_t kOpLoginCharacterToFieldServerReq = 2733;  // u8 | u64 charac
 constexpr uint16_t kOpReserveShutDownServerReq = 2748;
 // g_ServerFrameworkMode (opcion-d-d0.md §1.1): the u32 the host's server writes
 // into its 2002 (0x1051F1E0); the client uses it as PostPacket's index (§1.3).
-constexpr uintptr_t kServerFrameworkMode = 0x6EAB858;
+constexpr uintptr_t kServerFrameworkMode = 0x6EAD858;
 constexpr uint64_t kMaxDecisionLogged = 32, kMaxInternalLogged = 16, kMaxLoginLogged = 8;
 
 uintptr_t g_base = 0;

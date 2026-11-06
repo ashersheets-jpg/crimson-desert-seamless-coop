@@ -35,7 +35,7 @@ namespace g2976 = game::build_2976;
 using wsy::Mode;
 
 // The rule of the task: hooks only at verified function entries inside [0x1000, 0x51EB000) (.rsrc, never .xtls).
-constexpr uintptr_t kCodeBegin = 0x1000, kCodeEnd = 0x5595000;  // Co-op+ port: end of .xtext on 1.0.0.3549 (2976: .rsrc ends at 0x51EB000)
+constexpr uintptr_t kCodeBegin = 0x1000, kCodeEnd = 0x5597000;  // Co-op+ port: end of .xtext on 1.0.0.3549 (2976: .rsrc ends at 0x51EB000)
 constexpr uint32_t kTickMs = 200;           // the worker: 5 Hz
 constexpr uint64_t kProbeEveryMs = 5000;
 constexpr uint64_t kMinuteMs = 60000;

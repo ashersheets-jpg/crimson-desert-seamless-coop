@@ -1209,9 +1209,9 @@ void server_probe_log(const char* when) {
     // (RTTI .?AVServerActorManager@pa@@, exe+0x5EECE88 on 3549) and log each slot found.
     static bool sam_scanned = false;
     const auto sam_vt = sam ? read_ptr(*sam) : std::nullopt;
-    if (!sam_scanned && game::read_ptr(g_base + off::kServerActorLookupSlot) && sam_vt != g_base + 0x5EECE88) {
+    if (!sam_scanned && game::read_ptr(g_base + off::kServerActorLookupSlot) && sam_vt != g_base + 0x5EEF0A8) {
         sam_scanned = true;
-        constexpr uintptr_t kSamVtable = 0x5EECE88, kFrom = 0x6C00000, kTo = 0x7400000, kChunk = 0x10000;
+        constexpr uintptr_t kSamVtable = 0x5EEF0A8, kFrom = 0x6C00000, kTo = 0x7400000, kChunk = 0x10000;
         std::vector<uint64_t> buf(kChunk / 8);
         int found = 0;
         for (uintptr_t at = kFrom; at < kTo && found < 8; at += kChunk) {
@@ -1272,7 +1272,7 @@ void server_probe_log(const char* when) {
     // FieldTime 0x6EAB998 + 0x20, as on 2976): user 2's MoveField and
     // LoadingCompleteReq 01 copy its save's time here (R1).
     uint8_t ft[32] = {};
-    if (game::safe_read(g_base + 0x6EAB9B8, ft, sizeof ft)) {
+    if (game::safe_read(g_base + 0x6EAD9B8, ft, sizeof ft)) {
         std::string h;
         for (uint8_t b : ft) h += std::format("{:02X}", b);
         log::info("Session2 probe ({}): server FieldTime {}", when, h);

@@ -43,7 +43,7 @@ inline constexpr uint32_t kActorUser = 0xA0;    // character -> ServerUserActor
 inline constexpr uint32_t kUserKey = 0x60;      // ServerUserActor -> u32 user key (0x2BC0A70)
 inline constexpr uint32_t kTsFieldTime = 0x450; // 32-byte FieldTime of the character (setter 0xE52E914)
 inline constexpr uint32_t kFieldTimeSize = 32;
-inline constexpr uintptr_t kWorldTime = 0x6EAB9B8;  // server FieldTime (exe+)
+inline constexpr uintptr_t kWorldTime = 0x6EAD9B8;  // server FieldTime (exe+)
 }  // namespace clk
 
 enum class ClockWho { Other, Host, User2 };
