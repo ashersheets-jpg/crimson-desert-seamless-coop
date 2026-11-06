@@ -65,7 +65,7 @@ constexpr uint32_t kLock_Acquire = 0x08, kLock_Release = 0x10;  // the lock's vf
 constexpr uint32_t kActor_State = 0x5E, kActor_C2 = 0xC2, kActor_C3 = 0xC3, kActor_CF = 0xCF;
 constexpr uint32_t kActor_Parent = 0xAC, kActor_Children = 0xB0, kActor_ChildCount = 0xB8;
 constexpr uint32_t kVf_Ready = 0x1D8;
-// The guest character's own ClientSequencerStageManager (guest_seq_play.cpp): [[[A+0x68]+0xA8]+0x18], +0x231.
+// The guest character's own ClientSequencerStageManager (guest_seq_play.cpp): [[[A+0x68]+0xA8]+0x18], +0x259 (2976 +0x231).
 constexpr uint32_t kActor_Comps = 0x68, kComps_Seq = 0xA8, kSeqComp_Mgr = 0x18, kMgr_Ready = 0x259 /* Co-op+ port 3549: the stage manager's load state moved to +0x259 (0x856090 checks >= 2, the 2322 handler 0xC9CB9B writes 2); 2976 0x231 */;
 constexpr uintptr_t kVtStageManager = 0x59572E0;  // .?AVClientSequencerStageManager@pa@@ (Co-op+ port 3549; 2976 0x55C9720)
 
@@ -194,7 +194,7 @@ uintptr_t own_actor() {
     return rdv<uintptr_t>(mgr + g2976::kActorManager_ControlledActor);
 }
 
-// Its own stage manager's +0x231 (0xFF = unreadable / not a stage manager).
+// Its own stage manager's +0x259 (2976 +0x231) (0xFF = unreadable / not a stage manager).
 uint8_t own_m231(uintptr_t a) {
     const uintptr_t comps = a ? rdv<uintptr_t>(a + kActor_Comps) : 0;
     const uintptr_t seq = comps ? rdv<uintptr_t>(comps + kComps_Seq) : 0;
@@ -514,7 +514,7 @@ void line_trace(const p8p::Event& e) {
     const auto n = static_cast<uint32_t>(v[2]);
     const auto m231 = static_cast<unsigned>((v[3] >> 56) & 0xFF);
     const uint64_t start = v[4];
-    // P8 S27 (log only, outside the line budget): held in 0x11 in a reload, its own M+0x231 below 2 for >= 10 s.
+    // P8 S27 (log only, outside the line budget): held in 0x11 in a reload, its own M+0x259 below 2 for >= 10 s.
     if (sample && trip != g_warned_own_2322_trip) {
         const bool reload = grw::is_reload_trip(start, v[6], v[5]);
         const uint64_t in_state = v[8] && e.qpc_us >= v[8] ? e.qpc_us - v[8] : 0;
@@ -522,7 +522,7 @@ void line_trace(const p8p::Event& e) {
             g_warned_own_2322_trip = trip;
             c_own_2322_warned.fetch_add(1, std::memory_order_relaxed);
             log::warn("GuestReloadWait [0x11 own 2322] {} T{} | trip {} (RELOAD (2643, no 2174)) | [P+0x15C] 0x11 for {} "
-                      "with own M+0x231 {} (0x779E48 waits for 2): NO PlayAllPreLoadSequencerAck 2384 for this client's "
+                      "with own M+0x259 {} (0x779E48 waits for 2): NO PlayAllPreLoadSequencerAck 2384 for this client's "
                       "own character 0x{:08X} came after its PreLoadSequencerReq 2939 - the host's server sent it to the "
                       "field owner's character; the load stays here (no 2445; at the exit the final save is refused "
                       "while loading). Host: observer_milestone_reload(_any), docs/research/s25/reaparicion.md",
@@ -536,7 +536,7 @@ void line_trace(const p8p::Event& e) {
                                        : "no 2174/2643 yet";
     log::info("GuestReloadWait [{}] {} T{} | trip {} ({}) | [P+0x15C] {}{} | +{} since the trip began | P+0x160..163 "
               "{:02X} {:02X} {:02X} {:02X} | P+0x290 {:02X} P+0x291 {:02X} | wait list {} | own actor 0x{:08X} +C2 {} "
-              "+CF {} +C3 {} | own M+0x231 {} | 3066 {}",
+              "+CF {} +C3 {} | own M+0x259 {} | 3066 {}",
               sample ? "still" : "trace", p8_when(e.qpc_us), e.tid, trip, kind,
               sample ? state_text(to) : std::format("{} -> {}", state_text(from), state_text(to)),
               sample ? std::format(" for {}", since_text(v[8], e.qpc_us)) : std::string(), since_text(start, e.qpc_us),
@@ -726,7 +726,7 @@ void guest_reload_wait_on_pass(uintptr_t p, uint8_t state, int previous) noexcep
         g_last_sample_us = now;
     }
     if (state == grw::kStateWait) on_wait(p, now);
-    // Co-op+ (3549 bring-up): state 0x11 waits for the own stage manager's +0x231 >= 2, which only a
+    // Co-op+ (3549 bring-up): state 0x11 waits for the own stage manager's +0x259 >= 2, which only a
     // PlayAllPreLoadSequencerAck naming the guest's own character writes; in a trip into the host's field the host's
     // server sends it for the host's character (S27), and guest_seq_route (which routes it) is not ported yet. After
     // 4 s in 0x11 with the own value below 2, once per stay: the value the native handler writes (game thread, here,
@@ -775,7 +775,7 @@ void guest_reload_wait_tick() noexcept {
         if (const uint64_t n = c_unstuck.load(std::memory_order_relaxed); n != g_unstuck_logged) {
             g_unstuck_logged = n;
             log::warn("GuestReloadWait [0x11 unstick] the load sat 4 s in 0x11 without its own 2322: own stage manager "
-                      "+0x231 {} -> 2 (as PlayAllPreLoadSequencerAck's handler does) | {} so far (Co-op+, until "
+                      "+0x259 {} -> 2 (as PlayAllPreLoadSequencerAck's handler does) | {} so far (Co-op+, until "
                       "guest_seq_route is ported)",
                       g_unstuck_from.load(), n);
         }

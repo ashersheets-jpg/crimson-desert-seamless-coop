@@ -182,8 +182,8 @@ std::atomic<uint32_t> g_tracked_n{0}, g_tracked_key0{0};
 std::atomic<uint64_t> g_trig_count[3] = {};
 
 // 4. divergence (pendientes/p8-impl-log-async.md §3)
-constexpr uintptr_t kClockBase = 0x6C8CD68;  // u64 ms (ui_pause.cpp: the frame clock 0x1416B80 reads)
-constexpr uintptr_t kClockFrac = 0x6C8CD70;  // u64 us
+constexpr uintptr_t kClockBase = 0x70D9E60;  // u64 ms (ui_pause.cpp; 3549, 2976 0x6C8CD68)
+constexpr uintptr_t kClockFrac = 0x70D9E70;  // u64 us (3549)
 constexpr uintptr_t kClockBias = 0x6D69438;  // i64 client -> server offset (ServerTimeInfoAck), added on client threads
 constexpr uintptr_t kDelayGlobal = 0x71081C8;  // int, the interpolation delay (remote_interp.cpp), default 200 (3549; 2976 0x6CB9548)
 std::atomic<bool> g_div_wanted{false}, g_div_on{false};
