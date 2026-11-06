@@ -545,10 +545,12 @@ DWORD WINAPI install_thread(LPVOID) {
     }
     // As early as the game's code is there (2 minutes), like the guest's other
     // hooks; the crash capture too (nothing of it before the code is there).
+    // Co-op+ port: the crash capture first, at once: it needs none of the checked code, and on 3549 the S3 points
+    // are not ported yet, so waiting for them left the capture unarmed for 2 minutes (tc5's crash came before).
+    if (g_crash.load()) install_crash();
     bool ready = false;
     for (int i = 0; i < 24000 && !(ready = code_ready()); ++i) Sleep(5);
     if (!ready) log::warn("GuestS3: the game's code is not the expected one after 2 minutes; installing what matches");
-    if (g_crash.load()) install_crash();
     if (g_guard.load() || g_diag.load()) {
         g_ret = static_cast<uint8_t*>(VirtualAlloc(nullptr, 16, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
         if (g_ret) {
