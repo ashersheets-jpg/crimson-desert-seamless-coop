@@ -629,7 +629,7 @@ bool check_code() {
     IMAGE_DOS_HEADER dos{};
     IMAGE_NT_HEADERS64 nt{};
     if (g_base != off::kImageBase || !game::safe_read(g_base, &dos, sizeof dos) ||
-        !game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestampUnported) {
+        !game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestamp) {
         return false;
     }
     std::vector<gad::Section> secs;
