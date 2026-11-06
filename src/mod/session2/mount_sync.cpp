@@ -71,7 +71,7 @@ constexpr uint8_t kGateCallSiteBytes[] = {0x48, 0x8D, 0x54, 0x24, 0x20, 0x49, 0x
 constexpr uint8_t kGateNetOrBytes[] = {0x41, 0x80, 0xC8, 0x02, 0x44, 0x08, 0x41, 0x50};
 // CC fields the gate reads [V 0xEE58A40]: [CC+8] actor, [CC+0x80] pending entries, CC+0xA8 "pending taken" flag.
 constexpr uint32_t kCcActor = 0x08, kCcPending = 0x80, kCcPendingBusy = 0xA8;
-constexpr uint32_t kMcMethods = 0xF8, kRideOffHorseKey = 0xD4;  // [mc+0xF8+8*method]; RideOff's cached horse key
+constexpr uint32_t kMcMethods = 0x140, kRideOffHorseKey = 0xD4;  // [mc+0x140+8*method] (3549; 2976 0xF8, see kMcMethod); RideOff's cached horse key (2976 +0xD4, NOT re-verified on 3549)
 constexpr uint32_t kActorChartGate = 0x96;  // 0x85FBA0: a player-type actor runs its chart only if != 0
 
 // Offsets [V, mounts-20261011 native/INFORME.txt §2-§6; remote_motion.cpp].
@@ -80,7 +80,7 @@ constexpr uint32_t kCompsCC = 0x40, kCompsVehicle = 0x48;
 constexpr uint32_t kVcActor = 0x08, kVcLink = 0x18, kVcSeats = 0x48, kVcReserves = 0x88, kVcCount = 0xC8, kVcHasSeats = 0xEB;
 constexpr uint32_t kLinkResVehicle = 0x08, kLinkResSeat = 0x0C, kLinkVehicle = 0x10, kLinkSeat = 0x14;
 constexpr uint32_t kMethodActor = 0x20;
-constexpr uint32_t kCcMc = 0xC8, kMcMethod = 0xF0, kCcLayer0 = 0x88, kCcLayer1 = 0x90, kLayerCurrent = 0x10, kActionHash = 0x18;
+constexpr uint32_t kCcMc = 0xC8, kMcMethod = 0x13C /* 3549 (2976 0xF0): movzx eax,byte [mc+0x13C]; cmp al,0x17; mov rcx,[mc+rax*8+0x140], 10 sites */, kCcLayer0 = 0x88, kCcLayer1 = 0x90, kLayerCurrent = 0x10, kActionHash = 0x18;
 constexpr uint32_t kPktBuffer = 0x18;  // the handlers' R8: [R8+0x18] = header (u16 op, i8 slot, u16 len) + payload
 // ClientActorManager hash table (game/actor_lookup.cpp).
 constexpr uint32_t kMgrTable = 0x08, kTableBucketCount = 0x88, kTableBuckets = 0x98, kTableNodes = 0xA0;
