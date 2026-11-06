@@ -80,15 +80,15 @@ inline constexpr uint32_t kActorKey = 0x60, kActorComponents = 0x68, kComponents
 inline constexpr uint32_t kTsField = 0x4F0 + 0x10;  // FieldMover (TS+0x4F0) +0x10: ServerField*
 inline constexpr uint32_t kCharClass = 0xA;         // player characters (key >> 28)
 
-inline constexpr uint16_t kOpGameLoadingStartReq = 2437;
-inline constexpr uint16_t kOpReloadStageStartReq = 2283;
+inline constexpr uint16_t kOpGameLoadingStartReq = 2294;
+inline constexpr uint16_t kOpReloadStageStartReq = 3074;
 inline constexpr uint16_t kOpLogoutSessionReq = 2001;
-inline constexpr uint16_t kOpRemoveActorAck = 2516;
+inline constexpr uint16_t kOpRemoveActorAck = 3067;
 inline constexpr uint8_t kReasonCollector = 25;
 // The slot's other reader on the server [E]: 0x2826F70 (0x2827094 reads [field+0x2E4]) skips its own level-box check
 // (0x184F360) while the slot is on, for UpdateSyncSceneObjectOutOfLevelBoundaryReq 2573 (handler 0x29C31C0 ->
 // 0x282EE90 -> 0x28256F0 with the flag 1): the client's report of a scene object out of its level is trusted. Counted.
-inline constexpr uint16_t kOpOutOfLevelBoundaryReq = 2573;
+inline constexpr uint16_t kOpOutOfLevelBoundaryReq = 2341;
 
 inline constexpr uint64_t kWaitCheckMs = 500;   // nothing set: how often the conditions are read
 inline constexpr uint64_t kWatchdogMs = 5000;   // set: how often the slot is read back

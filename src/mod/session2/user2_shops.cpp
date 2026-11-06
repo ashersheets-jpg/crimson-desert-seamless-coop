@@ -34,7 +34,7 @@ std::atomic<uint8_t> g_mode{0};  // u2sh::Mode
 std::atomic<uint8_t> g_abort_why{0};
 std::atomic<bool> g_site_ok[u2sh::kSiteCount] = {};
 // Review B1: the sites without which the shop cannot work (the branch, the game-play events, the trigger volumes).
-constexpr uint16_t kCriticalOps[] = {2436, 2173, 2767};
+constexpr uint16_t kCriticalOps[] = {2880, 2752, 2620};
 
 // Route decisions per site (the last row: U2-b's server check), and the vf48 of those Trocs that are not the site's.
 constexpr size_t kRows = u2sh::kSiteCount + 1;
@@ -502,8 +502,8 @@ std::string line_of(const p::Event& e) {
             return std::format("User2Shops [to user 2] {} T{} | {} of the shop interaction 0x{:08X}: NPC 0x{:08X}, "
                                "requester 0x{:08X} | {}{}",
                                when, e.tid,
-                               v[0] == u2sh::kOpDoStepOk ? "2916 InteractionDoStepSuccessAck"
-                                                         : "3000 InteractionPreemptionStepFailAck",
+                               v[0] == u2sh::kOpDoStepOk ? "2794 InteractionDoStepSuccessAck"
+                                                         : "3100 InteractionPreemptionStepFailAck",
                                u2sh::kShopInteraction, static_cast<uint32_t>(v[1]), static_cast<uint32_t>(v[2]),
                                v[3] ? "queued" : "NOT queued",
                                v[0] != u2sh::kOpDoStepOk ? std::string()

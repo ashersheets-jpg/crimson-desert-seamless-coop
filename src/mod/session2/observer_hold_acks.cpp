@@ -118,7 +118,7 @@ std::string note_text(const p8p::Event& e) {
             return std::format("Session2 observer hold acks: {} keys held: NPC 0x{:08X}'s packets pass natively", v[1],
                                v[0]);
         case kNScope:
-            return "Session2 observer hold acks: a ScopeSenderAck 2042 bundle went to user 2 while NPC packets were "
+            return "Session2 observer hold acks: a ScopeSenderAck 2046 bundle went to user 2 while NPC packets were "
                    "held: what is inside it is not seen here";
         case kNClear:
             return std::format("Session2 observer hold acks: {} held packet(s) of {} key(s) discarded: {}", v[0], v[1],

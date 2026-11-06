@@ -374,16 +374,16 @@ std::string hex_of(const uint64_t* q, size_t nbytes) {
 
 const char* req_name(uint16_t op) {
     switch (op) {
-        case shp::kOpPreemptionReq: return "2671 InteractionPreemptionStepReq";
-        case shp::kOpDoStepReq: return "2720 InteractionDoStepReq";
-        case shp::kOpBranchReq: return "2436 StageBranchStateReq";
+        case shp::kOpPreemptionReq: return "3008 InteractionPreemptionStepReq";
+        case shp::kOpDoStepReq: return "3073 InteractionDoStepReq";
+        case shp::kOpBranchReq: return "2880 StageBranchStateReq";
         case shp::kOpChartEvent: return "2591 (stage chart event Req)";
-        case shp::kOpPreemptionOk: return "2663 InteractionPreemptionStepSuccessAck";
-        case shp::kOpPreemptionFail: return "3000 InteractionPreemptionStepFailAck";
-        case shp::kOpDoStepOk: return "2916 InteractionDoStepSuccessAck";
+        case shp::kOpPreemptionOk: return "2120 InteractionPreemptionStepSuccessAck";
+        case shp::kOpPreemptionFail: return "3100 InteractionPreemptionStepFailAck";
+        case shp::kOpDoStepOk: return "2794 InteractionDoStepSuccessAck";
         case shp::kOpDoInteraction: return "2525 (the interaction ran)";
-        case shp::kOpBranchAck: return "2981 StageBranchStateAck";
-        case shp::kOpOnBranchEvent: return "2524 StageOnBranchEventAck";
+        case shp::kOpBranchAck: return "2920 StageBranchStateAck";
+        case shp::kOpOnBranchEvent: return "2436 StageOnBranchEventAck";
         default: return "?";
     }
 }

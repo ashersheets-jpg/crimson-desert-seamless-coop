@@ -54,16 +54,16 @@ namespace cdmp::session2::omr {
 
 using NoteSink_t = oms::NoteSink;  // the notes share observer_milestone's ring
 
-inline constexpr uint16_t kOpPreLoadSequencerReq = 2873;
-inline constexpr uint16_t kOpReloadStageStartReq = 2283;
-inline constexpr uint16_t kOpGameLoadingStartReq = 2437;
-inline constexpr uint16_t kOpMoveFieldAck = 2174;
-inline constexpr uint16_t kOpLoadingFieldDataAck = 2643;
-inline constexpr uint16_t kOpMoveFieldCompletePostAck = 3066;
-inline constexpr uint16_t kOpMilestone = 2322;
-inline constexpr uint16_t kOpLoadingCompleteAck = 2762;
-inline constexpr uint16_t kOpLogoutCharacterAck = 2679;
-inline constexpr uint16_t kOpReviveLoadingReq = 2362;  // P8 S27: the revive's load request (C>S)
+inline constexpr uint16_t kOpPreLoadSequencerReq = 2939;
+inline constexpr uint16_t kOpReloadStageStartReq = 3074;
+inline constexpr uint16_t kOpGameLoadingStartReq = 2294;
+inline constexpr uint16_t kOpMoveFieldAck = 2653;
+inline constexpr uint16_t kOpLoadingFieldDataAck = 2399;
+inline constexpr uint16_t kOpMoveFieldCompletePostAck = 3029;
+inline constexpr uint16_t kOpMilestone = 2384;
+inline constexpr uint16_t kOpLoadingCompleteAck = 2190;
+inline constexpr uint16_t kOpLogoutCharacterAck = 2623;
+inline constexpr uint16_t kOpReviveLoadingReq = 2390;  // P8 S27: the revive's load request (C>S)
 
 inline constexpr uint64_t kMinDelayUs = 300'000;     // native: the 2322 leaves 460-501 ms after the 2873
 inline constexpr uint64_t kTimeoutUs = 15'000'000;   // no fitting Req of user 2 within 15 s: given up (logged)
@@ -138,8 +138,8 @@ inline const char* origin_name(Origin o) {
 inline const char* load_req_name(uint16_t op) {
     switch (op) {
         case 0: return "no 2283 / 2362 of user 2 seen before it";
-        case kOpReloadStageStartReq: return "ReloadStageStartReq 2283 (fast travel)";
-        case kOpReviveLoadingReq: return "ReviveLoadingReq 2362 (revive)";
+        case kOpReloadStageStartReq: return "ReloadStageStartReq 3074 (fast travel)";
+        case kOpReviveLoadingReq: return "ReviveLoadingReq 2390 (revive)";
         default: return "another Req";
     }
 }

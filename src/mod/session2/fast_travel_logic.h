@@ -69,7 +69,7 @@ inline const char* mode_name(Mode m) {
 
 // ---------------------------------------------------------------- the 2283 payload
 
-inline constexpr uint16_t kOpReloadStageStartReq = 2283;
+inline constexpr uint16_t kOpReloadStageStartReq = 3074;
 inline constexpr size_t kReloadPayload = 53;
 
 // The server's handler 0x2A5F580 reads, in order (0x2A5F64B..0x2A5F77B): u32 a, u32 b, u32 c, float3 position
@@ -286,7 +286,7 @@ inline ApplyOut decide_apply(uint32_t ret_rva, uintptr_t armed_mgr, bool block_u
 // F4 answers that vf48 with user 2's OWN manager (vtable and back pointer checked, as F3): its +0x6A0 (already 0 in
 // the host's field) is the one reset, as the game does for the owner's own revive. Same hooked function as F3
 // (ServerField::vf48's inline hook at its entry); nothing else is patched.
-inline constexpr uint16_t kOpReviveLoadingReq = 2362;
+inline constexpr uint16_t kOpReviveLoadingReq = 2390;
 
 enum class F4Out : uint8_t {
     NotHere,          // another return address, no subject, or F3 answered this Troc: not F4's

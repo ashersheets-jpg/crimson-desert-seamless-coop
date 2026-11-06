@@ -111,8 +111,8 @@ constexpr uint32_t kBindingStride = 0x0C;
 // ---------------------------------------------------------------- events
 
 enum Kind : uint16_t { kKPrepare = 0, kKPrepareMore, kKDelete, kKBranch, kKMilestone, kKEntry, kKindCount };
-constexpr const char* kKindName[kKindCount] = {"2661 PrepareSequencerAck", "2661 bindings", "2810 DeleteSequencerAck",
-                                               "2981 StageBranchStateAck", "2322 PlayAllPreLoadSequencerAck",
+constexpr const char* kKindName[kKindCount] = {"2380 PrepareSequencerAck", "2380 bindings", "2292 DeleteSequencerAck",
+                                               "2920 StageBranchStateAck", "2384 PlayAllPreLoadSequencerAck",
                                                "entry 0x2BC84E2"};
 constexpr uint16_t kFlagPlayData = 1, kFlagVector = 2, kFlagSeq = 4, kFlagExtra = 8;
 constexpr size_t kInlineBindings = 6;  // in the 2661 event itself

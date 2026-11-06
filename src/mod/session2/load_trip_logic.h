@@ -29,9 +29,9 @@
 
 namespace cdmp::session2::ltr {
 
-inline constexpr uint16_t kOpMoveFieldAck = 2174, kOpMoveFieldCompleteAck = 2144, kOpPostAck = 3066,
-                          kOpMilestone = 2322, kOpLoadingCompleteAck = 2762, kOpBundle = 2042,
-                          kOpMoveFieldCompleteReq = 2549, kOpLoadingCompleteReq = 2445;
+inline constexpr uint16_t kOpMoveFieldAck = 2653, kOpMoveFieldCompleteAck = 2340, kOpPostAck = 3029,
+                          kOpMilestone = 2384, kOpLoadingCompleteAck = 2190, kOpBundle = 2046,
+                          kOpMoveFieldCompleteReq = 2471, kOpLoadingCompleteReq = 2167;
 
 constexpr bool followed_in(uint16_t op) {
     return op == kOpMoveFieldAck || op == kOpMoveFieldCompleteAck || op == kOpPostAck || op == kOpMilestone ||
@@ -141,7 +141,7 @@ public:
             } else if (op == kOpLoadingCompleteReq) {
                 ++t->n2445;
                 t->t2445 = e.qpc_us;
-                lines.push_back(std::format("GuestLoad [out 2445] {} T{} | trip {} | LoadingCompleteReq to the host | {} "
+                lines.push_back(std::format("GuestLoad [out 2167] {} T{} | trip {} | LoadingCompleteReq to the host | {} "
                                             "after the 2322 | last state seen {}",
                                             when_(e.qpc_us), e.tid, t->n, dt(t->t2322, e.qpc_us), state_text(t->last_state)));
             }
@@ -155,7 +155,7 @@ public:
             case kOpMoveFieldCompleteAck:
                 ++t->n2144;
                 t->t2144 = e.qpc_us;
-                lines.push_back(std::format("GuestLoad [in 2144] {} T{} | trip {} | MoveFieldCompleteAck #{} | {} after "
+                lines.push_back(std::format("GuestLoad [in 2340] {} T{} | trip {} | MoveFieldCompleteAck #{} | {} after "
                                             "the 2549",
                                             when_(e.qpc_us), e.tid, t->n, t->n2144, dt(t->t2549, e.qpc_us)));
                 break;
@@ -168,7 +168,7 @@ public:
                 if (!t->t2322) t->t2322 = e.qpc_us;
                 t->actor2322 = value;
                 lines.push_back(std::format(
-                    "GuestLoad [in 2322] {} T{} | trip {} | PlayAllPreLoadSequencerAck #{} actor 0x{:08X} | {} after its "
+                    "GuestLoad [in 2384] {} T{} | trip {} | PlayAllPreLoadSequencerAck #{} actor 0x{:08X} | {} after its "
                     "2144 | {} | last state seen {}{}",
                     when_(e.qpc_us), e.tid, t->n, t->n2322, value, dt(t->t2144, e.qpc_us),
                     std::format("corr=2322:{:08X}:0x0:0x0", value), state_text(t->last_state),

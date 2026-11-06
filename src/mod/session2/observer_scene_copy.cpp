@@ -282,7 +282,7 @@ std::string line_of(const p8p::Event& e) {
                                         e.qpc_us >= v[8] ? static_cast<double>(e.qpc_us - v[8]) / 1e6 : 0.0);
             }
             const bool copy = why == osc::Why::Copy;
-            return std::format("{} DeleteSequencerAck 2810 of sequencer 0x{:X} (owner [seq+0x98] 0x{:08X}) natively to "
+            return std::format("{} DeleteSequencerAck 2292 of sequencer 0x{:X} (owner [seq+0x98] 0x{:08X}) natively to "
                                "0x{:08X} ([manager+0x18]) | {} | user 2's character 0x{:08X} | {} | thread: realm {}, "
                                "send context {}, scope {} | {}{}",
                                head("decision", e), seq, owner, recipient,

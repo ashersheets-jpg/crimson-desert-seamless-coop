@@ -696,14 +696,14 @@ void drain_one(const p::Event& e) {
                     break;
                 case scd::kOpScheduleCreate:
                     g_ledger.schedule_create({e.v[2], a, b, e.qpc_us});
-                    what = std::format("2335 CreateNPCScheduleStageAck actor 0x{:08X} scene 0x{:X} resource 0x{:08X} "
+                    what = std::format("2989 CreateNPCScheduleStageAck actor 0x{:08X} scene 0x{:X} resource 0x{:08X} "
                                        "(+5 0x{:X} +13 {}) | {} | live schedules {}",
                                        a, e.v[2], b, static_cast<uint32_t>(e.v[3]), (e.v[3] >> 32) & 0xFF,
                                        gsd::corr_token(op, a, e.v[2], b), g_ledger.schedules().size());
                     break;
                 case scd::kOpScheduleDelete: {
                     const bool was = g_ledger.schedule_delete(e.v[2]);
-                    what = std::format("2126 DeleteNPCScheduleStageAck actor 0x{:08X} scene 0x{:X} ({}) | {} | live "
+                    what = std::format("2796 DeleteNPCScheduleStageAck actor 0x{:08X} scene 0x{:X} ({}) | {} | live "
                                        "schedules {}",
                                        a, e.v[2], was ? "removed" : "NOT in the ledger", gsd::corr_token(op, a, e.v[2], 0),
                                        g_ledger.schedules().size());
@@ -711,7 +711,7 @@ void drain_one(const p::Event& e) {
                 }
                 case scd::kOpScheduleClosed: {
                     const bool was = g_ledger.schedule_closed(b);
-                    what = std::format("2411 ScheduleStageClosedAck actor 0x{:08X} id 0x{:08X} ({}) | {} | live schedules "
+                    what = std::format("2551 ScheduleStageClosedAck actor 0x{:08X} id 0x{:08X} ({}) | {} | live schedules "
                                        "{}",
                                        a, b, was ? "removed" : "no live schedule with that low key",
                                        gsd::corr_token(op, a, 0, b), g_ledger.schedules().size());
@@ -720,7 +720,7 @@ void drain_one(const p::Event& e) {
                 case scd::kOpPrepare: {
                     const uint32_t res = static_cast<uint32_t>(e.v[3]), n = static_cast<uint32_t>(e.v[3] >> 32);
                     g_ledger.prepare({e.v[2], a, b, res, n, e.qpc_us});
-                    what = std::format("2661 PrepareSequencerAck actor 0x{:08X} owner 0x{:08X} sequencer 0x{:X} resource "
+                    what = std::format("2380 PrepareSequencerAck actor 0x{:08X} owner 0x{:08X} sequencer 0x{:X} resource "
                                        "0x{:08X} bindings {} | {} | live sequencers {}",
                                        a, b, e.v[2], res, n, gsd::corr_token(op, a, e.v[2], n),
                                        g_ledger.sequencers().size());
@@ -728,7 +728,7 @@ void drain_one(const p::Event& e) {
                 }
                 case scd::kOpDeleteSequencer: {
                     const bool was = g_ledger.remove_sequencer(e.v[2]);
-                    what = std::format("2810 DeleteSequencerAck actor 0x{:08X} sequencer 0x{:X} ({}) | {} | live "
+                    what = std::format("2292 DeleteSequencerAck actor 0x{:08X} sequencer 0x{:X} ({}) | {} | live "
                                        "sequencers {}",
                                        a, e.v[2], was ? "removed" : "NOT in the ledger", gsd::corr_token(op, a, e.v[2], b),
                                        g_ledger.sequencers().size());
@@ -737,7 +737,7 @@ void drain_one(const p::Event& e) {
                 case scd::kOpInitSchedule: {
                     const uint32_t res = static_cast<uint32_t>(e.v[2]), node = static_cast<uint32_t>(e.v[2] >> 32);
                     g_ledger.init({b, a, res, node, e.v[3], e.qpc_us});
-                    what = std::format("2874 InitializeNPCScheduleAck actor 0x{:08X} NPC 0x{:08X} resource 0x{:08X} node "
+                    what = std::format("2769 InitializeNPCScheduleAck actor 0x{:08X} NPC 0x{:08X} resource 0x{:08X} node "
                                        "0x{:08X} scene 0x{:X}{} | {} | the native re-binding path (0xC0CE50)",
                                        a, b, res, node, e.v[3], e.v[4] ? "" : " (NOT 64 bytes)",
                                        gsd::corr_token(op, a, e.v[3], b));

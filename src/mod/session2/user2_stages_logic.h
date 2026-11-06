@@ -56,9 +56,9 @@ inline const char* mode_name(Mode m) {
 // ---------------------------------------------------------------- build 1.0.0.2976 constants
 
 // Opcodes of the three timers (troc_messages_2976.csv).
-inline constexpr uint16_t kOp2043 = 2043;  // UpdateStageOnceTimer -> .xtls 0x1082F900 -> vf48 -> 0x287DBB0(mgr)
-inline constexpr uint16_t kOp2045 = 2045;  // UpdateScheduleStageOnceTimer -> .xtls 0x108309B0 -> 0x2822D00([mgr+0x148])
-inline constexpr uint16_t kOp2046 = 2046;  // UpdateFactionSpawnStageOnceTimer -> .xtls 0x10835A30 -> 0x27FBD60([mgr+0x10])
+inline constexpr uint16_t kOp2043 = 2047;  // UpdateStageOnceTimer -> .xtls 0x1082F900 -> vf48 -> 0x287DBB0(mgr)
+inline constexpr uint16_t kOp2045 = 2049;  // UpdateScheduleStageOnceTimer -> .xtls 0x108309B0 -> 0x2822D00([mgr+0x148])
+inline constexpr uint16_t kOp2046 = 2050;  // UpdateFactionSpawnStageOnceTimer -> .xtls 0x10835A30 -> 0x27FBD60([mgr+0x10])
 // ServerSequencerStageManager (vtable 0x5B17A58).
 inline constexpr uint32_t kVtStageMgr = 0x5B17A58;
 inline constexpr uint32_t kVtSchedMgr = 0x5B16968;  // ServerNPCScheduleSpawnManger
@@ -1114,7 +1114,7 @@ inline bool ctl_undriven(const CtlStats& s) { return s.eligible >= 8 && s.eligib
 
 // The AI / movement Reqs whose payload starts with the actor's key (driven / the host's client drives).
 inline bool ai_req(uint16_t op) {
-    return op == 2556 || op == 2223 || op == 2734 || op == 2405 || op == 2291 || op == 2828;
+    return op == 2833 || op == 2202 || op == 2394 || op == 2913 || op == 2606 || op == 2852;
 }
 
 // A 2005 payload: [u16 length][record] repeated; a record: type u8 +0, key u32 +1, controller u32 +0x12. Calls

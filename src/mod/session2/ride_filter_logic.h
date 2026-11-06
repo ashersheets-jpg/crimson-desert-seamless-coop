@@ -47,7 +47,7 @@ using u2f::Mode;
 using u2f::mode_name;
 using u2f::parse_mode;
 
-inline constexpr uint16_t kOpStartActionAck = 2991;
+inline constexpr uint16_t kOpStartActionAck = 2552;
 inline constexpr size_t kHeader = 5;
 inline constexpr size_t kAckSize = 725;
 inline constexpr size_t kA0 = 0x004;

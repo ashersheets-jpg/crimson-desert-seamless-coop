@@ -241,8 +241,8 @@ constexpr uintptr_t kFindByNoRead = 0x2D12B80;
 constexpr uint8_t kFindByNoReadBytes[] = {0x4C, 0x8B, 0x31, 0x49, 0x8B, 0x46, 0x68, 0x48, 0x8B, 0x40, 0x20};
 constexpr uint32_t kLoginMgrActors = 0xB8;
 constexpr uint32_t kLoginMgrCount = 0xC0;
-constexpr uint16_t kOpLoginUser = 2490;
-constexpr uint16_t kOpLoginCharacter = 3093;
+constexpr uint16_t kOpLoginUser = 2535;
+constexpr uint16_t kOpLoginCharacter = 2733;
 constexpr uint64_t kMaxLogged = 48, kMaxRefusalsLogged = 8;
 
 uintptr_t g_base = 0;

@@ -350,7 +350,7 @@ std::string line_of(const p8p::Event& e) {
         case oms::kNTripStart:
             g_gen_epoch[gen] = static_cast<uint32_t>(v[1]);
             if (g_gen_epoch.size() > 256) g_gen_epoch.erase(g_gen_epoch.begin());
-            return std::format("{} trip {} begins: MoveFieldAck 2174 to session 2 {} | field owner written by the "
+            return std::format("{} trip {} begins: MoveFieldAck 2653 to session 2 {} | field owner written by the "
                                "server 0x{:08X} (user 2's copy is rewritten) | previous trip {}{}",
                                head("2174", e), txn(gen), v[3] ? "queued" : "LOST IN THE QUEUE (trip poisoned)",
                                static_cast<uint32_t>(v[2]), v[4] ? txn(static_cast<uint32_t>(v[4])) : std::string("-"),
@@ -367,10 +367,10 @@ std::string line_of(const p8p::Event& e) {
                                v[9], v[10], v[11]);
         }
         case oms::kN2144:
-            return std::format("{} trip {}: MoveFieldCompleteAck 2144 #{} to session 2 {} (seq {})", head("2144", e),
+            return std::format("{} trip {}: MoveFieldCompleteAck 2340 #{} to session 2 {} (seq {})", head("2340", e),
                                txn(gen), v[3], v[1] ? "queued" : "LOST IN THE QUEUE (trip poisoned)", v[2]);
         case oms::kN3066:
-            return std::format("{} trip {}: MoveFieldCompletePostAck 3066 to session 2 {} | {}", head("3066", e),
+            return std::format("{} trip {}: MoveFieldCompletePostAck 3029 to session 2 {} | {}", head("3029", e),
                                txn(gen), v[1] ? "queued" : "LOST IN THE QUEUE",
                                v[2] ? std::format("after the trip's 2144 (seq {}) on the same thread: this "
                                                   "MoveFieldCompleteCore's direct sends reach take_frame",
@@ -392,10 +392,10 @@ std::string line_of(const p8p::Event& e) {
                                head("2042", e), txn(gen), v[1] ? "queued" : "LOST", v[2]);
         case oms::kNIn:
             return std::format("{} trip {}: user 2's {} #{} handed to the server{}", head("in", e), txn(gen),
-                               v[1] == oms::kOpLoadingCompleteReq ? "LoadingCompleteReq 2445" : "MoveFieldCompleteReq 2549",
+                               v[1] == oms::kOpLoadingCompleteReq ? "LoadingCompleteReq 2167" : "MoveFieldCompleteReq 2471",
                                v[2], v[3] ? std::format(" ({:.3f} s after our 2322)", static_cast<double>(v[3]) / 1e6) : "");
         case oms::kNOut2762:
-            return std::format("{} trip {}: LoadingCompleteAck 2762 to session 2 {}{}{} | the load's normal exit seen "
+            return std::format("{} trip {}: LoadingCompleteAck 2190 to session 2 {}{}{} | the load's normal exit seen "
                                "from the host",
                                head("2762", e), txn(gen), v[1] ? "queued" : "LOST IN THE QUEUE",
                                v[2] ? std::format(" | {:.3f} s after our 2322", static_cast<double>(v[2]) / 1e6) : "",
@@ -498,7 +498,7 @@ std::string r_line_of(const p8p::Event& e) {
                                       e.tid ? std::format(" T{}", e.tid) : std::string());
     switch (e.kind) {
         case omr::kNTrip:
-            return std::format("{} trip R{} begins: user 2's ReloadStageStartReq 2283 was accepted by F3 (its own "
+            return std::format("{} trip R{} begins: user 2's ReloadStageStartReq 3074 was accepted by F3 (its own "
                                "manager / the block at 0x2A5F7FC) | epoch {} | previous trip {}",
                                h, v[0], v[1], v[2] ? std::format("R{}", v[2]) : std::string("-"));
         case omr::kNTrip2437:
@@ -516,7 +516,7 @@ std::string r_line_of(const p8p::Event& e) {
                                h, v[0], omr::phase_name(static_cast<omr::Phase>(v[1])),
                                omr::load_req_name(static_cast<uint16_t>(v[2])));
         case omr::kNNativeInReload:
-            return std::format("{} trip {}: user 2's PreLoadSequencerReq 2873 (#{} of the run) WENT TO THE SERVER during "
+            return std::format("{} trip {}: user 2's PreLoadSequencerReq 2939 (#{} of the run) WENT TO THE SERVER during "
                                "a reload in {} ({} after its 2437: 2643/3066, no 2174, no 2762 yet) with no 2322 of ours "
                                "({}): the server's 2322 goes to the field owner's character and the guest's load will "
                                "wait in state 0x11 (docs/research/s25/reaparicion.md) | observer_milestone_reload={} "
@@ -529,7 +529,7 @@ std::string r_line_of(const p8p::Event& e) {
                                v[2], v[2] == omr::kOpGameLoadingStartReq ? "entered the server" : "to user 2",
                                v[3] ? std::format(" (+{} after its 2437)", rms(v[3])) : std::string());
         case omr::kNOffer:
-            return std::format("{} trip {}: user 2's PreLoadSequencerReq 2873 #{} ({}; user 2 in {}) -> {} | {} | "
+            return std::format("{} trip {}: user 2's PreLoadSequencerReq 2939 #{} ({}; user 2 in {}) -> {} | {} | "
                                "observer_milestone_reload={}",
                                h, v[0] ? std::format("R{}", v[0]) : std::string("-"), v[3],
                                omr::phase_name(static_cast<omr::Phase>(v[5])), where_text(v[4]),
@@ -581,7 +581,7 @@ std::string r_line_of(const p8p::Event& e) {
                                rkey(v[2]), v[3] ? "the live session 2" : "NOT THE LIVE SESSION 2",
                                v[1] ? "queued" : "LOST IN THE QUEUE");
         case omr::kNLoaded:
-            return std::format("{} trip R{}: LoadingCompleteAck 2762 to user 2 ({}){} | the reload's normal exit", h,
+            return std::format("{} trip R{}: LoadingCompleteAck 2190 to user 2 ({}){} | the reload's normal exit", h,
                                v[0], v[2] ? "queued" : "LOST",
                                v[1] ? std::format(", {} after our 2322", rms(v[1])) : std::string());
         case omr::kNTripEnd:
@@ -874,8 +874,8 @@ omr::Mode observer_milestone_reload_configure(const std::string& value) {
               "subject){}",
               omr::mode_name(mode),
               mode == omr::Mode::On
-                  ? "its PreLoadSequencerReq 2873 is DROPPED (the host's sequencers are not re-prepared) and ONE "
-                    "PlayAllPreLoadSequencerAck 2322 for its character is emitted at the exit of its next ExecuteTroc "
+                  ? "its PreLoadSequencerReq 2939 is DROPPED (the host's sequencers are not re-prepared) and ONE "
+                    "PlayAllPreLoadSequencerAck 2384 for its character is emitted at the exit of its next ExecuteTroc "
                     "(>= 300 ms later) with 0x2A757A0 + 0x2999D80"
                   : "its 2873 goes to the server as before; what mode 1 would do is decided and logged ('WOULD')",
               mode == omr::Mode::On && g_mode.load() != oms::Mode::Send
@@ -910,7 +910,7 @@ omr::Mode observer_milestone_reload_any_configure(const std::string& value) {
     }
     if (mode == omr::Mode::Off) return mode;
     const bool acts = mode == omr::Mode::On && g_r_mode.load() == omr::Mode::On;
-    log::info("ObserverMilestone reload: observer_milestone_reload_any={}: user 2's GameLoadingStartReq 2437 with no "
+    log::info("ObserverMilestone reload: observer_milestone_reload_any={}: user 2's GameLoadingStartReq 2294 with no "
               "reload trip open OPENS one (origin 'at its 2437': a revive ReviveLoadingReq 2362, or any other path "
               "without an F3 2283); classified as an F3 trip (2643/3066 with no 2174 = reload, 2174 = field change and "
               "never ours, 2762 = over) | {} | needs ExecuteTroc's subject (user2_funnels) | a 2873 handed to the "

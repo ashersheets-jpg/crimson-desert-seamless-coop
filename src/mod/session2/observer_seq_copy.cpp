@@ -166,7 +166,7 @@ std::string line_of(const p8p::Event& e) {
             }
             const auto n = static_cast<uint32_t>((v[1] >> 8) & 0xFFFF);
             if (seen == osq::HostSeen::NewField) {
-                return std::format("{} the host's client got its own MoveFieldAck 2174: {} | ledger live {}",
+                return std::format("{} the host's client got its own MoveFieldAck 2653: {} | ledger live {}",
                                    head("ledger", e), osq::host_seen_name(seen), v[7]);
             }
             return std::format("{} the host's client: {} {} of sequencer 0x{:X} (actor 0x{:08X}, owner 0x{:08X}) | "
@@ -178,12 +178,12 @@ std::string line_of(const p8p::Event& e) {
         case kNTrip: {
             const auto owner = static_cast<uint32_t>(v[1]), user = static_cast<uint32_t>(v[1] >> 32);
             if (!v[0]) {
-                return std::format("{} user 2's MoveFieldAck 2174 (owner as the server wrote it 0x{:08X}, user 2's user "
+                return std::format("{} user 2's MoveFieldAck 2653 (owner as the server wrote it 0x{:08X}, user 2's user "
                                    "0x{:08X}): NOT an observer trip (its own field, or a key unknown) -> nothing to copy | "
                                    "epoch {}",
                                    head("trip", e), owner, user, v[4]);
             }
-            return std::format("{} user 2's MoveFieldAck 2174 into a field owned by 0x{:08X} (user 2 is 0x{:08X}): "
+            return std::format("{} user 2's MoveFieldAck 2653 into a field owned by 0x{:08X} (user 2 is 0x{:08X}): "
                                "OBSERVER trip | snapshot: {} of the ledger's {} live sequencer(s) wait for the 2005 of "
                                "their bound actors and for user 2's own 2322 (S2) | epoch {}",
                                head("trip", e), owner, user, v[2], v[3], v[4]);
@@ -196,7 +196,7 @@ std::string line_of(const p8p::Event& e) {
             const bool sent = v[6] != 0, pr = v[7] != 0;
             const char* verb = pr ? "WOULD SEND (probe)" : sent ? "SENT to user 2's queue" : "REFUSED by the queue (stays pending)";
             if (v[1] == osq::Released::Milestone) {
-                return std::format("{} the host's 2322 (its character's PlayAllPreLoadSequencerAck, {} bytes): {} | on the "
+                return std::format("{} the host's 2384 (its character's PlayAllPreLoadSequencerAck, {} bytes): {} | on the "
                                    "guest: GuestSeqRoute [2322 ...] ROUTED, X+0x231 1 -> 2",
                                    head("2322", e), v[5], verb);
             }
@@ -258,7 +258,7 @@ std::string line_of(const p8p::Event& e) {
         case kNSchedLedger: {
             const auto seen = static_cast<osq::SchedSeen>(v[1]);
             if (seen == osq::SchedSeen::NewField) {
-                return std::format("{} the host's client got its own MoveFieldAck 2174: schedule ledger emptied",
+                return std::format("{} the host's client got its own MoveFieldAck 2653: schedule ledger emptied",
                                    head("sched ledger", e));
             }
             if (v[0] == osq::kOpSchedClosed) {
@@ -284,7 +284,7 @@ std::string line_of(const p8p::Event& e) {
             return std::format("{} user 2 finished loading the field ({}): the schedule copies may go behind the 2005 of "
                                "their actor | NPC 2005 records already queued to user 2: {} | pending {}",
                                head("sched gate", e),
-                               v[0] == 1 ? "its 2549 MoveFieldCompleteReq reached the server path"
+                               v[0] == 1 ? "its 2471 MoveFieldCompleteReq reached the server path"
                                          : "its 2144 went to its queue",
                                v[1], v[2]);
         case kNSchedCopy: {

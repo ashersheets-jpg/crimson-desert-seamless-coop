@@ -314,7 +314,7 @@ inline uint32_t rd32(const uint8_t* p) {
            static_cast<uint32_t>(p[3]) << 24;
 }
 
-inline constexpr uint16_t kOpActorLoad = 2005, kOpScheduleCreate = 2335, kOpInitSchedule = 2874;
+inline constexpr uint16_t kOpActorLoad = 2005, kOpScheduleCreate = 2989, kOpInitSchedule = 2769;
 inline constexpr size_t kHeader = 5;
 inline constexpr size_t kScheduleCreateResource = 9, kScheduleCreateMin = 22;  // scene_diag_logic.h
 inline constexpr size_t kInitScheduleResource = 8, kInitScheduleMin = 24;

@@ -67,7 +67,7 @@ inline constexpr uint32_t kDesc_User = 0x40, kDesc_Saved0 = 0x280, kDesc_Saved1 
                           kDesc_ReqKey = 0x3C8, kDesc_First = 0x3CC, kDesc_Mark = 0x3CD, kDesc_Road = 0x3D0,
                           kDesc_RoadB = 0x3D8, kDesc_RoadC = 0x3E0, kDesc_RoadD = 0x3E8, kWrap_Inner = 0x08;
 inline constexpr uint32_t kActor_Key = 0x60, kActor_Ctl = 0x90, kActor_User = 0xA0, kField_Owner = 0x180;
-inline constexpr uint16_t kOpAutoSpawnRoad = 2550;
+inline constexpr uint16_t kOpAutoSpawnRoad = 2530;
 // Una caravana medida en S34: conductor + carro + caballo(s) + cabras/ovejas. 16 registros por unidad (raíz + 15).
 // Revisión de la fase C (§3.2): una carreta lleva un gimmick con su carga (19 tipo 7 en la prueba 3 de la fase B): 16 no
 // cabía. 32 registros por unidad (raíz + preexamen de como mucho 15 + tardíos / host-kept / hijos retenidos).
@@ -1332,7 +1332,7 @@ inline const char* stop_name(Stop s) noexcept {
 // 3/5/6 no envió ninguna de éstas (sólo 2556 para los «Game Mechanic» tipo 7): una de ellas desde el cliente del
 // anfitrión para un viajero asignado es su IA corriendo también allí. 2556 sólo se cuenta (indicio).
 inline bool controller_only_req(uint16_t op) noexcept {
-    return op == 2223 || op == 2734 || op == 2291 || op == 2405 || op == 2828;
+    return op == 2202 || op == 2394 || op == 2606 || op == 2913 || op == 2852;
 }
 // Un 2005 de una clave de carretera registrada. to_host: el visto por el cliente del anfitrión (S>C capturado).
 enum class Check2005 : uint8_t { Ignore, Ok, BadController, Restore0ToHost };
@@ -1382,8 +1382,8 @@ inline int in_request(const Request& r, uint64_t troc, uint32_t road) noexcept {
 // ---------------------------------------------------------------- posición de una Req (para «se mueve»)
 // 2223: payload +0x8E; 2556: +4 (npc_probe_client_logic.h). Desplazamiento X/Z máximo desde la primera.
 inline bool req_position_offset(uint16_t op, size_t& off) noexcept {
-    if (op == 2223) { off = 0x8E; return true; }
-    if (op == 2556) { off = 4; return true; }
+    if (op == 2202) { off = 0x8E; return true; }
+    if (op == 2833) { off = 4; return true; }
     return false;
 }
 inline void note_position(Rec& c, float x, float z) noexcept {

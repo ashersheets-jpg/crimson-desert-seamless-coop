@@ -39,22 +39,22 @@
 namespace cdmp::session2::oha {
 
 inline constexpr uint16_t kOpAnnounce = 2005;     // ActorLoadDataAck
-inline constexpr uint16_t kOpScopeSender = 2042;  // ScopeSenderAck: a native bundle (contents not parsed)
+inline constexpr uint16_t kOpScopeSender = 2046;  // ScopeSenderAck: a native bundle (contents not parsed)
 inline constexpr uint32_t kNpcKeyClass = 0xB;     // key >> 28 of NPCs and children
 
 // The per-actor S>C messages held for a withheld key, u32 actor key at payload +0.
 inline constexpr std::array<uint16_t, 11> kHeldOps = {
-    2723,  // StartSpawnActionAck
-    2404,  // ChangeAIStateAck
-    2586,  // DataDefinedRegenerateValueAck
-    2991,  // StartActionAck
-    2697,  // MoveActorAck
-    2642,  // UpdateElementalAck
-    2506,  // ApplyBuffAck
-    2402,  // ClearAllyGroupDataAck
-    2645,  // SetMinStatRateAck
-    2434,  // VaryDataDefinedStaticStatAck
-    2356,  // GimmickCatcherUpdateAck: a carried piece's (observer_hold_family; p8-s14-viajeros.md §3 A.2)
+    2392,  // StartSpawnActionAck
+    3047,  // ChangeAIStateAck
+    2305,  // DataDefinedRegenerateValueAck
+    2552,  // StartActionAck
+    3094,  // MoveActorAck
+    3143,  // UpdateElementalAck
+    2677,  // ApplyBuffAck
+    2259,  // ClearAllyGroupDataAck
+    2642,  // SetMinStatRateAck
+    2362,  // VaryDataDefinedStaticStatAck
+    2896,  // GimmickCatcherUpdateAck: a carried piece's (observer_hold_family; p8-s14-viajeros.md §3 A.2)
 };
 inline constexpr size_t kOpCount = kHeldOps.size();
 

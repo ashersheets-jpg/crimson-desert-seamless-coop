@@ -1922,7 +1922,7 @@ std::string line_of(const p8p::Event& e) {
                                    ? msl::gate_verdict_name(static_cast<msl::GateVerdict>(v[2]))
                                    : "?");
         case kSelfReq:
-            return std::format("MountSync self-check {} | this client {} a StartActionReq 2223 for the remote {} "
+            return std::format("MountSync self-check {} | this client {} a StartActionReq 2202 for the remote {} "
                                "0x{:08X} ({}): an observer must never request actions of the other player's {} (count "
                                "{}) - abort criterion; fix B DEGRADED from now on (ride_filter rewrites new dismounts, the "
                                "detour only frees an already stuck rider)",
@@ -2083,9 +2083,9 @@ DWORD WINAPI install_thread(LPVOID) {
         {kClientVf54, 5, kVf54, sizeof kVf54, "ClientVehicle vf54 0xA45760"},
         {kRideOnEnter, 7, kRideEnter, sizeof kRideEnter, "RideOn::Enter 0x681C80"},
         {kRideOffEnter, 7, kRideEnter, sizeof kRideEnter, "RideOff::Enter 0x682C20"},
-        {kH2663, 5, kHandler, sizeof kHandler, "the 2663 InteractionPreemptionStepSuccessAck handler 0xBB4130"},
-        {kH2916, 5, kHandler, sizeof kHandler, "the 2916 InteractionDoStepSuccessAck handler 0xBB4AC0"},
-        {kH2991, 5, kHandler, sizeof kHandler, "the 2991 StartActionAck handler 0xB57720 (apply point)"},
+        {kH2663, 5, kHandler, sizeof kHandler, "the 2120 InteractionPreemptionStepSuccessAck handler 0xBB4130"},
+        {kH2916, 5, kHandler, sizeof kHandler, "the 2794 InteractionDoStepSuccessAck handler 0xBB4AC0"},
+        {kH2991, 5, kHandler, sizeof kHandler, "the 2552 StartActionAck handler 0xB57720 (apply point)"},
     };
     void* detours[] = {reinterpret_cast<void*>(&common_detour),  reinterpret_cast<void*>(&thunk_detour),
                        reinterpret_cast<void*>(&rideoff_detour), reinterpret_cast<void*>(&vf54_detour),
@@ -2620,7 +2620,7 @@ std::string mount_sync_describe() {
         "detour {}{} [{}] (would drop {}, +0x51 bit 3 seen {}) | remote rider 2991 in RideOff with a 0x40 action {}: "
         "rejected {} taken {} UNLOCKED {} | native retirement already done {} fallback {} forgotten (rider unreadable "
         "15 s) {} | 0x40 hashes learned {} | "
-        "self-check: this client's StartActionReq 2223 for the remote rider {} horse {} (must be 0; withheld {})",
+        "self-check: this client's StartActionReq 2202 for the remote rider {} horse {} (must be 0; withheld {})",
         msl::mode_name(m), g_guest.load() ? "guest" : "host", g_on_common.load(), g_on_thunk.load(), g_on_rideoff.load(),
         g_on_vf54.load(), g_on_enter_on.load(), g_on_enter_off.load(), g_on_2663.load(), g_on_2916.load(),
         g_on_2991.load(), g_local_key.load(), remote_key(), c_vf53.load(), c_vf53_client.load(), c_vf53_other.load(),

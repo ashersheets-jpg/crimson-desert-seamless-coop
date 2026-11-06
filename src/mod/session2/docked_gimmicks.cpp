@@ -750,7 +750,7 @@ void log_event(const p8p::Event& e, State& st, uint64_t& lines, uint64_t& not_lo
             return;
         case kEvOwnKey:
             if (may_log()) {
-                log::info("DockedGimmicks #{} own character {}: 0x{:08X} (MainPlayerDataStartAck 2756); the own user "
+                log::info("DockedGimmicks #{} own character {}: 0x{:08X} (MainPlayerDataStartAck 2524); the own user "
                           "and the local-only keys start again",
                           seq, p8_when(e.qpc_us), static_cast<uint32_t>(e.v[0]));
             }

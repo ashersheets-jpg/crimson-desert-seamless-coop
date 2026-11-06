@@ -451,7 +451,7 @@ bool install_wallup() {
     }
     g_wallup_now.store(back);
     log::info("RemoteMotion: wallup_send ON: byte exe+0x{:X} ({} 0x{:X}+0x{:X}, flags 0x{:08X}, page protect 0x{:X}) "
-              "{} -> 1 | the 2851 sender 0x87DD00 now sends UpdateWallUpDataReq while this client's character is in "
+              "{} -> 1 | the 2357 sender 0x87DD00 now sends UpdateWallUpDataReq while this client's character is in "
               "method 5 (WallUp); the other gates (0x87DD3C method 5, X+0x120, the call site's local character, "
               "the logged-in controlled actor, ClientNet+0x112 connected) are the game's",
               kWallUpByte, sec->name, sec->va, sec->vsize, sec->flags, static_cast<uint32_t>(mbi.Protect), prev);

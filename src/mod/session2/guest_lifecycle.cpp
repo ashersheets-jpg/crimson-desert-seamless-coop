@@ -256,7 +256,7 @@ MoveCloseSequence::Action MoveCloseSequence::step(uint32_t now_ms, const MovePha
         case Stage::Idle:
             if (t.phase() == MovePhase::WindowA) {
                 say(std::format("user 2 left in window A ({}): its move is closed natively first, "
-                                "MoveFieldCompleteReq 2549 00",
+                                "MoveFieldCompleteReq 2471 00",
                                 t.describe()));
                 return Action::InjectMoveComplete;
             }
@@ -264,7 +264,7 @@ MoveCloseSequence::Action MoveCloseSequence::step(uint32_t now_ms, const MovePha
                 stage_ = Stage::WaitMoveAck;
                 since_ms_ = now_ms;
                 say(std::format("user 2 left after its GameLoadingStartReq ({}): waiting up to {} ms for the "
-                                "server's MoveFieldAck 2174 before deciding",
+                                "server's MoveFieldAck 2653 before deciding",
                                 t.describe(), cfg_.move_ack_ms));
                 return Action::Wait;
             }
@@ -273,7 +273,7 @@ MoveCloseSequence::Action MoveCloseSequence::step(uint32_t now_ms, const MovePha
             return Action::HandLogout;
         case Stage::WaitMoveAck:
             if (t.phase() == MovePhase::WindowA) {
-                say(std::format("MoveFieldAck 2174 out after {} ms ({}): window A, MoveFieldCompleteReq 2549 00 first",
+                say(std::format("MoveFieldAck 2653 out after {} ms ({}): window A, MoveFieldCompleteReq 2471 00 first",
                                 now_ms - since_ms_, t.describe()));
                 return Action::InjectMoveComplete;
             }

@@ -645,7 +645,7 @@ void guest_save_guest_configure(const std::string& raw) {
               gsv::mode_name(p.mode),
               p.mode == gsv::Mode::On
                   ? "the client's 3093 waits for the host's SAVE_ACK (30 s at most), its goodbye waits behind one "
-                    "SaveToFileCurrentPlayerReq 2910 (slot 100, 'Co-op') for the final save (15 s at most)"
+                    "SaveToFileCurrentPlayerReq 2122 (slot 100, 'Co-op') for the final save (15 s at most)"
                   : "PROBE: upload and results only; the client's packets are never held and no Req is added",
               narrow(g_save_root), gsw::kCapsGuestSave, narrow(g_progress_root));
     CloseHandle(CreateThread(nullptr, 0, worker, nullptr, 0, nullptr));
@@ -783,12 +783,12 @@ void guest_save_guest_on_host_packet(uint16_t opcode, std::span<const uint8_t> p
         }
         if (c_3016.fetch_add(1) < 16) {
             if (a) {
-                log::info("Session2 guest save: SaveToFileCurrentPlayerAck 3016 from the host's server: character "
+                log::info("Session2 guest save: SaveToFileCurrentPlayerAck 2966 from the host's server: character "
                           "0x{:08X} slot {} -> {} (result 0x{:X}){}",
                           a->key, a->slot, a->ok && a->result == 0 ? "SAVED" : "NOT saved", a->result,
                           a->ok && a->result == 0 ? "; its SAVE_RESULT follows when it went to your slot" : "");
             } else {
-                log::info("Session2 guest save: SaveToFileCurrentPlayerAck 3016 of {} bytes (not the 14 expected)",
+                log::info("Session2 guest save: SaveToFileCurrentPlayerAck 2966 of {} bytes (not the 14 expected)",
                           payload.size());
             }
         }
@@ -872,7 +872,7 @@ GuestSaveSend guest_save_guest_on_send(const std::vector<uint8_t>& packet, bool 
             r.before = gsw::make_final_save_req();
             c_finals.fetch_add(1);
             log::info("Session2 guest save: the client says goodbye (2001) while the host plays your save: a "
-                      "SaveToFileCurrentPlayerReq 2910 (slot {}, 'Co-op') goes first and the goodbye waits for the final "
+                      "SaveToFileCurrentPlayerReq 2122 (slot {}, 'Co-op') goes first and the goodbye waits for the final "
                       "save's SAVE_RESULT (15 s at most; at once if the server's 3016 says it failed)",
                       gsw::kFinalSaveSlot);
         }

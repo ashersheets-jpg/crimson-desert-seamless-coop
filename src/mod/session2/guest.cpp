@@ -68,17 +68,17 @@ namespace {
 using OnRecvFn = void(__fastcall*)(void* net, void* session, uint64_t unused, const uint8_t* pkt, uint16_t size);
 using PushFn = void(__fastcall*)(void* queue, void** item);
 
-constexpr uint16_t kOpConnectCryptogramToServerReq = 2319;
+constexpr uint16_t kOpConnectCryptogramToServerReq = 2493;
 constexpr uint64_t kNoEpoch = 0x7FFFFFFFFFFFFFFFull;  // what PostPacket writes without a session
 constexpr uint32_t kHostReadyFreshMs = 3000;
 
 // G2/G3 (p8-preparacion.md §3): what is only counted and logged, never changed.
-constexpr uint16_t kOpScopeSenderAck = 2042;
+constexpr uint16_t kOpScopeSenderAck = 2046;
 constexpr uint16_t kOpActorAppear = 2005;
-constexpr uint16_t kOpDataAck = 2869;
-constexpr uint16_t kOp2679 = 2679;
-constexpr uint16_t kOpLoginCharacterToFieldServerReq = 3093;  // u8 | u64 characterNo @1 | u32 slot @9
-constexpr uint16_t kOpReserveShutDownServerReq = 2790;
+constexpr uint16_t kOpDataAck = 3082;
+constexpr uint16_t kOp2679 = 2623;
+constexpr uint16_t kOpLoginCharacterToFieldServerReq = 2733;  // u8 | u64 characterNo @1 | u32 slot @9
+constexpr uint16_t kOpReserveShutDownServerReq = 2748;
 // g_ServerFrameworkMode (opcion-d-d0.md §1.1): the u32 the host's server writes
 // into its 2002 (0x1051F1E0); the client uses it as PostPacket's index (§1.3).
 constexpr uintptr_t kServerFrameworkMode = 0x6EAB858;
@@ -211,7 +211,7 @@ uint64_t g_ll_seen_3093 = 0, g_ll_seen_2549 = 0;        // the diagnostics threa
 // never runs UserLogin). Armed by guest_send, run by guest_pump (both the
 // NetworkThread); the diagnostic is armed by the install thread.
 namespace sr = slot_refresh;
-constexpr uint16_t kOpLoginUserToFieldServerReq = 2490;
+constexpr uint16_t kOpLoginUserToFieldServerReq = 2535;
 constexpr uint64_t kSlotTestKey = ~0ull;  // the diagnostic's own key (never an epoch PostPacket writes)
 std::mutex g_refresh_mutex;
 sr::Planner g_refresh;                   // under g_refresh_mutex
@@ -551,7 +551,7 @@ Mode decide(uint16_t first_op, uint64_t epoch) {
     } else if (had && !rv.remote) {
         why = rv.why.c_str();
     } else if (first_op != kOpConnectCryptogramToServerReq) {
-        why = "its first packet is not ConnectCryptogramToServerReq 2319 (part of it may already be local)";
+        why = "its first packet is not ConnectCryptogramToServerReq 2493 (part of it may already be local)";
     } else if (!tunnel) {
         why = "the tunnel to the host is down";
     } else if (dead) {
@@ -630,7 +630,7 @@ void note_out(std::span<const uint8_t> p) {
         g_n.last_character_no.store(character_no);
         g_n.last_3093_slot.store(slot);
         note(g_n.login_logged, kMaxLoginLogged,
-             "Session2 guest: out LoginCharacterToFieldServerReq 3093: characterNo 0x{:016X} ({}), save slot {}",
+             "Session2 guest: out LoginCharacterToFieldServerReq 2733: characterNo 0x{:016X} ({}), save slot {}",
              character_no,
              character_no == 0x7FFFFFFFFFFFF002ull   ? "F002: the host's identity fix, as expected"
              : character_no == 0x7FFFFFFFFFFFFFFFull ? "7FFF...FFFF: the single-player constant, NOT the host's F002"
@@ -672,7 +672,7 @@ void count_delivered(std::span<const uint8_t> p) {
     switch (opcode_of(p)) {
         case kOpScopeSenderAck:
             if (g_n.in_2042.fetch_add(1, std::memory_order_relaxed) == 0) {
-                note(g_n.first_2042_logged, 1, "Session2 guest: first ScopeSenderAck 2042 delivered ({} bytes)",
+                note(g_n.first_2042_logged, 1, "Session2 guest: first ScopeSenderAck 2046 delivered ({} bytes)",
                      p.size());
             }
             break;
@@ -817,7 +817,7 @@ sr::Attempt try_refresh([[maybe_unused]] uintptr_t net, bool test, std::string& 
     // Connected is fine (the NetworkThread only turns once the client connects,
     // live P8-T 2026-10-09); its 2490 being out is not.
     if (test && g_local_login_out.load()) {
-        why = "the client's LoginUserToFieldServerReq 2490 already went to its own server: the diagnostic only runs "
+        why = "the client's LoginUserToFieldServerReq 2535 already went to its own server: the diagnostic only runs "
               "before its login (start the game again)";
         return sr::Attempt::Refused;
     }
@@ -870,7 +870,7 @@ void arm_title_refresh(uint64_t epoch) noexcept {
         std::lock_guard lk(g_refresh_mutex);
         if (!g_refresh.arm(epoch, GetTickCount64())) return;
         g_refresh_wanted.store(true);
-        log::info("Session2 guest: the client's LoginUserToFieldServerReq 2490 went to the host (epoch 0x{:X}); its "
+        log::info("Session2 guest: the client's LoginUserToFieldServerReq 2535 went to the host (epoch 0x{:X}); its "
                   "local server will not log in, so the title's slots are refreshed here on the next NetworkThread "
                   "turn", epoch);
     } catch (...) {
@@ -1625,7 +1625,7 @@ void guest_local_load_watch() noexcept {
         if (const uint64_t t = g_ll_2549_ms.load(); t && t != g_ll_seen_2549 && t >= g_ll_seen_3093) {
             g_ll_seen_2549 = t;
             if (g_ll_watch.armed()) {
-                log::info("Session2 guest: the local load sent its MoveFieldCompleteReq 2549 after {:.1f} s: not stuck",
+                log::info("Session2 guest: the local load sent its MoveFieldCompleteReq 2471 after {:.1f} s: not stuck",
                           static_cast<double>(t - g_ll_watch.since_ms()) / 1000.0);
             }
             g_ll_watch.note_frame(gxv::LocalAfterRemote::Stuck, true, gxv::kOpMoveFieldCompleteReq, t);
@@ -1741,7 +1741,7 @@ void guest_deliver(std::vector<uint8_t>&& packet) {
     }
     if (g_mode.load() != Mode::Remote || g_broken.load()) return;  // nothing to deliver to
     // P8 mounts: this client's own character key (its MainPlayerDataStartAck 2756, u32 at +0).
-    if (v && v->opcode == 2756 && v->payload.size() >= 4) {
+    if (v && v->opcode == 2524 && v->payload.size() >= 4) {
         mount_sync_set_local_key(msl::get32(v->payload.data()));
     }
     // P8 mounts (mode 1): held in order while a Begin of the host's character waits for its Commit.

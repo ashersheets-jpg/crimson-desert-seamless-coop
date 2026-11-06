@@ -125,10 +125,10 @@ inline constexpr size_t kNameMax = 255;
 
 // ---------------------------------------------------------------- packets (C->S, payload after the 5-byte header)
 
-inline constexpr uint16_t kOpLoad = 2598;     // SceneLevelLoadCompleteSyncSceneObjectListReq: u32 != 0, u32 hash != 0
-inline constexpr uint16_t kOpUnload = 2834;   // SceneLevelUnloadReq: u32 != 0, u8 type 0..3, u32 hash != 0, u8 flag
-inline constexpr uint16_t kOpResync = 2104;   // ResyncSyncSceneObjectDataForReloadReq: u8, then u32 hashes
-inline constexpr uint16_t kOpReloadStage = 2283, kOpRevive = 2362, kOpGameLoading = 2437, kOpLogout = 2001;
+inline constexpr uint16_t kOpLoad = 2713;     // SceneLevelLoadCompleteSyncSceneObjectListReq: u32 != 0, u32 hash != 0
+inline constexpr uint16_t kOpUnload = 2449;   // SceneLevelUnloadReq: u32 != 0, u8 type 0..3, u32 hash != 0, u8 flag
+inline constexpr uint16_t kOpResync = 2319;   // ResyncSyncSceneObjectDataForReloadReq: u8, then u32 hashes
+inline constexpr uint16_t kOpReloadStage = 3074, kOpRevive = 2390, kOpGameLoading = 2294, kOpLogout = 2001;
 inline constexpr size_t kHeader = 5;  // u16 opcode, u8, u16 payload size
 
 enum class Kind : uint8_t { None, Bad, Load, Unload, Resync, Flush };

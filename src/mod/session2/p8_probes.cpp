@@ -811,7 +811,7 @@ std::string format_event(const p::Event& e) {
         case kKH2322: {
             const uint8_t disabled = (v[4] >> 16) & 0xFF;
             return std::format(
-                "{} S2 PlayAllPreLoadSequencerAck 2322 handler: actor key {} | opcode {} payload len {} size {} | handler "
+                "{} S2 PlayAllPreLoadSequencerAck 2384 handler: actor key {} | opcode {} payload len {} size {} | handler "
                 "+0x21 {} ({}) | wrapper 0x{:X} raw 0x{:X} | epoch 0x{:X}",
                 head, ((v[4] >> 24) & 1) ? std::format("0x{:08X}", v[3] & 0xFFFFFFFF) : std::string("UNREADABLE"),
                 (v[3] >> 32) & 0xFFFF, v[3] >> 48, v[4] & 0xFFFF, disabled,

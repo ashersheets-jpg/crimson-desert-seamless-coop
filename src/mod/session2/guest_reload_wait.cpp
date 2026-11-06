@@ -513,8 +513,8 @@ void line_trace(const p8p::Event& e) {
             g_warned_own_2322_trip = trip;
             c_own_2322_warned.fetch_add(1, std::memory_order_relaxed);
             log::warn("GuestReloadWait [0x11 own 2322] {} T{} | trip {} (RELOAD (2643, no 2174)) | [P+0x15C] 0x11 for {} "
-                      "with own M+0x231 {} (0x779E48 waits for 2): NO PlayAllPreLoadSequencerAck 2322 for this client's "
-                      "own character 0x{:08X} came after its PreLoadSequencerReq 2873 - the host's server sent it to the "
+                      "with own M+0x231 {} (0x779E48 waits for 2): NO PlayAllPreLoadSequencerAck 2384 for this client's "
+                      "own character 0x{:08X} came after its PreLoadSequencerReq 2939 - the host's server sent it to the "
                       "field owner's character; the load stays here (no 2445; at the exit the final save is refused "
                       "while loading). Host: observer_milestone_reload(_any), docs/research/s25/reaparicion.md",
                       p8_when(e.qpc_us), e.tid, trip, since_text(v[8], e.qpc_us), m231, v[3] & 0xFFFFFFFF);

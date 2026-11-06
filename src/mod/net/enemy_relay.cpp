@@ -24,18 +24,18 @@ namespace {
 using Bytes = std::vector<uint8_t>;
 
 constexpr uint16_t kOpActorLoadDataAck = 2005;
-constexpr uint16_t kOpRemoveActorAck = 2516;
-constexpr uint16_t kOpStartActionReq = 2223;
-constexpr uint16_t kOpRotateActorReq = 2828;
-constexpr uint16_t kOpChangeBattleStateReq = 2257;  // 5 B: u32 actor | u8 state (0 = out of combat)
-constexpr uint16_t kOpDoFrameEventReq = 2380;       // u8 4 | u32 attacker | ... | 665-byte target entries at the end
+constexpr uint16_t kOpRemoveActorAck = 3067;
+constexpr uint16_t kOpStartActionReq = 2202;
+constexpr uint16_t kOpRotateActorReq = 2852;
+constexpr uint16_t kOpChangeBattleStateReq = 2453;  // 5 B: u32 actor | u8 state (0 = out of combat)
+constexpr uint16_t kOpDoFrameEventReq = 3030;       // u8 4 | u32 attacker | ... | 665-byte target entries at the end
 constexpr uint64_t kEngagedMs = 20000;
 // Server->client messages about an enemy (key at +0), relayed for its copy
 // (enemigos-del-anfitrion.md §3.1): HP and death reliably, hit reactions not.
-constexpr uint16_t kOpVaryHPAck = 2147;               // 92 B; +0x40 per-actor sequence, kept
-constexpr uint16_t kOpNotifyHandleDeadAck = 2530;     // 19 B: dead | killer | reason
-constexpr uint16_t kOpAttackTargetAck = 2922;         // hit effect on the target at +0
-constexpr uint16_t kOpApplyActionRestrictionAck = 2162;
+constexpr uint16_t kOpVaryHPAck = 2740;               // 92 B; +0x40 per-actor sequence, kept
+constexpr uint16_t kOpNotifyHandleDeadAck = 2985;     // 19 B: dead | killer | reason
+constexpr uint16_t kOpAttackTargetAck = 2791;         // hit effect on the target at +0
+constexpr uint16_t kOpApplyActionRestrictionAck = 3059;
 constexpr size_t kRotateActorReqSize = 176;
 constexpr uint64_t kPosIntervalMs = 66;  // ~15 Hz
 constexpr uint64_t kPosKeepAliveMs = 900;  // the remote buffer wants a sample every <= 1 s

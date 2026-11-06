@@ -654,7 +654,7 @@ uintptr_t troc_detour(uintptr_t res, uintptr_t troc, uintptr_t params, uintptr_t
     // P8 option U, U-1 (user2_stages.h): its 2283/2362/2437/2001 drain its own armed manager before the game sees them.
     user2_stages_troc_enter(now.actor, now.opcode);
     // S38 fase C (revisión §2): its AutoSpawnRoadReq's road classes, for the provenance of the births of this Troc.
-    if (now.opcode == 2550 && params) {
+    if (now.opcode == 2530 && params) {
         uintptr_t packet = 0;
         uint16_t size = 0;
         if (game::fast_read(params + 0x18, &packet, sizeof packet) && game::fast_read(params + 0x10, &size, sizeof size)) {
@@ -888,8 +888,8 @@ uintptr_t revive_apply_vf48(uintptr_t field, const Frame& fr, uintptr_t ret) {
 // P8 option U (S28, Ghidra): the timer handlers' vf48 calls return to .xtls 0x1082F96A (2043 UpdateStageOnceTimer ->
 // 0x287DBB0), 0x10830A0F (2045 -> 0x2822D00([mgr+0x148])) and 0x10835A8F (2046 -> 0x27FBD60([mgr+0x10])).
 bool timer_vf48_ret(uint32_t rva, uint16_t opcode) noexcept {
-    return (rva == 0x1082F96A && opcode == 2043) || (rva == 0x10830A0F && opcode == 2045) ||
-           (rva == 0x10835A8F && opcode == 2046);
+    return (rva == 0x1082F96A && opcode == 2047) || (rva == 0x10830A0F && opcode == 2049) ||
+           (rva == 0x10835A8F && opcode == 2050);
 }
 
 // vf48: counted under a subject; changed only by F3 (the 2283's two calls) and F4 (the 2362's setter call).
@@ -919,7 +919,7 @@ uintptr_t vf48_detour(uintptr_t field) {
         // address in .xtls) -> its own manager while U-1 routes; 0 = the original.
         if (timer_vf48_ret(rva, fr.opcode)) {
             if (const uintptr_t mine = user2_stages_route(fr.opcode, fr.actor, field)) return mine;
-        } else if (fr.opcode == 2043 || fr.opcode == 2045 || fr.opcode == 2046) {
+        } else if (fr.opcode == 2047 || fr.opcode == 2049 || fr.opcode == 2050) {
             // Review M3: counted by caller; inside its armed 2043 tick, its own manager (user2_stages.h).
             if (const uintptr_t mine = user2_stages_timer_vf48(fr.opcode, rva, fr.actor, field)) return mine;
         }
@@ -1765,7 +1765,7 @@ DWORD WINAPI funnels_thread(LPVOID) {
         g_f4_on.store(f4_sites && g_subject_on, std::memory_order_release);
         if (f4 != ftl::Mode::Off) {
             log::info("User2Funnels: user2_revive_manager {} {}", ftl::mode_name(f4),
-                      g_f4_on.load() ? std::format("LIVE: user 2's ReviveLoadingReq 2362 -> the reload setter's vf48 "
+                      g_f4_on.load() ? std::format("LIVE: user 2's ReviveLoadingReq 2390 -> the reload setter's vf48 "
                                                    "returning to exe+0x{:X} {}",
                                                    ftl::kApplyVf48Ret,
                                                    f4 == ftl::Mode::On
@@ -1776,7 +1776,7 @@ DWORD WINAPI funnels_thread(LPVOID) {
         }
         if (ft != ftl::Mode::Off) {
             log::info("User2Funnels: user2_fast_travel {} {}", ftl::mode_name(ft),
-                      g_ft_on.load() ? std::format("LIVE: user 2's ReloadStageStartReq 2283 -> vf48 returning to "
+                      g_ft_on.load() ? std::format("LIVE: user 2's ReloadStageStartReq 3074 -> vf48 returning to "
                                                    "exe+0x{:X} {}",
                                                    ftl::kReloadVf48Ret,
                                                    ft == ftl::Mode::On
@@ -2009,7 +2009,7 @@ void user2_funnels_policy_record(const QuestPolicyVerdict& v, bool handed) noexc
             if (n < 12 && where == 0) {
                 std::string hex;
                 for (size_t i = 0; i < v.size && i < sizeof v.head; ++i) hex += std::format("{:02X} ", v.head[i]);
-                log::info("User2Funnels quest_policy: user 2's MissionTriggerInOutReq 2112 #{} in the host's field ({} "
+                log::info("User2Funnels quest_policy: user 2's MissionTriggerInOutReq 2899 #{} in the host's field ({} "
                           "bytes): {}| {} | {}",
                           n + 1, v.size, hex, handed ? "handed to the server" : "not handed",
                           policy == Mode::On ? "its vf40 keeps the host's quest manager (its event goes to the host's "
@@ -2022,7 +2022,7 @@ void user2_funnels_policy_record(const QuestPolicyVerdict& v, bool handed) noexc
             g_change_reqs[where].fetch_add(1, std::memory_order_relaxed);
             if (v.drop) {
                 if (g_change_dropped.fetch_add(1, std::memory_order_relaxed) < 4) {
-                    log::warn("User2Funnels quest_policy: user 2's ChangePlayerbleCharacterReq 2369 dropped before the "
+                    log::warn("User2Funnels quest_policy: user 2's ChangePlayerbleCharacterReq 2758 dropped before the "
                               "server (a reload trip; its vf40 is the host's quest manager) - the guest's switch of "
                               "character does not happen");
                 }

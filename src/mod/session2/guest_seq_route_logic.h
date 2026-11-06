@@ -37,14 +37,14 @@ namespace cdmp::session2::gsr {
 // never gated, only routed.
 enum class Point : uint8_t { P2661, P2981, P2810, P2322, P2524, Count };
 inline constexpr size_t kPoints = static_cast<size_t>(Point::Count);
-inline constexpr std::array<uint16_t, kPoints> kPointOp = {2661, 2981, 2810, 2322, 2524};
+inline constexpr std::array<uint16_t, kPoints> kPointOp = {2380, 2920, 2292, 2384, 2436};
 inline const char* point_name(Point p) {
     switch (p) {
-        case Point::P2661: return "2661 PrepareSequencerAck 0xC0612A";
-        case Point::P2981: return "2981 StageBranchStateAck 0xC07749";
-        case Point::P2810: return "2810 DeleteSequencerAck 0xC0659E";
-        case Point::P2322: return "2322 PlayAllPreLoadSequencerAck 0xB87A67";
-        case Point::P2524: return "2524 StageOnBranchEventAck 0xC08178";
+        case Point::P2661: return "2380 PrepareSequencerAck 0xC0612A";
+        case Point::P2981: return "2920 StageBranchStateAck 0xC07749";
+        case Point::P2810: return "2292 DeleteSequencerAck 0xC0659E";
+        case Point::P2322: return "2384 PlayAllPreLoadSequencerAck 0xB87A67";
+        case Point::P2524: return "2436 StageOnBranchEventAck 0xC08178";
         default: return "?";
     }
 }
@@ -404,11 +404,11 @@ inline Verdict decide(const RouteFacts& f) {
 // nullopt for any other opcode or a short payload.
 inline std::optional<uint32_t> named_actor(uint16_t op, std::span<const uint8_t> payload) {
     switch (op) {
-        case 2661:
+        case 2380:
             if (payload.size() >= 5) return le32(&payload[1]);
             return std::nullopt;
-        case 2810:
-        case 2322:
+        case 2292:
+        case 2384:
             if (payload.size() >= 4) return le32(&payload[0]);
             return std::nullopt;
         default:
@@ -473,13 +473,13 @@ inline bool refuse(Point p, const RouteFacts& f, Verdict v) {
 // 2126 u32 actor | u64 key @4; 2958 / 2909 u8 | u32 actor @1 | u32 resource @5 | u64 key @9 | u32 x n.
 enum class SchedPoint : uint8_t { P2335, P2126, P2958, P2909, Count };
 inline constexpr size_t kSchedPoints = static_cast<size_t>(SchedPoint::Count);
-inline constexpr std::array<uint16_t, kSchedPoints> kSchedOp = {2335, 2126, 2958, 2909};
+inline constexpr std::array<uint16_t, kSchedPoints> kSchedOp = {2989, 2796, 2616, 2297};
 inline const char* sched_point_name(SchedPoint p) {
     switch (p) {
-        case SchedPoint::P2335: return "2335 CreateNPCScheduleStageAck 0xC0B5C1";
-        case SchedPoint::P2126: return "2126 DeleteNPCScheduleStageAck 0xC0BA4E";
-        case SchedPoint::P2958: return "2958 ChangeNPCScheduleMiseensceneAck 0xC0C761";
-        case SchedPoint::P2909: return "2909 DeactivateMiseensceneScheduleEvadeObstacleAck 0xC0CC91";
+        case SchedPoint::P2335: return "2989 CreateNPCScheduleStageAck 0xC0B5C1";
+        case SchedPoint::P2126: return "2796 DeleteNPCScheduleStageAck 0xC0BA4E";
+        case SchedPoint::P2958: return "2616 ChangeNPCScheduleMiseensceneAck 0xC0C761";
+        case SchedPoint::P2909: return "2297 DeactivateMiseensceneScheduleEvadeObstacleAck 0xC0CC91";
         default: return "?";
     }
 }

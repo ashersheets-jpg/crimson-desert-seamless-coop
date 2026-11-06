@@ -567,11 +567,11 @@ bool combat_follow_start(const std::string& raw, const std::string& raw_v2) {
     }
     if (pv2.mode != Mode::On) {
         log::info("CombatFollow ON ({}): the host client's enemies engaged with user 2 (AttackTargetAck 2922 with its "
-                  "character, or a StartActionAck 2991 aimed at it, within {} ms) that this client simulates "
+                  "character, or a StartActionAck 2552 aimed at it, within {} ms) that this client simulates "
                   "([actor+0xC8] 1/2), within {:.0f} m of user 2 and without a parent {} every {} ms (at most {} at a "
                   "time; ts = the enemy's last real ts + the host client's game clock since then)",
                   cfl::mode_name(p.mode), cfl::kEngageMs, cfl::kRangeM,
-                  p.mode == Mode::On ? "get a synthetic MoveActorAck 2697 to user 2 (server_push_extra)"
+                  p.mode == Mode::On ? "get a synthetic MoveActorAck 3094 to user 2 (server_push_extra)"
                                      : "are measured as if a synthetic 2697 went (probe: nothing sent)",
                   cfl::kTickMs, cfl::kMaxFollowed);
     }

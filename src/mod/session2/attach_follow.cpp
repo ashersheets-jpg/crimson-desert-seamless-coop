@@ -292,7 +292,7 @@ bool attach_follow_configure(const std::string& raw) {
               "only, in every mode; attachments end with another parent, a Move of the child with parent -1, the "
               "dismount hash 0x{:08X}, or {} s without an attached action{}",
               afl::mode_name(p.mode),
-              p.mode == Mode::On ? "every 3rd MoveActorAck of the character to user 2 is followed by a synthetic 2697 "
+              p.mode == Mode::On ? "every 3rd MoveActorAck of the character to user 2 is followed by a synthetic 3094 "
                                    "of the child (character pose x the action's Path local +0xD7)"
                                  : "probe: the Path local hypothesis is measured against each action's own position, "
                                    "nothing is made",

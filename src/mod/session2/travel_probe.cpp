@@ -156,7 +156,7 @@ void format(const p8p::Event& e) {
             in.host_6a0_after = static_cast<uint8_t>(e.v[6] >> 16);
             const tpl::PreparedOut o = tpl::decide_prepared(in);
             const std::string line = std::format(
-                "TravelRevive trip {} {}: user 2's ReviveLoadingReq 2362 ({}) | TS_user2 before [{}] after [{}] | TS_host "
+                "TravelRevive trip {} {}: user 2's ReviveLoadingReq 2390 ({}) | TS_user2 before [{}] after [{}] | TS_host "
                 "before [{}] after [{}] | host manager +0x6A0 {} | ExecuteTroc result {} -> {}{} | F4: {}",
                 e.v[0], when, key(e.v[1]), ts(e.v[2]), ts(e.v[3]), ts(e.v[4]), ts(e.v[5]),
                 in.host_mgr_ok ? std::format("{} -> {}", in.host_6a0_before, in.host_6a0_after) : std::string("unreadable"),
@@ -263,10 +263,10 @@ DWORD WINAPI probe_thread(LPVOID) {
 void travel_configure(bool loading_owner_alias, bool travel_probe) {
     g_alias.store(loading_owner_alias);
     g_probe.store(travel_probe);
-    log::info("Travel (host): user2_loading_owner_alias={}: user 2's copy of LoadingFieldDataAck 2643 {} | "
+    log::info("Travel (host): user2_loading_owner_alias={}: user 2's copy of LoadingFieldDataAck 2399 {} | "
               "user2_travel_probe={}{}",
               loading_owner_alias ? 1 : 0,
-              loading_owner_alias ? "names user 2 as the field owner (u32 +9, layout 20 + 48n), as its MoveFieldAck 2174"
+              loading_owner_alias ? "names user 2 as the field owner (u32 +9, layout 20 + 48n), as its MoveFieldAck 2653"
                                   : "keeps the owner the server wrote (the host)",
               travel_probe ? 1 : 0,
               travel_probe ? ": TravelBegin / TravelContext / TravelPrepared / TravelConsume / TravelAck lines (read "
@@ -290,7 +290,7 @@ void travel_probe_begin(const TravelBeginInfo& b) {
     } else {
         dest = std::format("{} bytes, NOT the 53-byte layout of build 2976", b.size);
     }
-    log::info("TravelBegin {}: user 2's ReloadStageStartReq 2283 (user {}, character {}) | {} | in {} (owner {}, host {}) "
+    log::info("TravelBegin {}: user 2's ReloadStageStartReq 3074 (user {}, character {}) | {} | in {} (owner {}, host {}) "
               "| F2/F3: {} ({}) | next server trip {}",
               p8_when(p8_now_us()), key(b.user2_user), key(b.char_key), dest, b.where, key(b.owner), key(b.host_user),
               b.gate, b.outcome, g_trip.load() + 1);

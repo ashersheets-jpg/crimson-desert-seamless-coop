@@ -273,9 +273,9 @@ void kill_tunnel(const std::string& why) {
 // 2004 (pointers), and the client-local connect/disconnect 1001-1008. Also
 // SetFieldTimeReq 2125 (sleep, explicit time): the world clock is the host's
 // (reloj.md §5.1, 0x2BC8970 publishes for any field owner).
-constexpr uint16_t kOpSetFieldTimeReq = 2125;
+constexpr uint16_t kOpSetFieldTimeReq = 2227;
 bool never_from_guest(uint16_t opcode) {
-    return opcode == 2790 || opcode == 2038 || opcode == 2004 || opcode == kOpSetFieldTimeReq ||
+    return opcode == 2748 || opcode == 2042 || opcode == 2004 || opcode == kOpSetFieldTimeReq ||
            (opcode >= 1001 && opcode <= 1008);
 }
 // P8 session 25, W1 (block_guest_weather, research/noche/clima-hora.md §5.2): user 2's SyncWeatherStateReq 2560
@@ -324,7 +324,7 @@ bool offer(const std::vector<uint8_t>& p) {
     }
     if (v && ckp::guest_req_blocked_by_env(v->opcode, g_block_weather)) {
         if (g_weather_blocked++ == 0) {
-            log::info("Session2 W1: user 2's SyncWeatherStateReq 2560 dropped (block_guest_weather=1): the host's field "
+            log::info("Session2 W1: user 2's SyncWeatherStateReq 2689 dropped (block_guest_weather=1): the host's field "
                       "weather flags stay the host client's; counted from now on");
         }
         return true;
@@ -906,7 +906,7 @@ bool install(const Options& opt) {
         log::warn("Session2: block_guest_weather needs create_session=1; off");
     }
     if (g_block_weather) {
-        log::info("Session2 W1 ON (block_guest_weather=1): user 2's SyncWeatherStateReq 2560 never reaches the host's "
+        log::info("Session2 W1 ON (block_guest_weather=1): user 2's SyncWeatherStateReq 2689 never reaches the host's "
                   "server (it would write the host field's weather flags, 0x20E6FE0, with no owner check); counted");
     }
     // C2 (pendientes/identidad.md §5): before the tunnel opens and before the
@@ -1302,7 +1302,7 @@ bool install(const Options& opt) {
             g_tap_mount_sync.store(true);
             net::sniffer_set_tap(&sniffer_fanout);
         } else {
-            log::warn("MountSync: [sniffer] enabled=0: the self-check (no StartActionReq 2223 for user 2's rider) cannot "
+            log::warn("MountSync: [sniffer] enabled=0: the self-check (no StartActionReq 2202 for user 2's rider) cannot "
                       "count");
         }
     }

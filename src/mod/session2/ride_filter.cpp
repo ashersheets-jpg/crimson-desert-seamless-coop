@@ -19,7 +19,7 @@ namespace {
 using rfl::Kind;
 using rfl::Mode;
 
-constexpr uint16_t kOpMainPlayerDataStartAck = 2756;  // u32 the client's own character at +0 (server.cpp)
+constexpr uint16_t kOpMainPlayerDataStartAck = 2524;  // u32 the client's own character at +0 (server.cpp)
 constexpr uint16_t kEvRewrite = 1, kEvWindow = 2;
 constexpr uint64_t kMaxLines = 48;       // rewrite / window lines in a run
 constexpr uint64_t kSummaryMs = 60000;
@@ -184,7 +184,7 @@ bool ride_filter_configure(const std::string& raw, bool guest) {
     g_guest.store(guest);
     g_mode.store(static_cast<uint8_t>(p.mode));
     if (p.mode == Mode::Off) return false;
-    log::info("RideFilter ON ({}, {}): the other player's StartActionAck 2991 with a mount action (A0 0x{:08X} / "
+    log::info("RideFilter ON ({}, {}): the other player's StartActionAck 2552 with a mount action (A0 0x{:08X} / "
               "0x{:08X}) or the dismount layer (A1 0x{:08X} with an 0xB parent) {} | the hashes of its Acks that "
               "name an 0xB key or come within {} ms of a parent change are recorded | dismounts: ride_dismount={}",
               rfl::mode_name(p.mode), guest ? "guest: in guest_deliver" : "host: in ClientNet::OnRecvPacket",

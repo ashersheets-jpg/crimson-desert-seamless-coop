@@ -45,29 +45,29 @@ namespace cdmp::session2::scd {
 // ---------------------------------------------------------------- opcodes
 
 inline constexpr uint16_t kOpActorLoad = 2005;          // ActorLoadDataAck
-inline constexpr uint16_t kOpStartActionReq = 2223;     // StartActionReq
-inline constexpr uint16_t kOpScheduleCreate = 2335;     // CreateNPCScheduleStageAck
-inline constexpr uint16_t kOpScheduleDelete = 2126;     // DeleteNPCScheduleStageAck
-inline constexpr uint16_t kOpScheduleClosed = 2411;     // ScheduleStageClosedAck
-inline constexpr uint16_t kOpInitSchedule = 2874;       // InitializeNPCScheduleAck
-inline constexpr uint16_t kOpPrepare = 2661;            // PrepareSequencerAck
-inline constexpr uint16_t kOpDeleteSequencer = 2810;    // DeleteSequencerAck
-inline constexpr uint16_t kOpBranch = 2981;             // StageBranchStateAck
-inline constexpr uint16_t kOpFactionSpawn = 2195;       // CreateFactionSpawnStageAck
-inline constexpr uint16_t kOpMoveFieldAck = 2174;
-inline constexpr uint16_t kOpMoveFieldCompleteReq = 2549;
-inline constexpr uint16_t kOpMoveFieldCompleteAck = 2144;
-inline constexpr uint16_t kOpMilestone = 2322;          // PlayAllPreLoadSequencerAck
+inline constexpr uint16_t kOpStartActionReq = 2202;     // StartActionReq
+inline constexpr uint16_t kOpScheduleCreate = 2989;     // CreateNPCScheduleStageAck
+inline constexpr uint16_t kOpScheduleDelete = 2796;     // DeleteNPCScheduleStageAck
+inline constexpr uint16_t kOpScheduleClosed = 2551;     // ScheduleStageClosedAck
+inline constexpr uint16_t kOpInitSchedule = 2769;       // InitializeNPCScheduleAck
+inline constexpr uint16_t kOpPrepare = 2380;            // PrepareSequencerAck
+inline constexpr uint16_t kOpDeleteSequencer = 2292;    // DeleteSequencerAck
+inline constexpr uint16_t kOpBranch = 2920;             // StageBranchStateAck
+inline constexpr uint16_t kOpFactionSpawn = 2208;       // CreateFactionSpawnStageAck
+inline constexpr uint16_t kOpMoveFieldAck = 2653;
+inline constexpr uint16_t kOpMoveFieldCompleteReq = 2471;
+inline constexpr uint16_t kOpMoveFieldCompleteAck = 2340;
+inline constexpr uint16_t kOpMilestone = 2384;          // PlayAllPreLoadSequencerAck
 // The client's scene/sequencer Reqs (p8-s1-escenas-npc.md §4 A.3, G4).
-inline constexpr uint16_t kOpTriggerVolume = 2767;      // SequencerTriggerVolumeInOutReq
-inline constexpr uint16_t kOpChartEvent = 2591;         // UpdateStageChartEventReq
-inline constexpr uint16_t kOpBranchReq = 2436;          // StageBranchStateReq
-inline constexpr uint16_t kOpEvadeLogout = 2547;        // SequencerEvadeTriggerLogoutReq
-inline constexpr uint16_t kOpGamePlayData = 2173;       // UpdateSequencerGamePlayDataEventReq
-inline constexpr uint16_t kOpReloadStage = 2283;        // ReloadStageStartReq
-inline constexpr uint16_t kOpStageFail = 2138;          // SequencerStageFailReq
-inline constexpr uint16_t kOpNextBranch = 3020;         // SetNextBranchTypeFromAIReq
-inline constexpr uint16_t kOpCandidatePos = 2100;       // SyncStageCandidatePostionReq
+inline constexpr uint16_t kOpTriggerVolume = 2620;      // SequencerTriggerVolumeInOutReq
+inline constexpr uint16_t kOpChartEvent = 2839;         // UpdateStageChartEventReq
+inline constexpr uint16_t kOpBranchReq = 2880;          // StageBranchStateReq
+inline constexpr uint16_t kOpEvadeLogout = 2211;        // SequencerEvadeTriggerLogoutReq
+inline constexpr uint16_t kOpGamePlayData = 2752;       // UpdateSequencerGamePlayDataEventReq
+inline constexpr uint16_t kOpReloadStage = 3074;        // ReloadStageStartReq
+inline constexpr uint16_t kOpStageFail = 3161;          // SequencerStageFailReq
+inline constexpr uint16_t kOpNextBranch = 2783;         // SetNextBranchTypeFromAIReq
+inline constexpr uint16_t kOpCandidatePos = 3117;       // SyncStageCandidatePostionReq
 
 // The Reqs G4 counts, in the order its line prints them.
 inline constexpr uint16_t kSceneReqs[] = {kOpTriggerVolume, kOpChartEvent, kOpBranchReq, kOpEvadeLogout,

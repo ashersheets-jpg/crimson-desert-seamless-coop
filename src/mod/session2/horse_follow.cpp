@@ -83,7 +83,7 @@ bool horse_follow_configure(const std::string& raw) {
     if (p.mode == Mode::Off) return false;
     log::info("HorseFollow ON ({}): {}", hfl::mode_name(p.mode),
               p.mode == Mode::On
-                  ? "every rider's MoveActorAck 2697 to user 2 (parent +0x8C an 0xB key, world transform +0x94) is "
+                  ? "every rider's MoveActorAck 3094 to user 2 (parent +0x8C an 0xB key, world transform +0x94) is "
                     "followed by a synthetic 2697 of that horse (pos/quat from the rider's Path, parent -1, the same ts), "
                     "never for a horse user 2 controls; user 2's own riding (the other direction) is only measured"
                   : "probe: riders' Acks to user 2, their horses' own Acks and user 2's riding Reqs counted, nothing "
@@ -238,7 +238,7 @@ bool horse_follow_configure_guest_probe(const std::string& raw) {
     }
     g_guest_probe.store(true);
     log::info("GuestHorseProbe ON (probe): user 2's riding Reqs and its horse's own Reqs measured; the synthetic "
-              "MoveActorReq 2556 of the horse (the rider's Path world pose, parent -1, the rider's ts, history zeroed) "
+              "MoveActorReq 2833 of the horse (the rider's Path world pose, parent -1, the rider's ts, history zeroed) "
               "built for every riding Req and NEVER sent (pendientes/p8-impl-s9-movimiento.md §4)");
     return true;
 }
@@ -431,7 +431,7 @@ bool horse_follow_reverse_configure(const std::string& raw) {
         return false;
     }
     log::info("HorseFollowReverse ON ({}): user 2's main character riding a horse OWNED by user 2 (its server actor's "
-              "owner): every MoveActorAck 2697 of it reaching THIS client {} a 2697 of the horse (the rider's Path "
+              "owner): every MoveActorAck 3094 of it reaching THIS client {} a 3094 of the horse (the rider's Path "
               "world pose, parent -1, the rider's ts), only if newer than the last horse sample this client got; "
               "never to the server nor to user 2{}",
               hfl::mode_name(p.mode),

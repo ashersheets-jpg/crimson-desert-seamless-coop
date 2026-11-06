@@ -169,12 +169,12 @@ private:
 
 inline constexpr size_t kHeader = 5;  // u16 opcode | u8 slot | u16 length
 inline constexpr uint16_t kOpActorLoad = 2005;
-inline constexpr uint16_t kOpRemoveActor = 2516;
-inline constexpr uint16_t kOpGimmickFrameEvent = 3082;
-inline constexpr uint16_t kOpUpdateGimmick = 2758;
-inline constexpr uint16_t kOpGimmickBranch = 2609;
-inline constexpr uint16_t kOpStartActionAck = 2991;
-inline constexpr uint16_t kOpRemoteCatchAck = 2763;
+inline constexpr uint16_t kOpRemoveActor = 3067;
+inline constexpr uint16_t kOpGimmickFrameEvent = 2155;
+inline constexpr uint16_t kOpUpdateGimmick = 2787;
+inline constexpr uint16_t kOpGimmickBranch = 2165;
+inline constexpr uint16_t kOpStartActionAck = 2552;
+inline constexpr uint16_t kOpRemoteCatchAck = 2395;
 
 // The device's gimmick events (S25 / S27 captures, section 12.2): the hash at +4 of 3082 / 2758.
 enum class DevEvent : uint8_t { Deploy, Catch, E9278, EA55A, Release, Stow, Count };

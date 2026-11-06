@@ -28,8 +28,8 @@ namespace cdmp::session2::ged {
 using dgl::le16;
 using dgl::le32;
 
-inline constexpr uint16_t kOpCreateFromGimmickEvent = 2779;  // CreateProjectileFromGimmickEventReq: gimmick at +0
-inline constexpr uint16_t kOpCreateProjectileAck = 2250;     // CreateProjectileAck
+inline constexpr uint16_t kOpCreateFromGimmickEvent = 3154;  // CreateProjectileFromGimmickEventReq: gimmick at +0
+inline constexpr uint16_t kOpCreateProjectileAck = 2737;     // CreateProjectileAck
 // 2250 (S27, 127 bytes): +0 the owner (the gimmick of a 2779), +0x19 a hash, +0x1D the owner again, +0x21 u32 the
 // projectile's index for that owner (1, 2 for the duplicate).
 inline constexpr size_t k2250_Owner = 0x00;

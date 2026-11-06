@@ -146,25 +146,25 @@ struct Site {
 };
 inline constexpr uint8_t kReqId = 5, kTimerId = 3;
 inline constexpr Site kSites[] = {
-    {2436, 0x2A5C6CB, kReqId, "StageBranchStateReq (-> 0x2891FB0)"},
-    {2591, 0x2C4A8FC, kReqId, "UpdateStageChartEventReq (0x2C4A8A0 -> 0x2936060)"},
-    {2105, 0x2A5CA68, kReqId, "StageBranchStateDelayEndReq (-> 0x2892210)"},
-    {2704, 0x2A5D0E1, kReqId, "UpdateStageChartDelayedEventReq (-> 0x28928D0)"},
-    {2173, 0x2A5C283, kReqId, "UpdateSequencerGamePlayDataEventReq (-> 0x2891CE0)"},
-    {2276, 0x2A5B71D, kReqId, "DeleteSequencerReq (-> 0x2879320)"},
-    {2767, 0x2978E20, kReqId, "SequencerTriggerVolumeInOutReq (0x1F6C190 at 0x2978E6E)"},
-    {2138, 0x1089F284, kReqId, "SequencerStageFailReq (.xtls 0x1089F230)"},
-    {2888, 0x2A5E401, kReqId, "ChangeSequencerPivotReq (-> 0x28952F0)"},
-    {2325, 0x2A5DDF1, kReqId, "StageQuitReq (-> 0x28934F0)"},
-    {2406, 0x2A5D6B1, kReqId, "SubTimelinePauseReq (-> 0x2892FE0)"},
-    {2968, 0x2A5DA51, kReqId, "SubTimelineResumeReq (-> 0x2893260)"},
-    {3020, 0x2A5BF4D, kReqId, "SetNextBranchTypeFromAIReq (-> 0x2895DC0)"},
-    {2044, 0x1082FBE7, kTimerId, "StageBranchStateOnceTimer (.xtls 0x1082FB80 -> 0x2895820)"},
+    {2880, 0x2A5C6CB, kReqId, "StageBranchStateReq (-> 0x2891FB0)"},
+    {2839, 0x2C4A8FC, kReqId, "UpdateStageChartEventReq (0x2C4A8A0 -> 0x2936060)"},
+    {2396, 0x2A5CA68, kReqId, "StageBranchStateDelayEndReq (-> 0x2892210)"},
+    {2098, 0x2A5D0E1, kReqId, "UpdateStageChartDelayedEventReq (-> 0x28928D0)"},
+    {2752, 0x2A5C283, kReqId, "UpdateSequencerGamePlayDataEventReq (-> 0x2891CE0)"},
+    {2178, 0x2A5B71D, kReqId, "DeleteSequencerReq (-> 0x2879320)"},
+    {2620, 0x2978E20, kReqId, "SequencerTriggerVolumeInOutReq (0x1F6C190 at 0x2978E6E)"},
+    {3161, 0x1089F284, kReqId, "SequencerStageFailReq (.xtls 0x1089F230)"},
+    {2869, 0x2A5E401, kReqId, "ChangeSequencerPivotReq (-> 0x28952F0)"},
+    {2683, 0x2A5DDF1, kReqId, "StageQuitReq (-> 0x28934F0)"},
+    {3113, 0x2A5D6B1, kReqId, "SubTimelinePauseReq (-> 0x2892FE0)"},
+    {2676, 0x2A5DA51, kReqId, "SubTimelineResumeReq (-> 0x2893260)"},
+    {2783, 0x2A5BF4D, kReqId, "SetNextBranchTypeFromAIReq (-> 0x2895DC0)"},
+    {2048, 0x1082FBE7, kTimerId, "StageBranchStateOnceTimer (.xtls 0x1082FB80 -> 0x2895820)"},
     // The deferred delete (tiendas-u2.md 12.2): without it a delete of one of user 2's scenes reached the host's
     // manager and was lost (an orphan scene in user 2's manager and in the guest's M).
-    {2054, 0x10835C57, kTimerId, "DeleteSequencerOnceTimer (.xtls 0x10835BF0 -> 0x2879440, the deferred delete)"},
+    {2059, 0x10835C57, kTimerId, "DeleteSequencerOnceTimer (.xtls 0x10835BF0 -> 0x2879440, the deferred delete)"},
 };
-inline constexpr uint16_t kOpDeleteTimer = 2054;
+inline constexpr uint16_t kOpDeleteTimer = 2059;
 inline constexpr size_t kSiteCount = sizeof kSites / sizeof kSites[0];
 inline const Site* site_of(uint16_t op) {
     for (const Site& s : kSites) {
@@ -253,7 +253,7 @@ inline const char* route_out_name(RouteOut o) {
 // FFFFFFFF 00 01 00). S46: ported by hand from the other AI's branch opcion-d-tenderos (S41 P2). Before it, a 3000 was
 // read with the success layout (its interaction is the error): the Fail3000 criterion never saw a shop 3000.
 inline constexpr uint32_t kShopInteraction = 0x000F4321;
-inline constexpr uint16_t kOpPreemptionOk = 2663, kOpPreemptionFail = 3000, kOpDoStepOk = 2916, kOpResetAck = 2743,
+inline constexpr uint16_t kOpPreemptionOk = 2120, kOpPreemptionFail = 3100, kOpDoStepOk = 2794, kOpResetAck = 2369,
                           kOpNak = 1013;
 struct StepAck {
     bool ok = false;

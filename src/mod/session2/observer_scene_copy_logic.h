@@ -28,9 +28,9 @@
 
 namespace cdmp::session2::osc {
 
-inline constexpr uint16_t kOpPrepare = 2661;    // PrepareSequencerAck
-inline constexpr uint16_t kOpDelete = 2810;     // DeleteSequencerAck
-inline constexpr uint16_t kOpMoveField = 2174;  // MoveFieldAck: a new trip (the client's field changes)
+inline constexpr uint16_t kOpPrepare = 2380;    // PrepareSequencerAck
+inline constexpr uint16_t kOpDelete = 2292;     // DeleteSequencerAck
+inline constexpr uint16_t kOpMoveField = 2653;  // MoveFieldAck: a new trip (the client's field changes)
 inline constexpr size_t kPreparePrefix = 91;    // u8 kind | u32 actor | 86-byte play data (owner +0, seq +8)
 inline constexpr size_t kBindingWire = 11;
 inline constexpr size_t kDeletePayload = 17;    // u32 actor | u64 seq | u32 | u8

@@ -690,7 +690,7 @@ void on_bad_this(safetyhook::Context& ctx) noexcept {
 void on_scope_ack(safetyhook::Context& ctx) noexcept {
     try {
         g_pt[kPtScopeAck].calls.fetch_add(1);
-        note(kPtScopeAck, false, "ScopeSenderAck 2042 entry 0xCB4160 (rcx 0x{:X}) caller {}", ctx.rcx,
+        note(kPtScopeAck, false, "ScopeSenderAck 2046 entry 0xCB4160 (rcx 0x{:X}) caller {}", ctx.rcx,
              rva(peekp(ctx.rsp)));
     } catch (...) {
     }

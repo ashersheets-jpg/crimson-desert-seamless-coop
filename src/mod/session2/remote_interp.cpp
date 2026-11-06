@@ -797,7 +797,7 @@ static void conversation_check() noexcept {
 void remote_interp_on_host_packet(uint16_t opcode, std::span<const uint8_t> payload) noexcept {
     if (g_on.load(std::memory_order_relaxed) && g_guest) conversation_check();
     if (!g_combat.load(std::memory_order_relaxed)) return;
-    if (opcode == 2756) {  // MainPlayerDataStartAck: this client's character, u32 at +0 (guest.cpp, mount_sync)
+    if (opcode == 2524) {  // MainPlayerDataStartAck: this client's character, u32 at +0 (guest.cpp, mount_sync)
         if (payload.size() >= 4) {
             const uint32_t key = cfl::rd32(payload, 0);
             if (cfl::is_a(key)) g_own_char.store(key, std::memory_order_relaxed);

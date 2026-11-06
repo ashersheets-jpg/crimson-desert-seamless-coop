@@ -529,8 +529,8 @@ struct Caller {
     bool server;
 };
 inline constexpr Caller kCallers[] = {
-    {0x2BFFDCA, "2789 BuyStockFromStoreReq (0x2BFFB00)", true},
-    {0x2C04B05, "2366 SellItemToItemStoreReq (0x2C04880)", true},
+    {0x2BFFDCA, "2531 BuyStockFromStoreReq (0x2BFFB00)", true},
+    {0x2C04B05, "3109 SellItemToItemStoreReq (0x2C04880)", true},
     {0x2C004A5, "store op 0x2C002D0", true},
     {0x2C064BF, "store op 0x2C06340", true},
     {0x2C08291, "store op 0x2C080A0", true},

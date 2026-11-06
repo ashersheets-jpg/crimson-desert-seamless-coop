@@ -271,7 +271,7 @@ DWORD WINAPI guest_thread(LPVOID) {
 void fast_travel_host_configure(const std::string& user2_fast_travel) {
     const ftl::ParsedMode m = ftl::parse_mode(user2_fast_travel);
     g_host_mode.store(static_cast<uint8_t>(m.mode));
-    log::info("FastTravel F2 (host): user2_fast_travel={}: user 2's ReloadStageStartReq 2283 in the host's field is {}",
+    log::info("FastTravel F2 (host): user2_fast_travel={}: user 2's ReloadStageStartReq 3074 in the host's field is {}",
               ftl::mode_name(m.mode),
               m.mode == ftl::Mode::On
                   ? "handed to the server only while F3 is live and ExecuteTroc's subject recognises user 2's "
@@ -310,7 +310,7 @@ FastTravelVerdict fast_travel_host_judge(uint16_t opcode, std::span<const uint8_
                         p->field_info_key, fmt_key(p->target_actor), p->a, p->pos[0], p->pos[1], p->pos[2], p->flag)
           : std::format("{} bytes (not the 53 of build 2976)", payload.size());
     v.line = std::format(
-        "FastTravel F2: user 2's ReloadStageStartReq 2283 ({}) | user 2 (character {}) is in {} (owner {}, host {}, "
+        "FastTravel F2: user 2's ReloadStageStartReq 3074 ({}) | user 2 (character {}) is in {} (owner {}, host {}, "
         "user 2 {}) | ExecuteTroc's subject {} | its own sequencer manager {} | F3 {} ({}) -> {}",
         dest, fmt_key(r.char_key), ftl::where_name(r.where), fmt_key(r.owner), fmt_key(r.host_key), fmt_key(r.user2_key),
         r.subject_ok ? "recognises it" : "would NOT recognise it", r.mgr_ok ? "readable" : ftl::mgr_fail_name(r.why),

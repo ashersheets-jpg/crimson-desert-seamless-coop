@@ -130,14 +130,14 @@ troc::PacketQueue g_outgoing(kMaxOutgoingBytes);
 // The save slot the host's own client loaded (its LoginCharacterToFieldServerReq):
 // the E3 script loads the same one for user 2. -1 = not seen yet.
 std::atomic<int64_t> g_host_slot{-1};
-constexpr uint16_t kOpLoginCharacterToFieldServerReq = 3093;
-constexpr uint16_t kOpLoginUserToFieldServerReq = 2490;
+constexpr uint16_t kOpLoginCharacterToFieldServerReq = 2733;
+constexpr uint16_t kOpLoginUserToFieldServerReq = 2535;
 
 // E4 mirror. Opcodes of build 2976 (checked against the handler table at install).
-constexpr uint16_t kOpMoveActorReq = 2556, kOpStartActionReq = 2223, kOpRotateActorReq = 2828;
-constexpr uint16_t kOpMainPlayerDataStartAck = 2756;
-constexpr uint16_t kOpMainUserDataStartAck = 2646;  // u32 user key at +0
-constexpr uint16_t kOpMoveFieldAck = 2174;          // u8 | u32 actor | u32 | u32 field owner @9 | 0x30 * n
+constexpr uint16_t kOpMoveActorReq = 2833, kOpStartActionReq = 2202, kOpRotateActorReq = 2852;
+constexpr uint16_t kOpMainPlayerDataStartAck = 2524;
+constexpr uint16_t kOpMainUserDataStartAck = 3048;  // u32 user key at +0
+constexpr uint16_t kOpMoveFieldAck = 2653;          // u8 | u32 actor | u32 | u32 field owner @9 | 0x30 * n
 std::atomic<uint32_t> g_user2_userkey{0};           // from user 2's MainUserDataStartAck
 std::atomic<uint32_t> g_host_userkey{0};            // the host's user key, read once (session 1's user +0x60)
 std::atomic<uint64_t> g_owner_rewrites{0}, g_owner_unexpected{0};
@@ -179,7 +179,7 @@ MovePhaseTracker g_phase;  // under g_phase_mu
 MoveCloseSequence g_close;
 uintptr_t g_close_session = 0;
 constexpr uint16_t kOpNak = 1013;
-constexpr uint16_t kOpRemoveActorAck2516 = 2516;  // RemoveActorAck (world_anchor's probe)
+constexpr uint16_t kOpRemoveActorAck2516 = 3067;  // RemoveActorAck (world_anchor's probe)
 std::atomic<uint64_t> g_nak{0}, g_nak_after_logout{0};  // Nak 1013 written to session 2 (this epoch)
 
 MovePhaseTracker phase_snapshot() {
@@ -537,7 +537,7 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
             alias = tpl::alias_owner(p, troc::kHeaderSize, v->opcode, me, move || travel_loading_owner_alias(), &owner_orig);
             owner_copy = alias == tpl::AliasOut::Rewrite ? me : owner_orig;
             if (move) milestone_value = owner_orig;  // 0 unless the known layout (as before)
-            const char* what = move ? "MoveFieldAck 2174" : "LoadingFieldDataAck 2643";
+            const char* what = move ? "MoveFieldAck 2653" : "LoadingFieldDataAck 2399";
             if (alias == tpl::AliasOut::Rewrite) {
                 if ((move ? g_owner_rewrites : g_load_owner_rewrites).fetch_add(1) < 8) {
                     log::info("Session2: user 2's {} names the field owner 0x{:08X} (the host); user 2's copy names user "
@@ -551,7 +551,7 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
                               what, n);
                 }
             } else if (!move && g_load_owner_other.fetch_add(1) < 4) {
-                log::info("Session2: user 2's LoadingFieldDataAck 2643 owner 0x{:08X}: {}", owner_orig,
+                log::info("Session2: user 2's LoadingFieldDataAck 2399 owner 0x{:08X}: {}", owner_orig,
                           tpl::alias_name(alias));
             }
         }
@@ -629,7 +629,7 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
         // P8 S15/S16 (child_hold.h, observer_hold_family): what user 2 is given (2005), loses (2516) or starts over
         // with (2174), in queue order, only once really queued (review 6); the orphans among its records are
         // counted. None of these opcodes is ever kept above (p is intact).
-        if (pushed && (opcode == 2005 || opcode == 2516 || opcode == 2174) && self == live_session2()) {
+        if (pushed && (opcode == 2005 || opcode == 3067 || opcode == 2653) && self == live_session2()) {
             child_hold_on_user2_out(opcode, v->payload);
         }
         // P8 S15 (travel_probe.h): the Acks queued for user 2 after its 2283 / 2437 (bounded, read only).
@@ -664,7 +664,7 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
         user2_shops_on_out(opcode, v->payload, self == live_session2(), pushed);
         // P8 option U, U-1 (user2_stages.h): the 2322 / 2335 really queued for user 2 (abort criterion, counts); the
         // 2005s for U-e's controller check (user2_npc_control).
-        if (pushed && (opcode == 2322 || opcode == 2335 || opcode == 2005)) {
+        if (pushed && (opcode == 2384 || opcode == 2989 || opcode == 2005)) {
             user2_stages_on_out(opcode, v->payload, self == live_session2());
         }
         // P8 B step 2 (owner_fanout.h): user 2's observer trip, by the same rule (counts only).
@@ -822,7 +822,7 @@ void on_server_recv(safetyhook::Context& ctx) {
         }
     }
     // P6, second layer (log only, decision D-5): the server is asked to save.
-    if (pkt && peek(pkt, op) && (op == 3037 || op == 2910)) g_n.save_reqs.fetch_add(1, std::memory_order_relaxed);
+    if (pkt && peek(pkt, op) && (op == 3134 || op == 2122)) g_n.save_reqs.fetch_add(1, std::memory_order_relaxed);
     // E4: copy the host player's movement for user 2 (mirror_delay_ms later).
     if (g_opt.mirror_host && (op == kOpMoveActorReq || op == kOpStartActionReq || op == kOpRotateActorReq) &&
         ctx.r8 != s2) {
@@ -1674,13 +1674,13 @@ bool close_open_move() {
     const bool ok = o == inj::Outcome::Queued;
     g_close.injected(ok, now, t);
     if (!ok) {
-        log::warn("Session2: user 2's logout ({}): MoveFieldCompleteReq 2549 COULD NOT be queued for the server ({}); "
+        log::warn("Session2: user 2's logout ({}): MoveFieldCompleteReq 2471 COULD NOT be queued for the server ({}); "
                   "the 2001 as before",
                   g_logout_why, inj::outcome_name(o));
         return true;
     }
     g_n.move_close_injected.fetch_add(1);
-    log::info("Session2: user 2's logout ({}): MoveFieldCompleteReq 2549 00 handed to the server (epoch {}, its "
+    log::info("Session2: user 2's logout ({}): MoveFieldCompleteReq 2471 00 handed to the server (epoch {}, its "
               "own lane and tag); the 2001 waits for its MoveFieldCompleteAck 2144",
               g_logout_why, g_want_epoch.load());
     return false;
@@ -1705,7 +1705,7 @@ bool final_save_step() {
             g_final.injected(queued, now, guest_save_exports());
             if (queued) {
                 guest_save_tunnel_note_final_injected();
-                log::info("Session2: user 2's logout ({}): its own save is active: SaveToFileCurrentPlayerReq 2910 (slot 100, 'Co-op') handed to "
+                log::info("Session2: user 2's logout ({}): its own save is active: SaveToFileCurrentPlayerReq 2122 (slot 100, 'Co-op') handed to "
                           "the server FIRST; the 2001 waits for the export of slot 204 (15 s at most)",
                           g_logout_why);
                 return false;
@@ -2170,7 +2170,7 @@ std::string server_describe() {
         s += std::format(" | MoveFieldAck owner -> user 2: {} (unknown layout {})", r, g_owner_unexpected.load());
     }
     if (const uint64_t r = g_load_owner_rewrites.load(); r || g_load_owner_unexpected.load() || g_load_owner_other.load()) {
-        s += std::format(" | LoadingFieldDataAck 2643 owner -> user 2: {} (unknown layout {}, left as written {})", r,
+        s += std::format(" | LoadingFieldDataAck 2399 owner -> user 2: {} (unknown layout {}, left as written {})", r,
                          g_load_owner_unexpected.load(), g_load_owner_other.load());
     }
     // The opcodes for user 2 that carry the host's user key, most frequent first (top 8).

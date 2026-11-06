@@ -159,8 +159,8 @@ constexpr uintptr_t kServerNetSlot = 0x6D69680;   // [exe+...] = g_ServerNet (0x
 constexpr uintptr_t kPeriodSlot = 0x6D06098;      // i32: the 2043 period / 10 ms (0x287F139)
 constexpr uintptr_t kTroc2043Slot = 0x6FA3ED8;    // the periodic 2043's Troc (0x287F171; set by the host's 0x287EF60)
 constexpr uintptr_t kZeroCell = 0x5545F50;        // the 8-byte zero cell copied into the payload (0x287F0DB)
-constexpr uint16_t kOp2322 = 2322, kOp2335 = 2335, kOp2126 = 2126, kOp2958 = 2958, kOp2909 = 2909;
-constexpr uint16_t kOp2283 = 2283, kOp2362 = 2362, kOp2437 = 2437, kOp2001 = 2001;
+constexpr uint16_t kOp2322 = 2384, kOp2335 = 2989, kOp2126 = 2796, kOp2958 = 2616, kOp2909 = 2297;
+constexpr uint16_t kOp2283 = 3074, kOp2362 = 2390, kOp2437 = 2294, kOp2001 = 2001;
 
 // U-c2 (the 2e38ce5 run, probe H: its id list [+0x150] stayed 0 while the host's held 52065): what the native
 // preparation 0x287EF60 builds right after its arm 0x287F450 (0x287F06F), and the minimal arm skipped:
@@ -7307,7 +7307,7 @@ void user2_stages_start(const std::string& mode, const std::string& timer_route,
         }
         g_road_mode.store(static_cast<uint8_t>(rm));
         if (rm != npcact::Mode::Off) {
-            log::info("User2Road S38: user2_road_control={} (pedido {}) | viajeros del AutoSpawnRoadReq 2550 del "
+            log::info("User2Road S38: user2_road_control={} (pedido {}) | viajeros del AutoSpawnRoadReq 2530 del "
                       "invitado: procedencia = descriptor ICreateServerActorDesc exe+0x{:X} con +0x3CD=1, +0x3C8 = su "
                       "personaje, +0x3B8 = su puntero, nacido DENTRO de su Troc 2550; unidad = raíz + subárbol _Rider "
                       "exe+0x{:X} del mismo solicitante (máx. {} registros), tipos 3/5/6, nunca hijos de usuario (+0xA0, "
@@ -7978,7 +7978,7 @@ void user2_stages_server_packet(uint16_t opcode, bool from_user2, uintptr_t pack
     if (npc_probes() && packet && size >= 9) {
         uint32_t key = 0;
         if (rd(packet + 5, key)) npc_observe_req(opcode, key, true);
-        if (g_road_probe.load() && opcode == 2550) {
+        if (g_road_probe.load() && opcode == 2530) {
             // 2550 no empieza por una clave: u8 + f32 y entradas de24bytes (p8-s14-viajeros §1.1).
             for (uint16_t at = 10; static_cast<uint32_t>(at) + 24 <= size; at = static_cast<uint16_t>(at + 24)) {
                 uint8_t entry[24] = {};
@@ -8020,8 +8020,8 @@ void user2_stages_server_packet(uint16_t opcode, bool from_user2, uintptr_t pack
 
 static uint16_t npc_req_bit(uint16_t op) noexcept {
     switch (op) {
-        case 2223: return 1; case 2734: return 2; case 2556: return 4;
-        case 2405: return 8; case 2291: return 16; case 2828: return 32;
+        case 2202: return 1; case 2394: return 2; case 2833: return 4;
+        case 2913: return 8; case 2606: return 16; case 2852: return 32;
         default: return 0;
     }
 }

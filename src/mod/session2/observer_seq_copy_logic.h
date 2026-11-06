@@ -57,33 +57,33 @@
 
 namespace cdmp::session2::osq {
 
-inline constexpr uint16_t kOpPrepare = 2661;     // PrepareSequencerAck
-inline constexpr uint16_t kOpBranch = 2981;      // StageBranchStateAck
-inline constexpr uint16_t kOpDelete = 2810;      // DeleteSequencerAck
-inline constexpr uint16_t kOpMilestone = 2322;   // PlayAllPreLoadSequencerAck
-inline constexpr uint16_t kOpMoveField = 2174;   // MoveFieldAck
+inline constexpr uint16_t kOpPrepare = 2380;     // PrepareSequencerAck
+inline constexpr uint16_t kOpBranch = 2920;      // StageBranchStateAck
+inline constexpr uint16_t kOpDelete = 2292;      // DeleteSequencerAck
+inline constexpr uint16_t kOpMilestone = 2384;   // PlayAllPreLoadSequencerAck
+inline constexpr uint16_t kOpMoveField = 2653;   // MoveFieldAck
 inline constexpr uint16_t kOpAnnounce = 2005;    // ActorLoadDataAck
-inline constexpr uint16_t kOpRemove = 2516;      // RemoveActorAck: u8 | u32 | u8 reason | n x u32 key
-inline constexpr uint16_t kOpComplete = 2144;    // MoveFieldCompleteAck
-inline constexpr uint16_t kOpLoaded = 2762;      // LoadingCompleteAck (the end of the 2322's hold, review M2)
+inline constexpr uint16_t kOpRemove = 3067;      // RemoveActorAck: u8 | u32 | u8 reason | n x u32 key
+inline constexpr uint16_t kOpComplete = 2340;    // MoveFieldCompleteAck
+inline constexpr uint16_t kOpLoaded = 2190;      // LoadingCompleteAck (the end of the 2322's hold, review M2)
 // C>S of user 2 the filter looks at.
-inline constexpr uint16_t kOpTriggerVolume = 2767;  // u64 seq @0
-inline constexpr uint16_t kOpChartEvent = 2591;     // u64 seq @0
-inline constexpr uint16_t kOpBranchReq = 2436;      // u64 seq @0
-inline constexpr uint16_t kOpStageFail = 2138;      // u64 seq @0
+inline constexpr uint16_t kOpTriggerVolume = 2620;  // u64 seq @0
+inline constexpr uint16_t kOpChartEvent = 2839;     // u64 seq @0
+inline constexpr uint16_t kOpBranchReq = 2880;      // u64 seq @0
+inline constexpr uint16_t kOpStageFail = 3161;      // u64 seq @0
 // ReloadStageStartReq: NOT a sequencer Req (P8 session 15, p8-impl-viaje-rapido.md §5). Its 53 bytes (S14 capture,
 // the server's reader 0x2A5F580) are u32 0 | u32 FieldInfoKey | u32 target actor | position | rotation | scale | u8:
 // "u64 @0" would be FieldInfoKey << 32, never a sequencer id. Not filtered here; fast_travel_logic.h (F2/F3) owns it.
-inline constexpr uint16_t kOpReloadStage = 2283;
-inline constexpr uint16_t kOpGamePlayData = 2173;   // u64 seq @0, or u32 1 | u32 actor (never a sequencer id)
-inline constexpr uint16_t kOpCandidatePos = 2100;   // SyncStageCandidatePostionReq: positions, no scene id
+inline constexpr uint16_t kOpReloadStage = 3074;
+inline constexpr uint16_t kOpGamePlayData = 2752;   // u64 seq @0, or u32 1 | u32 actor (never a sequencer id)
+inline constexpr uint16_t kOpCandidatePos = 3117;   // SyncStageCandidatePostionReq: positions, no scene id
 // P8 guest_seq_play (pendientes/p8-impl-escenas-play.md §5): the guest's tick / live update of the host
 // character's manager X can send these two about the host's sequencers (p8-xtls-lectura.md §6 R1).
-inline constexpr uint16_t kOpDeleteSeqReq = 2276;   // DeleteSequencerReq: u64 seq @0 | u8 code (0xC02CB0/0xC02D1E [V])
+inline constexpr uint16_t kOpDeleteSeqReq = 2178;   // DeleteSequencerReq: u64 seq @0 | u8 code (0xC02CB0/0xC02D1E [V])
 // ChangeSequencerPivotReq: u64 seq @0 | position / orientation (24 bytes; session 9 guest capture, e.g.
 // "63 01 00 00 00 00 00 00 | 88 73 27 C6 ..." = sequencer 0x163, the host's).
-inline constexpr uint16_t kOpPivotReq = 2888;
-inline constexpr uint16_t kOpDelayEndReq = 2105;    // StageBranchStateDelayEndReq: one u64 @0, the sequencer id [V]:
+inline constexpr uint16_t kOpPivotReq = 2869;
+inline constexpr uint16_t kOpDelayEndReq = 2396;    // StageBranchStateDelayEndReq: one u64 @0, the sequencer id [V]:
                                                     // the server's handler 0x2A5C920 reads 8 bytes (0x2A5C9BC), the
                                                     // whole payload (0x2A5C9F6), and 0x2892210 looks them up with
                                                     // 0x1F6C190(manager, &out, id) (0x289231B), the lookup that the
@@ -949,14 +949,14 @@ private:
 //            (take_frame sees it before the host's client reads it: one emission). A 2126 of a key whose copy
 //            has not gone cancels it; a 2958/2909 of a pending key goes with that copy, in order.
 
-inline constexpr uint16_t kOpSchedCreate = 2335;  // CreateNPCScheduleStageAck (ToNear)
-inline constexpr uint16_t kOpSchedDelete = 2126;  // DeleteNPCScheduleStageAck (ToTarget the owner; one ToNear site)
-inline constexpr uint16_t kOpSchedClosed = 2411;  // ScheduleStageClosedAck (ToNear) [E: layout, no capture]
-inline constexpr uint16_t kOpSchedChange = 2958;  // ChangeNPCScheduleMiseensceneAck (ToTarget)
-inline constexpr uint16_t kOpSchedEvade = 2909;   // DeactivateMiseensceneScheduleEvadeObstacleAck (ToTarget)
+inline constexpr uint16_t kOpSchedCreate = 2989;  // CreateNPCScheduleStageAck (ToNear)
+inline constexpr uint16_t kOpSchedDelete = 2796;  // DeleteNPCScheduleStageAck (ToTarget the owner; one ToNear site)
+inline constexpr uint16_t kOpSchedClosed = 2551;  // ScheduleStageClosedAck (ToNear) [E: layout, no capture]
+inline constexpr uint16_t kOpSchedChange = 2616;  // ChangeNPCScheduleMiseensceneAck (ToTarget)
+inline constexpr uint16_t kOpSchedEvade = 2297;   // DeactivateMiseensceneScheduleEvadeObstacleAck (ToTarget)
 // User 2's C>S MoveFieldCompleteReq: its client finished loading the field; the server answers with the field's
 // actors (2005) and the 2144. Session 11 G1: 2549 t46.07, first NPC 2005 t46.12, 2144 t46.94 (after 545 records).
-inline constexpr uint16_t kOpMoveFieldCompleteReq = 2549;
+inline constexpr uint16_t kOpMoveFieldCompleteReq = 2471;
 
 // Payload layouts (build 1.0.0.2976; scene_diag_logic.h, and the session 11 host capture H1 [V]):
 //   2335 u8 kind | u32 actor @1 | u32 @5 | u32 resource @9 | u8 @13 | u64 key @14 | ...   (94..302 B)

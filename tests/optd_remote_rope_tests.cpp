@@ -369,7 +369,7 @@ void test_payload() {
     buf[3] = 7;
     CHECK(!rrp::parse_2471(12, buf, sizeof buf, p));  // not 6 bytes
     CHECK(!rrp::parse_2471(11, buf, 10, p));          // short buffer
-    static_assert(rrp::kOp2471 == 0x09A7);
+    static_assert(rrp::kOp2471 == 2464);  // ReleaseRemoteCatchResultAck on 1.0.0.3549 (2976: 0x09A7 = 2471)
 }
 
 void test_math() {

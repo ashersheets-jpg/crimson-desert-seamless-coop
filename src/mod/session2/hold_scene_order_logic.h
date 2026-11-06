@@ -50,13 +50,13 @@ inline Key parse_key(std::string_view v) {
     return k;
 }
 
-inline constexpr uint16_t kOpPrepare = 2661, kOpBranch = 2981, kOpOnBranch = 2524, kOpDelete = 2810,
-                          kOpAnnounce = 2005, kOpRemove = 2516, kOpMoveField = 2174, kOpLoadingField = 2643,
-                          kOpBoundary2756 = 2756,
+inline constexpr uint16_t kOpPrepare = 2380, kOpBranch = 2920, kOpOnBranch = 2436, kOpDelete = 2292,
+                          kOpAnnounce = 2005, kOpRemove = 3067, kOpMoveField = 2653, kOpLoadingField = 2399,
+                          kOpBoundary2756 = 2524,
                           // S46 phase 3: UpdateStageChartEventAck (ToNear, 0x2936BF3): 22 B, u8 kind | u32 actor @1 |
                           // u64 sequencer id @5 | ... [V p2b captures: guest t=2538.134 ids 0x115..0x117, the same ids
                           // as the 2981s @5 and the 2661s @9 of those scenes].
-                          kOpChartEvent = 2111;
+                          kOpChartEvent = 2187;
 
 inline uint32_t le32(const uint8_t* p) {
     uint32_t v = 0;

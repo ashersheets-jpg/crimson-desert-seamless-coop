@@ -71,9 +71,9 @@ inline const char* mode_name(Mode m) {
 
 inline constexpr size_t kHeader = 5;  // u16 opcode | u8 slot | u16 payload length
 inline constexpr uint16_t kOpActorLoad = 2005;           // ActorLoadDataAck: [u16 len][record] ...
-inline constexpr uint16_t kOpMainPlayerDataStart = 2756;  // u32 at +0: this client's own character
-inline constexpr uint16_t kOpSceneUnspawnReq = 2221;     // SceneLevelOnDemandGimmickUnspawnReq: u8 4 | u32 n | n keys
-inline constexpr uint16_t kOpSceneSpawnReq = 2928;       // SceneLevelOnDemandGimmickSpawnReq
+inline constexpr uint16_t kOpMainPlayerDataStart = 2524;  // u32 at +0: this client's own character
+inline constexpr uint16_t kOpSceneUnspawnReq = 2596;     // SceneLevelOnDemandGimmickUnspawnReq: u8 4 | u32 n | n keys
+inline constexpr uint16_t kOpSceneSpawnReq = 2976;       // SceneLevelOnDemandGimmickSpawnReq
 // The state requests keyed by the gimmick at +0 that the guest withholds for its local-only keys
 // (gimmicks-dueno.md section 6.1, from the server's handlers in build 2976):
 //   3082 GimmickExecuteFrameEventReq   0x2AC1270: ignored unless the requester controls the gimmick
@@ -87,7 +87,7 @@ inline constexpr uint16_t kOpSceneSpawnReq = 2928;       // SceneLevelOnDemandGi
 //                                      so that it keeps coming from the controller only
 // So for 3082 / 2758 / 2609 withholding changes nothing on the server; for 2774 / 3089 / 2779 / 2826 / 2618 it keeps the
 // host (the controller) the only writer.
-inline constexpr uint16_t kWithheldOps[] = {3082, 2758, 2609, 2774, 3089, 2779, 2826, 2618};
+inline constexpr uint16_t kWithheldOps[] = {2155, 2787, 2165, 2251, 2381, 3154, 2881, 2849};
 inline constexpr size_t kWithheldOpCount = sizeof(kWithheldOps) / sizeof(kWithheldOps[0]);
 inline int withheld_op_index(uint16_t op) {
     for (size_t i = 0; i < kWithheldOpCount; ++i) {
@@ -672,7 +672,7 @@ inline const char* age_bucket_name(size_t b) {
 // The requests whose +0 key counts as "this user's client still has the gimmick" for the 2221 probe.
 inline bool touch_op(uint16_t op) {
     switch (op) {
-        case 2556: case 2828: case 3067: case 2758: case 3082: case 2609: case 2774: case 3089: return true;
+        case 2833: case 2852: case 2539: case 2787: case 2155: case 2165: case 2251: case 2381: return true;
         default: return false;
     }
 }
@@ -691,7 +691,7 @@ inline size_t unspawn_keys(std::span<const uint8_t> pl, uint32_t* out, size_t ma
     return k;
 }
 // RemoveActorAck 2516: u8 4 | u32 | u8 reason | u32 key (+6), more keys after it in a longer one (S27: 10 bytes).
-inline constexpr uint16_t kOpRemoveActor = 2516;
+inline constexpr uint16_t kOpRemoveActor = 3067;
 inline size_t removed_keys(std::span<const uint8_t> pl, uint32_t* out, size_t max_keys) {
     size_t k = 0;
     for (size_t i = 6; i + 4 <= pl.size() && k < max_keys; i += 4) out[k++] = le32(&pl[i]);

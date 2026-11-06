@@ -209,16 +209,16 @@ inline uint32_t le32(const uint8_t* p) {
 }
 inline uint64_t le64(const uint8_t* p) { return static_cast<uint64_t>(le32(p)) | static_cast<uint64_t>(le32(p + 4)) << 32; }
 
-inline constexpr uint16_t kOpPreemptionReq = 2671;   // InteractionPreemptionStepReq: u32 requester | u32 NPC | u32 interaction | ...
-inline constexpr uint16_t kOpDoStepReq = 2720;       // InteractionDoStepReq: u32 requester | u32 NPC | u32 interaction | u32
-inline constexpr uint16_t kOpBranchReq = 2436;       // StageBranchStateReq: u64 sequencer | ... (the branch after it)
-inline constexpr uint16_t kOpChartEvent = 2591;      // StageChart event Req: u64 sequencer @0
-inline constexpr uint16_t kOpPreemptionOk = 2663;    // ...SuccessAck: u32 requester | u32 requester | u32 NPC | u32 interaction
-inline constexpr uint16_t kOpPreemptionFail = 3000;  // ...FailAck
-inline constexpr uint16_t kOpDoStepOk = 2916;        // InteractionDoStepSuccessAck
-inline constexpr uint16_t kOpDoInteraction = 2525;   // the interaction ran
-inline constexpr uint16_t kOpBranchAck = 2981;       // StageBranchStateAck: u8 kind | u32 actor | u64 seq | u32 state
-inline constexpr uint16_t kOpOnBranchEvent = 2524;   // StageOnBranchEventAck
+inline constexpr uint16_t kOpPreemptionReq = 3008;   // InteractionPreemptionStepReq: u32 requester | u32 NPC | u32 interaction | ...
+inline constexpr uint16_t kOpDoStepReq = 3073;       // InteractionDoStepReq: u32 requester | u32 NPC | u32 interaction | u32
+inline constexpr uint16_t kOpBranchReq = 2880;       // StageBranchStateReq: u64 sequencer | ... (the branch after it)
+inline constexpr uint16_t kOpChartEvent = 2839;      // StageChart event Req: u64 sequencer @0
+inline constexpr uint16_t kOpPreemptionOk = 2120;    // ...SuccessAck: u32 requester | u32 requester | u32 NPC | u32 interaction
+inline constexpr uint16_t kOpPreemptionFail = 3100;  // ...FailAck
+inline constexpr uint16_t kOpDoStepOk = 2794;        // InteractionDoStepSuccessAck
+inline constexpr uint16_t kOpDoInteraction = 2980;   // the interaction ran
+inline constexpr uint16_t kOpBranchAck = 2920;       // StageBranchStateAck: u8 kind | u32 actor | u64 seq | u32 state
+inline constexpr uint16_t kOpOnBranchEvent = 2436;   // StageOnBranchEventAck
 
 struct Interaction {
     bool ok = false;

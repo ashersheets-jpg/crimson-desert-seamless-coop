@@ -26,8 +26,8 @@
 namespace cdmp::session2::fam {
 
 inline constexpr uint16_t kOpAnnounce = 2005;  // ActorLoadDataAck
-inline constexpr uint16_t kOpRemove = 2516;    // RemoveActorAck: u8 | u32 | u8 reason | n x u32 key (keys at +6)
-inline constexpr uint16_t kOpMoveField = 2174;  // MoveFieldAck: a field change (the client starts empty)
+inline constexpr uint16_t kOpRemove = 3067;    // RemoveActorAck: u8 | u32 | u8 reason | n x u32 key (keys at +6)
+inline constexpr uint16_t kOpMoveField = 2653;  // MoveFieldAck: a field change (the client starts empty)
 
 inline uint32_t le32(const uint8_t* p) {
     uint32_t v = 0;

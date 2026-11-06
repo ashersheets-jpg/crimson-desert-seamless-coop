@@ -94,11 +94,11 @@ inline constexpr uint32_t kRespawnVf40Ret = 0x2B03AA7, kTraceVf40Ret = 0x2C4A0AD
 inline constexpr uint32_t kQuestEventVf40Ret = 0x290DC0B, kMissionUiVf40Ret = 0x2A49183,
                           kMissionAlarmVf40Ret = 0x2A4A03B, kChallengeDiscoverVf40Ret = 0x104C4B3D,
                           kChallengeTimerVf40Ret = 0x2C3409D, kChangeCharacterVf40Ret = 0x2A4A32B;
-inline constexpr uint16_t kOpTraceMission = 2372, kOpMissionTrigger = 2112, kOpMissionUiState = 2477,
-                          kOpMissionNewAlarm = 2354, kOpChangePlayable = 2369;
+inline constexpr uint16_t kOpTraceMission = 2462, kOpMissionTrigger = 2899, kOpMissionUiState = 2553,
+                          kOpMissionNewAlarm = 3096, kOpChangePlayable = 2758;
 // Measured only at the ingress (the open decision about the guest's dialog choices, politica-misiones.md).
-inline constexpr uint16_t kOpQuestDialogEnd = 2342, kOpSetQuestDialog = 2857, kOpStageBranchState = 2436,
-                          kOpUpdateStageChartEvent = 2591;
+inline constexpr uint16_t kOpQuestDialogEnd = 2223, kOpSetQuestDialog = 2963, kOpStageBranchState = 2880,
+                          kOpUpdateStageChartEvent = 2839;
 
 enum class PolicyCaller : uint8_t {
     None,
@@ -260,7 +260,7 @@ inline EventActor classify_event_actor(uint32_t key, uint32_t user2_char, uint32
     return EventActor::Other;
 }
 // The host client's quest Acks the probe counts (sniffer, S>C).
-inline constexpr uint16_t kAckHostQuest[] = {3009, 3088, 2738, 2346};
+inline constexpr uint16_t kAckHostQuest[] = {2360, 3035, 2485, 2459};
 inline int host_quest_ack_index(uint16_t op) {
     for (int i = 0; i < 4; ++i) {
         if (kAckHostQuest[i] == op) return i;

@@ -56,7 +56,7 @@ uint64_t g_epoch = 0, g_full = 0, g_reads_bad = 0, g_read_fail = 0, g_budget_hit
 uint64_t g_handed_loads = 0, g_handed_old = 0, g_handed_other = 0, g_repeat_loads = 0, g_status_quiet = 0;
 size_t g_cursor = 0;
 uint64_t g_last_summary = 0;
-constexpr uint16_t kOps[] = {2223,2556,2734,2405,2291,2828,2697,2991};
+constexpr uint16_t kOps[] = {2202,2833,2394,2913,2606,2852,3094,2552};
 int op_index(uint16_t op) { for (int i = 0; i < 8; ++i) if (kOps[i] == op) return i; return -1; }
 const char* side() { return g_guest ? "invitado" : "anfitrion"; }
 const char* phase_name(uint16_t p) {
@@ -90,13 +90,13 @@ void packet(uint16_t op, std::span<const uint8_t> p, uint64_t epoch, uint64_t t,
             }
             o += n + 2;
         }
-    } else if (incoming && op == 2516 && p.size() >= 6) {
+    } else if (incoming && op == 3067 && p.size() >= 6) {
         for (size_t o = 6; o + 4 <= p.size(); o += 4) {
             const uint32_t key = npcp::u32(p, o);
             if (!npcp::npc(key)) continue;
             p8p::Event e; e.kind = Remove; e.flags = phase; e.v[1] = key; e.v[2] = p[5]; push(e, epoch, t, queued_us);
         }
-    } else if (incoming && op == 2174 && phase != Handed) {
+    } else if (incoming && op == 2653 && phase != Handed) {
         p8p::Event e; e.kind = Reset; push(e, epoch, t, queued_us);
     } else if (phase != Handed) {
         npcp::Motion m;

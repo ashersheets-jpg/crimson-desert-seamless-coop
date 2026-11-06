@@ -59,9 +59,9 @@ using u2f::Mode;
 using u2f::mode_name;
 using u2f::parse_mode;
 
-inline constexpr uint16_t kOpMoveActorAck = 2697;
-inline constexpr uint16_t kOpStartActionAck = 2991;
-inline constexpr uint16_t kOpAttackTargetAck = 2922;  // PostProcessAttackResult_AttackTargetAck
+inline constexpr uint16_t kOpMoveActorAck = 3094;
+inline constexpr uint16_t kOpStartActionAck = 2552;
+inline constexpr uint16_t kOpAttackTargetAck = 2791;  // PostProcessAttackResult_AttackTargetAck
 inline constexpr size_t kHeader = 5;
 inline constexpr size_t kMoveAck = 235;
 inline constexpr size_t kStartAck = 725;
@@ -70,8 +70,8 @@ inline constexpr size_t kStartParent = 0x117, kStartTs = 0x160, kStartTarget = 0
 inline constexpr size_t kAttackMin = 8;
 // Liveness (review 2026-10-10) [V layouts, session 9 G1]: NotifyHandleDeadAck 2530 (19 B, +0x00 the dead actor,
 // +0x04 the killer); RemoveActorAck 2516 (10 B, `04 00 00 00 00 xx` then the key at +0x06; 8342 of 8342).
-inline constexpr uint16_t kOpNotifyHandleDeadAck = 2530;
-inline constexpr uint16_t kOpRemoveActorAck = 2516;
+inline constexpr uint16_t kOpNotifyHandleDeadAck = 2985;
+inline constexpr uint16_t kOpRemoveActorAck = 3067;
 inline constexpr size_t kDeadMin = 4, kRemoveSize = 10, kRemoveKey = 6;
 
 inline constexpr uint64_t kEngageMs = 8000;

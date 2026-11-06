@@ -26,9 +26,9 @@ namespace cdmp::session2::grw {
 
 inline constexpr int kStateIdle = 0x18;   // in the field, no load running
 inline constexpr int kStateWait = 0x12;   // the wait list (0x779E8B..0x779F25)
-inline constexpr uint16_t kOpMoveFieldAck = 2174, kOpReloadPos = 2643, kOpPostAck = 3066;
+inline constexpr uint16_t kOpMoveFieldAck = 2653, kOpReloadPos = 2399, kOpPostAck = 3029;
 
-inline constexpr uint16_t kOpTravelReq = 2283;  // the client's fast-travel / reload request (C>S)
+inline constexpr uint16_t kOpTravelReq = 3074;  // the client's fast-travel / reload request (C>S)
 // A trip begun by a 2283 whose state never left 0x18 within this long is stale: the real exit begins a new one.
 inline constexpr uint64_t kStaleBeginUs = 10'000'000;
 
