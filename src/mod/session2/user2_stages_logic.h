@@ -87,7 +87,7 @@ inline constexpr uint32_t kActor_Key = 0x60, kActor_User = 0xA0, kUser_Key = 0x6
 inline constexpr uint32_t kTs_Local = 0xB4, kTs_Parent = 0xD0;
 // The field a TransformSync's field mover holds (TS+0x4F0, +0x10: fast_travel.cpp's kTsFieldMoverField) and the
 // ServerField vtable it must have.
-inline constexpr uint32_t kTs_Field = 0x500;
+inline constexpr uint32_t kTs_Field = 0x518;  // Co-op+ port 3549: field mover TS+0x508, +0x10 (2976: 0x500)
 inline constexpr uint32_t kVtServerField = 0x5B29A60;
 
 // ---------------------------------------------------------------- positions and cells (0x288B7A0's arithmetic)

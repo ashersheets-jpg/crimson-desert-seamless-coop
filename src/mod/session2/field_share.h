@@ -43,16 +43,16 @@ inline constexpr uint32_t kLock1 = 0x18;         // lock object (vtable: +8 lock
 inline constexpr uint32_t kLock2Ptr = 0x08;      // -> lock object
 inline constexpr uint32_t kOpen = 0x4A;          // u8 open
 inline constexpr uint32_t kOwner = 0x180;        // u32 owner user key
-inline constexpr uint32_t kUsers = 0x2A0;        // FieldUserEntry*
-inline constexpr uint32_t kUserCount = 0x2A8;    // u32
-inline constexpr uint32_t kUserActors = 0x2B0;   // u32
-inline constexpr uint32_t kKey = 0x2C8;          // u32 field key (index, pool, generation)
-inline constexpr uint32_t kLevelEntry = 0x2D0;   // -> level entry; u16 static level index at +4
-// FieldMover (FM) = TransformSync + 0x4F0.
-inline constexpr uint32_t kTsFieldMover = 0x4F0;
+inline constexpr uint32_t kUsers = 0x2A8;        // FieldUserEntry* (Co-op+ port 3549; 2976: 0x2A0)
+inline constexpr uint32_t kUserCount = 0x2B0;    // u32 (3549; 2976: 0x2A8)
+inline constexpr uint32_t kUserActors = 0x2B8;   // u32 (3549; 2976: 0x2B0)
+inline constexpr uint32_t kKey = 0x2D0;          // u32 field key (index, pool, generation) (3549; 2976: 0x2C8)
+inline constexpr uint32_t kLevelEntry = 0x2D8;   // -> level entry; u16 static level index at +4 (3549; 2976: 0x2D0)
+// FieldMover (FM) = TransformSync + 0x508 (Co-op+ port 3549: ServerTransformSync vf 0x140 = add rcx,0x508; 2976: 0x4F0).
+inline constexpr uint32_t kTsFieldMover = 0x508;
 inline constexpr uint32_t kFmFieldKey = 0x08;    // u32 copy of field+0x2C8
 inline constexpr uint32_t kFmField = 0x10;       // ServerField*
-inline constexpr uint32_t kFmBusy = 0x5A;        // u16 accesses in progress
+inline constexpr uint32_t kFmBusy = 0x4A;        // u16 accesses in progress (3549: GetField 0x2E6125F inc word [FM+0x4A]; 2976: 0x5A)
 // FieldAttacher (AcquireField's `out`, 0x28 bytes, vtable: +0x10 release):
 // written at 0x2B07A19 (+0x18), 0x2B07A1D (+8), 0x2B07A21 (+0x10), 0x2B07A35 (+0x20).
 inline constexpr uint32_t kOutField = 0x08;

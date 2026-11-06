@@ -1250,18 +1250,19 @@ void server_probe_log(const char* when) {
         const auto key = pj ? read<uint32_t>(*pj + off::kServerActor_Key) : std::nullopt;
         const auto c68 = pj ? read_ptr(*pj + 0x68) : std::nullopt;
         const auto ts = c68 ? read_ptr(*c68 + 0x1A0) : std::nullopt;
-        const auto sector = ts ? read_ptr(*ts + 0x540) : std::nullopt;
+        const auto sector = ts ? read_ptr(*ts + 0x558) : std::nullopt;  // Co-op+ port: +0x18 as the FieldMover (unverified)
         // Its ServerField: [TS+0x4F0+0x10] (opcion-d-campo-compartido.md §1): owner +0x180,
         // users in the field +0x2A8 (the game lets in only one), user actors +0x2B0,
         // generation +0x2C8.
-        const auto field = ts ? read_ptr(*ts + 0x500) : std::nullopt;
+        const auto field = ts ? read_ptr(*ts + fld::kTsFieldMover + fld::kFmField) : std::nullopt;  // 3549: TS+0x518
         std::string f = "-";
         if (field) {
             f = std::format("{} owner {} users {} user actors {} generation {}", hex(field),
-                            hex(read<uint32_t>(*field + 0x180)), hex(read<uint32_t>(*field + 0x2A8)),
-                            hex(read<uint32_t>(*field + 0x2B0)), hex(read<uint32_t>(*field + 0x2C8)));
+                            hex(read<uint32_t>(*field + fld::kOwner)), hex(read<uint32_t>(*field + fld::kUserCount)),
+                            hex(read<uint32_t>(*field + fld::kUserActors)), hex(read<uint32_t>(*field + fld::kKey)));
         }
-        return std::format("character {} key {} TS {} sector {} field {}", hex(pj), hex(key), hex(ts), hex(sector),
+        return std::format("character {} key {} TS {} (vt {}) sector {} field {}", hex(pj), hex(key), hex(ts),
+                           ts ? rva(read_ptr(*ts)) : std::string("-"), hex(sector),
                            f);
     };
     const auto s2 = live_session2();

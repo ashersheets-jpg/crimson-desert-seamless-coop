@@ -197,7 +197,7 @@ inline constexpr uint32_t kActorState = 0x5E;           // u16: 0x20 logging out
 inline constexpr uint32_t kActorComponents = 0x68;      // [pj+0x68]
 inline constexpr uint32_t kComponentsTransformSync = 0x1A0;  // TS = [[pj+0x68]+0x1A0]
 inline constexpr uint32_t kTsMoving = 0x3DC;            // u8: 1 from MoveFieldOnceTimer to MoveFieldComplete
-inline constexpr uint32_t kFmMoving = 0x58;             // u8 at TS+0x4F0+0x58: the move is open (GetField refuses)
+inline constexpr uint32_t kFmMoving = 0x48;             // u8 at FM+0x48: the move is open (GetField refuses; 3549 GetField 0x2E611B6, FM = TS+0x508; 2976: 0x58)
 }  // namespace c4
 
 // What the logout waits for, read through a user that is still attached

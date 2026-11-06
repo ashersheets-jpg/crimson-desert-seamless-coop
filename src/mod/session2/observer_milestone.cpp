@@ -133,7 +133,7 @@ const Region kRegions[] = {
 
 // The objects the decision reads (the same offsets as the rest of option D):
 constexpr uint32_t kActor_Key = 0x60, kActor_User = 0xA0, kActor_Comp = 0x68, kComp_TS = 0x1A0;
-constexpr uint32_t kTS_Field = 0x4F0 + 0x10;  // the field mover's field (field_share.h kTsFieldMover + kFmField)
+constexpr uint32_t kTS_Field = 0x508 + 0x10;  // the field mover's field (field_share.h kTsFieldMover + kFmField; Co-op+ port 3549, 2976: 0x4F0)
 constexpr uint32_t kUser_Key = 0x60, kUser_Main = 0xD0, kUser_Session = 0x1F8;
 constexpr uint32_t kField_Owner = 0x180, kField_Key = 0x2C8;
 constexpr uint32_t kTls_Realm = 0x1EC, kTls_SendCtx = 0x250;
