@@ -276,6 +276,30 @@ void remote_character_line() noexcept {
             }
             return s;
         };
+        // copias-grupo-invisibles.md §2.4 (2976): Status = [[actor+0x68]+0x20]; Status vf80 sets the model's alpha to 0
+        // while Status+0x390|0x394 != 0 (bit 2 is set by CC vf18 and only cleared at the end of a normal login).
+        // 3549: ClientStatusActorComponent (vtable 0x591A710) slot 79 0x6E99D0 tests [Status+0x3C0] | [Status+0x3B8]
+        // (qwords) against 0x80 and the actor type, as 2976's vf80 did with the two dwords.
+        auto status_flags = [this_base = g_base](uintptr_t a) {
+            uintptr_t comps = 0, status = 0, vt = 0;
+            uint64_t f[2] = {};
+            if (!a || !game::safe_read(a + 0x68, &comps, sizeof comps) || !comps ||
+                !game::safe_read(comps + 0x20, &status, sizeof status) || !status ||
+                !game::safe_read(status, &vt, sizeof vt) || !game::safe_read(status + 0x3B8, f, sizeof f)) {
+                return std::string("unreadable");
+            }
+            // The alpha it writes (0x6E9B1A..0x6E9B25): [[[comps+0x40] CC +0xE8]+0x100], 0.0 while the flags are set.
+            uintptr_t cc = 0, vis = 0;
+            float alpha = -1.0f;
+            const bool alpha_ok = game::safe_read(comps + 0x40, &cc, sizeof cc) && cc &&
+                                  game::safe_read(cc + 0xE8, &vis, sizeof vis) && vis &&
+                                  game::safe_read(vis + 0x100, &alpha, sizeof alpha);
+            return std::format("Status 0x{:X} (vtable {}) +0x3B8 0x{:X} +0x3C0 0x{:X} | alpha {}", status,
+                               vt == this_base + 0x591A710 ? "ClientStatusActorComponent" : std::format("exe+0x{:X}", vt - this_base),
+                               f[0], f[1], alpha_ok ? std::format("{:.2f}", alpha) : std::string("unreadable"));
+        };
+        log::info("RemoteInterp [actor flags] remote character: {} | a visible NPC: {}", status_flags(actor),
+                  status_flags(g_npc_actor.load()));
         log::info("RemoteInterp [actor bytes] remote character 0x{:X} +0x40..+0x13F: {}", actor, hex(actor));
         log::info("RemoteInterp [actor bytes] a visible NPC 0x{:X} (0x{:08X}) +0x40..+0x13F: {}", npc, g_npc_key.load(),
                   hex(npc));
