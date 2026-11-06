@@ -61,7 +61,7 @@ constexpr Body kFind{0x8AE1A0, 0x8AE385, 0xCBE3B75431B9931Bull};
 constexpr Body kRelease{0x1434880, 0x143491C, 0x3FA7949A2E381275ull};
 constexpr Body kLink{0x43B4B0, 0x43B781, 0x06AD352D3DCC67B3ull};
 constexpr uintptr_t kVtHolderDtor = 0x5725E48;  // what the game writes into a holder before 0x1434880 (0x9F3206)
-constexpr uint32_t kTlsRealm = 0x1EC;           // the exe's TLS block byte: 0 client, 1 server (0xA9FF2A)
+constexpr uint32_t kTlsRealm = 0x1EB;  /* Co-op+ port 3549 (2976: 0x1EC) */           // the exe's TLS block byte: 0 client, 1 server (0xA9FF2A)
 
 using BindFn = void(__fastcall*)(uintptr_t comp, const uint64_t* key);
 using FindFn = void*(__fastcall*)(uintptr_t mgr, void* holder, uint32_t key);

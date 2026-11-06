@@ -82,7 +82,7 @@ inline constexpr uint8_t kAllocThreadBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x
                                                 0x48, 0x8B, 0x5C, 0x24, 0x30, 0x48, 0x8B, 0x74, 0x24, 0x38, 0x48, 0x83,
                                                 0xC4, 0x20, 0x5F, 0xE9, 0x3C, 0xFC, 0xFF, 0xFF};
 inline constexpr uintptr_t kTlsIndexSlot = 0x70D5D50;  // u32 _tls_index (0 in the dumps)
-inline constexpr uint32_t kTls_UseGlobalHeap = 0x1FD;  // u8: the allocator test above
+inline constexpr uint32_t kTls_UseGlobalHeap = 0x1FE;  // u8: the allocator test above (Co-op+ port 3549: 807 tests use +0x1FE; 2976: 0x1FD)
 // The server's thread park flags: ServerNet::RegisterThread 0x27751D0 (called first by ServerRunThread's
 // loop 0x27733F0) appends {u32 tid, u8* &TLS[+0x4460]} to [ServerNet+0xF8], count [+0x100] (lock +0x98).
 // The loops 0x27733F0 / 0x27731C0 spin Sleep(10) with byte[1] = 1 while byte[0] != 0, after taking an

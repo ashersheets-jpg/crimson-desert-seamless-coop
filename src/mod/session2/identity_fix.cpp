@@ -310,7 +310,7 @@ bool on_server_thread() {
     uintptr_t block = 0;
     uint8_t flag = 0;
     return game::safe_read(tls_array, &block, sizeof block) && block &&
-           game::safe_read(block + 0x1EC, &flag, sizeof flag) && flag != 0;
+           game::safe_read(block + 0x1EB, &flag, sizeof flag)  /* Co-op+ port 3549: ServerRunThread 0x29AAF36 sets +0x1EB (2976: +0x1EC) */ && flag != 0;
 }
 
 // Read only, unlocked (no game call may take the manager's lock): a stale

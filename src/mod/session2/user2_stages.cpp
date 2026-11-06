@@ -1097,7 +1097,7 @@ bool server_realm() noexcept {
     const uintptr_t tls_array = static_cast<uintptr_t>(__readgsqword(0x58));
     uintptr_t block = 0;
     uint8_t flag = 0;
-    return rd(tls_array, block) && block && rd(block + 0x1EC, flag) && flag != 0;
+    return rd(tls_array, block) && block && rd(block + 0x1EB, flag) /* Co-op+ port 3549 (2976: 0x1EC) */ && flag != 0;
 }
 
 // user2: the event is about user 2 (its stage, manager or timer): its own, larger budget.

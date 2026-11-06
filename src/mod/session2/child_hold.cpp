@@ -860,9 +860,9 @@ constexpr uint8_t kRestoreWriteBytes[] = {0x49, 0x8B, 0x46, 0x40, 0xC6, 0x40, 0x
 // ServerRunThread's entry 0x2773390 marks its thread as the server's realm
 // (TLS block 0 +0x1EC = 1) before its loop; NotifyAppear's key lookup picks the
 // server's actor manager by that byte (0x2B06147).
-constexpr uintptr_t kServerRealmSet = 0x27733A6;  // mov eax,0x1EC ; mov byte [rax+rbx],1
-constexpr uint8_t kServerRealmSetBytes[] = {0xB8, 0xEC, 0x01, 0x00, 0x00, 0xC6, 0x04, 0x18, 0x01};
-constexpr uint32_t kTlsServerRealm = 0x1EC;
+constexpr uintptr_t kServerRealmSet = 0x29AAF36;  // mov eax,0x1EB ; mov byte [rax+rbx],1 (Co-op+ port 3549; 2976: 0x27733A6, 0x1EC)
+constexpr uint8_t kServerRealmSetBytes[] = {0xB8, 0xEB, 0x01, 0x00, 0x00, 0xC6, 0x04, 0x18, 0x01};
+constexpr uint32_t kTlsServerRealm = 0x1EB;  // Co-op+ port 3549 (2976: 0x1EC)
 
 constexpr uint32_t kMaxKeys = 0x4000;      // larger lists go unchanged
 constexpr uint32_t kMaxSessions = 64;

@@ -65,7 +65,7 @@ constexpr uint8_t kStageCallBytes[] = {0xE8, 0xB8, 0x2A, 0xDC, 0x00};
 // pa::NPCScheduleData_File (ctor 0x1860C10 [V]): vtable, refcount u32 (+0x10), "atomic count" byte (+0x14 = 1).
 constexpr uintptr_t kVtFile = 0x57DB080;
 constexpr uint32_t kFile_Refs = 0x10, kFile_Atomic = 0x14;
-constexpr uint32_t kTlsRealm = 0x1EC;      // the server-realm byte of the exe's TLS block (0x281B757, 0xA9FF2A)
+constexpr uint32_t kTlsRealm = 0x1EB;  /* Co-op+ port 3549 (2976: 0x1EC) */      // the server-realm byte of the exe's TLS block (0x281B757, 0xA9FF2A)
 constexpr uint32_t kLookupSample = 8;      // the lookup watch's full path: 1 call in 8 per thread (+ verifications)
 constexpr uint32_t kMaxKeySetBuilds = 32;  // the key set is rebuilt when the context table changes, at most this
 
