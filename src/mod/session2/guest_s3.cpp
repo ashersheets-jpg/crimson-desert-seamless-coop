@@ -1101,6 +1101,47 @@ LONG CALLBACK crash_veh(EXCEPTION_POINTERS* ep) {
     }
     const EXCEPTION_RECORD* er = ep->ExceptionRecord;
     const uintptr_t at = reinterpret_cast<uintptr_t>(er->ExceptionAddress);
+    // Co-op+ port (3549 bring-up): the first few access violations anywhere go to the log at once (the game ended
+    // before the 5 s tick in tc5/tc6, and a fault in the mod's own code was not recorded at all).
+    // Each distinct site once (the mod's own SEH-guarded reads fault too), at most 24 sites.
+    static std::atomic<uintptr_t> s_sites[24]{};
+    bool fresh = false;
+    for (auto& s : s_sites) {
+        uintptr_t cur = s.load(std::memory_order_relaxed);
+        if (cur == at) break;
+        if (cur == 0 && s.compare_exchange_strong(cur, at)) {
+            fresh = true;
+            break;
+        }
+        if (cur == at) break;
+    }
+    if (fresh) {
+        static const uintptr_t mod_base = [] {
+            HMODULE m = nullptr;
+            GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                               reinterpret_cast<LPCWSTR>(&crash_veh), &m);
+            return reinterpret_cast<uintptr_t>(m);
+        }();
+        game::FixedLine l;
+        l.str("GuestS3 first-chance AV at ");
+        if (at >= g_base && at < g_base + 0x14000000) {
+            l.str("exe+").hex(at - g_base);
+        } else if (mod_base && at >= mod_base && at < mod_base + 0x2000000) {
+            l.str("cdmp.asi+").hex(at - mod_base);
+        } else {
+            l.hex(at);
+        }
+        l.str(" kind ").hex(er->NumberParameters >= 2 ? er->ExceptionInformation[0] : 0);
+        l.str(" addr ").hex(er->NumberParameters >= 2 ? er->ExceptionInformation[1] : 0);
+        if (const CONTEXT* c = ep->ContextRecord) {
+            l.str(" rcx ").hex(c->Rcx).str(" rdx ").hex(c->Rdx).str(" rsp ").hex(c->Rsp);
+            uintptr_t ret = 0;
+            if (game::safe_read(c->Rsp, &ret, sizeof ret) && ret >= g_base && ret < g_base + 0x14000000) {
+                l.str(" [rsp] exe+").hex(ret - g_base);
+            }
+        }
+        log::emergency(log::Level::Error, l.view());
+    }
     if (!in_game_code(at)) return EXCEPTION_CONTINUE_SEARCH;
     c_crash_events.fetch_add(1, std::memory_order_relaxed);
     const uint64_t kind = er->NumberParameters >= 2 ? er->ExceptionInformation[0] : ~0ull;
@@ -1266,7 +1307,7 @@ void install_crash() {
     g_crashpad_present.store(crashpad_present());  // once, here (never inside the filter)
     // Last in the list: the game's and the protector's own handlers see their
     // exceptions first; this one only records.
-    const PVOID veh = AddVectoredExceptionHandler(0, crash_veh);
+    const PVOID veh = AddVectoredExceptionHandler(1, crash_veh);  // Co-op+ port (3549 bring-up): first, it only reads
     if (!veh) log::error("GuestS3 crash capture: the vectored handler could not be added");
     g_prev_uef.store(SetUnhandledExceptionFilter(crash_uef));
     g_crash_on = veh != nullptr;
