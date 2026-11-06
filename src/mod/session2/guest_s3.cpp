@@ -1156,7 +1156,10 @@ LONG CALLBACK crash_veh(EXCEPTION_POINTERS* ep) {
         l.str(" kind ").hex(er->NumberParameters >= 2 ? er->ExceptionInformation[0] : 0);
         l.str(" addr ").hex(er->NumberParameters >= 2 ? er->ExceptionInformation[1] : 0);
         if (const CONTEXT* c = ep->ContextRecord) {
-            l.str(" rcx ").hex(c->Rcx).str(" rdx ").hex(c->Rdx).str(" rsp ").hex(c->Rsp);
+            l.str(" rcx ").hex(c->Rcx).str(" rdx ").hex(c->Rdx).str(" rbx ").hex(c->Rbx).str(" rsi ").hex(c->Rsi);
+            l.str(" rdi ").hex(c->Rdi).str(" rsp ").hex(c->Rsp);
+            uint32_t key = 0;  // rdi / rbx as an actor (key at +0x60)
+            if (game::safe_read(c->Rdi + 0x60, &key, 4) && (key >> 28) != 0) l.str(" [rdi+0x60] ").hex(key);
             uintptr_t ret = 0;
             if (game::safe_read(c->Rsp, &ret, sizeof ret) && ret >= g_base && ret < g_base + 0x14000000) {
                 l.str(" [rsp] exe+").hex(ret - g_base);
