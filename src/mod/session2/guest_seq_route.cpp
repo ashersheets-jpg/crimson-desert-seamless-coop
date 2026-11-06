@@ -60,7 +60,7 @@ constexpr uint8_t kWrap2981Bytes[] = {0x4C, 0x89, 0x44, 0x24, 0x18};            
 constexpr uint8_t kActor2981Bytes[] = {0x49, 0x89, 0x3E};                                  // 0xC076E6 mov [r15],rdi
 constexpr uint8_t kVf48_2981Bytes[] = {0x48, 0x8B, 0x4D, 0xF0, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x48};  // 0xC0773F
 //   0xC0659E movzx ecx,byte [rbp+0x70] ; mov [rsp+0x20],cl (RAX = the manager; RAX reaches 0xC065B2 mov rcx,rax)
-constexpr uintptr_t kP2810 = 0xD34225;  // 3549: movzx ecx,byte [rbp+0x80] (disp32) ; mov [rsp+0x20],cl = 11 bytes
+constexpr uintptr_t kP2810 = 0xD34225;  // 3549: movzx ecx,byte [rbp+0x80] (disp32: 7 bytes, the whole patch) ; mov [rsp+0x20],cl
 constexpr uint8_t kP2810Bytes[] = {0x0F, 0xB6, 0x8D, 0x80, 0x00, 0x00, 0x00, 0x88, 0x4C, 0x24, 0x20, 0x4C, 0x8D, 0x4D, 0xB0, 0x4C};
 constexpr uint8_t kVf48_2810Bytes[] = {0x48, 0x8B, 0x4D, 0xC8, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x48};  // 0xC06594
 constexpr uint8_t kFrame2810Bytes[] = {0x48, 0x8D, 0x6C, 0x24, 0xD0};                     // 0xC06340 lea rbp,[rsp-0x20]
@@ -1036,7 +1036,7 @@ std::vector<PointDef> points() {
         {Point::P2981, kP2981, 9, kP2981Bytes,
          {{0xD35335, kWrap2981Bytes}, {0xD357F1, kActor2981Bytes}, {0xD3584A, kVf48_2981Bytes}},
          on_p2981},
-        {Point::P2810, kP2810, 11, kP2810Bytes,
+        {Point::P2810, kP2810, 7, kP2810Bytes,
          {{0xD3421B, kVf48_2810Bytes}, {0xD33FB0, kFrame2810Bytes}, {0xD34189, kFind2810Bytes},
           {0xD34234, kSeq2810Bytes}},
          on_p2810},
