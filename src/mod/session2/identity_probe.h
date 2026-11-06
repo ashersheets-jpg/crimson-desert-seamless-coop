@@ -47,7 +47,7 @@ namespace cdmp::session2 {
 namespace idp {
 inline constexpr uint32_t kActorComponents = 0x68;   // actor -> component table (0x206A890, 0x2AE1037)
 inline constexpr uint32_t kTableStatus = 0x20;       // table -> Status component (0x206A894)
-inline constexpr uint32_t kStatusCharacterNo = 0x70; // Status -> u64* characterNo (0x206A8A5)
+inline constexpr uint32_t kStatusCharacterNo = 0x90; // Status -> u64* characterNo (Co-op+ port 3549: 0x2D12B95; 2976: 0x70)
 inline constexpr uint32_t kComponentOwner = 0x08;    // component -> actor (0x2AE102A, 0x17919A5)
 inline constexpr uint32_t kActorUser = 0xA0;         // character -> ServerUserActor (clock gate, P9 §2.2)
 inline constexpr uint32_t kKey = 0x60;               // actor/user -> u32 key (offsets_s2.h)
