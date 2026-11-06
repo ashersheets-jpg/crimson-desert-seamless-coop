@@ -120,24 +120,24 @@ void test_first_mismatch() {
 
 void test_expected_sequence_shape() {
     using namespace cdmp::session2::off;
-    // 0x2A22475..0x2A224F2 (+0xF5..+0x172 of SaveDataSlotRefreshReq): 0x7D bytes,
-    // with the call to 0x1870C20 at 0x2A224CD.
+    // 0x7D bytes of SaveDataSlotRefreshReq (2976: 0x2A22475; 3549: 0x2CABDBB), with the call to the refresh thunk
+    // at +0x58 and the second read of the ServerActorLookup slot at +0x4D (the same layout on both builds).
     static_assert(sizeof kSlotRefreshReqSequenceBytes == 0x7D);
-    const uint8_t* call = kSlotRefreshReqSequenceBytes + (0x2A224CD - kSlotRefreshReqSequence);
+    const uint8_t* call = kSlotRefreshReqSequenceBytes + 0x58;
     int32_t rel = 0;
     std::memcpy(&rel, call + 1, 4);
-    CHECK(call[0] == 0xE8 && 0x2A224CD + 5 + static_cast<int64_t>(rel) == static_cast<int64_t>(kSaveMgrRefreshSlots));
-    // Both globals are [rip+...] = 0x6D69698.
+    CHECK(call[0] == 0xE8 && kSlotRefreshReqSequence + 0x58 + 5 + static_cast<int64_t>(rel) == static_cast<int64_t>(kSaveMgrRefreshSlots));
+    // Both globals are [rip+...] = kServerActorLookupSlot.
     int32_t g1 = 0, g2 = 0;
     std::memcpy(&g1, kSlotRefreshReqSequenceBytes + 3, 4);
-    std::memcpy(&g2, kSlotRefreshReqSequenceBytes + (0x2A224C2 - kSlotRefreshReqSequence) + 3, 4);
-    CHECK(0x2A2247C + static_cast<int64_t>(g1) == static_cast<int64_t>(kServerActorLookupSlot));
-    CHECK(0x2A224C9 + static_cast<int64_t>(g2) == static_cast<int64_t>(kServerActorLookupSlot));
-    // The thunk: jmp .xtls 0xCBD92D0.
+    std::memcpy(&g2, kSlotRefreshReqSequenceBytes + 0x4D + 3, 4);
+    CHECK(kSlotRefreshReqSequence + 7 + static_cast<int64_t>(g1) == static_cast<int64_t>(kServerActorLookupSlot));
+    CHECK(kSlotRefreshReqSequence + 0x4D + 7 + static_cast<int64_t>(g2) == static_cast<int64_t>(kServerActorLookupSlot));
+    // The thunk: jmp .xtls (2976: 0xCBD92D0; 3549: 0xB7F20A0).
     int32_t j = 0;
     std::memcpy(&j, kSaveMgrRefreshSlotsHead + 1, 4);
-    CHECK(kSaveMgrRefreshSlots + 5 + static_cast<int64_t>(j) == 0xCBD92D0);
-    // The title's read: [rip+...] = 0x6D69190, then +0x88.
+    CHECK(kSaveMgrRefreshSlots + 5 + static_cast<int64_t>(j) == 0xB7F20A0);
+    // The title's read: [rip+...] = kWorldSystemSlot, then +0x88.
     int32_t w = 0;
     std::memcpy(&w, kTitlePlayReadsSaveMgrBytes + 3, 4);
     CHECK(kTitlePlayReadsSaveMgr + 7 + static_cast<int64_t>(w) == static_cast<int64_t>(kWorldSystemSlot));

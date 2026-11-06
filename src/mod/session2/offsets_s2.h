@@ -201,10 +201,12 @@ inline constexpr uint8_t kSlotRefreshReqSequenceBytes[] = {0x48, 0x8B, 0x05, 0x3
                                                            0x1F, 0x48, 0x89, 0x5D, 0x77, 0x48, 0x8B, 0x03, 0x48, 0x8B, 0xCB, 0xFF,
                                                            0x50, 0x08, 0x90, 0x41, 0xC6, 0x47, 0x60, 0x00, 0x48, 0x8B, 0x03, 0x48,
                                                            0x8B, 0xCB, 0xFF, 0x50, 0x10};  // call [rax+0x10] (unlock)
-// The title's own read of the table (Play, 0x65DB90): mov r11,[exe+0x6D69190]; mov rax,[r11+0x88].
-inline constexpr uintptr_t kTitlePlayReadsSaveMgr = 0x65DC3E;
-inline constexpr uint8_t kTitlePlayReadsSaveMgrBytes[] = {0x4C, 0x8B, 0x1D, 0x4B, 0xB5, 0x70, 0x06,
-                                                          0x49, 0x8B, 0x83, 0x88, 0x00, 0x00, 0x00};
+// The title's own read of the table (2976: Play 0x65DB90, mov r11,[exe+0x6D69190]; mov rax,[r11+0x88] at +0xAE).
+// Co-op+ port (3549): the same read in 0x72B350 at +0xA8, mov rcx,[WorldSystem]; mov rcx,[rcx+0x88], then a call
+// into the save manager (0x19B2E80, beside the refresh thunk 0x19B2080). The check only needs [WorldSystem+0x88].
+inline constexpr uintptr_t kTitlePlayReadsSaveMgr = 0x72B3F8;
+inline constexpr uint8_t kTitlePlayReadsSaveMgrBytes[] = {0x48, 0x8B, 0x0D, 0xF1, 0x2A, 0xA9, 0x06,
+                                                          0x48, 0x8B, 0x89, 0x88, 0x00, 0x00, 0x00};
 
 inline constexpr uintptr_t kImageBase = 0x140000000;
 inline constexpr uint32_t kPeTimestamp = 0x6AEB7D59;  // Co-op+ port: 1.0.0.3549 (was 0x6AB28F00)

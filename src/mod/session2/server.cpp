@@ -1204,6 +1204,29 @@ void server_probe_log(const char* when) {
     const auto c28 = cn ? read_ptr(*cn + 0x28) : std::nullopt;
     log::info("Session2 probe ({}): ServerNet {} | session 1 {} | Q2 {} Q3 {} (ClientNet+0x20/+0x28 {})", when, hex(sn),
               session, hex(q2), hex(q3), q2 && q3 && c20 && c28 && *q2 == *c20 && *q3 == *c28 ? "same" : "DIFFERENT");
+    // Co-op+ port (3549): the ServerActorManager slot is not known yet (its constructor keeps the object in a
+    // register). Once, look in the exe's data for a pointer to an object whose vtable is ServerActorManager's
+    // (RTTI .?AVServerActorManager@pa@@, exe+0x5EECE88 on 3549) and log each slot found.
+    static bool sam_scanned = false;
+    if (!sam_scanned && game::read_ptr(g_base + off::kServerActorLookupSlot)) {
+        sam_scanned = true;
+        constexpr uintptr_t kSamVtable = 0x5EECE88, kFrom = 0x6C00000, kTo = 0x7400000, kChunk = 0x10000;
+        std::vector<uint64_t> buf(kChunk / 8);
+        int found = 0;
+        for (uintptr_t at = kFrom; at < kTo && found < 8; at += kChunk) {
+            if (!game::safe_read(g_base + at, buf.data(), kChunk)) continue;
+            for (size_t i = 0; i < buf.size() && found < 8; ++i) {
+                const uint64_t p = buf[i];
+                if (p < 0x10000 || (p >= g_base && p < g_base + kTo)) continue;
+                uint64_t vt = 0;
+                if (game::safe_read(p, &vt, 8) && vt == g_base + kSamVtable) {
+                    log::info("Session2 probe ({}): SAM slot candidate exe+0x{:X} -> 0x{:X}", when, at + 8 * i, p);
+                    ++found;
+                }
+            }
+        }
+        if (!found) log::info("Session2 probe ({}): no SAM slot found in exe+0x{:X}..0x{:X}", when, kFrom, kTo);
+    }
     if (sam) {
         log::info("Session2 probe ({}): SAM {} | free actor keys {} | actors {}", when, hex(sam),
                   hex(read<uint32_t>(*sam + off::kSam_FreeKeys)), hex(read<uint32_t>(*sam + off::kSam_ActorCount)));
