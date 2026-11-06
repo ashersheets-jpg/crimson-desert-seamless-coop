@@ -35,6 +35,39 @@ namespace cdmp::net {
 namespace {
 namespace off = game::build_2976;
 
+// Co-op+ on the native base (docs/research/native-coopplus-layer.md): when coopplus.asi (the Co-op+ layer, its own
+// sniffer off) is loaded next to us, every packet this sniffer feeds to co-op also goes to its coopplus_observe
+// export (the client's point of view, 5-byte header + payload; called on this writer thread). Resolved by module
+// name, retried every 5 s until the layer is there; a fault inside it is contained here.
+using LayerObserveFn = void (*)(int c2s, const uint8_t* packet, size_t size);
+LayerObserveFn layer_observe() {
+    static LayerObserveFn fn = nullptr;
+    static ULONGLONG next_try = 0;
+    if (fn) return fn;
+    const ULONGLONG now = GetTickCount64();
+    if (now < next_try) return nullptr;
+    next_try = now + 5000;
+    if (HMODULE m = GetModuleHandleW(L"coopplus.asi")) {
+        fn = reinterpret_cast<LayerObserveFn>(GetProcAddress(m, "coopplus_observe"));
+        if (fn) log::info("Sniffer: the Co-op+ layer (coopplus.asi) gets the client's packets from now on");
+    }
+    return fn;
+}
+bool call_layer(LayerObserveFn fn, bool c2s, const uint8_t* data, size_t size) noexcept {
+    __try {
+        fn(c2s ? 1 : 0, data, size);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+void forward_to_layer(bool c2s, const uint8_t* data, size_t size) noexcept {
+    const LayerObserveFn fn = layer_observe();
+    if (!fn || call_layer(fn, c2s, data, size)) return;
+    static std::atomic<int> faults{0};
+    if (faults.fetch_add(1) < 3) log::warn("Sniffer: the Co-op+ layer faulted on a packet (contained)");
+}
+
 enum class Dir : uint8_t { ClientToServer = 1, ServerToClient = 2 };
 
 constexpr size_t kRingBytes = 64ull * 1024 * 1024;
@@ -506,6 +539,7 @@ struct Writer {
             if (h.copied == h.size && !mod_extra) {
                 if (c2s) capture_observe_c2s(data, h.copied);
                 else capture_observe_s2c(data, h.copied);
+                forward_to_layer(c2s, data, h.copied);
             }
             return;
         }
@@ -535,6 +569,7 @@ struct Writer {
             } else {
                 capture_observe_s2c(data, h.copied);
             }
+            forward_to_layer(c2s, data, h.copied);
         }
 
         const BinRecord r{h.t_us, static_cast<uint8_t>(h.dir), static_cast<uint8_t>(mod_extra ? kRecModExtra : 0),
