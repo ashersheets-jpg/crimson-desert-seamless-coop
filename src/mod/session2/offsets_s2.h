@@ -11,7 +11,7 @@ namespace cdmp::session2::off {
 // Globals (pointers to the objects).
 inline constexpr uintptr_t kServerNetSlot = 0x71BE3E0;  // [exe+..] = ServerNet
 inline constexpr uintptr_t kClientNetSlot = 0x71BDED0;  // [exe+..] = ClientNet
-inline constexpr uintptr_t kSamSlot = 0x6DA67D8;        // [exe+..] = ServerActorManager
+inline constexpr uintptr_t kSamSlot = 0x71FC598;        // [exe+..] = ServerActorManager (Co-op+ port: 3549, found live; 2976 0x6DA67D8)
 
 // ServerNet fields.
 inline constexpr uint32_t kServerNet_Session = 0x18;  // the only NwVirtualAsyncSession

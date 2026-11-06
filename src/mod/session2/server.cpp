@@ -1204,11 +1204,12 @@ void server_probe_log(const char* when) {
     const auto c28 = cn ? read_ptr(*cn + 0x28) : std::nullopt;
     log::info("Session2 probe ({}): ServerNet {} | session 1 {} | Q2 {} Q3 {} (ClientNet+0x20/+0x28 {})", when, hex(sn),
               session, hex(q2), hex(q3), q2 && q3 && c20 && c28 && *q2 == *c20 && *q3 == *c28 ? "same" : "DIFFERENT");
-    // Co-op+ port (3549): the ServerActorManager slot is not known yet (its constructor keeps the object in a
-    // register). Once, look in the exe's data for a pointer to an object whose vtable is ServerActorManager's
+    // Co-op+ port (3549): kSamSlot was found live by this scan (its constructor keeps the object in a register,
+    // so it is not visible statically). If the slot ever stops holding the SAM, once, look in the exe's data for a pointer to an object whose vtable is ServerActorManager's
     // (RTTI .?AVServerActorManager@pa@@, exe+0x5EECE88 on 3549) and log each slot found.
     static bool sam_scanned = false;
-    if (!sam_scanned && game::read_ptr(g_base + off::kServerActorLookupSlot)) {
+    const auto sam_vt = sam ? read_ptr(*sam) : std::nullopt;
+    if (!sam_scanned && game::read_ptr(g_base + off::kServerActorLookupSlot) && sam_vt != g_base + 0x5EECE88) {
         sam_scanned = true;
         constexpr uintptr_t kSamVtable = 0x5EECE88, kFrom = 0x6C00000, kTo = 0x7400000, kChunk = 0x10000;
         std::vector<uint64_t> buf(kChunk / 8);

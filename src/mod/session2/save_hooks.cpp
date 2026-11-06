@@ -1166,6 +1166,23 @@ bool save_hooks_install(saveguard::Mode mode) {
                 const bool made = bar != std::wstring::npos && (CreateDirectoryW(dst.c_str(), nullptr) ||
                                                                  GetLastError() == ERROR_ALREADY_EXISTS);
                 if (made && copy_tree(src, dst, extra)) {
+                    // Its files dated now, so that the title's Continue picks the test slot (inside the sandbox).
+                    FILETIME now;
+                    GetSystemTimeAsFileTime(&now);
+                    WIN32_FIND_DATAW fd;
+                    if (HANDLE f = FindFirstFileW((dst + L"\\*").c_str(), &fd); f != INVALID_HANDLE_VALUE) {
+                        do {
+                            if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+                            const std::wstring p = dst + L"\\" + fd.cFileName;
+                            HANDLE h = CreateFileW(p.c_str(), FILE_WRITE_ATTRIBUTES, FILE_SHARE_READ, nullptr,
+                                                   OPEN_EXISTING, 0, nullptr);
+                            if (h != INVALID_HANDLE_VALUE) {
+                                SetFileTime(h, nullptr, nullptr, &now);
+                                CloseHandle(h);
+                            }
+                        } while (FindNextFileW(f, &fd));
+                        FindClose(f);
+                    }
                     log::info("Session2 save redirect: test slot '{}' copied into the sandbox as '{}' ({} files)",
                               narrow(src), narrow(dst), extra.files);
                 } else {
