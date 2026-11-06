@@ -1204,6 +1204,33 @@ bool save_hooks_install(saveguard::Mode mode) {
                 log::info("Session2 save redirect: test slot '{}' copied into the sandbox as '{}' ({} files)", narrow(src),
                           narrow(dst), extra.files);
             }
+            // Co-op+ (tests): CDMP_SANDBOX_ONLY="<account>\slotNNN" keeps only that slot of the account in the SANDBOX
+            // (the title's Continue picks the newest save by its own data, so the copy of the player's slots would
+            // win). Only folders under the sandbox are touched; delete_tree refuses anything in or around the real
+            // save folder.
+            wchar_t only[512];
+            const DWORD on = GetEnvironmentVariableW(L"CDMP_SANDBOX_ONLY", only, 512);
+            if (on > 0 && on < 512) {
+                const std::wstring keep(only);
+                const size_t bs = keep.find(L'\\');
+                const std::wstring account = sandbox + L"\\" + keep.substr(0, bs);
+                const std::wstring keep_name = bs == std::wstring::npos ? std::wstring() : keep.substr(bs + 1);
+                WIN32_FIND_DATAW fd;
+                int removed = 0;
+                if (!keep_name.empty() && saveguard::is_under(account, sandbox)) {
+                    if (HANDLE f = FindFirstFileW((account + L"\\slot*").c_str(), &fd); f != INVALID_HANDLE_VALUE) {
+                        do {
+                            if (!(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) || keep_name == fd.cFileName) continue;
+                            const std::wstring victim = account + L"\\" + fd.cFileName;
+                            if (saveguard::is_under(victim, sandbox) && delete_tree(victim, dir)) ++removed;
+                        } while (FindNextFileW(f, &fd));
+                        FindClose(f);
+                    }
+                }
+                log::info("Session2 save redirect: CDMP_SANDBOX_ONLY '{}': {} other slot folder(s) removed from the "
+                          "sandbox copy (the real save folder is untouched)",
+                          narrow(keep), removed);
+            }
             g_redir = std::move(redir);
             // Before the first hook is enabled: a detour must never see the redirect half on.
             g_redirect.store(true, std::memory_order_relaxed);
