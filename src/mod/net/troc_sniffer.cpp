@@ -61,6 +61,38 @@ bool call_layer(LayerObserveFn fn, bool c2s, const uint8_t* data, size_t size) n
         return false;
     }
 }
+// The layer's veto on a server packet (tc49: our own death notice while a friend is with us, which left the HUD hidden
+// for good after the revive): its coopplus_filter_s2c export, called in the OnRecvPacket hook on the game's thread
+// with the packet as the game would read it; 1 = the game never sees it (the hook returns at once, like the old
+// base's filters). Resolved like coopplus_observe; a fault inside it lets the packet through.
+using LayerFilterFn = int (*)(const uint8_t* packet, size_t size);
+LayerFilterFn layer_filter() {
+    static std::atomic<LayerFilterFn> fn{nullptr};
+    static std::atomic<ULONGLONG> next_try{0};
+    if (LayerFilterFn f = fn.load(std::memory_order_acquire)) return f;
+    const ULONGLONG now = GetTickCount64();
+    if (now < next_try.load(std::memory_order_relaxed)) return nullptr;
+    next_try.store(now + 5000, std::memory_order_relaxed);
+    if (HMODULE m = GetModuleHandleW(L"coopplus.asi")) {
+        if (auto f = reinterpret_cast<LayerFilterFn>(GetProcAddress(m, "coopplus_filter_s2c"))) {
+            fn.store(f, std::memory_order_release);
+            log::info("Sniffer: the Co-op+ layer may now hold back server packets (coopplus_filter_s2c)");
+            return f;
+        }
+    }
+    return nullptr;
+}
+bool layer_drops(const uint8_t* packet, size_t size) noexcept {
+    const LayerFilterFn fn = layer_filter();
+    if (!fn) return false;
+    __try {
+        return fn(packet, size) == 1;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+uint8_t* g_ret_stub = nullptr;  // a `ret`: the OnRecvPacket hook sits on the function's first instruction
+
 void forward_to_layer(bool c2s, const uint8_t* data, size_t size) noexcept {
     const LayerObserveFn fn = layer_observe();
     if (!fn || call_layer(fn, c2s, data, size)) return;
@@ -286,6 +318,15 @@ void deliver_extra(void* net, void* session, uint64_t arg3, const uint8_t* pkt, 
 
 void on_recv_packet(safetyhook::Context& ctx) {
     capture(Dir::ServerToClient, 0, reinterpret_cast<const uint8_t*>(ctx.r9), ctx.rsp);
+    // Co-op+ layer's veto (layer_drops): only on the server's own packets, never on one the mod injects.
+    if (g_ret_stub && ctx.r9 && !t_injecting) {
+        uint16_t size = 0;
+        if (guarded_copy(&size, reinterpret_cast<const void*>(ctx.rsp + off::kHookArgSizeStackOffset), sizeof size) &&
+            layer_drops(reinterpret_cast<const uint8_t*>(ctx.r9), size)) {
+            ctx.rip = reinterpret_cast<uintptr_t>(g_ret_stub);
+            return;
+        }
+    }
     // P8 D1 (session2/ride_filter.h): after the capture, before the game reads the packet; the callback
     // guards its own accesses. The size is the 5th argument, as capture() reads it. Never on a packet the mod
     // itself injects (experiment 4c, t_injecting): those are the dev tools' own, not the server's.
@@ -801,6 +842,14 @@ bool sniffer_install(const std::wstring& dir, HANDLE stop, bool record) {
     load_troc_names(base);
     log::info("Sniffer: {} message types resolved from the game ({} opcodes)", g_trocs.size(),
               g_name_by_opcode.size());
+    if (auto* stub = static_cast<uint8_t*>(VirtualAlloc(nullptr, 16, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE))) {
+        stub[0] = 0xC3;  // ret
+        DWORD old = 0;
+        if (VirtualProtect(stub, 16, PAGE_EXECUTE_READ, &old)) {
+            FlushInstructionCache(GetCurrentProcess(), stub, 16);
+            g_ret_stub = stub;
+        }
+    }
 
     // Injection relies on two opcodes; check them against the live table.
     g_on_recv_fn = reinterpret_cast<OnRecvPacketFn>(recv);
