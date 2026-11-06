@@ -245,6 +245,9 @@ void set_dest(safetyhook::Context& c, Site s, uint32_t v) noexcept {
 // sector words (0x5AC810 on 3549, as 2976); the buffer's newest sample position (+0x00 of a 0xA0 sample).
 std::atomic<uintptr_t> g_remote_char{0}, g_remote_char_mc{0}, g_npc_actor{0};
 std::atomic<uint32_t> g_remote_char_key{0}, g_npc_key{0};
+// The visibility guard's counters (on_flag_setter below).
+std::atomic<uint64_t> g_vis_stripped{0}, g_vis_added{0}, g_vis_calls{0};
+std::atomic<uintptr_t> g_vis_last_caller{0};
 void remote_character_line() noexcept {
     const uintptr_t actor = g_remote_char.load(), mc = g_remote_char_mc.load();
     if (!actor) return;
@@ -311,6 +314,18 @@ void remote_character_line() noexcept {
               ts_ok ? std::format("0x{:X}", ts) : std::string("unreadable"), local[0], local[1], local[2],
               static_cast<int16_t>(sector[0]), static_cast<int16_t>(sector[1]), rip::kPosBuffer,
               buf_ok ? count : 0u, sample[0], sample[1], sample[2]);
+    uintptr_t status = 0, cc = 0, vis = 0;
+    uint64_t flags = 0;
+    float alpha = -1.0f;
+    if (game::safe_read(actor + 0x68, &comps, sizeof comps) && comps && game::safe_read(comps + 0x20, &status, sizeof status) &&
+        status && game::safe_read(status + 0x3B8, &flags, sizeof flags)) {
+        if (game::safe_read(comps + 0x40, &cc, sizeof cc) && cc && game::safe_read(cc + 0xE8, &vis, sizeof vis) && vis)
+            game::safe_read(vis + 0x100, &alpha, sizeof alpha);
+    }
+    log::info("RemoteInterp [visible] 0x{:08X}: Status flags 0x{:X}, alpha {:.2f} | flag calls on it {}, bit 0x100000 "
+              "stripped {}, added to a clear {} (last from exe+0x{:X})",
+              g_remote_char_key.load(), flags, alpha, g_vis_calls.load(), g_vis_stripped.load(), g_vis_added.load(),
+              g_vis_last_caller.load() ? g_vis_last_caller.load() - g_base : 0);
 }
 
 // Co-op+ port 1.0.0.3549 (layout discovery, log only): the movement controller's layout around its buffers moved
@@ -491,7 +506,73 @@ bool write_code(uintptr_t rva, const uint8_t* bytes, size_t len) {
     return game::safe_read(g_base + rva, back.data(), len) && std::memcmp(back.data(), bytes, len) == 0;
 }
 
+// ---------------------------------------------------------------- Co-op+: the other player stays visible (3549)
+//
+// tc26: on both copies the other player's character stood where it should, logged in (u16 +0x5E 0x10, +0xCF 1), with
+// model alpha 0.0: its Status flags [+0x3B8] held 0x100000 (bit 20), and ClientStatusActorComponent slot 79
+// (0x6E99D0) keeps the alpha at 0 while [+0x3B8]|[+0x3C0] != 0 (the 2976 mechanism of copias-grupo-invisibles.md
+// §2.4, with 64-bit words). The flag setter 0x18CC450(Status rcx, bits rdx, set r8b, fade xmm3, [rsp+0x28] second
+// word) is the only writer; its callers that set bit 20 are 0x22153B8 and 0x231E018 (0x231DEE0: a non-local actor
+// linked to another's [comps+0x110] component). The guard sits at the setter's entry (mov rax,rsp; mov
+// [rax+0x10],rbx: 7 bytes, whole instructions, the function start): for the other player's character (key class 0xA,
+// local mark actor+0x96 == 0) a SET of bit 20 is stripped, and any CLEAR also clears bit 20, so the game's own next
+// flag change brings the alpha back natively (slot 79 runs because the combined value changes).
+constexpr uintptr_t kFlagSetter = 0x18CC450;
+constexpr uint8_t kFlagSetterBytes[] = {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x10, 0x48, 0x89, 0x68, 0x18, 0x48, 0x89, 0x70, 0x20};
+constexpr uint64_t kHideBit = 0x100000;
+constexpr uint32_t kStatusActor = 0x08, kActorLocalMark = 0x96;
+SafetyHookMid g_flag_hook;
+std::atomic<int> g_vis_logged{0};
+
+bool other_players_character(uintptr_t status) noexcept {
+    uintptr_t actor = 0;
+    uint32_t key = 0;
+    uint8_t local = 1;
+    return game::fast_read(status + kStatusActor, &actor, sizeof actor) && actor &&
+           game::fast_read(actor + rip::kActorKey, &key, sizeof key) && (key >> 28) == 0xA &&
+           game::fast_read(actor + kActorLocalMark, &local, sizeof local) && local == 0;
+}
+
+void on_flag_setter(safetyhook::Context& c) noexcept {
+    if (!other_players_character(c.rcx)) return;
+    g_vis_calls.fetch_add(1, std::memory_order_relaxed);
+    uintptr_t caller = 0;
+    game::fast_read(c.rsp, &caller, sizeof caller);
+    const bool set = (c.r8 & 0xFF) != 0;
+    const uint64_t bits = c.rdx;
+    bool changed = false;
+    if (set && (bits & kHideBit)) {
+        c.rdx = bits & ~kHideBit;
+        g_vis_stripped.fetch_add(1, std::memory_order_relaxed);
+        changed = true;
+    } else if (!set && !(bits & kHideBit)) {
+        uint64_t word = 0;
+        uint8_t second = 0;
+        game::fast_read(c.rsp + 0x28, &second, sizeof second);
+        if (!second && game::fast_read(c.rcx + 0x3B8, &word, sizeof word) && (word & kHideBit)) {
+            c.rdx = bits | kHideBit;
+            g_vis_added.fetch_add(1, std::memory_order_relaxed);
+            changed = true;
+        }
+    }
+    if (changed) g_vis_last_caller.store(caller, std::memory_order_relaxed);
+    if (changed && g_vis_logged.fetch_add(1, std::memory_order_relaxed) < 8) {
+        log::info("RemoteInterp [visible] the other player's character: {} bit 0x100000 in a flag {} of 0x{:X} from "
+                  "exe+0x{:X} (Status 0x{:X})",
+                  set ? "STRIPPED" : "ADDED (clears it too)", set ? "set" : "clear", bits, caller - g_base, c.rcx);
+    }
+}
+
 bool install_hooks() {
+    if (bytes_at(kFlagSetter, kFlagSetterBytes) &&
+        p8_install_mid(g_base, g_secs, kFlagSetter, 7, kFlagSetterBytes, on_flag_setter, g_flag_hook, "RemoteInterp",
+                       "the Status flag setter 0x18CC450 (the other player stays visible)")) {
+        log::info("RemoteInterp: the other player's character stays visible: Status flag bit 0x100000 is never set on "
+                  "it, and cleared with the game's next flag clear (hook exe+0x{:X})", kFlagSetter);
+    } else {
+        log::error("RemoteInterp: the Status flag setter exe+0x{:X} is not the expected code; the other player may "
+                   "stay invisible (alpha 0)", kFlagSetter);
+    }
     for (const HookSite& h : kHooks) {
         if (!in_allowed_range(h.rva, kHookLen)) {
             log::error("RemoteInterp: {} (exe+0x{:X}) is outside [0x1000, 0x51EB000); REFUSED, nothing hooked", h.what,
