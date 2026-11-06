@@ -267,7 +267,7 @@ inline void removed_keys(std::span<const uint8_t> p, std::vector<uint32_t>& out)
 }
 // MoveFieldAck 2174: u8 | u32 actor | u32 | u32 owner user @9 | ... (17 + 0x30 n bytes).
 inline std::optional<uint32_t> move_owner(std::span<const uint8_t> p) {
-    if (p.size() < 17 || (p.size() - 17) % 0x30 != 0) return std::nullopt;
+    if (p.size() < 17 || (p.size() - 17) % 0x38 != 0) return std::nullopt;  // Co-op+ port 3549: records of 0x38 (2976: 0x30)
     return le32(&p[9]);
 }
 

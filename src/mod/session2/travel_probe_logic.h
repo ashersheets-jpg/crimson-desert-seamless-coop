@@ -40,7 +40,9 @@ inline constexpr uint16_t kOpReviveLoadingReq = 2390;
 inline constexpr size_t kOwnerAt = 9;           // u32 owner, both 2174 and 2643 (payload offset, no Troc header)
 inline constexpr size_t kMoveFieldHead = 17;    // 2174: 17 + 48n
 inline constexpr size_t kLoadingFieldHead = 20; // 2643: 20 + 48n
-inline constexpr size_t kRecord = 0x30;
+// Co-op+ port 1.0.0.3549: the per-entry record grew to 0x38 (a live MoveFieldAck: 73 = 17 + 56, one record; owner
+// still @9). 2976: 0x30.
+inline constexpr size_t kRecord = 0x38;
 
 // ---------------------------------------------------------------- the owner alias (2174 and 2643)
 
