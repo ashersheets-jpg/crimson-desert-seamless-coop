@@ -47,21 +47,24 @@ struct HookSite {
     uint32_t off;  // buffer - mc
     const char* what;
 };
+// Co-op+ port 1.0.0.3549: the four reads of the delay global 0x71081C8 (the only movsxd reads of it; same
+// functions at the same offsets: setPos 0x1386C00 +0x3E, updPos +0x27 of its chunk 0x13870A3, setRot 0x1387310 +0x50,
+// updRot; same destination registers, now = rax+rbx / rcx as on 2976).
 constexpr HookSite kHooks[rip::kSites] = {
-    {0x11B200E, {0x4C, 0x63, 0x15, 0x33, 0x75, 0xB0, 0x05}, Site::SetPos, rip::kPosBuffer,
+    {0x1386C3E, {0x4C, 0x63, 0x15, 0x83, 0x15, 0xD8, 0x05}, Site::SetPos, rip::kPosBuffer,
      "the delay read of setInterpolatePositionData 0x11B1FD0"},
-    {0x11B2730, {0x4C, 0x63, 0x1D, 0x11, 0x6E, 0xB0, 0x05}, Site::SetRot, rip::kRotBuffer,
+    {0x1387360, {0x4C, 0x63, 0x1D, 0x61, 0x0E, 0xD8, 0x05}, Site::SetRot, rip::kRotBuffer,
      "the delay read of setInterpolateRotateData 0x11B26E0"},
-    {0x11B249A, {0x48, 0x63, 0x05, 0xA7, 0x70, 0xB0, 0x05}, Site::UpdPos, rip::kPosBuffer,
+    {0x13870CA, {0x48, 0x63, 0x05, 0xF7, 0x10, 0xD8, 0x05}, Site::UpdPos, rip::kPosBuffer,
      "the delay read of updateInterpolatePositionData 0x11B2420"},
-    {0x11B2B62, {0x48, 0x63, 0x05, 0xDF, 0x69, 0xB0, 0x05}, Site::UpdRot, rip::kRotBuffer,
+    {0x1387792, {0x48, 0x63, 0x05, 0x2F, 0x0A, 0xD8, 0x05}, Site::UpdRot, rip::kRotBuffer,
      "the delay read of updateInterpolateRotateData 0x11B2AF0"},
 };
 constexpr uint32_t kHookLen = 7;
-constexpr uintptr_t kDelayGlobal = 0x6CB9548;  // GlobalVariableInt value (object 0x6CB9510), default 200
+constexpr uintptr_t kDelayGlobal = 0x71081C8;  // GlobalVariableInt value, default 200 (Co-op+ port 3549; 2976 0x6CB9548)
 
 // The emptying threshold: cmp r8,0x3E8 right before `jbe` (0x11B207A / 0x11B277C).
-constexpr uintptr_t kThreshold[2] = {0x11B2073, 0x11B2775};
+constexpr uintptr_t kThreshold[2] = {0x1386CA3, 0x13873A5};  // 3549 (2976 0x11B2073, 0x11B2775)
 constexpr uint8_t kThresholdOrig[7] = {0x49, 0x81, 0xF8, 0xE8, 0x03, 0x00, 0x00};
 constexpr uint8_t kThresholdNew[7] = {0x49, 0x81, 0xF8, 0xC4, 0x09, 0x00, 0x00};  // 2500
 static_assert(rip::kPatchedThreshold == 0x9C4);
@@ -652,7 +655,7 @@ DWORD WINAPI interp_thread(LPVOID) {
     IMAGE_DOS_HEADER dos{};
     IMAGE_NT_HEADERS64 nt{};
     if (g_base != g2976::kImageBase || !peek(g_base, dos) || !peek(g_base + dos.e_lfanew, nt) ||
-        nt.FileHeader.TimeDateStamp != g2976::kPeTimestampUnported) {
+        nt.FileHeader.TimeDateStamp != g2976::kPeTimestamp) {
         log::error("RemoteInterp: unsupported game build; remote_interp stays off");
         return 0;
     }
