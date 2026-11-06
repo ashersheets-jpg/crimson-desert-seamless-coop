@@ -339,7 +339,9 @@ constexpr uint64_t kMaxLines = 3000;
 
 template <class T>
 bool rd(uintptr_t a, T& v) noexcept {
-    if (a < 0x10000) return false;
+    // tc34: a non-canonical address (0xFFFF...) never reaches the read (its fault was harmless but every vectored
+    // handler in the process saw it, Co-op+'s crash log among them).
+    if (a < 0x10000 || a > 0x00007FFFFFFFFFFFull) return false;
     __try {
         v = *reinterpret_cast<const volatile T*>(a);
         return true;
