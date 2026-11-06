@@ -494,6 +494,11 @@ std::string age_text(uint32_t key) {
     return std::format("not ready for >= {} s (5 s walk)", now >= since ? (now - since) / 1000 : 0);
 }
 
+// Co-op+ (3549): the 0x11 unstick (game thread writes, the tick logs).
+uint64_t g_unstuck_since = 0;
+std::atomic<uint8_t> g_unstuck_from{0};
+std::atomic<uint64_t> c_unstuck{0};
+uint64_t g_unstuck_logged = 0;
 // P8 S27: the last trip warned about a missing 2322 of its own character (diagnostics thread only).
 uint32_t g_warned_own_2322_trip = 0;
 std::atomic<uint64_t> c_own_2322_warned{0};
@@ -721,6 +726,26 @@ void guest_reload_wait_on_pass(uintptr_t p, uint8_t state, int previous) noexcep
         g_last_sample_us = now;
     }
     if (state == grw::kStateWait) on_wait(p, now);
+    // Co-op+ (3549 bring-up): state 0x11 waits for the own stage manager's +0x231 >= 2, which only a
+    // PlayAllPreLoadSequencerAck naming the guest's own character writes; in a trip into the host's field the host's
+    // server sends it for the host's character (S27), and guest_seq_route (which routes it) is not ported yet. After
+    // 4 s in 0x11 with the own value below 2, once per stay: the value the native handler writes (game thread, here,
+    // before the state handler runs). Mode 1 only.
+    if (state == grw::kStateOwn2322 && g_mode.load(std::memory_order_relaxed) == static_cast<uint8_t>(Mode::On) &&
+        g_code_ok.load(std::memory_order_acquire) && now - g_clock.state_since_us() >= 4'000'000 &&
+        g_unstuck_since != g_clock.state_since_us()) {
+        const uintptr_t a = own_actor();
+        const uintptr_t comps = a ? rdv<uintptr_t>(a + kActor_Comps) : 0;
+        const uintptr_t seq = comps ? rdv<uintptr_t>(comps + kComps_Seq) : 0;
+        const uintptr_t m = seq ? rdv<uintptr_t>(seq + kSeqComp_Mgr) : 0;
+        uint8_t v = 0xFF;
+        if (m && rdv<uintptr_t>(m) == g_base + kVtStageManager && rd(m + kMgr_Ready, v) && v < 2) {
+            g_unstuck_since = g_clock.state_since_us();
+            g_unstuck_from.store(v, std::memory_order_relaxed);
+            *reinterpret_cast<volatile uint8_t*>(m + kMgr_Ready) = 2;
+            c_unstuck.fetch_add(1, std::memory_order_relaxed);
+        }
+    }
     g_busy.clear(std::memory_order_release);
 }
 
@@ -747,6 +772,13 @@ void guest_reload_wait_note_entry(uint32_t key, bool ready) noexcept {
 void guest_reload_wait_tick() noexcept {
     if (!g_mode.load(std::memory_order_relaxed)) return;
     try {
+        if (const uint64_t n = c_unstuck.load(std::memory_order_relaxed); n != g_unstuck_logged) {
+            g_unstuck_logged = n;
+            log::warn("GuestReloadWait [0x11 unstick] the load sat 4 s in 0x11 without its own 2322: own stage manager "
+                      "+0x231 {} -> 2 (as PlayAllPreLoadSequencerAck's handler does) | {} so far (Co-op+, until "
+                      "guest_seq_route is ported)",
+                      g_unstuck_from.load(), n);
+        }
         if (!g_code_ok.load(std::memory_order_acquire) && !g_code_failed_logged.load()) {
             if (check_code()) {
                 log::info("GuestReloadWait: state 0x12 (exe+0x{:X}, exe+0x{:X}, removal exe+0x{:X}), vf1D8 exe+0x{:X} "

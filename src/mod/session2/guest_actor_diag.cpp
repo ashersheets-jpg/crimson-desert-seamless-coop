@@ -784,7 +784,9 @@ DWORD WINAPI install_thread(LPVOID) {
     }
     // As early as the game's code is there (2 minutes), like the guest's other hooks.
     for (int i = 0; i < 24000; ++i) {
-        const bool diag = !g_diag || (all_match(kFinishChecks) && all_match(kRestoreChecks) && all_match(kWaitChecks));
+        // Co-op+ port (3549): only the wait list's code (what the state hook and guest_reload_wait need); FinishGroup and
+        // the restore points are not ported and never match, which delayed every hook by these 2 minutes.
+        const bool diag = !g_diag || all_match(kWaitChecks);
         const bool guard = !g_guard || all_match(kGuardChecks);
         if (diag && guard) break;
         Sleep(5);
