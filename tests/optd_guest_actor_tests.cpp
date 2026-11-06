@@ -134,9 +134,14 @@ void test_sections() {
     CHECK(!in_real_code(secs, 0x500, 5));
     CHECK(!in_real_code(secs, 0x4FD491, 0));
     CHECK(section_of(secs, 0x500) == nullptr);
-    // A section that is merely named like it (no exact match) is not .rsrc.
-    const std::vector<Section> odd = {sec(".rsrc2", 0x1000, 0x1000)};
-    CHECK(!in_real_code(odd, 0x1100, 5));
+    // Co-op+ port: the real code is the section at 0x1000 whatever its (decoy) name; on 1.0.0.3576 it is ".text1" and
+    // a different, small section is called ".rsrc".
+    const std::vector<Section> b3576 = {sec(".text1", 0x1000, 0x5596000), sec(".tls$", 0x7A44000, 0xBDE1F34),
+                                        sec(".rsrc", 0x13826000, 0x1BAEA8)};
+    CHECK(in_real_code(b3576, 0x9439B0, 16));
+    CHECK(!in_real_code(b3576, 0x13826010, 5));
+    CHECK(!in_real_code(b3576, 0x7A44010, 5));
+    CHECK(is_denuvo_name(".tls$") && is_denuvo_name(".xpdata") && is_denuvo_name(".xtls") && !is_denuvo_name(".rsrc"));
 }
 
 void test_line_budget() {

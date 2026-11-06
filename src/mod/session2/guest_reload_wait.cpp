@@ -158,8 +158,7 @@ bool in_code(uintptr_t a) {
     if (a < g_base) return false;
     const gad::Section* s = gad::section_of(g_secs, static_cast<uint32_t>(a - g_base));
     if (!s) return false;
-    const std::string_view n(s->name);
-    return n == ".rsrc" || n == ".xtls" || n == ".xtext" || n == ".xpdata";  // 2976 / 3549 names
+    return gad::is_real_code_section(*s) || gad::is_denuvo_name(s->name);  // by place, not by the decoy names
 }
 
 // ---------------------------------------------------------------- the actors

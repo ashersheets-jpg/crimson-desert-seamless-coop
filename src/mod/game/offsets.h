@@ -8,7 +8,8 @@
 namespace cdmp::game::build_2976 {
 
 // CrimsonDesert.exe 1.0.0.2976 = public patch 2.03.02 (Steam build 25477059).
-// Co-op+ port: the ported values below are for 1.0.0.3549 (PE 0x6AEB7D59); the namespace keeps its old name.
+// Co-op+ port: the ported values below are for 1.0.0.3576 (PE 0x6AED2E85), mapped from the 1.0.0.3549 port (PE 0x6AEB7D59;
+// tools/native-port/scan3576.py in the Co-op+ repo); the namespace keeps its old name.
 inline constexpr uint32_t kPeTimestamp = 0x6AED2E85;  // 1.0.0.3576 (3549: 0x6AEB7D59)
 // Co-op+ port: modules whose addresses are not ported yet compare against this (build 2976), so on 3549
 // they stay off by their own build check (docs/research/native-port-3549.json).

@@ -209,7 +209,7 @@ inline constexpr uint8_t kTitlePlayReadsSaveMgrBytes[] = {0x48, 0x8B, 0x0D, 0xA1
                                                           0x48, 0x8B, 0x89, 0x88, 0x00, 0x00, 0x00};
 
 inline constexpr uintptr_t kImageBase = 0x140000000;
-inline constexpr uint32_t kPeTimestamp = 0x6AEB7D59;  // Co-op+ port: 1.0.0.3549 (was 0x6AB28F00)
+inline constexpr uint32_t kPeTimestamp = 0x6AED2E85;  // Co-op+ port: 1.0.0.3576 (3549: 0x6AEB7D59; 2976: 0x6AB28F00)
 inline constexpr uint32_t kPeTimestampUnported = 0x6AB28F00;  // modules not ported yet
 
 }  // namespace cdmp::session2::off

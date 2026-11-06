@@ -93,11 +93,17 @@ inline const Section* section_of(std::span<const Section> secs, uint32_t rva) {
     return nullptr;
 }
 
-// The only code the mod may patch: [rva, rva + len) entirely inside the game's real code section (.rsrc on build
-// 2976, .xtext on 1.0.0.3549: Co-op+ port), never the Denuvo section (.xtls / .xpdata) or anything else.
+// The only code the mod may patch: [rva, rva + len) entirely inside the game's real code section, never the Denuvo
+// section or anything else. Co-op+ port: the section NAMES are decoys reshuffled on every build (.rsrc on 2976, .xtext
+// on 1.0.0.3549, .text1 on 1.0.0.3576, where ".rsrc" is now a different, small section); the real code is the first
+// section, at rva 0x1000, on all three.
+inline constexpr uint32_t kRealCodeVa = 0x1000;
+inline bool is_real_code_section(const Section& s) { return s.va == kRealCodeVa; }
+// Denuvo's section (calls into it are the game's own): .xtls on 2976, .xpdata on 3549, .tls$ on 3576.
+inline bool is_denuvo_name(std::string_view n) { return n == ".xtls" || n == ".xpdata" || n == ".tls$"; }
 inline bool in_real_code(std::span<const Section> secs, uint32_t rva, uint32_t len) {
     const Section* s = section_of(secs, rva);
-    if (!s || (std::string_view(s->name) != ".rsrc" && std::string_view(s->name) != ".xtext") || len == 0) return false;
+    if (!s || !is_real_code_section(*s) || len == 0) return false;
     return static_cast<uint64_t>(rva) + len <= static_cast<uint64_t>(s->va) + s->size;
 }
 

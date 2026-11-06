@@ -861,7 +861,7 @@ bool install_hooks(bool host) {
     g_code_n = 0;
     for (const auto& s : secs) {
         const std::string_view n(s.name);
-        if ((n == ".rsrc" || n == ".xtls" || n == ".xtext" || n == ".xpdata") && g_code_n < std::size(g_code)) {
+        if ((gad::is_real_code_section(s) || gad::is_denuvo_name(n)) && g_code_n < std::size(g_code)) {
             g_code[g_code_n++] = {g_base + s.va, g_base + s.va + s.size};
         }
     }
