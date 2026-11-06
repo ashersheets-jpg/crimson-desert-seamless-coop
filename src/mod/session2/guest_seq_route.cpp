@@ -43,32 +43,31 @@ using gsr::Point;
 // their definition and the point.
 
 //   0xC0612A cmp bl,4 ; je 0xC06179 (RAX = the manager vf48 returned; RAX reaches 0xC06185 mov rcx,rax)
-constexpr uintptr_t kP2661 = 0xC0612A;
-constexpr uint8_t kP2661Bytes[] = {0x80, 0xFB, 0x04, 0x74, 0x4A, 0x48, 0x8D, 0x05,
-                                   0x7A, 0x37, 0x9C, 0x04, 0x48, 0x89, 0x44, 0x24};
-constexpr uint8_t kFrame2661Bytes[] = {0x48, 0x8D, 0xAC, 0x24, 0x60, 0xFF, 0xFF, 0xFF};  // 0xC05BC0
-constexpr uint8_t kKind2661Bytes[] = {0x0F, 0xB6, 0x9D, 0xF0, 0x00, 0x00, 0x00};          // 0xC060C6
-constexpr uint8_t kActor2661Bytes[] = {0x49, 0x89, 0x1C, 0x24};                            // 0xC060C2 mov [r12],rbx
-constexpr uint8_t kVf48_2661Bytes[] = {0x48, 0x8B, 0x4D, 0xC0, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x48};  // 0xC06120
-constexpr uint8_t kWrap2661Bytes[] = {0x4D, 0x8B, 0xE0};  // 0xC05BCF mov r12,r8 (the wrapper)
+// Co-op+ port 1.0.0.3549 (2661/2981/2810/2524): the handlers are slot 2 of their TrocTr vtables (Prepare 0xD33880,
+// BranchState 0xD35330, Delete 0xD33FA0, OnBranchEvent 0xD35F10). The wrapper registers of 2976 are overwritten
+// before the points on 3549 (2661 r12 at 0xD33CD5, 2981 r14 at 0xD357FE), so those read r8's home slot instead.
+constexpr uintptr_t kP2661 = 0xD33D2E;  // cmp r14b,4 ; je (6 bytes; the kind is in R14B, 2976 BL)
+constexpr uint8_t kP2661Bytes[] = {0x41, 0x80, 0xFE, 0x04, 0x74, 0x47, 0x48, 0x8D, 0x05, 0xB5, 0x3F, 0xC2, 0x04, 0x48, 0x89, 0x44};
+constexpr uint8_t kFrame2661Bytes[] = {0x48, 0x8D, 0xAC, 0x24, 0x50, 0xFF, 0xFF, 0xFF};  // 0xC05BC0
+constexpr uint8_t kKind2661Bytes[] = {0x44, 0x0F, 0xB6, 0xB5, 0x08, 0x01, 0x00, 0x00};          // 0xC060C6
+constexpr uint8_t kActor2661Bytes[] = {0x4D, 0x89, 0x34, 0x24};                            // 0xC060C2 mov [r12],rbx
+constexpr uint8_t kVf48_2661Bytes[] = {0x48, 0x8B, 0x4D, 0xD8, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x48};  // 0xC06120
+constexpr uint8_t kWrap2661Bytes[] = {0x4C, 0x89, 0x44, 0x24, 0x18};  // 0xC05BCF mov r12,r8 (the wrapper)
 //   0xC07749 lea rcx,[rbp-0x80] ; mov [rsp+0x30],rcx (RAX = the manager; RAX reaches 0xC0776E mov rcx,rax)
-constexpr uintptr_t kP2981 = 0xC07749;
-constexpr uint8_t kP2981Bytes[] = {0x48, 0x8D, 0x4D, 0x80, 0x48, 0x89, 0x4C, 0x24,
-                                   0x30, 0x48, 0x8D, 0x4D, 0xB0, 0x48, 0x89, 0x4C};
-constexpr uint8_t kWrap2981Bytes[] = {0x4D, 0x8B, 0xF8};                                   // 0xC073BC mov r15,r8
-constexpr uint8_t kActor2981Bytes[] = {0x49, 0x89, 0x3F};                                  // 0xC076E6 mov [r15],rdi
-constexpr uint8_t kVf48_2981Bytes[] = {0x48, 0x8B, 0x4D, 0xC8, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x48};  // 0xC0773F
+constexpr uintptr_t kP2981 = 0xD35854;  // 3549
+constexpr uint8_t kP2981Bytes[] = {0x48, 0x8D, 0x4D, 0x80, 0x48, 0x89, 0x4C, 0x24, 0x30, 0x48, 0x8D, 0x4D, 0xD0, 0x48, 0x89, 0x4C};
+constexpr uint8_t kWrap2981Bytes[] = {0x4C, 0x89, 0x44, 0x24, 0x18};                                   // 0xC073BC mov r15,r8
+constexpr uint8_t kActor2981Bytes[] = {0x49, 0x89, 0x3E};                                  // 0xC076E6 mov [r15],rdi
+constexpr uint8_t kVf48_2981Bytes[] = {0x48, 0x8B, 0x4D, 0xF0, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x48};  // 0xC0773F
 //   0xC0659E movzx ecx,byte [rbp+0x70] ; mov [rsp+0x20],cl (RAX = the manager; RAX reaches 0xC065B2 mov rcx,rax)
-constexpr uintptr_t kP2810 = 0xC0659E;
-constexpr uint8_t kP2810Bytes[] = {0x0F, 0xB6, 0x4D, 0x70, 0x88, 0x4C, 0x24, 0x20,
-                                   0x4C, 0x8D, 0x4D, 0xA0, 0x4C, 0x8B, 0x45, 0xA8};
-constexpr uint8_t kVf48_2810Bytes[] = {0x48, 0x8B, 0x4D, 0xB8, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x48};  // 0xC06594
-constexpr uint8_t kFrame2810Bytes[] = {0x48, 0x8D, 0x6C, 0x24, 0xE0};                     // 0xC06340 lea rbp,[rsp-0x20]
+constexpr uintptr_t kP2810 = 0xD34225;  // 3549: movzx ecx,byte [rbp+0x80] (disp32) ; mov [rsp+0x20],cl = 11 bytes
+constexpr uint8_t kP2810Bytes[] = {0x0F, 0xB6, 0x8D, 0x80, 0x00, 0x00, 0x00, 0x88, 0x4C, 0x24, 0x20, 0x4C, 0x8D, 0x4D, 0xB0, 0x4C};
+constexpr uint8_t kVf48_2810Bytes[] = {0x48, 0x8B, 0x4D, 0xC8, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x48};  // 0xC06594
+constexpr uint8_t kFrame2810Bytes[] = {0x48, 0x8D, 0x6C, 0x24, 0xD0};                     // 0xC06340 lea rbp,[rsp-0x20]
 // 0xC06505 mov r8d,[rbp+0x78] ; lea rdx,[rbp-0x10] ; mov rcx,rsi ; call 0x8A67E0 ; nop ;
 //          cmp byte [rbp],0 ; je 0xC06545 ; mov rsi,[rbp-8]   (the actor found: [rbp-8], found: [rbp])
-constexpr uint8_t kFind2810Bytes[] = {0x44, 0x8B, 0x45, 0x78, 0x48, 0x8D, 0x55, 0xF0, 0x48, 0x8B, 0xCE, 0xE8, 0xCB, 0x02,
-                                      0xCA, 0xFF, 0x90, 0x80, 0x7D, 0x00, 0x00, 0x74, 0x29, 0x48, 0x8B, 0x75, 0xF8};
-constexpr uint8_t kSeq2810Bytes[] = {0x4C, 0x8B, 0x45, 0xA8};  // 0xC065AA mov r8,[rbp-0x58] (the sequencer's u64)
+constexpr uint8_t kFind2810Bytes[] = {0x44, 0x8B, 0x85, 0x88, 0x00, 0x00, 0x00, 0x48, 0x8D, 0x55, 0x00, 0x48, 0x8B, 0xCE, 0xE8, 0x14, 0xB7, 0xC5, 0xFF, 0x90, 0x80, 0x7D, 0x10, 0x00, 0x74, 0x29, 0x48, 0x8B, 0x75, 0x08};
+constexpr uint8_t kSeq2810Bytes[] = {0x4C, 0x8B, 0x45, 0xB8};  // 0xC065AA mov r8,[rbp-0x58] (the sequencer's u64)
 //   0xB87A67 mov byte [rax+0x231],2 (RAX = M from 0xB87A5D..0xB87A64; R14 = the raw packet from 0xB878B8;
 //            the handler's own lookup 0xB879DD 0x8A67E0(rsi, &[rbp-0x18], key): found = byte [rbp-8], actor =
 //            [rbp-0x10], neither written again before 0xB87A67)
@@ -95,17 +94,13 @@ constexpr uint8_t kFind2322Bytes[] = {0x48, 0x8D, 0x55, 0xF8, 0x48, 0x8B, 0xCE, 
 //   0xC08178 lea rcx,[rbp-8] ; mov [rsp+0x28],rcx   THE POINT (9 bytes, two whole instructions, no branch into
 //            0xC0817C, no RIP-relative operand)
 //   0xC08188 ... 0xC08198 mov rcx,rax ; call 0xA9E480(M, field, seq, ...)   (RAX not written in between)
-constexpr uintptr_t kP2524 = 0xC08178;
-constexpr uint8_t kP2524Bytes[] = {0x48, 0x8D, 0x4D, 0xF8, 0x48, 0x89, 0x4C, 0x24,
-                                   0x28, 0x0F, 0xB6, 0x8D, 0xA8, 0x10, 0x00, 0x00};
-constexpr uint8_t kWrap2524Bytes[] = {0x4D, 0x8B, 0xF8, 0x48, 0x8B, 0xFA, 0x48, 0x8B,
-                                      0xD9, 0x33, 0xD2, 0x4D, 0x8B, 0x70, 0x18};  // 0xC07D25
-constexpr uint8_t kFind2524Bytes[] = {0x44, 0x8B, 0x45, 0xA0, 0x48, 0x8D, 0x55, 0x08, 0x49, 0x8B, 0xCC, 0xE8, 0xFF, 0xE6,
-                                      0xC9, 0xFF, 0x90, 0x80, 0x7D, 0x18, 0x00, 0x74, 0x29, 0x48, 0x8B, 0x5D, 0x10};  // 0xC080D1
+constexpr uintptr_t kP2524 = 0xD363D0;  // 3549 (its inner check 0xA9E55B is not ported: refused)
+constexpr uint8_t kP2524Bytes[] = {0x48, 0x8D, 0x4D, 0x08, 0x48, 0x89, 0x4C, 0x24, 0x28, 0x0F, 0xB6, 0x8D, 0xB8, 0x10, 0x00, 0x00};
+constexpr uint8_t kWrap2524Bytes[] = {0x4D, 0x8B, 0xF8, 0x48, 0x8B, 0xFA, 0x48, 0x8B, 0xD9, 0x45, 0x33, 0xED, 0x4D, 0x8B, 0x70, 0x18};  // 0xC07D25
+constexpr uint8_t kFind2524Bytes[] = {0x44, 0x8B, 0x45, 0xB0, 0x48, 0x8D, 0x55, 0x18, 0x49, 0x8B, 0xCC, 0xE8, 0x77, 0x95, 0xC5, 0xFF, 0x90, 0x80, 0x7D, 0x28, 0x00, 0x74, 0x29, 0x48, 0x8B, 0x5D, 0x20};  // 0xC080D1
 constexpr uint8_t kActor2524Bytes[] = {0x49, 0x89, 0x1F};  // 0xC0810E mov [r15],rbx
-constexpr uint8_t kVf48_2524Bytes[] = {0x48, 0x8B, 0x4D, 0xB8, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x48};  // 0xC0816E
-constexpr uint8_t kUse2524Bytes[] = {0x88, 0x4C, 0x24, 0x20, 0x44, 0x8B, 0x4D, 0xA4, 0x4C, 0x8B, 0x45, 0xA8,
-                                     0x48, 0x8B, 0x55, 0xB8, 0x48, 0x8B, 0xC8, 0xE8, 0xE0, 0x62, 0xE9, 0xFF};  // 0xC08188
+constexpr uint8_t kVf48_2524Bytes[] = {0x48, 0x8B, 0x4D, 0xC8, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x48};  // 0xC0816E
+constexpr uint8_t kUse2524Bytes[] = {0x88, 0x4C, 0x24, 0x20, 0x44, 0x8B, 0x4D, 0xB4, 0x4C, 0x8B, 0x45, 0xB8, 0x48, 0x8B, 0x55, 0xC8, 0x48, 0x8B, 0xC8, 0xE8, 0xF8, 0x37, 0xE7, 0xFF};  // 0xC08188
 
 // guest_sched_route (p8-impl-horarios-x.md §2), the NPC schedule Acks; capstone over the whole RUNTIME_FUNCTION of each
 // handler: the points are whole instructions, no direct branch (rel8 in the function, rel32 anywhere in .rsrc/.xtls)
@@ -169,7 +164,7 @@ constexpr uint32_t kComp_Stage = 0x318, kComp_Wait = 0x3D9;
 // The field each handler's vf48 ran on: the frame slot of its `mov rcx,[rbp-N] ; mov rax,[rcx] ; call [rax+0x48]`
 // (kVf48_* above, verified at install): 2661 [rbp-0x40], 2981 [rbp-0x38], 2810 [rbp-0x48], 2322 [rbp-0x58],
 // 2524 [rbp-0x48]; nothing writes it between that call and the point.
-constexpr uint32_t kFieldSlot[gsr::kPoints] = {0x40, 0x38, 0x48, 0x48 /* 3549 (2976 0x58) */, 0x48};
+constexpr uint32_t kFieldSlot[gsr::kPoints] = {0x28, 0x10, 0x38, 0x48, 0x38};  // 3549 (2976 0x40, 0x38, 0x48, 0x58, 0x48)
 
 constexpr uintptr_t kVtStageManager = 0x59572E0;  // 3549 (2976 0x55C9720)  // pa::ClientSequencerStageManager (RTTI)
 constexpr uintptr_t kVtSeqPlayComp = 0x594D930;  // 3549 (2976 0x55BEE78)   // pa::ClientSequencerPlayDataActorComponent (RTTI)
@@ -1034,23 +1029,23 @@ std::vector<SchedDef> sched_points() {
 
 std::vector<PointDef> points() {
     return {
-        {Point::P2661, kP2661, 5, kP2661Bytes,
-         {{0xC05BC0, kFrame2661Bytes}, {0xC060C6, kKind2661Bytes}, {0xC060C2, kActor2661Bytes},
-          {0xC06120, kVf48_2661Bytes}, {0xC05BCF, kWrap2661Bytes}},
+        {Point::P2661, kP2661, 6, kP2661Bytes,
+         {{0xD33895, kFrame2661Bytes}, {0xD33CC9, kKind2661Bytes}, {0xD33CC5, kActor2661Bytes},
+          {0xD33D24, kVf48_2661Bytes}, {0xD33885, kWrap2661Bytes}},
          on_p2661},
         {Point::P2981, kP2981, 9, kP2981Bytes,
-         {{0xC073BC, kWrap2981Bytes}, {0xC076E6, kActor2981Bytes}, {0xC0773F, kVf48_2981Bytes}},
+         {{0xD35335, kWrap2981Bytes}, {0xD357F1, kActor2981Bytes}, {0xD3584A, kVf48_2981Bytes}},
          on_p2981},
-        {Point::P2810, kP2810, 8, kP2810Bytes,
-         {{0xC06594, kVf48_2810Bytes}, {0xC06340, kFrame2810Bytes}, {0xC06505, kFind2810Bytes},
-          {0xC065AA, kSeq2810Bytes}},
+        {Point::P2810, kP2810, 11, kP2810Bytes,
+         {{0xD3421B, kVf48_2810Bytes}, {0xD33FB0, kFrame2810Bytes}, {0xD34189, kFind2810Bytes},
+          {0xD34234, kSeq2810Bytes}},
          on_p2810},
         {Point::P2322, kP2322, 7, kP2322Bytes,
          {{0xC9CB91, kVf48_2322Bytes}, {0xC9C9CC, kRaw2322Bytes}, {0xC9CB0A, kFind2322Bytes}},
          on_p2322},
         {Point::P2524, kP2524, 9, kP2524Bytes,
-         {{0xC07D25, kWrap2524Bytes}, {0xC080D1, kFind2524Bytes}, {0xC0810E, kActor2524Bytes},
-          {0xC0816E, kVf48_2524Bytes}, {0xC08188, kUse2524Bytes}},
+         {{0xD35F35, kWrap2524Bytes}, {0xD36329, kFind2524Bytes}, {0xD36366, kActor2524Bytes},
+          {0xD363C6, kVf48_2524Bytes}, {0xD363E0, kUse2524Bytes}},
          on_p2524},
     };
 }
@@ -1134,7 +1129,7 @@ DWORD WINAPI install_thread(LPVOID) {
     IMAGE_NT_HEADERS64 nt{};
     std::vector<gad::Section> secs;
     if (g_base != off::kImageBase || !game::safe_read(g_base, &dos, sizeof dos) ||
-        !game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestampUnported ||
+        !game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestamp ||
         !p8_exe_sections(g_base, secs)) {
         log::error("GuestSeqRoute: unsupported game build or unreadable sections; nothing is routed (the gate drops "
                    "every copy)");
@@ -1297,20 +1292,24 @@ void guest_seq_route_hook(Point point, safetyhook::Context& ctx) noexcept {
     uint64_t seq = 0;
     uint32_t value = 0;
     switch (point) {
-        case Point::P2661:
-            f.kind_ok = (ctx.rbx & 0xFF) == 4;
-            f.actor = rdp(ctx.r12);
-            raw = rdp(ctx.r12 + kWrap_Raw);
+        case Point::P2661: {  // 3549: kind R14B; the wrapper is r8's home slot [rbp+0x100] (r12 reused at 0xD33CD5)
+            f.kind_ok = (ctx.r14 & 0xFF) == 4;
+            const uintptr_t wrap = rdp(ctx.rbp + 0x100);
+            f.actor = rdp(wrap);
+            raw = rdp(wrap + kWrap_Raw);
             break;
-        case Point::P2981:
-            f.actor = rdp(ctx.r15);
-            raw = rdp(ctx.r15 + kWrap_Raw);
+        }
+        case Point::P2981: {  // 3549: the wrapper's home slot [rbp+0xA0] (r14 reused at 0xD357FE)
+            const uintptr_t wrap = rdp(ctx.rbp + 0xA0);
+            f.actor = rdp(wrap);
+            raw = rdp(wrap + kWrap_Raw);
             break;
-        case Point::P2810:
-            f.actor = rdv<uint8_t>(ctx.rbp) ? rdp(ctx.rbp - 8) : 0;
-            f.packet_key = rdv<uint32_t>(ctx.rbp + 0x78);
-            seq = rdv<uint64_t>(ctx.rbp - 0x58);
-            value = rdv<uint32_t>(ctx.rbp - 0x60);
+        }
+        case Point::P2810:  // 3549: lookup 0xD34189 found [rbp+0x10] actor [rbp+8]; key [rbp+0x88]; seq [rbp-0x48]
+            f.actor = rdv<uint8_t>(ctx.rbp + 0x10) ? rdp(ctx.rbp + 8) : 0;
+            f.packet_key = rdv<uint32_t>(ctx.rbp + 0x88);
+            seq = rdv<uint64_t>(ctx.rbp - 0x48);
+            value = rdv<uint32_t>(ctx.rbp - 0x50);
             break;
         case Point::P2322:
             raw = ctx.r14;
