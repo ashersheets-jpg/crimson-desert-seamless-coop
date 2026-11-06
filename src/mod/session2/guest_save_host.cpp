@@ -70,9 +70,9 @@ struct CallSite {
 };
 constexpr CallSite kCallSites[] = {
     // Co-op+ port 1.0.0.3549 (calls found by scanning .xtext and .xpdata for E8 to each entry; order as on 2976).
-    {0x2EBBE8B, kLoadSlot}, {0x2EE2BA1, kLoadSlot}, {0xE3CCACF, kLoadSlot},  // UserLogin, 3093 lobby, 3093 character
-    {0xB7F1385, kSave},     {0xE37C231, kSave},                               // autosave, 2910
-    {0x2B5CD6A, kFlush},    {0xE6FC3C8, kFlush},                              // logout phase, flush timer
+    {0x2EBBE8B, kLoadSlot}, {0x2EE2BA1, kLoadSlot}, {0xE3927BF, kLoadSlot},  // UserLogin, 3093 lobby, 3093 character
+    {0xB8A786C, kSave},     {0xE35801A, kSave},                               // autosave, 2910
+    {0x2B5CD6A, kFlush},    {0xE69FA88, kFlush},                              // logout phase, flush timer
 };
 struct ErrorSite {
     uintptr_t at, global;
