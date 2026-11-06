@@ -79,8 +79,8 @@ constexpr uint32_t kP_Manager = 0xB8;                 // M; its +0x10 is the loc
 constexpr uint32_t kManager_Container = 0x08;         // C = ClientActorContainer
 constexpr uint32_t kContainer_WaitKeys = 0x78;        // u32*
 constexpr uint32_t kContainer_WaitCount = 0x80;       // u32
-constexpr uintptr_t kStateSite = 0x7798D0;
-constexpr uint8_t kStateSiteBytes[] = {0x44, 0x0F, 0xB6, 0xB7, 0x5C, 0x01, 0x00, 0x00};
+constexpr uintptr_t kStateSite = 0x855AE4;
+constexpr uint8_t kStateSiteBytes[] = {0x41, 0x0F, 0xB6, 0xB5, 0x5C, 0x01, 0x00, 0x00};
 // The state's transitions as they happen (p8-raiz-invitado.md §4.3, §7.2): a
 // mid hook on that read, movzx r14d,byte [rdi+0x15C] (8 bytes, patch 8), then
 // mov [rbp+0xD0],r14b. 0x7797F0 jumps back to 0x7798B6 whenever a state
@@ -88,18 +88,19 @@ constexpr uint8_t kStateSiteBytes[] = {0x44, 0x0F, 0xB6, 0xB7, 0x5C, 0x01, 0x00,
 // through passes here. RDI = P since 0x779823. No branch of the function nor
 // any rel32 of .rsrc/.xtls/.text lands in 0x7798D1..0x7798D7 (p8-impl-s1s2.md §2).
 constexpr uint32_t kStatePatch = 8;
-constexpr uint8_t kStateHookBytes[] = {0x44, 0x0F, 0xB6, 0xB7, 0x5C, 0x01, 0x00, 0x00,
-                                       0x44, 0x88, 0xB5, 0xD0, 0x00, 0x00, 0x00};
-constexpr uintptr_t kWaitSite = 0x779ED0;
-constexpr uint8_t kWaitSiteBytes[] = {0x48, 0x8B, 0x56, 0x78, 0x8B, 0x12, 0x49, 0x8B, 0x4E, 0x08, 0xE8, 0xB1,
-                                      0xA3, 0xCE, 0xFF, 0x48, 0x85, 0xC0, 0x74, 0x13, 0x48, 0x8B, 0x08, 0x48,
+// Co-op+ port 1.0.0.3549: movzx esi,byte [r13+0x15C] ; mov [rbp+0xF0],sil (P is r13 there, not rdi).
+constexpr uint8_t kStateHookBytes[] = {0x41, 0x0F, 0xB6, 0xB5, 0x5C, 0x01, 0x00, 0x00,
+                                       0x40, 0x88, 0xB5, 0xF0, 0x00, 0x00, 0x00};
+constexpr uintptr_t kWaitSite = 0x856130;
+constexpr uint8_t kWaitSiteBytes[] = {0x48, 0x8B, 0x57, 0x78, 0x8B, 0x12, 0x48, 0x8B, 0x4E, 0x08, 0xE8, 0x91,
+                                      0x38, 0xCB, 0xFF, 0x48, 0x85, 0xC0, 0x74, 0x13, 0x48, 0x8B, 0x08, 0x48,
                                       0x8B, 0x91, 0xD8, 0x01, 0x00, 0x00};
-constexpr uintptr_t kFind = 0x464290;
-constexpr uint8_t kFindBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x83, 0xB9, 0x8C, 0x00, 0x00, 0x00, 0x00, 0x44,
-                                  0x8B, 0xC2, 0x4C, 0x8B, 0xD1, 0x74, 0x4F, 0x8B, 0x89, 0x88, 0x00, 0x00, 0x00,
-                                  0x85, 0xC9, 0x74, 0x45, 0x33, 0xD2, 0x41, 0x8B, 0xC0, 0xF7, 0xF1, 0x44, 0x8B,
-                                  0xDA, 0x33, 0xD2, 0x49, 0xC1, 0xE3, 0x08, 0x4D, 0x03, 0x9A, 0x98, 0x00, 0x00,
-                                  0x00, 0x41, 0x8B, 0x1B};
+constexpr uintptr_t kFind = 0x5099D0;
+constexpr uint8_t kFindBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x83, 0xB9, 0x8C, 0x00, 0x00, 0x00, 0x00,
+                                  0x44, 0x8B, 0xC2, 0x4C, 0x8B, 0xD1, 0x74, 0x4F, 0x8B, 0x89, 0x88, 0x00,
+                                  0x00, 0x00, 0x85, 0xC9, 0x74, 0x45, 0x33, 0xD2, 0x41, 0x8B, 0xC0, 0xF7,
+                                  0xF1, 0x44, 0x8B, 0xDA, 0x33, 0xD2, 0x49, 0xC1, 0xE3, 0x08, 0x4D, 0x03,
+                                  0x9A, 0x98, 0x00, 0x00, 0x00, 0x41, 0x8B, 0x1B};
 // vf1D8 = 0x4FE240: +0xC2 && +0xCF (read here, never called).
 constexpr uint32_t kActor_State = 0x5E, kActor_C2 = 0xC2, kActor_CF = 0xCF;
 
@@ -628,25 +629,26 @@ void tick_wait_list() {
 // Game thread, every pass of 0x7797F0 through its state switch: one compare,
 // an event only when the value differs from the last one seen.
 void on_state(safetyhook::Context& ctx) noexcept {
+    const uintptr_t p_reg = ctx.r13;  // Co-op+ port 3549: P is r13 at the state read (2976: rdi)
     g_state_hits.fetch_add(1, std::memory_order_relaxed);
     // Only the field-change P the 5 s report reads ([[WorldSystem]+0x60]).
     uintptr_t ws = 0, expected = 0;
     if (!fast_peek(g_base + g2976::kWorldSystemSlot, ws) || !fast_peek(ws + kWorldSystem_FieldChange, expected) ||
-        expected != ctx.rdi) {
+        expected != p_reg) {
         g_state_other_p.fetch_add(1, std::memory_order_relaxed);
         return;
     }
     uint8_t state = 0;
-    if (!fast_peek(ctx.rdi + kP_State, state)) return;
+    if (!fast_peek(p_reg + kP_State, state)) return;
     const int old = g_state_seen.exchange(state, std::memory_order_relaxed);
     // P8 S15 (guest_reload_wait.h): every pass, before the state handler runs; nothing when it is off.
-    if (guest_reload_wait_active()) guest_reload_wait_on_pass(ctx.rdi, state, old);
+    if (guest_reload_wait_active()) guest_reload_wait_on_pass(p_reg, state, old);
     if (old == state) return;
     g_state_changes.fetch_add(1, std::memory_order_relaxed);
     p8p::Event e;
     e.qpc_us = p8_now_us();
     e.tid = GetCurrentThreadId();
-    e.v[0] = ctx.rdi;
+    e.v[0] = p_reg;
     e.v[1] = static_cast<uint64_t>(static_cast<int64_t>(old));
     e.v[2] = state;
     g_state_ring.push(e);  // full: counted by the ring
