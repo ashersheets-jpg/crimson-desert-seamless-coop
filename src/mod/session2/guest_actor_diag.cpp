@@ -224,7 +224,7 @@ bool read_sections() {
 
 std::string rsrc_text() {
     for (const gad::Section& s : g_secs) {
-        if (std::string_view(s.name) == ".rsrc") {
+        if (std::string_view(s.name) == ".rsrc" || std::string_view(s.name) == ".xtext") {
             return std::format("hooked bytes checked inside .rsrc [exe+0x{:X}, exe+0x{:X})", s.va,
                                static_cast<uint64_t>(s.va) + s.size);
         }

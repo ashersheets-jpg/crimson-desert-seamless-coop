@@ -422,7 +422,7 @@ bool read_rsrc() {
     for (WORD i = 0; i < nt.FileHeader.NumberOfSections && i < 64; ++i) {
         IMAGE_SECTION_HEADER h{};
         if (!game::safe_read(first + i * sizeof h, &h, sizeof h)) return false;
-        if (std::memcmp(h.Name, ".rsrc\0\0\0", 8) == 0) {
+        if (std::memcmp(h.Name, ".rsrc\0\0\0", 8) == 0 || std::memcmp(h.Name, ".xtext\0\0", 8) == 0) {  // 2976 / 3549
             g_rsrc_va = h.VirtualAddress;
             g_rsrc_size = h.Misc.VirtualSize;
             return true;

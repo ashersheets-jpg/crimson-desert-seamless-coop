@@ -32,7 +32,7 @@ namespace {
 namespace g2976 = game::build_2976;
 using tbl::Mode;
 
-constexpr uintptr_t kCodeBegin = 0x1000, kCodeEnd = 0x51EB000;
+constexpr uintptr_t kCodeBegin = 0x1000, kCodeEnd = 0x5595000;  // Co-op+ port: end of .xtext on 1.0.0.3549 (2976: .rsrc ends at 0x51EB000)
 constexpr uint32_t kLoopMs = 10;
 constexpr uint64_t kWorldTickMs = 500;
 constexpr uint32_t kWorldTicks = 6;
@@ -511,7 +511,7 @@ bool install_hooks() {
     g_code_n = 0;
     for (const auto& s : secs) {
         const std::string_view n(s.name);
-        if ((n == ".rsrc" || n == ".xtls") && g_code_n < std::size(g_code)) {
+        if ((n == ".rsrc" || n == ".xtls" || n == ".xtext" || n == ".xpdata") && g_code_n < std::size(g_code)) {
             g_code[g_code_n++] = {g_base + s.va, g_base + s.va + s.size};
         }
     }

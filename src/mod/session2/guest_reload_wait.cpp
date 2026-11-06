@@ -155,7 +155,7 @@ bool in_code(uintptr_t a) {
     const gad::Section* s = gad::section_of(g_secs, static_cast<uint32_t>(a - g_base));
     if (!s) return false;
     const std::string_view n(s->name);
-    return n == ".rsrc" || n == ".xtls";
+    return n == ".rsrc" || n == ".xtls" || n == ".xtext" || n == ".xpdata";  // 2976 / 3549 names
 }
 
 // ---------------------------------------------------------------- the actors

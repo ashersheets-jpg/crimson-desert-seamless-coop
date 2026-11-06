@@ -127,7 +127,8 @@ void test_byte_site() {
     CHECK(rmo::check_data_byte(secs, 0x6D76D5C) == rmo::ByteSite::Ok);  // the wall-up byte (.rdata, RW)
     CHECK(rmo::check_data_byte(secs, 0x87DD2F) == rmo::ByteSite::InCode);
     CHECK(rmo::check_data_byte(secs, 0x8000000) == rmo::ByteSite::Xtls);
-    CHECK(rmo::check_data_byte(secs, 0x5300000) == rmo::ByteSite::NotWritable);   // .xdata
+    // .xdata, past kCodeEnd (0x5595000 since the Co-op+ port to 3549: the end of its .xtext)
+    CHECK(rmo::check_data_byte(secs, 0x5600000) == rmo::ByteSite::NotWritable);
     CHECK(rmo::check_data_byte(secs, 0x170D4010) == rmo::ByteSite::Ok);  // .shared: RW (0xC0000020, no MEM_EXECUTE)
     CHECK(rmo::check_data_byte(secs, 0x16F10010) == rmo::ByteSite::NotWritable);  // .text
     auto rwx = secs;

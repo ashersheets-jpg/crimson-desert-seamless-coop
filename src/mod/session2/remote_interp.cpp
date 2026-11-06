@@ -67,7 +67,7 @@ constexpr uint8_t kThresholdNew[7] = {0x49, 0x81, 0xF8, 0xC4, 0x09, 0x00, 0x00};
 static_assert(rip::kPatchedThreshold == 0x9C4);
 
 // The rule of the task: hooks and patches only inside [0x1000, 0x51EB000) (never .xtls).
-constexpr uintptr_t kCodeBegin = 0x1000, kCodeEnd = 0x51EB000;
+constexpr uintptr_t kCodeBegin = 0x1000, kCodeEnd = 0x5595000;  // Co-op+ port: end of .xtext on 1.0.0.3549 (2976: .rsrc ends at 0x51EB000)
 
 constexpr uint64_t kSummaryMs = 60000;
 

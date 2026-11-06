@@ -53,7 +53,7 @@ constexpr uint8_t kThunkRideOff[] = {0xE9, 0x1B, 0xA0, 0x4C, 0x0C};  // jmp 0xE6
 constexpr uintptr_t kCommonVf53 = 0x2228260, kClientVf53 = 0xA45740, kRideOffThunk = 0x2228E40, kClientVf54 = 0xA45760;
 constexpr uintptr_t kRideOnEnter = 0x681C80, kRideOffEnter = 0x682C20, kH2663 = 0xBB4130, kH2916 = 0xBB4AC0,
                     kH2991 = 0xB57720;
-constexpr uintptr_t kCodeEnd = 0x51EB000;
+constexpr uintptr_t kCodeEnd = 0x5595000;  // Co-op+ port: end of .xtext on 1.0.0.3549 (2976: .rsrc ends at 0x51EB000)
 
 // P8 S18 fix B (pendientes/p8-s18-desmontar-nativo.md §6, mount_sync_logic.h "the request gate") [V, capstone on the
 // installed PE]: the thunk 0x2329A90 `jmp 0xEE58A40` (5 B, a function start in .rsrc; no E8/E9 lands in +1..+4); its

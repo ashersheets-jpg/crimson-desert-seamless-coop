@@ -93,11 +93,11 @@ inline const Section* section_of(std::span<const Section> secs, uint32_t rva) {
     return nullptr;
 }
 
-// The only code the mod may patch: [rva, rva + len) entirely inside .rsrc (the
-// game's real code in this build), never .xtls (Denuvo) or anything else.
+// The only code the mod may patch: [rva, rva + len) entirely inside the game's real code section (.rsrc on build
+// 2976, .xtext on 1.0.0.3549: Co-op+ port), never the Denuvo section (.xtls / .xpdata) or anything else.
 inline bool in_real_code(std::span<const Section> secs, uint32_t rva, uint32_t len) {
     const Section* s = section_of(secs, rva);
-    if (!s || std::string_view(s->name) != ".rsrc" || len == 0) return false;
+    if (!s || (std::string_view(s->name) != ".rsrc" && std::string_view(s->name) != ".xtext") || len == 0) return false;
     return static_cast<uint64_t>(rva) + len <= static_cast<uint64_t>(s->va) + s->size;
 }
 
