@@ -1243,10 +1243,11 @@ void server_probe_log(const char* when) {
     const auto s2 = live_session2();
     log::info("Session2 probe ({}): host {} | user 2 {}", when, where(s1),
               s2 ? where(std::optional<uintptr_t>(s2)) : std::string("-"));
-    // The server's world time (FieldTime, exe+0x6A6D238): user 2's MoveField and
+    // The server's world time (FieldTime, exe+0x6A6D238 on 2976; Co-op+ port: 0x6EAB9B8 on 3549 = the client's
+    // FieldTime 0x6EAB998 + 0x20, as on 2976): user 2's MoveField and
     // LoadingCompleteReq 01 copy its save's time here (R1).
     uint8_t ft[32] = {};
-    if (game::safe_read(g_base + 0x6A6D238, ft, sizeof ft)) {
+    if (game::safe_read(g_base + 0x6EAB9B8, ft, sizeof ft)) {
         std::string h;
         for (uint8_t b : ft) h += std::format("{:02X}", b);
         log::info("Session2 probe ({}): server FieldTime {}", when, h);

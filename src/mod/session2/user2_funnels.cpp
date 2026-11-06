@@ -1660,7 +1660,7 @@ DWORD WINAPI funnels_thread(LPVOID) {
     IMAGE_DOS_HEADER dos{};
     IMAGE_NT_HEADERS64 nt{};
     if (g_base != g2976::kImageBase || !peek(g_base, dos) || !peek(g_base + dos.e_lfanew, nt) ||
-        nt.FileHeader.TimeDateStamp != g2976::kPeTimestamp) {
+        nt.FileHeader.TimeDateStamp != g2976::kPeTimestampUnported) {
         log::error("User2Funnels: unsupported game build; rank_permit / quest_per_user / kill_loot_per_user stay off");
         return 0;
     }

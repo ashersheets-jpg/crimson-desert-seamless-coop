@@ -1120,7 +1120,7 @@ DWORD WINAPI probe_thread(LPVOID) {
     IMAGE_DOS_HEADER dos{};
     IMAGE_NT_HEADERS64 nt{};
     if (g_base != off::kImageBase || !peek(g_base, dos) || !peek(g_base + dos.e_lfanew, nt) ||
-        nt.FileHeader.TimeDateStamp != off::kPeTimestamp) {
+        nt.FileHeader.TimeDateStamp != off::kPeTimestampUnported) {
         log::error("P8Probe: unsupported game build; load_diag / s1_diag stay off");
         g_settled.store(true);
         return 0;

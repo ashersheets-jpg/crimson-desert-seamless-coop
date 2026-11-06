@@ -669,7 +669,7 @@ bool build_ok() {
     IMAGE_DOS_HEADER dos{};
     IMAGE_NT_HEADERS64 nt{};
     return g_base == g2976::kImageBase && game::safe_read(g_base, &dos, sizeof dos) &&
-           game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) && nt.FileHeader.TimeDateStamp == g2976::kPeTimestamp;
+           game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) && nt.FileHeader.TimeDateStamp == g2976::kPeTimestampUnported;
 }
 
 // ---------------------------------------------------------------- the module's thread

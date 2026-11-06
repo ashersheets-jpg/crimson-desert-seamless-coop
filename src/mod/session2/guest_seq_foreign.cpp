@@ -632,7 +632,7 @@ bool read_pdata(std::vector<RUNTIME_FUNCTION>& out, std::string& why) {
     if (g_base != off::kImageBase || !game::safe_read(g_base, &dos, sizeof dos) || dos.e_magic != IMAGE_DOS_SIGNATURE ||
         dos.e_lfanew <= 0 || dos.e_lfanew > 0x100000 ||
         !game::safe_read(g_base + static_cast<uint32_t>(dos.e_lfanew), &nt, sizeof nt) ||
-        nt.Signature != IMAGE_NT_SIGNATURE || nt.FileHeader.TimeDateStamp != off::kPeTimestamp) {
+        nt.Signature != IMAGE_NT_SIGNATURE || nt.FileHeader.TimeDateStamp != off::kPeTimestampUnported) {
         why = "not build 1.0.0.2976 (base / PE timestamp)";
         return false;
     }

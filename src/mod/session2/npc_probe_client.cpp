@@ -390,7 +390,7 @@ void npc_probe_client_start(std::string_view activation, std::string_view family
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     uint16_t mz{}; uint32_t pe_at{}, pe{}, stamp{};
     if (!rd(g_base,mz) || mz != 0x5A4D || !rd(g_base + 0x3C,pe_at) || pe_at > 0x100000 ||
-        !rd(g_base + pe_at,pe) || pe != 0x4550 || !rd(g_base + pe_at + 8,stamp) || stamp != game::build_2976::kPeTimestamp) {
+        !rd(g_base + pe_at,pe) || pe != 0x4550 || !rd(g_base + pe_at + 8,stamp) || stamp != game::build_2976::kPeTimestampUnported) {
         log::warn("NpcProbe: build distinta de 2976 o cabecera ilegible; no se leen actores"); return;
     }
     g_on.store(true);

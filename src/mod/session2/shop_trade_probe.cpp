@@ -1304,7 +1304,7 @@ DWORD WINAPI thread_main(LPVOID) {
     std::vector<gad::Section> secs;
     std::vector<RUNTIME_FUNCTION> pdata;
     if (g_base != off::kImageBase || !game::safe_read(g_base, &dos, sizeof dos) ||
-        !game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestamp ||
+        !game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestampUnported ||
         !p8_exe_sections(g_base, secs) || !read_pdata(pdata)) {
         log::warn("ShopTradeProbe: not build 1.0.0.2976 (base / PE TimeDateStamp) or unreadable sections / .pdata: "
                   "NOTHING installed (the 3000 / Nak taps still count)");

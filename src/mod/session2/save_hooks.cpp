@@ -1154,6 +1154,24 @@ bool save_hooks_install(saveguard::Mode mode) {
                        "(writes refused, 'Failed to save data' will come back)", narrow(sandbox));
             mode = saveguard::Mode::Block;
         } else {
+            // Co-op+ port (tests): CDMP_SANDBOX_ADD="<folder>|<path under the save folder>" copies a test slot
+            // (e.g. slot103) into the sandbox only, so a test never adds anything to the real save folder.
+            wchar_t add[1024];
+            const DWORD an = GetEnvironmentVariableW(L"CDMP_SANDBOX_ADD", add, 1024);
+            if (an > 0 && an < 1024) {
+                const std::wstring spec(add);
+                const size_t bar = spec.find(L'|');
+                const std::wstring src = spec.substr(0, bar), dst = sandbox + L"\\" + spec.substr(bar + 1);
+                CopyStats extra;
+                const bool made = bar != std::wstring::npos && (CreateDirectoryW(dst.c_str(), nullptr) ||
+                                                                 GetLastError() == ERROR_ALREADY_EXISTS);
+                if (made && copy_tree(src, dst, extra)) {
+                    log::info("Session2 save redirect: test slot '{}' copied into the sandbox as '{}' ({} files)",
+                              narrow(src), narrow(dst), extra.files);
+                } else {
+                    log::error("Session2 save redirect: CDMP_SANDBOX_ADD '{}' could not be copied", narrow(spec));
+                }
+            }
             g_redir = std::move(redir);
             // Before the first hook is enabled: a detour must never see the redirect half on.
             g_redirect.store(true, std::memory_order_relaxed);

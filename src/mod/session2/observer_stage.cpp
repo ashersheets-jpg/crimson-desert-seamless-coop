@@ -650,7 +650,7 @@ DWORD WINAPI stage_thread(LPVOID) {
     IMAGE_DOS_HEADER dos{};
     IMAGE_NT_HEADERS64 nt{};
     if (g_base != off::kImageBase || !peek(g_base, dos) || !peek(g_base + dos.e_lfanew, nt) ||
-        nt.FileHeader.TimeDateStamp != off::kPeTimestamp) {
+        nt.FileHeader.TimeDateStamp != off::kPeTimestampUnported) {
         log::error("ObserverStage: unsupported game build; observer_stage_sync stays off");
         return 0;
     }

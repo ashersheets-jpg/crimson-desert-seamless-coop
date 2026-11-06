@@ -604,7 +604,7 @@ DWORD WINAPI probe_thread(LPVOID) {
     IMAGE_NT_HEADERS64 nt{};
     std::vector<gad::Section> secs;
     if (g_base != off::kImageBase || !game::safe_read(g_base, &dos, sizeof dos) ||
-        !game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestamp ||
+        !game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestampUnported ||
         !p8_exe_sections(g_base, secs)) {
         log::error("ShopProbe: unsupported game build or unreadable sections; nothing installed (taps still count)");
     } else {

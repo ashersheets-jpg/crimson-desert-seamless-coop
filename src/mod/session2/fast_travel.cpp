@@ -195,7 +195,7 @@ DWORD WINAPI guest_thread(LPVOID) {
     IMAGE_NT_HEADERS64 nt{};
     std::vector<gad::Section> secs;
     if (base != g2976::kImageBase || !peek(base, dos) || !peek(base + dos.e_lfanew, nt) ||
-        nt.FileHeader.TimeDateStamp != g2976::kPeTimestamp || !p8_exe_sections(base, secs)) {
+        nt.FileHeader.TimeDateStamp != g2976::kPeTimestampUnported || !p8_exe_sections(base, secs)) {
         log::error("GuestFastTravel: unsupported game build or unreadable sections; guest_fast_travel_veto stays off");
         return 0;
     }

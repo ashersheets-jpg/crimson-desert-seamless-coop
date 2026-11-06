@@ -847,7 +847,7 @@ DWORD WINAPI motion_thread(LPVOID) {
     IMAGE_DOS_HEADER dos{};
     IMAGE_NT_HEADERS64 nt{};
     if (g_base != g2976::kImageBase || !peek(g_base, dos) || !peek(g_base + dos.e_lfanew, nt) ||
-        nt.FileHeader.TimeDateStamp != g2976::kPeTimestamp) {
+        nt.FileHeader.TimeDateStamp != g2976::kPeTimestampUnported) {
         log::error("RemoteMotion: unsupported game build; remote_climb / wallup_send / dismount_probe stay off");
         return 0;
     }

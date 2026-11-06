@@ -513,7 +513,7 @@ DWORD WINAPI ui_thread(LPVOID) {
     IMAGE_DOS_HEADER dos{};
     IMAGE_NT_HEADERS64 nt{};
     if (g_base != g2976::kImageBase || !peek(g_base, dos) || !peek(g_base + dos.e_lfanew, nt) ||
-        nt.FileHeader.TimeDateStamp != g2976::kPeTimestamp) {
+        nt.FileHeader.TimeDateStamp != g2976::kPeTimestampUnported) {
         log::error("UiPause: unsupported game build; ui_pause_block stays off");
         return 0;
     }

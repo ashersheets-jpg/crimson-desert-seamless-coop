@@ -1371,7 +1371,7 @@ DWORD WINAPI install_thread(LPVOID) {
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(g_base);
     const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(g_base + dos->e_lfanew);
-    if (g_base != off::kImageBase || nt->FileHeader.TimeDateStamp != off::kPeTimestamp) {
+    if (g_base != off::kImageBase || nt->FileHeader.TimeDateStamp != off::kPeTimestampUnported) {
         log::error("Session2 guest: unsupported game build; P8 off");
         return 0;
     }
@@ -1473,7 +1473,7 @@ DWORD WINAPI report_guard_thread(LPVOID) {
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
     const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(base + dos->e_lfanew);
-    if (base != off::kImageBase || nt->FileHeader.TimeDateStamp != off::kPeTimestamp) {
+    if (base != off::kImageBase || nt->FileHeader.TimeDateStamp != off::kPeTimestampUnported) {
         log::error("Session2 guest: unsupported game build; the report guard (K1) is NOT on: move "
                    "crashpad_handler.exe out (K2) before playing");
         return 0;

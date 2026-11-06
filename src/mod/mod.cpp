@@ -955,6 +955,16 @@ DWORD WINAPI worker(LPVOID) {
             TerminateProcess(GetCurrentProcess(), 0xCD60);
             return 0;
         }
+        // Co-op+ port: the host role redirects its saves from the start too (into the cdmp_save_sandbox copy), not
+        // only once a stage that writes is installed, so that no test run (a read-only probe included) can write the
+        // real save folder. A failure ends the game here, as for the guest.
+        if (rs.role == role::Role::Host && in_game && !session2::save_hooks_install(saveguard::Mode::Redirect)) {
+            log::error("Role host: the save redirect is NOT installed; the game is ended now so that it never "
+                       "writes the real save folder");
+            log::flush(2000);
+            TerminateProcess(GetCurrentProcess(), 0xCD61);
+            return 0;
+        }
         if (rs.extra) {
             log::warn("Role {}: another process of this role runs the mod (the game's short-lived second "
                       "CrimsonDesert.exe?): nothing else is installed here{}",

@@ -941,7 +941,7 @@ DWORD WINAPI install_thread(LPVOID) {
     IMAGE_DOS_HEADER dos{};
     IMAGE_NT_HEADERS64 nt{};
     if (g_base != off::kImageBase || !peek(g_base, dos) || !peek(g_base + dos.e_lfanew, nt) ||
-        nt.FileHeader.TimeDateStamp != off::kPeTimestamp) {
+        nt.FileHeader.TimeDateStamp != off::kPeTimestampUnported) {
         log::error("GuestStage: unsupported game build; guest_stage_diag stays off");
         g_settled.store(true);
         return 0;
