@@ -1154,40 +1154,55 @@ bool save_hooks_install(saveguard::Mode mode) {
                        "(writes refused, 'Failed to save data' will come back)", narrow(sandbox));
             mode = saveguard::Mode::Block;
         } else {
-            // Co-op+ port (tests): CDMP_SANDBOX_ADD="<folder>|<path under the save folder>" copies a test slot
-            // (e.g. slot103) into the sandbox only, so a test never adds anything to the real save folder.
-            wchar_t add[1024];
-            const DWORD an = GetEnvironmentVariableW(L"CDMP_SANDBOX_ADD", add, 1024);
-            if (an > 0 && an < 1024) {
-                const std::wstring spec(add);
+            // Co-op+ port (tests): CDMP_SANDBOX_ADD="<source>|<path under the save folder>[;...]" copies a test slot
+            // folder (e.g. slot103, its files dated now so that the title's Continue picks it) or a single file (e.g.
+            // a windowed user_engine_option_save.xml) into the sandbox only: a test never adds anything to the real
+            // save folder.
+            wchar_t add[2048];
+            const DWORD an = GetEnvironmentVariableW(L"CDMP_SANDBOX_ADD", add, 2048);
+            const std::wstring all = an > 0 && an < 2048 ? std::wstring(add) : std::wstring();
+            for (size_t at = 0; at < all.size();) {
+                const size_t end = std::min(all.find(L';', at), all.size());
+                const std::wstring spec = all.substr(at, end - at);
+                at = end + 1;
                 const size_t bar = spec.find(L'|');
+                if (bar == std::wstring::npos) continue;
                 const std::wstring src = spec.substr(0, bar), dst = sandbox + L"\\" + spec.substr(bar + 1);
-                CopyStats extra;
-                const bool made = bar != std::wstring::npos && (CreateDirectoryW(dst.c_str(), nullptr) ||
-                                                                 GetLastError() == ERROR_ALREADY_EXISTS);
-                if (made && copy_tree(src, dst, extra)) {
-                    // Its files dated now, so that the title's Continue picks the test slot (inside the sandbox).
-                    FILETIME now;
-                    GetSystemTimeAsFileTime(&now);
-                    WIN32_FIND_DATAW fd;
-                    if (HANDLE f = FindFirstFileW((dst + L"\\*").c_str(), &fd); f != INVALID_HANDLE_VALUE) {
-                        do {
-                            if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
-                            const std::wstring p = dst + L"\\" + fd.cFileName;
-                            HANDLE h = CreateFileW(p.c_str(), FILE_WRITE_ATTRIBUTES, FILE_SHARE_READ, nullptr,
-                                                   OPEN_EXISTING, 0, nullptr);
-                            if (h != INVALID_HANDLE_VALUE) {
-                                SetFileTime(h, nullptr, nullptr, &now);
-                                CloseHandle(h);
-                            }
-                        } while (FindNextFileW(f, &fd));
-                        FindClose(f);
+                const DWORD attr = GetFileAttributesW(src.c_str());
+                if (attr != INVALID_FILE_ATTRIBUTES && !(attr & FILE_ATTRIBUTE_DIRECTORY)) {
+                    if (CopyFileW(src.c_str(), dst.c_str(), FALSE)) {
+                        log::info("Session2 save redirect: test file '{}' copied into the sandbox as '{}'", narrow(src),
+                                  narrow(dst));
+                    } else {
+                        log::error("Session2 save redirect: CDMP_SANDBOX_ADD file '{}' could not be copied (error {})",
+                                   narrow(src), GetLastError());
                     }
-                    log::info("Session2 save redirect: test slot '{}' copied into the sandbox as '{}' ({} files)",
-                              narrow(src), narrow(dst), extra.files);
-                } else {
-                    log::error("Session2 save redirect: CDMP_SANDBOX_ADD '{}' could not be copied", narrow(spec));
+                    continue;
                 }
+                CopyStats extra;
+                const bool made = CreateDirectoryW(dst.c_str(), nullptr) || GetLastError() == ERROR_ALREADY_EXISTS;
+                if (!made || !copy_tree(src, dst, extra)) {
+                    log::error("Session2 save redirect: CDMP_SANDBOX_ADD '{}' could not be copied", narrow(spec));
+                    continue;
+                }
+                FILETIME now;
+                GetSystemTimeAsFileTime(&now);
+                WIN32_FIND_DATAW fd;
+                if (HANDLE f = FindFirstFileW((dst + L"\\*").c_str(), &fd); f != INVALID_HANDLE_VALUE) {
+                    do {
+                        if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+                        const std::wstring p = dst + L"\\" + fd.cFileName;
+                        HANDLE h = CreateFileW(p.c_str(), FILE_WRITE_ATTRIBUTES, FILE_SHARE_READ, nullptr, OPEN_EXISTING,
+                                               0, nullptr);
+                        if (h != INVALID_HANDLE_VALUE) {
+                            SetFileTime(h, nullptr, nullptr, &now);
+                            CloseHandle(h);
+                        }
+                    } while (FindNextFileW(f, &fd));
+                    FindClose(f);
+                }
+                log::info("Session2 save redirect: test slot '{}' copied into the sandbox as '{}' ({} files)", narrow(src),
+                          narrow(dst), extra.files);
             }
             g_redir = std::move(redir);
             // Before the first hook is enabled: a detour must never see the redirect half on.
