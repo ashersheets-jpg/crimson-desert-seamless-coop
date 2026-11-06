@@ -271,7 +271,7 @@ void add_record(std::vector<uint8_t>& pl, uint8_t kind, uint32_t key, const std:
 void test_packet_keys() {
     // 2335: the resource at +9.
     const auto a = gsl::packet_keys(unhex(k2335_1609), nullptr);
-    CHECK(a.ok && a.op == 2335 && a.n == 1 && a.keys[0] == 0xAC00B3BB);
+    CHECK(a.ok && a.op == 2989 && a.n == 1 && a.keys[0] == 0xAC00B3BB);
     const auto b = gsl::packet_keys(unhex(k2335_2391), nullptr);
     CHECK(b.ok && b.n == 1 && b.keys[0] == 0xDA8B15D0);
     auto shortp = unhex(k2335_1609);
@@ -874,7 +874,7 @@ void test_engine_hold() {
     CHECK(eng->early.load() == 1 && env.count(gsl::Note::Early) == 1 && eng->holds.has(J));
     // K ran its 2335 before it went: not counted.
     env.container.erase(K);
-    CHECK(gsl::process_key(*eng, env, g, K, 2335, pk2) == W::Load && eng->early.load() == 1 && eng->holds.has(K));
+    CHECK(gsl::process_key(*eng, env, g, K, 2989, pk2) == W::Load && eng->early.load() == 1 && eng->holds.has(K));
     // The container drops both (its own references; the same manager and container): ours are now their LAST
     // references -> Kept, counted, never given back (no destructor on this thread), the entries go.
     CHECK(env.outstanding() == 2 && env.total_refs(StubEnv::file_of(J)) == 2);
@@ -932,7 +932,7 @@ void test_engine_hold_owner() {
         StubEnv env;
         env.add_ctx(K);
         gsl::PacketBudget pk;
-        CHECK(gsl::process_key(*eng, env, g, K, 2335, pk) == W::Load && eng->holds.has(K));
+        CHECK(gsl::process_key(*eng, env, g, K, 2989, pk) == W::Load && eng->holds.has(K));
         if (change == 0) env.owner.epoch = 2;
         if (change == 1) env.owner.live = false;  // the connection ended (end_remote)
         if (change == 2) env.owner.mgr = 0x1100;

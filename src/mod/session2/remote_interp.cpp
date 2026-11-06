@@ -243,8 +243,8 @@ void set_dest(safetyhook::Context& c, Site s, uint32_t v) noexcept {
 // thread (tc23: each client has the other's actor and its movement controller, the packets carry the same positions,
 // yet neither window shows the other player). TransformSync [[actor+0x68]+0x1A0]: +0xB4 local x/y/z, +0xC0/+0xC2
 // sector words (0x5AC810 on 3549, as 2976); the buffer's newest sample position (+0x00 of a 0xA0 sample).
-std::atomic<uintptr_t> g_remote_char{0}, g_remote_char_mc{0};
-std::atomic<uint32_t> g_remote_char_key{0};
+std::atomic<uintptr_t> g_remote_char{0}, g_remote_char_mc{0}, g_npc_actor{0};
+std::atomic<uint32_t> g_remote_char_key{0}, g_npc_key{0};
 void remote_character_line() noexcept {
     const uintptr_t actor = g_remote_char.load(), mc = g_remote_char_mc.load();
     if (!actor) return;
@@ -260,6 +260,26 @@ void remote_character_line() noexcept {
                         game::safe_read(mc + rip::kPosBuffer + rip::kBufCount, &count, sizeof count) && arr &&
                         count && count < 64 &&
                         game::safe_read(arr + (count - 1) * rip::kSampleSize, sample, sizeof sample);
+    // tc24: the actor stands where the other player is and moves with it, yet is not drawn. Its header bytes next to
+    // a visible NPC's (both resolved by these hooks), for the login state (2976: u16 +0x5E 8 -> 0x10, +0xCF 1).
+    static int dumps = 0;
+    if (dumps < 4) {
+        ++dumps;
+        const uintptr_t npc = g_npc_actor.load();
+        auto hex = [](uintptr_t a) {
+            uint8_t b[0x100] = {};
+            if (!a || !game::safe_read(a + 0x40, b, sizeof b)) return std::string("unreadable");
+            std::string s;
+            for (size_t i = 0; i < sizeof b; ++i) {
+                if (i % 16 == 0) s += std::format("{}+{:X}:", i ? " | " : "", 0x40 + i);
+                s += std::format(" {:02X}", b[i]);
+            }
+            return s;
+        };
+        log::info("RemoteInterp [actor bytes] remote character 0x{:X} +0x40..+0x13F: {}", actor, hex(actor));
+        log::info("RemoteInterp [actor bytes] a visible NPC 0x{:X} (0x{:08X}) +0x40..+0x13F: {}", npc, g_npc_key.load(),
+                  hex(npc));
+    }
     log::info("RemoteInterp [remote character] 0x{:08X} actor 0x{:X} (key read {}{}) | TransformSync {} local ({:.1f}, "
               "{:.1f}, {:.1f}) sector ({}, {}) | buffer mc+0x{:X}: {} samples, newest ({:.1f}, {:.1f}, {:.1f})",
               g_remote_char_key.load(), actor, key_ok ? "ok" : "FAILED", key_ok && key != g_remote_char_key.load() ?
@@ -330,6 +350,9 @@ void on_delay_read(safetyhook::Context& c) noexcept {
         g_remote_char.store(r.actor, std::memory_order_relaxed);
         g_remote_char_key.store(r.key, std::memory_order_relaxed);
         g_remote_char_mc.store(r.mc, std::memory_order_relaxed);
+    } else if (cls == KeyClass::Npc) {
+        g_npc_actor.store(r.actor, std::memory_order_relaxed);
+        g_npc_key.store(r.key, std::memory_order_relaxed);
     }
     sc.cls[static_cast<size_t>(cls)].fetch_add(1, std::memory_order_relaxed);
     // Only the position sites make a slot (the rotation ones use the controller's).

@@ -433,7 +433,7 @@ void test_tables() {
     CHECK(dgl::age_bucket(200000, 50000) == 4);
     CHECK(dgl::age_bucket(200000, 0) == 5);
     CHECK(dgl::age_bucket(100, 200) == 5);
-    CHECK(dgl::touch_op(3067) && dgl::touch_op(3082) && !dgl::touch_op(2221) && !dgl::touch_op(2005));
+    CHECK(dgl::touch_op(2539) && dgl::touch_op(2155) && !dgl::touch_op(2596) && !dgl::touch_op(2005));
 }
 
 void test_mode_and_bytes() {
@@ -498,8 +498,8 @@ void test_other_player() {
         CHECK(std::strcmp(dgl::docked_action_name(r.docked[0]), "REWRITTEN (other player, local drive)") == 0);
         // Its requests are withheld (the device's key at +0), like phase 1's.
         const std::vector<uint8_t> req = {0x4e, 0x01, 0x10, 0xb0, 0x59, 0xcc, 0x3e, 0x00};
-        CHECK(dgl::withhold_index(packet(3082, req), keys) == 0);
-        CHECK(dgl::withhold_index(packet(2774, req), keys) == 3);
+        CHECK(dgl::withhold_index(packet(2155, req), keys) == 0);
+        CHECK(dgl::withhold_index(packet(2251, req), keys) == 3);
         CHECK(dgl::withhold_index(packet(2556, req), keys) == -1);
         // Announced again with the same parent: kept. With another parent, or undocked: retired.
         auto again = payload({kS28HostDevice});

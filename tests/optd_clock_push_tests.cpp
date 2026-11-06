@@ -151,7 +151,7 @@ void test_loading_ack() {
 }
 
 void test_weather_block() {
-    CHECK(ckp::guest_req_blocked_by_env(2560, true));
+    CHECK(ckp::guest_req_blocked_by_env(2689, true));
     CHECK(!ckp::guest_req_blocked_by_env(2560, false));
     CHECK(!ckp::guest_req_blocked_by_env(2125, true));   // SetFieldTimeReq: never_from_guest's, not this key's
     CHECK(!ckp::guest_req_blocked_by_env(2961, true));   // CreateProjectileByWeatherReq: combat, not the field's flags

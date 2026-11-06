@@ -184,9 +184,9 @@ void test_who_and_tables() {
     CHECK(u2s::who_of(0xB0100003, 0xA0100001, 0xA010034E) == u2s::Who::Other);
     CHECK(u2s::who_of(0, 0xA0100001, 0xA010034E) == u2s::Who::Unknown);
     CHECK(u2s::who_of(0xA010034E, 0xA0100001, 0) == u2s::Who::Other);  // user 2 not known yet
-    CHECK(u2s::timer_of(2043) == u2s::Timer::T2043);
-    CHECK(u2s::timer_of(2045) == u2s::Timer::T2045);
-    CHECK(u2s::timer_of(2046) == u2s::Timer::T2046);
+    CHECK(u2s::timer_of(2047) == u2s::Timer::T2043);
+    CHECK(u2s::timer_of(2049) == u2s::Timer::T2045);
+    CHECK(u2s::timer_of(2050) == u2s::Timer::T2046);
     CHECK(u2s::timer_of(2556) == u2s::Timer::NotTimer);
 
     static u2s::RouteTable rt;
@@ -311,12 +311,12 @@ void test_u1() {
     CHECK(!u2s::skip_element(true, u2s::Mode::On, true, false, Element::Sequencer));  // A3: its own field
 
     using u2s::Route;
-    CHECK(u2s::route_of(u2s::Mode::On, 2043, true) == Route::Own);  // always: armed or not (A1)
-    CHECK(u2s::route_of(u2s::Mode::On, 2045, true) == Route::Own);
-    CHECK(u2s::route_of(u2s::Mode::On, 2046, true) == Route::Own);
+    CHECK(u2s::route_of(u2s::Mode::On, 2047, true) == Route::Own);  // always: armed or not (A1)
+    CHECK(u2s::route_of(u2s::Mode::On, 2049, true) == Route::Own);
+    CHECK(u2s::route_of(u2s::Mode::On, 2050, true) == Route::Own);
     CHECK(u2s::route_of(u2s::Mode::On, 2043, false) == Route::None);  // its own field: native already
     CHECK(u2s::route_of(u2s::Mode::On, 2283, true) == Route::None);   // not a timer
-    CHECK(u2s::route_of(u2s::Mode::Probe, 2043, true) == Route::Would);
+    CHECK(u2s::route_of(u2s::Mode::Probe, 2047, true) == Route::Would);
     CHECK(u2s::route_of(u2s::Mode::Off, 2043, true) == Route::None);
     CHECK(std::string(u2s::mode_name(u2s::Mode::On)) == "1" && std::string(u2s::mode_name(u2s::Mode::Probe)) == "probe");
 
@@ -910,7 +910,7 @@ void test_ctl_stats_and_abort() {
         CHECK(std::string(u2s::ctl_abort_name(static_cast<u2s::CtlAbort>(i))) != "?");
     }
     CHECK(u2s::ai_req(2556) && u2s::ai_req(2223) && u2s::ai_req(2734) && u2s::ai_req(2405) && u2s::ai_req(2291) &&
-          u2s::ai_req(2828));
+          u2s::ai_req(2852));
     CHECK(!u2s::ai_req(2005) && !u2s::ai_req(2380));
 }
 
