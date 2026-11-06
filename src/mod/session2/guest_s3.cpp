@@ -51,15 +51,15 @@ struct Site {
 constexpr uint8_t kNullConsumerBytes[] = {0x4C, 0x89, 0x4C, 0x24, 0x20, 0x4C, 0x89, 0x44,
                                           0x24, 0x18, 0x88, 0x54, 0x24, 0x10, 0x48, 0x89};
 // 0x232D5FB mov rax,[r8+0x10] ; 0x232D5FF movzx eax,word [rax+0xE4]: the read.
-constexpr uint8_t kNullReadBytes[] = {0x49, 0x8B, 0x40, 0x10, 0x0F, 0xB7, 0x80, 0xE4, 0x00, 0x00, 0x00};
+constexpr uint8_t kNullReadBytes[] = {0x49, 0x8B, 0x40, 0x10, 0x0F, 0xB7, 0x80, 0xE8, 0x00, 0x00, 0x00};  // 3549: +0xE8 (2976 +0xE4)
 // 0x85FBA0 CharacterControl::Update (rcx = CC). mov [rsp+0x10],rbx (5).
 constexpr uint8_t kUpdateBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x55, 0x56, 0x57,
                                     0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57};
 // 0x48B120 2723's consumer ([rcx] = CC). mov [rsp+0x10],rbx (5).
 constexpr uint8_t kSpawnBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74,
-                                   0x24, 0x18, 0x55, 0x57, 0x41, 0x54, 0x41, 0x56};
+                                   0x24, 0x18, 0x48, 0x89, 0x7C, 0x24, 0x20, 0x55};  // 3549 prologue
 // 0x48B197 test al,al ; jne 0x48B1B2 ; mov [rsi],r12d (7): AL = vf188(5).
-constexpr uint8_t kSpawnAlBytes[] = {0x84, 0xC0, 0x75, 0x17, 0x44, 0x89, 0x26, 0x48, 0x8B, 0x8D, 0x80, 0x00, 0x00, 0x00};
+constexpr uint8_t kSpawnAlBytes[] = {0x84, 0xC0, 0x75, 0x17, 0x45, 0x89, 0x26, 0x48, 0x8B, 0x8D, 0x80, 0x00, 0x00, 0x00};  // 3549: mov [r14],r12d
 // 0x48B18F mov dl,5 ; 0x48B191 call [rax+0x188] (the test it follows).
 constexpr uint8_t kSpawnCallBytes[] = {0xB2, 0x05, 0xFF, 0x90, 0x88, 0x01, 0x00, 0x00};
 // 0x48AD40 2991's consumer ([rcx] = CC, r9b = flag). mov [rsp+0x10],rbx (5).
@@ -70,14 +70,22 @@ constexpr uint8_t kAckBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74,
 constexpr uint8_t kStartBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x4C, 0x89, 0x44,
                                    0x24, 0x18, 0x48, 0x89, 0x4C, 0x24, 0x08, 0x55};
 
-constexpr Site kNullConsumer{0x232D5C0, kNullConsumerBytes, 5, "0x232D5C0 (null-action consumer)"};
-constexpr Site kUpdate{0x85FBA0, kUpdateBytes, 5, "CharacterControl::Update 0x85FBA0"};
-constexpr Site kSpawn{0x48B120, kSpawnBytes, 5, "2723's consumer 0x48B120"};
-constexpr Site kSpawnAl{0x48B197, kSpawnAlBytes, 7, "2723's vf188(5) test 0x48B197"};
-constexpr Site kAck{0x48AD40, kAckBytes, 5, "2991's consumer 0x48AD40"};
-constexpr Site kStart{0x863530, kStartBytes, 5, "StartAction 0x863530"};
-constexpr uintptr_t kNullRead = 0x232D5FB;
-constexpr uintptr_t kSpawnCall = 0x48B18F;
+// Co-op+ port 1.0.0.3549 (tools/native-port: wildcard match + the read below; 2976 addresses in the names).
+constexpr Site kNullConsumer{0x251DFC0, kNullConsumerBytes, 5, "0x232D5C0 (null-action consumer)"};
+constexpr Site kUpdate{0x944E70, kUpdateBytes, 5, "CharacterControl::Update 0x85FBA0"};
+constexpr Site kSpawn{0x532BC0, kSpawnBytes, 5, "2723's consumer 0x48B120"};
+constexpr Site kSpawnAl{0x532C3D, kSpawnAlBytes, 7, "2723's vf188(5) test 0x48B197"};
+constexpr Site kAck{0x5327D0, kAckBytes, 5, "2991's consumer 0x48AD40"};
+constexpr Site kStart{0x9489C0, kStartBytes, 5, "StartAction 0x863530"};
+constexpr uintptr_t kNullRead = 0x251DFFB;
+constexpr uintptr_t kSpawnCall = 0x532C35;
+// Co-op+ (3549, two-copy run tc9): a second reader of a layer's current action, in the movement update 0x7F66A0:
+// rax = layer, `mov rdx,[rax+0x10] ; cmp byte [rdx+0x116],r15b ; jge 0x7F6CC3`. With the current action null (a
+// remote actor, as at 0x232D5C0) it read [0x116] and the guest's game ended. Guard: a null action takes the code's
+// own jge way (0x7F6CC3 uses neither rdx nor rax; no branch lands inside the 11 bytes).
+constexpr uint8_t kMoveNullBytes[] = {0x48, 0x8B, 0x50, 0x10, 0x44, 0x38, 0xBA, 0x16, 0x01, 0x00, 0x00};
+constexpr uintptr_t kMoveNullResume = 0x7F6CC3;
+constexpr Site kMoveNull{0x7F6872, kMoveNullBytes, 11, "0x7F6872 (movement update, current action read)"};
 
 // Offsets (build 2976; p8-raiz-invitado.md §5, companeros.md).
 constexpr uint32_t kCc_Actor = 0x08, kCc_Ack60 = 0x60, kCc_Default0 = 0x70, kCc_Default1 = 0x78, kCc_Layer0 = 0x88,
@@ -110,6 +118,9 @@ std::atomic<uint32_t> g_epoch{0};
 uint8_t* g_ret = nullptr;  // a lone `ret`
 
 SafetyHookMid g_h_null, g_h_update, g_h_spawn, g_h_spawn_al, g_h_ack;
+SafetyHookMid g_h_move_null;
+std::atomic<bool> g_move_null_on{false};
+std::atomic<uint64_t> c_move_null{0};
 SafetyHookInline g_h_start;
 
 s3::Ring<kRingSize> g_ring;
@@ -313,6 +324,14 @@ void on_spawn(safetyhook::Context& ctx) noexcept {
     fp(t_spawn.actor + kActor_C8, c8);
     r.a = c8;
     push(r);
+}
+
+// The movement update's current-action read (kMoveNull): a null action takes the jge way instead of a crash.
+void on_move_null(safetyhook::Context& ctx) noexcept {
+    uintptr_t action = 0;
+    if (fp(ctx.rax + 0x10, action) && action) return;
+    c_move_null.fetch_add(1, std::memory_order_relaxed);
+    ctx.rip = g_base + kMoveNullResume;
 }
 
 void on_spawn_al(safetyhook::Context& ctx) noexcept {
@@ -567,6 +586,9 @@ DWORD WINAPI install_thread(LPVOID) {
             } else {
                 g_null_on = make_mid(kNullConsumer, g_h_null, on_null_consumer);
             }
+            g_move_null_on = make_mid(kMoveNull, g_h_move_null, on_move_null);
+            log::info("GuestS3 guard (Co-op+, 3549): the movement update's current-action read exe+0x{:X} {}",
+                      kMoveNull.rva, g_move_null_on.load() ? "guarded (a null action skips to exe+0x7F6CC3)" : "OFF");
             if (g_diag.load()) {
                 // One owner per entry: with guest_remote_update_guard=1, horse_diag hooks 0x85FBA0.
                 if (!g_update_taken.load()) g_update_on = make_mid(kUpdate, g_h_update, on_update);
@@ -876,7 +898,7 @@ void tick_once() {
 // does not handle and ends the process; its reporter (Sentry) may replace our
 // top-level filter, so there the vectored handler is the only place sure to run.
 
-constexpr uintptr_t kKnownCrashSite = 0x232D5FF;
+constexpr uintptr_t kKnownCrashSite = 0x251DFFF;  // Co-op+ port 3549 (2976: 0x232D5FF)
 constexpr uint32_t kMaxCrashRecords = 64;
 constexpr size_t kKeepDumps = 2;  // cdmp_crash_*.dmp kept next to cdmp.asi (the newest)
 
@@ -1358,10 +1380,10 @@ void guest_s3_tick() noexcept {
 std::string guest_s3_describe() {
     if (!g_started.load()) return {};
     return std::format(" | GuestS3 diag {} guard {} crash {} | local 0x{:08X} | null actions {} (remote {}) | guard "
-                       "skips {} keys {} recovered {} stuck {} | 2723 vf188 false {} | dumps {}",
+                       "skips {} keys {} recovered {} stuck {} | 2723 vf188 false {} | dumps {} | move null skips {}",
                        g_diag.load() ? "on" : "off", g_guard.load() ? (g_null_on.load() ? "ON" : "OFF") : "off",
                        g_crash_on.load() ? "on" : "off", local(), c_null.load(), c_null_remote.load(), c_skips.load(),
-                       g_guard_tab.size(), c_recovered.load(), c_stuck.load(), c_spawn_al0.load(), c_dumps.load());
+                       g_guard_tab.size(), c_recovered.load(), c_stuck.load(), c_spawn_al0.load(), c_dumps.load(), c_move_null.load());
 }
 
 void guest_s3_on_host_packet(uint16_t opcode, std::span<const uint8_t> payload, uint64_t epoch) noexcept {
