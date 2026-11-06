@@ -10,7 +10,7 @@
 //    OWNER, the host's user in the shared field. The client's handler 0xB88FD0 keeps it in P+0x12C (external report
 //    §10.2). Layout written by 0x299B520: u8 @0, u32 actor @1, u32 FieldInfoKey @5, u32 owner @9, u8 @13, u8 @14,
 //    u32 @15, u8 append @19, then records of 48 bytes from +20 (u32, u32, float3 +0x24, float4 +0x14, float3 +8 of
-//    each 0x30-byte source record; 0x299B810..0x299B8E2). The 2174's own layout is 17 + 48n (server.cpp).
+//    each 0x30-byte (3549: 0x38) source record; 0x299B810..0x299B8E2). The 2174's own layout is 17 + 48n (server.cpp).
 //    3066 (0x299A610): u32 [character+0x60] (the traveller's own actor key) + u8 + u8: no owner.
 // 2. The probe user2_travel_probe = 0 | 1 (travel_probe.h): bounded lines TravelBegin / TravelContext /
 //    TravelPrepared / TravelConsume / TravelAck. Their packing and verdicts live here.

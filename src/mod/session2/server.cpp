@@ -137,7 +137,7 @@ constexpr uint16_t kOpLoginUserToFieldServerReq = 2535;
 constexpr uint16_t kOpMoveActorReq = 2833, kOpStartActionReq = 2202, kOpRotateActorReq = 2852;
 constexpr uint16_t kOpMainPlayerDataStartAck = 2524;
 constexpr uint16_t kOpMainUserDataStartAck = 3048;  // u32 user key at +0
-constexpr uint16_t kOpMoveFieldAck = 2653;          // u8 | u32 actor | u32 | u32 field owner @9 | 0x30 * n
+constexpr uint16_t kOpMoveFieldAck = 2653;          // u8 | u32 actor | u32 | u32 field owner @9 | 0x38 * n (3549; 2976 0x30)
 std::atomic<uint32_t> g_user2_userkey{0};           // from user 2's MainUserDataStartAck
 std::atomic<uint32_t> g_host_userkey{0};            // the host's user key, read once (session 1's user +0x60)
 std::atomic<uint64_t> g_owner_rewrites{0}, g_owner_unexpected{0};

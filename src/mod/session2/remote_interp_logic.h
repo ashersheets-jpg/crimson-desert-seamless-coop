@@ -37,8 +37,8 @@ using u2f::parse_mode;
 
 // ---------------------------------------------------------------- constants (build 2976)
 
-inline constexpr uint32_t kPosBuffer = 0x3D0;  // mc + 0x3D0: the position buffer (set 0x11B1FD0, update 0x11B2420)
-inline constexpr uint32_t kRotBuffer = 0x488;  // mc + 0x488: the rotation buffer (set 0x11B26E0, update 0x11B2AF0)
+inline constexpr uint32_t kPosBuffer = 0x430;  // mc + 0x430 on 3549 (2976 0x3D0): the position buffer (UpdateInterpolation 0x976320: lea rbx,[rcx+0x430]; cmp byte [rbx],1)
+inline constexpr uint32_t kRotBuffer = 0x4E8;  // mc + 0x4E8 on 3549 (2976 0x488): the rotation buffer (0x965AE0: mov byte [rbx+0x4e8],1; count +0x4F8)
 // The buffer: +0x08 sample array (0xA0 bytes each), +0x10 u32 count.
 inline constexpr uint32_t kBufArray = 0x08;
 inline constexpr uint32_t kBufCount = 0x10;

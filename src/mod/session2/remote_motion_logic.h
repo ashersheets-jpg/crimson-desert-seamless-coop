@@ -620,7 +620,7 @@ inline bool mc_identity_ok(uintptr_t actor, uintptr_t cc_actor, uintptr_t mc, ui
 // The interpolation buffer mc+0x3D0 (movimiento-remoto-cliente.md §2; build 2976): +0x00 u8 done, +0x08 the
 // sample array (0xA0 bytes each: vec3 pos +0, u64 ts +0x98), +0x10 u32 count, +0x18 the last interpolated
 // sample (0xA0 bytes: rewritten by every update that finds T > ts[0], with ts = T = now - delay).
-inline constexpr uint32_t kInterpPosBuffer = 0x3D0;
+inline constexpr uint32_t kInterpPosBuffer = 0x430;  // 3549 (2976 0x3D0)
 inline constexpr uint32_t kInterpDone = 0x00, kInterpArray = 0x08, kInterpCount = 0x10, kInterpShown = 0x18;
 inline constexpr uint32_t kInterpSampleSize = 0xA0, kInterpSampleTs = 0x98;
 inline constexpr uint32_t kInterpSaneCount = 64;  // the game keeps <= 30

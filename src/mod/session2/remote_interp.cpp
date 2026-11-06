@@ -239,6 +239,73 @@ void set_dest(safetyhook::Context& c, Site s, uint32_t v) noexcept {
     }
 }
 
+// Co-op+ (3549 bring-up, log only): the other player's character as this client has it, every 10 s from the
+// thread (tc23: each client has the other's actor and its movement controller, the packets carry the same positions,
+// yet neither window shows the other player). TransformSync [[actor+0x68]+0x1A0]: +0xB4 local x/y/z, +0xC0/+0xC2
+// sector words (0x5AC810 on 3549, as 2976); the buffer's newest sample position (+0x00 of a 0xA0 sample).
+std::atomic<uintptr_t> g_remote_char{0}, g_remote_char_mc{0};
+std::atomic<uint32_t> g_remote_char_key{0};
+void remote_character_line() noexcept {
+    const uintptr_t actor = g_remote_char.load(), mc = g_remote_char_mc.load();
+    if (!actor) return;
+    uintptr_t comps = 0, ts = 0, arr = 0;
+    float local[3] = {}, sample[3] = {};
+    uint16_t sector[2] = {};
+    uint32_t key = 0, count = 0;
+    const bool key_ok = game::safe_read(actor + rip::kActorKey, &key, sizeof key);
+    const bool ts_ok = game::safe_read(actor + 0x68, &comps, sizeof comps) && comps &&
+                       game::safe_read(comps + 0x1A0, &ts, sizeof ts) && ts &&
+                       game::safe_read(ts + 0xB4, local, sizeof local) && game::safe_read(ts + 0xC0, sector, sizeof sector);
+    const bool buf_ok = game::safe_read(mc + rip::kPosBuffer + rip::kBufArray, &arr, sizeof arr) &&
+                        game::safe_read(mc + rip::kPosBuffer + rip::kBufCount, &count, sizeof count) && arr &&
+                        count && count < 64 &&
+                        game::safe_read(arr + (count - 1) * rip::kSampleSize, sample, sizeof sample);
+    log::info("RemoteInterp [remote character] 0x{:08X} actor 0x{:X} (key read {}{}) | TransformSync {} local ({:.1f}, "
+              "{:.1f}, {:.1f}) sector ({}, {}) | buffer mc+0x{:X}: {} samples, newest ({:.1f}, {:.1f}, {:.1f})",
+              g_remote_char_key.load(), actor, key_ok ? "ok" : "FAILED", key_ok && key != g_remote_char_key.load() ?
+              std::format(", now 0x{:08X}: the actor was reused", key) : std::string(),
+              ts_ok ? std::format("0x{:X}", ts) : std::string("unreadable"), local[0], local[1], local[2],
+              static_cast<int16_t>(sector[0]), static_cast<int16_t>(sector[1]), rip::kPosBuffer,
+              buf_ok ? count : 0u, sample[0], sample[1], sample[2]);
+}
+
+// Co-op+ port 1.0.0.3549 (layout discovery, log only): the movement controller's layout around its buffers moved
+// (tc22: every call "no CC"). For the first unresolved position buffers, search buf - off = mc with [mc+c] = CC and
+// [CC+b] == mc, and the qwords of mc that point at an actor whose u32 +0x60 is a 0xA/0xB key. Three probes at most.
+std::atomic<int> g_layout_probes{0};
+void layout_probe(uintptr_t buf, Site site) noexcept {
+    if (g_layout_probes.fetch_add(1, std::memory_order_relaxed) >= 3) return;
+    std::string found;
+    int hits = 0;
+    for (uint32_t off = 0x80; off <= 0x800 && hits < 6; off += 8) {
+        const uintptr_t mc = buf - off;
+        uintptr_t m[0x20] = {};
+        if (!game::fast_read(mc, m, sizeof m)) continue;
+        for (uint32_t ci = 0; ci < 0x20 && hits < 6; ++ci) {
+            const uintptr_t cc = m[ci];
+            if (cc < 0x10000 || cc > 0x00007FFFFFFFFFFFull || (cc & 7)) continue;
+            uintptr_t b[0x40] = {};
+            if (!game::fast_read(cc, b, sizeof b)) continue;
+            for (uint32_t bi = 0; bi < 0x40; ++bi) {
+                if (b[bi] != mc) continue;
+                std::string actors;
+                for (uint32_t ai = 0; ai < 0x20; ++ai) {
+                    uint32_t key = 0;
+                    if (m[ai] >= 0x10000 && m[ai] <= 0x00007FFFFFFFFFFFull &&
+                        game::fast_read(m[ai] + rip::kActorKey, &key, sizeof key) && (key >> 28 == 0xA || key >> 28 == 0xB)) {
+                        actors += std::format(" mc+0x{:X}->key 0x{:08X}", ai * 8, key);
+                    }
+                }
+                found += std::format(" | off 0x{:X}: mc+0x{:X} = CC, CC+0x{:X} == mc;{}", off, ci * 8, bi * 8,
+                                     actors.empty() ? " no actor in mc+0..0xF8" : actors);
+                ++hits;
+            }
+        }
+    }
+    log::info("RemoteInterp [layout probe] {} buffer 0x{:X}:{}", site == Site::SetPos ? "set pos" : "update pos", buf,
+              found.empty() ? " nothing (no back-linked CC within 0x800 bytes before the buffer)" : found);
+}
+
 template <size_t I>
 void on_delay_read(safetyhook::Context& c) noexcept {
     constexpr HookSite hs = kHooks[I];
@@ -254,10 +321,16 @@ void on_delay_read(safetyhook::Context& c) noexcept {
     const rip::Resolved r = rip::resolve(FastMem{}, buf, hs.off, &why);
     if (!r.ok) {
         sc.fail[static_cast<size_t>(why)].fetch_add(1, std::memory_order_relaxed);
+        if (hs.site == Site::SetPos || hs.site == Site::UpdPos) layout_probe(buf, hs.site);
         return;  // the game's own read runs
     }
     sc.resolved.fetch_add(1, std::memory_order_relaxed);
     const KeyClass cls = rip::key_class(r.key);
+    if (cls == KeyClass::Character) {  // the other player's character (only remote actors take these buffers)
+        g_remote_char.store(r.actor, std::memory_order_relaxed);
+        g_remote_char_key.store(r.key, std::memory_order_relaxed);
+        g_remote_char_mc.store(r.mc, std::memory_order_relaxed);
+    }
     sc.cls[static_cast<size_t>(cls)].fetch_add(1, std::memory_order_relaxed);
     // Only the position sites make a slot (the rotation ones use the controller's).
     const bool create = hs.site == Site::SetPos || hs.site == Site::UpdPos;
@@ -714,10 +787,14 @@ DWORD WINAPI interp_thread(LPVOID) {
                   rip::kCombatFloor, rip::kCombatCap, rip::kCombatMovedCap,
                   cmode == Mode::Probe ? " | probe: on a shadow controller, counted, never applied" : "");
     }
-    uint64_t last = GetTickCount64();
+    uint64_t last = GetTickCount64(), last_pos = last;
     for (;;) {
         Sleep(1000);
         const uint64_t now = GetTickCount64();
+        if (now - last_pos >= 10000) {
+            last_pos = now;
+            remote_character_line();
+        }
         if (now - last >= kSummaryMs) {
             last = now;
             summary();

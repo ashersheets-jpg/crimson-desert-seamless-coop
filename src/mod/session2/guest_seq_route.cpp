@@ -72,15 +72,20 @@ constexpr uint8_t kSeq2810Bytes[] = {0x4C, 0x8B, 0x45, 0xA8};  // 0xC065AA mov r
 //   0xB87A67 mov byte [rax+0x231],2 (RAX = M from 0xB87A5D..0xB87A64; R14 = the raw packet from 0xB878B8;
 //            the handler's own lookup 0xB879DD 0x8A67E0(rsi, &[rbp-0x18], key): found = byte [rbp-8], actor =
 //            [rbp-0x10], neither written again before 0xB87A67)
-constexpr uintptr_t kP2322 = 0xB87A67;
-constexpr uint8_t kP2322Bytes[] = {0xC6, 0x80, 0x31, 0x02, 0x00, 0x00, 0x02,
-                                   0x48, 0x8D, 0x05, 0xEB, 0xB3, 0xD8, 0x04};
-constexpr uint8_t kVf48_2322Bytes[] = {0x48, 0x8B, 0x4D, 0xA8, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x48};  // 0xB87A5D
+// Co-op+ port 1.0.0.3549 (the 2322 point only; the others keep their 2976 addresses and are refused by their own
+// byte checks): handler 0xC9C9B0 (PlayAllPreLoadSequencerAck, 3549 opcode 2384); 0xC9CB9B mov byte [rax+0x259],2;
+// vf48 at 0xC9CB91 on [rbp-0x48]; R14 = the raw packet from 0xC9C9D8; the handler's own lookup 0xC9CB0A
+// 0x98F8B0(rsi, &[rbp-8], key): found = byte [rbp+8], actor = [rbp], neither written again before 0xC9CB9B
+// (0x1939120 at 0xC9CB60 fills [rbp-0x50]..[rbp-0x28]).
+constexpr uintptr_t kP2322 = 0xC9CB9B;
+constexpr uint8_t kP2322Bytes[] = {0xC6, 0x80, 0x59, 0x02, 0x00, 0x00, 0x02,
+                                   0x48, 0x8D, 0x05, 0x57, 0xB9, 0x02, 0x05};
+constexpr uint8_t kVf48_2322Bytes[] = {0x48, 0x8B, 0x4D, 0xB8, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x48};  // 0xC9CB91
 constexpr uint8_t kRaw2322Bytes[] = {0x49, 0x8B, 0xF8, 0x48, 0x8B, 0xDA, 0x48, 0x8B, 0xF1, 0x45, 0x33,
-                                     0xED, 0x4D, 0x8B, 0x70, 0x18, 0x41, 0x0F, 0xB7, 0x4E, 0x03};  // 0xB878AC
+                                     0xFF, 0x4D, 0x8B, 0x70, 0x18, 0x41, 0x0F, 0xB7, 0x4E, 0x03};  // 0xC9C9CC
 // 0xB879D6 lea rdx,[rbp-0x18] ; mov rcx,rsi ; call 0x8A67E0 ; nop ; cmp byte [rbp-8],0 ; je ; mov rsi,[rbp-0x10]
-constexpr uint8_t kFind2322Bytes[] = {0x48, 0x8D, 0x55, 0xE8, 0x48, 0x8B, 0xCE, 0xE8, 0xFE, 0xED, 0xD1, 0xFF,
-                                      0x90, 0x80, 0x7D, 0xF8, 0x00, 0x74, 0x29, 0x48, 0x8B, 0x75, 0xF0};
+constexpr uint8_t kFind2322Bytes[] = {0x48, 0x8D, 0x55, 0xF8, 0x48, 0x8B, 0xCE, 0xE8, 0x9A, 0x2D, 0xCF, 0xFF,
+                                      0x90, 0x80, 0x7D, 0x08, 0x00, 0x74, 0x29, 0x48, 0x8B, 0x75, 0x00};  // 0xC9CB0A (3549)
 // guest_seq_play_live (p8-impl-escenas-play.md §3), the 2524 StageOnBranchEventAck handler 0xC07D00:
 //   0xC07D25 mov r15,r8 ; mov rdi,rdx ; mov rbx,rcx ; xor edx,edx ; mov r14,[r8+0x18]   (R15 = the wrapper, not
 //            written again before the point; [R15+0x18] = the raw packet: u32 actor @5, u64 sequencer @9)
@@ -164,10 +169,10 @@ constexpr uint32_t kComp_Stage = 0x318, kComp_Wait = 0x3D9;
 // The field each handler's vf48 ran on: the frame slot of its `mov rcx,[rbp-N] ; mov rax,[rcx] ; call [rax+0x48]`
 // (kVf48_* above, verified at install): 2661 [rbp-0x40], 2981 [rbp-0x38], 2810 [rbp-0x48], 2322 [rbp-0x58],
 // 2524 [rbp-0x48]; nothing writes it between that call and the point.
-constexpr uint32_t kFieldSlot[gsr::kPoints] = {0x40, 0x38, 0x48, 0x58, 0x48};
+constexpr uint32_t kFieldSlot[gsr::kPoints] = {0x40, 0x38, 0x48, 0x48 /* 3549 (2976 0x58) */, 0x48};
 
-constexpr uintptr_t kVtStageManager = 0x55C9720;  // pa::ClientSequencerStageManager (RTTI)
-constexpr uintptr_t kVtSeqPlayComp = 0x55BEE78;   // pa::ClientSequencerPlayDataActorComponent (RTTI)
+constexpr uintptr_t kVtStageManager = 0x59572E0;  // 3549 (2976 0x55C9720)  // pa::ClientSequencerStageManager (RTTI)
+constexpr uintptr_t kVtSeqPlayComp = 0x594D930;  // 3549 (2976 0x55BEE78)   // pa::ClientSequencerPlayDataActorComponent (RTTI)
 
 // Structure offsets (guest_stage_diag.cpp; p8-s1-escenas-npc.md §2.1).
 constexpr uint32_t kActor_Key = 0x60, kActor_Comps = 0x68, kComps_Seq = 0xA8, kSeqComp_Mgr = 0x18, kComps_Play = 0xB0;
@@ -1041,7 +1046,7 @@ std::vector<PointDef> points() {
           {0xC065AA, kSeq2810Bytes}},
          on_p2810},
         {Point::P2322, kP2322, 7, kP2322Bytes,
-         {{0xB87A5D, kVf48_2322Bytes}, {0xB878AC, kRaw2322Bytes}, {0xB879D6, kFind2322Bytes}},
+         {{0xC9CB91, kVf48_2322Bytes}, {0xC9C9CC, kRaw2322Bytes}, {0xC9CB0A, kFind2322Bytes}},
          on_p2322},
         {Point::P2524, kP2524, 9, kP2524Bytes,
          {{0xC07D25, kWrap2524Bytes}, {0xC080D1, kFind2524Bytes}, {0xC0810E, kActor2524Bytes},
@@ -1310,7 +1315,7 @@ void guest_seq_route_hook(Point point, safetyhook::Context& ctx) noexcept {
         case Point::P2322:
             raw = ctx.r14;
             f.packet_key = rdv<uint32_t>(raw + kHeader);
-            f.actor = rdv<uint8_t>(ctx.rbp - 8) ? rdp(ctx.rbp - 0x10) : 0;  // the handler's own lookup
+            f.actor = rdv<uint8_t>(ctx.rbp + 8) ? rdp(ctx.rbp) : 0;  // the handler's own lookup (3549; 2976 [rbp-8] / [rbp-0x10])
             break;
         case Point::P2524:  // [R15] = the actor 0xC0810E stored (the one 0xC0811F gave 0x17FA6C0)
             f.actor = rdp(ctx.r15);

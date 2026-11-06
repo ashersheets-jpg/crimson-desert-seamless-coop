@@ -1496,7 +1496,7 @@ private:
 // Its output: float pos[3] at +0x0 (in-sector), int16 sector x / z at +0xC / +0xE (0x88E82A / 0x88E82E). Its own
 // current pose comes from 0x4F8220 on TS = [[actor+0x68]+0x1A0], whose fast path copies exactly TS+0xB4..+0xC3 (pos
 // 12 bytes, sector u16 x at +0xC0, z at +0xC2). The actor of mc is [[mc+0x60]+8].
-inline constexpr uint32_t kMcEmptyFlag = 0x3D0;
+inline constexpr uint32_t kMcEmptyFlag = 0x430;  // 3549 (2976 0x3D0): UpdateInterpolation 0x976320 cmp byte [rcx+0x430],1
 enum class HoldWho : uint8_t { None, Remote, Other };
 // Whose early return this is: the tracked remote player (never the local one), another 0xA actor, or nobody to count.
 inline HoldWho hold_who(bool early, uint32_t key, uint32_t remote, uint32_t local) {

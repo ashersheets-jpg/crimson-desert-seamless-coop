@@ -1041,7 +1041,7 @@ void test_hold_pos() {
     CHECK(hold_decide(Mode::On, HoldWho::Other, true, ok, -11, -4) == HoldAct::CountOther);
     CHECK(hold_decide(Mode::Probe, HoldWho::Other, false, zero, 0, 0) == HoldAct::CountOther);
     CHECK(hold_decide(Mode::On, HoldWho::None, true, ok, -11, -4) == HoldAct::None);
-    static_assert(kMcEmptyFlag == 0x3D0);
+    static_assert(kMcEmptyFlag == 0x430);
 }
 
 

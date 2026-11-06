@@ -142,8 +142,8 @@ void test_layouts() {
     keys.clear();
     hso::removed_keys(p2516({kRhett}), keys);
     CHECK(keys.size() == 1 && keys[0] == kRhett);
-    // Boundaries: 2174 17 + 48 n, 2643 20 + 48 n with append 0, 2756.
-    std::vector<uint8_t> b2174(17 + 48, 0);
+    // Boundaries: 2174 17 + 0x38 n, 2643 20 + 0x38 n (3549 records) with append 0, 2756.
+    std::vector<uint8_t> b2174(17 + 0x38, 0);
     put32(b2174, 1, kOwn);
     CHECK(hso::field_boundary(2174, b2174, kOwn));
     CHECK(!hso::field_boundary(2174, b2174, kHost));

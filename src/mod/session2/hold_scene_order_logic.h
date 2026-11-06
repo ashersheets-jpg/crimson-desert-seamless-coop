@@ -15,7 +15,7 @@
 // Scene-id packets to user 2 (layouts read by the client's readers 0xC073A0 / 0xC07D00, ported from the other AI's
 // guest_shop_order_logic.h): 2981 = 21 + 8 n (id @5), 2524 = 18 + 11 n (id @5), 2810 = 17 (id @4), 2661 (id @9).
 // The 2005s are read as take_frame queues them (after observer_hold_acks' compaction, possibly batched: every record).
-// Field boundaries for user 2 (the same port): 2174 = 17 + 48 n (actor @1), 2643 = 20 + 48 n (actor @1, append @19 =
+// Field boundaries for user 2 (the same port): 2174 = 17 + 0x38 n (actor @1), 2643 = 20 + 0x38 n (Co-op+ port 3549: 2653 / 2399, records of 0x38; 2976 48) (actor @1, append @19 =
 // 0), 2756 (actor @0).
 
 #include <algorithm>
@@ -143,8 +143,8 @@ inline void removed_keys(std::span<const uint8_t> p, std::vector<uint32_t>& out)
 inline bool field_boundary(uint16_t op, std::span<const uint8_t> p, uint32_t own) {
     if (!own) return false;
     if (op == kOpBoundary2756) return p.size() >= 4 && le32(p.data()) == own;
-    if (op == kOpMoveField) return p.size() >= 17 && (p.size() - 17) % 48 == 0 && le32(p.data() + 1) == own;
-    return op == kOpLoadingField && p.size() >= 20 && (p.size() - 20) % 48 == 0 && le32(p.data() + 1) == own &&
+    if (op == kOpMoveField) return p.size() >= 17 && (p.size() - 17) % 0x38 == 0 && le32(p.data() + 1) == own;
+    return op == kOpLoadingField && p.size() >= 20 && (p.size() - 20) % 0x38 == 0 && le32(p.data() + 1) == own &&
            p[19] == 0;
 }
 
