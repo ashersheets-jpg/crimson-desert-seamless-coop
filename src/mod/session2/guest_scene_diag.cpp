@@ -31,7 +31,7 @@ namespace p = p8p;
 constexpr uint32_t kWorld_ActorMgr = 0x30, kActorMgr_Container = 0x08, kActor_Flags5E = 0x5E;
 constexpr uint32_t kComps_Seq = 0xA8, kSeqComp_Mgr = 0x18;
 constexpr uint32_t kMgr_Stages = 0x148, kStages_Data = 0x18, kStages_Count = 0x20, kMgr_Count = 0x174,
-                   kMgr_Ready = 0x231;
+                   kMgr_Ready = 0x259;  // 3549 (2976 0x231)
 constexpr uintptr_t kVtStageManager = 0x55C9720;  // pa::ClientSequencerStageManager (RTTI)
 constexpr uint32_t kHostCharacter = 0xA0100001;   // the host's first character on its server (every session so far)
 

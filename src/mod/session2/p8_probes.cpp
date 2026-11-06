@@ -214,7 +214,7 @@ constexpr uint8_t kSeqCtxBytes[] = {0x4D, 0x8D, 0x86, 0xE0, 0x02, 0x00, 0x00, 0x
 
 // Structure offsets the hooks read (p8-raiz-invitado.md §3, §4).
 constexpr uint32_t kP_State = 0x15C, kP_Flag162 = 0x162, kP_Flag163 = 0x163, kP_Pos = 0x150;
-constexpr uint32_t kM_Ready = 0x231, kM_Busy = 0x174, kM_TimerOn = 0x2D4, kM_Timer = 0x2D0;
+constexpr uint32_t kM_Ready = 0x259 /* 3549 (2976 0x231) */, kM_Busy = 0x174, kM_TimerOn = 0x2D4, kM_Timer = 0x2D0;
 constexpr uint32_t kM_List1 = 0x1B0, kM_List1N = 0x1B8, kM_List2 = 0x1C0, kM_List2N = 0x1C8;
 constexpr uint32_t kE_Flag28C = 0x28C, kE_Mode60 = 0x60, kE_State61 = 0x61, kE_Box = 0xD8;
 constexpr uintptr_t kTimerThreshold = 0x6CC8898;  // f32 DAT_146cc8898 (.rdata)

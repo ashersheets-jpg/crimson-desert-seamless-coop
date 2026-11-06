@@ -66,7 +66,7 @@ constexpr uint32_t kActor_State = 0x5E, kActor_C2 = 0xC2, kActor_C3 = 0xC3, kAct
 constexpr uint32_t kActor_Parent = 0xAC, kActor_Children = 0xB0, kActor_ChildCount = 0xB8;
 constexpr uint32_t kVf_Ready = 0x1D8;
 // The guest character's own ClientSequencerStageManager (guest_seq_play.cpp): [[[A+0x68]+0xA8]+0x18], +0x231.
-constexpr uint32_t kActor_Comps = 0x68, kComps_Seq = 0xA8, kSeqComp_Mgr = 0x18, kMgr_Ready = 0x231;
+constexpr uint32_t kActor_Comps = 0x68, kComps_Seq = 0xA8, kSeqComp_Mgr = 0x18, kMgr_Ready = 0x259 /* Co-op+ port 3549: the stage manager's load state moved to +0x259 (0x856090 checks >= 2, the 2322 handler 0xC9CB9B writes 2); 2976 0x231 */;
 constexpr uintptr_t kVtStageManager = 0x59572E0;  // .?AVClientSequencerStageManager@pa@@ (Co-op+ port 3549; 2976 0x55C9720)
 
 constexpr uint32_t kSnapMax = 1024;

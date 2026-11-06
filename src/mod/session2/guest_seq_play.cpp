@@ -112,7 +112,7 @@ constexpr uint32_t kFrame_Q = 0x41;               // [rbp-0x41]
 constexpr uint32_t kModeByte = 0x50;              // [r8+0x50]
 // Structure offsets (guest_seq_route.cpp; p8-s8-escenas.md §3).
 constexpr uint32_t kActor_Key = 0x60, kActor_Comps = 0x68, kComps_Seq = 0xA8, kSeqComp_Mgr = 0x18;
-constexpr uint32_t kMgr_Ctx = 0x08, kMgr_Live = 0x30, kMgr_Actor = 0x18, kMgr_Ready = 0x231, kMgr_Loading = 0x174;
+constexpr uint32_t kMgr_Ctx = 0x08, kMgr_Live = 0x30, kMgr_Actor = 0x18, kMgr_Ready = 0x259 /* 3549 (2976 0x231) */, kMgr_Loading = 0x174;
 constexpr uint32_t kMgr_N1B0 = 0x1B8, kMgr_N1C0 = 0x1C8, kMgr_N1D0 = 0x1D8;
 // The client actor table (game/actor_lookup.cpp's replica, as guest_seq_route's G5): the liveness check of X's
 // character before each call (review 1). Read-only SEH reads without the table's lock: a torn read can only

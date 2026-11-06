@@ -82,7 +82,7 @@ constexpr uint32_t kMgr_Sched = 0x148, kSched_Vec = 0x18, kSched_Count = 0x20;
 constexpr uint32_t kStage_Mgr = 0x28, kStage_Key = 0x30, kStage_Active = 0x178, kStage_Nodes = 0x138,
                    kStage_NodeCount = 0x140, kNodeStride = 0x168, kNode_Npc = 0x28;
 constexpr uint32_t kManager_Table = 0x08;
-constexpr uint32_t kMgr_State = 0x231;  // a manager's load state (3 = loaded; guest_seq_play's M+0x231 gate)
+constexpr uint32_t kMgr_State = 0x259;  // Co-op+ port 3549 (2976 0x231)  // a manager's load state (3 = loaded; guest_seq_play's M+0x231 gate)
 constexpr uint8_t kTypeCharacter = 7;  // [[actor+0x88]+1] == 7: 0x9F2FA0's path A (0x9F2FDC)
 
 uintptr_t g_base = 0;

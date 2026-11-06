@@ -171,7 +171,7 @@ constexpr uintptr_t kVtSeqPlayComp = 0x55BEE78;   // pa::ClientSequencerPlayData
 
 // Structure offsets (guest_stage_diag.cpp; p8-s1-escenas-npc.md §2.1).
 constexpr uint32_t kActor_Key = 0x60, kActor_Comps = 0x68, kComps_Seq = 0xA8, kSeqComp_Mgr = 0x18, kComps_Play = 0xB0;
-constexpr uint32_t kMgr_Actor = 0x18, kMgr_Ready = 0x231, kMgr_Count = 0x174, kMgr_Created = 0x17C;
+constexpr uint32_t kMgr_Actor = 0x18, kMgr_Ready = 0x259 /* 3549 (2976 0x231) */, kMgr_Count = 0x174, kMgr_Created = 0x17C;
 constexpr uint32_t kMgr_List1B0 = 0x1B0, kMgr_List1C0 = 0x1C0;  // lists {ptr, u32 count @+8}
 constexpr uint32_t kActor_State = 0x5E, kActor_C2 = 0xC2, kActor_CF = 0xCF;
 constexpr uint32_t kActor_Info = 0x88;  // [[actor+0x88]+1] = the actor type (3 = NPC; guest_sched_bind.cpp)
