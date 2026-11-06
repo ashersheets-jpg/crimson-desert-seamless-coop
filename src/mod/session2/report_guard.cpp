@@ -16,9 +16,9 @@ namespace {
 
 // 0x1317D40: mov [rsp+10],rbx; push rbp/rsi/rdi/r12/r13/r14/r15
 // (docs/research/data/rpt0-estatico.md, checked by hand).
-constexpr uintptr_t kReporter = 0x1317D40;
-constexpr uint8_t kReporterHead[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x55, 0x56, 0x57,
-                                     0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57};
+constexpr uintptr_t kReporter = 0x14F75E0;
+constexpr uint8_t kReporterHead[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55,
+                                     0x41, 0x56, 0x41, 0x57};
 constexpr uint32_t kMaxPaths = 8;
 constexpr size_t kMaxText = 260;
 constexpr uint64_t kMaxLogged = 16;  // a broken loop must not flood the log

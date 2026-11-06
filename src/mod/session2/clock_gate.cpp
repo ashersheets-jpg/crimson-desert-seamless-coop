@@ -18,29 +18,36 @@ namespace {
 
 // Entries and one instruction of each body, from the copy analysed in
 // docs/research/pendientes/reloj/capstone_*.txt (prologues alone repeat).
-constexpr uintptr_t kTravel = 0x2BC0A30;
-constexpr uint8_t kTravelHead[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x18, 0x48, 0x89, 0x7C, 0x24,
-                                   0x20, 0x55, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8D, 0x6C, 0x24,
-                                   0xC9, 0x48, 0x81, 0xEC, 0xC0, 0x00, 0x00, 0x00, 0x48, 0x8B, 0xF2, 0x48, 0x8B, 0xF9};
-constexpr uintptr_t kTravelOwnerCmp = 0x2BC0A78;  // cmp [rdx+0x180], eax
-constexpr uint8_t kTravelOwnerCmpBytes[] = {0x39, 0x82, 0x80, 0x01, 0x00, 0x00};
-constexpr uintptr_t kTravelGetterCall = 0x2BC0CC7;  // call 0x20E55A0 (non-owner branch)
-constexpr uint8_t kTravelGetterCallBytes[] = {0xE8, 0xD4, 0x48, 0x52, 0xFF};
-constexpr uintptr_t kLoading = 0x219D7F0;
-constexpr uint8_t kLoadingHead[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x18, 0x48,
-                                    0x89, 0x7C, 0x24, 0x20, 0x55, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56,
-                                    0x41, 0x57, 0x48, 0x8B, 0xEC, 0x48, 0x83, 0xEC, 0x60, 0x4D, 0x8B,
-                                    0xE9, 0x49, 0x8B, 0xF0, 0x4C, 0x8B, 0xF2, 0x48, 0x8B, 0xD9};
-constexpr uintptr_t kLoadingFlagCmp = 0x219D82B;  // cmp [rbp+0x50], r12b ; je 0x219D941
+// Co-op+ port (1.0.0.3549): FieldMover::SyncFieldTimeOnMove (2976: its own function 0x2BC0A30) is inlined into
+// 0x2E61990 here. FM = r15, the destination field = rdi, TS = [FM]. The owner check
+// `cmp [rdi+0x180], eax; jne` (eax = the moving user's key) leads to the publish of the world clock; both ways then
+// meet at 0x2E620A1: `mov rbx,[r15]; getter(field) 0x22A8F70; FieldComponent::SetFieldTime(TS, ft) 0x2370570`
+// (which publishes again when the user owns the field). For user 2 a mid hook on the owner check copies the field's
+// time into its character only (clock_user2_travel, as on 2976) and resumes after the setter call: nothing published.
+constexpr uintptr_t kTravelOwnerCmp = 0x2E61FB8;  // cmp [rdi+0x180], eax ; jne 0x2E620A1
+constexpr uint8_t kTravelOwnerCmpBytes[] = {0x39, 0x87, 0x80, 0x01, 0x00, 0x00, 0x0F, 0x85, 0xDD, 0x00, 0x00, 0x00};
+constexpr uintptr_t kTravelGetterCall = 0x2E620A1;  // mov rbx,[r15]; getter(rdi); SetFieldTime(rbx, ft)
+constexpr uint8_t kTravelGetterCallBytes[] = {0x49, 0x8B, 0x1F, 0x48, 0x8D, 0x54, 0x24, 0x70, 0x48,
+                                              0x8B, 0xCF, 0xE8, 0xBF, 0x6E, 0x44, 0xFF, 0x48, 0x8B,
+                                              0xD0, 0x48, 0x8B, 0xCB, 0xE8, 0xB4, 0xE4, 0x50, 0xFF};
+constexpr uintptr_t kTravelResume = kTravelGetterCall + sizeof kTravelGetterCallBytes;  // 0x2E620BC
+constexpr uintptr_t kLoading = 0x236B6B0;
+constexpr uint8_t kLoadingHead[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74, 0x24, 0x10, 0x48, 0x89,
+                                    0x7C, 0x24, 0x18, 0x55, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57,
+                                    0x48, 0x8B, 0xEC, 0x48, 0x83, 0xEC, 0x60, 0x4D, 0x8B, 0xE9, 0x49, 0x8B,
+                                    0xF0, 0x4C, 0x8B, 0xF2, 0x48, 0x8B, 0xD9};
+constexpr uintptr_t kLoadingFlagCmp = 0x236B6EB;  // cmp [rbp+0x50], r12b ; je 0x219D941
 constexpr uint8_t kLoadingFlagCmpBytes[] = {0x44, 0x38, 0x65, 0x50, 0x0F, 0x84, 0x0C, 0x01, 0x00, 0x00};
-constexpr uintptr_t kGetter = 0x20E55A0;
-constexpr uint8_t kGetterHead[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x57, 0x48, 0x83, 0xEC, 0x60, 0x48, 0x8B, 0x01, 0x48,
-                                   0x8B, 0xFA, 0x48, 0x8D, 0x54, 0x24, 0x70, 0x48, 0x8B, 0xD9, 0xFF, 0x50, 0x60};
+constexpr uintptr_t kGetter = 0x22A8F70;
+constexpr uint8_t kGetterHead[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x57, 0x48, 0x83, 0xEC, 0x60, 0x48, 0x8B,
+                                   0x01, 0x48, 0x8B, 0xFA, 0x48, 0x8D, 0x54, 0x24, 0x70, 0x48, 0x8B, 0xD9,
+                                   0xFF, 0x50, 0x60};
 constexpr uint64_t kMaxLogged = 24;
 
 ClockGame g_game{};
 uintptr_t g_base = 0;
-SafetyHookInline g_travel, g_loading;
+SafetyHookInline g_loading;
+SafetyHookMid g_travel;
 std::atomic<bool> g_active{false};
 std::atomic<uint64_t> g_travels{0}, g_travel_failed{0}, g_loadings{0}, g_flags_cut{0}, g_world_moved{0},
     g_logged{0}, g_world_changes{0}, g_world_frozen{0};
@@ -132,33 +139,32 @@ uintptr_t ts_of(void* fm) {
     return peek(reinterpret_cast<uintptr_t>(fm), ts) ? ts : 0;
 }
 
-// FieldMover::SyncFieldTimeOnMove(FM, destination field). Nothing may throw
-// out of here; for user 2 the original never runs, not even on a failure.
-void __fastcall travel_detour(void* fm, void* field) noexcept {
-    bool gated = false;
+// The owner check of the inlined SyncFieldTimeOnMove (see kTravelOwnerCmp). Nothing may throw out of here; for
+// user 2 neither the publish nor the game's SetFieldTime runs, not even on a failure.
+void travel_mid(safetyhook::Context& ctx) noexcept {
     try {
-        const uintptr_t ts = ts_of(fm);
-        if (ts && who_now(ts) == ClockWho::User2) {
-            gated = true;
-            g_travels.fetch_add(1);
-            const WorldTime before = world_now();
-            const bool copied = clock_user2_travel(g_game, ts, reinterpret_cast<uintptr_t>(field));
-            const WorldTime after = world_now();
-            uint8_t mine[clk::kFieldTimeSize] = {};
-            game::safe_read(ts + clk::kTsFieldTime, mine, sizeof mine);
-            if (!copied) g_travel_failed.fetch_add(1);
-            if (moved(before, after)) g_world_moved.fetch_add(1);
-            uint32_t owner = 0;
-            peek(reinterpret_cast<uintptr_t>(field) + 0x180, owner);
-            note("Session2 clock gate: user 2 travels to field 0x{:X} (owner 0x{:X}): {} | world clock {} -> {}{}",
-                 reinterpret_cast<uintptr_t>(field), owner,
-                 copied ? "its character takes the field's time (" + show(mine) + "), nothing published"
-                        : std::string("COPY FAILED, its character keeps its time; nothing published"),
-                 show(before), show(after), moved(before, after) ? " (MOVED, by someone else)" : "");
-        }
+        const uintptr_t ts = ts_of(reinterpret_cast<void*>(ctx.r15));
+        if (!ts || who_now(ts) != ClockWho::User2) return;
+        const uintptr_t field = ctx.rdi;
+        g_travels.fetch_add(1);
+        const WorldTime before = world_now();
+        const bool copied = clock_user2_travel(g_game, ts, field);
+        const WorldTime after = world_now();
+        uint8_t mine[clk::kFieldTimeSize] = {};
+        game::safe_read(ts + clk::kTsFieldTime, mine, sizeof mine);
+        if (!copied) g_travel_failed.fetch_add(1);
+        if (moved(before, after)) g_world_moved.fetch_add(1);
+        uint32_t owner = 0;
+        peek(field + 0x180, owner);
+        ctx.rbx = ts;  // as the skipped `mov rbx,[r15]`
+        ctx.rip = g_base + kTravelResume;
+        note("Session2 clock gate: user 2 travels to field 0x{:X} (owner 0x{:X}): {} | world clock {} -> {}{}", field,
+             owner,
+             copied ? "its character takes the field's time (" + show(mine) + "), nothing published"
+                    : std::string("COPY FAILED, its character keeps its time; nothing published"),
+             show(before), show(after), moved(before, after) ? " (MOVED, by someone else)" : "");
     } catch (...) {
     }
-    if (!gated) g_travel.unsafe_call<void>(fm, field);
 }
 
 // TransformSync LoadingComplete(TS, res, field, ?, u8 flag, now*) -> res.
@@ -236,9 +242,8 @@ uint8_t clock_loading_flag(ClockWho who, uint8_t flag) { return who == ClockWho:
 bool clock_gate_install() {
     if (g_active.load()) return true;
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-    if (!code_ok(kTravel, kTravelHead, sizeof kTravelHead, "FieldMover::SyncFieldTimeOnMove") ||
-        !code_ok(kTravelOwnerCmp, kTravelOwnerCmpBytes, sizeof kTravelOwnerCmpBytes, "its owner check") ||
-        !code_ok(kTravelGetterCall, kTravelGetterCallBytes, sizeof kTravelGetterCallBytes, "its getter call") ||
+    if (!code_ok(kTravelOwnerCmp, kTravelOwnerCmpBytes, sizeof kTravelOwnerCmpBytes, "SyncFieldTimeOnMove's owner check") ||
+        !code_ok(kTravelGetterCall, kTravelGetterCallBytes, sizeof kTravelGetterCallBytes, "its getter and setter calls") ||
         !code_ok(kLoading, kLoadingHead, sizeof kLoadingHead, "TransformSync LoadingComplete") ||
         !code_ok(kLoadingFlagCmp, kLoadingFlagCmpBytes, sizeof kLoadingFlagCmpBytes, "its flag check") ||
         !code_ok(kGetter, kGetterHead, sizeof kGetterHead, "CommonField::GetCurrentFieldTime")) {
@@ -247,8 +252,8 @@ bool clock_gate_install() {
     g_game.field_time = reinterpret_cast<decltype(g_game.field_time)>(g_base + kGetter);
     g_loading = safetyhook::create_inline(reinterpret_cast<void*>(g_base + kLoading),
                                           reinterpret_cast<void*>(&loading_detour), SafetyHookInline::StartDisabled);
-    g_travel = safetyhook::create_inline(reinterpret_cast<void*>(g_base + kTravel),
-                                         reinterpret_cast<void*>(&travel_detour), SafetyHookInline::StartDisabled);
+    g_travel = safetyhook::create_mid(reinterpret_cast<void*>(g_base + kTravelOwnerCmp), &travel_mid,
+                                      safetyhook::MidHook::StartDisabled);
     if (!g_loading || !g_travel || !g_loading.enable()) {
         g_loading = {};
         g_travel = {};
@@ -263,8 +268,8 @@ bool clock_gate_install() {
     g_active.store(true);
     CloseHandle(CreateThread(nullptr, 0, watch_thread, nullptr, 0, nullptr));
     log::info("Session2 clock gate ON: user 2's travels and loads never publish the world clock "
-              "(hooks exe+0x{:X} SyncFieldTimeOnMove, exe+0x{:X} LoadingComplete); world clock now {}",
-              kTravel, kLoading, show(world_now()));
+              "(hooks exe+0x{:X} SyncFieldTimeOnMove's owner check, exe+0x{:X} LoadingComplete); world clock now {}",
+              kTravelOwnerCmp, kLoading, show(world_now()));
     return true;
 }
 
