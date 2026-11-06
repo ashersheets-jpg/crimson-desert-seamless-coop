@@ -847,3 +847,11 @@ bool sniffer_install(const std::wstring& dir, HANDLE stop, bool record) {
 }
 
 }  // namespace cdmp::net
+
+// Co-op+ on the native base: the Co-op+ layer (coopplus.asi, its own sniffer off) asks this sniffer to send a client
+// request (5-byte header + payload) the way it used to ask its own (revive, duel hits, give-backs). The same queue
+// and checks as sniffer_inject_c2s; 1 = queued.
+extern "C" __declspec(dllexport) int cdmp_inject_c2s(const uint8_t* packet, size_t size) {
+    if (!packet || size < 5 || size > 0x7F00) return 0;
+    return cdmp::net::sniffer_inject_c2s(std::vector<uint8_t>(packet, packet + size)) ? 1 : 0;
+}
