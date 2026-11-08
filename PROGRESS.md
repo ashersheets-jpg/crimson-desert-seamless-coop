@@ -2400,3 +2400,13 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   [rax+0x170] (14 bytes) ; call 0x4E1740 (2976 0x43C750); its slots found [rbp+8] actor [rbp] packet key [rbp+0x80]
   key [rbp+0x88]. The Create point 0xD3A951 (9 bytes): found [rbp+0x80] actor [rbp+0x78] packet key [rbp-0x40]
   key [rbp-0x30] resource [rbp-0x34] kind BL; the stage call 0xBABA90 (13 args now).
+- 2026-11-08 05:50 tcB46 InteractProbe (host and guest, the same NPCs): the guest RECEIVES each NPC's interaction
+  entries -- 0xB01005AF / 0xB01005AC / 0xB0100524: 25 entries per query on BOTH sides -- but the client's per-entry
+  test 0xABF5A0 keeps one on the host (426 of 426 queries: the "Greet") and NONE on the guest. (Some NPCs, e.g.
+  0xB01004CF-4D4, are refused earlier by 0xABF3E0 code 0x741F3E3F on both sides: not talkable.) So the data is there
+  and the slot-guard suspicion is out; the guest's client refuses the entries. 0xABF5A0's refusal paths each store
+  their own code (globals 0x714C018 via 0xABCD30, 0x714AF0C via 0x8D0FE70, 0x7137FC8 the target's +0x120 flag,
+  0x714BE54 the local user's current interaction, 0x714AF14 the target's current action needs +0x111 and flag
+  +0x116 & 4) plus 0x22E6FC0 first. The probe now records the guest's refusal code per NPC. tcB47 (+ the 3576 port of
+  guest_seq_route's schedule points, in probe mode: Create 0xD3A951, Delete 0xD3B10B (14 bytes), Change 0xD3C047,
+  Deactivate 0xD3C797; manager container +0x170).
