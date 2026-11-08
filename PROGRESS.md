@@ -2138,3 +2138,10 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
     arrive natively (walk / fast travel).
   - tcB14 (the guest walks into the inn from 7 m out): camwalk's walker climbed the outside wall (stuck at y 621.7):
     no answer. Harness: -GuestWalkTo x_z.
+- 2026-11-07 22:30 tcB15: tried a SERVER move for "go to my friend" on the native base: AITeleportReq 3040 (template:
+  the host client's own AITeleportReq for its NPC 0xB01006FF, recorded: u32 actor | ..., the position at +196) with
+  our player key. The server answered AITeleportFailAck 3150 (key, key) every time: that request is only for AI
+  actors (the handler needs the actor's AI component, [actor+0x68]+0x58), not for a player. Reverted (no code kept).
+  State: the host's own move works with the client hops (tcB11/12); the GUEST's breaks its character
+  ("physics object missing", no NPCs drawn: tcB13). Open: a native way to move user 2 (its fast travel to the
+  nearest unlocked point, then a short hop; or the server-side move the fast-travel funnel uses).
