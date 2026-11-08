@@ -163,6 +163,11 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   screen only (B01's join flow).
 - [ ] **B09 — Shared cutscenes on 3576** (the guest sees the host's boss cutscenes; late1's old crash).
 - [ ] **B10 — Quest sharing on by default** (live quest steps, co-op save per friend: out of experimental).
+  **Design (user 2026-11-08, after a Discord poll):** option 3 as the base -- each player keeps and plays their OWN
+  quests and story in the shared world (start / finish individually, fight together); option 2 as an optional "do it
+  together" bonus -- when both are on the SAME step of the same quest, one completing it checks it off for both
+  (never a step a player has not reached). Rejected: copying every completion to both (skips steps, rewards and
+  cutscenes) and host-only missions.
 
 **Items** (decomp: the bag's item transaction, docs/research/reverse-engineering-3576.md "Items")
 - [ ] **B11 — Item gifting and trading** (confirm step, no duplication, a log, controller).
