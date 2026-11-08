@@ -2410,3 +2410,14 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   +0x116 & 4) plus 0x22E6FC0 first. The probe now records the guest's refusal code per NPC. tcB47 (+ the 3576 port of
   guest_seq_route's schedule points, in probe mode: Create 0xD3A951, Delete 0xD3B10B (14 bytes), Change 0xD3C047,
   Deactivate 0xD3C797; manager container +0x170).
+- 2026-11-08 06:10 tcB47: (1) the guest's per-entry refusal is 0x6467532C for EVERY entry of a talkable NPC
+  (0xB0100524: host keeps 1 of 25 per query, its other 24 also refused with 0x6467532C; guest keeps 0) -- one condition
+  of the entry check fails on the guest for the Greet entry too; the code globals were still 0 at the probe's start
+  (runtime-filled); tcB48 prints them once set, to name the path. (2) The guest_seq_route schedule port in probe mode:
+  Create (3576 2989) and Change (2616) HOOKED and decoding right: "scene 0x200001BC of character 0xA0100001 (the
+  host's), resource 0xF9E1E4B3, kind 4 | vf48 gave M (this client's 0xA01001D0, its container counting 1, 2, 3...)
+  | X (the host character's manager on the guest) | WOULD route to X". Census: M holds 87 host stages, X none -- the
+  routing ByJunter built is what puts them where the NPCs look. Every stage's +0x28 is M (the stage -> manager link
+  holds on 3576); "0 active (+0x178), 0 nodes (+0x138)" across 87 is suspect: tcB48 dumps a stage's first 0x200
+  bytes. Fixed: Delete's patch is the first 7-byte instruction (the second reads the RAX the hook sets, in place);
+  Deactivate's lookup call bytes (E8 20 35 C5 FF).
