@@ -2219,3 +2219,8 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   (host, prologue checked) writes a null slot as the game writes an empty one (the byte 0): the stream to user 2 keeps
   its shape. These actors only reach that serializer for user 2 now that held NPCs are released (before the sector
   fix none were). tcB26 checks it.
+- 2026-11-08 00:45 tcB26: THE GUEST SEES THE NPCs. With the sector fix (+0x548) and the slot guard: "Session2 slot
+  guard ON"; the host's teleport into the inn did not crash; observer hold "NPCs held 1017 ... released 993 ...
+  drops by reason: despawned x17"; the guest's shot tcB26-39 shows the inn's people (the masked guard, the man at
+  the fire, the man with the headband: the same ones in the host's shot). SAVES OK. Next: the guest INTERACTS with
+  them (talk, the table) and a longer town session (no crash over time).
