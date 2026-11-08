@@ -2196,3 +2196,11 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
     vfunction6 0x2D11AA0) and the sector observer list (+0x68/+0x70, 16-byte entries, in 0x2D8FA00 which calls
     NotifyAppear 0x2D97820) are unchanged on 3576; actor key +0x60 unchanged. Native: counters of every drop by reason
     in the summary ("drops by reason"); tcB21 runs with it.
+- 2026-11-08 00:20 FOUND AND FIXED the guest's missing NPCs (native base on 3576): tcB21's new per-reason counter:
+  "drops by reason: despawned x23, observer out of range x1028" (1051 held, 0 released). A one-time live probe of the
+  first "out of range" NPC (tcB22): "TS +0x540 sector 0x0: observers none | FOUND the observer in the list of TS+0x548
+  (2 observers)": on 3576 the TransformSync's current sector is at +0x548 (2976: +0x540, the only use of it:
+  child_hold.h kTsSector). Every held NPC looked "in no sector, observed by nobody" and was dropped instead of
+  released, so the guest never got the NPCs around it. Fixed (native commit). tcB23: "NPCs held 291 ... released 262
+  in 137 NotifyAppear (mean 5.8 s, max 12.2 s) ... drops by reason: despawned x25", no guest crash, SAVES OK. (The
+  harness then lost focus; tcB24 re-checks the inn with screenshots.)
