@@ -2446,3 +2446,11 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   So the guest's Greet is refused because a condition on the guest's PLAYER CHARACTER fails (not the NPC). tcB52
   logs each distinct failing condition (its vtables and flag bytes) on both sides: the one that fails only on the
   guest names what the guest's character lacks.
+- 2026-11-08 08:00 tcB53 (the failing owner conditions per NPC, their classes from the exe vtables): failing on BOTH
+  sides (normal: entries that do not apply) NotContentsLogicFunction 0x5D83C30, ConditionData_CheckActionAttribute
+  0x5D09190, ConditionData_CheckGimmickState 0x5CFD3B0 (the conditions are data, deterministic: the same heap
+  addresses on both PCs); failing ONLY on the guest: one pa::ConditionData_Macro (vtable 0x5D09E08; target
+  0xB0100588) -- a named macro condition from the data (condition_macro): ConditionData_Macro::vfunction2 0x2417930
+  looks the macro up by its u16 index in [0x71C2150]+0x58 (0x3F4F10, loaded on demand) and evaluates the macro's
+  inner condition [info+0x10]. tcB54 dumps that macro (index, info, inner class, strings) to see what the guest's
+  character lacks.
