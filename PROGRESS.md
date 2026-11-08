@@ -2145,3 +2145,15 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   State: the host's own move works with the client hops (tcB11/12); the GUEST's breaks its character
   ("physics object missing", no NPCs drawn: tcB13). Open: a native way to move user 2 (its fast travel to the
   nearest unlocked point, then a short hop; or the server-side move the fast-travel funnel uses).
+- 2026-11-07 22:45 NATIVE PORT with the decomp: user2_funnels F3 (user 2's fast travel on the host's server) was still
+  on 2976's code ("the 2283 handler's vf48 call 0x2A5F7F9 ... is not the expected code of build 2976; REFUSED" in
+  every 3576 run). 2976 byte patterns did not match; the decomp did it: TrocTrReloadStageStartReq's handler (classes.tsv
+  slot 3) = 0x2CEE250, its `call [rax+0x48]` at 0x2CEE4F2 (ctx 0x2CEE4EB, return 0x2CEE4F5) then `call 0x2AF4690`
+  (the apply function, 2976 0x2896120; r13 = [rcx+0x18] at +55); the second vf48 is in 0x2E680F0 (2976 0x2BC4950;
+  calls.tsv: called by 0x2AF4690) at 0x2E682E3 (return 0x2E682ED; the cleared field moved +0x6A0 -> +0x6D0). Native
+  commit 161c23a. tcB16: "User2Funnels: user2_fast_travel 1 LIVE" (first time on 3576).
+  - Tried for "go to my friend" (guest): a bare ReloadStageStartReq 3074 (a 0, FieldInfoKey 1, actor 0xA0100001 = the
+    host's character, pos/rot/scale) from the guest's layer: the server took it (F3: "user 2's manager 2") but the guest
+    got no MoveFieldAck: in a real fast travel the CLIENT starts its own loading (its fast-travel entry, 2976 0x655110,
+    sends the 2283 and then 2437...). Reverted (a bare one leaves a destination set on the server). Next: call the
+    client's fast-travel entry on 3576 (find it with the decomp: the caller of the 3074 writer) with the host's actor.
