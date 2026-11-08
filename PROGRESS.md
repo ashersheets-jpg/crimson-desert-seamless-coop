@@ -2518,3 +2518,12 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   0x3E2AD36C eErrNoInvalidInteractionDistance (the host's usual refusal of far entries), 0x669DBA09
   eErrNoInteractionShowWhenTargeted. tcB61 dumps the target condition that fails for entry 0x0055 on the guest (a
   hook on the collector's call 0xAC0330 records the entry index; the dump hook at 0x25FA549).
+- 2026-11-08 11:40 tcB61: the Greet's (entry 0x0055) failing TARGET condition on the guest = macro 270 (its inner
+  GameEventParam: fields 0x11E / 0x60F / 0xF43A3) AND an AndContentsLogicFunction (0x5D83B40, named from RTTI) -- the
+  same data on both PCs, so runtime state differs. Not the guest's story progress: its own save has 492 completed
+  missions (the host's "other player is in the prologue (0 completed missions)" is Co-op+'s prologue message sent
+  before the guest read its save: the count defaults to 0 -- a Co-op+ artifact; prologue_hold is copy-mode logic
+  still running on the native layer: to switch off there). The host's server ALSO refused the guest's lamp with
+  TargetConditionCheckFail, so the failing state is probably visible to the server too. Practical test tcB62:
+  interact_owner_override=1 now covers both exits (owner 0x25FA3DA and target 0x25FA549), only for HUMAN NPCs (type 1)
+  another user controls: does the Greet show, and does the host's server accept it (dialogue)?
