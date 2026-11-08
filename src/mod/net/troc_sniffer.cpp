@@ -900,7 +900,17 @@ bool sniffer_install(const std::wstring& dir, HANDLE stop, bool record) {
 // Co-op+ on the native base: the Co-op+ layer (coopplus.asi, its own sniffer off) asks this sniffer to send a client
 // request (5-byte header + payload) the way it used to ask its own (revive, duel hits, give-backs). The same queue
 // and checks as sniffer_inject_c2s; 1 = queued.
+extern "C" __declspec(dllexport) int cdmp_inject_s2c(const uint8_t* packet, size_t size);
 extern "C" __declspec(dllexport) int cdmp_inject_c2s(const uint8_t* packet, size_t size) {
     if (!packet || size < 5 || size > 0x7F00) return 0;
     return cdmp::net::sniffer_inject_c2s(std::vector<uint8_t>(packet, packet + size)) ? 1 : 0;
+}
+// Co-op+ (2026-11-07, B01/B19): the other direction: a server message (5-byte header + payload) for OUR client, e.g.
+// DoTeleportAck for the layer's travel hops and dev teleports. It goes into the same queue the copies used, which
+// this sniffer's OnRecvPacket hook delivers on the client's own thread (injection needs the opcode table checked).
+extern "C" __declspec(dllexport) int cdmp_inject_s2c(const uint8_t* packet, size_t size) {
+    if (!packet || size < 5 || size > 0x7F00) return 0;
+    const uint16_t op = static_cast<uint16_t>(packet[0] | (packet[1] << 8));
+    cdmp::net::puppet_inject_s2c(op, std::vector<uint8_t>(packet + 5, packet + size), 0);
+    return 1;
 }
