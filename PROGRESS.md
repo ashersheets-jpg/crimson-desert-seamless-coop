@@ -2238,3 +2238,10 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   interaction check is still open: Ctrl+F4 put the guest in a corner facing a wall (shot tcB29-38b), so no prompt
   was expected; needs the guest placed at the fire / an NPC (the host interacted with the fire from the dev spot in
   tcB19) -- next.
+- 2026-11-08 01:12 tcB30 (both players teleported to the inn table spot, the guest pressed E 12 times, turning
+  between presses): the guest's NPCs are posed and animated (no bind pose: shots tcB30-38/39 guest), and the guest
+  gets the game's own interaction prompts: "Fire / E Turn off" at the hanging lamp (shot tcB30-38b). On the host,
+  the hearth is dark at 10:56, lit at 11:08, dark at 11:22 (tcB30-38/39/40 host) while the host pressed nothing:
+  most likely the guest's E toggled it through the host's server. Not proven yet: the host's user 2 Req summary
+  shows only the top 8 opcodes; native user2_funnels now always prints user 2's interaction Reqs (3008 / 3073 /
+  2887) -- tcB31 checks. SAVES OK.
