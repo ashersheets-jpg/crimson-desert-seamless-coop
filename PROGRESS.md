@@ -2250,3 +2250,12 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   no reset) -- the guest's interaction path to the host's world works. Guest "actors held 0", SAVES OK. The guest's
   prompt is the hanging lamp ("Fire / E Turn off"); 12 presses = an even number of toggles, so no visible change is
   expected at the end. tcB32: the same turns with no E, then ONE E on the lamp, both screens compared.
+- 2026-11-08 01:40 tcB32/tcB33 (the same turns, then ONE guest E at the hanging lamp): the native guest trace
+  (guest.cpp interaction_trace, one line per interaction packet) shows the whole exchange WORKS:
+  out 3008 PreemptionStep (guest character 0xA01001B4, target 0xB0100879) -> in 2120 PreemptionStepSuccessAck
+  (33 ms) -> out 3073 DoStep -> in 2794 DoStepSuccessAck (33 ms). But no 2980 DoStepDoInteractionSuccessAck ever
+  came, and the lamp stays lit on both screens ("E Turn off" still offered). The server's DoStep handler
+  (0x2C70EA0) hands off to an obfuscated thunk; the real interaction runs from a server timer
+  (TrocTrInteractionDoStepDoInteractionOnceTimer 0x2ED8DD0, on the interacting actor's interaction component
+  +0x68 -> +0x98). tcB34: the sniffer logs the same packets on the HOST's client (its own E at "Stranger / Greet")
+  to compare the host's sequence with the guest's.
