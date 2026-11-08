@@ -186,18 +186,38 @@ bool remote_without_action(uintptr_t cc, uint32_t local, uint32_t& key, uint32_t
         if (!actor) return false;
         ctrl = *reinterpret_cast<const uint32_t*>(actor + off::kActor_OwnerUser);
         if (!gad::remote_user_controlled(ctrl, local)) return false;
+        // Co-op+ (2026-11-08, 3576: the guest's NPCs stood frozen in the bind pose, "actors held 623"): the game's own
+        // rule from its per-frame layer tick 0xA12C00 (decomp; Co-op+'s copy_tick_would_fault): a layer with flag 2 is
+        // skipped; one without flag 1 whose entry (the CC's +0x80 array, 0x78 bytes each: int n, ..., int16 a, b, c at
+        // +0x20) is empty or unset is skipped; only a layer the tick really reads with its current action (+0x10) null
+        // would fault. The old test (a chart and no action, 2976) also held idle NPCs whose second layer is unused, and
+        // a held character is never updated: it stood in the bind pose.
         bool lacks0 = false, lacks1 = false;
-        const auto l0 = *reinterpret_cast<const uintptr_t*>(cc + off::kControl_Layer0);
-        if (l0) {
-            lacks0 = gad::layer_lacks_action(*reinterpret_cast<const uintptr_t*>(l0 + off::kLayer_Chart),
-                                             *reinterpret_cast<const uintptr_t*>(l0 + 0x10),
-                                             *reinterpret_cast<const uintptr_t*>(l0 + off::kLayer_Playback));
-        }
-        const auto l1 = *reinterpret_cast<const uintptr_t*>(cc + off::kControl_Layer0 + 8);
-        if (l1 && !lacks0) {
-            lacks1 = gad::layer_lacks_action(*reinterpret_cast<const uintptr_t*>(l1 + off::kLayer_Chart),
-                                             *reinterpret_cast<const uintptr_t*>(l1 + 0x10),
-                                             *reinterpret_cast<const uintptr_t*>(l1 + off::kLayer_Playback));
+        const auto entries = *reinterpret_cast<const uintptr_t*>(cc + 0x80);
+        for (int i = 0; i < 2; ++i) {
+            const auto layer = *reinterpret_cast<const uintptr_t*>(cc + off::kControl_Layer0 + 8ull * i);
+            bool lacks = false;
+            if (!layer) {
+                lacks = true;
+            } else {
+                const uint8_t flags = *reinterpret_cast<const uint8_t*>(layer + 0x108);
+                bool skip = (flags & 2) != 0;
+                if (!skip && !(flags & 1)) {
+                    if (!entries) {
+                        skip = true;
+                    } else {
+                        const auto e = entries + 0x78ull * i;
+                        const int32_t n = *reinterpret_cast<const int32_t*>(e);
+                        const int16_t a = *reinterpret_cast<const int16_t*>(e + 0x20);
+                        const int16_t b = *reinterpret_cast<const int16_t*>(e + 0x22);
+                        const int16_t c = *reinterpret_cast<const int16_t*>(e + 0x24);
+                        skip = n == 0 || a == -1 || b == -1 || c == -1;
+                    }
+                }
+                if (!skip) lacks = *reinterpret_cast<const uintptr_t*>(layer + 0x10) == 0;
+            }
+            (i == 0 ? lacks0 : lacks1) = lacks;
+            if (lacks) break;
         }
         if (!gad::contain_remote_update(ctrl, local, lacks0, lacks1)) return false;
         key = *reinterpret_cast<const uint32_t*>(actor + off::kActor_Key);
