@@ -2304,3 +2304,20 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   20 SUBSTITUTED with the idle wait (the native 0x949080 then succeeds), 2 skipped (the native byte-0 path); "actors
   held 0". The guest's teleport landed it on the inn's ROOF this time (11 m from the host), so no visual check;
   tcB38 again for the shots.
+- 2026-11-08 03:10 Plitos's C606D401 handoff (Discord, via the user; reference patches against 862b4256, unpacked
+  to the scratchpad, hashes match his list). User: use nothing made irrelevant by the switch to native. Triage
+  against native_layer.h (apply_native_layer turns OFF in coopplus.asi: sniffer, enemy relay, co-op worlds, live
+  quests, story sync, stage cinema, save guard, puppet):
+  NOT taken (copy-based, off on native): packet replay budget (sniffer), enemy relay pacing, save_io ready guard
+  (the native base's save hooks own saves), Direct quest credit / quest_live, tavern local credit, scene-skip
+  pairing (stage cinema; B09 is native), persistent World ID + title-screen checkpoint transfer (co-op worlds).
+  TAKEN as references for our own port (still live on native): (1) the overlay's present path skipping a frame
+  instead of waiting on its fence / the render lock (dx12_hook, overlay_fence_slots.h); (2) the installer reusing
+  an existing ASI loader (winhttp.dll ...), keeping occupied proxy names, hash-verified backups of solo AND co-op
+  saves, EXE identity check (Setup-Direct.ps1 -> kit/coopplus/install.ps1); (3) Direct link polish: the timeout
+  message (LAN/VPN, IP, port, build), role checks on Direct too, the VPN route choice off-subnet. Credit Plitos.
+- 2026-11-08 03:10 User on tcB39: "Even with the guest's camera under the floor ... the NPCs are still in A-pose";
+  tcB40 (the guest inside, on the floor) agrees: stiff on the guest while the host's are bent over the fire, even
+  with 897/897 restored. So the restore is not the whole story. AnimProbe (native, [session2] anim_probe=1, read
+  only) counts per 5 s over the NPC keys: updated / layer-0 action / playback / playback CHANGED, host vs guest.
+  tcB41 running.
