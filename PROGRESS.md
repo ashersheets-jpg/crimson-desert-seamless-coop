@@ -2157,3 +2157,10 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
     got no MoveFieldAck: in a real fast travel the CLIENT starts its own loading (its fast-travel entry, 2976 0x655110,
     sends the 2283 and then 2437...). Reverted (a bare one leaves a destination set on the server). Next: call the
     client's fast-travel entry on 3576 (find it with the decomp: the caller of the 3074 writer) with the host's actor.
+- 2026-11-07 23:00 CORRECTION: "Local: unavailable (physics object missing)" is in EVERY native guest log (tcB3 79,
+  tcB9 51, tcB12 51, tcB13 59 lines, no teleport in tcB3/tcB9): the native base's own reader, not a sign that the
+  client hop broke the guest's character. The empty inn (tcB13) is still unexplained by it; the hold logs remain the
+  lead. tcB17: the guest's "go to my friend" through the client's own fast travel (native ui_pause detour runs
+  0x7221F0(ctx = [[[0x71C0158]+0x90]+0x1240], -1, -1, 0xA0100001) on the game thread, export cdmp_guest_travel_to;
+  the layer asks it): the layer said "asked", but the native side logged nothing and the guest did not move;
+  tcB18 adds a line where the request arrives.
