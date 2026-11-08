@@ -2538,3 +2538,16 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   follows the host's progress" (U-a2: user 2's quest context redirected to the host's on the server) is the pattern
   of fix. Next: the host's InteractProbe catches the server-side target-condition failure for the guest's character
   (the same Common code 0x25FA200 runs in the host's server) to see what the macro reads for user 2 vs user 1.
+- 2026-11-08 12:40 tcB65 FOUND THE SERVER-SIDE BLOCK: the host's server refuses the guest's NPC interaction (the guest's
+  character 0xA01001CA, NPC 0xB0100618, interaction 0x0C) on a target condition whose first part is
+  pa::ConditionData_CheckKnowledge (vtable 0x5CFDE68, named from RTTI; fields ...0024 / 0x1FFFF14E8: knowledge entry
+  0x14E8?) AND an AndContentsLogicFunction. NPC conversations are gated by the PLAYER'S KNOWLEDGE, checked per
+  character on the server (the condition classes evaluate through the CompareTargetParameter visitor: 0x2417610 ->
+  param vf+0x20). The guest's character lacks that knowledge on the host's server. (tcB64's lines were the host's
+  own character: my "local character" test missed; the host's is 0xA0100001 in every run.)
+  This is B04 ("knowledge learned by one counts for both"): the fix direction is for knowledge checks of user 2's
+  character to see the host's knowledge too (as ByJunter's rule "the guest follows the host's progress" for quests),
+  on the server and on the guest's client. The game has native knowledge sharing (ShareKnowledgeDataListReq/Ack,
+  ShareKnowledgeSeedAck, CommonShareKnowledgeInteractionProcessor) and per-actor knowledge (LearnKnowledgeListAck
+  0xCFEFA0 resolves the actor by key, 0x98FC20). Open: is user 2's knowledge on the server EMPTY (its save's
+  knowledge not loaded) or only missing this entry; which knowledge is 0x14E8.
