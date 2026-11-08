@@ -2299,3 +2299,8 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
       also holds a remote actor whose selected layer / its playback / playback+0x28 is null (it has no animation
       to show anyway; no visual change). The regression came from my change of 4a60393 -- my mistake.
   tcB37: both, with a minute more in the inn.
+- 2026-11-08 02:55 tcB37 (seq_actor_restore=1 + the selected-layer guard): NO guest crash in ~5 min, SAVES OK.
+  GuestSeqRestore ON (3576 point); restores 999, ALL restored (CHART FAILED 0, tcB35: 21); seq_bodyanim restores 22:
+  20 SUBSTITUTED with the idle wait (the native 0x949080 then succeeds), 2 skipped (the native byte-0 path); "actors
+  held 0". The guest's teleport landed it on the inn's ROOF this time (11 m from the host), so no visual check;
+  tcB38 again for the shots.
