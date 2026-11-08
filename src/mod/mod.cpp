@@ -1182,6 +1182,7 @@ DWORD WINAPI worker(LPVOID) {
             net::anim_probe_start(cfg.s2_anim_probe);
             net::interact_probe_start(cfg.s2_interact_probe, cfg.s2_guest && cfg.s2_interact_owner_override);
             net::knowledge_share_start(!cfg.s2_guest && cfg.s2_user2_knowledge_share);
+            net::subject_swap_start(!cfg.s2_guest && cfg.s2_user2_condition_subject_host);
             session2::npc_probe_client_start(cfg.s2_npc_activation, cfg.s2_npc_family_control,
                                             cfg.s2_user2_road_control, cfg.s2_guest, g_stop);
         }

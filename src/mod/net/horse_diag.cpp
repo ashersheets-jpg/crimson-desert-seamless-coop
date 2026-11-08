@@ -17,6 +17,8 @@
 #include "mod/log.h"
 #include "mod/net/enemy_relay.h"
 #include "mod/session2/guest_actor_diag_logic.h"
+#include "mod/session2/guest_lifecycle.h"
+#include "mod/session2/offsets_s2.h"
 
 namespace cdmp::net {
 namespace {
@@ -512,7 +514,7 @@ std::string cond_dump(uintptr_t c, uintptr_t base);
 std::atomic<uint32_t> g_tc_lines{0};
 uint64_t g_tc_seen[64] = {};
 void tc_on_fail(safetyhook::Context& ctx) {  // 0x25FA549: the store of eErrNoInteractionTargetConditionCheckFail
-    if (g_oc_override.load(std::memory_order_relaxed) && remote_npc(t_oc_target)) {  // TEST: as the owner exit
+    if (g_oc_override.load(std::memory_order_relaxed) && t_entry_idx == 0x0055 && remote_npc(t_oc_target)) {
         g_tc_overridden.fetch_add(1, std::memory_order_relaxed);
         ctx.rip = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)) + 0x25FA55F;
         return;
@@ -546,7 +548,28 @@ void tc_on_fail(safetyhook::Context& ctx) {  // 0x25FA549: the store of eErrNoIn
               server_user2 ? "SERVER for another player" : "GREET", ip_key_of(t_oc_player), target, c & 0xFFFFFFF,
               cond_dump(c, base));
 }
+// TEST user2_condition_subject_host=1 (HOST): on a SERVER thread, an interaction condition whose subject is another
+// player's character is evaluated with the HOST's server character instead ("the guest follows the host's progress",
+// ByJunter's rule for quests): any NPC interaction the host can do, the guest can. The host's character is looked up
+// by key (0xA0100001, the first user's in every run) in the ServerActorManager each time (never kept).
+std::atomic<bool> g_subject_swap{false};
+std::atomic<uint64_t> g_subject_swapped{0};
+bool ks_server_thread();
 void oc_on_entry(safetyhook::Context& ctx) {  // 0x25FA200
+    if (g_subject_swap.load(std::memory_order_relaxed) && ks_server_thread()) {
+        uint32_t pkey = 0, powner = 0;
+        game::safe_read(ctx.rdx + off::kActor_Key, &pkey, 4);
+        game::safe_read(ctx.rdx + off::kActor_OwnerUser, &powner, 4);
+        if ((pkey >> 28) == 0xA && pkey != 0xA0100001u && powner != 0x90100000u) {
+            const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+            uintptr_t sam = 0;
+            game::safe_read(base + session2::off::kSamSlot, &sam, 8);
+            if (const auto host = session2::sam_find_actor(sam, 0xA0100001u); host && *host) {
+                ctx.rdx = *host;
+                g_subject_swapped.fetch_add(1, std::memory_order_relaxed);
+            }
+        }
+    }
     t_oc_cond = ctx.rcx;
     t_oc_player = ctx.rdx;
     t_oc_target = ctx.r8;
@@ -608,7 +631,7 @@ bool remote_npc(uintptr_t actor) {
 void oc_on_fail(safetyhook::Context& ctx) {  // 0x25FA3DA: the store of eErrNoInteractionOwnerConditionCheckFail
     // TEST (interact_owner_override=1, guest): for a target another user controls (its [actor+0x90] is not this
     // client's user key), the owner condition passes: resume at 0x25FA55F (mov al,1 ; the epilogue).
-    if (g_oc_override.load(std::memory_order_relaxed) && remote_npc(t_oc_target)) {
+    if (g_oc_override.load(std::memory_order_relaxed) && t_entry_idx == 0x0055 && remote_npc(t_oc_target)) {
         g_oc_overridden.fetch_add(1, std::memory_order_relaxed);
         ctx.rip = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)) + 0x25FA55F;
         return;
@@ -759,8 +782,9 @@ DWORD WINAPI interact_probe_thread(LPVOID) {
                              r.why);
         }
         log::info("InteractProbe: {} targets asked in 5 s (overridden so far: owner {}, target {}) | KnowledgeShare: "
-                  "user 2 no {} -> shared {}, still no {}{}", rows.size(), g_oc_overridden.load(), g_tc_overridden.load(),
-                  g_ks_calls.load(), g_ks_shared.load(), g_ks_still_no.load(), s);
+                  "user 2 no {} -> shared {}, still no {} | subject swapped to the host {}{}", rows.size(),
+                  g_oc_overridden.load(), g_tc_overridden.load(), g_ks_calls.load(), g_ks_shared.load(),
+                  g_ks_still_no.load(), g_subject_swapped.load(), s);
     }
 }
 
@@ -1055,6 +1079,12 @@ void interact_probe_start(bool on, bool owner_override) {
     log::info("InteractProbe: 0xABF5A0 refusal codes:{} (0x714C018 the 0xABCD30 path, 0x714AF0C 0x8D0FE70, 0x7137FC8 the "
               "target's +0x120 flag, 0x714BE54 the user's current interaction, 0x714AF14 the target's action flag +0x116 & 4)",
               codes);
+}
+
+void subject_swap_start(bool on) {
+    g_subject_swap.store(on);
+    if (on) log::warn("SubjectSwap ON (user2_condition_subject_host=1, TEST, host): user 2's interaction conditions are "
+                      "evaluated with the host's character on the server");
 }
 
 void knowledge_share_start(bool on) {
