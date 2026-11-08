@@ -2224,3 +2224,12 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   drops by reason: despawned x17"; the guest's shot tcB26-39 shows the inn's people (the masked guard, the man at
   the fire, the man with the headband: the same ones in the host's shot). SAVES OK. Next: the guest INTERACTS with
   them (talk, the table) and a longer town session (no crash over time).
+- 2026-11-08 01:00 User, on the guest's shot: "the NPCs ... are all standing in the same A-Pose, not actually
+  detecting the player at all". Confirmed: (1) the guest's packets carry the inn NPCs' actions (tcB26: the 58 NPCs
+  loaded last got 8-19 StartActionAck each) but its native remote update guard held them: "update skipped 247152 ...
+  actors held 623" (CharacterControl Update/PostUpdate return at once = no animation = the bind pose). Its test (a
+  layer with a chart and no current action/playback, 2976) is cruder than the game's own per-frame layer rule on 3576
+  (0xA12C00: skip flag-2 layers and not-started layers with an empty entry; only a layer it really reads needs an
+  action) -- the rule Co-op+ already ported for the A12E4E crash. Native remote_without_action now uses that rule
+  (tcB29 checks: poses, held count, no guest crash). (2) tcB28: the guest pressed E ten times at the inn: no
+  Interaction request at all and no prompt on its screen (the host's shows "E Turn on" at the fire) -- next.
