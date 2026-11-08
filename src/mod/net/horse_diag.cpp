@@ -219,6 +219,18 @@ bool remote_without_action(uintptr_t cc, uint32_t local, uint32_t& key, uint32_t
             (i == 0 ? lacks0 : lacks1) = lacks;
             if (lacks) break;
         }
+        // Co-op+ (2026-11-08, tcB36: the guest crashed at exe+0x251AF7D reading 0x28, an NPC with a chart and no
+        // action on both layers): every CharacterControl::Update (0x9451E0) calls 0x9496C0, which first calls
+        // 0x251AF40: it reads the SELECTED layer ([[CC+0x30]+0x1B], 0 or 1) -> its playback +0x18 -> +0x28 -> +0x7E
+        // with no null check. A remote actor without that chain is held too (it has no animation to show anyway).
+        if (!lacks0 && !lacks1) {
+            const auto info = *reinterpret_cast<const uintptr_t*>(cc + 0x30);
+            const uint8_t sel = info ? *reinterpret_cast<const uint8_t*>(info + 0x1B) : 0;
+            const auto layer = sel < 2 ? *reinterpret_cast<const uintptr_t*>(cc + off::kControl_Layer0 + 8ull * sel) : 0;
+            const auto play = layer ? *reinterpret_cast<const uintptr_t*>(layer + 0x18) : 0;
+            const auto deep = play ? *reinterpret_cast<const uintptr_t*>(play + 0x28) : 0;
+            if (!info || !deep) (sel == 1 ? lacks1 : lacks0) = true;
+        }
         if (!gad::contain_remote_update(ctrl, local, lacks0, lacks1)) return false;
         key = *reinterpret_cast<const uint32_t*>(actor + off::kActor_Key);
         return true;
@@ -244,7 +256,100 @@ bool contain_remote(uintptr_t cc, std::atomic<uint64_t>& skipped) {
     return true;
 }
 
+// Co-op+ AnimProbe (2026-11-08, [session2] anim_probe=1, host and guest, read only): the guest's NPCs stand in the
+// bind pose although their actions restore (tcB37-40: 999 of 999 "restored"). Per actor seen by
+// CharacterControl::Update (0x9451E0): its calls; every 5 s, over the NPC keys (0xB...): how many were updated,
+// how many have a current action on layer 0, and how many whose layer-0 playback bytes (+0x18 -> 64 bytes) CHANGED
+// since the last report (an advancing animation). The host's numbers are the reference.
+struct ApSlot {
+    std::atomic<uint32_t> key{0};
+    std::atomic<uintptr_t> cc{0};
+    std::atomic<uint32_t> calls{0};
+    uint32_t last_calls = 0;
+    uint64_t last_digest = 0;
+};
+constexpr size_t kApSlots = 4096;
+ApSlot g_ap[kApSlots];
+std::atomic<bool> g_ap_on{false};
+std::atomic<uint64_t> g_ap_full{0};
+
+void anim_probe_note(uintptr_t cc) {
+    uint32_t key = 0;
+    uintptr_t actor = 0;
+    if (!game::safe_read(cc + 0x08, &actor, 8) || !actor || !game::safe_read(actor + off::kActor_Key, &key, 4) || !key) return;
+    size_t i = (static_cast<size_t>(key) * 2654435761u >> 12) & (kApSlots - 1);
+    for (int n = 0; n < 32; ++n, i = (i + 1) & (kApSlots - 1)) {
+        ApSlot& sl = g_ap[i];
+        uint32_t k = sl.key.load(std::memory_order_relaxed);
+        if (k == 0) {
+            if (!sl.key.compare_exchange_strong(k, key)) {
+                if (k != key) continue;
+            }
+            k = key;
+        }
+        if (k != key) continue;
+        sl.cc.store(cc, std::memory_order_relaxed);
+        sl.calls.fetch_add(1, std::memory_order_relaxed);
+        return;
+    }
+    g_ap_full.fetch_add(1, std::memory_order_relaxed);
+}
+
+DWORD WINAPI anim_probe_thread(LPVOID) {
+    for (;;) {
+        Sleep(5000);
+        uint32_t npcs = 0, updated = 0, with_action = 0, with_play = 0, advancing = 0, other = 0, with_default = 0;
+        std::string samples;
+        int shown = 0;
+        for (auto& sl : g_ap) {
+            const uint32_t key = sl.key.load(std::memory_order_relaxed);
+            if (!key) continue;
+            if ((key >> 28) != 0xB) {
+                ++other;
+                continue;
+            }
+            ++npcs;
+            const uint32_t calls = sl.calls.load(std::memory_order_relaxed);
+            const uint32_t d = calls - sl.last_calls;
+            sl.last_calls = calls;
+            if (!d) continue;
+            ++updated;
+            const uintptr_t cc = sl.cc.load(std::memory_order_relaxed);
+            uintptr_t layer = 0, cur = 0, play = 0;
+            if (!game::safe_read(cc + 0x88, &layer, 8) || !layer) continue;
+            game::safe_read(layer + 0x10, &cur, 8);
+            game::safe_read(layer + 0x18, &play, 8);
+            if (cur) ++with_action;
+            uintptr_t def0 = 0, def1 = 0;
+            uint8_t b23a = 0;
+            game::safe_read(cc + 0x70, &def0, 8);
+            game::safe_read(cc + 0x78, &def1, 8);
+            game::safe_read(cc + 0x23A, &b23a, 1);
+            if (def0 || def1) ++with_default;
+            if (!play) continue;
+            ++with_play;
+            uint8_t b[64] = {};
+            if (!game::safe_read(play, b, sizeof b)) continue;
+            uint64_t h = 1469598103934665603ull;
+            for (uint8_t x : b) h = (h ^ x) * 1099511628211ull;
+            if (sl.last_digest && h != sl.last_digest) ++advancing;
+            sl.last_digest = h;
+            if (shown < 3) {
+                ++shown;
+                const uint32_t* w = reinterpret_cast<const uint32_t*>(b);
+                samples += std::format(" | 0x{:08X} calls {} def 0x{:X}/0x{:X} +23A {} cur 0x{:X} play", key, d, def0, def1,
+                                       b23a, cur);
+                for (int j = 0; j < 16; ++j) samples += std::format(" {:08X}", w[j]);
+            }
+        }
+        log::info("AnimProbe: NPC keys {} | updated {} | layer0 action {} playback {} | playback CHANGED {} | default chart {}"
+                  " | other keys {} | table full {}{}", npcs, updated, with_action, with_play, advancing, with_default, other,
+                  g_ap_full.load(), samples);
+    }
+}
+
 void on_cc_update(safetyhook::Context& ctx) {
+    if (g_ap_on.load(std::memory_order_relaxed)) anim_probe_note(ctx.rcx);
     if (g_remote_mode) {
         if (contain_remote(ctx.rcx, g_remote_skipped)) ctx.rip = reinterpret_cast<uintptr_t>(g_ret);
         return;
@@ -425,6 +530,12 @@ void horse_diag_tick() {
         logged_post = b;
         last = t;
     }
+}
+
+void anim_probe_start(bool on) {
+    if (!on || g_ap_on.exchange(true)) return;
+    if (HANDLE t = CreateThread(nullptr, 0, anim_probe_thread, nullptr, 0, nullptr)) CloseHandle(t);
+    log::info("AnimProbe ON (anim_probe=1, read only): NPC update / action / playback-change counts every 5 s");
 }
 
 }  // namespace cdmp::net

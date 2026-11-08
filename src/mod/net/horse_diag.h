@@ -18,6 +18,8 @@ namespace cdmp::net {
 
 // Call once (after the world exists). `contain` enables the skip.
 bool horse_diag_install(bool contain);
+// Co-op+ (2026-11-08): [session2] anim_probe=1: NPC update/animation counts every 5 s (read only).
+void anim_probe_start(bool on);
 // The sender's horse key, to watch it next to the copy (any thread).
 void horse_diag_watch(uint32_t key);
 // Writer thread, regularly: summary lines.

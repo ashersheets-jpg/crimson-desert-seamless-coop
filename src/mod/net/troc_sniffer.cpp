@@ -163,6 +163,27 @@ uint64_t now_us() {
     return t / f * 1000000ull + t % f * 1000000ull / f;  // no overflow for long uptimes
 }
 
+// Co-op+ (2026-11-08, 3576: the guest's interaction gets 2120 + 2794 but never 2980 and the lamp stays as it was):
+// this client's interaction packets, one line each, to compare with the host's own (PreemptionStep 3008 / 2120 / 3100,
+// DoStep 3073 / 2794, DoInteraction 2980, Reset 2887 / 2369). Rare (an E press); 400 lines at most.
+std::atomic<uint32_t> g_ia_lines{0};
+void interaction_line(Dir dir, const uint8_t* pkt, uint16_t size) {
+    uint16_t op = 0;
+    if (!guarded_copy(&op, pkt, 2)) return;
+    switch (op) {
+        case 3008: case 3073: case 2887: case 2120: case 3100: case 2794: case 2980: case 2369: break;
+        default: return;
+    }
+    if (g_ia_lines.fetch_add(1, std::memory_order_relaxed) >= 400) return;
+    uint8_t b[48] = {};
+    const uint16_t n = std::min<uint16_t>(size, sizeof b);
+    if (!guarded_copy(b, pkt, n)) return;
+    std::string hex;
+    for (uint16_t i = 0; i < n; ++i) hex += std::format("{}{:02X}", i ? " " : "", b[i]);
+    log::info("Sniffer interaction {} {} ({} B, T{}): {}", dir == Dir::ClientToServer ? "C>S" : "S>C", op, size,
+              GetCurrentThreadId(), hex);
+}
+
 void capture(Dir dir, uint32_t session, const uint8_t* pkt, uint64_t rsp) {
     uint16_t size = 0;
     if (!guarded_copy(&size, reinterpret_cast<const void*>(rsp + off::kHookArgSizeStackOffset),
@@ -176,6 +197,7 @@ void capture(Dir dir, uint32_t session, const uint8_t* pkt, uint64_t rsp) {
         uint8_t b[3] = {};
         if (size != 3 || !guarded_copy(b, pkt, 3) || b[0] != 0xD1 || b[1] != 0x07 || b[2] != 0xFF) return;
     }
+    interaction_line(dir, pkt, size);
     RecordHeader h{};
     h.session = session;
     h.flags = t_extra ? kRecModExtra : 0;

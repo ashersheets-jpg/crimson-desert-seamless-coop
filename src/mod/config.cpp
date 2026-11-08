@@ -320,6 +320,7 @@ Config load_config(const std::wstring& ini_path) {
     c.s2_npc_family_vehicles = narrow(read_string(ini_path, L"session2", L"npc_family_vehicles", "0"));
     c.s2_enemy_damage_probe = narrow(read_string(ini_path, L"session2", L"enemy_damage_probe", "0"));
     c.s2_door_trace = narrow(read_string(ini_path, L"session2", L"door_trace", "0"));
+    c.s2_anim_probe = read_uint(ini_path, L"session2", L"anim_probe", 0) != 0;
     c.s2_scene_level_share = narrow(read_string(ini_path, L"session2", L"scene_level_share", "0"));
     c.s2_user2_road_control = narrow(read_string(ini_path, L"session2", L"user2_road_control", "0"));
     c.s2_user2_road_carts = narrow(read_string(ini_path, L"session2", L"user2_road_carts", "0"));

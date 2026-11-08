@@ -60,9 +60,10 @@ struct Mem {
         return a;
     }
     // An action definition with its hash at +0x18.
-    uint64_t action(uint32_t hash) {
-        const uint64_t a = alloc(0x40);
+    uint64_t action(uint32_t hash, bool valid = true) {
+        const uint64_t a = alloc(0x200);
         put32(a + sar::kAction_Hash, hash);
+        put32(a + sar::kAction_ValidWord, valid ? 0x100u : 0u);  // 3576: byte +0x111
         return a;
     }
     // A chart: count at +0x20, array at +0x18 of {p0, p1, p2} sorted by [p2+0x18].
@@ -119,6 +120,16 @@ void test_find() {
     CHECK(sar::chart_find(m, c, sar::kHashSeqBodyAnim) == sar::Lookup::NotFound);
     CHECK(sar::chart_find(m, c, 0) == sar::Lookup::NotFound);           // entries are complete: key 0 never matches
     CHECK(sar::chart_find(m, c, 0xFFFFFFFFu) == sar::Lookup::NotFound);
+    {
+        // 3576: ActionGraph_Find 0x2627350 skips an action whose byte +0x111 is 0 (as an incomplete entry).
+        Mem m2;
+        const uint64_t c2 = m2.chart({sar::kHashWait});
+        CHECK(sar::chart_find(m2, c2, sar::kHashWait) == sar::Lookup::Found);
+        uint64_t arr = 0, p2 = 0;
+        CHECK(m2.r64(c2 + sar::kChart_Array, arr) && m2.r64(arr + 16, p2));
+        m2.put32(p2 + sar::kAction_ValidWord, 0);
+        CHECK(sar::chart_find(m2, c2, sar::kHashWait) == sar::Lookup::NotFound);
+    }
     // Every key of a small chart, its neighbours not.
     std::vector<uint32_t> small = {10, 20, 30, 40, 50};
     const uint64_t s = m.chart(small);

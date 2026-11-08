@@ -1179,6 +1179,7 @@ DWORD WINAPI worker(LPVOID) {
         // own server seconds after start), and never with the host-side stages.
         if (session2) {
             session2::door_trace_start(cfg.s2_door_trace, cfg.s2_guest);
+            net::anim_probe_start(cfg.s2_anim_probe);
             session2::npc_probe_client_start(cfg.s2_npc_activation, cfg.s2_npc_family_control,
                                             cfg.s2_user2_road_control, cfg.s2_guest, g_stop);
         }

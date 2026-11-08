@@ -261,6 +261,29 @@ uint16_t opcode_of(std::span<const uint8_t> p) {
     return p.size() >= 2 ? static_cast<uint16_t>(p[0] | (p[1] << 8)) : uint16_t{0};
 }
 
+// Co-op+ (2026-11-08, 3576: the guest's E reaches the host's server, tcB31 3008x12 3073x12, but a lamp did not
+// toggle in tcB32): one line per interaction packet, the guest's Reqs (PreemptionStep 3008, DoStep 3073, Reset 2887,
+// sent to the host) and the host's answers handed to this client (PreemptionStep Success 2120 / Fail 3100, DoStep
+// Success 2794, DoStep DoInteraction Success 2980, Reset 2369). Rare (an E press); 400 lines at most.
+std::atomic<uint64_t> g_ia_lines{0};
+void interaction_trace(const char* dir, std::span<const uint8_t> p) {
+    const uint16_t op = opcode_of(p);
+    const char* name = nullptr;
+    switch (op) {
+        case 3008: name = "InteractionPreemptionStepReq"; break;
+        case 3073: name = "InteractionDoStepReq"; break;
+        case 2887: name = "InteractionResetReq"; break;
+        case 2120: name = "InteractionPreemptionStepSuccessAck"; break;
+        case 3100: name = "InteractionPreemptionStepFailAck"; break;
+        case 2794: name = "InteractionDoStepSuccessAck"; break;
+        case 2980: name = "InteractionDoStepDoInteractionSuccessAck"; break;
+        case 2369: name = "InteractionResetAck"; break;
+        default: return;
+    }
+    if (g_ia_lines.fetch_add(1, std::memory_order_relaxed) >= 400) return;
+    log::info("Session2 guest interaction {} {} {} ({} B): {}", dir, op, name, p.size(), hex_bytes(p, 48));
+}
+
 template <class T>
 bool peek(uintptr_t addr, T& out) {
     __try {
@@ -1088,6 +1111,7 @@ int* __fastcall guest_send(void* self, int* res, void* pbv) {
             }
             if (ok) {
                 g_n.sent.fetch_add(1, std::memory_order_relaxed);
+                interaction_trace("out", p);
             } else {
                 // Never to the local server instead (two worlds): this connection is lost.
                 g_n.bad_frames.fetch_add(1, std::memory_order_relaxed);
@@ -1147,6 +1171,7 @@ void deliver_all(uintptr_t net) noexcept {
                 door_trace_packet(DoorTraceStage::GuestDeliver, p, handed_us);
                 turn.on_delivered(item.queued_us, handed_us);
                 g_n.delivered.fetch_add(1, std::memory_order_relaxed);
+                interaction_trace("in", p);
                 try {
                     count_delivered(p);  // G3: counts only
                 } catch (...) {

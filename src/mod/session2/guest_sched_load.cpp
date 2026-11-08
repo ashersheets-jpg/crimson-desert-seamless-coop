@@ -48,22 +48,26 @@ struct Body {
     uintptr_t rva, end;
     uint64_t fnv;
 };
-constexpr Body kLoader{0x1864140, 0x18643A8, 0xE06FA55A0E6EA986ull};
-constexpr Body kReader{0x18643B0, 0x1864CD8, 0x90E1F0C9AAC28DB5ull};
-constexpr Body kLookup{0x186A810, 0x186A999, 0x8D729B4530462A50ull};
-constexpr Body kRelease{0x38AD90, 0x38ADEC, 0x9F799744CF2F1875ull};
-constexpr uintptr_t kNodeLookupRva = 0x1869D70;
+// Co-op+ 3576 (2026-11-08; 3576 decomp + capstone): the loader 0x19A64E0 (mgr, out, &name String, flag: hashes the
+// name, finds it through 0x19AC5F0 in [mgr+8], else "sequencer/binary__" + the reader), the reader 0x19A6760 ([mgr+0x90]
+// vf40), the container lookup 0x19AC460 (users +0x68, lock vf40 / vf18 / vf20), the release 0x3D7FA0 (refcount +0x10,
+// atomic +0x14, vf0(1)); ranges from .pdata (the release: the whole function, its first unwind entry is chained).
+constexpr Body kLoader{0x19A64E0, 0x19A675D, 0xACFA1300C77A2A02ull};  // 2976 {0x1864140, 0x18643A8}
+constexpr Body kReader{0x19A6760, 0x19A719E, 0x1841B8E73754BC97ull};  // 2976 {0x18643B0, 0x1864CD8}
+constexpr Body kLookup{0x19AC460, 0x19AC5E9, 0x025B68BF2552A266ull};  // 2976 {0x186A810, 0x186A999}
+constexpr Body kRelease{0x3D7FA0, 0x3D7FFC, 0x9F799744CF2F1875ull};  // 2976 {0x38AD90, 0x38ADEC}
+constexpr uintptr_t kNodeLookupRva = 0x19ABC70;  // 3576 (2976 0x1869D70; reads [0x70DBFA0]+8)
 constexpr uint8_t kNodeLookupBytes[] = {0x48, 0x89, 0x54, 0x24, 0x10, 0x48, 0x89, 0x4C,
                                         0x24, 0x08, 0x53, 0x55, 0x56, 0x57, 0x41, 0x56};
-constexpr uintptr_t kKeyLookupRva = 0x1862A80;
+constexpr uintptr_t kKeyLookupRva = 0x19A4B90;  // 3576 (2976 0x1862A80)
 constexpr uint8_t kKeyLookupBytes[] = {0x44, 0x89, 0x44, 0x24, 0x18, 0x48, 0x89, 0x54,
                                        0x24, 0x10, 0x53, 0x48, 0x83, 0xEC, 0x30, 0x48};
 // Session 12 (the hold): 0xA9FEE0 (only caller 0xC0B619 in the 2335 handler 0xC0AFC0) calls 0x1862A80 at 0xA9FFC3
 // (E8 B8 2A DC 00): at the lookup's entry, [rsp] = 0xA9FFC8 means "this 2335 is running now" (checked at install).
-constexpr uintptr_t kStageCallRva = 0xA9FFC3, kStageRetRva = 0xA9FFC8;
-constexpr uint8_t kStageCallBytes[] = {0xE8, 0xB8, 0x2A, 0xDC, 0x00};
+constexpr uintptr_t kStageCallRva = 0xBABB73, kStageRetRva = 0xBABB78;  // 3576: in 0xBABA90 (2976 0xA9FEE0)
+constexpr uint8_t kStageCallBytes[] = {0xE8, 0x18, 0x90, 0xDF, 0x00};  // 3576 call 0x19A4B90
 // pa::NPCScheduleData_File (ctor 0x1860C10 [V]): vtable, refcount u32 (+0x10), "atomic count" byte (+0x14 = 1).
-constexpr uintptr_t kVtFile = 0x57DB080;
+constexpr uintptr_t kVtFile = 0x5B7CD38;  // 3576 (2976 0x57DB080)
 constexpr uint32_t kFile_Refs = 0x10, kFile_Atomic = 0x14;
 constexpr uint32_t kTlsRealm = 0x1EB;  /* Co-op+ port 3549 (2976: 0x1EC) */      // the server-realm byte of the exe's TLS block (0x281B757, 0xA9FF2A)
 constexpr uint32_t kLookupSample = 8;      // the lookup watch's full path: 1 call in 8 per thread (+ verifications)
@@ -792,7 +796,7 @@ DWORD WINAPI install_thread(LPVOID) {
     IMAGE_NT_HEADERS64 nt{};
     std::vector<gad::Section> secs;
     if (g_base != off::kImageBase || !game::safe_read(g_base, &dos, sizeof dos) ||
-        !game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestampUnported ||
+        !game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestamp ||  // Co-op+: ported to 3576 (2026-11-08)
         !p8_exe_sections(g_base, secs)) {
         log::error("GuestSchedLoad: unsupported game build or unreadable sections; nothing installed");
         return 0;

@@ -72,6 +72,9 @@ inline bool user_key(uint32_t key) { return (key >> 28) == 0x9; }
 // 0x863880 then needs the triple complete (all three non-null, 0x863952..0x863968). A pure read: no lock, no
 // allocation. The Reader: bool r32(uint64_t addr, uint32_t&) and bool r64(uint64_t addr, uint64_t&).
 inline constexpr uint32_t kChart_Array = 0x18, kChart_Count = 0x20, kEntry_Size = 24, kAction_Hash = 0x18;
+// Co-op+ 3576: ActionGraph_Find 0x2627350 counts an entry only when its action's byte +0x111 is set.
+inline constexpr uint32_t kAction_Valid = 0x111;
+inline constexpr uint32_t kAction_ValidWord = 0x110;  // read as a u32 (the Reader has r32 / r64): byte 1 is +0x111
 inline constexpr uint32_t kMaxSteps = 40;  // > log2(2^32): a torn count cannot loop for long
 
 enum class Lookup : uint8_t { NoChart, NotFound, Found, Unreadable };
@@ -101,7 +104,9 @@ Lookup chart_find(const Reader& rd, uint64_t chart, uint32_t hash) {
         uint64_t p0 = 0, p1 = 0, p2 = 0;
         if (!rd.r64(e, p0) || !rd.r64(e + 8, p1) || !rd.r64(e + 16, p2)) return Lookup::Unreadable;
         uint32_t key = 0;
-        const bool full = p0 && p1 && p2;
+        uint32_t valid_word = 0;
+        if (p0 && p1 && p2 && !rd.r32(p2 + kAction_ValidWord, valid_word)) return Lookup::Unreadable;
+        const bool full = p0 && p1 && p2 && ((valid_word >> 8) & 0xFF) != 0;
         if (full && !rd.r32(p2 + kAction_Hash, key)) return Lookup::Unreadable;
         if (full && hash < key) {
             hi = mid - 1;

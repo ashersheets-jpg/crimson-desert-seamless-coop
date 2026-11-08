@@ -547,6 +547,7 @@ struct Config {
     std::string s2_enemy_damage_probe = "0";
     // S42: 2928/2145/2953 y resultado nativo; probe/1 sólo observan, no fuerzan puertas.
     std::string s2_door_trace = "0";
+    bool s2_anim_probe = false;  // Co-op+ 2026-11-08: AnimProbe
     // S43 (docs/research/s25/s43-puertas-y-r42.md), HOST: scene_level_share = 0 | probe | 1. A: user 2's own 2598 / 2104
     // marks the SceneLevel ready (owner gate 0x283044D); B: a 2834 delete of a level the other user still has loaded is
     // skipped (0x2829E60). 0: nothing installed; probe: measures only.

@@ -1626,8 +1626,12 @@ void summary() {
         }
     }
     const uintptr_t wrong_vt = g_wrong_class_vt.load();
-    log::info("User2Funnels subject: Reqs while user 2 is live {} | of user 2 {} ({}) | top Req opcodes of user 2: {}{}",
+    // Co-op+ (2026-11-08): user 2's interaction Reqs are rare (never in the top 8): always shown (3576 opcodes:
+    // InteractionPreemptionStepReq 3008, InteractionDoStepReq 3073, InteractionResetReq 2887).
+    log::info("User2Funnels subject: Reqs while user 2 is live {} | of user 2 {} ({}) | top Req opcodes of user 2: {}"
+              " | interaction 3008x{} 3073x{} 2887x{}{}",
               g_reqs_total.load(), g_reqs_user2.load(), verdicts.empty() ? "none" : verdicts, ops_text(g_req_ops),
+              g_req_ops.at(3008), g_req_ops.at(3073), g_req_ops.at(2887),
               wrong_vt ? std::format(" | last other class: vtable exe+0x{:X}", wrong_vt - g_base) : std::string{});
     struct Row {
         uint8_t f;
