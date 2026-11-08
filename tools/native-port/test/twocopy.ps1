@@ -18,7 +18,9 @@ param([string]$Name = 'tc1', [string]$HostVariant = 'coop-test-bandits', [string
       # actpid steps for the host after the guest's (joined with _ like -GuestKeys)
       [string]$HostKeys = '',
       # 'x_z': the guest walks there after the scripts and keys (camwalk\walkto.py, 3 m short)
-      [string]$GuestWalkTo = '')
+      [string]$GuestWalkTo = '',
+      # host ini overrides 'key=value,key=value' (an existing line of that key is replaced)
+      [string]$HostSet = '')
 $ErrorActionPreference = 'Stop'
 $bin = 'D:\SteamLibrary\steamapps\common\Crimson Desert\bin64'
 $here = $PSScriptRoot; $saves = 'C:\Users\asher\CrimsonDesert-SeamlessCoop\build\test-saves'
@@ -89,6 +91,15 @@ horse_follow_reverse=1
 user2_fast_travel=1
 '@
 if ($HostCoop) { [IO.File]::AppendAllText("$bin\cdmp.host.ini", "`r`ncoop_save_dir=$HostCoop`r`ncoop_save_seed=$HostSeed`r`n", (New-Object Text.UnicodeEncoding($false, $false))); "host co-op save: $HostCoop ($HostSeed)" }
+if ($HostSet) {
+    $hi = "$bin\cdmp.host.ini"; $t = [IO.File]::ReadAllText($hi, [Text.Encoding]::Unicode)
+    foreach ($kv in $HostSet -split ',') {
+        $k, $v = $kv -split '=', 2
+        if ($t -match "(?m)^$([regex]::Escape($k))=") { $t = [regex]::Replace($t, "(?m)^$([regex]::Escape($k))=.*$", "$k=$v") }
+        else { $t = $t.TrimEnd() + "`r`n$k=$v`r`n" }  # [session2] is the last section
+    }
+    [IO.File]::WriteAllText($hi, $t, (New-Object Text.UnicodeEncoding($false, $true))); "host ini overrides: $HostSet"
+}
 Write-Ini "$bin\cdmp.guest.ini" @'
 [general]
 player_name=Guest

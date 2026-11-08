@@ -2204,3 +2204,10 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   released, so the guest never got the NPCs around it. Fixed (native commit). tcB23: "NPCs held 291 ... released 262
   in 137 NotifyAppear (mean 5.8 s, max 12.2 s) ... drops by reason: despawned x25", no guest crash, SAVES OK. (The
   harness then lost focus; tcB24 re-checks the inn with screenshots.)
+- 2026-11-08 00:30 With the NPCs released (tcB23/tcB24), the HOST crashed on its own teleport into the inn, the same way
+  both times: AV at exe+0x249500A reading 0 (0x2495000, a component's serializer: *param_1 of a null entry) from
+  0x22E32A0 (an actor component's array of 0x38-byte entries, entry +8 null) from NotifyAppear (stack exe+0x2D979D4)
+  called by the native base: a HELD NPC's release re-announcing an actor that the host's teleport was tearing down
+  (the harness then "lost focus" to the crash reporter). Before the fix no release ever ran, so it never showed.
+  ByJunter's own answer exists: [session2] notify_thread_rule=1 (releases call NotifyAppear only on a thread the game
+  uses for NotifyAppear, so they cannot race the server's own actor work); off by default. tcB25 runs with it.
