@@ -2184,3 +2184,15 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   0x000F4266/7) and three 0xB01005xx objects, none on the arm-wrestling table (3479's interaction 0x000F431C): the
   teleport spot (pub.sh's -10661.5, -3830) does not face the table on 3576. The host's inn is full of NPCs (shot
   tcB19-38c). B14 needs the table's spot and facing on 3576 (or a walk to it) before the shared-world check.
+- 2026-11-08 00:00 THE GUEST'S NPCs (top priority, user: "we can't ship a co-op mod that strips the guest from having
+  their NPCs showing and interact-able"; ship rule: nothing of the big update ships until every pick works):
+  - tcB20 with the host's observer holds OFF (observer_hold / _family / load_defer / _acks = 0, harness -HostSet): the
+    GUEST CRASHED ~1 min after joining, before any teleport: AV at exe+0x2519FC4 (read of 0x28) on an NPC 0xB01002AE
+    controlled by the host with "L0 chart 1 cur 0 play 0" (a chart, no action yet) -- the very state the holds exist
+    for; 0x2519FC4 is in 0x2518850, the function Co-op+ already guards at 0x2519762 / 0x251A1AD on the old base.
+  - The empty-inn run's hold counters (tcB13): observer hold "NPCs held 1198 ... released 0 ... dropped 1198": NO held
+    NPC was ever released to the guest on 3576. Logged drop reasons (first lines only): despawned 121, observer out of
+    range 42, observer gone 2. Checked with the decomp: the actor map walk (0x98/0x9C/0xA8/0xB0, ServerActorManager
+    vfunction6 0x2D11AA0) and the sector observer list (+0x68/+0x70, 16-byte entries, in 0x2D8FA00 which calls
+    NotifyAppear 0x2D97820) are unchanged on 3576; actor key +0x60 unchanged. Native: counters of every drop by reason
+    in the summary ("drops by reason"); tcB21 runs with it.
