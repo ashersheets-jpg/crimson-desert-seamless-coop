@@ -2665,3 +2665,5 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   (shot tcB88-g1), E sent InteractionPreemptionStepReq + InteractionDoStepReq for interaction 0xAD and the host's
   server ACCEPTED both (2120, 2794); on screen "Stranger: Trust +5" and the NPC's line (tcB88-g2/g3). No crash,
   SAVES OK. The earlier TEST flags (owner override, subject swap, knowledge share) are not needed for this.
+- 2026-11-08 20:50 tcB89 (the same, WITHOUT interact_probe: only the default npc_category_share=1): reproduced -- the
+  guest's Greet (0xAD) sent and both steps accepted by the host's server; SAVES OK.
