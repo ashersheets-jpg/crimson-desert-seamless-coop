@@ -2580,3 +2580,10 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   Next for NPC talk: send the Greet (the host's greet interaction 0xAD, tcB34) from the guest to the server directly
   (a one-shot test of the request path) with the host's subject swap on, to see whether the server accepts and the
   dialogue reaches the guest -- before more client-side work.
+- 2026-11-08 14:50 tcB71 (TEST test_greet=1 on the guest: the host's own greet request, interaction 0xAD -- the bytes the
+  host's client sent in tcB34 -- sent by the guest's character 0xA01001C0 to the talkable NPC it looked at most,
+  0xB0100587; the host's subject swap on): THE HOST'S SERVER ACCEPTED IT -- InteractionPreemptionStepSuccessAck
+  2120 for 0xAD on 0xB0100587. The guest's client then sent InteractionResetReq 2887 (it had not started that
+  interaction itself) and the server acked the reset. So the server path for a guest greeting an NPC works (with the
+  swap: tcB72 checks without it); the remaining block is the guest's CLIENT (the Greet is not offered: the target
+  condition and further checks of 0xABF5A0).
