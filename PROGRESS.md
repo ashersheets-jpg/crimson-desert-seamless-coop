@@ -2551,3 +2551,10 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   ShareKnowledgeSeedAck, CommonShareKnowledgeInteractionProcessor) and per-actor knowledge (LearnKnowledgeListAck
   0xCFEFA0 resolves the actor by key, 0x98FC20). Open: is user 2's knowledge on the server EMPTY (its save's
   knowledge not loaded) or only missing this entry; which knowledge is 0x14E8.
+- 2026-11-08 13:10 CheckKnowledge's evaluate is slot 21 (+0xA8) of its vtable 0x5CFDE68 = 0x242A270 (the class table
+  listed only 11 of its 22 slots): the subject actor (CompareTargetParameter +0x828) -> its USER (+0xA0) -> the user's
+  main character (+0xD0) -> knowledge comp ([+0x68]+0x150) -> 0x2308FC0(comp, &key, level): comp+8 its actor, +0x18
+  an array of 0x18-byte entries by knowledge key, the level learned at +0; "has" = level >= the asked level. The
+  Greet's condition asks key 0x14E8 at level 1. TEST user2_knowledge_share=1 (native, HOST): an inline hook on
+  0x2308FC0 asks the host character's knowledge again when the server (TLS +0x1EB) gets "no" for another player's
+  character -- read only (B04 "knowledge learned by one counts for both"). tcB66: with the guest's client override.
