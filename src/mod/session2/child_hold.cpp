@@ -4441,6 +4441,48 @@ bool child_hold_install() { return child_hold_install(true, false, false); }
 
 bool child_hold_install(bool children, bool observers) { return child_hold_install(children, observers, false); }
 
+// Co-op+ (2026-11-08, tcB23-tcB25: the host crashed at exe+0x249500A reading 0 as soon as observer_hold's NPCs were
+// really released to user 2 on 3576): ServerInteractionActorComponent's serializer (vtable 0x5EF4338 slot 25,
+// 0x22E32A0) walks its 0x38-byte entries and hands entry+8 to 0x2495000(slot, writer), which writes one byte
+// "present" = (*slot != 0) and the slot's data when present. An entry whose +8 is null (an interaction slot not set
+// up for that copy of the actor) crashes it before the byte is written. The guard: a null slot is written exactly as
+// the game writes an empty one (the byte 0, nothing else; 0x3DEEF0 after it does not read the slot), so the stream
+// user 2 reads stays the same shape. Host only, the prologue checked first (10 bytes: mov [rsp+18],rbx ; push rdi ;
+// sub rsp,20; no RIP-relative instruction).
+constexpr uintptr_t kSlotSerializer = 0x2495000;
+constexpr uint8_t kSlotSerializerHead[] = {0x48, 0x89, 0x5C, 0x24, 0x18, 0x57, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x83, 0x39, 0x00};
+SafetyHookInline g_slot_guard;
+std::atomic<uint64_t> g_slot_nulls{0};
+using SlotWriteFn = void(__fastcall*)(void*, const void*, uint64_t);
+
+void __fastcall slot_serializer_detour(int64_t* slot, int64_t* writer) {
+    if (!slot && writer) {
+        g_slot_nulls.fetch_add(1, std::memory_order_relaxed);
+        const uint8_t absent = 0;
+        const auto write = *reinterpret_cast<SlotWriteFn*>(*reinterpret_cast<uintptr_t*>(writer) + 8);
+        write(writer, &absent, 1);
+        return;
+    }
+    g_slot_guard.unsafe_call<void>(slot, writer);
+}
+
+bool install_slot_guard() {
+    uint8_t head[sizeof kSlotSerializerHead] = {};
+    if (!game::safe_read(g_base + kSlotSerializer, head, sizeof head) ||
+        std::memcmp(head, kSlotSerializerHead, sizeof head) != 0) {
+        log::warn("Session2 slot guard: exe+0x{:X} is not the expected code; not installed", kSlotSerializer);
+        return false;
+    }
+    g_slot_guard = safetyhook::create_inline(reinterpret_cast<void*>(g_base + kSlotSerializer),
+                                             reinterpret_cast<void*>(&slot_serializer_detour));
+    if (!g_slot_guard) {
+        log::warn("Session2 slot guard: exe+0x{:X} could not be hooked", kSlotSerializer);
+        return false;
+    }
+    log::info("Session2 slot guard ON: a null interaction slot (0x2495000) is serialized as an empty one, not a crash");
+    return true;
+}
+
 bool child_hold_install(bool children, bool observers, bool characters) {
     const uint32_t settle_ms = g_settle_ms.load();
     if (!children && !observers && !characters && !settle_ms) return false;
@@ -4486,6 +4528,7 @@ bool child_hold_install(bool children, bool observers, bool characters) {
         return false;
     }
     g_active.store(true);
+    install_slot_guard();  // releases put actors in front of user 2 the host's client never serializes for anyone else
     if (children) {
         log::info("Session2 child hold ON (D-53, any owner): a user's child (the host's or user 2's) with restore 0 "
                   "goes only to its owner's session; every other recipient gets it once its first action is accepted "
