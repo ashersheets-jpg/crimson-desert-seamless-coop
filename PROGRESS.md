@@ -2270,3 +2270,10 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   function is 0x949EB0 (2976 0x8646D0; RestartLayerAction 0x949080; the layer's chart is +0x118, not +0x110), so
   the guest diag (guest_actor_diag) was REFUSED; it is ported now (companion_probe.h) to count per remote NPC:
   restore byte 0 / restored / chart failure / other.
+- 2026-11-08 02:00 tcB34 (sniffer interaction lines on BOTH clients; the guest's E at a lamp, then the host's E at
+  "Stranger / Greet"): the host's own exchange is the guest's exactly: C>S 3008 -> S>C 2120 -> C>S 3073 -> S>C 2794,
+  no 2980 either (2980 is not part of a normal interaction). The host's one E did two (the Stranger 0xB01005DC,
+  interaction 0xAD, then the lamp 0xB010088F, 0x0F4267) and the Stranger spoke (subtitle, shot tcB34-38c). So the
+  guest's request path is complete and accepted; what the guest misses is what follows (the NPC's reaction /
+  dialogue; its NPCs have no action at all, see the correction above). Next tcB35: the restore diag on 3576 + the
+  guest's E right after its teleport (facing the Stranger like the host).
