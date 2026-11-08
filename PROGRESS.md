@@ -2430,3 +2430,12 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   out) re-gathers the target's entries through 0x22EAE00: filter 0, or an empty server list (comp+0x98), takes them
   from the NPC's AI ([[actor+0x68]+0x58]+0x90: its current state node) -- the Greet may come from the NPC's AI
   state, which the guest (not the NPCs' controller) may hold stale. tcB49 logs the evaluator's inputs per target.
+- 2026-11-08 07:00 tcB49/50: (1) the 3576 node layout: the NPC key at node +0x28 (0xB01003A1, next 0xB01003A2), stride
+  0x188 (2976 0x168) -> fixed. Census with the 3576 offsets: M (the guest's own manager) holds the host's 82 stages,
+  ALL active, 1541 nodes, 554 bound to an NPC; X (the host character's manager on the guest) none. ByJunter routes
+  them to X, but only guest_seq_play ticks X: routing on without seq_play would put the stages where nothing ticks
+  them, so guest_sched_route stays in probe until guest_seq_play is ported (next, with guest_sched_bind).
+  (2) The condition evaluator's inputs: "server list 0" on BOTH sides for every NPC -- every interaction entry is
+  derived from the NPC's AI state (0x22EAE00's AI path), and the guest's NPCs do have AI components and states; no
+  difference seen in what the probe reads. tcB51 scans .sdata/.rodata for the guest's refusal value 0x6467532C to
+  find which check stores it.
