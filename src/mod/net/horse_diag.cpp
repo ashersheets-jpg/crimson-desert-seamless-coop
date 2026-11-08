@@ -19,6 +19,8 @@
 #include "mod/session2/guest_actor_diag_logic.h"
 #include "mod/session2/guest_lifecycle.h"
 #include "mod/session2/offsets_s2.h"
+#include "mod/session2/guest.h"
+#include "mod/game/actor_lookup.h"
 
 namespace cdmp::net {
 namespace {
@@ -405,8 +407,13 @@ IpSlot* ip_slot(uint32_t key) {
     return nullptr;
 }
 std::atomic<uint32_t> g_local_lines{0};
+std::atomic<uint32_t> g_ip_player_key{0};  // the local player's character (the collector's rcx+8)
 void ip_on_entry(safetyhook::Context& ctx) {
     if (IpSlot* sl = ip_slot(ip_key_of(ctx.rdx))) sl->calls.fetch_add(1, std::memory_order_relaxed);
+    {
+        uintptr_t pl = 0;
+        if (game::safe_read(ctx.rcx + 8, &pl, 8) && pl) g_ip_player_key.store(ip_key_of(pl), std::memory_order_relaxed);
+    }
     // The player's "controlled by this client" test (vf178 0x5B3AA0, and inline in 0xABF5A0): [player+0xA0] ==
     // [[exe+0x71C0100]+0x30]+0x58 and byte [player+0x94] != 0. Logged a few times (rcx = the player's interaction
     // side, +8 its actor).
@@ -553,9 +560,21 @@ void tc_on_fail(safetyhook::Context& ctx) {  // 0x25FA549: the store of eErrNoIn
 // ByJunter's rule for quests): any NPC interaction the host can do, the guest can. The host's character is looked up
 // by key (0xA0100001, the first user's in every run) in the ServerActorManager each time (never kept).
 std::atomic<bool> g_subject_swap{false};
+std::atomic<bool> g_subject_swap_client{false};  // TEST guest_condition_subject_host=1 (GUEST): the same on the client
 std::atomic<uint64_t> g_subject_swapped{0};
 bool ks_server_thread();
 void oc_on_entry(safetyhook::Context& ctx) {  // 0x25FA200
+    if (g_subject_swap_client.load(std::memory_order_relaxed) && !ks_server_thread()) {
+        // The guest's client: its own character as the subject -> the host's character's copy on this client.
+        uint32_t pkey = 0;
+        game::safe_read(ctx.rdx + off::kActor_Key, &pkey, 4);
+        if ((pkey >> 28) == 0xA && pkey != 0xA0100001u) {
+            if (const auto host = game::find_actor(0xA0100001u); host && *host) {
+                ctx.rdx = *host;
+                g_subject_swapped.fetch_add(1, std::memory_order_relaxed);
+            }
+        }
+    }
     if (g_subject_swap.load(std::memory_order_relaxed) && ks_server_thread()) {
         uint32_t pkey = 0, powner = 0;
         game::safe_read(ctx.rdx + off::kActor_Key, &pkey, 4);
@@ -1079,6 +1098,60 @@ void interact_probe_start(bool on, bool owner_override) {
     log::info("InteractProbe: 0xABF5A0 refusal codes:{} (0x714C018 the 0xABCD30 path, 0x714AF0C 0x8D0FE70, 0x7137FC8 the "
               "target's +0x120 flag, 0x714BE54 the user's current interaction, 0x714AF14 the target's action flag +0x116 & 4)",
               codes);
+}
+
+// TEST test_greet=1 (GUEST): 70 s after the probe starts, the talkable NPC this client asked most (20+ entries per
+// query) gets the host's greet request (interaction 0xAD, the bytes the host's client sent in tcB34): 3008, then 3073.
+DWORD WINAPI test_greet_thread(LPVOID) {
+    uint32_t best = 0, best_n = 0;
+    for (int tries = 0; tries < 120 && best_n < 50; ++tries) {  // until a talkable NPC was asked 50 times (10 min)
+        Sleep(5000);
+        best = 0;
+        best_n = 0;
+        for (auto& sl : g_ip) {
+            const uint32_t key = sl.key.load();
+            const uint32_t reached = sl.reached.load();
+            if (!key || (key >> 28) != 0xB || !reached || sl.entries.load() / reached < 20) continue;
+            if (sl.calls.load() > best_n) {
+                best_n = sl.calls.load();
+                best = key;
+            }
+        }
+    }
+    const uint32_t me = g_ip_player_key.load();
+    if (!best || !me) {
+        log::warn("TestGreet: no talkable NPC asked ({:08X}) or no own character ({:08X}); nothing sent", best, me);
+        return 0;
+    }
+    auto put = [](std::vector<uint8_t>& v, uint32_t x) {
+        for (int i = 0; i < 4; ++i) v.push_back(static_cast<uint8_t>(x >> (8 * i)));
+    };
+    std::vector<uint8_t> pre{0xC0, 0x0B, 0x00, 0x19, 0x00};
+    put(pre, me);
+    put(pre, best);
+    for (uint8_t b : {0xAD, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01, 0, 0, 0, 0}) pre.push_back(b);
+    std::vector<uint8_t> step{0x01, 0x0C, 0x00, 0x10, 0x00};
+    put(step, me);
+    put(step, best);
+    for (uint8_t b : {0xAD, 0, 0, 0, 0, 0, 0, 0}) step.push_back(b);
+    const bool a1 = session2::guest_test_push_raw(pre);
+    Sleep(400);
+    const bool a2 = session2::guest_test_push_raw(step);
+    log::warn("TestGreet: sent the greet (interaction 0xAD) as 0x{:08X} to the NPC 0x{:08X} (asked {} times): 3008 {}, "
+              "3073 {}", me, best, best_n, a1 ? "queued" : "REFUSED", a2 ? "queued" : "REFUSED");
+    return 0;
+}
+
+void test_greet_start(bool on) {
+    if (!on) return;
+    if (HANDLE t = CreateThread(nullptr, 0, test_greet_thread, nullptr, 0, nullptr)) CloseHandle(t);
+    log::warn("TestGreet ON (test_greet=1, TEST, guest): a greet request goes to the host 70 s after start");
+}
+
+void subject_swap_client_start(bool on) {
+    g_subject_swap_client.store(on);
+    if (on) log::warn("SubjectSwap (client) ON (guest_condition_subject_host=1, TEST, guest): interaction conditions are "
+                      "evaluated with the host's character's copy on this client");
 }
 
 void subject_swap_start(bool on) {

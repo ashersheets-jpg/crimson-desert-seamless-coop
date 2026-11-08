@@ -72,6 +72,8 @@ uint8_t guest_rejoin_caps();
 // What the HUD says about the re-entry while the client does not play on the host (Spanish; "" = nothing).
 std::string guest_rejoin_hud();
 std::string guest_describe();
+// Co-op+ (2026-11-08, TEST): a raw client packet queued to the host (test_greet).
+bool guest_test_push_raw(const std::vector<uint8_t>& p);
 // B1 (pendientes/p8-s9-cinematica.md §8; guest_local_after_remote=stuck): the diagnostics thread, every 5 s. Ends the
 // game when a save loaded locally after a remote session in this run is seen stuck (gxv::LocalLoadWatch).
 void guest_local_load_watch() noexcept;

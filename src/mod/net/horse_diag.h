@@ -23,6 +23,8 @@ void anim_probe_start(bool on);
 // Co-op+ (2026-11-08, TEST, host): [session2] user2_knowledge_share=1 (B04 experiment).
 void knowledge_share_start(bool on);
 void subject_swap_start(bool on);
+void test_greet_start(bool on);
+void subject_swap_client_start(bool on);
 std::string knowledge_share_describe();
 // Co-op+ (2026-11-08): [session2] interact_probe=1: the client's NPC interaction candidates (read only).
 void interact_probe_start(bool on, bool owner_override = false);
