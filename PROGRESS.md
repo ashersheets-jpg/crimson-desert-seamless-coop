@@ -2164,3 +2164,10 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   0x7221F0(ctx = [[[0x71C0158]+0x90]+0x1240], -1, -1, 0xA0100001) on the game thread, export cdmp_guest_travel_to;
   the layer asks it): the layer said "asked", but the native side logged nothing and the guest did not move;
   tcB18 adds a line where the request arrives.
+- 2026-11-07 23:05 tcB18: the native cdmp_guest_travel_to request arrives and runs on the game thread, but the client's
+  fast travel 0x7221F0(ctx, -1, -1, 0xA0100001) returns al 0: its target check 0x2320500 (decomp) refuses a remote
+  player (it validates the target actor's class data +0x4B, its field, its user ...; meant for the player's own mount /
+  companion). Reproducing the rest of the success path by hand (the loading UI 0x854B40 with 0x905, then 0xD32E10's
+  3074) was judged too risky. Kept: the native export (logs, harmless). The layer's guest move went back to the client
+  hops, which DO move the guest (tcB12; the "physics object missing" sign was a false lead). Open: the guest's empty
+  inn (tcB13) and a native move for user 2.
