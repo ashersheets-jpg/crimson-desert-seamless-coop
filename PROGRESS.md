@@ -2587,3 +2587,9 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   interaction itself) and the server acked the reset. So the server path for a guest greeting an NPC works (with the
   swap: tcB72 checks without it); the remaining block is the guest's CLIENT (the Greet is not offered: the target
   condition and further checks of 0xABF5A0).
+- 2026-11-08 15:10 tcB72 (the same greet request WITHOUT the host's subject swap): the host's server REFUSES it
+  (InteractionPreemptionStepFailAck, eErrNoInteractionTargetConditionCheckFail). With the swap (tcB71) it accepts.
+  So the server side needs the rule "user 2's interaction conditions are judged as the host's" (ByJunter's "the guest
+  follows the host's progress"); the conditions read the subject's user / main character / knowledge. tcB73: the
+  same swap on the GUEST's client too (guest_condition_subject_host=1: the subject becomes the host's character's
+  copy on the guest's client), to see whether the Greet is offered.
