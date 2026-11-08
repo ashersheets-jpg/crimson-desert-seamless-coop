@@ -14,7 +14,11 @@ param([string]$Name = 'tc1', [string]$HostVariant = 'coop-test-bandits', [string
       # A Co-op+ dev script per role ([dev] script=..., run with Ctrl+Shift+F6 after the join), e.g. a teleport
       [string]$HostScript = '', [string]$GuestScript = '',
       # actpid steps for the guest after the scripts (e.g. 'kd:CTRL k:F4:120 ku:CTRL w:20000': go to the friend)
-      [string]$GuestKeys = '')
+      [string]$GuestKeys = '',
+      # actpid steps for the host after the guest's (joined with _ like -GuestKeys)
+      [string]$HostKeys = '',
+      # 'x_z': the guest walks there after the scripts and keys (camwalk\walkto.py, 3 m short)
+      [string]$GuestWalkTo = '')
 $ErrorActionPreference = 'Stop'
 $bin = 'D:\SteamLibrary\steamapps\common\Crimson Desert\bin64'
 $here = $PSScriptRoot; $saves = 'C:\Users\asher\CrimsonDesert-SeamlessCoop\build\test-saves'
@@ -294,7 +298,18 @@ if ($GuestKeys) {
     "guest keys: $GuestKeys at $(Get-Date -Format HH:mm:ss.fff)"
     & "$here\actpid.ps1" -GamePid $gp.Id -Seq "$GuestKeys shot:$Name-38b-guest-after-keys" | Out-Null
 }
-if ($HostScript -or $GuestScript -or $GuestKeys) {
+if ($HostKeys) {
+    $HostKeys = $HostKeys -replace "_", " "
+    "host keys at $(Get-Date -Format HH:mm:ss.fff)"
+    & "$here/actpid.ps1" -GamePid $h.Id -Seq "$HostKeys shot:$Name-38c-host-after-keys" | Out-Null
+}
+if ($GuestWalkTo) {
+    $xz = $GuestWalkTo -split '_'
+    "guest walks to ($($xz[0]), $($xz[1])) at $(Get-Date -Format HH:mm:ss.fff)"
+    $env:CD_PID = "$($gp.Id)"; cmd /c "python ""$here/camwalk/walkto.py"" $($xz[0]) $($xz[1]) 3 2>&1" | Select-Object -Last 3
+    $env:CD_PID = ''
+}
+if ($HostScript -or $GuestScript -or $GuestKeys -or $HostKeys -or $GuestWalkTo) {
     & "$here\actpid.ps1" -GamePid $h.Id -Seq "w:3000 shot:$Name-39-host-view" | Out-Null
     & "$here\actpid.ps1" -GamePid $gp.Id -Seq "w:3000 shot:$Name-39-guest-view" | Out-Null
 }

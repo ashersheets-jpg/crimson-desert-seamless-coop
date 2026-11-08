@@ -2127,3 +2127,14 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
     hops); the native base moves user 2 through the server (its fast-travel funnels), so the server's announce of
     the inn sector to user 2 may never have happened properly. Next test: the guest walks into a busy place
     (no teleport), and/or Co-op+'s "go to my friend" uses the native fast travel on the native base.
+- 2026-11-07 22:20 More on the empty inn (tcB13 logs) and tcB14:
+  - The host's server DID announce to user 2 after its arrival ("to user 2 with the host's key: 2005x1373", "user 2
+    move phase STABLE"), yet the guest drew nobody; and from the arrival on, the guest's layer logged "Local:
+    unavailable (physics object missing)" (29 times): the guest's own character is in a broken state after the
+    CLIENT-side teleport (Co-op+'s DoTeleportAck hops into the guest's client). On the native base the server owns
+    user 2's position: moving the guest must go through the server (the native fast-travel funnel / a server move of
+    user 2), not through its client. So "go to my friend" works for the HOST's own move (its client and server are
+    one) but needs a native path for the guest. Same for B02's check: a fair NPC comparison needs the guest to
+    arrive natively (walk / fast travel).
+  - tcB14 (the guest walks into the inn from 7 m out): camwalk's walker climbed the outside wall (stuck at y 621.7):
+    no answer. Harness: -GuestWalkTo x_z.
