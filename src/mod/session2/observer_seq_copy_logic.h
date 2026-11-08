@@ -95,7 +95,7 @@ inline constexpr uint16_t kOpDelayEndReq = 2396;    // StageBranchStateDelayEndR
 // The drop is by id, whatever the trip; the module counts those outside an observer trip apart.
 
 inline constexpr size_t kHeader = 5;           // u16 opcode | i8 slot | u16 payload length
-inline constexpr size_t kPreparePrefix = 91;   // u8 kind | u32 actor | 86-byte play data (owner +0, seq +8)
+inline constexpr size_t kPreparePrefix = 92;   // u8 kind | u32 actor | 87-byte play data on 3576 (2976: 86), owner +0, seq +8
 inline constexpr size_t kBindingWire = 11;     // u32 node | u32 actor | u8 type | 2 x u8
 inline constexpr size_t kBranchMin = 17;       // u8 kind | u32 actor | u64 seq | u32 ...
 inline constexpr size_t kDeletePayload = 17;   // u32 actor | u64 seq | u32 | u8

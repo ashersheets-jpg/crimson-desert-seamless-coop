@@ -372,7 +372,7 @@ DWORD WINAPI install_thread(LPVOID) {
     IMAGE_NT_HEADERS64 nt{};
     std::vector<gad::Section> secs;
     if (g_base != off::kImageBase || !game::safe_read(g_base, &dos, sizeof dos) ||
-        !game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestampUnported ||
+        !game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestamp ||  /* Co-op+: ported to 3576 (stage_lookup_logic.h) */
         !p8_exe_sections(g_base, secs)) {
         log::error("GuestXInter: unsupported game build or unreadable sections; nothing installed");
         return 0;

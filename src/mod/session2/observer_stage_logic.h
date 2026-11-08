@@ -38,7 +38,7 @@ inline constexpr uint16_t kOpBranch = 2920;     // StageBranchStateAck
 inline constexpr uint16_t kOpMilestone = 2384;  // PlayAllPreLoadSequencerAck
 
 inline constexpr size_t kHeader = 5;          // u16 opcode | i8 slot | u16 payload length
-inline constexpr size_t kPreparePrefix = 91;  // u8 kind | u32 actor | 86-byte play data
+inline constexpr size_t kPreparePrefix = 92;  // u8 kind | u32 actor | 87-byte play data (3576; 2976: 86)
 inline constexpr size_t kBindingWire = 11;    // u32 node | u32 actor | 3 x u8
 inline constexpr size_t kDeletePayload = 17;  // u32 actor | u64 seq | u32 | u8
 inline constexpr size_t kMilestonePayload = 4;

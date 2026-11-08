@@ -121,7 +121,7 @@ struct Script {
 // u64 @19, the resource's file-name hash u32 @27, ... up to @91; then 11-byte bindings {u32 node, u32 actor, u8 type,
 // 2 x u8}.
 inline constexpr uint16_t kOpPrepareSequencerAck = 2380;
-inline constexpr size_t kPrepareBindings = 91, kPrepareBindingSize = 11;
+inline constexpr size_t kPrepareBindings = 92, kPrepareBindingSize = 11;  // Co-op+ 3576: 92 (2976: 91)
 struct Prepare2661 {
     struct Binding {
         uint32_t node = 0, actor = 0;

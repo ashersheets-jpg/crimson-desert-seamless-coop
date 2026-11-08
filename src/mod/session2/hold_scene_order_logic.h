@@ -71,7 +71,7 @@ inline uint64_t le64(const uint8_t* p) {
 
 // 2661: u8 kind | u32 actor @1 | 86-byte play data @5 (owner @5, sequencer @9, resource hash @27) | n x 11 bytes of
 // binding @91 (u32 node | u32 actor | u8 type | u8 | u8).
-inline constexpr size_t kPreparePrefix = 91, kBindingWire = 11;
+inline constexpr size_t kPreparePrefix = 92, kBindingWire = 11;  // Co-op+ 3576: 92 (2976: 91), tcB95
 struct Prepare {
     bool ok = false;
     uint32_t owner = 0, hash = 0;

@@ -44,7 +44,10 @@ inline constexpr uint32_t hash_id(uint64_t id) {
 
 // ---------------------------------------------------------------- the table walk
 
-inline constexpr uint32_t kMgr_Buckets = 0x108, kMgr_Count = 0x10C, kMgr_BucketArray = 0x118, kMgr_Elements = 0x120;
+// Co-op+ port 1.0.0.3576 (2026-11-08): the lookup is 0x21578E0 (2976: 0x1F6C190); its table moved by 0x28 (count
+// +0x134, buckets +0x130, bucket array +0x140, elements +0x148; the element and instance layout and the hash 0x1547050
+// are unchanged).
+inline constexpr uint32_t kMgr_Buckets = 0x130, kMgr_Count = 0x134, kMgr_BucketArray = 0x140, kMgr_Elements = 0x148;
 inline constexpr uint32_t kBucketStride = 0x100, kBucketPairs = (kBucketStride - 8) / 8;  // 31 pairs fit a bucket
 inline constexpr uint32_t kElem_Id = 0x08, kElem_Inst = 0x10, kInst_Dead = 0x15;
 inline constexpr uint32_t kMaxIndex = 1u << 20;  // a sane element index (the game has hundreds)
@@ -172,27 +175,32 @@ private:
 //   F 0x2126D11  mov [rbp-0x80],rdi ; lea rcx,[rbp-0x80] every path but the two early returns (no stage id: al = 2;
 //                (8 bytes; a jmp target at its start)    no user: al = 0) reaches it with BL = the result (0 refused,
 //                                                        1 / 2 accepted: 0x2126C6F..0x2126C77, 0x2126C88 xor bl).
-inline constexpr uintptr_t kPointA = 0x2126A1F, kPointR = 0x2126AAB, kPointF = 0x2126D11;
-inline constexpr uint32_t kPatchA = 10, kPatchR = 7, kPatchF = 8;
-inline constexpr uint8_t kBytesA[] = {0x48, 0x8B, 0xF8, 0x48, 0x89, 0x85, 0xE8, 0x08, 0x00, 0x00};
-inline constexpr uint8_t kBytesR[] = {0x48, 0x8D, 0x8D, 0xD0, 0x08, 0x00, 0x00};
-inline constexpr uint8_t kBytesF[] = {0x48, 0x89, 0x7D, 0x80, 0x48, 0x8D, 0x4D, 0x80};
+// Co-op+ port 1.0.0.3576 (2026-11-08): the function is 0x22EE2D0 (2976: 0x2126920; the same shape: [rcx+0x20] &
+// 0x1FFFFFFF -> al 2, no user -> al 0, both to the epilogue 0x22EE70B). A 0x22EE3D9 (mov rdi,rax ; mov
+// [rbp+0x8F8],rax), R 0x22EE465 (lea rcx,[rbp+0x8F0], where both lookup paths join: RSI = the instance or 0), F
+// 0x22EE6F9 (mov [rsp+0x70],rdi ; lea rcx,[rsp+0x70], BL = the result; a jmp target, every path but the two early
+// returns). The lookup call is 0x22EE416 -> 0x21578E0.
+inline constexpr uintptr_t kPointA = 0x22EE3D9, kPointR = 0x22EE465, kPointF = 0x22EE6F9;
+inline constexpr uint32_t kPatchA = 10, kPatchR = 7, kPatchF = 5;  // F: safetyhook takes the 5-byte mov only
+inline constexpr uint8_t kBytesA[] = {0x48, 0x8B, 0xF8, 0x48, 0x89, 0x85, 0xF8, 0x08, 0x00, 0x00};
+inline constexpr uint8_t kBytesR[] = {0x48, 0x8D, 0x8D, 0xF0, 0x08, 0x00, 0x00};
+inline constexpr uint8_t kBytesF[] = {0x48, 0x89, 0x7C, 0x24, 0x70, 0x48, 0x8D, 0x4C, 0x24, 0x70};
 // Context checked before A (the vf48 call and its field slot) and before R (the lookup's call and its result use):
 //   0x2126A14 mov rcx,[rsp+0x48] ; mov rax,[rcx] ; call [rax+0x48]
 //   0x2126A5C mov r8,[r13+0x20] ; lea rdx,[rbp+0x8D0] ; mov rcx,rdi ; call 0x1F6C190 (rel32 E8 21 57 E4 FF)
-inline constexpr uintptr_t kCtxA = 0x2126A14, kCtxLookup = 0x2126A5C;
+inline constexpr uintptr_t kCtxA = 0x22EE3CE, kCtxLookup = 0x22EE416;  // 3576 (2976: 0x2126A14, 0x2126A5C)
 inline constexpr uint8_t kCtxABytes[] = {0x48, 0x8B, 0x4C, 0x24, 0x48, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x48};
-inline constexpr uint8_t kCtxLookupBytes[] = {0x4D, 0x8B, 0x45, 0x20, 0x48, 0x8D, 0x95, 0xD0, 0x08, 0x00, 0x00,
-                                              0x48, 0x8B, 0xCF, 0xE8, 0x21, 0x57, 0xE4, 0xFF};
+inline constexpr uint8_t kCtxLookupBytes[] = {0x4D, 0x8B, 0x45, 0x20, 0x48, 0x8D, 0x95, 0xF0, 0x08, 0x00, 0x00,
+                                              0x48, 0x8B, 0xCF, 0xE8, 0xB7, 0x94, 0xE6, 0xFF};  // 3576
 inline constexpr uint32_t kRspField = 0x48;     // [rsp+0x48] at A: the field whose vf48 gave RAX
-inline constexpr uint32_t kRbpMgrUsed = 0x8E8;  // [rbp+0x8E8] after A: the manager the lookup used
+inline constexpr uint32_t kRbpMgrUsed = 0x8F8;  // 3576 (2976: 0x8E8)  // [rbp+0x8E8] after A: the manager the lookup used
 inline constexpr uint32_t kEntry_StageId = 0x20;  // u64 [entry+0x20] (0x2126A5C), tested & 0x1FFFFFFF at 0x212694D
 inline constexpr uint32_t kJ_User = 0xA0, kUser_Key = 0x60;
 
 // RTTI vtables (build 2976).
-inline constexpr uintptr_t kVtClientField = 0x55BCEA0;    // pa::ClientField (vf48 0x9A5BE0)
-inline constexpr uintptr_t kVtServerField = 0x5B29A60;    // pa::ServerField (vf48 0x2B00CE0)
-inline constexpr uintptr_t kVtClientStageMgr = 0x55C9720;  // pa::ClientSequencerStageManager
-inline constexpr uintptr_t kVtServerStageMgr = 0x5B17A58;  // pa::ServerSequencerStageManager
+inline constexpr uintptr_t kVtClientField = 0x594DB40;  // 3576 (2976: 0x55BCEA0)    // pa::ClientField (vf48 0x9A5BE0)
+inline constexpr uintptr_t kVtServerField = 0x5EF2B10;  // 3576 (2976: 0x5B29A60)    // pa::ServerField (vf48 0x2B00CE0)
+inline constexpr uintptr_t kVtClientStageMgr = 0x5959438;  // 3576 (2976: 0x55C9720)  // pa::ClientSequencerStageManager
+inline constexpr uintptr_t kVtServerStageMgr = 0x5EE0B88;  // 3576 (2976: 0x5B17A58)  // pa::ServerSequencerStageManager
 
 }  // namespace cdmp::session2::isl
