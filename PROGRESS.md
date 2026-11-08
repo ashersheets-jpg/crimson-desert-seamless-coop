@@ -2605,3 +2605,10 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   proper versions: the host's character found through its user (not the key 0xA0100001), and the guest's client
   allowance limited to what the host's world allows (e.g. the host's knowledge sent to the guest, or a host-side list
   of the entries each nearby NPC offers).
+- 2026-11-08 15:50 tcB74 (end to end: the narrow Greet allowance on the guest + the host's subject swap; the guest turned
+  past the lamp to the man by the stairs, ~1 m): the guest's client KEPT the Greet for 0xB0100473 / 0xB01005B9 (the
+  rest refused only by distance), but no prompt showed for the NPC in front and E sent nothing. So after the candidate
+  collector the target choice / prompt step (FindManualInteractionTargetProcessor 0xB2C1E0, the UI's
+  "ShowWhenTargeted" refusals) still drops it -- next. No crash, SAVES OK.
+  STATE OF NPC TALK FOR THE GUEST: server side solved in principle (the subject rule, tested: accepted with, refused
+  without); client side: the condition allowance makes the Greet a candidate; the prompt choice remains.
