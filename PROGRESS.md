@@ -2421,3 +2421,12 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   holds on 3576); "0 active (+0x178), 0 nodes (+0x138)" across 87 is suspect: tcB48 dumps a stage's first 0x200
   bytes. Fixed: Delete's patch is the first 7-byte instruction (the second reads the RAX the hook sets, in place);
   Deactivate's lookup call bytes (E8 20 35 C5 FF).
+- 2026-11-08 06:30 tcB48: (1) the 3576 stage layout (a live stage of M dumped): +0x28 the manager (M), +0x30 the scene key
+  (0x200001BA), the node vector +0x140 / count +0x148 (2976 +0x138 / +0x140), active +0x180 (2976 +0x178; it is 1),
+  resource +0x1C0 -> kStage_* fixed in guest_seq_route and guest_sched_bind; tcB49 dumps a node (stride 0x168, NPC
+  +0x28 to check). All four schedule points hooked now (Delete / Deactivate fixed). (2) The refusal code globals,
+  filled: 0x714AEEC (0x1940AD0's) = 0xCBCF84AC, 0x714ABB8 = 0x378A2A74, ... -- none is 0x6467532C: the guest's
+  refusal comes from a deeper callee. The condition evaluator 0x1940AD0(target, filter = the player's vf178(), &key,
+  out) re-gathers the target's entries through 0x22EAE00: filter 0, or an empty server list (comp+0x98), takes them
+  from the NPC's AI ([[actor+0x68]+0x58]+0x90: its current state node) -- the Greet may come from the NPC's AI
+  state, which the guest (not the NPCs' controller) may hold stale. tcB49 logs the evaluator's inputs per target.
