@@ -2277,3 +2277,15 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   guest's request path is complete and accepted; what the guest misses is what follows (the NPC's reaction /
   dialogue; its NPCs have no action at all, see the correction above). Next tcB35: the restore diag on 3576 + the
   guest's E right after its teleport (facing the Stranger like the host).
+- 2026-11-08 02:20 tcB35 (the restore diag ported to 3576): on the guest RestoreActionsFromLoadData ran for 842
+  remote actors: 821 "restored" (both layers then have a current action + playback: those animate) and 21 FAILED
+  with eErrNoInvalidActionChart, all with layer 0 hash 0x837487D4 (+ layer 1 0x35DD392F): ByJunter's
+  seq_bodyanim scene actions (cdmp.2inst-guest.ini: "an NPC of the host announced in the middle of a scene action
+  cannot restore it here: the scene's chart exists only while it plays"); keys in runs (0xB0100718-722,
+  0xB010051D-521): groups in a scene (the inn's staff / drinkers). Those 21 keep a chart and no action: the bind
+  pose. His fix seq_actor_restore (0 | probe | 1, guest) restores the wait 0x26107D3C instead (the scene gives the
+  real action when it plays); it was 2976-only. PORTED to 3576 (native guest_seq_restore.cpp): the restore is
+  0x949EB0 (2976 + 0xE57E0 throughout), the point 0x94A0EF, RestartLayerAction 0x949080, ActionGraph_Find
+  0x2627350, the entries' constructor 0x207B060; changed on 3576: the layer's chart +0x118 (was +0x110) and an
+  action counts only with its byte +0x111 set (the find and the triple check test it) -- sar::chart_find does
+  too now (test added; optd_seq_restore all passed). Harness: -GuestSet k=v (like -HostSet). tcB36: seq_actor_restore=1.
