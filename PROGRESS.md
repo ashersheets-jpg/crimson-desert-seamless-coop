@@ -2491,3 +2491,17 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   guest_seq_play to tick X. Bind on 3576: the InitializeNPCSchedule handler 0xD3CA50 calls 0xAF91F0 / 0xAF9480;
   0xAF9480 has 0x9F2FA0's path-A test ([[actor+0x88]+1] == 7 on [comp+8]) -> the bind candidate. The guest's tp
   landed upstairs (no pose check): tp_inn_guest.txt now jumps twice (4 s apart) like the host's.
+- 2026-11-08 10:15 Two corrections from the 3576 decomp:
+  (1) ROUTING IS NOT NEEDED ON 3576. The 3576 bind 0xAF91F0 (2976 0x9F2FA0; it stores the stage in [comps+0xB0]+0x318
+      and links the node via 0x4E0480 = 2976 0x43B4B0) looks the NPC's stage up in the LOCAL player's manager
+      (0x99EA20 attaches [user ctx +0x50], then [[comps+0xA8]+0x18]+0x170), not in the owner's X as on 2976 -- which
+      is why M (unrouted) had 554 NPCs bound natively and X (routed, tcB57) none. guest_sched_route stays OFF on 3576
+      (the port of its points stays, probe-only). Other 3576 equivalents found: the locked actor lookup 0x997570
+      (2976 0x8AE1A0), the holder release 0x1618660 (2976 0x1434880, the same 156 bytes), ScopeAttacherBase vtable
+      0x5AC58E0 (2976 0x5725E48).
+  (2) The owner conditions are NEGATIVE: in 0x25FA200 a sub-condition that PASSES jumps to the failure exit (0x25FA491
+      -> 0x25FA3B5 -> 0x25FA3DA). GameEventParam's parameterised evaluate (slot 4 = 0x522390) returns 3 = true, so
+      macro 270 "true" blocks the Greet on the guest. Which conditions apply comes from the NPC: 0x22E7A90 takes the
+      list of the target's control state ([[target+0x68]+0x30], u16 index +0x48 -> 0x3DE240 -> 0x194DEA0). Lead: the
+      guest's NPC is in a different control state than the host's (e.g. seq_actor_restore's substituted wait vs the
+      host's scene action). tcB58 logs each talkable NPC's control state on both PCs.
