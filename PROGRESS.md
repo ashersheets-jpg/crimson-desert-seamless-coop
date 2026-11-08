@@ -2462,3 +2462,11 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   ClientChildOnlyInGameActor 0x5914D58), and 0xABF5A0 makes the same test inline several times. Hypothesis: on the
   guest, the guest's OWN character fails that test (its +0xA0 owner object is not the client's local user object),
   so every player-side interaction check takes the "not my character" branch. tcB55 logs both values on both PCs.
+- 2026-11-08 09:00 tcB55: the "controlled by this client" test is TRUE for the guest's own character on the guest
+  (player 0xA01001B0 +0xA0 == the client's local user 0x901001AF, +0x94 1) -- hypothesis out. In 0x25FA200's
+  branch for a local player the owner condition is evaluated on the TARGET (the NPC; the player is the compared
+  parameter), so the guest-only failing macro tests the NPC's state as the guest sees it. GameEventParam's default
+  case returns 2 (passes), so the failure is elsewhere in the macro. Experiment instead: interact_owner_override=1
+  (guest, TEST ONLY): an owner condition that fails for an NPC another user controls resumes at 0x25FA55F (success).
+  If the Greet prompt appears and the host's server accepts it (the NPC answers), only this client check is wrong.
+  (Over-broad by design: it also passes conditions that fail on the host; not a fix.) tcB56.
