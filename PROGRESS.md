@@ -2171,3 +2171,11 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   3074) was judged too risky. Kept: the native export (logs, harmless). The layer's guest move went back to the client
   hops, which DO move the guest (tcB12; the "physics object missing" sign was a false lead). Open: the guest's empty
   inn (tcB13) and a native move for user 2.
+- 2026-11-07 23:10 The empty inn for the guest (tcB13), with its packet log: during the hops (t 174-182 s) the guest got
+  ~900 ActorLoadDataAck and ~1100 RemoveActorAck; after arriving at the inn almost no loads (5+22+2+4 per 30 s) and
+  steady removals. The host's game drew the guest AT the inn (RemoteInterp: local (-660.5, 617.0, -830.0)), so the
+  server knew where it was; Nas River and the inn are in the same sector (-10, -3), so the server's sector-change
+  announce (OnActorSectorChanged -> NotifyAppear for the new sectors) never ran for the inn's actors, and the observer
+  holds logged parents "withheld there". Next for B02: the native announce of nearby actors to user 2 within one
+  sector (ByJunter's opcion-d-campo-compartido.md / observer_hold), e.g. a re-announce when user 2 moves far inside
+  a sector.
