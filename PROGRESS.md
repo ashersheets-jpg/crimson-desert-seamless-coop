@@ -2120,3 +2120,10 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
     teleport may skip the field / region steps that load NPCs for user 2).
   - B14: no InteractionDoStepReq in the host's packet log (cdmp_packets.host_20261107-215955.log); inconclusive:
     on 3576 the interact prompt shows E (R was 3479's), and the turn steps may not have faced the table.
+  - Reading child_hold.h: observer_hold keeps an NPC from user 2 only while its restore byte is 0 (no first action);
+    the host's client gives every NPC it controls its first action ~0.16 s after it appears, then a native re-announce
+    goes to user 2. So a permanently empty inn points elsewhere: the family hold logged "its parent is withheld
+    there" (parents never announced to user 2). Lead: the guest arrived by a CLIENT-side teleport (Co-op+'s DoTeleportAck
+    hops); the native base moves user 2 through the server (its fast-travel funnels), so the server's announce of
+    the inn sector to user 2 may never have happened properly. Next test: the guest walks into a busy place
+    (no teleport), and/or Co-op+'s "go to my friend" uses the native fast travel on the native base.
