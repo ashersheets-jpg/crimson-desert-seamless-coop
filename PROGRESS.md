@@ -2641,3 +2641,16 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   5 s); the guest's character (on the guest's client, and on the host's server) is judged with the host's category
   only where its own entry is missing or 0. Nothing in the game is written. tcB79: the end-to-end check, no test
   overrides.
+- 2026-11-08 18:45 tcB79-81 (npc_category, no test overrides). tcB79: the host read 0 entries (wrong object: the table
+  is reached through the player's user and its main character, as the game does) -- fixed. tcB80: WORKS: the host's
+  table (185-264 NPCs) reaches the guest every second; the guest's character was judged 15860 times, 7025 with the
+  host's category, 2748 answers changed; the Greet now passes the category check on the guest. No crash, SAVES OK.
+  NEXT BLOCK (tcB80/81): HasQuestDialog -- for most NPCs the guest's table has NO entry, so "this NPC has a quest
+  dialog for you" is false and the Greet is refused (the host's entries exist). The entries come from the server's
+  answers (SetQuestDialogAck) to SetQuestDialogReq; on the host those requests come from the NPCs' own AI step
+  (RequestNearbyQuestDialog), which runs only on the host. These ARE per-player (the server builds them from the
+  asking player's quests), so the own-progress way is for the guest to ask for its own. tcB81 tried that (the guest
+  asked SetQuestDialogReq for the host's NPCs it lacked): the server answered none of them, and that run's tunnel
+  broke (the guest's net loop stalled 8.6 s; tcB79/80 never broke) -- turned off (kept in the code, never sent).
+  Open: why the server answers the guest's native requests (~350 a run) but not these (the server finds the NPC by
+  key through a manager first; maybe a per-user relevance check).
