@@ -2568,3 +2568,15 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   Next idea (an experiment first; a design choice for the user): on the SERVER, evaluate user 2's interaction
   conditions with the HOST's character as the subject ("the guest follows the host's progress", ByJunter's rule for
   quests), so any NPC interaction the host can do the guest can too; the guest's client keeps the prompt override.
+- 2026-11-08 14:20 tcB69/70 (TEST user2_condition_subject_host=1 on the host: on a server thread, 0x25FA200's subject
+  -- another player's character -- becomes the host's server character, looked up in the SAM by key each time; the
+  guest's client override limited to the Greet entry 0x0055): the server swapped the subject 3-4 times, but the
+  guest's E never asked for the Greet (tcB69: interaction 0x0C, refused; tcB70: the lamp). The Greet's target
+  condition was overridden 1428 times on the guest's client and still no Greet prompt: more of 0xABF5A0's checks
+  stand after the conditions (e.g. eErrNoInteractionShowWhenTargeted, the distance).
+  GOOD: tcB70 -- the guest TURNED OFF THE LAMP (0xB01008C8, interaction 0x0F4267): PreemptionStep and DoStep both
+  succeeded on the host's server and the lamp is dark on the guest's screen afterwards (shots tcB70-g1 lit, -g3
+  dark). Object interaction works for the guest.
+  Next for NPC talk: send the Greet (the host's greet interaction 0xAD, tcB34) from the guest to the server directly
+  (a one-shot test of the request path) with the host's subject swap on, to see whether the server accepts and the
+  dialogue reaches the guest -- before more client-side work.
