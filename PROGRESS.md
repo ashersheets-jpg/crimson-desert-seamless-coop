@@ -2352,3 +2352,8 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   EvadeObstacle (2909 -> 2297) 0xD3C300, InitializeNPCSchedule (2874 -> 2769) 0xD3CA50; the frames moved (the 2335
   point is now 0xD3A951 lea rcx,[rbp-0x28] ; mov [rsp+0x60],rcx after vf48 on [rbp]; find 0x98FC20 found [rbp+0x80]
   actor [rbp+0x78]; kind [rbp+0x1100]; the stage call 0xBABA90).
+- 2026-11-08 04:20 User (from Plitos): "if you add nothing else that he said, to please add this part to our final
+  package by the time you release it" -- save protection and installer. Added to ROADMAP as B22a (a release blocker):
+  loader reuse (winhttp.dll ...), occupied proxy names kept, hash-verified backups of solo AND co-op saves, the EXE
+  identity check, and co-op refused when a required save-redirection hook fails (on native: the native base's save
+  guard). Credit Plitos.
