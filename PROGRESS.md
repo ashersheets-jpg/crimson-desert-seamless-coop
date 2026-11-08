@@ -2558,3 +2558,13 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   Greet's condition asks key 0x14E8 at level 1. TEST user2_knowledge_share=1 (native, HOST): an inline hook on
   0x2308FC0 asks the host character's knowledge again when the server (TLS +0x1EB) gets "no" for another player's
   character -- read only (B04 "knowledge learned by one counts for both"). tcB66: with the guest's client override.
+- 2026-11-08 13:50 tcB66-68 (user2_knowledge_share=1 on the host + the guest's client override): the server's "no"
+  answers for the guest's character (27) ask keys 0x0F9A-0x0FD2 at level 1, and the HOST's character has them at
+  level 0 too (its comp known) -> shared 0: knowledge sharing is not the fix for these checks (CheckKnowledge's
+  evaluate returns NOT has ("^ 1") on that path, so these are "has not learned yet" checks that come out the same for
+  both players). The Greet's key 0x14E8 never reached 0x2308FC0: that condition takes CheckKnowledge's other path
+  (flag +0x20 set: the knowledge key of the NPC itself, [[npc+0x68]+0x20] -> info +0x64). The guest's E kept landing
+  on interaction 0x0C, not the Greet 0x55. tcB67's guest keys aborted on "game window is not in front" (focus).
+  Next idea (an experiment first; a design choice for the user): on the SERVER, evaluate user 2's interaction
+  conditions with the HOST's character as the subject ("the guest follows the host's progress", ByJunter's rule for
+  quests), so any NPC interaction the host can do the guest can too; the guest's client keeps the prompt override.
