@@ -2103,3 +2103,8 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   User's extra facts: the inn-guard report was a Radmin session, the cutscene one a Steam invite. The relay does not
   depend on the transport; if the Radmin session's prologue ending was NOT skipped, the guard is a separate issue
   (T21-like: a copy arriving with us at the inn) that this hotfix does not touch.
+- 2026-11-07 21:58 tcB12 (native base): the host's dev teleport to Hernand, then the GUEST pressed Ctrl+F4 ("go to my
+  friend"): "Co-op: to the other player at (-10611, -3873)" -> hops through cdmp_inject_s2c -> "Teleport: arrived"
+  in 7 s; shot tcB12-39 (the guest's game: Hernand Town, the party frame "Host 6 m"). SAVES OK. B19's "go to my
+  friend" works on the shared world. Cosmetic: the layer's status line still says "other player not loaded" (no copy
+  on the native base). Harness: -GuestKeys (steps joined with _, bash splits PSARGS at spaces).

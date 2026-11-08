@@ -12,7 +12,9 @@ param([string]$Name = 'tc1', [string]$HostVariant = 'coop-test-bandits', [string
       # both games restart into the native modes (the layer writes cdmp.<role>.ini), then start together.
       [switch]$Lobby,
       # A Co-op+ dev script per role ([dev] script=..., run with Ctrl+Shift+F6 after the join), e.g. a teleport
-      [string]$HostScript = '', [string]$GuestScript = '')
+      [string]$HostScript = '', [string]$GuestScript = '',
+      # actpid steps for the guest after the scripts (e.g. 'kd:CTRL k:F4:120 ku:CTRL w:20000': go to the friend)
+      [string]$GuestKeys = '')
 $ErrorActionPreference = 'Stop'
 $bin = 'D:\SteamLibrary\steamapps\common\Crimson Desert\bin64'
 $here = $PSScriptRoot; $saves = 'C:\Users\asher\CrimsonDesert-SeamlessCoop\build\test-saves'
@@ -287,7 +289,12 @@ foreach ($pair in @(@{ s = $HostScript; p = $h; n = 'host' }, @{ s = $GuestScrip
     "$($pair.n): its dev script (Ctrl+Shift+F6) at $(Get-Date -Format HH:mm:ss.fff)"
     & "$here\actpid.ps1" -GamePid $pair.p.Id -Seq "kd:CTRL kd:SHIFT kd:F6 w:400 ku:F6 ku:SHIFT ku:CTRL w:20000 shot:$Name-38-$($pair.n)-after-script" | Out-Null
 }
-if ($HostScript -or $GuestScript) {
+if ($GuestKeys) {
+    $GuestKeys = $GuestKeys -replace "_", " "  # (bash splits PSARGS at spaces: steps joined with _)
+    "guest keys: $GuestKeys at $(Get-Date -Format HH:mm:ss.fff)"
+    & "$here\actpid.ps1" -GamePid $gp.Id -Seq "$GuestKeys shot:$Name-38b-guest-after-keys" | Out-Null
+}
+if ($HostScript -or $GuestScript -or $GuestKeys) {
     & "$here\actpid.ps1" -GamePid $h.Id -Seq "w:3000 shot:$Name-39-host-view" | Out-Null
     & "$here\actpid.ps1" -GamePid $gp.Id -Seq "w:3000 shot:$Name-39-guest-view" | Out-Null
 }
