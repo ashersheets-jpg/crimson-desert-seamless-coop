@@ -61,6 +61,7 @@
 #include "mod/session2/tree_bend.h"
 #include "mod/session2/tree_bend_logic.h"
 #include "mod/session2/weather_sync.h"
+#include "mod/session2/npc_category.h"
 
 namespace cdmp::session2 {
 namespace {
@@ -1723,6 +1724,11 @@ void guest_deliver(std::vector<uint8_t>&& packet) {
         }
         // P8 S25 weather (weather_sync.h): the host's weather sample, state 12 (its exact 277-byte form), never the game's.
         if (weather_sync_guest_on_control(packet)) return;
+        // Co-op+ (npc_category.h): the host's NPC quest-dialog categories, state 16. Only while playing on the host.
+        if (!v->payload.empty() && v->payload[0] == 16) {
+            if (remote_live_for_keys()) (void)npc_category_guest_on_control(v->payload);
+            return;
+        }
         const uint8_t state = v->payload.empty() ? 0 : v->payload[0];
         // P8 S25 phase B: the host's end of the tunnel exists: the own-save upload is queued now, BEFORE the host
         // counts as ready below, so it is ahead of the client's first packet (its 2319 / 2490) in the tunnel.

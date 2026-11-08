@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <mutex>
 #include <vector>
 #include <chrono>
 #include <cstring>
@@ -555,6 +556,100 @@ void tc_on_fail(safetyhook::Context& ctx) {  // 0x25FA549: the store of eErrNoIn
               server_user2 ? "SERVER for another player" : "GREET", ip_key_of(t_oc_player), target, c & 0xFFFFFFF,
               cond_dump(c, base));
 }
+// Leaf results (2026-11-08, read only, with interact_probe=1): while 0x25FA200 judges the Greet on a client (entry
+// 0x0055) or any condition of a player's request on a SERVER thread, every leaf ConditionData_* evaluated through the
+// generic 0x2417610 (obj, compare param, invert flag) is noted as "name=result" (tri-state al: 0/1/2; '~' = the invert
+// flag set), and the exit 0x25FA561 (al = 1 pass / 0 refused) logs the list: the same NPC judged for the host's
+// character (its client) and for user 2's (the host's server) shows which leaf differs.
+std::string rtti_name(uintptr_t obj, uintptr_t base);
+thread_local bool t_gt_on = false;
+thread_local int t_gt_n = 0;
+thread_local std::string t_gt_buf;
+SafetyHookInline g_leaf_hook;
+SafetyHookMid g_oc_exit;
+std::atomic<uint32_t> g_gt_lines_client{0}, g_gt_lines_server{0};
+uint64_t g_gt_seen[128] = {};
+std::mutex g_gt_mu;
+uintptr_t __fastcall leaf_detour(uintptr_t obj, uintptr_t param, uintptr_t flag, uintptr_t r9) {
+    const uintptr_t r = g_leaf_hook.unsafe_call<uintptr_t>(obj, param, flag, r9);
+    if (t_gt_on && t_gt_n < 48) {
+        ++t_gt_n;
+        std::string n = rtti_name(obj, reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)));
+        if (n.rfind("ConditionData_", 0) == 0) n = n.substr(14);
+        t_gt_buf += std::format(" {}{}={}", (flag & 0xFF) ? "~" : "", n, static_cast<unsigned>(r & 0xFF));
+        if (n == "CheckQuestDialogCategory") {
+            // 0x24752E0: the player's user's main character ([[actor+0xA0]+0xD0]), its comps [+0x68], the quest
+            // dialog table [comps+0xF8] (0x1C358E0: buckets +0x68, count +0x6C, by the target's u32 +0x60), the
+            // category byte the leaf compares at obj+0x18.
+            uintptr_t user = 0, main = 0, comps = 0, tab = 0, tgt = 0;
+            uint32_t buckets = 0, count = 0, tkey = 0;
+            uint8_t want = 0;
+            uintptr_t subj = 0;
+            game::safe_read(param + 0x830, &subj, 8);
+            if (subj) game::safe_read(subj + 0xA0, &user, 8);
+            if (user) game::safe_read(user + 0xD0, &main, 8);
+            if (main) game::safe_read(main + 0x68, &comps, 8);
+            if (comps) game::safe_read(comps + 0xF8, &tab, 8);
+            if (tab) {
+                game::safe_read(tab + 0x68, &buckets, 4);
+                game::safe_read(tab + 0x6C, &count, 4);
+            }
+            game::safe_read(param + 0x828, &tgt, 8);
+            if (tgt) game::safe_read(tgt + 0x60, &tkey, 4);
+            game::safe_read(obj + 0x18, &want, 1);
+            // The lookup as 0x1C358E0 does it: bucket (key % buckets) * 0x100 + [tab+0x78]: u32 n, then n pairs
+            // {u32 key, u32 index} from +8; the entry [[tab+0x80] + index*8]: +4 key, category +0x19 (< 6) or +0x18.
+            std::string found = "absent";
+            uintptr_t bk = 0, ents = 0;
+            if (tab && buckets && count && game::safe_read(tab + 0x78, &bk, 8) && bk &&
+                game::safe_read(tab + 0x80, &ents, 8) && ents) {
+                const uintptr_t b = bk + (tkey % buckets) * 0x100ull;
+                uint32_t n = 0;
+                game::safe_read(b, &n, 4);
+                for (uint32_t i = 0; i < n && i < 30; ++i) {
+                    uint32_t k = 0, ix = 0;
+                    game::safe_read(b + 8 + 8ull * i, &k, 4);
+                    game::safe_read(b + 12 + 8ull * i, &ix, 4);
+                    if (k != tkey) continue;
+                    uintptr_t e = 0;
+                    uint8_t c18 = 0, c19 = 0;
+                    game::safe_read(ents + 8ull * ix, &e, 8);
+                    if (e) {
+                        game::safe_read(e + 0x18, &c18, 1);
+                        game::safe_read(e + 0x19, &c19, 1);
+                    }
+                    found = std::format("entry {} cat18 {} cat19 {}", ix, c18, c19);
+                    break;
+                }
+            }
+            t_gt_buf += "[" + found + "]";
+            t_gt_buf += std::format("[want {} | npc +60 0x{:X} | subject 0x{:08X} main 0x{:08X} table {} buckets {} count {}]", want, tkey,
+                                    subj ? ip_key_of(subj) : 0, main ? ip_key_of(main) : 0, tab ? "yes" : "NONE", buckets, count);
+        }
+    }
+    return r;
+}
+bool ks_server_thread();
+void oc_on_exit(safetyhook::Context& ctx) {  // 0x25FA561: al = the result
+    if (!t_gt_on) return;
+    t_gt_on = false;
+    const bool server = ks_server_thread();
+    const uint32_t pk = ip_key_of(t_oc_player), tk = ip_key_of(t_oc_target);
+    uint64_t h = 1469598103934665603ull ^ (static_cast<uint64_t>(tk) << 1) ^ (server ? 1 : 0) ^ ((ctx.rax & 0xFF) << 40);
+    for (unsigned char ch : t_gt_buf) h = (h ^ ch) * 1099511628211ull;
+    h ^= static_cast<uint64_t>(pk) << 20;
+    {
+        std::lock_guard lk(g_gt_mu);
+        for (auto& v : g_gt_seen) {
+            if (v == h) return;
+            if (!v) { v = h; break; }
+        }
+    }
+    auto& lines = server ? g_gt_lines_server : g_gt_lines_client;
+    if (lines.fetch_add(1) >= 120) return;
+    log::info("InteractProbe [LEAVES {}] player 0x{:08X} target 0x{:08X} entry 0x{:04X} -> {} |{}",
+              server ? "SERVER" : "client Greet", pk, tk, t_entry_idx, (ctx.rax & 0xFF) ? "PASS" : "REFUSED", t_gt_buf);
+}
 // TEST user2_condition_subject_host=1 (HOST): on a SERVER thread, an interaction condition whose subject is another
 // player's character is evaluated with the HOST's server character instead ("the guest follows the host's progress",
 // ByJunter's rule for quests): any NPC interaction the host can do, the guest can. The host's character is looked up
@@ -592,40 +687,79 @@ void oc_on_entry(safetyhook::Context& ctx) {  // 0x25FA200
     t_oc_cond = ctx.rcx;
     t_oc_player = ctx.rdx;
     t_oc_target = ctx.r8;
+    if (g_leaf_hook) {
+        const bool server = ks_server_thread();
+        t_gt_on = server ? (ip_key_of(ctx.rdx) >> 28) == 0xA && (ip_key_of(ctx.r8) >> 28) == 0xB : t_entry_idx == 0x0055 && (ip_key_of(ctx.r8) >> 28) == 0xB;
+        t_gt_n = 0;
+        t_gt_buf.clear();
+    }
+}
+// The class name of a game object from its RTTI (vtable[-1] -> COL; COL+12 = the type descriptor's RVA; name at +0x10).
+std::string rtti_name(uintptr_t obj, uintptr_t base) {
+    uintptr_t vt = 0, col = 0;
+    uint32_t td = 0;
+    char nm[72] = {};
+    if (!game::safe_read(obj, &vt, 8) || !game::safe_read(vt - 8, &col, 8) || !game::safe_read(col + 12, &td, 4) ||
+        !game::safe_read(base + td + 0x10, nm, sizeof nm - 1))
+        return "?";
+    std::string n(nm);
+    if (n.rfind(".?AV", 0) == 0) n = n.substr(4);
+    if (auto at = n.find("@pa@@"); at != std::string::npos) n = n.substr(0, at);
+    return n;
+}
+// A condition tree (3576): And/Or/Not ContentsLogicFunction (children at +8 / +0x10, objects), ConditionData_Macro
+// (u16 macro index at +0x10 -> [[0x71C2150]+0x58][index] -> info, its condition object at info+0x10, as 0x24178F0),
+// leaves ConditionData_* (u16 function type at +8: its name from the table 0x5D02C70; fields +0x10..+0x48).
+void cond_tree(uintptr_t obj, uintptr_t base, int depth, int& budget, std::string& out) {
+    if (!obj || budget-- <= 0 || depth > 8) return;
+    const std::string n = rtti_name(obj, base);
+    out += std::format(" {}{}", depth ? "(" : "", n);
+    if (n == "AndContentsLogicFunction" || n == "OrContentsLogicFunction") {
+        uintptr_t l = 0, r = 0;
+        game::safe_read(obj + 8, &l, 8);
+        game::safe_read(obj + 0x10, &r, 8);
+        cond_tree(l, base, depth + 1, budget, out);
+        cond_tree(r, base, depth + 1, budget, out);
+    } else if (n == "NotContentsLogicFunction") {
+        uintptr_t ch = 0;
+        game::safe_read(obj + 8, &ch, 8);
+        cond_tree(ch, base, depth + 1, budget, out);
+    } else if (n == "ConditionData_Macro") {
+        uint16_t idx = 0;
+        uintptr_t table = 0, arr = 0, info = 0, inner = 0;
+        game::safe_read(obj + 0x10, &idx, 2);
+        game::safe_read(base + 0x71C2150, &table, 8);
+        if (table) game::safe_read(table + 0x58, &arr, 8);
+        if (arr) game::safe_read(arr + 8ull * idx, &info, 8);
+        if (info) game::safe_read(info + 0x10, &inner, 8);
+        out += std::format(" #{}", idx);
+        cond_tree(inner, base, depth + 1, budget, out);
+    } else {
+        uint16_t type = 0;
+        uintptr_t np = 0;
+        char fn[40] = {};
+        game::safe_read(obj + 8, &type, 2);
+        if (game::safe_read(base + 0x5D02C70 + 8ull * type, &np, 8) && np) game::safe_read(np, fn, sizeof fn - 1);
+        out += std::format(" fn 0x{:X} '{}' f", type, fn);
+        for (uint32_t o = 0x10; o < 0x48; o += 8) {
+            uint64_t q = 0;
+            game::safe_read(obj + o, &q, 8);
+            out += std::format(" {:X}", q);
+        }
+    }
+    if (depth) out += ")";
 }
 std::string cond_dump(uintptr_t c, uintptr_t base) {
-    auto rva = [&](uintptr_t a) { return a >= base && a < base + 0x14000000 ? a - base : a; };
     std::string out;
     for (int k = 0; k < 2; ++k) {
-        uintptr_t p1 = 0, obj = 0, vt = 0;
-        if (!game::safe_read(c + 8ull * k, &p1, 8) || !p1 || !game::safe_read(p1, &obj, 8) || !obj ||
-            !game::safe_read(obj, &vt, 8)) {
-            out += std::format(" | sub +{:X} none", 8 * k);
+        uintptr_t p1 = 0, obj = 0;
+        if (!game::safe_read(c + 8ull * k, &p1, 8) || !p1 || !game::safe_read(p1, &obj, 8) || !obj) {
+            out += std::format(" | {} none", k ? "TARGET" : "OWNER");
             continue;
         }
-        out += std::format(" | sub +{:X} class 0x{:X} fields", 8 * k, rva(vt));
-        for (uint32_t o = 8; o < 0x40; o += 8) {
-            uintptr_t q = 0;
-            game::safe_read(obj + o, &q, 8);
-            out += std::format(" {:X}", rva(q));
-        }
-        if (rva(vt) == 0x5D09E08) {  // ConditionData_Macro: its macro's inner condition
-            uint16_t idx = 0;
-            uintptr_t table = 0, arr = 0, info = 0, inner = 0, ivt = 0;
-            game::safe_read(obj + 8, &idx, 2);
-            game::safe_read(base + 0x71C2150, &table, 8);
-            if (table) game::safe_read(table + 0x58, &arr, 8);
-            if (arr) game::safe_read(arr + 8ull * idx, &info, 8);
-            if (info) game::safe_read(info + 0x10, &inner, 8);
-            if (inner) game::safe_read(inner, &ivt, 8);
-            out += std::format(" [macro {} inner class 0x{:X} fields", idx, rva(ivt));
-            for (uint32_t o = 8; inner && o < 0x48; o += 8) {
-                uintptr_t q = 0;
-                game::safe_read(inner + o, &q, 8);
-                out += std::format(" {:X}", rva(q));
-            }
-            out += "]";
-        }
+        out += std::format(" | {}:", k ? "TARGET" : "OWNER");
+        int budget = 40;
+        cond_tree(obj, base, 0, budget, out);
     }
     return out;
 }
@@ -714,7 +848,7 @@ void oc_on_fail(safetyhook::Context& ctx) {  // 0x25FA3DA: the store of eErrNoIn
         }
     }
     log::info("InteractProbe [owner condition FAILED] target 0x{:08X} | condition ...{:07X} | sub +0 class vtable 0x{:X} | "
-              "sub +8 class vtable 0x{:X}{}", target, c & 0xFFFFFFF, v0, v1, macro);
+              "sub +8 class vtable 0x{:X}{}", target, c & 0xFFFFFFF, v0, v1, cond_dump(c, base));
 }
 void ip_on_keep(safetyhook::Context& ctx) {  // 0xAC0335 cmp byte [rsp+0x30],0
     IpSlot* sl = ip_slot(ip_key_of(ctx.r15));
@@ -1077,6 +1211,16 @@ void interact_probe_start(bool on, bool owner_override) {
     n += ip_hook(base, 0xAC0330, {0xE8, 0x6B, 0xF2, 0xFF, 0xFF}, g_ip_call, ip_on_call);
     n += ip_hook(base, 0x25FA549, {0x48, 0x8B, 0x8D, 0xB0, 0x07, 0x00, 0x00, 0x88, 0x01}, g_tc_fail, tc_on_fail);
     n += ip_hook(base, 0x25FA3DA, {0x48, 0x8B, 0x8D, 0xB0, 0x07, 0x00, 0x00, 0x88, 0x01}, g_oc_fail, oc_on_fail);
+    n += ip_hook(base, 0x25FA561, {0x4C, 0x8D, 0x9C, 0x24, 0x60, 0x08, 0x00, 0x00}, g_oc_exit, oc_on_exit);
+    {
+        uint8_t h[9] = {};
+        game::safe_read(base + 0x2417610, h, 9);
+        static constexpr uint8_t want[9] = {0x48, 0x83, 0x79, 0x10, 0x00, 0x4C, 0x8B, 0xCA, 0x74};
+        if (std::memcmp(h, want, 9) == 0)
+            g_leaf_hook = safetyhook::create_inline(reinterpret_cast<void*>(base + 0x2417610),
+                                                    reinterpret_cast<void*>(&leaf_detour));
+        log::info("InteractProbe: leaf results 0x2417610 {}", g_leaf_hook ? "hooked" : "NOT hooked (bytes differ)");
+    }
     {
         uint8_t h[5] = {};
         game::safe_read(base + 0x1940AD0, h, 5);

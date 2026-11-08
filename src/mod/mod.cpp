@@ -68,6 +68,7 @@
 #include "mod/session2/ui_pause.h"
 #include "mod/session2/user2_funnels.h"
 #include "mod/session2/weather_sync.h"
+#include "mod/session2/npc_category.h"
 #include "mod/render/dx12_hook.h"
 #include "mod/render/hud.h"
 
@@ -454,6 +455,8 @@ void run_network(const Config& cfg, LocalSource& local) {
         // P8 S25 weather (weather_sync.h): the host's newest weather sample as control state 12 (weather_sync=1 and a
         // guest that announced caps 0x04; nothing otherwise). Flushed by the next tunnel_tick.
         if (s2_link) session2::weather_sync_host_tick(*s2_link, now);
+        // Co-op+ (npc_category.h): the host's NPC quest-dialog categories as control state 16.
+        if (s2_link) session2::npc_category_host_tick(*s2_link, now);
         health.mark(Phase::HostTunnel, now_us());
         if (!s2_guest_link && !coop && session2::guest_active()) {
             s2_guest_link = std::make_unique<troc::TrocLink>(
@@ -1184,6 +1187,7 @@ DWORD WINAPI worker(LPVOID) {
             net::knowledge_share_start(!cfg.s2_guest && cfg.s2_user2_knowledge_share);
             net::subject_swap_start(!cfg.s2_guest && cfg.s2_user2_condition_subject_host);
             net::test_greet_start(cfg.s2_guest && cfg.s2_test_greet);
+            session2::npc_category_install(cfg.s2_npc_category_share, cfg.s2_guest);
             net::subject_swap_client_start(cfg.s2_guest && cfg.s2_guest_condition_subject_host);
             session2::npc_probe_client_start(cfg.s2_npc_activation, cfg.s2_npc_family_control,
                                             cfg.s2_user2_road_control, cfg.s2_guest, g_stop);
