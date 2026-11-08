@@ -2357,3 +2357,13 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   loader reuse (winhttp.dll ...), occupied proxy names kept, hash-verified backups of solo AND co-op saves, the EXE
   identity check, and co-op refused when a required save-redirection hook fails (on native: the native base's save
   guard). Credit Plitos.
+- 2026-11-08 04:35 tcB43 (guest_schedule_load=1 on the 3576 port, seq_actor_restore=1; both players on the inn floor):
+  THE GUEST'S NPCs ARE POSED. Shots tcB43-38 / -38b (guest): a man SITTING at the left table, the guard with his spear
+  in a natural stance, a man LEANING over the table, a woman READING a paper, the man at the hearth bent over the fire
+  (tcB40, without it: all standing stiff). GuestSchedLoad: manager / client root / server root one object (vtable
+  pa::NPCScheduleManager), context table 4408 keys, names hash back to their key 64/64 sampled (the layout and the
+  hash hold on 3576); before delivery: 2005 x1885 (NPC records 2098, key hits 868), 2335 x78; LOADED 60 failed 0,
+  late 0, 24.5 ms in all (max 3.3 ms); no guest crash, SAVES OK. (ScheduleSelfCheck, a separate read-only thread, is
+  still gated: unported, not needed.) Native 3df1909 (local) + bundle. Next: guest_sched_route / guest_sched_bind
+  (NPCs whose 2335 comes after their 2005; the handlers are mapped above) and guest_seq_play (scene ticking); then
+  the guest's interaction with NPCs (talk) now that they are real.
