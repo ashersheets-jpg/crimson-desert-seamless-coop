@@ -132,6 +132,9 @@ Steam join/invite/leave and room code, friends-only vs invite-only, join/leave n
 
 ## 5. The big update (picked by the user 2026-11-07, after the full decomp)
 
+**Ship rule (user 2026-11-07):** nothing of this update ships until EVERY task below (except B08, dropped) is done and
+works flawlessly to our knowledge. The guest must see and use every NPC the host does. B09 comes back in a safe form.
+
 Order: the native shared world first, because it makes most of the world picks real instead of simulated (one world:
 same NPCs, events, map, mounts, combat damage, bosses, join mid-event). Then the Co-op+ layer on top, then the
 features that stay Co-op+'s own. Each task: decomp first (build/decomp: functions.tsv / classes.tsv / c/*.c), then
