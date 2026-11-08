@@ -208,14 +208,14 @@ std::optional<uintptr_t> seq_manager_of(const Mem& m, uintptr_t actor, uintptr_t
 
 // The vf48 call of the 2283 handler: `mov rcx,[rbp-0x28] ; mov rax,[rcx] ; call [rax+0x48]` at 0x2A5F7F2, the
 // return address 0x2A5F7FC, then `mov rcx,rax ; call 0x2896120` (0x2A5F829 / 0x2A5F82C).
-inline constexpr uint32_t kReloadVf48Ret = 0x2A5F7FC;
+inline constexpr uint32_t kReloadVf48Ret = 0x2CEE4F5;  // 3576 (2976 0x2A5F7FC)
 // The second vf48 of the same 2283, inside 0x2BC4950 (called from 0x2896974): `mov rcx,[rbp-0x21] ; mov rax,[rcx] ;
 // call [rax+0x48]` at 0x2BC4C49 on the field of the TRAVELLER's field mover (0x2BBF340(TS+0x4F0) at 0x2BC4C3D: for
 // user 2, the shared field -> the OWNER's manager), then `mov rbx,rax`, a reference on [mgr+8] (0x393650: lock xadd
 // [obj+8], vf30, vf18; [mgr+8] must be a live object, a null manager crashes at 0x2BC4C69) and
 // `mov byte [rbx+0x6A0],0` (0x2BC4C80). It always runs for a 2283: 0x2896120 builds the destination with +0x19 = 1
 // and 0x2BC4C23 takes this block when it is not 0.
-inline constexpr uint32_t kApplyVf48Ret = 0x2BC4C53;
+inline constexpr uint32_t kApplyVf48Ret = 0x2E682ED;  // 3576 (2976 0x2BC4C53)
 
 // The block F3 hands 0x2896120 when user 2's own manager cannot be read: 0x2896120 reads its manager once,
 // `mov r13,[rcx+0x18]` at 0x2896155, and never keeps rcx (overwritten at 0x289615E); the handler only does
