@@ -2108,3 +2108,15 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   in 7 s; shot tcB12-39 (the guest's game: Hernand Town, the party frame "Host 6 m"). SAVES OK. B19's "go to my
   friend" works on the shared world. Cosmetic: the layer's status line still says "other player not loaded" (no copy
   on the native base). Harness: -GuestKeys (steps joined with _, bash splits PSARGS at spaces).
+- 2026-11-07 22:08 tcB13 (shared world, Hernand inn): the host's dev teleport to the arm-wrestling table
+  (scripts/tp_inn_table.txt), the guest's Ctrl+F4 to it (arrived 1 m away), the host held R + turned 16 times.
+  - B02 FINDING: the HOST sees the inn full (two guards beside it, patrons, "Stranger: Am I that good-looking?"),
+    the GUEST 1 m away sees NOBODY, still a minute later (shots tcB13-38/39 host vs guest). The host's native log:
+    "Session2 observer hold family: held member 0xB0100A55 (type 7, parent 0xB0100A54; host gets it now) from
+    session ... (user 2 ...): its parent is withheld there" -- the native base's observer holds ([session2]
+    observer_hold / observer_hold_family / observer_hold_acks / character_hold, on in the host profile) keep actor
+    loads from user 2. Next: which hold withholds the inn's NPCs and why (ByJunter's notes, Spanish:
+    upstream/cdmp-native/docs/research/opcion-d-*.md), and whether a guest that WALKS in gets them (a client-side
+    teleport may skip the field / region steps that load NPCs for user 2).
+  - B14: no InteractionDoStepReq in the host's packet log (cdmp_packets.host_20261107-215955.log); inconclusive:
+    on 3576 the interact prompt shows E (R was 3479's), and the turn steps may not have faced the table.
