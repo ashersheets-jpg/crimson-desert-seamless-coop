@@ -2654,3 +2654,14 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   broke (the guest's net loop stalled 8.6 s; tcB79/80 never broke) -- turned off (kept in the code, never sent).
   Open: why the server answers the guest's native requests (~350 a run) but not these (the server finds the NPC by
   key through a manager first; maybe a per-user relevance check).
+- 2026-11-08 20:30 *** THE GUEST TALKS TO AN NPC (tcB88), ON ITS OWN PROGRESS, NO TEST OVERRIDES. ***
+  tcB82-86 (probes): the guest's quest-dialog entries DO exist (one dialog each, like the host's) and its user is
+  valid; the HasQuestDialog search for the Greet's "Hello" dialogs gives up before reading them because it first
+  asks the NPC's category from the same per-player table, and the guest's is 0. So the share moved from the
+  CheckQuestDialogCategory condition to the category GETTER itself (npc_category: one inline hook, the guest's 0
+  answers become the host's category, a non-zero own one is kept; the dialogs and their requirements read after it
+  are the guest's own). tcB87: the Greet passes for the guest on 35 NPCs (keys aborted: game window not in front --
+  actpid.ps1 now retries the focus 6 times). tcB88: the guest turned to a "Stranger": the prompt "E Greet" shows
+  (shot tcB88-g1), E sent InteractionPreemptionStepReq + InteractionDoStepReq for interaction 0xAD and the host's
+  server ACCEPTED both (2120, 2794); on screen "Stranger: Trust +5" and the NPC's line (tcB88-g2/g3). No crash,
+  SAVES OK. The earlier TEST flags (owner override, subject swap, knowledge share) are not needed for this.

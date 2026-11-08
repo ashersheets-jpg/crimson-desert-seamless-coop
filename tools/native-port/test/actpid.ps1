@@ -15,12 +15,18 @@ public static class A {
   [DllImport("user32.dll")] public static extern uint MapVirtualKey(uint code, uint type);
   [DllImport("user32.dll")] public static extern void mouse_event(uint f, int dx, int dy, int d, UIntPtr e);
   [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
+  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int cmd);
+  [DllImport("user32.dll")] public static extern bool BringWindowToTop(IntPtr h);
 }
 '@
 $p = Get-Process -Id $GamePid -ErrorAction Stop | Where-Object { $_.MainWindowHandle -ne 0 }
 $h = $p.MainWindowHandle
-if ([A]::GetForegroundWindow() -ne $h) { [A]::keybd_event(0x12, 0, 0, [UIntPtr]::Zero); [A]::keybd_event(0x12, 0, 2, [UIntPtr]::Zero) }
-[A]::SetForegroundWindow($h) | Out-Null; Start-Sleep -Milliseconds 300
+# Up to 6 tries (another window may take the focus for a moment): Alt tap, restore, bring to top, focus.
+for ($try = 0; $try -lt 6 -and [A]::GetForegroundWindow() -ne $h; $try++) {
+  [A]::keybd_event(0x12, 0, 0, [UIntPtr]::Zero); [A]::keybd_event(0x12, 0, 2, [UIntPtr]::Zero)
+  [A]::ShowWindow($h, 9) | Out-Null; [A]::BringWindowToTop($h) | Out-Null
+  [A]::SetForegroundWindow($h) | Out-Null; Start-Sleep -Milliseconds 500
+}
 if ([A]::GetForegroundWindow() -ne $h) { throw 'game window is not in front' }
 $vk = @{ ENTER=0x0D; ESC=0x1B; SPACE=0x20; UP=0x26; DOWN=0x28; LEFT=0x25; RIGHT=0x27; CTRL=0x11; TAB=0x09; ALT=0x12;
          SHIFT=0x10; F1=0x70; F2=0x71; F3=0x72; F4=0x73; F5=0x74; F6=0x75; F7=0x76; F8=0x77; F9=0x78; F10=0x79 }
