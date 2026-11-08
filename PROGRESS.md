@@ -2439,3 +2439,10 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   derived from the NPC's AI state (0x22EAE00's AI path), and the guest's NPCs do have AI components and states; no
   difference seen in what the probe reads. tcB51 scans .sdata/.rodata for the guest's refusal value 0x6467532C to
   find which check stores it.
+- 2026-11-08 07:30 tcB51 NAMED the guest's refusal: 0x6467532C lives at 0x714AF5C, registered with the string
+  "eErrNoInteractionOwnerConditionCheckFail" (0x5CD8140). It is stored by 0x25FA200(condition, PLAYER actor, target,
+  mode, out) at its failure exit 0x25FA3DA (a second exit 0x25FA552 stores another code); the only caller 0x22E7A90
+  runs it for each owner condition of the entry with the INTERACTING PLAYER as the subject (interaction side + 8).
+  So the guest's Greet is refused because a condition on the guest's PLAYER CHARACTER fails (not the NPC). tcB52
+  logs each distinct failing condition (its vtables and flag bytes) on both sides: the one that fails only on the
+  guest names what the guest's character lacks.
