@@ -2677,3 +2677,21 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   own shop scenes, the U2 routing, T1/T2 ordering, R0 entry deletion), compiled and unit-tested on 2976 but never run
   in the game; its modules (user2_stages, user2_shops, shop_probe, shop_trade_probe, observer_hold_scene_order) are
   in the native tree. Next: check which are ported to 3576, then a live test as its 9.7 describes.
+- 2026-11-08 23:30 QUEST SYNC DESIGN (user, after a Discord poll): option 3 as the base (each player plays its own
+  quests and story in the shared world) + option 2 as an optional bonus (both on the same step: one completing it
+  checks it off for both). ROADMAP B10 updated.
+  MERCHANTS, groundwork (tcB96-100):
+  * FIXED: on 3576 PrepareSequencerAck 2380 has a 92-byte header before its 11-byte bindings (2976: 91): every
+    module that parses it (observer_seq_copy, observer_scene_copy, observer_stage, hold_scene_order, troc_script)
+    rejected every scene, so the host's scenes never reached the guest. tcB97: 32 of the host's scenes copied to the
+    guest, all ROUTED to X on the guest, 0 refused, no crash, SAVES OK. (Unit tests: 29 of 85 fail with or without
+    this change -- the pre-existing 2976 test data.)
+  * PORTED guest_x_interaction (ByJunter's C1: the guest's prompt check of a merchant's dynamic entry looks the
+    entry's scene up in X when it is not in the guest's own manager): 3576 function 0x22EE2D0 (A 0x22EE3D9, R
+    0x22EE465, F 0x22EE6F9, stack slot 0x8F8), scene lookup 0x21578E0 whose table moved by 0x28 (stage_lookup_logic.h;
+    guest_seq_route's peek fixed the same); class vtables by RTTI. Hooks in; not exercised yet.
+  * The Hernand merchants on 3576 (their spawn positions in the guest's capture = ByJunter's 2976 coordinates):
+    butcher (-10677.6 611.4 -3905.4), grocer (-10653.6 612.3 -3879.6), blacksmith (-10636.5 613.4 -3848.3), bank
+    (-10700.8 622.4 -3798.1); keys change per run. At the test save's hour the grocery stall is empty for BOTH
+    players (tcB100) and the blacksmith gave the host no prompt either: next, a merchant actually at work in the
+    test save (or another hour), the host's own shop prompt as the control, then the guest.
