@@ -2259,3 +2259,14 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   (TrocTrInteractionDoStepDoInteractionOnceTimer 0x2ED8DD0, on the interacting actor's interaction component
   +0x68 -> +0x98). tcB34: the sniffer logs the same packets on the HOST's client (its own E at "Stranger / Greet")
   to compare the host's sequence with the guest's.
+- 2026-11-08 01:55 CORRECTION (user, on the guest's shots: "The NPCs are still in A-poses for the guest"): right --
+  my tcB30 note "posed and animated" was wrong. Zoomed (tcB33-38b guest): the man in the long coat stands with his
+  arms out (bind pose); at the hearth the man in white stands straight on the guest while the host's shot shows him
+  bent over the fire. The guard fix (tcB29: held 0) only stopped the guest SKIPPING the update; the game's own layer
+  rule (0xA12C00) then skips those layers itself because they were never started: the guest's NPCs have no action.
+  Both native guest guards skip nothing (RemoteUpdateGuard "update skipped 0", puppet layer guards "skipped 0").
+  Lead: an NPC that began its action before user 2 arrived gets no StartActionAck later; its state must come with
+  the appear (restore byte 1 + the action load data -> the client's RestoreActionsFromLoadData). On 3576 that
+  function is 0x949EB0 (2976 0x8646D0; RestartLayerAction 0x949080; the layer's chart is +0x118, not +0x110), so
+  the guest diag (guest_actor_diag) was REFUSED; it is ported now (companion_probe.h) to count per remote NPC:
+  restore byte 0 / restored / chart failure / other.
