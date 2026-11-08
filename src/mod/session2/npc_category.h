@@ -6,9 +6,11 @@
 //           key -> category map; sent to the guest as control state 16 on a change (or every 5 s); the same map
 //           serves the host's SERVER when it judges user 2's character.
 //   guest   the host's map from state 16 (dropped after 15 s without one).
-//   both    an inline hook on 0x24752E0 (CheckQuestDialogCategory's evaluate): for the guest's character (on the
-//           guest's client: any player character; on the host's server: server_user2_player_key) an NPC whose own
-//           entry is missing or 0 is judged with the host's category. Nothing in the game is written.
+//   both    an inline hook on the category getter 0x1C358E0 (table, NPC key): for a table of the guest's character
+//           (on the guest's client: any player character; on the host's server: server_user2_player_key) a 0 answer
+//           (the NPC's own entry missing or 0) becomes the host's category. Its callers: CheckQuestDialogCategory and
+//           HasQuestDialog's dialog search (which gives up at 0 before it reads the guest's OWN dialogs, tcB86).
+//           Nothing in the game is written.
 
 #include <cstdint>
 #include <span>

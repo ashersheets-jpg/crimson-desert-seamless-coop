@@ -570,6 +570,7 @@ SafetyHookMid g_oc_exit;
 std::atomic<uint32_t> g_gt_lines_client{0}, g_gt_lines_server{0};
 uint64_t g_gt_seen[128] = {};
 std::mutex g_gt_mu;
+int call_valid_logged_in(uintptr_t fn, uintptr_t obj);
 uintptr_t __fastcall leaf_detour(uintptr_t obj, uintptr_t param, uintptr_t flag, uintptr_t r9) {
     const uintptr_t r = g_leaf_hook.unsafe_call<uintptr_t>(obj, param, flag, r9);
     if (t_gt_on && t_gt_n < 48) {
@@ -618,14 +619,81 @@ uintptr_t __fastcall leaf_detour(uintptr_t obj, uintptr_t param, uintptr_t flag,
                         game::safe_read(e + 0x18, &c18, 1);
                         game::safe_read(e + 0x19, &c19, 1);
                     }
-                    found = std::format("entry {} cat18 {} cat19 {}", ix, c18, c19);
+                    uint32_t ndlg = 0;
+                    uint32_t d0[2] = {};
+                    uintptr_t dl = 0;
+                    if (e) {
+                        game::safe_read(e + 0x10, &ndlg, 4);
+                        game::safe_read(e + 8, &dl, 8);
+                        if (dl) game::safe_read(dl, d0, 8);
+                    }
+                    found = std::format("entry {} cat18 {} cat19 {} dialogs {} first ({:X},{:X})", ix, c18, c19, ndlg,
+                                        d0[0], d0[1]);
                     break;
                 }
             }
             t_gt_buf += "[" + found + "]";
+            {   // the subject's OWN table ([[subj+0x68]+0xF8], where SetQuestDialogAck writes) vs the main character's
+                uintptr_t sc = 0, st = 0;
+                uint32_t scount = 0;
+                game::safe_read(subj + 0x68, &sc, 8);
+                if (sc) game::safe_read(sc + 0xF8, &st, 8);
+                if (st) game::safe_read(st + 0x6C, &scount, 4);
+                t_gt_buf += std::format("[subj 0x{:X} main 0x{:X} | own table 0x{:X} count {} vs main's 0x{:X}]", subj,
+                                        main, st, scount, tab);
+                // HasQuestDialog's gate 0x2228460: the user's [+0xD8] and its vf+0xC0(4, 0x10) ("valid, logged in").
+                uintptr_t d8 = 0, vt = 0, fn = 0;
+                game::safe_read(user + 0xD8, &d8, 8);
+                int ok = -1;
+                if (d8 && game::safe_read(d8, &vt, 8) && vt && game::safe_read(vt + 0xC0, &fn, 8) && fn) {
+                    ok = call_valid_logged_in(fn, d8);
+                }
+                t_gt_buf += std::format("[user 0x{:X} +D8 0x{:X} (key 0x{:08X}) valid-logged-in {}]", user, d8,
+                                        d8 ? ip_key_of(d8) : 0, ok);
+            }
             t_gt_buf += std::format("[want {} | npc +60 0x{:X} | subject 0x{:08X} main 0x{:08X} table {} buckets {} count {}]", want, tkey,
                                     subj ? ip_key_of(subj) : 0, main ? ip_key_of(main) : 0, tab ? "yes" : "NONE", buckets, count);
         }
+    }
+    return r;
+}
+// The quest dialogs' activation requirements (HasQuestDialog -> 0x1C35970 -> 0x253E6C0(req, user?, npc, ...)):
+// the requirement's type byte (req+0) and its result, inside the same Greet window as the leaves.
+// A game virtual (bool vf+0xC0(obj, 4, 0x10, 0, 0)) under SEH: 1 / 0, -2 if it faulted.
+int call_valid_logged_in(uintptr_t fn, uintptr_t obj) {
+    using Fn = bool(__fastcall*)(uintptr_t, int, int, uintptr_t, uintptr_t);
+    __try {
+        return reinterpret_cast<Fn>(fn)(obj, 4, 0x10, 0, 0) ? 1 : 0;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return -2;
+    }
+}
+SafetyHookInline g_hqd_hook;
+// HasQuestDialog's search 0x1C35970(table, npc, mode, types): its mode (Active 0 / All), the type list's first words and
+// the answer, inside the Greet window; reqs evaluated inside it follow in the buffer.
+uint64_t __fastcall hqd_detour(uintptr_t tab, uintptr_t npc, uintptr_t mode, uintptr_t types) {
+    std::string mark;
+    if (t_gt_on && t_gt_n < 64) {
+        uint32_t tw[4] = {};
+        if (types) game::safe_read(types, tw, sizeof tw);
+        mark = std::format(" HQD(mode {} types {:X} {:X} {:X} {:X}:", static_cast<unsigned>(mode & 0xFF), tw[0], tw[1],
+                           tw[2], tw[3]);
+        t_gt_buf += mark;
+    }
+    const uint64_t r = g_hqd_hook.unsafe_call<uint64_t>(tab, npc, mode, types);
+    if (!mark.empty() && t_gt_on) t_gt_buf += std::format(" ->{})", static_cast<unsigned>(r & 0xFF));
+    return r;
+}
+SafetyHookInline g_req_hook;
+bool __fastcall req_detour(uint8_t* req, uintptr_t a2, uintptr_t npc, uintptr_t a4) {
+    const bool r = g_req_hook.unsafe_call<bool>(req, a2, npc, a4);
+    if (t_gt_on && t_gt_n < 64) {
+        ++t_gt_n;
+        uint8_t type = 0xFF;
+        uint32_t w[4] = {};
+        game::safe_read(reinterpret_cast<uintptr_t>(req), &type, 1);
+        game::safe_read(reinterpret_cast<uintptr_t>(req) + 4, w, sizeof w);
+        t_gt_buf += std::format(" req{}({:X} {:X} {:X})={}", type, w[0], w[1], w[2], r ? 1 : 0);
     }
     return r;
 }
@@ -1220,6 +1288,21 @@ void interact_probe_start(bool on, bool owner_override) {
             g_leaf_hook = safetyhook::create_inline(reinterpret_cast<void*>(base + 0x2417610),
                                                     reinterpret_cast<void*>(&leaf_detour));
         log::info("InteractProbe: leaf results 0x2417610 {}", g_leaf_hook ? "hooked" : "NOT hooked (bytes differ)");
+        uint8_t q[7] = {};
+        game::safe_read(base + 0x253E6C0, q, 7);
+        static constexpr uint8_t qwant[7] = {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x10};
+        if (std::memcmp(q, qwant, 7) == 0)
+            g_req_hook = safetyhook::create_inline(reinterpret_cast<void*>(base + 0x253E6C0),
+                                                   reinterpret_cast<void*>(&req_detour));
+        log::info("InteractProbe: dialog requirements 0x253E6C0 {}", g_req_hook ? "hooked" : "NOT hooked");
+        uint8_t hq[15] = {};
+        game::safe_read(base + 0x1C35970, hq, 15);
+        static constexpr uint8_t hqwant[15] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74,
+                                               0x24, 0x10, 0x48, 0x89, 0x7C, 0x24, 0x20};
+        if (std::memcmp(hq, hqwant, 15) == 0)
+            g_hqd_hook = safetyhook::create_inline(reinterpret_cast<void*>(base + 0x1C35970),
+                                                   reinterpret_cast<void*>(&hqd_detour));
+        log::info("InteractProbe: quest dialog search 0x1C35970 {}", g_hqd_hook ? "hooked" : "NOT hooked");
     }
     {
         uint8_t h[5] = {};
