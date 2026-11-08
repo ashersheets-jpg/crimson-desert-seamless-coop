@@ -48,6 +48,7 @@ private:
     bool resolve();
     void become_ready();
     void fail(const char* what);
+    bool network_usable() const;
     void drain_incoming();
 
     std::unique_ptr<Api> api_;
@@ -56,6 +57,16 @@ private:
     uint64_t accept_from_;
     bool disabled_ = false;
     bool ready_ = false;
+    // Steam's relay network reports 100 ("Current") once it can route. Under
+    // Proton the bridge (lsteamclient.dll) can fault if the networking API is
+    // used before that; today's crash was ReceiveMessagesOnChannel ~0.3 s after
+    // "ready". Calls that touch the network wait for this or for a grace period.
+    bool network_ready_ = false;
+    // A single exception is not fatal: the Proton bridge fails mostly once,
+    // right after startup. Retry with a growing delay instead of giving up.
+    int failures_ = 0;
+    uint32_t retry_at_ms_ = 0;
+    uint32_t ready_at_ms_ = 0;
     uint64_t own_id_ = 0;
     uint64_t peer_ = 0;
     uint32_t last_poll_ms_ = 0;

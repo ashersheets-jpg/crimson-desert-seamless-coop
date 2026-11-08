@@ -79,6 +79,23 @@ constexpr int kResultOK = 1;
 constexpr uint32_t kAppId = 3321460;  // Crimson Desert
 constexpr uint32_t kPollEveryMs = 500;
 constexpr uint32_t kReadyTimeoutMs = 120000;
+constexpr int kRelayReady = 100;          // k_ESteamNetworkingAvailability_Current
+// After "ready", wait this long for the relay before using the network API, so
+// Proton's bridge is up. Past it, keep going anyway: a relay that never reports
+// 100 must not block co-op forever.
+constexpr uint32_t kRelayGraceMs = 15000;
+constexpr int kMaxFailures = 5;           // exceptions before giving up
+constexpr uint32_t kRetryBaseMs = 2000;   // 2 s, 4 s, 8 s, 16 s between attempts
+
+// Proton's lsteamclient.dll is the usual culprit when a Steam call faults (the
+// game and the mod both work on Windows). Logged once, as a hint.
+bool on_proton() {
+    static const bool value = [] {
+        HMODULE nt = GetModuleHandleW(L"ntdll.dll");
+        return nt && GetProcAddress(nt, "wine_get_version") != nullptr;
+    }();
+    return value;
+}
 
 SteamNetworkingIdentity identity(uint64_t id) {
     SteamNetworkingIdentity i;
@@ -90,9 +107,10 @@ SteamNetworkingIdentity identity(uint64_t id) {
 }
 
 // Every call into Steam goes through one of these: a crash in there would be
-// reported to Pearl Abyss as a game crash, so the first exception disables
-// the transport instead. Templates with only trivially copyable arguments,
-// so __try is allowed.
+// reported to Pearl Abyss as a game crash, so an exception never escapes. It is
+// not fatal either: fail() retries (see there) and only disables the transport
+// if the same call keeps faulting. Templates with only trivially copyable
+// arguments, so __try is allowed.
 template <class R, class... P, class... A>
 bool call(R& out, R (*fn)(P...), A... args) {
     if (!fn) return false;
@@ -167,9 +185,24 @@ SteamTransport::~SteamTransport() {
 }
 
 void SteamTransport::fail(const char* what) {
-    if (!disabled_) log::error("Steam: exception in {}; Steam transport disabled", what);
-    disabled_ = true;
     ready_ = false;
+    network_ready_ = false;
+    if (disabled_) return;
+    ++failures_;
+    if (failures_ >= kMaxFailures) {
+        disabled_ = true;
+        log::error("Steam: {} kept failing ({} times); Steam transport disabled for this session",
+                   what, failures_);
+        return;
+    }
+    const uint32_t delay = kRetryBaseMs << (failures_ - 1);
+    retry_at_ms_ = now_ms() + delay;
+    log::warn("Steam: exception in {}; retrying in {} s (attempt {} of {})", what, delay / 1000,
+              failures_, kMaxFailures);
+    if (on_proton() && failures_ == 1) {
+        log::warn("Steam: Proton's Steam bridge (lsteamclient.dll) faulted; the mod retries. If this "
+                  "repeats, restarting Steam or the game usually clears it");
+    }
 }
 
 bool SteamTransport::resolve() {
@@ -241,6 +274,9 @@ void SteamTransport::become_ready() {
                                                       : "could not be turned off");
     if (!call_void(a.init_relay, a.utl)) return fail("InitRelayNetworkAccess");
     ready_ = true;
+    failures_ = 0;
+    retry_at_ms_ = 0;
+    ready_at_ms_ = now_ms();
     log::info("Steam: ready as '{}' (SteamID64 {}), channel {}, {}", name ? name : "?", own_id_,
               channel_, host_ ? "host" : "guest");
     const auto playing = friends_playing();
@@ -252,13 +288,16 @@ void SteamTransport::become_ready() {
     }
 }
 
-void SteamTransport::poll(uint32_t now_ms) {
-    if (disabled_ || now_ms - last_poll_ms_ < kPollEveryMs) return;
-    last_poll_ms_ = now_ms;
+void SteamTransport::poll(uint32_t now) {
+    if (disabled_ || now - last_poll_ms_ < kPollEveryMs) return;
+    last_poll_ms_ = now;
+    // A fault (see fail()) parks the transport until the retry is due, instead
+    // of disabling it for the whole session.
+    if (failures_ && static_cast<int32_t>(now - retry_at_ms_) < 0) return;
     Api& a = *api_;
     if (!ready_) {
         become_ready();
-        if (!ready_ && !disabled_ && now_ms - started_ms_ > kReadyTimeoutMs) {
+        if (!ready_ && !disabled_ && !failures_ && now - started_ms_ > kReadyTimeoutMs) {
             log::error("Steam: not logged on after {} s (offline mode?); no co-op over Steam",
                        kReadyTimeoutMs / 1000);
             disabled_ = true;
@@ -266,6 +305,18 @@ void SteamTransport::poll(uint32_t now_ms) {
         return;
     }
     if (!call_void(a.release_thread_memory)) return fail("ReleaseCurrentThreadMemory");
+
+    // Relay status first: nothing that opens or touches a session runs before
+    // it (or the grace period) is up, because Proton's Steam bridge faults when
+    // the networking API is used while it is still starting.
+    int relay = 0;
+    if (!call(relay, a.relay_status, a.utl, static_cast<void*>(nullptr))) return fail("GetRelayNetworkStatus");
+    if (relay != last_relay_status_) {
+        log::info("Steam: relay network status {} (100 = ready)", relay);
+        last_relay_status_ = relay;
+    }
+    network_ready_ = relay == kRelayReady;
+    if (!network_usable()) return;
 
     // Host: accept the session of whoever may connect. Sending to someone
     // accepts implicitly, so a guest needs nothing here.
@@ -284,12 +335,6 @@ void SteamTransport::poll(uint32_t now_ms) {
         }
     }
 
-    int relay = 0;
-    if (!call(relay, a.relay_status, a.utl, static_cast<void*>(nullptr))) return fail("GetRelayNetworkStatus");
-    if (relay != last_relay_status_) {
-        log::info("Steam: relay network status {} (100 = ready)", relay);
-        last_relay_status_ = relay;
-    }
     if (peer_) {
         const auto id = identity(peer_);
         int state = 0;
@@ -363,6 +408,12 @@ bool SteamTransport::send(const PeerAddr& to, std::span<const uint8_t> data) {
     return true;
 }
 
+// True once Steam's relay is up, or once the grace period after "ready" has
+// passed: a relay that never reports 100 must not block co-op forever.
+bool SteamTransport::network_usable() const {
+    return network_ready_ || now_ms() - ready_at_ms_ >= kRelayGraceMs;
+}
+
 void SteamTransport::drain_incoming() {
     SteamNetworkingMessage* msgs[16];
     int n = 0;
@@ -388,7 +439,7 @@ void SteamTransport::drain_incoming() {
 std::optional<size_t> SteamTransport::recv(PeerAddr& from, std::span<uint8_t> buf, int timeout_ms) {
     const uint32_t until = now_ms() + static_cast<uint32_t>(timeout_ms);
     for (;;) {
-        if (inbox_.empty() && ready_ && !disabled_) drain_incoming();
+        if (inbox_.empty() && ready_ && !disabled_ && network_usable()) drain_incoming();
         if (!inbox_.empty()) {
             auto [id, bytes] = std::move(inbox_.front());
             inbox_.pop_front();
@@ -398,13 +449,20 @@ std::optional<size_t> SteamTransport::recv(PeerAddr& from, std::span<uint8_t> bu
             return bytes.size();
         }
         if (static_cast<int32_t>(now_ms() - until) >= 0) return std::nullopt;
-        Sleep(1);
+        Sleep(ready_ && !network_usable() ? 5 : 1);
     }
 }
 
 std::string SteamTransport::status() const {
     if (disabled_) return "steam: disabled (see earlier errors)";
-    if (!ready_) return "steam: waiting for the game's Steam login";
+    if (!ready_) {
+        if (failures_) {
+            const int32_t wait = static_cast<int32_t>(retry_at_ms_ - now_ms());
+            return std::format("steam: retrying after {} fault(s) (next in {} ms)", failures_,
+                               wait > 0 ? wait : 0);
+        }
+        return "steam: waiting for the game's Steam login";
+    }
     return std::format("steam: id {} | sent {} recv {} send errors {} | session {} | relay {} | {}", own_id_,
                        sent_, received_, send_errors_, last_session_state_, last_relay_status_, last_status_);
 }

@@ -25,6 +25,8 @@ Since 0.1.0-alpha+f3517194 (2026-11-06 / 07, game 1.0.0.3576; tested with two co
 - Direct play without Steam (Radmin VPN, LAN, any VPN): [net] transport=direct, see DIRECT PLAY in README.txt. Asked for by a playtester so they need not patch each release.
 - From a playtester's patch (Plitos, merged): a quest step from before a co-op save switch is no longer applied, live quest steps are checked again before they run, and malformed cutscene messages are ignored.
 
+Linux/Proton (2026-11-05, patch 0004): the panel, HUD and first-launch cards now appear under Proton/Wine. The overlay used to hook only NVIDIA Streamline's swap chain class, which is not the one presenting there (`Overlay: presents 0` in `cdmp.log`); on Wine it now also hooks DXGI's own class. Windows is unchanged. Steam: one fault in Proton's Steam bridge no longer turns co-op off for the rest of the session — the mod waits for Steam's relay network and retries with backoff (5 attempts).
+
 New (2026-11-05, after the first playtest):
 - Hide and seek, a new challenge: the challenger counts first with eyes closed (45 s) while the friend hides within 100 m (a gold ring on the ground marks the edge, red when you are outside). The seeker has 3 minutes; the hider's name tag, distance and map marker are hidden, and Cold / Warm / Hot tells how close you are. Within 4 m = found. Roles swap every round, first to 2.
 - Fishing contest, a new challenge: six minutes, each player fishes in their own world; every fish kept scores by kind (river 1, sea 2, legendary 5) and the friend sees each catch ("Ana caught a Trout +1"). A draw plays another round.

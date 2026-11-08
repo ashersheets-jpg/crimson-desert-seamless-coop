@@ -44,6 +44,14 @@ jobs:
       - run: cmake -S . -B build -A x64
       - run: cmake --build build --config RelWithDebInfo --parallel
       - run: ctest --test-dir build -C RelWithDebInfo --output-on-failure
+      # The built mod, so a Linux/Proton player can pick it up from the run
+      # (there is no local MSVC here). Path: CMAKE_RUNTIME_OUTPUT_DIRECTORY +
+      # the multi-config subfolder.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cdmp-asi-msvc
+          path: upstream/cd-coop-3446/build/bin/RelWithDebInfo/cdmp.asi
+          if-no-files-found: error
 
   linux-tests:
     runs-on: ubuntu-latest

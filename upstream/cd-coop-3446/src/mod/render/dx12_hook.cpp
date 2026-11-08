@@ -47,10 +47,6 @@ using ResizeBuffers1Fn = HRESULT(STDMETHODCALLTYPE*)(IDXGISwapChain3*, UINT, UIN
 using ExecuteCommandListsFn = void(STDMETHODCALLTYPE*)(ID3D12CommandQueue*, UINT,
                                                        ID3D12CommandList* const*);
 
-PresentFn o_present = nullptr;
-Present1Fn o_present1 = nullptr;
-ResizeBuffersFn o_resize = nullptr;
-ResizeBuffers1Fn o_resize1 = nullptr;
 ExecuteCommandListsFn o_execute = nullptr;
 void** g_queue_vtable = nullptr;
 std::atomic<bool> g_execute_hooked{false};
@@ -113,11 +109,19 @@ bool hook_function(void* target, void* detour, SafetyHookInline& hook, Fn& origi
     return true;
 }
 
-SafetyHookInline g_present_hook;
-SafetyHookInline g_present1_hook;
-SafetyHookInline g_resize_hook;
-SafetyHookInline g_resize1_hook;
 SafetyHookInline g_execute_hook;
+
+// Wine/Proton: the game presents through DXGI's own swap chain class, not
+// through NVIDIA Streamline's proxy (the proxy is only used on Windows). This
+// is what makes the overlay draw there: the class actually presenting is found
+// by creating a throwaway swap chain, exactly as on Windows without Streamline.
+bool running_under_wine() {
+    static const bool value = [] {
+        HMODULE nt = GetModuleHandleW(L"ntdll.dll");
+        return nt && GetProcAddress(nt, "wine_get_version") != nullptr;
+    }();
+    return value;
+}
 
 void STDMETHODCALLTYPE hk_execute(ID3D12CommandQueue* q, UINT n, ID3D12CommandList* const* lists) {
     if (q->GetDesc().Type == D3D12_COMMAND_LIST_TYPE_DIRECT) t_last_direct_queue = q;
@@ -200,6 +204,7 @@ ComPtr<ID3D12CommandQueue> find_queue(IDXGISwapChain* sc, std::string& source) {
         return queue;
     }
     // Fallback: the last direct queue that executed on this (present) thread.
+    if (!g_queue_vtable) return queue;
     if (!g_execute_hooked.exchange(true)) {
         log::info("Overlay: GetDevice gave no queue; watching ExecuteCommandLists instead");
         hook_function(g_queue_vtable[kSlotExecuteCommandLists],
@@ -405,32 +410,53 @@ void present_common(IDXGISwapChain* sc, UINT flags) {
     guarded_present(sc);
 }
 
+// Two independent hook sets. The game presents through one class only, but
+// that class differs by platform: Streamline's proxy on Windows, DXGI's own
+// class on Wine/Proton. Both are hooked when both exist, so whichever one
+// presents gets drawn. A Present that internally calls the other one is
+// ignored through t_in_present.
+template <int N>
+struct HookSet {
+    static inline SafetyHookInline present_hook;
+    static inline SafetyHookInline present1_hook;
+    static inline SafetyHookInline resize_hook;
+    static inline SafetyHookInline resize1_hook;
+    static inline PresentFn o_present = nullptr;
+    static inline Present1Fn o_present1 = nullptr;
+    static inline ResizeBuffersFn o_resize = nullptr;
+    static inline ResizeBuffers1Fn o_resize1 = nullptr;
+};
+
+template <int N>
 HRESULT STDMETHODCALLTYPE hk_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
     present_common(sc, flags);
-    HRESULT hr = o_present(sc, sync, flags);
+    HRESULT hr = HookSet<N>::o_present(sc, sync, flags);
     t_in_present = false;
     return hr;
 }
 
+template <int N>
 HRESULT STDMETHODCALLTYPE hk_present1(IDXGISwapChain1* sc, UINT sync, UINT flags,
                                       const DXGI_PRESENT_PARAMETERS* params) {
     present_common(sc, flags);
-    HRESULT hr = o_present1(sc, sync, flags, params);
+    HRESULT hr = HookSet<N>::o_present1(sc, sync, flags, params);
     t_in_present = false;
     return hr;
 }
 
+template <int N>
 HRESULT STDMETHODCALLTYPE hk_resize(IDXGISwapChain* sc, UINT count, UINT w, UINT h,
                                     DXGI_FORMAT fmt, UINT flags) {
     before_resize(sc);
-    return o_resize(sc, count, w, h, fmt, flags);
+    return HookSet<N>::o_resize(sc, count, w, h, fmt, flags);
 }
 
+template <int N>
 HRESULT STDMETHODCALLTYPE hk_resize1(IDXGISwapChain3* sc, UINT count, UINT w, UINT h,
                                      DXGI_FORMAT fmt, UINT flags, const UINT* masks,
                                      IUnknown* const* queues) {
     before_resize(sc);
-    return o_resize1(sc, count, w, h, fmt, flags, masks, queues);
+    return HookSet<N>::o_resize1(sc, count, w, h, fmt, flags, masks, queues);
 }
 
 // The vtable of a class with MSVC RTTI, found in a loaded module's image by its type name (e.g.
@@ -465,30 +491,20 @@ void** find_rtti_vtable(HMODULE module, const char* type_name) {
     return nullptr;
 }
 
-// Learns the vtable addresses of the swap chain class the game presents through and of D3D12's
-// command queue class.
+// What the overlay hooks, and why there are two candidates.
 //
 // Co-op+ (3460): the game loads NVIDIA Streamline, which wraps every DXGI swap chain in its own
-// proxy (sl::interposer::DXGISwapChain; the overlay has always ended up hooking that class's
-// Present). Creating a throwaway swap chain while the game runs, D3D12 or D3D11, is picked up by
-// DLSS frame generation and crashed the game a moment later in about one launch in five
-// (sl.dlss_g.dll on our thread, sl.interposer.dll / d3d11.dll on the game's). With Streamline
-// loaded, the proxy's vtable is read from its RTTI instead and no swap chain is created. Without
-// Streamline, the throwaway D3D12 swap chain as before. The command queue vtable still needs a
-// D3D12 device and queue, but no swap chain.
-bool find_vtables(void**& swapchain_vtable, void**& queue_vtable) {
-    if (HMODULE sl = GetModuleHandleW(L"sl.interposer.dll")) {
-        swapchain_vtable = find_rtti_vtable(sl, ".?AUDXGISwapChain@interposer@sl@@");
-        if (!swapchain_vtable) {
-            log::error("Overlay: Streamline is loaded but its swap chain class was not found");
-            return false;
-        }
-        log::info("Overlay: using Streamline's swap chain class (no throwaway swap chain)");
-    }
-
-    ComPtr<IDXGIFactory4> factory;
-    ComPtr<ID3D12Device> device;
-    ComPtr<ID3D12CommandQueue> queue;
+// proxy (sl::interposer::DXGISwapChain); on Windows that proxy is what presents, so its vtable is
+// read from its RTTI and no throwaway swap chain is created (creating one while DLSS frame
+// generation runs crashed the game in about one launch in five).
+//
+// Wine/Proton (the Linux build): vkd3d-proton + Wine's dxgi create and present the swap chain, and
+// Streamline's proxy does not present at all. The overlay used to hook only the Streamline class,
+// so the game ran with "presents 0" and no panel. On Wine we therefore also create the throwaway
+// swap chain (as on Windows without Streamline) and hook DXGI's own class, which is the one that
+// presents there. The command queue vtable still needs a D3D12 device and queue.
+bool make_dummy_device(ComPtr<IDXGIFactory4>& factory, ComPtr<ID3D12Device>& device,
+                       ComPtr<ID3D12CommandQueue>& queue) {
     if (FAILED(CreateDXGIFactory1(IID_PPV_ARGS(&factory)))) return false;
     if (FAILED(D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&device)))) {
         ComPtr<IDXGIAdapter> warp;
@@ -497,10 +513,14 @@ bool find_vtables(void**& swapchain_vtable, void**& queue_vtable) {
     }
     D3D12_COMMAND_QUEUE_DESC qd{};
     qd.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-    if (!device || FAILED(device->CreateCommandQueue(&qd, IID_PPV_ARGS(&queue)))) return false;
-    queue_vtable = *reinterpret_cast<void***>(queue.Get());
-    if (swapchain_vtable) return true;
+    return device && SUCCEEDED(device->CreateCommandQueue(&qd, IID_PPV_ARGS(&queue)));
+}
 
+// The vtable of the swap chain class DXGI itself creates. On Wine/Proton this is the class the
+// game presents through, so hooking its Present is what makes the overlay draw there.
+void** find_dxgi_vtable(IDXGIFactory4* factory, ID3D12CommandQueue* queue) {
+    if (!factory || !queue) return nullptr;
+    void** vtable = nullptr;
     HINSTANCE inst = GetModuleHandleW(nullptr);
     WNDCLASSEXW wc{};
     wc.cbSize = sizeof wc;
@@ -520,13 +540,46 @@ bool find_vtables(void**& swapchain_vtable, void**& queue_vtable) {
         sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
         sd.BufferCount = 2;
         sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-        if (SUCCEEDED(factory->CreateSwapChainForHwnd(queue.Get(), hwnd, &sd, nullptr, nullptr, &swapchain))) {
-            swapchain_vtable = *reinterpret_cast<void***>(swapchain.Get());
+        if (SUCCEEDED(factory->CreateSwapChainForHwnd(queue, hwnd, &sd, nullptr, nullptr, &swapchain))) {
+            vtable = *reinterpret_cast<void***>(swapchain.Get());
         }
         DestroyWindow(hwnd);
     }
     UnregisterClassW(wc.lpszClassName, inst);
-    return swapchain_vtable != nullptr;
+    return vtable;
+}
+
+// True when both vtables share the Present implementation: hooking it twice would be
+// double-hooking the same function, so one candidate is dropped.
+bool same_present(void** a, void** b) {
+    return a && b && a[kSlotPresent] == b[kSlotPresent] && a[kSlotPresent1] == b[kSlotPresent1];
+}
+
+template <int N>
+bool hook_swapchain(void** vtable, const char* label) {
+    if (!vtable) return false;
+    // Resize hooks first: once Present is hooked we may start holding GPU
+    // work that a resize has to wait for. A failure in a resize hook, though,
+    // must not stop Present: without Present nothing is drawn at all.
+    const bool resize = hook_function(vtable[kSlotResizeBuffers],
+                                      reinterpret_cast<void*>(&hk_resize<N>),
+                                      HookSet<N>::resize_hook, HookSet<N>::o_resize, "ResizeBuffers");
+    const bool resize1 = hook_function(vtable[kSlotResizeBuffers1],
+                                       reinterpret_cast<void*>(&hk_resize1<N>),
+                                       HookSet<N>::resize1_hook, HookSet<N>::o_resize1, "ResizeBuffers1");
+    const bool present = hook_function(vtable[kSlotPresent], reinterpret_cast<void*>(&hk_present<N>),
+                                       HookSet<N>::present_hook, HookSet<N>::o_present, "Present");
+    const bool present1 = hook_function(vtable[kSlotPresent1],
+                                        reinterpret_cast<void*>(&hk_present1<N>),
+                                        HookSet<N>::present1_hook, HookSet<N>::o_present1, "Present1");
+    if (!present && !present1) {
+        note({}, "inline hook failed");
+        return false;
+    }
+    if (!resize || !resize1) note({}, "resize hook failed");
+    log::info("Overlay: {} hooks installed (swap chain vtable 0x{:X})", label,
+              reinterpret_cast<uintptr_t>(vtable));
+    return true;
 }
 
 }  // namespace
@@ -535,35 +588,58 @@ bool install(DrawFn draw) {
     InitializeCriticalSection(&g_render_cs);
     g_draw = draw;
 
-    void** sc_vtable = nullptr;
-    if (!find_vtables(sc_vtable, g_queue_vtable)) {
-        log::error("Overlay: could not create the dummy swap chain / D3D12 queue");
-        note({}, "dummy swap chain failed");
-        return false;
+    const bool wine = running_under_wine();
+    if (wine)
+        log::info("Overlay: Wine/Proton detected; hooking DXGI's own swap chain class (Streamline's is not the "
+                  "one presenting here)");
+
+    ComPtr<IDXGIFactory4> factory;
+    ComPtr<ID3D12Device> device;
+    ComPtr<ID3D12CommandQueue> queue;
+    if (make_dummy_device(factory, device, queue))
+        g_queue_vtable = *reinterpret_cast<void***>(queue.Get());
+
+    void** sl_vtable = nullptr;
+    HMODULE sl_module = GetModuleHandleW(L"sl.interposer.dll");
+    if (sl_module) {
+        sl_vtable = find_rtti_vtable(sl_module, ".?AUDXGISwapChain@interposer@sl@@");
+        if (sl_vtable)
+            log::info("Overlay: found Streamline's swap chain class");
+        else
+            log::warn("Overlay: Streamline is loaded but its swap chain class was not found");
     }
-    // Resize hooks first: once Present is hooked we may start holding GPU
-    // work that a resize has to wait for.
-    const bool ok =
-        hook_function(sc_vtable[kSlotResizeBuffers], reinterpret_cast<void*>(&hk_resize),
-                      g_resize_hook, o_resize, "ResizeBuffers") &&
-        hook_function(sc_vtable[kSlotResizeBuffers1], reinterpret_cast<void*>(&hk_resize1),
-                      g_resize1_hook, o_resize1, "ResizeBuffers1") &&
-        hook_function(sc_vtable[kSlotPresent], reinterpret_cast<void*>(&hk_present),
-                      g_present_hook, o_present, "Present") &&
-        hook_function(sc_vtable[kSlotPresent1], reinterpret_cast<void*>(&hk_present1),
-                      g_present1_hook, o_present1, "Present1");
-    if (!ok) {
-        // Leave whatever did hook in place: each hook is complete on its own,
-        // and an unhooked Present simply means nothing gets drawn.
-        note({}, "inline hook failed");
+
+    bool installed = false;
+    if (wine) {
+        void** dxgi_vtable = find_dxgi_vtable(factory.Get(), queue.Get());
+        if (!dxgi_vtable)
+            log::warn("Overlay: could not create the dummy swap chain (DXGI's swap chain class unknown)");
+        else
+            installed = hook_swapchain<0>(dxgi_vtable, "DXGI");
+        if (sl_vtable) {
+            if (same_present(sl_vtable, dxgi_vtable))
+                log::info("Overlay: Streamline and DXGI share the Present implementation; one hook is enough");
+            else
+                installed = hook_swapchain<1>(sl_vtable, "Streamline") || installed;
+        }
+    } else if (sl_vtable) {
+        // Streamline is loaded: its proxy is the one presenting on Windows.
+        installed = hook_swapchain<0>(sl_vtable, "Streamline");
+    } else if (!sl_module) {
+        // Only without Streamline: creating a throwaway swap chain while DLSS
+        // frame generation runs crashed the game in about one launch in five.
+        void** dxgi_vtable = find_dxgi_vtable(factory.Get(), queue.Get());
+        if (dxgi_vtable) installed = hook_swapchain<0>(dxgi_vtable, "DXGI");
+    }
+    if (!installed) {
+        log::error("Overlay: no swap chain class could be hooked (the panel cannot draw)");
+        note({}, "no swap chain class hooked");
         return false;
     }
     {
         std::lock_guard lock(g_status_mutex);
         g_status.installed = true;
     }
-    log::info("Overlay hooks installed (swap chain vtable 0x{:X})",
-              reinterpret_cast<uintptr_t>(sc_vtable));
     return true;
 }
 
