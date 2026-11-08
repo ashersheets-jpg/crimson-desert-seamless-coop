@@ -2512,3 +2512,9 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   guest is offered a different entry under the same prompt (the 25 entries come from the NPC's AI state node).
   tcB59 (per NPC and entry index: kept / refusal) ran out of its 160-line budget on other actors (only 2 gimmicks
   differ: host 0x3E2AD36C, guest 0x2569C661); tcB60 logs only the townsfolk (20+ entries), 700 lines.
+- 2026-11-08 11:10 tcB60 (per NPC and entry, townsfolk only): THE GREET IS ENTRY INDEX 0x0055 -- the host keeps it for
+  0xB01003B7 / 0xB010058F / 0xB010060A; on the guest the same NPCs' 0x0055 is refused 0x2569C661 =
+  eErrNoInteractionTargetConditionCheckFail (a TARGET condition, the second exit of 0x25FA200). Other codes named:
+  0x3E2AD36C eErrNoInvalidInteractionDistance (the host's usual refusal of far entries), 0x669DBA09
+  eErrNoInteractionShowWhenTargeted. tcB61 dumps the target condition that fails for entry 0x0055 on the guest (a
+  hook on the collector's call 0xAC0330 records the entry index; the dump hook at 0x25FA549).
