@@ -2245,3 +2245,8 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   most likely the guest's E toggled it through the host's server. Not proven yet: the host's user 2 Req summary
   shows only the top 8 opcodes; native user2_funnels now always prints user 2's interaction Reqs (3008 / 3073 /
   2887) -- tcB31 checks. SAVES OK.
+- 2026-11-08 01:25 tcB31 (tcB30 again, with the new counter): the host's server got EVERY guest E press as a native
+  interaction: "interaction 3008x12 3073x12 2887x0" (InteractionPreemptionStepReq + InteractionDoStepReq from user 2,
+  no reset) -- the guest's interaction path to the host's world works. Guest "actors held 0", SAVES OK. The guest's
+  prompt is the hanging lamp ("Fire / E Turn off"); 12 presses = an even number of toggles, so no visible change is
+  expected at the end. tcB32: the same turns with no E, then ONE E on the lamp, both screens compared.
