@@ -2628,3 +2628,16 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   NPC). Every leaf goes through the generic 0x2417610 (obj, compare param, invert flag): [obj+0x10] set ->
   param vf+0x20, else the class's vf+0xA8. tcB76: a read-only hook there logs each leaf's result for the Greet on
   the host's client and for user 2's requests on the server (exit 0x25FA561), to see which leaf differs.
+- 2026-11-08 17:30 tcB76-78 FOUND THE GUEST'S NPC BLOCK, and it is NOT story progress. Logging each part of the Greet's
+  condition showed the guest stopping at "CheckQuestDialogCategory" (on its client and on the host's server): each
+  player has a per-NPC quest-dialog category table, and the Greet is refused when the NPC's category is 0. Same NPCs,
+  same run (tcB78): the host's table has 200-300 NPCs at category 1 (one at 2); the guest's has 30-80, at 0 or missing.
+  The server's quest-dialog replies (SetQuestDialogAck) are identical for both players, so both get the same dialogs;
+  the category byte is set by the NPCs' own stage/AI step (SetQuestDialogAICategory), which runs only where the NPCs
+  are controlled (the host's client) and only for its local player. So it is NPC state, not player progress: the
+  user's choice (the guest keeps its own progress) stands -- quests, knowledge and friendship stay the guest's.
+  FIX (native, local commit: npc_category + its pure logic and tests, [session2] npc_category_share=1 by default): the
+  host reads its own table every second and sends it to the guest as tunnel control state 16 (on a change or every
+  5 s); the guest's character (on the guest's client, and on the host's server) is judged with the host's category
+  only where its own entry is missing or 0. Nothing in the game is written. tcB79: the end-to-end check, no test
+  overrides.
