@@ -11,6 +11,7 @@
 #include <cstring>
 #include <format>
 #include <iterator>
+#include <map>
 #include <mutex>
 
 #include "mod/game/safe_memory.h"
@@ -560,6 +561,52 @@ bool hold_entry_of_user2(const HoldEntry& e) { return e.owner_who != OwnerWho::H
 
 bool npc_entry_of_leaving_user2(const HoldEntry& e) { return !e.observer_host; }
 
+// Co-op+ (2026-11-08, 3576: 1028 of 1051 held NPCs dropped "observer out of range"): once, the facts behind the first
+// "not observed": the observer value compared, the list of the sector at kTsSector, and every field of the actor's
+// TransformSync (0x300..0x800) that points to a sector whose observer list holds the observer.
+std::atomic<bool> g_sector_probed{false};
+void probe_sector_layout_once(uintptr_t actor, uintptr_t observer_user) {
+    if (g_sector_probed.exchange(true)) return;
+    const game::FastReads m;
+    std::string s = std::format("Co-op+ sector probe: actor 0x{:X} observer 0x{:X}", actor, observer_user);
+    const auto comps = m.ptr(actor + hold::kActorComponents);
+    const auto ts = comps ? m.ptr(*comps + hold::kComponentsTs) : std::nullopt;
+    if (!ts) {
+        log::warn("{} | TransformSync unreadable", s);
+        return;
+    }
+    s += std::format(" | TS 0x{:X}", *ts);
+    auto list_of = [&](uintptr_t sector) {
+        std::string l;
+        const auto cnt = m.rd<uint32_t>(sector + hold::kSectorObserverCount);
+        const auto data = m.ptr(sector + hold::kSectorObservers);
+        if (!cnt || !data || *cnt > 16) return std::string("unreadable");
+        for (uint32_t i = 0; i < *cnt; ++i) {
+            const auto u = m.rd<uintptr_t>(*data + static_cast<uintptr_t>(i) * hold::kObserverStride);
+            l += std::format("{}0x{:X}", l.empty() ? "" : " ", u ? *u : 0);
+        }
+        return std::format("{} [{}]", *cnt, l);
+    };
+    if (const auto sec = m.rd<uintptr_t>(*ts + hold::kTsSector)) {
+        s += std::format(" | +0x{:X} sector 0x{:X}: observers {}", hold::kTsSector, *sec, *sec ? list_of(*sec) : "none");
+    }
+    for (uint32_t off = 0x300; off < 0x800; off += 8) {
+        const auto q = m.rd<uintptr_t>(*ts + off);
+        if (!q || *q < 0x10000 || *q > 0x7FFFFFFFFFFF) continue;
+        const auto cnt = m.rd<uint32_t>(*q + hold::kSectorObserverCount);
+        const auto data = m.ptr(*q + hold::kSectorObservers);
+        if (!cnt || !data || *cnt == 0 || *cnt > 16) continue;
+        for (uint32_t i = 0; i < *cnt; ++i) {
+            const auto u = m.rd<uintptr_t>(*data + static_cast<uintptr_t>(i) * hold::kObserverStride);
+            if (u && *u == observer_user) {
+                s += std::format(" | FOUND the observer in the list of TS+0x{:X} (sector 0x{:X}, {} observers)", off, *q, *cnt);
+                break;
+            }
+        }
+    }
+    log::warn("{}", s);
+}
+
 NpcReleaseReadings read_npc_release(uintptr_t sam, uint32_t key, uintptr_t observer_user) {
     const game::FastReads m;
     NpcReleaseReadings r;
@@ -570,6 +617,7 @@ NpcReleaseReadings read_npc_release(uintptr_t sam, uint32_t key, uintptr_t obser
     r.controller = m.rd<uint32_t>(actor + hold::kActorController);
     r.restore = restore_byte_with(m, actor);
     if (const auto sector = sector_with(m, actor)) r.observes = observed_by_with(m, *sector, observer_user);
+    if (r.observes && !*r.observes) probe_sector_layout_once(actor, observer_user);
     return r;
 }
 
@@ -901,6 +949,21 @@ std::atomic<uint64_t> g_npc_held{0}, g_npc_held_host_ctrl{0}, g_npc_held_user2_c
     g_npc_release_calls{0}, g_npc_deferred{0}, g_npc_busy_skips{0}, g_npc_targeted{0}, g_npc_periodic{0},
     g_npc_evaluated{0}, g_npc_pass_us_sum{0}, g_npc_pass_us_max{0}, g_prepare_us_max{0}, g_npc_hold_logged{0},
     g_npc_release_logged{0}, g_npc_other_logged{0};
+
+// Co-op+ (2026-11-08, the guest's empty inn on 3576: 1198 held, 0 released, 1198 dropped): every NPC drop by reason,
+// in the summary line ("drops by reason").
+std::mutex g_drop_why_mu;
+std::map<std::string, uint64_t> g_drop_why;
+void note_npc_drop_reason(const char* why) {
+    std::lock_guard lk(g_drop_why_mu);
+    ++g_drop_why[why ? why : "?"];
+}
+std::string npc_drop_reasons() {
+    std::lock_guard lk(g_drop_why_mu);
+    std::string s;
+    for (const auto& [w, n] : g_drop_why) s += std::format("{}{} x{}", s.empty() ? "" : ", ", w, n);
+    return s.empty() ? "none" : s;
+}
 std::atomic<uint64_t> g_npc_age_sum{0}, g_npc_age_max{0};  // ms, of the released ones
 std::atomic<uint64_t> g_npc_last_pass{0}, g_npc_last_fallback{0};
 constexpr uint64_t kMaxNpcHoldLogged = 48, kMaxNpcReleaseLogged = 48, kMaxNpcOtherLogged = 64;
@@ -4145,6 +4208,7 @@ void npc_pass(uint32_t target, bool allow_release, const char* where) {
                 g_due[n_due++] = due;
             } else {
                 g_npc_dropped.fetch_add(1);
+                note_npc_drop_reason(d.why);
                 if (cur.defer) {
                     g_ld_dropped.fetch_add(1);
                     // Per reason (P8 S14 regression): a despawn, user 2 gone or another epoch cannot leave an NPC
@@ -4928,14 +4992,14 @@ std::string child_hold_describe() {
             "dropped {}) | withheld from the host (user 2 controls it, restore 0 past the timeout) {} | dropped {} (announced natively {}, user 2 "
             "gone {}) | controller changed while held {} | still held {} (>3 s {}, room reserved {}) | passes: "
             "targeted {}, budgeted {} ({} entries; mean {} us, max {} us; busy-skipped {}; releases deferred (the "
-            "fallback, or not a NotifyAppear thread) {}) | split max {} us | log lines lost {}",
+            "fallback, or not a NotifyAppear thread) {}) | split max {} us | log lines lost {} | drops by reason: {}",
             g_npc_held.load(), g_npc_held_host_ctrl.load(), g_npc_held_user2_ctrl.load(), g_npc_again.load(),
             g_npc_full.load(), g_npc_unrecorded.load(), rel, g_npc_release_calls.load(), g_npc_released_ctrl.load(),
             rel ? g_npc_age_sum.load() / rel : 0, g_npc_age_max.load(), g_npc_timeouts.load(),
             g_npc_timeout_host_u2.load(), g_npc_native.load(), g_npc_withheld_u2.load(), g_npc_dropped.load(), g_npc_forgotten.load(), g_npc_cleared.load(), g_npc_ctrl_changed.load(), npc_still,
             npc_old, reserved, g_npc_targeted.load(), g_npc_periodic.load(), g_npc_evaluated.load(),
             passes ? g_npc_pass_us_sum.load() / passes : 0, g_npc_pass_us_max.load(), g_npc_busy_skips.load(),
-            g_npc_deferred.load(), g_prepare_us_max.load(), g_notes_lost.load());
+            g_npc_deferred.load(), g_prepare_us_max.load(), g_notes_lost.load(), npc_drop_reasons());
         if (const uint8_t ld = g_load_defer.load()) {
             size_t ld_now = 0;
             {
