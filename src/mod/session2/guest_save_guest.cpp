@@ -18,6 +18,7 @@
 #include "mod/role.h"
 #include "mod/session2/guest_save_tunnel.h"
 #include "mod/session2/guest_save_wire.h"
+#include "mod/session2/save_hooks.h"
 
 namespace cdmp::session2 {
 namespace {
@@ -629,6 +630,8 @@ void guest_save_guest_configure(const std::string& raw) {
     // CDMP_ROLE=guest (role_logic.h): its saves are in save_cdmp_guest (the redirect sends it there anyway; named
     // here so the lines say where).
     g_save_root = role::current() == role::Role::Guest ? role::guest_save_dir(local) : role::save_dir(local);
+    // Co-op+ (a co-op save folder, save_hooks_set_coop_folder): the guest's redirect target is that folder.
+    if (save_hooks_guest_role() && !save_hooks_sandbox_dir().empty()) g_save_root = save_hooks_sandbox_dir();
     g_progress_root = std::wstring(local) + L"\\cdmp\\guest_progress";
     g_wake = CreateEventW(nullptr, FALSE, FALSE, nullptr);
     {

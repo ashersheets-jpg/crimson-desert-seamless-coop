@@ -43,6 +43,9 @@ bool save_hooks_install(saveguard::Mode mode = saveguard::Mode::Block);
 // stages that write).
 bool save_hooks_install_guest_role();
 bool save_hooks_guest_role();
+// Co-op+ (config.h s2_coop_save_dir / coop_save_seed): the next install (host redirect or guest role) uses this
+// folder as the save folder's stand-in, kept between runs. Call before either install; ignored after.
+void save_hooks_set_coop_folder(const std::wstring& dir, const std::string& seed);
 bool save_hooks_active();       // Block mode on: writes are refused
 bool save_hooks_tracing();      // Trace mode on: nothing refused, operations logged
 bool save_hooks_redirecting();  // Redirect mode on: everything goes to the sandbox

@@ -5,6 +5,8 @@
 
 #include <cmath>
 #include <exception>
+#include <format>
+#include <functional>
 #include <optional>
 #include <memory>
 #include <string>
@@ -943,6 +945,53 @@ DWORD WINAPI worker(LPVOID) {
         const bool in_game = log_process_info();
         if (!rs.valid) return 0;
         if (rs.role != role::Role::None) log_parent();
+        // Co-op+ (config.h s2_coop_save_dir; Co-op+ docs/design/native-join-and-saves.md): the co-op save folder is
+        // read now, before either save install below. Without a role (a real PC), [session2] enabled=1 with a co-op
+        // folder installs the redirect here too: guest=1 -> the guest's folder, else the host's sandbox. A failure ends
+        // the game before it touched a save, as for the roles.
+        {
+            const std::wstring ip = dir + ini.name;
+            wchar_t buf[MAX_PATH * 2] = {};
+            GetPrivateProfileStringW(L"session2", L"coop_save_dir", L"", buf, MAX_PATH * 2, ip.c_str());
+            std::wstring coop_dir = buf;
+            while (!coop_dir.empty() && (coop_dir.back() == L' ' || coop_dir.back() == L'"' ||
+                                         coop_dir.back() == L'\\' || coop_dir.back() == L'/')) {
+                coop_dir.pop_back();
+            }
+            while (!coop_dir.empty() && (coop_dir.front() == L' ' || coop_dir.front() == L'"')) coop_dir.erase(0, 1);
+            // A relative name is under %LOCALAPPDATA%\Pearl Abyss\CD (Co-op+ writes "coop_worlds\<friend>").
+            if (!coop_dir.empty() && !(coop_dir.size() > 1 && coop_dir[1] == L':') && coop_dir.rfind(L"\\\\", 0) != 0) {
+                wchar_t local[MAX_PATH] = {};
+                const DWORD n = GetEnvironmentVariableW(L"LOCALAPPDATA", local, MAX_PATH);
+                coop_dir = n && n < MAX_PATH ? std::wstring(local) + L"\\Pearl Abyss\\CD\\" + coop_dir : std::wstring();
+            }
+            if (!coop_dir.empty() && in_game) {
+                GetPrivateProfileStringW(L"session2", L"coop_save_seed", L"keep", buf, MAX_PATH * 2, ip.c_str());
+                // The game's short-lived second CrimsonDesert.exe (and any later process of this run) must never set
+                // aside or re-copy the folder the first one made: only the first process seeds, the rest keep.
+                // One name per folder (two copies on one PC each have their own).
+                const std::wstring seeded =
+                    std::format(L"Local\\cdmp_coop_seeded_{:016X}", std::hash<std::wstring>{}(saveguard::normalize(coop_dir)));
+                CreateMutexW(nullptr, FALSE, seeded.c_str());  // kept for the life of the process
+                if (GetLastError() == ERROR_ALREADY_EXISTS) wcscpy_s(buf, L"keep");
+                session2::save_hooks_set_coop_folder(coop_dir, narrow(std::wstring(buf)));
+                const bool s2_on = GetPrivateProfileIntW(L"session2", L"enabled", 0, ip.c_str()) != 0;
+                const bool s2_guest = GetPrivateProfileIntW(L"session2", L"guest", 0, ip.c_str()) != 0;
+                log::info("Co-op save: folder '{}' (seed {}){}", narrow(coop_dir), narrow(std::wstring(buf)),
+                          rs.role == role::Role::None && !s2_on ? " -- [session2] enabled=0: not used" : "");
+                if (rs.role == role::Role::None && s2_on && !rs.extra) {
+                    const bool ok = s2_guest ? session2::save_hooks_install_guest_role()
+                                             : session2::save_hooks_install(saveguard::Mode::Redirect);
+                    if (!ok) {
+                        log::error("Co-op save: the save redirect is NOT installed; the game is ended now so that it "
+                                   "never writes the real save folder");
+                        log::flush(2000);
+                        TerminateProcess(GetCurrentProcess(), 0xCD62);
+                        return 0;
+                    }
+                }
+            }
+        }
         // The guest's saves: before anything else (the game reads its save list early), in every guest-role process
         // (the later ones too). Never on the real folder: a failure ends the game here, before it touched a save.
         // Not in a test host (cdmp_host unloads the mod: KernelBase hooks would be left pointing into it).

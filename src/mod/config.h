@@ -712,6 +712,15 @@ struct Config {
     std::wstring s2_host_save_dir;
     // Valid generations kept (1-500; the newest is never pruned).
     uint32_t s2_host_save_keep = 20;
+    // Co-op+ (docs/design/native-join-and-saves.md in the Co-op+ repo): a co-op save of its own, kept between runs.
+    // coop_save_dir: the folder that stands in for the save folder in this run ("" = today's: the host's
+    // cdmp_save_sandbox rebuilt at every start / CDMP_ROLE=guest's save_cdmp_guest); a path under %LOCALAPPDATA%\Pearl
+    // Abyss\CD, never the save folder or inside it. coop_save_seed: keep (the folder as it was left; a missing one is
+    // made as copy), copy (the real save folder copied in: "from my solo progress"), new (copied without the slot
+    // folders: the game starts New Game). With copy / new an existing folder is set aside as <dir>_old_<time>, never
+    // deleted. Host: needs save_guard=redirect. Guest (guest=1 guest_mode=remote): the redirect is installed from it.
+    std::wstring s2_coop_save_dir;
+    std::string s2_coop_save_seed = "keep";
 };
 
 Config load_config(const std::wstring& ini_path);

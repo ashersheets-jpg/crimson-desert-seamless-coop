@@ -571,6 +571,94 @@ bool copy_tree(const std::wstring& from, const std::wstring& to, CopyStats& st) 
     return ok;
 }
 
+// Co-op+ (config.h s2_coop_save_dir): the co-op save folder of this run, set before either install.
+std::wstring g_coop_dir;
+std::string g_coop_seed = "keep";
+
+bool is_slot_dir(const wchar_t* name) { return _wcsnicmp(name, L"slot", 4) == 0; }
+
+// The slot folders anywhere under `root` (New Game: the account folders and settings stay, no character).
+bool remove_slot_dirs(const std::wstring& root, const std::wstring& save_dir, uint64_t& removed) {
+    WIN32_FIND_DATAW fd;
+    HANDLE f = FindFirstFileExW((root + L"\\*").c_str(), FindExInfoBasic, &fd, FindExSearchNameMatch, nullptr, 0);
+    if (f == INVALID_HANDLE_VALUE) return GetLastError() == ERROR_FILE_NOT_FOUND;
+    bool ok = true;
+    std::vector<std::wstring> slots, dirs;
+    do {
+        if (is_dots(fd.cFileName) || !(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ||
+            (fd.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)) {
+            continue;
+        }
+        (is_slot_dir(fd.cFileName) ? slots : dirs).push_back(root + L"\\" + fd.cFileName);
+    } while (FindNextFileW(f, &fd));
+    FindClose(f);
+    for (const auto& d : slots) {
+        if (delete_tree(d, save_dir)) {
+            ++removed;
+        } else {
+            ok = false;
+        }
+    }
+    for (const auto& d : dirs) ok = remove_slot_dirs(d, save_dir, removed) && ok;
+    return ok;
+}
+
+// The co-op save folder (Co-op+ docs/design/native-join-and-saves.md): keep = as it was left (a missing one is made
+// as copy); copy = the real folder copied in; new = copied without its slot folders. An existing folder that copy /
+// new replace is set aside as <dir>_old_<yyyymmdd-hhmmss>, never deleted. Never the save folder or a folder in it.
+bool prepare_coop_folder(const std::wstring& save_dir, const std::wstring& target, const std::string& seed,
+                         CopyStats& st, bool& kept) {
+    kept = false;
+    if (saveguard::is_under(target, save_dir) || saveguard::is_under(save_dir, target)) {
+        log::error("Co-op save: '{}' is the save folder or inside it; refused", narrow(target));
+        return false;
+    }
+    const DWORD attrs = GetFileAttributesW(target.c_str());
+    const bool exists = attrs != INVALID_FILE_ATTRIBUTES;
+    if (exists && (!(attrs & FILE_ATTRIBUTE_DIRECTORY) || (attrs & FILE_ATTRIBUTE_REPARSE_POINT))) {
+        log::error("Co-op save: '{}' is not a plain folder (attributes 0x{:X}); refused", narrow(target), attrs);
+        return false;
+    }
+    if (exists && seed == "keep") {
+        kept = true;
+        log::info("Co-op save: '{}' kept as it was left", narrow(target));
+        return true;
+    }
+    if (exists) {
+        SYSTEMTIME t{};
+        GetLocalTime(&t);
+        const std::wstring aside = target + std::format(L"_old_{:04}{:02}{:02}-{:02}{:02}{:02}", t.wYear, t.wMonth,
+                                                        t.wDay, t.wHour, t.wMinute, t.wSecond);
+        if (!MoveFileExW(target.c_str(), aside.c_str(), 0)) {
+            log::error("Co-op save: cannot set '{}' aside as '{}' (error {})", narrow(target), narrow(aside),
+                       GetLastError());
+            return false;
+        }
+        log::warn("Co-op save: the earlier co-op save '{}' set aside as '{}' (kept)", narrow(target), narrow(aside));
+    }
+    for (size_t at = target.find(L'\\', 3); at != std::wstring::npos; at = target.find(L'\\', at + 1)) {
+        CreateDirectoryW(target.substr(0, at).c_str(), nullptr);
+    }
+    if (!CreateDirectoryW(target.c_str(), nullptr)) {
+        log::error("Co-op save: cannot create '{}' (error {})", narrow(target), GetLastError());
+        return false;
+    }
+    bool ok = copy_tree(save_dir, target, st);
+    uint64_t removed = 0;
+    if (ok && seed == "new") ok = remove_slot_dirs(target, save_dir, removed);
+    if (!ok) {
+        if (!delete_tree(target, save_dir)) {
+            log::error("Co-op save: the half-made '{}' could not be deleted; delete it before the next start",
+                       narrow(target));
+        }
+        return false;
+    }
+    log::info("Co-op save: '{}' {} ({} files, {} folders{})", narrow(target),
+              seed == "new" ? "made for a new game" : "copied from the save folder", st.files, st.dirs,
+              seed == "new" ? std::format(", {} slot folders left out", removed) : std::string());
+    return true;
+}
+
 // This game start's sandbox: the previous one (if any) becomes <sandbox>_prev (an older _prev is deleted first),
 // then the whole real folder is copied into a new one. False if any step fails (logged); a new sandbox left half
 // made is deleted, so the next start still finds the _prev.
@@ -1063,7 +1151,13 @@ bool save_hooks_install_guest_role() {
         return false;
     }
     const std::wstring dir = role::save_dir(local);
-    const std::wstring target = role::guest_save_dir(local);
+    const bool coop = !g_coop_dir.empty();
+    const std::wstring target = coop ? g_coop_dir : role::guest_save_dir(local);
+    if (coop) {
+        CopyStats copied;
+        bool kept = false;
+        if (!prepare_coop_folder(dir, target, g_coop_seed, copied, kept)) return false;
+    }
     HMODULE kb = GetModuleHandleW(L"kernelbase.dll");
     if (!kb) {
         log::error("Role guest: kernelbase.dll not loaded; the guest's saves cannot be redirected");
@@ -1114,6 +1208,12 @@ bool save_hooks_install_guest_role() {
 
 bool save_hooks_guest_role() { return g_guest_role.load(); }
 
+void save_hooks_set_coop_folder(const std::wstring& dir, const std::string& seed) {
+    if (g_guard) return;  // only before either install
+    g_coop_dir = dir;
+    g_coop_seed = seed == "copy" || seed == "new" ? seed : "keep";
+}
+
 bool save_hooks_install(saveguard::Mode mode) {
     if (g_guest_role.load()) {
         // A guest-role process with the host's stages in its ini: they would save into the guest's folder.
@@ -1145,11 +1245,14 @@ bool save_hooks_install(saveguard::Mode mode) {
 
     // Redirect: the sandbox is made now, before any hook exists. If anything fails the saves are protected the
     // P6 way (block): never a redirect to a half-made copy.
-    const std::wstring sandbox = std::wstring(local) + L"\\Pearl Abyss\\CD\\cdmp_save_sandbox";
+    const bool coop = !g_coop_dir.empty();
+    const std::wstring sandbox = coop ? g_coop_dir : std::wstring(local) + L"\\Pearl Abyss\\CD\\cdmp_save_sandbox";
     CopyStats copied;
+    bool coop_kept = false;  // (prepare_coop_folder logs it)
     if (mode == saveguard::Mode::Redirect) {
         auto redir = std::make_unique<saveguard::Redirector>(dir, sandbox);
-        if (!redir->valid() || !prepare_sandbox(dir, sandbox, copied)) {
+        if (!redir->valid() || !(coop ? prepare_coop_folder(dir, sandbox, g_coop_seed, copied, coop_kept)
+                                      : prepare_sandbox(dir, sandbox, copied))) {
             log::error("Session2 save guard: the save folder could not be copied to '{}'; falling back to block "
                        "(writes refused, 'Failed to save data' will come back)", narrow(sandbox));
             mode = saveguard::Mode::Block;

@@ -395,6 +395,14 @@ Config load_config(const std::wstring& ini_path) {
         c.s2_host_save_dir = v;
     }
     c.s2_host_save_keep = read_uint(ini_path, L"session2", L"host_save_keep", c.s2_host_save_keep);
+    {
+        std::wstring v = read_string(ini_path, L"session2", L"coop_save_dir", "");
+        while (!v.empty() && (v.back() == L' ' || v.back() == L'"' || v.back() == L'\\' || v.back() == L'/')) v.pop_back();
+        while (!v.empty() && (v.front() == L' ' || v.front() == L'"')) v.erase(0, 1);
+        c.s2_coop_save_dir = v;
+        const std::string seed = narrow(read_string(ini_path, L"session2", L"coop_save_seed", "keep"));
+        c.s2_coop_save_seed = seed == "copy" || seed == "new" ? seed : "keep";
+    }
     c.s2_mirror_delay_ms = std::clamp(read_uint(ini_path, L"session2", L"mirror_delay_ms", 1000), 100u, 10000u);
     {
         const std::wstring v = read_string(ini_path, L"session2", L"account", "1");
