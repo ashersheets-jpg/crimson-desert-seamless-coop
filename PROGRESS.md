@@ -2289,3 +2289,13 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   0x2627350, the entries' constructor 0x207B060; changed on 3576: the layer's chart +0x118 (was +0x110) and an
   action counts only with its byte +0x111 set (the find and the triple check test it) -- sar::chart_find does
   too now (test added; optd_seq_restore all passed). Harness: -GuestSet k=v (like -HostSet). tcB36: seq_actor_restore=1.
+- 2026-11-08 02:40 tcB36 (seq_actor_restore=1): two findings.
+  (1) It did not install: its build gate still compared the exe stamp with kPeTimestampUnported (the base's
+      deliberate block for unported modules): now kPeTimestamp (3576), since its points are ported.
+  (2) THE GUEST CRASHED (02:01:48, exe+0x251AF7D reading 0x28; NPC 0xB010012D, both layers a chart and no
+      action/playback). Every CharacterControl::Update (0x9451E0) calls 0x9496C0, which first calls 0x251AF40: it
+      reads the SELECTED layer ([[CC+0x30]+0x1B]) -> playback +0x18 -> +0x28 -> +0x7E with no null check. My tcB29
+      guard rule (the 0xA12C00 layer rule) no longer held such an actor (the old crude test did). Fixed: the guard
+      also holds a remote actor whose selected layer / its playback / playback+0x28 is null (it has no animation
+      to show anyway; no visual change). The regression came from my change of 4a60393 -- my mistake.
+  tcB37: both, with a minute more in the inn.
