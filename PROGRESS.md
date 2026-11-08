@@ -2094,3 +2094,12 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   Regression run hf1 (old base, two copies) started.
 - 2026-11-07 21:45 hf1 (old base, two copies, build 862B4256): connected, both copies visible, no WRN/ERR beyond the
   known clock line, guarded reads 0 faulted, SAVES OK. The hotfix is ready to publish (waiting for the user's OK).
+- 2026-11-07 22:00 RELEASED hotfix 0.1.0-alpha+862b4256 (user: "Once the regression run passes, publish the fix"):
+  GitHub v0.1.0-alpha-862b4256 Latest (sha256 13c9e2d4... player zip, 0b886165... mod-manager, match); Discord
+  #download-here post with both zips (text typed first, zips attached last, 2 checked before sending), pinned;
+  #announcements "Hotfix 0.1.0-alpha+862b4256: the end of the prologue". The game folder has the hotfix asi; the test
+  kit restores it. publish-playtest.ps1 note: notes with double quotes must be passed in-process (& script -Notes),
+  a nested powershell -File splits them at the quotes ("got 'to'" as the repo).
+  User's extra facts: the inn-guard report was a Radmin session, the cutscene one a Steam invite. The relay does not
+  depend on the transport; if the Radmin session's prologue ending was NOT skipped, the guard is a separate issue
+  (T21-like: a copy arriving with us at the inn) that this hotfix does not touch.

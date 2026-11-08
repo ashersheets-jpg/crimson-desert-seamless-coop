@@ -7,7 +7,7 @@
 source /c/Users/asher/CrimsonDesert-SeamlessCoop/build/port3479/test_guard.sh
 D=/c/Users/asher/CrimsonDesert-SeamlessCoop/build/port3527; H=/c/Users/asher/CrimsonDesert-SeamlessCoop/build/port3479
 BIN="/d/SteamLibrary/steamapps/common/Crimson Desert/bin64"
-REL=/c/Users/asher/CrimsonDesert-SeamlessCoop/dist/CrimsonDesert-SeamlessCoop-0.1.0-alpha+4effc5c0/mod/cdmp.asi
+REL=/c/Users/asher/CrimsonDesert-SeamlessCoop/dist/CrimsonDesert-SeamlessCoop-0.1.0-alpha+862b4256/mod/cdmp.asi
 W="$LOCALAPPDATA/CrimsonDesert-CoopPlus/Worlds"
 NAME=${1:-cp1}
 T0=$(powershell -NoProfile -Command "(Get-Date).ToString('o')" | tr -d '\r')

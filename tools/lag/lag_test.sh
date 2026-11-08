@@ -6,7 +6,7 @@
 source /c/Users/asher/CrimsonDesert-SeamlessCoop/build/port3479/test_guard.sh
 P=/c/Users/asher/CrimsonDesert-SeamlessCoop/build/port3460; PW='C:\Users\asher\CrimsonDesert-SeamlessCoop\build\port3460'
 H=/c/Users/asher/CrimsonDesert-SeamlessCoop/build/port3479; BIN="/d/SteamLibrary/steamapps/common/Crimson Desert/bin64"
-REL=/c/Users/asher/CrimsonDesert-SeamlessCoop/dist/CrimsonDesert-SeamlessCoop-0.1.0-alpha+4effc5c0/mod/cdmp.asi
+REL=/c/Users/asher/CrimsonDesert-SeamlessCoop/dist/CrimsonDesert-SeamlessCoop-0.1.0-alpha+862b4256/mod/cdmp.asi
 PEER='C:\Users\asher\CrimsonDesert-SeamlessCoop\upstream\cd-coop-3446\build\bin\RelWithDebInfo\cdmp_peer.exe'
 SCRIPT=noop.txt; NAME=${1:-lag1}; VARIANT=${2:-coop-test-bandits}; PEERX=${PEERX:-",'--delay','0'"}
 peer_down() { powershell -NoProfile -Command "Get-Process | Where-Object { \$_.ProcessName -match 'cdmp' } | Stop-Process -Force -ErrorAction SilentlyContinue" >/dev/null 2>&1; }
