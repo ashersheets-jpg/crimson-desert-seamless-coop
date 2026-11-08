@@ -2233,3 +2233,8 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   action) -- the rule Co-op+ already ported for the A12E4E crash. Native remote_without_action now uses that rule
   (tcB29 checks: poses, held count, no guest crash). (2) tcB28: the guest pressed E ten times at the inn: no
   Interaction request at all and no prompt on its screen (the host's shows "E Turn on" at the fire) -- next.
+- 2026-11-08 01:05 tcB29 (the game's layer rule in the guest's guard): "update skipped 0 post-update 0 | actors held 0"
+  (tcB26: 247152 / 623) -- every remote NPC is updated (animated) on the guest now; no guest crash, SAVES OK. The
+  interaction check is still open: Ctrl+F4 put the guest in a corner facing a wall (shot tcB29-38b), so no prompt
+  was expected; needs the guest placed at the fire / an NPC (the host interacted with the fire from the dev spot in
+  tcB19) -- next.
