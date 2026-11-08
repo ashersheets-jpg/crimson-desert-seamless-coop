@@ -2179,3 +2179,8 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   holds logged parents "withheld there". Next for B02: the native announce of nearby actors to user 2 within one
   sector (ByJunter's opcion-d-campo-compartido.md / observer_hold), e.g. a re-announce when user 2 moves far inside
   a sector.
+- 2026-11-07 23:15 tcB19 (host alone at the inn, E held + turns; the guest at Nas River): on 3576 the interact key is
+  E: 14 InteractionPreemptionStepReq + DoStepReq, all on the inn's fire / lantern objects (0xB010088D, interactions
+  0x000F4266/7) and three 0xB01005xx objects, none on the arm-wrestling table (3479's interaction 0x000F431C): the
+  teleport spot (pub.sh's -10661.5, -3830) does not face the table on 3576. The host's inn is full of NPCs (shot
+  tcB19-38c). B14 needs the table's spot and facing on 3576 (or a walk to it) before the shared-world check.
