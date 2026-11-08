@@ -2612,3 +2612,19 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   "ShowWhenTargeted" refusals) still drops it -- next. No crash, SAVES OK.
   STATE OF NPC TALK FOR THE GUEST: server side solved in principle (the subject rule, tested: accepted with, refused
   without); client side: the condition allowance makes the Greet a candidate; the prompt choice remains.
+- 2026-11-08 16:30 THE USER'S CHOICE: the guest keeps ITS OWN progress (not the host's); a "wait for the host" overlay
+  only if own progress turns out impossible. Their idea (the guest joins mid-world without a co-op save) checked
+  against the logs: in every two-copy run user 2 ALREADY loads its own save on the host's server (ByJunter's
+  guest_own_save=1: the guest's slot is uploaded and loaded as slot 204; tcB72: "user 2's save VERIFIED"), and that
+  save comes from the same test save as the host's (the host's mailbox gen2, a user 2 autosave of an earlier run,
+  staged instead of the upload). So identical progress, and the server still refuses the guest's greet: not a
+  progress desync. Also: cond_dump read the macro index from +8 (it is the function type 0x10E 'Macro'); the index is
+  the u16 at +0x10 (0x24178F0 -> 0x3F4F10, the table [0x71C2150]+0x58). Rewritten as a tree (RTTI names at run time;
+  And/Or children +8/+0x10, Not +8, Macro -> info+0x10, leaves: u16 type at +8 named by the table 0x5D02C70).
+- 2026-11-08 16:40 tcB75 (the tree): the Greet's TARGET condition (judged with the NPC as target, refused when TRUE)
+  = And(Not IsManagementActor, Not CheckMaritalState, Not Macro#29(CheckSpawnReason | HasSummonTag),
+  HasQuestDialog x3 (Or), Macro#82(CheckFriendlyLevel | Not CheckCharacterGroupKey), Macro#20(CheckFriendlyLevel),
+  Macro#21(...)). The per-player ones: HasQuestDialog (quest state) and CheckFriendlyLevel (friendship with the
+  NPC). Every leaf goes through the generic 0x2417610 (obj, compare param, invert flag): [obj+0x10] set ->
+  param vf+0x20, else the class's vf+0xA8. tcB76: a read-only hook there logs each leaf's result for the Greet on
+  the host's client and for user 2's requests on the server (exit 0x25FA561), to see which leaf differs.
