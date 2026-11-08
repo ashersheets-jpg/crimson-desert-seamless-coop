@@ -2321,3 +2321,17 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   with 897/897 restored. So the restore is not the whole story. AnimProbe (native, [session2] anim_probe=1, read
   only) counts per 5 s over the NPC keys: updated / layer-0 action / playback / playback CHANGED, host vs guest.
   tcB41 running.
+- 2026-11-08 03:40 AnimProbe tcB41/42 (host and guest, every 5 s over the NPC keys): the SAME numbers on both sides
+  (~320 NPCs updated, ~310 with a layer-0 action and playback) and the same NPC has the same action hash on both
+  (0xB0100641: 5DCADFA4; 0xB01006B9: F9C42A4A). So the action layer is not what differs: the guest's NPCs have their
+  actions and are updated, yet stand stiff (user, tcB39/40). Teleports into the inn are unreliable for both players
+  (roof / upstairs / under the floor: the tp's height snap); tcB42's street spot faced walls.
+  ROOT CAUSE CLASS: ByJunter's guest ran a whole town-NPC stack on 2976 (his last guest ini s46: guest_schedule_load=1,
+  guest_sched_bind=1, guest_sched_route=1, guest_seq_play=1, guest_seq_foreign_*=1, seq_actor_restore=1, ...): the
+  townsfolk are in schedule / sequencer scene actions whose body animation comes from the scene, which must be
+  routed, bound and TICKED on the guest. On 3576 that stack is still blocked (kPeTimestampUnported): guest_sched_load,
+  guest_seq_play, guest_seq_foreign, guest_seq_present, guest_x_veto, docked_gimmicks (+ the host's user2_stages);
+  guest_seq_route is half ported (its 2661/2981/2810/2322/2524 points; the schedule points 2335 0xC0B5C1, 2126
+  0xC0BA4E, 2958/2909 0xC0C761/0xC0CC91 and the 0xA9E55B lookup are still 2976 and refuse themselves). This is B02's
+  core. Next: port guest_seq_route's schedule points, guest_sched_bind, guest_schedule_load, guest_seq_play to 3576
+  (bytes from the source + the 3576 decomp's handler/class names, as for seq_restore), then the two-copy check.
