@@ -2335,3 +2335,20 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   0xC0BA4E, 2958/2909 0xC0C761/0xC0CC91 and the 0xA9E55B lookup are still 2976 and refuse themselves). This is B02's
   core. Next: port guest_seq_route's schedule points, guest_sched_bind, guest_schedule_load, guest_seq_play to 3576
   (bytes from the source + the 3576 decomp's handler/class names, as for seq_restore), then the two-copy check.
+- 2026-11-08 04:15 ByJunter's own note (cdmp.2inst-guest.ini, guest_schedule_load): "the guest's pa::NPCScheduleManager
+  container is empty (only its own server fills it, which does not run in option D): 477+ schedule NPCs without a scene
+  (children in A-pose, sweepers, fauna)" -- the user's symptom exactly. guest_schedule_load loads, before each host
+  2005 / 2335 / 2874 is delivered, the schedule files it names, with the game's own loader.
+  PORTED to 3576 (native guest_sched_load.cpp / _logic.h): the loader 0x19A64E0 (2976 0x1864140; found through the
+  "sequencer/binary__" string: hashes the name, finds it via 0x19AC5F0 in [mgr+8], else the reader), the reader
+  0x19A6760 ([mgr+0x90] vf40), the container lookup 0x19AC460 (users +0x68, lock vf40/18/20), the release 0x3D7FA0
+  (its body's FNV equals 2976's exactly), the node lookup 0x19ABC70 (reads [0x70DBFA0]+8), the key lookup 0x19A4B90,
+  the 2335's call into it 0xBABB73 (in 0xBABA90 = 2976 0xA9FEE0), vtables NPCScheduleManager 0x5B7CD28 /
+  NPCScheduleData_File 0x5B7CD38, the manager slot 0x70DBFA0, the client / server roots 0x71C0488 / 0x71C0490;
+  body hashes from the 3576 .pdata ranges; the build gate now kPeTimestamp. The context table layout and the name
+  hash are checked at run time by its self-check (schedule_load_selfcheck=1). tcB43.
+  guest_seq_route's schedule handlers on 3576 (for the next step): CreateNPCScheduleStageAck (2976 2335 -> 2989)
+  0xD3A1B0, Delete (2126 -> 2796) 0xD3AEE0, ChangeMiseenscene (2958 -> 2616) 0xD3BBB0, DeactivateMiseensceneSchedule-
+  EvadeObstacle (2909 -> 2297) 0xD3C300, InitializeNPCSchedule (2874 -> 2769) 0xD3CA50; the frames moved (the 2335
+  point is now 0xD3A951 lea rcx,[rbp-0x28] ; mov [rsp+0x60],rcx after vf48 on [rbp]; find 0x98FC20 found [rbp+0x80]
+  actor [rbp+0x78]; kind [rbp+0x1100]; the stage call 0xBABA90).
