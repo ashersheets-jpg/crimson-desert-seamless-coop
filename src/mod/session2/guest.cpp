@@ -2075,6 +2075,11 @@ std::string actor_create_failures_text() {
 
 // Co-op+ (2026-11-08, TEST test_greet): a raw client packet (opcode first, as the client sends it) queued to the host.
 bool guest_test_push_raw(const std::vector<uint8_t>& p) { return !p.empty() && g_to_host.push(p); }
+// Co-op+ (npc_category.h): one of this client's own requests the mod asks for (a SetQuestDialogReq for an NPC the
+// host's world lists), queued to the host's server like the client's packets; only while playing on the host.
+bool guest_push_own_request(const std::vector<uint8_t>& p) {
+    return remote_live_for_keys() && !p.empty() && g_to_host.push(p);
+}
 
 std::string guest_describe() {
     const Mode m = g_mode.load();

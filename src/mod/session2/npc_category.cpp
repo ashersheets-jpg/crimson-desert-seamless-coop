@@ -18,6 +18,7 @@
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
 #include "mod/session2/npc_category_logic.h"
+#include "mod/session2/guest.h"
 #include "mod/session2/server.h"
 
 namespace cdmp::session2 {
@@ -42,6 +43,15 @@ uint64_t g_host_ms = 0;                         // when it was last filled (GetT
 std::atomic<uint64_t> c_calls{0}, c_host{0}, c_own{0}, c_native{0}, c_changed{0}, c_frames_in{0}, c_frames_bad{0},
     c_frames_out{0}, c_frames_refused{0};
 std::atomic<uint32_t> g_last_size{0};
+std::atomic<uint64_t> c_asked{0}, c_ask_refused{0};
+// The guest's own SetQuestDialogReq 2963 (u32 NPC key): the server answers with THIS player's dialogs for that NPC
+// (SetQuestDialogAck 3086), from its own quests. The host's client sends them for the NPCs its stage/AI functions
+// handle (AIFunction_RequestNearbyQuestDialog), which run only there; the guest asks for the same NPCs itself.
+constexpr uint16_t kOpSetQuestDialogReq = 2963;
+constexpr uint64_t kAskAgainMs = 30000;
+constexpr size_t kAskPerFrame = 24;
+constexpr bool kAskMissing = false;
+std::unordered_map<uint32_t, uint64_t> g_asked;  // the network thread only: NPC key -> when asked
 
 template <class T>
 bool rd(uintptr_t a, T& v) {
@@ -54,12 +64,17 @@ uint32_t key_of(uintptr_t actor) {
     return k;
 }
 
-// The table of a player character: [[actor+0x68]+0xF8] (the SetQuestDialogAck handler 0xD2E520 and 0x24752E0's
-// main character path; for a player's character the main character is itself).
-uintptr_t table_of(uintptr_t actor) {
+// The table of a player character as 0x24752E0 reaches it: its user [actor+0xA0], the user's main character
+// [+0xD0], its comps [+0x68], the table [comps+0xF8] (tcB77/78: 30-300 entries this way).
+uintptr_t table_of_main(uintptr_t main) {
     uintptr_t comps = 0, tab = 0;
-    if (!rd(actor + 0x68, comps) || !rd(comps + 0xF8, tab)) return 0;
+    if (!rd(main + 0x68, comps) || !rd(comps + 0xF8, tab)) return 0;
     return tab;
+}
+uintptr_t table_of(uintptr_t actor) {
+    uintptr_t user = 0, main = 0;
+    if (!rd(actor + 0xA0, user) || !rd(user + 0xD0, main)) return 0;
+    return table_of_main(main);
 }
 
 // 0x1C358E0's lookup: buckets +0x68, count +0x6C, bucket array +0x78 (0x100 bytes each: u32 n, then n pairs
@@ -114,11 +129,9 @@ bool is_guest_subject(uintptr_t subj) {
 uint8_t __fastcall detour(uintptr_t obj, uintptr_t param, uintptr_t a3, uintptr_t a4) {
     const uint8_t native = g_hook.unsafe_call<uint8_t>(obj, param, a3, a4);
     c_calls.fetch_add(1, std::memory_order_relaxed);
-    // The subject as 0x24752E0 takes it: a compare parameter of type 5 (byte +8) has it at +0x830, the NPC at +0x828.
-    uint8_t type = 0;
+    // The compare parameter: the player at +0x830, the NPC at +0x828 (tcB77/78: the subject and the NPC read this way).
     uintptr_t subj = 0, npc = 0;
-    if (!rd(param + 8, type) || type != 5 || !rd(param + 0x830, subj) || !rd(param + 0x828, npc) || !subj || !npc ||
-        !is_guest_subject(subj))
+    if (!rd(param + 0x830, subj) || !rd(param + 0x828, npc) || !subj || !npc || !is_guest_subject(subj))
         return native;
     const uint32_t nkey = key_of(npc);
     uint8_t want = 0, own = 0, host = 0;
@@ -133,17 +146,21 @@ uint8_t __fastcall detour(uintptr_t obj, uintptr_t param, uintptr_t a3, uintptr_
     return d.result;
 }
 
-uintptr_t local_character() {
-    uintptr_t g = 0, g30 = 0, user = 0, ch = 0;
-    if (!rd(g_base + kLocalUserRoot, g) || !rd(g + 0x30, g30) || !rd(g30 + 0x58, user) || !rd(user + 0x50, ch))
-        return 0;
-    return ch;
+// The local user's table: its character [user+0x50] the way 0x24752E0 goes (user, main character), else the user's
+// own main character [user+0xD0].
+uintptr_t local_table() {
+    uintptr_t g = 0, g30 = 0, user = 0, ch = 0, main = 0;
+    if (!rd(g_base + kLocalUserRoot, g) || !rd(g + 0x30, g30) || !rd(g30 + 0x58, user)) return 0;
+    if (rd(user + 0x50, ch) && ch)
+        if (const uintptr_t t = table_of(ch)) return t;
+    if (rd(user + 0xD0, main) && main) return table_of_main(main);
+    return 0;
 }
 
 // The host's own client table, read as a whole.
 std::vector<ncl::Entry> read_local_table() {
     std::vector<ncl::Entry> out;
-    const uintptr_t tab = table_of(local_character());
+    const uintptr_t tab = local_table();
     uint32_t count = 0;
     uintptr_t ents = 0;
     if (!tab || !rd(tab + 0x6C, count) || !rd(tab + 0x80, ents) || !ents) return out;
@@ -227,11 +244,35 @@ void npc_category_host_tick(troc::TrocLink& link, uint32_t /*now_ms*/) {
     }
 }
 
+// The NPCs of the host's table this client has no entry for: its own SetQuestDialogReq, a few per frame.
+static void ask_missing(const std::vector<ncl::Entry>& host) {
+    const uintptr_t own = local_table();
+    if (!own) return;
+    const uint64_t now = GetTickCount64();
+    size_t n = 0;
+    for (const auto& e : host) {
+        if (n >= kAskPerFrame) break;
+        uint8_t cat = 0;
+        if (lookup(own, e.key, cat)) continue;
+        if (auto it = g_asked.find(e.key); it != g_asked.end() && now - it->second < kAskAgainMs) continue;
+        std::vector<uint8_t> pkt{static_cast<uint8_t>(kOpSetQuestDialogReq & 0xFF),
+                                 static_cast<uint8_t>(kOpSetQuestDialogReq >> 8), 0x00, 0x04, 0x00};
+        for (int b = 0; b < 4; ++b) pkt.push_back(static_cast<uint8_t>(e.key >> (8 * b)));
+        g_asked[e.key] = now;
+        ++n;
+        (guest_push_own_request(pkt) ? c_asked : c_ask_refused).fetch_add(1, std::memory_order_relaxed);
+    }
+    if (g_asked.size() > 8192) g_asked.clear();
+}
+
 bool npc_category_guest_on_control(std::span<const uint8_t> payload) {
     if (payload.empty() || payload[0] != ncl::kState) return false;
     try {
         if (auto v = ncl::parse_payload(payload)) {
             store(*v);
+            // OFF (tcB81): the server answered none of these (its Acks stayed at the native count), and that run's
+            // tunnel broke (the guest's net loop stalled 8.6 s): kept for study, never sent.
+            if (kAskMissing) ask_missing(*v);
             const uint64_t n = c_frames_in.fetch_add(1, std::memory_order_relaxed) + 1;
             if (n == 1 || n % 60 == 0) log::info("{}", npc_category_describe());
         } else {
@@ -244,11 +285,12 @@ bool npc_category_guest_on_control(std::span<const uint8_t> payload) {
 
 std::string npc_category_describe() {
     return std::format("NpcCategory ({}{}): host table {} NPCs | the guest's character judged {} times: host category {}, "
-                       "own kept {}, native {} (answers changed {}) | frames out {} (refused {}) in {} (bad {})",
+                       "own kept {}, native {} (answers changed {}) | frames out {} (refused {}) in {} (bad {}) | own dialog requests "
+                       "for the host's NPCs {} (refused {})",
                        g_on ? "on" : "off", g_guest ? ", guest" : ", host", g_last_size.load(), c_calls.load() ?
                        c_host.load() + c_own.load() + c_native.load() : 0, c_host.load(), c_own.load(), c_native.load(),
                        c_changed.load(), c_frames_out.load(), c_frames_refused.load(), c_frames_in.load(),
-                       c_frames_bad.load());
+                       c_frames_bad.load(), c_asked.load(), c_ask_refused.load());
 }
 
 }  // namespace cdmp::session2
