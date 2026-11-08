@@ -2484,3 +2484,10 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   what differs -- and the townsfolk's state comes from their schedule scenes, which on the guest sit in the wrong
   manager (M), unbound and unticked. The scene stack (guest_sched_route mode 1 + guest_sched_bind + guest_seq_play)
   is therefore needed for NPC interaction too, not only for the scene poses (the man by the fire). Porting it next.
+- 2026-11-08 09:45 tcB57 (guest_sched_route=1, routing ON alone): no crash, SAVES OK; all 88 host schedule stages
+  ROUTED to X (M 0); but X's stages show "0 bound to an NPC" (in M, unrouted, the natives had bound 554) and the
+  Greet is still refused (owner / target condition codes). So routing without guest_sched_bind leaves the NPCs
+  unbound from their stages: ByJunter's bind step (0xC0B626 -> 0x9F2FA0 per NPC of the routed scene) is needed, and
+  guest_seq_play to tick X. Bind on 3576: the InitializeNPCSchedule handler 0xD3CA50 calls 0xAF91F0 / 0xAF9480;
+  0xAF9480 has 0x9F2FA0's path-A test ([[actor+0x88]+1] == 7 on [comp+8]) -> the bind candidate. The guest's tp
+  landed upstairs (no pose check): tp_inn_guest.txt now jumps twice (4 s apart) like the host's.
