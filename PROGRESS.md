@@ -2527,3 +2527,14 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   TargetConditionCheckFail, so the failing state is probably visible to the server too. Practical test tcB62:
   interact_owner_override=1 now covers both exits (owner 0x25FA3DA and target 0x25FA549), only for HUMAN NPCs (type 1)
   another user controls: does the Greet show, and does the host's server accept it (dialogue)?
+- 2026-11-08 12:10 tcB62/63 (the test override on both condition exits for NPCs another user controls; NPCs = an AI
+  component, not actor type 1 -- 0 matched by type): owner 2237 / target 26615 overridden on the guest, and the guest
+  then requested interaction 0x0C on the NPCs 0xB01005F7 / 0xB01005F8 -- the HOST'S SERVER refused each one:
+  InteractionPreemptionStepFailAck code 0x2569C661 = eErrNoInteractionTargetConditionCheckFail. So it is NOT only a
+  stale client copy: the server judges the same target condition failing FOR USER 2. Working theory: the townsfolk
+  are in schedule scenes owned by the HOST's character ("scene 0x200001BC of character 0xA0100001"), and a target
+  condition (macro 270, GameEventParam, ...) treats an NPC in another player's scene as unavailable. ByJunter's
+  user2_stages is about user 2's OWN stages far from the host (>= 64 m), not this case; but his rule "the guest
+  follows the host's progress" (U-a2: user 2's quest context redirected to the host's on the server) is the pattern
+  of fix. Next: the host's InteractProbe catches the server-side target-condition failure for the guest's character
+  (the same Common code 0x25FA200 runs in the host's server) to see what the macro reads for user 2 vs user 1.
