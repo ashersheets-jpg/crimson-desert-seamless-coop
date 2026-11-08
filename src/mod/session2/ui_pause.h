@@ -36,6 +36,7 @@
 // force it logs how much the game clock (0x1416B80's globals) moved; every
 // 60 s a summary with the blocked frames per UI.
 
+#include <cstdint>
 #include <string>
 
 namespace cdmp::session2 {
@@ -44,6 +45,8 @@ namespace cdmp::session2 {
 // its own thread; no-op for ui_pause_block=0. `raw` is the ini value.
 void ui_pause_start(const std::string& raw, bool guest);
 bool ui_pause_active();        // the hook is in
+// Co-op+: the client's fast travel to `actor` on the next UI frame (game thread); false when the hook is not in.
+bool ui_pause_request_travel(uint32_t actor);
 std::string ui_pause_describe();  // atomics only ("" when off)
 
 }  // namespace cdmp::session2

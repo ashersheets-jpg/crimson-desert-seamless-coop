@@ -189,11 +189,46 @@ float on_scale(uintptr_t world, float orig, uintptr_t ret) noexcept {
     return d.value;
 }
 
+// Co-op+ (2026-11-07, B01 "go to my friend" for the GUEST; the decomp of 3576): the client's own fast travel to an
+// ACTOR, the way the world map's travel does it: 0x7221F0(ctx, -1 point, -1 index, actor) -- its caller 0xF5F220 passes
+// ctx = [[[exe+0x71C0158]+0x90]+0x1240] and (-1, -1, actor). The client starts its own loading and sends
+// ReloadStageStartReq 3074 with that actor; the host's user2_funnels F3 lets it through and the host's server reloads
+// user 2 at the actor (a client-side hop broke user 2's character: tcB13). Run here, on the game's thread at the top
+// of the UI frame, never on the layer's thread. One request at a time, SEH-guarded; the drain thread logs it.
+constexpr uintptr_t kFastTravelEntry = 0x7221F0;
+constexpr uintptr_t kTravelCtxGlobal = 0x71C0158;
+std::atomic<uint32_t> g_travel_actor{0};    // asked (the layer's thread)
+std::atomic<uint32_t> g_travel_called{0};   // the actor of the last call (game thread)
+std::atomic<int> g_travel_rc{-2};           // its al (0/1), -1 = no context, -3 = the call faulted
+std::atomic<uint32_t> g_travel_logged{0};
+
+using FastTravelFn = uint64_t(__fastcall*)(uint64_t, uint32_t, uint32_t, int);
+
+int call_travel(FastTravelFn fn, uint64_t ctx, uint32_t actor) noexcept {
+    __try {
+        return static_cast<int>(fn(ctx, 0xFFFFFFFFu, 0xFFFFFFFFu, static_cast<int>(actor)) & 0xFF);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return -3;
+    }
+}
+
+void travel_now(uint32_t actor) noexcept {
+    uint64_t q0 = 0, q1 = 0, ctx = 0;
+    int rc = -1;
+    if (game::safe_read(g_base + kTravelCtxGlobal, &q0, 8) && q0 && game::safe_read(q0 + 0x90, &q1, 8) && q1 &&
+        game::safe_read(q1 + 0x1240, &ctx, 8) && ctx) {
+        rc = call_travel(reinterpret_cast<FastTravelFn>(g_base + kFastTravelEntry), ctx, actor);
+    }
+    g_travel_rc.store(rc, std::memory_order_relaxed);
+    g_travel_called.store(actor, std::memory_order_release);
+}
+
 // 0x35CD990(world) -> f32 in xmm0. The original is the only game call.
 float __fastcall scale_detour(void* world) noexcept {
     freeze_watchdog_frame();  // once per main loop turn: the freeze watchdog's frame source (two relaxed stores)
     const FreezeMark mark(g_mark);
     const float orig = g_hook.unsafe_call<float>(world);
+    if (const uint32_t a = g_travel_actor.exchange(0, std::memory_order_acq_rel)) travel_now(a);
     return on_scale(reinterpret_cast<uintptr_t>(world), orig, reinterpret_cast<uintptr_t>(_ReturnAddress()));
 }
 
@@ -562,6 +597,14 @@ DWORD WINAPI ui_thread(LPVOID) {
             }
         }
         if (tick % 10 == 0) drain();
+        if (const uint32_t a = g_travel_called.load(std::memory_order_acquire); a && a != g_travel_logged.load()) {
+            g_travel_logged = a;
+            const int rc = g_travel_rc.load();
+            log::info("Co-op+ travel: the client's fast travel 0x7221F0 to actor 0x{:08X}: {}", a,
+                      rc == 1 ? "started (al 1)" : rc == 0 ? "refused by the game (al 0)"
+                      : rc == -1 ? "NOT called: its context [[[0x71C0158]+0x90]+0x1240] was not readable"
+                                 : "the call FAULTED");
+        }
         if (tick % 50 == 0) {
             // Is the game clock (the server's game-time wheel too, in the local mode) running?
             const ClockSample c = clock_now();
@@ -607,6 +650,17 @@ void ui_pause_start(const std::string& raw, bool guest) {
 
 bool ui_pause_active() { return g_on.load(); }
 
+bool ui_pause_request_travel(uint32_t actor) {
+    const bool on = g_on.load();
+    log::info("Co-op+ travel: asked to travel to actor 0x{:08X} (UI hook {}; the last call was for 0x{:08X}, rc {})", actor,
+              on ? "in" : "NOT in", g_travel_called.load(), g_travel_rc.load());
+    if (!on || !actor) return false;
+    g_travel_logged = 0;
+    g_travel_called.store(0, std::memory_order_relaxed);
+    g_travel_actor.store(actor, std::memory_order_release);
+    return true;
+}
+
 std::string ui_pause_describe() {
     if (!g_started.load()) return {};
     const auto mode = static_cast<Mode>(g_mode.load());
@@ -622,3 +676,8 @@ std::string ui_pause_describe() {
 }
 
 }  // namespace cdmp::session2
+
+// Co-op+ layer (coopplus.asi), the guest's "go to my friend" on the native base: 1 = asked (run on the next UI frame).
+extern "C" __declspec(dllexport) int cdmp_guest_travel_to(uint32_t actor) {
+    return cdmp::session2::ui_pause_request_travel(actor) ? 1 : 0;
+}
