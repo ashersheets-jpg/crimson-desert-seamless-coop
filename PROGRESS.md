@@ -2470,3 +2470,17 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   (guest, TEST ONLY): an owner condition that fails for an NPC another user controls resumes at 0x25FA55F (success).
   If the Greet prompt appears and the host's server accepts it (the NPC answers), only this client check is wrong.
   (Over-broad by design: it also passes conditions that fail on the host; not a fix.) tcB56.
+- 2026-11-08 09:30 tcB56 (interact_owner_override=1, test only): the owner-condition override passed 14770 checks; the
+  lamp then showed 3 prompts on the guest (over-broad, as expected) but NPCs still none: the next refusal is
+  0x2569C661. NAMING THE CODES: they are lookup3(name, initval 0xC5EDE) of the eErr names (calibrated on two known
+  codes; tools/native-port/errhash.py hashes every eErr string of the exe):
+    0x6467532C eErrNoInteractionOwnerConditionCheckFail   (0x25FA200's exit 0x25FA3DA)
+    0x2569C661 eErrNoInteractionTargetConditionCheckFail  (0x25FA200's exit 0x25FA552; ALSO what the host's server
+                                                           answered the guest's lamp PreemptionStep with)
+    0x741F3E3F eErrNoInteractionTargetIsHidden            (0xABF3E0's refusal of some NPCs, on both PCs)
+    0x7B1E861C eErrNoGimmickNotInteractableState
+  So the guest's Greet fails BOTH the owner and the target condition lists, and both evaluate the NPC with the
+  player as the parameter (the guest-only failure: a ConditionData_Macro). The NPC's state as the guest sees it is
+  what differs -- and the townsfolk's state comes from their schedule scenes, which on the guest sit in the wrong
+  manager (M), unbound and unticked. The scene stack (guest_sched_route mode 1 + guest_sched_bind + guest_seq_play)
+  is therefore needed for NPC interaction too, not only for the scene poses (the man by the fire). Porting it next.
