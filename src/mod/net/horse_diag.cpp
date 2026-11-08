@@ -369,6 +369,11 @@ SafetyHookMid g_ip_entry, g_ip_gate, g_ip_count, g_ip_keep, g_ip_eval, g_oc_entr
 // 0x25FA200(condition, player actor, target, mode, out) -- called by 0x22E7A90 for each owner condition of the entry
 // (the subject is the PLAYER: [interaction side + 8]). Its failure exit 0x25FA3DA: the condition that failed.
 thread_local uintptr_t t_oc_cond = 0, t_oc_player = 0, t_oc_target = 0;
+thread_local uint16_t t_entry_idx = 0xFFFF;  // the collector's current entry (0xAC0330, r8 = the entry, +0x10)
+std::atomic<bool> g_oc_override{false};
+std::atomic<uint64_t> g_oc_overridden{0}, g_tc_overridden{0};
+bool remote_npc(uintptr_t actor);
+SafetyHookMid g_ip_call, g_tc_fail;
 std::atomic<uint32_t> g_oc_lines{0};
 uint64_t g_oc_seen[32] = {};
 // 0x1940AD0(target, filter = the player's vf178(), &entry key, out) (the condition of 0x22E6FC0): it re-gathers the
@@ -437,10 +442,30 @@ void ip_on_gate(safetyhook::Context& ctx) {  // 0xAC027B cmp [rax],r12d (r15 = t
         sl->gate_code.store(code, std::memory_order_relaxed);
     }
 }
+std::atomic<uint32_t> g_st_lines{0};
+uint32_t g_st_seen[48] = {};
 void ip_on_count(safetyhook::Context& ctx) {  // 0xAC02E4 (after 0x22EAE00): count [rbp-0x78]
     IpSlot* sl = ip_slot(ip_key_of(ctx.r15));
     uint32_t n = 0;
     if (sl && game::safe_read(ctx.rbp - 0x78, &n, 4)) sl->entries.fetch_add(n, std::memory_order_relaxed);
+    // The NPC's control state, which picks its owner-condition list (0x22E7A90: [[target+0x68]+0x30], u16 index at
+    // +0x48 -> 0x3DE240 -> 0x194DEA0): once per talkable NPC (entries > 0), to compare host and guest.
+    const uint32_t key = ip_key_of(ctx.r15);
+    if (!n || (key >> 28) != 0xB || g_st_lines.load(std::memory_order_relaxed) >= 48) return;
+    for (auto& k : g_st_seen) {
+        if (k == key) return;
+        if (!k) { k = key; break; }
+    }
+    uintptr_t comps = 0, ctrl = 0;
+    uint16_t st = 0xFFFF;
+    uint32_t owner = 0;
+    game::safe_read(ctx.r15 + 0x68, &comps, 8);
+    if (comps) game::safe_read(comps + 0x30, &ctrl, 8);
+    if (ctrl) game::safe_read(ctrl + 0x48, &st, 2);
+    game::safe_read(ctx.r15 + off::kActor_OwnerUser, &owner, 4);
+    g_st_lines.fetch_add(1, std::memory_order_relaxed);
+    log::info("InteractProbe [npc state] 0x{:08X} control state index 0x{:04X} (entries {}, controller 0x{:08X})", key, st,
+              n, owner);
 }
 void ip_on_eval(safetyhook::Context& ctx) {  // 0x1940AD0 entry: rcx target, dl filter, r8 &key
     const uint32_t key = ip_key_of(ctx.rcx);
@@ -476,30 +501,115 @@ void ip_on_eval(safetyhook::Context& ctx) {  // 0x1940AD0 entry: rcx target, dl 
     log::info("InteractProbe [eval 0x1940AD0] target 0x{:08X} filter {} want 0x{:X} | server list {} | AI 0x{:X} state 0x{:X} "
               "graph 0x{:X} index 0x{:04X}", key, static_cast<uint32_t>(ctx.rdx & 0xFF), want, count, ai, state, graph, idx);
 }
+void ip_on_call(safetyhook::Context& ctx) {  // 0xAC0330 call 0xABF5A0 (r8 = the entry)
+    uint16_t idx = 0xFFFF;
+    game::safe_read(ctx.r8 + 0x10, &idx, 2);
+    t_entry_idx = idx;
+}
+std::string cond_dump(uintptr_t c, uintptr_t base);
+std::atomic<uint32_t> g_tc_lines{0};
+uint64_t g_tc_seen[64] = {};
+void tc_on_fail(safetyhook::Context& ctx) {  // 0x25FA549: the store of eErrNoInteractionTargetConditionCheckFail
+    if (g_oc_override.load(std::memory_order_relaxed) && remote_npc(t_oc_target)) {  // TEST: as the owner exit
+        g_tc_overridden.fetch_add(1, std::memory_order_relaxed);
+        ctx.rip = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)) + 0x25FA55F;
+        return;
+    }
+    // Server side (the host's process): a target condition failing for ANOTHER player's character (user 2's request
+    // evaluated by the host's server) is always logged; on a client only the Greet entry 0x0055.
+    bool server_user2 = false;
+    {
+        const auto base1 = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+        uintptr_t g = 0, g30 = 0, local = 0, ch = 0;
+        game::safe_read(base1 + 0x71C0100, &g, 8);
+        if (g) game::safe_read(g + 0x30, &g30, 8);
+        if (g30) game::safe_read(g30 + 0x58, &local, 8);
+        if (local) game::safe_read(local + 0x50, &ch, 8);  // the local user's character (0x99EA20)
+        const uint32_t pk = ip_key_of(t_oc_player);
+        (void)ch;
+        // The host's character is 0xA0100001 in every two-copy run; any other 0xA... player here is user 2's.
+        server_user2 = (pk >> 28) == 0xA && pk != 0xA0100001u;
+    }
+    if (!server_user2 && t_entry_idx != 0x0055) return;  // the Greet (tcB60: the entry the host keeps)
+    const uintptr_t c = t_oc_cond;
+    const uint32_t target = ip_key_of(t_oc_target);
+    const uint64_t sig = (static_cast<uint64_t>(c & 0xFFFFFFF) << 32) ^ target;
+    for (auto& v : g_tc_seen) {
+        if (v == sig) return;
+        if (!v) { v = sig; break; }
+    }
+    if (g_tc_lines.fetch_add(1) >= 24) return;
+    const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    log::info("InteractProbe [{} target condition FAILED 0x25FA549] player 0x{:08X} target 0x{:08X} | condition ...{:07X}{}",
+              server_user2 ? "SERVER for another player" : "GREET", ip_key_of(t_oc_player), target, c & 0xFFFFFFF,
+              cond_dump(c, base));
+}
 void oc_on_entry(safetyhook::Context& ctx) {  // 0x25FA200
     t_oc_cond = ctx.rcx;
     t_oc_player = ctx.rdx;
     t_oc_target = ctx.r8;
 }
-std::atomic<bool> g_oc_override{false};
-std::atomic<uint64_t> g_oc_overridden{0};
+std::string cond_dump(uintptr_t c, uintptr_t base) {
+    auto rva = [&](uintptr_t a) { return a >= base && a < base + 0x14000000 ? a - base : a; };
+    std::string out;
+    for (int k = 0; k < 2; ++k) {
+        uintptr_t p1 = 0, obj = 0, vt = 0;
+        if (!game::safe_read(c + 8ull * k, &p1, 8) || !p1 || !game::safe_read(p1, &obj, 8) || !obj ||
+            !game::safe_read(obj, &vt, 8)) {
+            out += std::format(" | sub +{:X} none", 8 * k);
+            continue;
+        }
+        out += std::format(" | sub +{:X} class 0x{:X} fields", 8 * k, rva(vt));
+        for (uint32_t o = 8; o < 0x40; o += 8) {
+            uintptr_t q = 0;
+            game::safe_read(obj + o, &q, 8);
+            out += std::format(" {:X}", rva(q));
+        }
+        if (rva(vt) == 0x5D09E08) {  // ConditionData_Macro: its macro's inner condition
+            uint16_t idx = 0;
+            uintptr_t table = 0, arr = 0, info = 0, inner = 0, ivt = 0;
+            game::safe_read(obj + 8, &idx, 2);
+            game::safe_read(base + 0x71C2150, &table, 8);
+            if (table) game::safe_read(table + 0x58, &arr, 8);
+            if (arr) game::safe_read(arr + 8ull * idx, &info, 8);
+            if (info) game::safe_read(info + 0x10, &inner, 8);
+            if (inner) game::safe_read(inner, &ivt, 8);
+            out += std::format(" [macro {} inner class 0x{:X} fields", idx, rva(ivt));
+            for (uint32_t o = 8; inner && o < 0x48; o += 8) {
+                uintptr_t q = 0;
+                game::safe_read(inner + o, &q, 8);
+                out += std::format(" {:X}", rva(q));
+            }
+            out += "]";
+        }
+    }
+    return out;
+}
+bool remote_npc(uintptr_t actor) {
+    if (!actor || (ip_key_of(actor) >> 28) != 0xB) return false;
+    uintptr_t info = 0, comps = 0, ai = 0;
+    uint8_t type = 0;
+    if (!game::safe_read(actor + 0x88, &info, 8) || !info || !game::safe_read(info + 1, &type, 1) || type == 7)
+        return false;  // not a player character
+    if (!game::safe_read(actor + 0x68, &comps, 8) || !comps || !game::safe_read(comps + 0x58, &ai, 8) || !ai)
+        return false;  // NPCs have an AI component; gimmicks (lamps...) do not
+    const auto base0 = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    uintptr_t g = 0, g30 = 0, local = 0;
+    uint32_t local_key = 0, ctrl = 0;
+    game::safe_read(base0 + 0x71C0100, &g, 8);
+    if (g) game::safe_read(g + 0x30, &g30, 8);
+    if (g30) game::safe_read(g30 + 0x58, &local, 8);
+    if (local) game::safe_read(local + 0x60, &local_key, 4);
+    game::safe_read(actor + off::kActor_OwnerUser, &ctrl, 4);
+    return local_key && ctrl && ctrl != local_key;
+}
 void oc_on_fail(safetyhook::Context& ctx) {  // 0x25FA3DA: the store of eErrNoInteractionOwnerConditionCheckFail
     // TEST (interact_owner_override=1, guest): for a target another user controls (its [actor+0x90] is not this
     // client's user key), the owner condition passes: resume at 0x25FA55F (mov al,1 ; the epilogue).
-    if (g_oc_override.load(std::memory_order_relaxed) && t_oc_target) {
-        const auto base0 = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-        uintptr_t g = 0, g30 = 0, local = 0;
-        uint32_t local_key = 0, ctrl = 0;
-        game::safe_read(base0 + 0x71C0100, &g, 8);
-        if (g) game::safe_read(g + 0x30, &g30, 8);
-        if (g30) game::safe_read(g30 + 0x58, &local, 8);
-        if (local) game::safe_read(local + 0x60, &local_key, 4);
-        game::safe_read(t_oc_target + off::kActor_OwnerUser, &ctrl, 4);
-        if (local_key && ctrl && ctrl != local_key && (ip_key_of(t_oc_target) >> 28) == 0xB) {
-            g_oc_overridden.fetch_add(1, std::memory_order_relaxed);
-            ctx.rip = base0 + 0x25FA55F;
-            return;
-        }
+    if (g_oc_override.load(std::memory_order_relaxed) && remote_npc(t_oc_target)) {
+        g_oc_overridden.fetch_add(1, std::memory_order_relaxed);
+        ctx.rip = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)) + 0x25FA55F;
+        return;
     }
     const uintptr_t c = t_oc_cond;
     const uint32_t target = ip_key_of(t_oc_target);
@@ -568,6 +678,25 @@ void ip_on_keep(safetyhook::Context& ctx) {  // 0xAC0335 cmp byte [rsp+0x30],0
     if (sl && game::safe_read(ctx.rsp + 0x30, &ok, 1) && ok) sl->kept.fetch_add(1, std::memory_order_relaxed);
     uint32_t why = 0;  // a refused entry: 0xABF5A0's reason code (result + 4)
     if (sl && !ok && game::safe_read(ctx.rsp + 0x34, &why, 4)) sl->why.store(why, std::memory_order_relaxed);
+    // Per (NPC, entry index): kept or the refusal code, once each (rbx = the entry, its u16 index at +0x10).
+    static std::atomic<uint32_t> s_lines{0};
+    static uint64_t s_seen[700] = {};
+    const uint32_t key = ip_key_of(ctx.r15);
+    uint16_t idx = 0xFFFF;
+    uint32_t n_entries = 0;  // talkable townsfolk: 24-25 entries per query (the totals / the queries)
+    const uint32_t calls = sl ? sl->reached.load() : 0;
+    if (sl && calls) n_entries = sl->entries.load() / calls;
+    if (!sl || (key >> 28) != 0xB || n_entries < 20 || !game::safe_read(ctx.rbx + 0x10, &idx, 2) ||
+        s_lines.load() >= 700)
+        return;
+    const uint64_t sig = (static_cast<uint64_t>(key) << 16) | idx;
+    for (auto& v : s_seen) {
+        if (v == sig) return;
+        if (!v) { v = sig; break; }
+    }
+    s_lines.fetch_add(1);
+    log::info("InteractProbe [entry] 0x{:08X} index 0x{:04X} {}", key, idx,
+              ok ? std::string("KEPT") : std::format("refused 0x{:08X}", why));
 }
 
 DWORD WINAPI interact_probe_thread(LPVOID) {
@@ -627,8 +756,8 @@ DWORD WINAPI interact_probe_thread(LPVOID) {
                              "kept {}, last refusal 0x{:X})", r.key, r.d, r.reached, r.fail, r.code, r.entries, r.kept,
                              r.why);
         }
-        log::info("InteractProbe: {} targets asked in 5 s (owner conditions overridden so far {}){}", rows.size(),
-                  g_oc_overridden.load(), s);
+        log::info("InteractProbe: {} targets asked in 5 s (overridden so far: owner {}, target {}){}", rows.size(),
+                  g_oc_overridden.load(), g_tc_overridden.load(), s);
     }
 }
 
@@ -842,6 +971,8 @@ void interact_probe_start(bool on, bool owner_override) {
     n += ip_hook(base, 0xAC02E4, {0x48, 0x8B, 0x5D, 0x80, 0x8B, 0x45, 0x88}, g_ip_count, ip_on_count);
     n += ip_hook(base, 0xAC0335, {0x80, 0x7C, 0x24, 0x30, 0x00, 0x74, 0x32}, g_ip_keep, ip_on_keep);
     n += ip_hook(base, 0x25FA200, {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x18}, g_oc_entry, oc_on_entry);
+    n += ip_hook(base, 0xAC0330, {0xE8, 0x6B, 0xF2, 0xFF, 0xFF}, g_ip_call, ip_on_call);
+    n += ip_hook(base, 0x25FA549, {0x48, 0x8B, 0x8D, 0xB0, 0x07, 0x00, 0x00, 0x88, 0x01}, g_tc_fail, tc_on_fail);
     n += ip_hook(base, 0x25FA3DA, {0x48, 0x8B, 0x8D, 0xB0, 0x07, 0x00, 0x00, 0x88, 0x01}, g_oc_fail, oc_on_fail);
     {
         uint8_t h[5] = {};
