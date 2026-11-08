@@ -2454,3 +2454,11 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   looks the macro up by its u16 index in [0x71C2150]+0x58 (0x3F4F10, loaded on demand) and evaluates the macro's
   inner condition [info+0x10]. tcB54 dumps that macro (index, info, inner class, strings) to see what the guest's
   character lacks.
+- 2026-11-08 08:30 tcB54: the guest-only failing macro (index 270) wraps a pa::ConditionData_GameEventParam (vtable
+  0x5CF7958, named from its RTTI: not in classes.tsv), which only yields a real result for a type-9 (game event)
+  context; here it gets CompareTargetParameter type 5, so it is not the real cause -- the branch that reaches it is.
+  0x25FA200 picks its branch with the PLAYER's vf178 = 0x5B3AA0 ("controlled by this client": [actor+0xA0] ==
+  [[exe+0x71C0100]+0x30]+0x58 and byte [actor+0x94] != 0; slot 47 of ClientNormalInGameActor 0x5914848 /
+  ClientChildOnlyInGameActor 0x5914D58), and 0xABF5A0 makes the same test inline several times. Hypothesis: on the
+  guest, the guest's OWN character fails that test (its +0xA0 owner object is not the client's local user object),
+  so every player-side interaction check takes the "not my character" branch. tcB55 logs both values on both PCs.
