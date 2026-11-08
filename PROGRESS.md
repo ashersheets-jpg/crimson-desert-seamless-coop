@@ -2593,3 +2593,15 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   follows the host's progress"); the conditions read the subject's user / main character / knowledge. tcB73: the
   same swap on the GUEST's client too (guest_condition_subject_host=1: the subject becomes the host's character's
   copy on the guest's client), to see whether the Greet is offered.
+- 2026-11-08 15:30 tcB73 (the subject swap on the guest's client too: 7943 swaps): the Greet (0x0055) is still refused
+  by its target condition on the guest's client (18x) -- the host's character's COPY on the guest lacks the host's
+  progress data the conditions read. BUT tcB70 (the narrow override: the Greet's owner/target conditions pass on the
+  guest's client) had the Greet KEPT for 7 NPCs (the rest refused only by distance, eErrNoInvalidInteractionDistance):
+  the Greet WAS available; E went to the lamp because the guest faced it (the targeting prefers what is under the
+  crosshair). THE PATH FOR NPC TALK, tested in parts: (1) the host's server judges user 2's interaction conditions with
+  the host's character as the subject (tcB71 accepted / tcB72 refused without); (2) the guest's client lets an
+  NPC's (another user controls) condition failures pass for the entries the host could do, so the prompt shows; the
+  server stays the judge. Next: the end-to-end run (the guest facing an NPC, Greet, dialogue on screen), then the
+  proper versions: the host's character found through its user (not the key 0xA0100001), and the guest's client
+  allowance limited to what the host's world allows (e.g. the host's knowledge sent to the guest, or a host-side list
+  of the entries each nearby NPC offers).
