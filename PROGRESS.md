@@ -2367,3 +2367,21 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   still gated: unported, not needed.) Native 3df1909 (local) + bundle. Next: guest_sched_route / guest_sched_bind
   (NPCs whose 2335 comes after their 2005; the handlers are mapped above) and guest_seq_play (scene ticking); then
   the guest's interaction with NPCs (talk) now that they are real.
+- 2026-11-08 04:55 B22a, the installer part (after Plitos's Setup-Direct.ps1; our own code): kit/coopplus/install.ps1
+  (1) checks the EXE identity (version 1.0.0.3576, PE stamp 0x6AED2E85, SizeOfImage 0x13CC4000; a note on another
+  build, as before: the mod switches itself off there); (2) finds the ASI loader: an Ultimate ASI Loader already in
+  bin64 under any proxy name (winmm, winhttp, dinput8, version, dsound, xinput1_3/1_4, d3d9, d3d11, wininet,
+  msacm32; marker 'IsUltimateASILoader') is used as it is and the bundled winmm.dll is not installed; two loaders,
+  or a winmm.dll that is not a loader (and not ours), STOP the install before anything is touched; (3) backs up the
+  solo saves AND the co-op ones (coop_worlds, save_cdmp_guest) to Documents\...\<date>\{save,coop_worlds,...}, every
+  file checked by SHA-256 against its original, a linked (reparse point) save folder refused. tools/test-install-
+  fake.ps1 -RepoScripts: new cases (a reused winhttp.dll loader + uninstall leaves it; a foreign winmm.dll; two
+  loaders; the co-op save in the backup). ALL PASS on the 862b4256 zip (18 steps) and the shared-world zip (20).
+  Still open in B22a: co-op refused when a native save-redirection hook fails (native code).
+- 2026-11-08 04:55 tcB44 (the guest turned toward the hearth, E twice): poses fine (a man leaning on a pillar with his
+  arms crossed, the man in white bent toward the fire), but NO "Greet" prompt on the guest for any NPC (the host had
+  "Stranger / Greet"); both presses went to a lamp (0xB0100862) and the host's server answered PreemptionStepFail
+  3100 this time. User (tcB43): the man by the fire faces away from it on the guest (host: warming his hands): the
+  scene that turns and animates him is not played on the guest yet (guest_sched_route / bind / seq_play to port).
+  Next: the host's slot guard now counts every interaction slot it writes (present / empty / NULL holder) to see
+  whether user 2's NPCs reach the guest with their interactions emptied.
