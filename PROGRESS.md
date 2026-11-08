@@ -2505,3 +2505,10 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
       list of the target's control state ([[target+0x68]+0x30], u16 index +0x48 -> 0x3DE240 -> 0x194DEA0). Lead: the
       guest's NPC is in a different control state than the host's (e.g. seq_actor_restore's substituted wait vs the
       host's scene action). tcB58 logs each talkable NPC's control state on both PCs.
+- 2026-11-08 10:45 tcB58: the NPC control state (+0x48) is IDENTICAL on both PCs for every NPC seen on both (the
+  talkable townsfolk 0xFFFF); for townsfolk (type 1) 0x22E7A90 takes the conditions from the interaction's own static
+  list (the same data on both) -- so the condition list does not differ. CompareTargetParameter (0x240E9D0) stores
+  the player at +0x828 = 0x25FA200's local_38, so both PCs take the same "with context" call. Remaining lead: the
+  guest is offered a different entry under the same prompt (the 25 entries come from the NPC's AI state node).
+  tcB59 (per NPC and entry index: kept / refusal) ran out of its 160-line budget on other actors (only 2 gimmicks
+  differ: host 0x3E2AD36C, guest 0x2569C661); tcB60 logs only the townsfolk (20+ entries), 700 lines.
