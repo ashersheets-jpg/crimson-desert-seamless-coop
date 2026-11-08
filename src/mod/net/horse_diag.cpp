@@ -463,7 +463,7 @@ void ip_on_count(safetyhook::Context& ctx) {  // 0xAC02E4 (after 0x22EAE00): cou
     // The NPC's control state, which picks its owner-condition list (0x22E7A90: [[target+0x68]+0x30], u16 index at
     // +0x48 -> 0x3DE240 -> 0x194DEA0): once per talkable NPC (entries > 0), to compare host and guest.
     const uint32_t key = ip_key_of(ctx.r15);
-    if (!n || (key >> 28) != 0xB || g_st_lines.load(std::memory_order_relaxed) >= 48) return;
+    if (!n || (key >> 28) != 0xB || g_st_lines.load(std::memory_order_relaxed) >= 240) return;
     for (auto& k : g_st_seen) {
         if (k == key) return;
         if (!k) { k = key; break; }
@@ -476,8 +476,9 @@ void ip_on_count(safetyhook::Context& ctx) {  // 0xAC02E4 (after 0x22EAE00): cou
     if (ctrl) game::safe_read(ctrl + 0x48, &st, 2);
     game::safe_read(ctx.r15 + off::kActor_OwnerUser, &owner, 4);
     g_st_lines.fetch_add(1, std::memory_order_relaxed);
-    log::info("InteractProbe [npc state] 0x{:08X} control state index 0x{:04X} (entries {}, controller 0x{:08X})", key, st,
-              n, owner);
+    const auto pos = game::actor_world_position(key);
+    log::info("InteractProbe [npc state] 0x{:08X} control state index 0x{:04X} (entries {}, controller 0x{:08X}) at "
+              "({:.1f}, {:.1f}, {:.1f})", key, st, n, owner, pos ? pos->x : 0.f, pos ? pos->y : 0.f, pos ? pos->z : 0.f);
 }
 void ip_on_eval(safetyhook::Context& ctx) {  // 0x1940AD0 entry: rcx target, dl filter, r8 &key
     const uint32_t key = ip_key_of(ctx.rcx);
