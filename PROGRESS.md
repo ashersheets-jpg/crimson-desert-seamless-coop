@@ -2385,3 +2385,18 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   scene that turns and animates him is not played on the guest yet (guest_sched_route / bind / seq_play to port).
   Next: the host's slot guard now counts every interaction slot it writes (present / empty / NULL holder) to see
   whether user 2's NPCs reach the guest with their interactions emptied.
+- 2026-11-08 05:20 tcB45 (the host's slot guard now counts every interaction slot it writes): in the whole session
+  only 73 slots: present 45, empty 0, NULL holder (guarded) 28 -- the same component is serialized for both users,
+  so the NULLs are not user-2-specific, and so few calls mean most NPCs' interactions do not come through it. Still
+  no "Greet" on the guest (tcB45-g1; the man at the hearth faced the fire this time: his facing on the guest depends
+  on when he was announced). ByJunter's notes never reached NPC conversations for the guest (only "ShowAIDialogAck
+  may not include the guest"). Lead: the client's candidate collector 0xAC0150(player side, target, out, flag)
+  (3576 decomp: gates 0x9857C0 / vf188 / 0xABF090 / field 0x215B790, then 0xABF3E0 must give 0, then the target's
+  entries from [[target+0x68]+0x98] via 0x22EAE00, each tested by 0xABF5A0). Native InteractProbe
+  ([session2] interact_probe=1, read only, 4 mid hooks: 0xAC0150 / 0xAC027B / 0xAC02E4 / 0xAC0335): per target
+  asked, refused by 0xABF3E0 (code), entries, kept -- host vs guest. tcB46.
+  The scene port (for the man by the fire) found on 3576: the stage manager grew by 0x28 (its schedule container
+  +0x148 -> +0x170, the ready byte +0x231 -> +0x259); the Delete point is 0xD3B10B lea rdx,[rbp+0x88] ; mov rcx,
+  [rax+0x170] (14 bytes) ; call 0x4E1740 (2976 0x43C750); its slots found [rbp+8] actor [rbp] packet key [rbp+0x80]
+  key [rbp+0x88]. The Create point 0xD3A951 (9 bytes): found [rbp+0x80] actor [rbp+0x78] packet key [rbp-0x40]
+  key [rbp-0x30] resource [rbp-0x34] kind BL; the stage call 0xBABA90 (13 args now).
