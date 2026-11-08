@@ -1,6 +1,7 @@
 #include "mod/net/horse_diag.h"
 
 #include <windows.h>
+#include <intrin.h>
 
 #include <algorithm>
 #include <atomic>
@@ -364,6 +365,7 @@ struct IpSlot {
 constexpr size_t kIpSlots = 1024;
 IpSlot g_ip[kIpSlots];
 std::atomic<bool> g_ip_on{false};
+std::atomic<uint64_t> g_ks_calls{0}, g_ks_shared{0}, g_ks_still_no{0};  // KnowledgeShare (below)
 SafetyHookMid g_ip_entry, g_ip_gate, g_ip_count, g_ip_keep, g_ip_eval, g_oc_entry, g_oc_fail;
 // The guest's refusal is eErrNoInteractionOwnerConditionCheckFail (0x714AF5C = 0x6467532C, tcB51), stored by
 // 0x25FA200(condition, player actor, target, mode, out) -- called by 0x22E7A90 for each owner condition of the entry
@@ -756,8 +758,9 @@ DWORD WINAPI interact_probe_thread(LPVOID) {
                              "kept {}, last refusal 0x{:X})", r.key, r.d, r.reached, r.fail, r.code, r.entries, r.kept,
                              r.why);
         }
-        log::info("InteractProbe: {} targets asked in 5 s (overridden so far: owner {}, target {}){}", rows.size(),
-                  g_oc_overridden.load(), g_tc_overridden.load(), s);
+        log::info("InteractProbe: {} targets asked in 5 s (overridden so far: owner {}, target {}) | KnowledgeShare: "
+                  "user 2 no {} -> shared {}, still no {}{}", rows.size(), g_oc_overridden.load(), g_tc_overridden.load(),
+                  g_ks_calls.load(), g_ks_shared.load(), g_ks_still_no.load(), s);
     }
 }
 
@@ -772,6 +775,63 @@ bool ip_hook(uintptr_t base, uintptr_t rva, std::initializer_list<uint8_t> head,
     if (!m) return false;
     h = std::move(*m);
     return true;
+}
+
+// Co-op+ user2_knowledge_share (2026-11-08, TEST, HOST): the host's server refuses user 2's NPC interactions on
+// ConditionData_CheckKnowledge (tcB65): its evaluate 0x242A270 asks 0x2308FC0(knowledge comp, &key, level) of the
+// SUBJECT'S USER'S MAIN CHARACTER ([[actor+0xA0]+0xD0], comps +0x150); the comp's +8 is its actor, +0x18 an array of
+// 0x18-byte entries indexed by the knowledge key, the level learned at +0. With this on, a "no" for another player's
+// character on a SERVER thread (the exe's TLS byte +0x1EB) is asked again of the host's character's knowledge
+// (B04: "knowledge learned by one counts for both"). Read only: nothing is learned or written.
+SafetyHookInline g_ks_hook;
+std::atomic<uintptr_t> g_ks_host_comp{0};
+bool ks_server_thread() {
+    __try {
+        const auto tls = reinterpret_cast<uintptr_t*>(__readgsqword(0x58));
+        return tls && tls[0] && *reinterpret_cast<const uint8_t*>(tls[0] + 0x1EB) != 0;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+int32_t ks_level(uintptr_t comp, uint16_t key) {
+    uintptr_t arr = 0;
+    int32_t lvl = -1;
+    if (!comp || !game::safe_read(comp + 0x18, &arr, 8) || !arr) return -1;
+    game::safe_read(arr + 0x18ull * key, &lvl, 4);
+    return lvl;
+}
+bool __fastcall ks_detour(uintptr_t comp, const uint16_t* key, int32_t level) {
+    const bool has = g_ks_hook.unsafe_call<bool>(comp, key, level);
+    uintptr_t actor = 0;
+    uint32_t akey = 0, owner = 0;
+    game::safe_read(comp + 8, &actor, 8);
+    if (actor) {
+        game::safe_read(actor + off::kActor_Key, &akey, 4);
+        game::safe_read(actor + off::kActor_OwnerUser, &owner, 4);
+    }
+    if ((akey >> 28) != 0xA) return has;
+    if (owner == 0x90100000u) {  // the host's user (the first user in every run): its character's knowledge, from
+        g_ks_host_comp.store(comp, std::memory_order_relaxed);  // either realm (the host's client mirrors it and
+        return has;                                             // checks it constantly; the server seldom)
+    }
+    if (!ks_server_thread()) return has;
+    if (has) return has;
+    g_ks_calls.fetch_add(1, std::memory_order_relaxed);
+    uint16_t k = 0;
+    if (!key || !game::safe_read(reinterpret_cast<uintptr_t>(key), &k, 2)) return has;
+    const uintptr_t host = g_ks_host_comp.load(std::memory_order_relaxed);
+    static std::atomic<uint32_t> s_lines{0};
+    if (s_lines.fetch_add(1) < 12) {
+        log::info("KnowledgeShare [no] user 2 0x{:08X} asks key 0x{:04X} level {}: its level {} | the host's comp {} -> "
+                  "level {}", akey, k, level, ks_level(comp, k), host ? "known" : "NOT known",
+                  host ? ks_level(host, k) : -2);
+    }
+    if (host && ks_level(host, k) >= level) {
+        g_ks_shared.fetch_add(1, std::memory_order_relaxed);
+        return true;
+    }
+    g_ks_still_no.fetch_add(1, std::memory_order_relaxed);
+    return has;
 }
 
 void on_cc_update(safetyhook::Context& ctx) {
@@ -995,6 +1055,26 @@ void interact_probe_start(bool on, bool owner_override) {
     log::info("InteractProbe: 0xABF5A0 refusal codes:{} (0x714C018 the 0xABCD30 path, 0x714AF0C 0x8D0FE70, 0x7137FC8 the "
               "target's +0x120 flag, 0x714BE54 the user's current interaction, 0x714AF14 the target's action flag +0x116 & 4)",
               codes);
+}
+
+void knowledge_share_start(bool on) {
+    if (!on || g_ks_hook) return;
+    const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    uint8_t h[8] = {};
+    game::safe_read(base + 0x2308FC0, h, sizeof h);
+    // 0x2308FC0: mov [rsp+8],rbx ; push rdi ; sub rsp,20 ... (checked by its first bytes)
+    log::info("KnowledgeShare: 0x2308FC0 head {:02X} {:02X} {:02X} {:02X} {:02X} {:02X} {:02X} {:02X}", h[0], h[1], h[2],
+              h[3], h[4], h[5], h[6], h[7]);
+    g_ks_hook = safetyhook::create_inline(reinterpret_cast<void*>(base + 0x2308FC0), reinterpret_cast<void*>(&ks_detour));
+    log::warn("KnowledgeShare {} (user2_knowledge_share=1, TEST, host): a server-side knowledge check that fails for "
+              "another player's character asks the host's character's knowledge too (read only)",
+              g_ks_hook ? "ON" : "NOT installed");
+}
+
+std::string knowledge_share_describe() {
+    return std::format("KnowledgeShare: user 2's failed knowledge checks {} -> shared from the host's {}, still no {} "
+                       "(host knowledge comp {})", g_ks_calls.load(), g_ks_shared.load(), g_ks_still_no.load(),
+                       g_ks_host_comp.load() ? "known" : "NOT seen yet");
 }
 
 void anim_probe_start(bool on) {

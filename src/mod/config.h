@@ -550,6 +550,7 @@ struct Config {
     bool s2_anim_probe = false;  // Co-op+ 2026-11-08: AnimProbe
     bool s2_interact_probe = false;  // Co-op+ 2026-11-08: InteractProbe
     bool s2_interact_owner_override = false;  // Co-op+ 2026-11-08: TEST
+    bool s2_user2_knowledge_share = false;  // Co-op+ 2026-11-08: TEST (host)
     // S43 (docs/research/s25/s43-puertas-y-r42.md), HOST: scene_level_share = 0 | probe | 1. A: user 2's own 2598 / 2104
     // marks the SceneLevel ready (owner gate 0x283044D); B: a 2834 delete of a level the other user still has loaded is
     // skipped (0x2829E60). 0: nothing installed; probe: measures only.
