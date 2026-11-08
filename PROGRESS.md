@@ -2211,3 +2211,11 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   (the harness then "lost focus" to the crash reporter). Before the fix no release ever ran, so it never showed.
   ByJunter's own answer exists: [session2] notify_thread_rule=1 (releases call NotifyAppear only on a thread the game
   uses for NotifyAppear, so they cannot race the server's own actor work); off by default. tcB25 runs with it.
+- 2026-11-08 00:40 tcB25 (notify_thread_rule=1): the same host crash (0x249500A) -- not a thread race. With the decomp:
+  0x22E32A0 is slot 25 (+0xC8) of three vtables, the Client/Common/ServerInteractionActorComponent ones (0x594E6F0,
+  0x5CCB990, 0x5EF4338): the interaction component's serializer; it walks its 0x38-byte entries and passes entry+8 to
+  0x2495000(slot, writer), which writes a "present" byte (*slot != 0) and the slot's data. An entry with +8 = null
+  crashes it before the byte. 0x3DEEF0 (next) only indexes a static table. Native fix: an inline guard at 0x2495000
+  (host, prologue checked) writes a null slot as the game writes an empty one (the byte 0): the stream to user 2 keeps
+  its shape. These actors only reach that serializer for user 2 now that held NPCs are released (before the sector
+  fix none were). tcB26 checks it.
