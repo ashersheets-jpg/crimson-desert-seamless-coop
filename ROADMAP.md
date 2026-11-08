@@ -148,6 +148,11 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   worlds, one save per friend).
   Shipping it distributes ByJunter's GPL code: ask the user before the release.
 - [ ] **B02 — Same NPCs and townsfolk** (native: one world; check towns, schedules, the playtest's missing NPCs).
+  - [~] **B02a — The guest talks to NPCs on its own progress** (2026-11-08: greeting works, tcB88/89/91; npc_category).
+  - [ ] **B02b — Merchants for the guest (user 2026-11-08):** the guest opens a merchant, buys and sells with its own
+    money and stock, and starts and finishes the merchants' quests on its own, without the host at that step.
+    Start from ByJunter's S46 shop work (docs/research/s25/s46-tenderos.md: own shop scenes for user 2, U2 routing,
+    T1/T2, R0), never run in the game and written for 2976.
 - [ ] **B03 — World events and sieges** joinable by the guest.
 - [ ] **B04 — Shared map and knowledge** (fog / visited zones, knowledge learned by one counts for both).
 - [ ] **B05 — Other mounts and vehicles** (bears, wolves, raptors...; wagon, skiff, mech) seen and ridden.

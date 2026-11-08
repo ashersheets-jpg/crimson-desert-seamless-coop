@@ -2667,3 +2667,13 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   SAVES OK. The earlier TEST flags (owner override, subject swap, knowledge share) are not needed for this.
 - 2026-11-08 20:50 tcB89 (the same, WITHOUT interact_probe: only the default npc_category_share=1): reproduced -- the
   guest's Greet (0xAD) sent and both steps accepted by the host's server; SAVES OK.
+- 2026-11-08 21:40 MERCHANTS (user 2026-11-08: the guest must buy from merchants and start / finish their quests on
+  its own; ROADMAP B02b). tcB90/91: the guest's Greet works on many townsfolk (a "Talk" prompt also seen, tcB90-s5).
+  tcB92-95: finding the merchants on 3576 (teleports inside the inn land on the upper floor; the market square is at
+  ground 612.4; the host's probe now logs each NPC's position). The guest receives the same StoreDataListAck /
+  StoreItemSellDataListAck as the host (495 / 34) but NO shop scenes (PrepareSequencerAck: host 33, guest 0): a
+  merchant's trade entry exists only while its cd_seq_funcnpc_* scene runs, and the host's server makes those scenes
+  for the field owner (the host) only. ByJunter's S46 work (s46-tenderos.md) is the full design for this (user 2's
+  own shop scenes, the U2 routing, T1/T2 ordering, R0 entry deletion), compiled and unit-tested on 2976 but never run
+  in the game; its modules (user2_stages, user2_shops, shop_probe, shop_trade_probe, observer_hold_scene_order) are
+  in the native tree. Next: check which are ported to 3576, then a live test as its 9.7 describes.
