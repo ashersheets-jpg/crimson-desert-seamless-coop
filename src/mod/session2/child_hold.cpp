@@ -4453,9 +4453,14 @@ constexpr uintptr_t kSlotSerializer = 0x2495000;
 constexpr uint8_t kSlotSerializerHead[] = {0x48, 0x89, 0x5C, 0x24, 0x18, 0x57, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x83, 0x39, 0x00};
 SafetyHookInline g_slot_guard;
 std::atomic<uint64_t> g_slot_nulls{0};
+// Co-op+ (2026-11-08, tcB44: the guest gets no "Greet" prompt on NPCs): every slot written, and how: a null holder
+// (the guard's case), an empty one (*slot == 0, the game's own "absent"), a present one.
+std::atomic<uint64_t> g_slot_calls{0}, g_slot_empty{0};
 using SlotWriteFn = void(__fastcall*)(void*, const void*, uint64_t);
 
 void __fastcall slot_serializer_detour(int64_t* slot, int64_t* writer) {
+    g_slot_calls.fetch_add(1, std::memory_order_relaxed);
+    if (slot && *slot == 0) g_slot_empty.fetch_add(1, std::memory_order_relaxed);
     if (!slot && writer) {
         g_slot_nulls.fetch_add(1, std::memory_order_relaxed);
         const uint8_t absent = 0;
@@ -4953,6 +4958,12 @@ void child_hold_server_tick() noexcept {
     }
 }
 
+std::string slot_guard_describe() {
+    const uint64_t calls = g_slot_calls.load(), nulls = g_slot_nulls.load(), empty = g_slot_empty.load();
+    return std::format(" | interaction slots written {}: present {}, empty {}, NULL holder (guarded) {}", calls,
+                       calls - nulls - empty, empty, nulls);
+}
+
 std::string child_hold_describe() {
     size_t still = 0, old = 0;
     {
@@ -5122,6 +5133,7 @@ std::string child_hold_describe() {
             g_pg_shadow_recovered.load(), g_pg_shadow_recover_max_ms.load(), g_pg_shadow_would_drop.load(),
             g_pg_shadow_gone.load(), g_pub_shadow_size.load());
     }
+    if (g_slot_guard) s += slot_guard_describe();
     return s;
 }
 

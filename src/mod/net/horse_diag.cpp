@@ -2,7 +2,9 @@
 
 #include <windows.h>
 
+#include <algorithm>
 #include <atomic>
+#include <vector>
 #include <chrono>
 #include <cstring>
 #include <format>
@@ -348,6 +350,179 @@ DWORD WINAPI anim_probe_thread(LPVOID) {
     }
 }
 
+// Co-op+ InteractProbe (2026-11-08, [session2] interact_probe=1, host and guest, read only): the guest gets no
+// "Greet" prompt on NPCs. The client's candidate collector 0xAC0150(player side, target actor, out list, flag) (3576
+// decomp): gates (0x9857C0 state, vf188, 0xABF090, the field 0x215B790), then 0xABF3E0 (result 0 = go on, at
+// 0xAC027B), then the target's entries from its component [[target+0x68]+0x98] via 0x22EAE00 (count [rbp-0x78] at
+// 0xAC02E4), each tested by 0xABF5A0 (kept when byte [rsp+0x30] != 0 at 0xAC0335). Per target key: calls, the
+// 0xABF3E0 refusals (last code), entries seen, entries kept. Every 5 s the 8 most asked targets.
+struct IpSlot {
+    std::atomic<uint32_t> key{0};
+    std::atomic<uint32_t> calls{0}, gate_fail{0}, gate_code{0}, entries{0}, kept{0}, reached{0}, why{0};
+    uint32_t last_calls = 0;
+};
+constexpr size_t kIpSlots = 1024;
+IpSlot g_ip[kIpSlots];
+std::atomic<bool> g_ip_on{false};
+SafetyHookMid g_ip_entry, g_ip_gate, g_ip_count, g_ip_keep, g_ip_eval;
+// 0x1940AD0(target, filter = the player's vf178(), &entry key, out) (the condition of 0x22E6FC0): it re-gathers the
+// target's entries with that filter through 0x22EAE00 -- filter 0 (or an empty server list at comp+0x98) takes them
+// from the NPC's AI: [[actor+0x68]+0x58] (AI component) +0x90 -> {+8 graph, +0x10 u16 state index pair}.
+std::atomic<uint32_t> g_ev_lines{0};
+
+uint32_t ip_key_of(uintptr_t actor) {
+    uint32_t key = 0;
+    if (!actor || !game::safe_read(actor + off::kActor_Key, &key, 4)) return 0;
+    return key;
+}
+IpSlot* ip_slot(uint32_t key) {
+    if (!key) return nullptr;
+    size_t i = (static_cast<size_t>(key) * 2654435761u >> 10) & (kIpSlots - 1);
+    for (int n = 0; n < 32; ++n, i = (i + 1) & (kIpSlots - 1)) {
+        IpSlot& sl = g_ip[i];
+        uint32_t k = sl.key.load(std::memory_order_relaxed);
+        if (k == 0) {
+            if (!sl.key.compare_exchange_strong(k, key) && k != key) continue;
+            return &sl;
+        }
+        if (k == key) return &sl;
+    }
+    return nullptr;
+}
+void ip_on_entry(safetyhook::Context& ctx) {
+    if (IpSlot* sl = ip_slot(ip_key_of(ctx.rdx))) sl->calls.fetch_add(1, std::memory_order_relaxed);
+}
+void ip_on_gate(safetyhook::Context& ctx) {  // 0xAC027B cmp [rax],r12d (r15 = target)
+    IpSlot* sl = ip_slot(ip_key_of(ctx.r15));
+    if (!sl) return;
+    sl->reached.fetch_add(1, std::memory_order_relaxed);
+    uint32_t code = 0;
+    if (game::safe_read(ctx.rax, &code, 4) && code) {
+        sl->gate_fail.fetch_add(1, std::memory_order_relaxed);
+        sl->gate_code.store(code, std::memory_order_relaxed);
+    }
+}
+void ip_on_count(safetyhook::Context& ctx) {  // 0xAC02E4 (after 0x22EAE00): count [rbp-0x78]
+    IpSlot* sl = ip_slot(ip_key_of(ctx.r15));
+    uint32_t n = 0;
+    if (sl && game::safe_read(ctx.rbp - 0x78, &n, 4)) sl->entries.fetch_add(n, std::memory_order_relaxed);
+}
+void ip_on_eval(safetyhook::Context& ctx) {  // 0x1940AD0 entry: rcx target, dl filter, r8 &key
+    const uint32_t key = ip_key_of(ctx.rcx);
+    if (!key || (key >> 28) != 0xB) return;  // NPCs only (not the players nor their horses' keys 0xA...)
+    IpSlot* sl = ip_slot(key);
+    if (!sl || sl->entries.load(std::memory_order_relaxed) == 0) return;  // a target with interaction entries
+    static std::atomic<uint32_t> s_seen[64] = {};
+    bool known = false;
+    uint32_t free_i = 64;
+    for (uint32_t i = 0; i < 64; ++i) {
+        const uint32_t k = s_seen[i].load(std::memory_order_relaxed);
+        if (k == key) { known = true; break; }
+        if (!k && free_i == 64) free_i = i;
+    }
+    if (known || free_i == 64 || g_ev_lines.fetch_add(1, std::memory_order_relaxed) >= 64) return;
+    s_seen[free_i].store(key, std::memory_order_relaxed);
+    uintptr_t comps = 0, icomp = 0, ai = 0, state = 0, graph = 0;
+    uint32_t count = 0, want = 0;
+    uint16_t idx = 0;
+    game::safe_read(ctx.rcx + 0x68, &comps, 8);
+    if (comps) {
+        game::safe_read(comps + 0x98, &icomp, 8);
+        game::safe_read(comps + 0x58, &ai, 8);
+    }
+    if (icomp) game::safe_read(icomp + 0x98, &count, 4);
+    if (ai) game::safe_read(ai + 0x90, &state, 8);
+    if (state) {
+        game::safe_read(state + 8, &graph, 8);
+        uintptr_t ip = 0;
+        if (game::safe_read(state + 0x10, &ip, 8) && ip) game::safe_read(ip, &idx, 2);
+    }
+    game::safe_read(ctx.r8, &want, 4);
+    log::info("InteractProbe [eval 0x1940AD0] target 0x{:08X} filter {} want 0x{:X} | server list {} | AI 0x{:X} state 0x{:X} "
+              "graph 0x{:X} index 0x{:04X}", key, static_cast<uint32_t>(ctx.rdx & 0xFF), want, count, ai, state, graph, idx);
+}
+void ip_on_keep(safetyhook::Context& ctx) {  // 0xAC0335 cmp byte [rsp+0x30],0
+    IpSlot* sl = ip_slot(ip_key_of(ctx.r15));
+    uint8_t ok = 0;
+    if (sl && game::safe_read(ctx.rsp + 0x30, &ok, 1) && ok) sl->kept.fetch_add(1, std::memory_order_relaxed);
+    uint32_t why = 0;  // a refused entry: 0xABF5A0's reason code (result + 4)
+    if (sl && !ok && game::safe_read(ctx.rsp + 0x34, &why, 4)) sl->why.store(why, std::memory_order_relaxed);
+}
+
+DWORD WINAPI interact_probe_thread(LPVOID) {
+    for (;;) {
+        Sleep(5000);
+        struct Row { uint32_t key, d, reached, fail, code, entries, kept, why; };
+        std::vector<Row> rows;
+        for (auto& sl : g_ip) {
+            const uint32_t key = sl.key.load(std::memory_order_relaxed);
+            if (!key) continue;
+            const uint32_t calls = sl.calls.load(std::memory_order_relaxed);
+            const uint32_t d = calls - sl.last_calls;
+            sl.last_calls = calls;
+            if (!d) continue;
+            rows.push_back({key, d, sl.reached.load(), sl.gate_fail.load(), sl.gate_code.load(), sl.entries.load(),
+                            sl.kept.load(), sl.why.load()});
+        }
+        if (rows.empty()) continue;
+        static bool s_codes = false;  // the refusal codes are runtime globals (filled after start): once, when set
+        if (!s_codes) {
+            const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+            std::string codes;
+            bool any = false;
+            for (uintptr_t g : {0x7135728ull, 0x7137FC8ull, 0x7145948ull, 0x7145998ull, 0x714ABB8ull, 0x714AEECull,
+                                0x714AF08ull, 0x714AF0Cull, 0x714AF14ull, 0x714AF18ull, 0x714AF2Cull, 0x714AF30ull,
+                                0x714AF80ull, 0x714BE54ull, 0x714C018ull, 0x714C07Cull}) {
+                uint32_t v = 0;
+                game::safe_read(base + g, &v, 4);
+                any = any || v;
+                codes += std::format(" [0x{:X}]=0x{:X}", g, v);
+            }
+            if (any) {
+                s_codes = true;
+                log::info("InteractProbe: the refusal codes of 0x22E6FC0 / 0xABF5A0 (globals):{}", codes);
+                // Where the guest's refusal 0x6467532C lives: every dword of .sdata/.rodata (0x6CD2000..0x7824000)
+                // holding it (the code globals are filled at run time).
+                std::string at;
+                int hits = 0;
+                std::vector<uint32_t> chunk(0x4000);
+                for (uintptr_t r = 0x6CD2000; r < 0x7824000 && hits < 16; r += chunk.size() * 4) {
+                    if (!game::safe_read(base + r, chunk.data(), chunk.size() * 4)) continue;
+                    for (size_t i = 0; i < chunk.size() && hits < 16; ++i) {
+                        if (chunk[i] == 0x6467532Cu) {
+                            at += std::format(" 0x{:X}", r + i * 4);
+                            ++hits;
+                        }
+                    }
+                }
+                log::info("InteractProbe: 0x6467532C is held at:{}", at.empty() ? " nowhere in 0x6CD2000..0x7824000" : at);
+            }
+        }
+        std::sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) { return a.d > b.d; });
+        std::string s;
+        for (size_t i = 0; i < rows.size() && i < 8; ++i) {
+            const Row& r = rows[i];
+            s += std::format(" | 0x{:08X} asked {} (total: past gates {}, 0xABF3E0 refused {} last 0x{:X}, entries {}, "
+                             "kept {}, last refusal 0x{:X})", r.key, r.d, r.reached, r.fail, r.code, r.entries, r.kept,
+                             r.why);
+        }
+        log::info("InteractProbe: {} targets asked in 5 s{}", rows.size(), s);
+    }
+}
+
+bool ip_hook(uintptr_t base, uintptr_t rva, std::initializer_list<uint8_t> head, SafetyHookMid& h,
+             safetyhook::MidHookFn fn) {
+    std::vector<uint8_t> b(head.size());
+    if (!game::safe_read(base + rva, b.data(), b.size()) || !std::equal(b.begin(), b.end(), head.begin())) {
+        log::warn("InteractProbe: exe+0x{:X} is not the expected code; not hooked", rva);
+        return false;
+    }
+    auto m = safetyhook::MidHook::create(reinterpret_cast<void*>(base + rva), fn);
+    if (!m) return false;
+    h = std::move(*m);
+    return true;
+}
+
 void on_cc_update(safetyhook::Context& ctx) {
     if (g_ap_on.load(std::memory_order_relaxed)) anim_probe_note(ctx.rcx);
     if (g_remote_mode) {
@@ -530,6 +705,37 @@ void horse_diag_tick() {
         logged_post = b;
         last = t;
     }
+}
+
+void interact_probe_start(bool on) {
+    if (!on || g_ip_on.exchange(true)) return;
+    const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    int n = 0;
+    n += ip_hook(base, 0xAC0150, {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x18}, g_ip_entry, ip_on_entry);
+    n += ip_hook(base, 0xAC027B, {0x44, 0x39, 0x20, 0x0F, 0x85, 0xC0, 0x01, 0x00, 0x00}, g_ip_gate, ip_on_gate);
+    n += ip_hook(base, 0xAC02E4, {0x48, 0x8B, 0x5D, 0x80, 0x8B, 0x45, 0x88}, g_ip_count, ip_on_count);
+    n += ip_hook(base, 0xAC0335, {0x80, 0x7C, 0x24, 0x30, 0x00, 0x74, 0x32}, g_ip_keep, ip_on_keep);
+    {
+        uint8_t h[5] = {};
+        game::safe_read(base + 0x1940AD0, h, 5);
+        log::info("InteractProbe: 0x1940AD0 head {:02X} {:02X} {:02X} {:02X} {:02X}", h[0], h[1], h[2], h[3], h[4]);
+        if (auto m = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x1940AD0), ip_on_eval)) {
+            g_ip_eval = std::move(*m);
+            ++n;
+        }
+    }
+    if (HANDLE t = CreateThread(nullptr, 0, interact_probe_thread, nullptr, 0, nullptr)) CloseHandle(t);
+    log::info("InteractProbe ON (interact_probe=1, read only): {}/5 points in the candidate collector 0xAC0150 (+ 0x1940AD0)", n);
+    // 0xABF5A0's refusal codes are loaded from globals: their values, to name a refusal by its path.
+    std::string codes;
+    for (uintptr_t g : {0x714C018ull, 0x714AF0Cull, 0x7137FC8ull, 0x714BE54ull, 0x714AF14ull}) {
+        uint32_t v = 0;
+        game::safe_read(base + g, &v, 4);
+        codes += std::format(" [0x{:X}]=0x{:X}", g, v);
+    }
+    log::info("InteractProbe: 0xABF5A0 refusal codes:{} (0x714C018 the 0xABCD30 path, 0x714AF0C 0x8D0FE70, 0x7137FC8 the "
+              "target's +0x120 flag, 0x714BE54 the user's current interaction, 0x714AF14 the target's action flag +0x116 & 4)",
+              codes);
 }
 
 void anim_probe_start(bool on) {
