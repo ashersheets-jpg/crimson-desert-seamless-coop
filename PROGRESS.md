@@ -3275,3 +3275,15 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   verified on 3576): npc_activation=1, npc_action_evidence=1, npc_containment_guard=1, npc_degradation=1,
   publication_gate=1. Also fixed a stale shop_c1 test (C1 lookup call 0x22EE424 -> 0x21578E0). The native optd
   suite still has 2976-numbered troc fixtures failing (optd_tests.cpp:1154-1231, known since 7f33727).
+- 2026-11-09 17:35 B11 (trading), the 3111 worker 0x2E0B2B0 read in full (decomp): (char, err, u32 item key -> item
+  index (0xFFFF = error), u16 b, u64 c, u32* FROM key, u32* TO key, u16 d -> an index through 0x488D4430 (0xFFFF =
+  error; likely the inventory key), u16 e, u32 entry index). Both actors are found with SAM::FindActor (both must be
+  logged in); the inventory definition 0x5560E0(idx) holds a table [+0x38] (count [+0x40], stride 0xA0) indexed by
+  the u32: entry byte 0 = kind (3 = refused; 2 -> 0x2DF2560, else -> 0x2DF04A0, the move that writes the bag acks),
+  +2 / +4 = two inventory ids (-1 = refused), [+0x78] an optional condition (CompareTargetParameter). Then
+  0x2301D20(from, to, 0.0) is a DISTANCE check: both actors' positions (sector * 1000 + local) within a constant
+  radius (a second, larger one when either actor's region id [+0xA6] is the current one) -- a "give to someone next
+  to you" rule, which fits a player-to-player trade (the two players standing together). No code writes the 0xC27
+  opcode literally (the Req is built from its vtable), so the client UI that sends it is still unknown (a horse /
+  companion inventory is a guess). Next for B11: a 3111 capture (the game's own use), or a crafted one from the
+  guest's layer (the dev script's c2s) with from = guest, to = host, after reading 0x2DF04A0's use of b / c / e.
