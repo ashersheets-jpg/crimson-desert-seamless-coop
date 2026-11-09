@@ -2982,3 +2982,20 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   guest's shared dialogs; its `chaos` UDP relay (lag / loss between two copies) as an optional pre-release check.
   Native local commit 89fbc86 (user2_stages port + dialog_share_all); the user2_stages unit test: 19 failures, the same
   19 as before the port (fixtures still on 2976 opcodes), the two pinned constants updated.
+- 2026-11-09 13:25 tcB197 (host 430 m away, user2_stages=1 + timer_route + world_anchor + npc_control): the ported
+  points install (C L U N T P O, the gate, the element hook in; D S F refused as expected, log only), the manager's
+  state reads 0/2/3 (the +0x6D0 offset is right). Mode 1 could NOT arm: user2_world_anchor refused itself (its build
+  fingerprint, the 2245 handler's write 0x29C2915 / the collector's read 0x2C38E28, is 2976's). world_anchor writes the
+  ServerField's "world observer" slot itself (2976: byte +0x2E4, key +0x2E8, under the field's WindowsRWLock<4,1>);
+  on 3576 the slot is not found yet: the 2245 handler (TrocTrUpdateWorldObserverStateReq vtable 0x5EED4D8, slot 2
+  0x2C43980 -> 0x2EE64D0) has no direct byte write, the scans for byte X / dword X+4 pairs (X 0x2E0..0x300) found
+  nothing (the +0x2F0 read at 0x2EDBDFF is an actor component's type switch, not the field). Next for it: a live dump
+  of the host's ServerField around +0x2D0..+0x320 while a 2245 is handled (a DR watch from the handler), or the
+  collector's anchors from its caller. Parked; B10 first.
+  * B10 built (native, not committed yet): quest_route.{h,cpp}, [session2] quest_own_progress / quest_shared_credit
+  (host, default 0). On 3576 the quest component's game-event callback is the thunk 0x2B9C660 -> 0x2B7A7A0 (registered
+  by ServerQuestActorComponent vfB0 0x2B744B0); it asks ServerField::vf40 0x2D98440 (return 0x2B7A7DB) for the quest
+  manager, i.e. the field owner's: natively the guest's kills / zones / interactions advance the HOST's quests. Own
+  progress: a mid hook at 0x2B7A7DB gives the event the acting character's own manager ([[[char+0x68]+0x138]+0x18],
+  vtables 0x5EE8C80 / 0x5EE8DD0). Shared credit: the thunk (inline hook) runs the callback a second time with the
+  other player's manager (the game's apply functions only advance steps that manager has active).
