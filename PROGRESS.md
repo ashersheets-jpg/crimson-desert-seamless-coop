@@ -2826,3 +2826,18 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   * The host now logs its own shop scenes' transitions ("ShopTwin [host scene] ... state S branch N -> type T",
     flagged when the twin's table would differ) and writes the harness's stop flag at its menu, so other shops'
     charts can be checked host-alone (tcB171: the smithy).
+- 2026-11-09 04:40 Other shops / host far (tcB171-172).
+  * Every merchant's menu in the captures has the same shape: two shop choices (group 0x000F4440: Buy / Sell, index
+    pairs 0A/0B, 06/07, 02/03, 0C/0E, 11/13, 0F/10) or one (0x00, 0x04), plus Leave; so the butcher's chart (Buy 0 ->
+    3, Sell 1 -> 4, Leave 3 -> 7) very likely holds for all. tcB171 (host alone at the smithy, -10636.5 -3848.3): its
+    scene 0xA7132561 is prepared, but the scripted aim never got the blacksmith's "Shop" prompt (the walk ended in
+    his archway; a display sword "E Buy 2.51" is a gimmick). Not retried: the chart check is the host's own log
+    line "ShopTwin [host scene]" whenever a shop is used.
+  * tcB172 (host teleported 430 m east, guest at the butcher): the server DELETED the butcher scene when the host
+    left (2292 of 0x194, and the twin with it), no scene came back, and the guest's market was EMPTY (no Renee, no
+    townsfolk in the shots). So with the host far, the guest has no merchants -- and no townsfolk: the server
+    evaluates the world's cells only for the field owner's stage manager. 3576's owner gate found: 0x2AE972A
+    `cmp [r15+0x180],eax ; jne 0x2AE9CB7` (2976 0x288B87A), in 0x2AE9650. ByJunter's fix for this (user2_stages,
+    "U-1": user 2's own manager armed >= 64 m from the host, its own cells, its NPCs controlled by user 2, drained
+    when close again) is 8200 lines with ~15 hook points written for 2976 and never ported. Recorded as the B02
+    far-world gap. (Also: the host's tp to (-10238 640 -3958) left it "Badly hurt" -- a fall; test artifact.)
