@@ -2695,3 +2695,23 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
     (-10700.8 622.4 -3798.1); keys change per run. At the test save's hour the grocery stall is empty for BOTH
     players (tcB100) and the blacksmith gave the host no prompt either: next, a merchant actually at work in the
     test save (or another hour), the host's own shop prompt as the control, then the guest.
+- 2026-11-09 00:30 MERCHANTS: THE CAUSE FOUND (tcB101-tcB116, host on the sandbox copy of the user's save "usercopy";
+  the coop-test-bandits save has Hernand's shops locked).
+  * Host ALONE (new harness switch -NoGuest; saves sandboxed as always): the butcher Renee stands behind her counter,
+    prompt "R Shop" (HOLD R, a tap does nothing), and the shop opens: "Hernand Butchery - Buy / Sell / Leave"
+    (tcB116). Same as ByJunter's 2976 capture: InteractionPreemptionStepReq 3008 (key 0x000F4321) -> 2120,
+    InteractionDoStepReq 3073 -> 2794, then the HOST'S CLIENT asks StageBranchStateReq 2880 branch 6 of the butcher
+    scene -> 2920. Present at 10:50 AND at 11:36-11:42 game time (tcB114/115): not a schedule.
+  * With the guest in the world (tcB109/112/113): Renee is loaded on the host (2005, name "Renee", at her counter)
+    but NOT shown, and the host's own interaction check refuses her every time: 0xABF3E0 -> 0x741F3E3F
+    eErrNoInteractionTargetIsHidden (InteractProbe, tcB113: 808 of 808). So co-op HIDES the merchants for both
+    players: the guest's presence, not the guest's own client, is the bug. Next: who sets the hidden state on the
+    host's client when user 2 is in (the observer hold of user 2's copy released her after 4.9 s; whatever hides the
+    funcnpc actors), then the guest's own shop.
+  * Grocery stall goods are gimmicks ("E Buy (5)"; holding E picks the item up: Place / Throw / Drop).
+  * Built, off by default until proven: shop_guest (guest_shop_check=1): the store check 0x23C7350 (3576 of
+    ByJunter's 0x21F2780) takes the merchant's own linked stage as "current" for the guest's character only (A
+    0x23C74BB, B 0x23C777B), so the guest's buy / sell is judged with its own money, stock and distance; unit test
+    optd_shop_guest. guest_seq_route now reports the host's manager X to C1 (guest_x_veto is not ported to 3576).
+  * Harness: -NoGuest, -HostWalkTo / -AfterWalkKeys / -GuestAfterWalkKeys, walkto.py --face=X,Z and
+    --sweep=FROM,TO,STEP,VK,PREFIX[,HOLDMS] (turns the camera in steps, holds a key, screenshots each).
