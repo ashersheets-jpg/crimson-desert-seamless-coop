@@ -3218,3 +3218,9 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   did not open (twins prepared, no branch; the release ini records no packets, so the cause is not visible). Fix for
   (1): U-1's distance counts only once user 2 has been in the world 10 s (native, committed). tcB218 repeats to see
   whether (2) followed from (1).
+- 2026-11-09 18:20 tcB218: harness flake (the lobby focus loop threw "game window is not in front"; the guest never
+  joined; SAVES OK). tcB219 (-Lobby, the 10 s settle gate in): U-1 armed 24 s after the guest was in the world (no
+  2322 abort any more) but U-e then aborted ("more than 10 reason-42 logouts of assigned NPCs in a minute" -- the NPC
+  loop ByJunter contained with his S35 keys, not in our build); and the guest's near-host butcher menu did NOT open
+  again. tcB205 (the same flow before the far-shop keys) opened it, so the four far-shop keys are OUT of the release
+  defaults again (layer committed) until the conflict is found -- tcB220 checks the near shop without them.
