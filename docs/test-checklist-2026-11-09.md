@@ -28,6 +28,7 @@ Each line: what to do, what should happen. Note anything else odd (FPS too, for 
 
 ## Player interaction menu (B16b, your request)
 - [ ] Walk up to the other player (within 3 m, look at them): "R  Interact" with a ring appears; hold R: the ring fills and the menu opens (the other player's name, every challenge, Trade (coming soon), Leave).
+- [ ] On a controller: the same prompt shows the co-op buttons (View / Touchpad + D-pad Up) next to the ring; hold them: the ring fills and the menu opens (a quick press must not open it at once).
 - [ ] W / S move, Space picks a challenge (the other player gets the invite), Esc leaves. Does it look and feel like the shop menu?
 
 ## Duel (from the menu)
