@@ -6302,7 +6302,17 @@ void sample(bool force_log) {
     const u2s::Mode m = mode_now();
     if (m == u2s::Mode::Off) return;  // user2_timer_route alone: no state lines, no decisions
     const uint64_t near_since0 = g_machine.near_since;  // S37 phase D (review 3a): the near streak before this step
-    const u2s::Step st = u2s::step(g_machine, known && u2.chr, dist, now, kThresholds);
+    // Co-op+ 2026-11-09 (tcB217): with the 4-cell arm, user 2 still loading in (its own saved place 5 cells off) armed
+    // U-1 before its field enter, whose 2322 then aborted it. The distance counts only once user 2 has been in the
+    // world (its move phase stable, server_user2_in_world) for 10 s.
+    static uint64_t in_world_since = 0;
+    if (server_user2_in_world()) {
+        if (!in_world_since) in_world_since = now ? now : 1;
+    } else {
+        in_world_since = 0;
+    }
+    const bool settled = in_world_since && now - in_world_since >= 10'000'000;
+    const u2s::Step st = u2s::step(g_machine, known && u2.chr && settled, dist, now, kThresholds);
     const u2s::Arm arm = u2s::arm_verdict(u2.f);
     const std::string dist_text =
         known ? std::format("{} cells (Chebyshev, 64 m; U on at >= {} for {} s, off at <= {} for {} s; {})", dist,
