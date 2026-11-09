@@ -30,6 +30,9 @@ Each line: what to do, what should happen. Note anything else odd (FPS too, for 
 - [ ] Walk up to the other player (within 3 m, look at them): "R  Interact" with a ring appears; hold R: the ring fills and the menu opens (the other player's name, every challenge, Trade (coming soon), Leave).
 - [ ] W / S move, Space picks a challenge (the other player gets the invite), Esc leaves. Does it look and feel like the shop menu?
 
+## Duel (from the menu)
+- [ ] Pick Duel; the other player accepts; hit each other: does health go down on BOTH sides, and does the round end at the floor (no real death)?
+
 ## Revive (B17)
 - [ ] One player goes down; the other walks over and HOLDS E (or Shift+F7): "Reviving X... %" then they stand up where they fell. Q / U still work for the downed player.
 
