@@ -3398,3 +3398,8 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
 - 2026-11-09 18:25 Local package (NOT published): dist/CrimsonDesert-SeamlessCoop-0.1.0-alpha+58061ca8-shared-world.zip
   (11.9 MB; native 4b-series local commits + the layer with tcB230's defaults). tools/test-install-fake.ps1: ALL
   STEPS PASS.
+- 2026-11-09 18:28 B11: the bag list decoded (3576): AddItemToInventoryAck 3110 type 1 (login lists) =
+  u8 type | u32 owner | ... | records of 369 bytes from payload +12: u64 item no @0, u32 ITEM KEY @8 (tcB150's
+  guest: 1003225, 1000644, 50001, ..., 22007, ...). Layer dev script "trade3111 <item> <count> <receiver> <inventory>
+  <entry> [slot]" (giver = our own character, filled in at run time). tcB231 (non-lobby, records packets): the guest
+  next to the host sends one 22007 toward the host's inventory 8 (def 1 entry 0) and toward its inventory 5 (entry 1).

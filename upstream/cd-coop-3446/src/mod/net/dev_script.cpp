@@ -337,6 +337,38 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
             steps.push_back(st);
             continue;
         }
+        if (kind == "trade3111") {  // trade3111 <item hex> <count> <receiver hex> <inventory hex> <entry> [slot hex]
+            std::string item, count, recv, inv, entry, slot = "FFFF";
+            in >> item >> count >> recv >> inv >> entry;
+            if (in >> slot) {}
+            try {
+                st.kind = Step::C2S;
+                st.op = 3111;
+                st.addr = 0x3111;  // marks the giver key to fill in at run time
+                const uint32_t it = static_cast<uint32_t>(std::stoul(item, nullptr, 16));
+                const uint64_t n = std::stoull(count);
+                const uint32_t rv = static_cast<uint32_t>(std::stoul(recv, nullptr, 16));
+                const uint16_t iv = static_cast<uint16_t>(std::stoul(inv, nullptr, 16));
+                const uint32_t en = static_cast<uint32_t>(std::stoul(entry));
+                const uint16_t sl = static_cast<uint16_t>(std::stoul(slot, nullptr, 16));
+                const uint16_t b = 0xFFFF;
+                st.payload.resize(30);
+                std::memcpy(&st.payload[0], &it, 4);
+                std::memcpy(&st.payload[4], &b, 2);
+                std::memcpy(&st.payload[6], &n, 8);
+                // giver @14 (filled at run time), receiver @18
+                std::memcpy(&st.payload[18], &rv, 4);
+                std::memcpy(&st.payload[22], &iv, 2);
+                std::memcpy(&st.payload[24], &sl, 2);
+                std::memcpy(&st.payload[26], &en, 4);
+            } catch (...) {
+                log::warn("Dev script: line {} needs trade3111 <item hex> <count> <receiver hex> <inventory hex> <entry> "
+                          "[slot hex]", lineno);
+                continue;
+            }
+            steps.push_back(std::move(st));
+            continue;
+        }
         if (kind == "dumpitemmove") {  // dumpitemmove: B11, 3111's item-move definitions (read only)
             st.kind = Step::DumpItemMove;
             steps.push_back(st);
@@ -504,7 +536,13 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                 revive_teleport_to(st.to[0], st.to[1], st.to[2]);
                 log::info("Dev script: teleport to ({:.0f}, {:.0f}, {:.0f})", st.to[0], st.to[1], st.to[2]);
             } else if (st.kind == Step::C2S) {
-                const bool ok = sniffer_inject_c2s(make_c2s(st.op, st.payload));
+                std::vector<uint8_t> pl = st.payload;
+                if (st.addr == 0x3111 && pl.size() == 30) {  // trade3111: the giver = our character, now
+                    const uint32_t me = capture_own_player_key();
+                    std::memcpy(&pl[14], &me, 4);
+                    log::info("Dev script: trade3111 giver 0x{:08X}", me);
+                }
+                const bool ok = sniffer_inject_c2s(make_c2s(st.op, pl));
                 log::info("Dev script: c2s {} ({} bytes){}", st.op, st.payload.size(), ok ? "" : " NOT sent");
             } else {
                 puppet_inject_s2c_batch({{st.op, st.payload}});
