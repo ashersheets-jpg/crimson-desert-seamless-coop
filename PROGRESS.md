@@ -3411,3 +3411,8 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   control; the layer's dumpitemmove now also reads the handlers' +0x21 (3111 at exe+0x6EB9870, the vehicle move
   0x6EB9900, AddMinusItem 0x6EBA5F0). (A separate MoveItemInventoryToVehicleReq exists: 3111's "other inventory" is
   not the horse's.)
+- 2026-11-09 18:50 tcB232 (B11 control): the guest's 3111 to its OWN inventory got no answer either. tcB233:
+  the handlers' +0x21 read 0 for 3111, the vehicle move AND AddMinusItem (the "no answer" cheat of T18), so that byte
+  does not tell. Likely cause instead: the u16 inventory field is the definition's KEY (dumpitemmove "key?" @def+0:
+  bag 0xDFE0, 8 = 0x9040, 5 = 0x23E0, 6 = 0xEC70...), mapped to the index by 0x488D4430 -- I sent 1 (0xFFFF from
+  the map = error, silently). tcB234 retries with 0xDFE0 (self, then to the host's 8 and 5).
