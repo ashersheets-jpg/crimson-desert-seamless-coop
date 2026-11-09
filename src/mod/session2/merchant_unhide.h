@@ -16,5 +16,7 @@ void merchant_unhide_start(bool on, bool guest, bool diag_only = false, bool gua
 // A raw 2380 packet (the Troc frame: 5-byte header, then the payload) seen at 0xD3414E on this client.
 void merchant_unhide_note_2380(uintptr_t raw) noexcept;
 std::string merchant_unhide_describe();
+// Diagnostics: is this NPC key bound to a shop scene on this client (any thread)?
+bool merchant_unhide_is_shop_npc(uint32_t key) noexcept;
 
 }  // namespace cdmp::session2

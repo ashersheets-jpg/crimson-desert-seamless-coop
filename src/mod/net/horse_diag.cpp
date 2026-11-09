@@ -22,6 +22,7 @@
 #include "mod/session2/guest_lifecycle.h"
 #include "mod/session2/offsets_s2.h"
 #include "mod/session2/guest.h"
+#include "mod/session2/merchant_unhide.h"
 #include "mod/game/actor_lookup.h"
 
 namespace cdmp::net {
@@ -382,6 +383,31 @@ std::atomic<bool> g_oc_override{false};
 std::atomic<uint64_t> g_oc_overridden{0}, g_tc_overridden{0};
 bool remote_npc(uintptr_t actor);
 SafetyHookMid g_ip_call, g_tc_fail;
+// 2026-11-09 the guest's shop prompt: 0x22EE2D0 (the scene check of a dynamic entry; C1 redirects its lookup to X)
+// after the scene is found: 0x22EE47A cmp [scene+0x168],0 (refused if set) -> 0x215B230(manager, scene) (refused if
+// true: another scene has the manager's focus) -> 0x22EE49E the mission checks -> 0x22EE5CA the entry's target
+// condition (al). Counted: found / +0x168 set / past the focus check / condition results.
+SafetyHookMid g_sc_found, g_sc_focus_ok, g_sc_cond, g_sc_type_ok, g_sc_mission_ok;
+std::atomic<uint64_t> c_sc_found{0}, c_sc_168{0}, c_sc_focus_ok{0}, c_sc_cond_pass{0}, c_sc_cond_fail{0},
+    c_sc_no_mission{0}, c_sc_type_ok{0}, c_sc_mission_ok{0};
+std::atomic<uint32_t> g_sc_mission{0};
+void sc_on_type_ok(safetyhook::Context&) { c_sc_type_ok.fetch_add(1, std::memory_order_relaxed); }      // 0x22EE515
+void sc_on_mission_ok(safetyhook::Context&) { c_sc_mission_ok.fetch_add(1, std::memory_order_relaxed); }  // 0x22EE529
+void sc_on_found(safetyhook::Context& ctx) {  // rdi = the scene instance
+    c_sc_found.fetch_add(1, std::memory_order_relaxed);
+    uint32_t v = 0;
+    if (game::safe_read(ctx.rdi + 0x168, &v, 4) && v) c_sc_168.fetch_add(1, std::memory_order_relaxed);
+}
+void sc_on_focus_ok(safetyhook::Context& ctx) {  // r14 = the scene: its mission [+0x78]
+    c_sc_focus_ok.fetch_add(1, std::memory_order_relaxed);
+    uint32_t m = 0xFFFFFFFF;
+    game::safe_read(ctx.r14 + 0x78, &m, 4);
+    if (m == 0xFFFFFFFF) c_sc_no_mission.fetch_add(1, std::memory_order_relaxed);
+    else g_sc_mission.store(m, std::memory_order_relaxed);
+}
+void sc_on_cond(safetyhook::Context& ctx) {
+    ((ctx.rax & 0xFF) ? c_sc_cond_pass : c_sc_cond_fail).fetch_add(1, std::memory_order_relaxed);
+}
 std::atomic<uint32_t> g_oc_lines{0};
 uint64_t g_oc_seen[32] = {};
 // 0x1940AD0(target, filter = the player's vf178(), &entry key, out) (the condition of 0x22E6FC0): it re-gathers the
@@ -712,7 +738,8 @@ void tc_on_fail(safetyhook::Context& ctx) {  // 0x25FA549: the store of eErrNoIn
         // The host's character is 0xA0100001 in every two-copy run; any other 0xA... player here is user 2's.
         server_user2 = (pk >> 28) == 0xA && pk != 0xA0100001u;
     }
-    if (!server_user2 && t_entry_idx != 0x0055) return;  // the Greet (tcB60: the entry the host keeps)
+    const bool shop = session2::merchant_unhide_is_shop_npc(ip_key_of(t_oc_target));  // 2026-11-09: shop NPCs too
+    if (!server_user2 && !shop && t_entry_idx != 0x0055) return;  // the Greet (tcB60: the entry the host keeps)
     const uintptr_t c = t_oc_cond;
     const uint32_t target = ip_key_of(t_oc_target);
     const uint64_t sig = (static_cast<uint64_t>(c & 0xFFFFFFF) << 32) ^ target;
@@ -723,7 +750,8 @@ void tc_on_fail(safetyhook::Context& ctx) {  // 0x25FA549: the store of eErrNoIn
     if (g_tc_lines.fetch_add(1) >= 24) return;
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     log::info("InteractProbe [{} target condition FAILED 0x25FA549] player 0x{:08X} target 0x{:08X} | condition ...{:07X}{}",
-              server_user2 ? "SERVER for another player" : "GREET", ip_key_of(t_oc_player), target, c & 0xFFFFFFF,
+              server_user2 ? "SERVER for another player" : shop ? std::format("SHOP entry 0x{:04X}", t_entry_idx) : "GREET",
+              ip_key_of(t_oc_player), target, c & 0xFFFFFFF,
               cond_dump(c, base));
 }
 // Leaf results (2026-11-08, read only, with interact_probe=1): while 0x25FA200 judges the Greet on a client (entry
@@ -886,7 +914,7 @@ void oc_on_exit(safetyhook::Context& ctx) {  // 0x25FA561: al = the result
     auto& lines = server ? g_gt_lines_server : g_gt_lines_client;
     if (lines.fetch_add(1) >= 120) return;
     log::info("InteractProbe [LEAVES {}] player 0x{:08X} target 0x{:08X} entry 0x{:04X} -> {} |{}",
-              server ? "SERVER" : "client Greet", pk, tk, t_entry_idx, (ctx.rax & 0xFF) ? "PASS" : "REFUSED", t_gt_buf);
+              server ? "SERVER" : t_entry_idx == 0x0055 ? "client Greet" : "client SHOP", pk, tk, t_entry_idx, (ctx.rax & 0xFF) ? "PASS" : "REFUSED", t_gt_buf);
 }
 // TEST user2_condition_subject_host=1 (HOST): on a SERVER thread, an interaction condition whose subject is another
 // player's character is evaluated with the HOST's server character instead ("the guest follows the host's progress",
@@ -927,7 +955,9 @@ void oc_on_entry(safetyhook::Context& ctx) {  // 0x25FA200
     t_oc_target = ctx.r8;
     if (g_leaf_hook) {
         const bool server = ks_server_thread();
-        t_gt_on = server ? (ip_key_of(ctx.rdx) >> 28) == 0xA && (ip_key_of(ctx.r8) >> 28) == 0xB : t_entry_idx == 0x0055 && (ip_key_of(ctx.r8) >> 28) == 0xB;
+        t_gt_on = server ? (ip_key_of(ctx.rdx) >> 28) == 0xA && (ip_key_of(ctx.r8) >> 28) == 0xB
+                         : (t_entry_idx == 0x0055 || session2::merchant_unhide_is_shop_npc(ip_key_of(ctx.r8))) &&
+                               (ip_key_of(ctx.r8) >> 28) == 0xB;  // 2026-11-09: the shop NPCs' entries too
         t_gt_n = 0;
         t_gt_buf.clear();
     }
@@ -1047,7 +1077,14 @@ void oc_on_fail(safetyhook::Context& ctx) {  // 0x25FA3DA: the store of eErrNoIn
         if (v == sig) return;
         if (!v) { v = sig; break; }
     }
-    if (g_oc_lines.fetch_add(1, std::memory_order_relaxed) >= 32) return;
+    {
+        static std::atomic<uint32_t> s_shop_lines{0};  // 2026-11-09: the shop NPCs have their own budget
+        if (session2::merchant_unhide_is_shop_npc(target)) {
+            if (s_shop_lines.fetch_add(1, std::memory_order_relaxed) >= 24) return;
+        } else if (g_oc_lines.fetch_add(1, std::memory_order_relaxed) >= 32) {
+            return;
+        }
+    }
     // A ConditionData_Macro (vtable 0x5D09E08): its macro (u16 index at obj+8) from [0x71C2150]+0x58, the macro's
     // inner condition [info+0x10] (its class), the info's first 0x60 bytes and the strings it points to.
     std::string macro;
@@ -1102,10 +1139,12 @@ void ip_on_keep(safetyhook::Context& ctx) {  // 0xAC0335 cmp byte [rsp+0x30],0
     uint32_t n_entries = 0;  // talkable townsfolk: 24-25 entries per query (the totals / the queries)
     const uint32_t calls = sl ? sl->reached.load() : 0;
     if (sl && calls) n_entries = sl->entries.load() / calls;
-    if (!sl || (key >> 28) != 0xB || n_entries < 20 || !game::safe_read(ctx.rbx + 0x10, &idx, 2) ||
+    const bool shop = session2::merchant_unhide_is_shop_npc(key);  // 2026-11-09: the shop NPCs' 5 entries too
+    if (!sl || (key >> 28) != 0xB || (n_entries < 20 && !shop) || !game::safe_read(ctx.rbx + 0x10, &idx, 2) ||
         s_lines.load() >= 700)
         return;
-    const uint64_t sig = (static_cast<uint64_t>(key) << 16) | idx;
+    const uint64_t sig = (static_cast<uint64_t>(key) << 32) | (static_cast<uint64_t>(idx) << 16) |
+                         (shop ? (ok ? 1u : (why & 0xFFFE)) : 0u);  // a shop entry: again when its verdict changes
     for (auto& v : s_seen) {
         if (v == sig) return;
         if (!v) { v = sig; break; }
@@ -1131,6 +1170,17 @@ DWORD WINAPI interact_probe_thread(LPVOID) {
                         g_hw_addr.store(mgr + 0x259);
                     }
                 }
+            }
+        }
+        if (g_sc_found) {
+            static uint64_t last = 0;
+            if (c_sc_found.load() != last) {
+                last = c_sc_found.load();
+                log::info("InteractProbe [scene check 0x22EE2D0] scene found {} | +0x168 set {} | past the focus check "
+                          "0x215B230 {} (no mission {}, last mission 0x{:X}) | past the character-type checks {} | past "
+                          "the mission check 0x1C39FB0 {} | target condition passed {} failed {}",
+                          last, c_sc_168.load(), c_sc_focus_ok.load(), c_sc_no_mission.load(), g_sc_mission.load(),
+                          c_sc_type_ok.load(), c_sc_mission_ok.load(), c_sc_cond_pass.load(), c_sc_cond_fail.load());
             }
         }
         if (g_hw_enabled) {  // HideWatch (above): arm from this thread, never from a hook
@@ -1481,6 +1531,11 @@ void interact_probe_start(bool on, bool owner_override) {
     n += ip_hook(base, 0xAC0335, {0x80, 0x7C, 0x24, 0x30, 0x00, 0x74, 0x32}, g_ip_keep, ip_on_keep);
     n += ip_hook(base, 0x25FA200, {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x18}, g_oc_entry, oc_on_entry);
     n += ip_hook(base, 0xAC0330, {0xE8, 0x6B, 0xF2, 0xFF, 0xFF}, g_ip_call, ip_on_call);
+    n += ip_hook(base, 0x22EE47A, {0x83, 0xBF, 0x68, 0x01, 0x00, 0x00, 0x00}, g_sc_found, sc_on_found);
+    n += ip_hook(base, 0x22EE49E, {0x41, 0x8B, 0x7E, 0x78, 0x83, 0xFF, 0xFF}, g_sc_focus_ok, sc_on_focus_ok);
+    n += ip_hook(base, 0x22EE515, {0x8B, 0xD7, 0x48, 0x8B, 0x4C, 0x24, 0x30}, g_sc_type_ok, sc_on_type_ok);
+    n += ip_hook(base, 0x22EE529, {0x48, 0x8B, 0x8D, 0xE0, 0x08, 0x00, 0x00}, g_sc_mission_ok, sc_on_mission_ok);
+    n += ip_hook(base, 0x22EE5CA, {0x0F, 0xB6, 0xF8, 0x4C, 0x89, 0x75, 0x20}, g_sc_cond, sc_on_cond);
     n += ip_hook(base, 0x25FA549, {0x48, 0x8B, 0x8D, 0xB0, 0x07, 0x00, 0x00, 0x88, 0x01}, g_tc_fail, tc_on_fail);
     n += ip_hook(base, 0x25FA3DA, {0x48, 0x8B, 0x8D, 0xB0, 0x07, 0x00, 0x00, 0x88, 0x01}, g_oc_fail, oc_on_fail);
     n += ip_hook(base, 0x25FA561, {0x4C, 0x8D, 0x9C, 0x24, 0x60, 0x08, 0x00, 0x00}, g_oc_exit, oc_on_exit);

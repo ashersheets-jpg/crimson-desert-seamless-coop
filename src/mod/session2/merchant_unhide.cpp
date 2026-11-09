@@ -268,11 +268,12 @@ void worker() {
         {
             std::lock_guard lk(g_mu);
             for (const Bound& b : g_bound)
-                if (!b.done) todo.push_back(b);
+                if (!b.done || b.diag < 3) todo.push_back(b);  // snapshots go on after the fix steps
         }
         const uint64_t now = GetTickCount64();
         for (const Bound& b : todo) {
-            const uint8_t want = now - b.at_ms >= 8000 ? 2 : now - b.at_ms >= 2500 ? 1 : 0;
+            const uint64_t age = now - b.at_ms;
+            const uint8_t want = age >= 20000 ? 3 : age >= 8000 ? 2 : age >= 2500 ? 1 : 0;
             if (want > b.diag) {
                 log::info("MerchantUnhide [state +{} ms] NPC 0x{:08X} (shop scene 0x{:08X}): {}", now - b.at_ms, b.key,
                           b.scene, snapshot(b.key));
@@ -280,7 +281,7 @@ void worker() {
                 for (Bound& x : g_bound)
                     if (x.key == b.key) x.diag = want;
             }
-            if (g_diag_only || !g_guest) continue;  // the host needs only the login guard (its own scenes tick)
+            if (b.done || g_diag_only || !g_guest) continue;  // the host needs only the login guard (its own scenes tick)
             // The guest: its shop NPCs belong to the host's scenes (copies in X), which this client never ticks, so
             // the scene-start step that clears their scene component's wait byte +0x3E0 (and lets 0x9A1880 finish
             // their login, +0xCF) never comes. After kStuckMs: the byte cleared as that step does; the hide bit 9
@@ -325,6 +326,14 @@ void worker() {
 }
 
 }  // namespace
+
+bool merchant_unhide_is_shop_npc(uint32_t key) noexcept {
+    if (!g_on || !key) return false;
+    std::lock_guard lk(g_mu);
+    for (const Bound& b : g_bound)
+        if (b.key == key) return true;
+    return false;
+}
 
 void merchant_unhide_note_2380(uintptr_t raw) noexcept {
     if (!g_on || !raw) return;
