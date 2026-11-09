@@ -3331,3 +3331,7 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   2380s) and keeps a copy pending while one of its required actors is bound by a live own scene, releasing it right
   behind that scene's 2292 (same key observer_hold_scene_conflict). Layer: observer_hold_scene_conflict=1 in the host
   defaults. tcB227 tests it.
+- 2026-11-09 17:43 B11 tool: the layer's dev script gained "dumpitemmove" (read only): it walks [exe+0x71C1060]
+  (+8 count, +0x58 definitions) and logs each loaded definition's entries (kind, the two inventory ids, condition, the
+  first 32 bytes) -- the values a crafted 3111 needs (entry index of a kind-1 move between two characters' bags).
+  build/port3479/scripts/tp_butcher_host_dump.txt = the butcher teleport + dumpitemmove (tcB228).
