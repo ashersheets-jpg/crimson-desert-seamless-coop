@@ -3212,3 +3212,9 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   Note: the guest must reach the market after the host's shop scenes there are gone (tcB212 / 213) -- the case of the
   guest standing at a market while the host leaves (the host's scenes kept alive by the guest) still uses the host's
   scenes + shop twin, which also works (tcB191 / 192).
+- 2026-11-09 18:00 tcB217 (-Lobby, release defaults incl. the far-world shop keys): both joined, SAVES OK, BUT (1) U-1
+  armed while user 2 was still loading in (its own saved place 5 cells from the host) and the 2322 of its field enter
+  aborted it for the run ("[ABORT] an unexpected 2322 to user 2 after an arm"); (2) the guest's near-host butcher menu
+  did not open (twins prepared, no branch; the release ini records no packets, so the cause is not visible). Fix for
+  (1): U-1's distance counts only once user 2 has been in the world 10 s (native, committed). tcB218 repeats to see
+  whether (2) followed from (1).
