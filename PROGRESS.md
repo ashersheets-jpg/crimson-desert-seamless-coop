@@ -3335,3 +3335,18 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   (+8 count, +0x58 definitions) and logs each loaded definition's entries (kind, the two inventory ids, condition, the
   first 32 bytes) -- the values a crafted 3111 needs (entry index of a kind-1 move between two characters' bags).
   build/port3479/scripts/tp_butcher_host_dump.txt = the butcher teleport + dumpitemmove (tcB228).
+- 2026-11-09 17:54 tcB227 (-Lobby, + the conflict hold): menu NOT open; both alive, SAVES OK. The order was now
+  right (user 2's own scenes deleted 17:47:59.20, the host's butcher scene 0x21F built on the guest at 17:47:59.89),
+  yet Renee (0xB01002C3) stayed bound to the guest's DELETED own scene 0x1CA (G5: owner 0xA0100066, scene 0x1CA,
+  +0xCF 1). So the guest's client never releases an NPC from its own deleted scene: the 2292 goes to its own manager
+  (0xBA94E0 on the field's manager) whose scenes do not tick on the guest (the same stall merchant_unhide works
+  around), and the host's scene, routed to the copy manager X, cannot take the NPC. Not a test artifact: any guest
+  that shopped with its own scene and then meets the host at that market loses the shopkeeper until she streams out.
+  Fix built (native 49adcd6): when user 2's own scene goes (its 2292 to user 2) and it bound NPCs that a live scene of
+  the host requires, ObserverSeqCopy sends user 2 a RemoveActorAck 3067 for them right behind the 2292 and asks
+  child_hold for a native re-announce (child_hold_npc_reannounce: an observer_hold NPC entry for session 2, released
+  by its pass with NotifyAppear([session 2], [key]) = a fresh actor on the guest, no stale scene binding); the host's
+  scenes binding them wait for that fresh 2005 (ObserverSeqCopy: the keys leave its announced set; SceneHold: the
+  conflict keys become the scene's pending keys; the route now releases T2 scenes on any 2005, not only on one
+  observer_hold_acks held). Unit suite optd_scene_conflict updated and passing. tcB228 tests it with the S35
+  containment keys in the defaults and the host's dumpitemmove (B11).
