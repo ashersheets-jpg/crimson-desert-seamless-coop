@@ -3086,3 +3086,9 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   installed ("shared credit on"), the guest's events went to its own manager, 0 ERR, both alive, SAVES OK; too few
   events for the 200-event counter line, so the first shared passes are now logged (native c149dc4). Checklist for the
   user's next session: docs/test-checklist-2026-11-09.md. tcB205: the release flow (-Lobby) with the new defaults.
+- 2026-11-09 14:15 tcB205 (-Lobby, the release flow with the new host defaults written by the layer): host in the
+  shared world 14:05:55, guest 14:06:40; QuestRoute / FogShare / WorldAnchor / User2Stages all ON from the layer's
+  ini; the guest's own butcher shop opened and reached "Purchase [Small Bag]?"; both alive, SAVES OK. No regression.
+  Building the local shared-world package with today's work (not published).
+- 2026-11-09 14:20 Local package (NOT published): dist\CrimsonDesert-SeamlessCoop-0.1.0-alpha+9e684aa9-shared-world.zip
+  (11.9 MB; native c149dc4 + the layer with the new host defaults). tools/test-install-fake.ps1: ALL STEPS PASS.
