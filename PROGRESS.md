@@ -3049,3 +3049,22 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   CombinationGimmick 0x5ECDD00 SavedAttached 0x5ECDCE0 LinkedVehicle 0x5ECDCA0 Docking 0x5ECDDA0 Rider 0x5ECDDC0
   NPCScheduleGroupActionMember 0x5ECDCC0); their descriptor field offsets are not re-verified. Tests unchanged
   (npc_family 0, user2_road 8 and user2_stages 19 pre-existing failures, world_anchor passes).
+- 2026-11-09 13:35 tcB200 (anchor fixed): world_anchor SET and verified (field slot 01 / user 2's key; +0x198/+0x19C
+  right). U-1 armed again (60 own schedule stages, their 2335s sent to user 2), but the guest's loads after the arm
+  had none of the town's people (by name, from the full captures: near the host the guest loads Boy, Girl, Dancer,
+  Hernandian Guard, Noble, Punter, Dalia, Grover, Haldwin ...; far with U-1: only wildlife and road travellers, as
+  without U-1). Cause: "timer route: 2043/2045/2046 to its own manager 0/0/0" -- the 2045 / 2046 (2049 / 2050 on
+  3576) schedule / faction updates of user 2's stages ran on the HOST's manager: funnels recognises the timer
+  handlers by their vf48 return addresses in the protected section, still 2976's. 3576's, from the funnels' own
+  vf48 caller table (x24 / x40 / x40 under 2047 / 2049 / 2050, each right after a call [rax+0x48]): 0xE68CDEA,
+  0xE6911DF, 0xE6946CF. Fixed (user2_funnels.cpp timer_vf48_ret). tcB201 next, the guest in the open market.
+  (The actor load / remove churn on the guest, ~100 each per 30 s, is normal: 400-800 near the host.)
+- 2026-11-09 13:45 *** tcB201: THE FAR GUEST GETS ITS OWN TOWNSFOLK ON 3576 *** (host 430 m away, U-1 armed at >= 4
+  cells, timer route fixed): user 2's timers on its own manager 34 / 281 / 281 (2043 / 2045 / 2046), 62 own stages
+  sent to it, and U-e gave user 2 183 NPCs (161 alive at the end) -- the schedule spawns now run for the guest. Its
+  loads after the arm include town people absent from tcB198 / tcB200 (Jester, Meat Porter, Bird Hunter...). Shots:
+  the guest's teleport landed on a roof, but a townsperson is in the street below (tcB201-g2) and the minimap shows
+  NPC icons. Both alive, SAVES OK. Open: a street-level visual check (better guest spot), NPC behaviour (the S35
+  containment keys are not on), shops far away (U-f skips the funcnpc scenes: shop_twin needs the host's scene, which
+  the server deletes when the host leaves -- ByJunter's user2_shop_trade_list), the host's far spot (Rodbel dock has
+  bandits: the host dies in every far run; harmless, but pick a quiet spot).
