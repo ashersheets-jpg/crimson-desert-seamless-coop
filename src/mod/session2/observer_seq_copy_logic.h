@@ -429,6 +429,13 @@ public:
         }
     }
 
+    // Co-op+ NPC refresh: does a live scene of the host require `key`?
+    bool any_requires(uint32_t key) const {
+        for (const auto& [seq, r] : live_) {
+            if (std::find(r.required.begin(), r.required.end(), key) != r.required.end()) return true;
+        }
+        return false;
+    }
     const SeqRec* find(uint64_t seq) const {
         auto it = live_.find(seq);
         return it == live_.end() ? nullptr : &it->second;
@@ -633,6 +640,24 @@ public:
         own_binds_[seq] = keys;
     }
     bool on_user2_own_deleted(uint64_t seq) { return own_binds_.erase(seq) != 0; }
+    // The own scene `seq` went: the NPCs it bound that a live scene of the host requires are to be refreshed on user
+    // 2's client (its RemoveActorAck, then a fresh 2005): they are no longer "announced" here, so the copies requiring
+    // them wait for that 2005. Returns those keys (empty: nothing to refresh; the entry goes either way).
+    std::vector<uint32_t> on_user2_own_deleted_refresh(uint64_t seq, const Ledger& ledger) {
+        std::vector<uint32_t> out;
+        const auto it = own_binds_.find(seq);
+        if (it == own_binds_.end()) return out;
+        for (const uint32_t k : it->second) {
+            if (ledger.any_requires(k)) {
+                out.push_back(k);
+                announced_.erase(k);
+            }
+        }
+        own_binds_.erase(it);
+        refreshed_ += out.size();
+        return out;
+    }
+    uint64_t refreshed() const { return refreshed_; }
     bool own_blocks(const std::vector<uint32_t>& keys) const {
         if (!own_conflict_ || own_binds_.empty()) return false;
         for (const auto& [seq, bound] : own_binds_) {
@@ -946,6 +971,7 @@ private:
     bool own_conflict_ = false;
     std::map<uint64_t, std::vector<uint32_t>> own_binds_;  // conflict hold: user 2's own live scenes -> bound NPCs
     uint64_t own_blocked_ = 0;
+    uint64_t refreshed_ = 0;
     std::unordered_map<uint64_t, uint64_t> branch_seen_;  // seq -> hash of the last 2981 payload user 2 got
     std::vector<Pending> pending_;                        // ascending order (the ledger's)
     std::map<uint64_t, uint64_t> delivered_;              // seq -> when its 2661 copy went (this trip)

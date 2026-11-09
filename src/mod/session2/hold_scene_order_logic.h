@@ -482,6 +482,14 @@ public:
                 sc.id = pr.id;
                 sc.hash = pr.hash;
                 sc.wait_own = std::move(wait);
+                for (const uint32_t k : pr.bound) {
+                    for (const OwnBind& o : own_) {
+                        if (std::find(o.keys.begin(), o.keys.end(), k) != o.keys.end()) {
+                            sc.conflict_keys.push_back(k);
+                            break;
+                        }
+                    }
+                }
                 sc.since_us = now_us;
                 s_.push_back(std::move(sc));
                 ++c_.held;
@@ -557,11 +565,20 @@ public:
         if (conflict_ && op == kOpDelete && p.size() >= 4 && le32(p.data()) == own) {  // actor @0: user 2's own
             const auto it = std::find_if(own_.begin(), own_.end(), [&](const OwnBind& o) { return o.id == *id; });
             if (it != own_.end()) {  // user 2's own scene goes: the host's scenes that waited for it follow it
+                const std::vector<uint32_t> gone_keys = it->keys;
                 own_.erase(it);
                 for (size_t i = 0; i < s_.size();) {
                     Scene& sc = s_[i];
                     const bool waited = std::find(sc.wait_own.begin(), sc.wait_own.end(), *id) != sc.wait_own.end();
                     sc.wait_own.erase(std::remove(sc.wait_own.begin(), sc.wait_own.end(), *id), sc.wait_own.end());
+                    if (waited) {  // the NPCs both bound: they are refreshed (a fresh 2005); wait for it
+                        for (const uint32_t k : sc.conflict_keys) {
+                            if (std::find(gone_keys.begin(), gone_keys.end(), k) != gone_keys.end() &&
+                                std::find(sc.pending.begin(), sc.pending.end(), k) == sc.pending.end()) {
+                                sc.pending.push_back(k);
+                            }
+                        }
+                    }
                     if (!waited || !sc.wait_own.empty() || !sc.pending.empty()) {
                         ++i;
                         continue;
@@ -664,6 +681,7 @@ private:
         uint32_t hash = 0;
         std::vector<uint32_t> pending;
         std::vector<uint64_t> wait_own;  // Co-op+ conflict hold: user 2's own scene ids whose 2292 it waits for
+        std::vector<uint32_t> conflict_keys;  // ... and the NPCs both bind (refreshed: their fresh 2005 is waited for)
         uint64_t since_us = 0;
         std::vector<OutPacket> q;
         std::vector<uint16_t> ops;

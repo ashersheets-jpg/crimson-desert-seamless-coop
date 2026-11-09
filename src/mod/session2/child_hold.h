@@ -874,6 +874,11 @@ enum class Reannounce : uint8_t {
 const char* reannounce_name(Reannounce r);
 // dry_run: only the checks (a candidate of the host answers Queued), nothing is recorded (probe).
 Reannounce child_settle_reannounce(uint32_t key, uint32_t delay_ms, bool dry_run = false);
+// Co-op+ (2026-11-09, tcB227): an NPC (owner 0) controlled by the host or user 2 goes into observer_hold's table for
+// the live session 2, released by its usual pass (restore 1, user 2 observing its sector) with a native
+// NotifyAppear([session 2], [key]): a fresh 2005 after the RemoveActorAck the caller sent. Network thread or any
+// thread outside the route's locks (SEH reads, g_mu briefly). True = queued (or already there).
+bool child_hold_npc_reannounce(uint32_t key) noexcept;
 
 // The owner of a server actor by key ([actor+0xA0], SEH reads; nullopt = not found or unreadable).
 // attach_follow's filter (only users' children follow a parent).

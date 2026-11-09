@@ -94,14 +94,17 @@ void test_held_until_own_delete() {
     CHECK(r.send(hso::kOpPrepare, prepare(kHost, 0x242, kLeather, {kOther}), 0x242) == hso::Take::Pass);
     CHECK(r.send(hso::kOpDelete, del(kHost, 0x1CD), 0x1CD) == hso::Take::Pass);
     CHECK(r.t2.kept(0x241));
-    // The drain: user 2's own 0x1CD is deleted -> the host's 2380 and 2920 follow right after that 2292, in order.
+    // The drain: user 2's own 0x1CD is deleted -> Renee is refreshed on user 2's client (3067 + a fresh 2005): the
+    // host's scene now waits for her 2005, then its 2380 and 2920 follow right behind it, in order.
     const size_t before = r.queue.size();
     CHECK(r.send(hso::kOpDelete, del(kOwn, 0x1CD), 0x1CD) == hso::Take::Pass);
-    CHECK(r.queue.size() == before + 3);
-    CHECK(r.queue[before].first == hso::kOpDelete && r.queue[before + 1].first == hso::kOpPrepare &&
-          r.queue[before + 2].first == hso::kOpBranch);
-    CHECK(!r.t2.kept(0x241) && r.t2.own_scenes() == 0 && r.t2.live() == 0);
-    CHECK(r.ev.back().kind == hso::Kind::Released && r.ev.back().conflict);
+    CHECK(r.queue.size() == before + 1 && r.t2.kept(0x241) && r.t2.own_scenes() == 0);
+    std::vector<hso::OutPacket> rel;
+    const uint32_t keys[] = {kRenee};
+    r.t2.announced(keys, r.now, rel, r.ev);
+    CHECK(rel.size() == 2 && rel[0].op == hso::kOpPrepare && rel[1].op == hso::kOpBranch);
+    CHECK(!r.t2.kept(0x241) && r.t2.live() == 0);
+    CHECK(r.ev.back().kind == hso::Kind::Released);
     // Afterwards the host's packets of that id pass at once.
     CHECK(r.send(hso::kOpBranch, branch(0x241), 0x241) == hso::Take::Pass);
 }
@@ -114,9 +117,15 @@ void test_two_own_scenes() {
     CHECK(r.send(hso::kOpPrepare, prepare(kHost, 0x300, kButcher, {kRenee, kOther}), 0x300) == hso::Take::Held);
     CHECK(r.send(hso::kOpDelete, del(kOwn, 0x1CD), 0x1CD) == hso::Take::Pass);
     CHECK(r.t2.kept(0x300));  // still waits for 0x1D2
-    const size_t before = r.queue.size();
     CHECK(r.send(hso::kOpDelete, del(kOwn, 0x1D2), 0x1D2) == hso::Take::Pass);
-    CHECK(r.queue.size() == before + 2 && !r.t2.kept(0x300));
+    CHECK(r.t2.kept(0x300));  // now for both NPCs' fresh 2005
+    std::vector<hso::OutPacket> rel;
+    const uint32_t one[] = {kRenee};
+    r.t2.announced(one, r.now, rel, r.ev);
+    CHECK(rel.empty() && r.t2.kept(0x300));
+    const uint32_t two[] = {kOther};
+    r.t2.announced(two, r.now, rel, r.ev);
+    CHECK(rel.size() == 1 && !r.t2.kept(0x300));
 }
 
 void test_bound_and_clear() {

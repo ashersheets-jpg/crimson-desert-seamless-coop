@@ -1,4 +1,5 @@
 #include "mod/session2/observer_seq_copy.h"
+#include "mod/session2/child_hold.h"
 
 #include <windows.h>
 
@@ -797,8 +798,36 @@ void observer_seq_copy_on_out(uint16_t opcode, std::span<const uint8_t> payload,
                 const uint32_t me = server_user2_player_key();
                 if (!me || osq::le32(payload.data()) != me) return;
                 const uint64_t seq = osq::le64(payload.data() + 4);
-                std::lock_guard lock(g_mu);
-                if (g_copier.on_user2_own_deleted(seq)) release_locked();
+                std::vector<uint32_t> refresh;
+                {
+                    std::lock_guard lock(g_mu);
+                    refresh = g_copier.on_user2_own_deleted_refresh(seq, g_ledger);
+                    if (!refresh.empty()) {
+                        // Its RemoveActorAck 3067 (u8 4 | u32 0 | u8 0x1E | n x u32 key, the session-7 sample's
+                        // layout) right behind the 2292, from this lock (the queue's own lock only).
+                        std::vector<uint8_t> pk;
+                        const uint16_t op = osq::kOpRemove;
+                        const size_t len = 6 + 4 * refresh.size();
+                        pk.reserve(len + 2);
+                        pk.push_back(static_cast<uint8_t>(op));
+                        pk.push_back(static_cast<uint8_t>(op >> 8));
+                        pk.push_back(4);
+                        for (int i = 0; i < 4; ++i) pk.push_back(0);
+                        pk.push_back(0x1E);
+                        for (const uint32_t k : refresh) {
+                            for (int i = 0; i < 4; ++i) pk.push_back(static_cast<uint8_t>(k >> (8 * i)));
+                        }
+                        if (!server_push_extra(pk)) refresh.clear();  // no remove: no re-announce either
+                    }
+                    release_locked();
+                }
+                // Outside this module's lock: the native re-announce (child_hold's own lock and table).
+                for (const uint32_t k : refresh) {
+                    const bool q = child_hold_npc_reannounce(k);
+                    log::info("ObserverSeqCopy [refresh] user 2's own scene 0x{:X} went: NPC 0x{:08X} bound by it and "
+                              "required by a scene of the host -> RemoveActorAck sent, native re-announce {}",
+                              seq, k, q ? "queued" : "NOT queued (it stays removed until it comes into view again)");
+                }
                 return;
             }
             case osq::kOpMilestone: {

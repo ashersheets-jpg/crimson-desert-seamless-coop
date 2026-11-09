@@ -320,7 +320,11 @@ AckRoute observer_hold_acks_route(uint16_t opcode, std::span<const uint8_t> payl
             if (out.extra_failed) g_push_failed.fetch_add(out.extra_failed, std::memory_order_relaxed);
             return AckRoute::Pushed;
         }
-        if (!g_keys.load(std::memory_order_relaxed)) return AckRoute::Pass;
+        // Co-op+ NPC refresh: a 2005 may release a T2 conflict scene even with no observer_hold_acks key held.
+        if (!g_keys.load(std::memory_order_relaxed) &&
+            !(t2 && opcode == oha::kOpAnnounce && g_t2_live.load(std::memory_order_relaxed))) {
+            return AckRoute::Pass;
+        }
         if (opcode == oha::kOpAnnounce) {
             std::vector<uint32_t> keys;
             oha::announce_keys(payload, keys);
@@ -330,6 +334,26 @@ AckRoute observer_hold_acks_route(uint16_t opcode, std::span<const uint8_t> payl
             size_t matched = 0;
             std::vector<oha::HeldPacket> after = g_hold.announce(keys, now_ms(), &rel, &matched);
             sync_size();
+            // Co-op+ NPC refresh: a T2 scene waiting for one of these keys (a conflict scene behind a refreshed NPC)
+            // goes right after this 2005 even when observer_hold_acks held none of them.
+            if (!matched && t2 && g_scene.scenes()) {
+                std::vector<hso::OutPacket> scene;
+                std::vector<hso::Event> ev;
+                g_scene.announced(keys, t2_now_us(), scene, ev);
+                t2_keep(ev);
+                t2_sync();
+                if (scene.empty()) return AckRoute::Pass;
+                out.self_pushed = push(packet);
+                for (hso::OutPacket& o : scene) {
+                    ++out.extra_pushed;
+                    const bool ok = push(o.bytes);
+                    if (!ok) ++out.extra_failed;
+                    if (ok) out.scene_released.push_back(std::move(o.bytes));
+                }
+                g_pushed_released.fetch_add(out.extra_pushed, std::memory_order_relaxed);
+                if (out.extra_failed) g_push_failed.fetch_add(out.extra_failed, std::memory_order_relaxed);
+                return AckRoute::Pushed;
+            }
             // No hold for these keys: queued as usual. A hold that ended here, even with nothing
             // held, queues its 2005 under this lock (P8 review I5): once the key is no longer held
             // a packet of it offered by another thread passes at once, and pushed after the lock

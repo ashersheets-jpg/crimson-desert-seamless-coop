@@ -4759,6 +4759,51 @@ Reannounce child_settle_reannounce(uint32_t key, uint32_t delay_ms, bool dry_run
     return Reannounce::Queued;
 }
 
+bool child_hold_npc_reannounce(uint32_t key) noexcept {
+    try {
+        if (!g_observers.load(std::memory_order_relaxed)) return false;
+        const uintptr_t session = server_live_session2();
+        uintptr_t user2 = 0;
+        if (!session || !server_user2(user2) || !user2) return false;
+        uintptr_t host = 0;
+        const uint32_t host_key = host_key_now(host);
+        const auto sam = sam_now(true);
+        if (!sam) return false;
+        const game::FastReads m;
+        const auto actor = find_actor_with(m, *sam, key);
+        if (!actor || !*actor) return false;
+        const auto owner = m.rd<uintptr_t>(*actor + hold::kActorOwner);
+        const auto ctrl = m.rd<uint32_t>(*actor + hold::kActorController);
+        if (!owner || *owner || !ctrl) return false;  // an NPC with a controller only
+        ObserverHoldUsers ou;
+        ou.host = host;
+        ou.host_key = host ? host_key : 0;
+        ou.user2 = user2;
+        ou.user2_key = user_key_fast(user2);
+        uintptr_t ctrl_user = 0;
+        const OwnerWho who = npc_controller_who(*ctrl, ou, ctrl_user);
+        if (who == OwnerWho::None) return false;
+        HoldRecord r;
+        r.key = key;
+        r.observer = session;
+        r.observer_user = user2;
+        r.owner = ctrl_user;
+        r.owner_who = who;
+        r.observer_host = false;
+        r.npc = true;
+        r.controller = *ctrl;
+        r.actor = *actor;
+        if (const auto info = m.ptr(*actor + hold::kActorInfo)) r.type = m.rd<uint8_t>(*info + hold::kInfoType).value_or(0);
+        std::lock_guard lock(g_mu);
+        if (g_npc_table.room() <= g_npc_reserved) return false;
+        const bool ok = record_npc_locked(r, server_epoch(), now_ms(), ou.user2_key);
+        g_npc_size.store(g_npc_table.size());
+        return ok;
+    } catch (...) {
+        return false;
+    }
+}
+
 std::optional<uint32_t> child_hold_actor_parent(uintptr_t actor) noexcept {
     const game::FastReads m;
     const auto key = m.rd<uint32_t>(actor + hold::kActorKey);
