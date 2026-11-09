@@ -190,6 +190,13 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
 - [ ] **B15 — Duel extras and scoreboard** (wagers, arenas, spectator camera, rematch, titles).
 - [ ] **B16 — Emotes and group photo mode.**
 
+- [ ] **B16b — Player interaction menu (user 2026-11-09).** Hold R on the other player (the game's own hold prompt:
+  the R key in a circle that fills while held, exactly as at shopkeepers and their shop menus -- NOT a plain
+  "R Rock, Paper, Scissors" tap prompt) opens a player interaction menu like the shop menu. It holds every minigame
+  challenge the two can do (duel, RPS, race, hunt, fishing, hide and seek, arm wrestling...), later trading (B11) and
+  any other player-to-player feature that fits. Starting point: Geonode's proof of concept from the Discord (a "Kliff /
+  R Rock, Paper, Scissors" prompt on the other player; screenshot 2026-11-09), which replaces the Shift+F5 picker.
+
 **Combat and safety**
 - [ ] **B17 — Teammate revive rework** (bleed-out timer, revive by interacting, progress and credit; Q/U kept).
 - [ ] **B18 — Combat feedback for both** (status effects, knockback, damage numbers, per-player lock-on).
