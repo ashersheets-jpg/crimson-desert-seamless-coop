@@ -618,6 +618,32 @@ public:
     void on_user2_own(uint64_t seq) {
         if (own_.size() < l_.max_own) own_.insert(seq);
     }
+    // Co-op+ (2026-11-09, tcB225/226) conflict hold: user 2's OWN live scenes (U-1's, prepared while it was far) and
+    // the NPCs they bind (types 4 / 5). A copy of the host's scene requiring one of those NPCs stays pending until
+    // that own scene's 2292 went to user 2: its client keeps the NPC bound to its own scene, so a host scene arriving
+    // first never gets it (the shopkeeper vanished for the guest).
+    void set_own_conflict(bool on) {
+        own_conflict_ = on;
+        if (!on) own_binds_.clear();
+    }
+    bool own_conflict() const { return own_conflict_; }
+    void on_user2_own_binds(uint64_t seq, const std::vector<uint32_t>& keys) {
+        if (!own_conflict_ || keys.empty()) return;
+        if (own_binds_.size() >= 256 && !own_binds_.count(seq)) own_binds_.erase(own_binds_.begin());
+        own_binds_[seq] = keys;
+    }
+    bool on_user2_own_deleted(uint64_t seq) { return own_binds_.erase(seq) != 0; }
+    bool own_blocks(const std::vector<uint32_t>& keys) const {
+        if (!own_conflict_ || own_binds_.empty()) return false;
+        for (const auto& [seq, bound] : own_binds_) {
+            for (const uint32_t k : keys) {
+                if (std::find(bound.begin(), bound.end(), k) != bound.end()) return true;
+            }
+        }
+        return false;
+    }
+    size_t own_binds() const { return own_binds_.size(); }
+    uint64_t own_blocked() const { return own_blocked_; }
     // User 2's own 2322 (S2) went to its queue: from now on the copies may go.
     void on_user2_milestone() { gate_open_ = true; }
     void on_user2_complete(uint64_t now_us) {
@@ -696,6 +722,11 @@ public:
                 continue;
             }
             if (!all_announced(r->required)) {
+                ++it;
+                continue;
+            }
+            if (own_blocks(r->required)) {  // Co-op+ conflict hold: behind user 2's own scene's 2292
+                ++own_blocked_;
                 ++it;
                 continue;
             }
@@ -912,6 +943,9 @@ private:
     uint64_t trip_us_ = 0;    // this trip's MoveFieldAck
     uint64_t milestone_holds_ = 0, milestone_hold_expired_ = 0, snapshot_after_milestone_ = 0;
     std::unordered_set<uint32_t> announced_;
+    bool own_conflict_ = false;
+    std::map<uint64_t, std::vector<uint32_t>> own_binds_;  // conflict hold: user 2's own live scenes -> bound NPCs
+    uint64_t own_blocked_ = 0;
     std::unordered_map<uint64_t, uint64_t> branch_seen_;  // seq -> hash of the last 2981 payload user 2 got
     std::vector<Pending> pending_;                        // ascending order (the ledger's)
     std::map<uint64_t, uint64_t> delivered_;              // seq -> when its 2661 copy went (this trip)

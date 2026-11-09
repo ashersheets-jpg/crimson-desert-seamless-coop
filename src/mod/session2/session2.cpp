@@ -1148,6 +1148,7 @@ bool install(const Options& opt) {
             if (lc.s2_observer_hold_scene_conflict) {
                 const bool t2 = lc.s2_observer_hold_scene_order == "1" && acks_on;
                 observer_hold_acks_set_scene_conflict(t2);
+                observer_seq_copy_set_own_conflict(t2);
                 log::info("HoldSceneOrder: observer_hold_scene_conflict=1 -> {}", t2 ? "ON: a host scene binding an NPC "
                           "of a live scene of user 2's own waits for that scene's 2292" : "off (needs "
                           "observer_hold_scene_order=1 and observer_hold_acks=1)");

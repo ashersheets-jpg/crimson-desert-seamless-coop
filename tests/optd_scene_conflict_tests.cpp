@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "mod/session2/hold_scene_order_logic.h"
+#include "mod/session2/observer_seq_copy_logic.h"
 
 using namespace cdmp::session2;
 
@@ -133,9 +134,24 @@ void test_bound_and_clear() {
     CHECK(r.t2.own_scenes() == 0 && r.t2.live() == 0);
 }
 
+void test_seq_copy_own_blocks() {
+    osq::Copier c;
+    c.on_user2_own_binds(0x1CA, {kRenee});
+    CHECK(!c.own_blocks({kRenee}) && c.own_binds() == 0);  // off: nothing noted
+    c.set_own_conflict(true);
+    c.on_user2_own_binds(0x1CA, {kRenee});
+    c.on_user2_own_binds(0x1CF, {kOther});
+    CHECK(c.own_blocks({kRenee}) && c.own_blocks({0x12345678u, kOther}) && !c.own_blocks({0x12345678u}));
+    CHECK(c.on_user2_own_deleted(0x1CA) && !c.own_blocks({kRenee}) && c.own_blocks({kOther}));
+    CHECK(!c.on_user2_own_deleted(0x1CA));
+    c.set_own_conflict(false);
+    CHECK(!c.own_blocks({kOther}) && c.own_binds() == 0);
+}
+
 }  // namespace
 
 int main() {
+    test_seq_copy_own_blocks();
     test_off_by_default();
     test_held_until_own_delete();
     test_two_own_scenes();

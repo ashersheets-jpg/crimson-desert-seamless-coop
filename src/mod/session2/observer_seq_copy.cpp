@@ -526,6 +526,11 @@ void observer_seq_copy_configure(const std::string& mode, const std::string& onl
               m == osq::Mode::On ? "DROPPED" : "counted only");
 }
 
+void observer_seq_copy_set_own_conflict(bool on) {
+    std::lock_guard lock(g_mu);
+    g_copier.set_own_conflict(on);
+}
+
 void observer_seq_copy_set_milestone_hold(uint32_t ms) {
     {
         std::lock_guard lock(g_mu);
@@ -665,7 +670,7 @@ void observer_seq_copy_on_out(uint16_t opcode, std::span<const uint8_t> payload,
     const bool sched = sched_on() && osq::sched_op(opcode);
     if (opcode != osq::kOpMoveField && opcode != osq::kOpAnnounce && opcode != osq::kOpRemove &&
         opcode != osq::kOpBranch && opcode != osq::kOpMilestone && opcode != osq::kOpComplete &&
-        opcode != osq::kOpPrepare && opcode != osq::kOpLoaded && !sched) {
+        opcode != osq::kOpPrepare && opcode != osq::kOpLoaded && opcode != osq::kOpDelete && !sched) {
         return;
     }
     try {
@@ -758,8 +763,25 @@ void observer_seq_copy_on_out(uint16_t opcode, std::span<const uint8_t> payload,
                 const auto p = osq::parse_prepare(payload);
                 const uint32_t me = server_user2_player_key();
                 if (!p || !me || p->actor != me) return;
+                std::vector<uint32_t> bound;  // types 4 / 5: what the client binds before it creates the scene
+                for (const auto& b : p->bindings) {
+                    if ((b.type == 4 || b.type == 5) && b.actor &&
+                        std::find(bound.begin(), bound.end(), b.actor) == bound.end()) {
+                        bound.push_back(b.actor);
+                    }
+                }
                 std::lock_guard lock(g_mu);
                 g_copier.on_user2_own(p->seq);
+                g_copier.on_user2_own_binds(p->seq, bound);
+                return;
+            }
+            case osq::kOpDelete: {  // Co-op+ conflict hold: user 2's own scene went; what waited for it goes now
+                if (payload.size() < 12) return;
+                const uint32_t me = server_user2_player_key();
+                if (!me || osq::le32(payload.data()) != me) return;
+                const uint64_t seq = osq::le64(payload.data() + 4);
+                std::lock_guard lock(g_mu);
+                if (g_copier.on_user2_own_deleted(seq)) release_locked();
                 return;
             }
             case osq::kOpMilestone: {

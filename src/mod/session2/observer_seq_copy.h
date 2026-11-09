@@ -42,6 +42,9 @@ bool observer_seq_copy_wanted();  // probe or on
 // P8 session 14 review M2: with observer_load_defer on, the host's 2322 copy waits while a snapshot copy waits for
 // its actors, until user 2's 2762 + ms (0 = off, as before). After observer_seq_copy_configure.
 void observer_seq_copy_set_milestone_hold(uint32_t ms);
+// Co-op+ conflict hold (observer_hold_scene_conflict=1): copies of the host's scenes that require an NPC one of user
+// 2's own live scenes binds wait for that scene's 2292.
+void observer_seq_copy_set_own_conflict(bool on);
 bool observer_seq_copy_sends();   // on
 // After observer_seq_copy_configure (needs it probe or on; its probe makes this one probe too).
 void observer_sched_copy_configure(bool on);
