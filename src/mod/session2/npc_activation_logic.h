@@ -231,7 +231,7 @@ inline bool exit_mismatch(const ActionCall& c) noexcept { return c.h1b && c.ctl_
 // (0x2a78ca0.c:45), y la lectura S34 param4+0x90 -> +0x60 (conservada sólo para npc_action_evidence 0/probe).
 struct ActionOffsets {
     uint32_t cc_actor = 0x08, actor_key = 0x60, actor_ctl = 0x90, cc_restore = 0x40, restore_byte = 0x30;
-    uint32_t branch = 0x281, s34_user = 0x90, s34_user_key = 0x60;
+    uint32_t branch = 0x279, s34_user = 0x90, s34_user_key = 0x60;  // 3576: cmp byte [r15+0x279],0 at 0x2D081FD (2976 +0x281)
 };
 template <class Read> uintptr_t read_ptr_with(Read&& read, uintptr_t at) noexcept {
     uintptr_t v = 0;
@@ -498,9 +498,13 @@ inline bool containment_ready(const Readiness& r) noexcept {
 enum class VetoSite : uint8_t { Exact, Group, Parent, Unknown };
 inline VetoSite veto_site(uint32_t return_rva) noexcept {
     switch (return_rva) {
-        case 0x281994B: case 0x281A341: case 0x281A958: case 0x281DD65: return VetoSite::Exact;
-        case 0x281A4B5: case 0x281A589: return VetoSite::Group;
-        case 0x28210B5: case 0x281DB05: return VetoSite::Parent;
+        // 1.0.0.3576 (2026-11-09), the same callers by function and order: 0x2A5DD70 (2976 0x2818AE0), 0x2A5F1B0
+        // (0x2819E00: +0x52C mode 2, +0x6A0 leader, +0x774 member, +0xB42), 0x2A63090 (0x281DBD0), 0x2A66460
+        // (0x2820D80, its cmp [r12+0xB0],-1), 0x2A62D10 (0x281D970). A ninth caller, 0x2A68440 (ret 0x2A68794), is
+        // new in 3576: Unknown (never vetoed).
+        case 0x2A5EB72: case 0x2A5F6E1: case 0x2A5FCF7: case 0x2A631A5: return VetoSite::Exact;
+        case 0x2A5F855: case 0x2A5F929: return VetoSite::Group;
+        case 0x2A66891: case 0x2A62EAE: return VetoSite::Parent;
         default: return VetoSite::Unknown;
     }
 }
@@ -514,7 +518,9 @@ inline VetoSite veto_site(uint32_t return_rva) noexcept {
 // 0x281CEE0 recibe en rdx ([nodo] recurso, [nodo+4] índice). Se exige el papel: en 0x281A4B5 el nodo es el
 // del líder; en 0x281A589, el de otra entrada del vector. Cualquier lectura fallida o papel no demostrado:
 // false (no se veta). read(dirección, destino, bytes) es una lectura protegida.
-inline constexpr uint32_t kGroupLeaderRet = 0x281A4B5, kGroupMemberRet = 0x281A589;
+// 3576: 0x2A5F1B0 has the same prologue (rbp = rsp+0x100); the group is loaded to r13 from [rbp-0x78] at 0x2A5F7AE
+// and not written between the two calls (0x2A5F850 leader, 0x2A5F924 member).
+inline constexpr uint32_t kGroupLeaderRet = 0x2A5F855, kGroupMemberRet = 0x2A5F929;
 inline constexpr uintptr_t kGroupFrameSlot = 0x88;
 inline constexpr uint32_t kMaxGroup = 64;
 struct GroupNode { uint32_t data = 0, index = 0; };

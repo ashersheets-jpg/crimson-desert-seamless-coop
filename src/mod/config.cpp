@@ -309,6 +309,8 @@ Config load_config(const std::wstring& ini_path) {
     c.s2_shop_trade_probe = read_uint(ini_path, L"session2", L"shop_trade_probe", 0) != 0;
     c.s2_user2_shop_trade_route = narrow(read_string(ini_path, L"session2", L"user2_shop_trade_route", "0"));
     c.s2_observer_hold_scene_order = narrow(read_string(ini_path, L"session2", L"observer_hold_scene_order", "0"));
+    c.s2_observer_hold_scene_conflict =
+        narrow(read_string(ini_path, L"session2", L"observer_hold_scene_conflict", "0")) == "1";
     c.s2_user2_shop_trade_list = narrow(read_string(ini_path, L"session2", L"user2_shop_trade_list", "0"));
     c.s2_shop_interaction_own_delete =
         narrow(read_string(ini_path, L"session2", L"shop_interaction_own_delete", "0"));

@@ -647,6 +647,11 @@ add_executable(cdmp_tests_optd_hold_scene_order tests/optd_hold_scene_order_test
 cdmp_strict(cdmp_tests_optd_hold_scene_order)
 target_link_libraries(cdmp_tests_optd_hold_scene_order PRIVATE cdmp_common)
 add_test(NAME optd_hold_scene_order COMMAND cdmp_tests_optd_hold_scene_order)
+# Co-op+ (2026-11-09): SceneHold's conflict hold on the 3576 layouts.
+add_executable(cdmp_tests_optd_scene_conflict tests/optd_scene_conflict_tests.cpp)
+cdmp_strict(cdmp_tests_optd_scene_conflict)
+target_link_libraries(cdmp_tests_optd_scene_conflict PRIVATE cdmp_common)
+add_test(NAME optd_scene_conflict COMMAND cdmp_tests_optd_scene_conflict)
 # P8 guest_schedule_load (docs/research/pendientes/p8-impl-horarios.md): offline logic only - the key's values, the
 # name -> key hash (lookup3, initval 0xC5EDE) and 0x1422F90's base name, the schedule-context table replica and the
 # name read on fake memory, the key set, the keys a 2005 / 2335 / 2874 names (session-6 records), the per-key book

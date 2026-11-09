@@ -629,6 +629,9 @@ struct Config {
     // and every later packet of its scene id are KEPT in observer_hold_acks' route and queued right after the 2005 of
     // the last of those NPCs, in order (s46-tenderos.md §9).
     std::string s2_observer_hold_scene_order = "0";
+    // Co-op+ (2026-11-09, tcB225): observer_hold_scene_conflict = 0 | 1, HOST, with observer_hold_scene_order=1: the
+    // host's 2661 that binds an NPC one of user 2's OWN live scenes binds waits for that scene's 2292 (hso::SceneHold).
+    bool s2_observer_hold_scene_conflict = false;
     // user2_shop_trade_list = 0 | probe | 1 (S46 phase 3, T1), HOST, with user2_stages: 1 = with U-1 armed far (>= 10
     // cells) U-f lets through ONLY the cd_seq_funcnpc_* whose base name hashes to the trade list (smithy 0xA7132561,
     // butcher 0x978345CA), instead of user2_stages_elements; probe = the verdict in the lines only.

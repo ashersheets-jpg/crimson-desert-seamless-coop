@@ -273,11 +273,11 @@ void decisions() {
         CHECK(!containment_ready(x));
     }
     // Sitios de 0x281CEE0: veto exacto; grupo nativo (sólo entero agotado); padre nativo y desconocido nunca.
-    CHECK(veto_site(0x281994B) == VetoSite::Exact && veto_site(0x281A341) == VetoSite::Exact);
-    CHECK(veto_site(0x281A958) == VetoSite::Exact && veto_site(0x281DD65) == VetoSite::Exact);
-    CHECK(veto_site(0x281A4B5) == VetoSite::Group && veto_site(0x281A589) == VetoSite::Group);
-    CHECK(veto_site(0x28210B5) == VetoSite::Parent && veto_site(0x281DB05) == VetoSite::Parent);
-    CHECK(veto_site(0) == VetoSite::Unknown && veto_site(0x281A33C) == VetoSite::Unknown);
+    CHECK(veto_site(0x2A5EB72) == VetoSite::Exact && veto_site(0x2A5F6E1) == VetoSite::Exact);
+    CHECK(veto_site(0x2A5FCF7) == VetoSite::Exact && veto_site(0x2A631A5) == VetoSite::Exact);
+    CHECK(veto_site(0x2A5F855) == VetoSite::Group && veto_site(0x2A5F929) == VetoSite::Group);
+    CHECK(veto_site(0x2A66891) == VetoSite::Parent && veto_site(0x2A62EAE) == VetoSite::Parent);
+    CHECK(veto_site(0) == VetoSite::Unknown && veto_site(0x2A68794) == VetoSite::Unknown && veto_site(0x281A4B5) == VetoSite::Unknown);
     static_assert(sizeof(Family) <= 2048, "la familia va en la pila del servidor");
 }
 // Prueba en un PC (14-10, 15:42): un abandono es por unidad. La raíz y su familia (nacimientos exactos) salen de la
@@ -350,7 +350,7 @@ void group_veto_only_when_whole_group_exhausted() {
     CHECK(!read_group(rd, rsp, kGroupMemberRet, nodes, g) && g.size == 0);
     CHECK(!read_group(rd, rsp, kGroupLeaderRet, nodes + 0x168, g));
     CHECK(!read_group(rd, rsp, kGroupLeaderRet, nodes + 0x168 * 2, g));
-    CHECK(!read_group(rd, rsp, 0x28210B5, nodes, g) && !read_group(rd, rsp, 0x281994B, nodes, g));
+    CHECK(!read_group(rd, rsp, 0x2A66891, nodes, g) && !read_group(rd, rsp, 0x2A5EB72, nodes, g));
     CHECK(!read_group(rd, 0, kGroupLeaderRet, nodes, g));
     CHECK(!read_group(rd, m.base() + 8000, kGroupLeaderRet, nodes, g));
     m.put<uint32_t>(group + 0x10, kMaxGroup + 1);
@@ -508,7 +508,7 @@ struct Frame {
         put<uint32_t>(actor() + 0x90, ctl);
         put<uintptr_t>(cc() + 0x40, state());
         put<int8_t>(state() + 0x30, restore);
-        put<uint8_t>(block() + 0x281, flag);
+        put<uint8_t>(block() + 0x279, flag);  // 3576
         put<int32_t>(result(), internal);
         // param4 is NOT a session: its +0x90 holds some other pointer (here 0: the S34 read gives 0, as in 843/843).
     }
@@ -531,7 +531,7 @@ void s35_detour_reads_on_a_frame() {
     Actor b = actor(key + 1, 8); b.controller = kGuest; t.born(b);
     CHECK(t.record(key + 1, make_call(e, x, false, 8), 10) == Evidence::ReturnZeroOnly);
     // Branch 281 on the frame.
-    f.put<uint8_t>(f.block() + 0x281, 1);
+    f.put<uint8_t>(f.block() + 0x279, 1);  // 3576
     read_action_entry(rd, f.cc(), f.context(), f.block(), e);
     CHECK(e.flag == 1 && t.record(key + 1, make_call(e, read_action_exit(rd, f.cc(), e, f.result()), false, 8), 11) ==
                              Evidence::Branch281);

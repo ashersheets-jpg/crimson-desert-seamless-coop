@@ -105,6 +105,8 @@ AckRoute observer_hold_acks_route(uint16_t opcode, std::span<const uint8_t> payl
 // install (session2), before any packet.
 // own_key: user 2's character key (server_user2_player_key); note: where its events go (observer_hold_scene_order_note,
 // called by tick outside this module's lock).
+// Co-op+ conflict hold (hso::SceneHold::set_conflict).
+void observer_hold_acks_set_scene_conflict(bool on) noexcept;
 void observer_hold_acks_set_scene_order(bool on, uint32_t (*own_key)(),
                                         void (*note)(std::vector<hso::Event>&, uint64_t)) noexcept;
 bool observer_hold_acks_scene_order_on() noexcept;

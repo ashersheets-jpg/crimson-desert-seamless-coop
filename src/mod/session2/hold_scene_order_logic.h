@@ -182,6 +182,7 @@ struct Event {
     uint64_t delay_us = 0;
     std::vector<uint16_t> ops;   // the opcodes it would have held, in order (the 2661 first)
     uint32_t more_ops = 0;       // past the bound, counted only
+    bool conflict = false;       // Co-op+ conflict hold (SceneHold::set_conflict): another owner's scene behind user 2's own
 };
 
 struct Limits {
@@ -385,6 +386,7 @@ struct HoldCounters {
     uint64_t packets_discarded = 0, tomb_dropped = 0, delay_max_us = 0, peak_scenes = 0, peak_bytes = 0;
     uint64_t odd_2810 = 0;       // review B2: a 2810 not 17 B long that matched a kept / tombstoned id
     uint64_t tomb_reopened = 0;  // review B4: a 2661 of a tombstoned id, decided again as a new one
+    uint64_t conflict_held = 0;  // Co-op+ conflict hold: another owner's 2661 kept behind user 2's own scene's 2292
 };
 // A 2005's release: observer_hold_acks' own packets (`after`, Held = oha::HeldPacket: seq, opcode, key, bytes) and
 // the scenes' (key 0), merged by their original sequence (stable: equal seqs never happen, one counter).
@@ -416,6 +418,20 @@ class SceneHold {
 public:
     explicit SceneHold(HoldLimits l = {}) : l_(l) {}
 
+    // Co-op+ (2026-11-09, tcB225) conflict hold: a 2661 of ANOTHER owner's scene (the host's) that binds an NPC one of
+    // user 2's OWN live scenes binds (U-1's copies of the same shops, prepared while user 2 was far) is kept, with
+    // every later packet of its id, until the 2292 of each such own scene went to user 2; then it goes right after
+    // that 2292 (take_after). User 2's client had bound the NPC to its own scene and, once that one was deleted, the
+    // host's (refused while the NPC was busy) never got it: the shopkeeper vanished for the guest.
+    void set_conflict(bool on) { conflict_ = on; }
+    bool conflict() const { return conflict_; }
+    size_t own_scenes() const { return own_.size(); }
+    // The packets to queue right after the one offer() just returned Pass for (a 2292 that ended a conflict).
+    void take_after(std::vector<OutPacket>& out) {
+        for (OutPacket& o : after_) out.push_back(std::move(o));
+        after_.clear();
+    }
+
     // One packet to user 2's live session (never a 2005: see announced). own = user 2's character key;
     // holding(key) -> bool: AckHold::withheld (review M1: Holding or Spilled, not Orphan); next_seq() -> u64: the shared order. Held: `packet`
     // moved in. Discarded: drop it (it was a kept scene's or a tombstoned id's). Pass: queue it as usual.
@@ -429,6 +445,7 @@ public:
             }
             s_.clear();
             tombs_.clear();
+            own_.clear();
             bytes_ = 0;
             return Take::Pass;
         }
@@ -440,6 +457,46 @@ public:
         }
         if (op == kOpPrepare) {
             const Prepare pr = parse_prepare(p);
+            if (conflict_ && pr.ok && own && pr.owner == own && !pr.bound.empty()) {  // user 2's own scene: noted
+                bool found = false;
+                for (OwnBind& o : own_) {
+                    if (o.id == pr.id) {
+                        o.keys = pr.bound;
+                        found = true;
+                    }
+                }
+                if (!found) {
+                    if (own_.size() >= 256) own_.erase(own_.begin());
+                    own_.push_back({pr.id, pr.bound});
+                }
+            }
+            if (conflict_ && pr.ok && own && pr.owner != own) {
+                if (Scene* s = find(pr.id)) return keep(*s, op, packet, now_us, next_seq, out);  // again while kept
+                std::vector<uint64_t> wait = conflicts(pr.bound);
+                if (wait.empty()) return Take::Pass;
+                const size_t size = packet.size();
+                if (s_.size() >= l_.max_scenes || size > l_.max_bytes_scene || bytes_ + size > l_.max_bytes_total) {
+                    return Take::Pass;  // at the cap: native behaviour (never refused for a conflict)
+                }
+                Scene sc;
+                sc.id = pr.id;
+                sc.hash = pr.hash;
+                sc.wait_own = std::move(wait);
+                sc.since_us = now_us;
+                s_.push_back(std::move(sc));
+                ++c_.held;
+                ++c_.conflict_held;
+                Event e;
+                e.active = true;
+                e.kind = Kind::WouldHold;
+                e.conflict = true;
+                e.id = pr.id;
+                e.hash = pr.hash;
+                e.keys = pr.bound;
+                e.ops = {op};
+                out.push_back(std::move(e));
+                return keep(s_.back(), op, packet, now_us, next_seq, out);
+            }
             if (!pr.ok || !own || pr.owner != own || !u2trade::is_trade_hash(pr.hash)) return Take::Pass;
             if (Scene* s = find(pr.id)) return keep(*s, op, packet, now_us, next_seq, out);  // again while kept
             // Review B4: a 2661 sent again with a tombstoned id is decided again as a new one (the tombstone goes): with
@@ -497,6 +554,31 @@ public:
         }
         const auto id = scene_id_t2(op, p);
         if (!id) return Take::Pass;
+        if (conflict_ && op == kOpDelete && p.size() >= 4 && le32(p.data()) == own) {  // actor @0: user 2's own
+            const auto it = std::find_if(own_.begin(), own_.end(), [&](const OwnBind& o) { return o.id == *id; });
+            if (it != own_.end()) {  // user 2's own scene goes: the host's scenes that waited for it follow it
+                own_.erase(it);
+                for (size_t i = 0; i < s_.size();) {
+                    Scene& sc = s_[i];
+                    const bool waited = std::find(sc.wait_own.begin(), sc.wait_own.end(), *id) != sc.wait_own.end();
+                    sc.wait_own.erase(std::remove(sc.wait_own.begin(), sc.wait_own.end(), *id), sc.wait_own.end());
+                    if (!waited || !sc.wait_own.empty() || !sc.pending.empty()) {
+                        ++i;
+                        continue;
+                    }
+                    Event e = event(sc, Kind::Released, now_us);
+                    e.conflict = true;
+                    c_.delay_max_us = std::max(c_.delay_max_us, e.delay_us);
+                    ++c_.released;
+                    c_.packets_released += sc.q.size();
+                    bytes_ -= std::min(bytes_, sc.bytes);
+                    for (OutPacket& o : sc.q) after_.push_back(std::move(o));
+                    out.push_back(std::move(e));
+                    s_.erase(s_.begin() + static_cast<std::ptrdiff_t>(i));
+                }
+                return Take::Pass;  // the 2292 itself passes; take_after() gives what follows it
+            }
+        }
         if (op == kOpDelete && p.size() != 17 && (find(*id) || tomb(*id))) ++c_.odd_2810;
         if (Scene* s = find(*id)) {
             if (op == kOpDelete) {  // its 2810: the scene goes with everything it kept, the 2810 too
@@ -520,7 +602,7 @@ public:
         for (size_t i = 0; i < s_.size();) {
             Scene& s = s_[i];
             for (const uint32_t k : keys) s.pending.erase(std::remove(s.pending.begin(), s.pending.end(), k), s.pending.end());
-            if (!s.pending.empty()) {
+            if (!s.pending.empty() || !s.wait_own.empty()) {
                 ++i;
                 continue;
             }
@@ -560,11 +642,13 @@ public:
         for (Scene& s : s_) discard(s, Kind::KeyGone, now_us, {}, out, false);
         s_.clear();
         tombs_.clear();
+        own_.clear();
+        after_.clear();
         bytes_ = 0;
     }
     size_t scenes() const { return s_.size(); }
     size_t tombs() const { return tombs_.size(); }
-    size_t live() const { return s_.size() + tombs_.size(); }
+    size_t live() const { return s_.size() + tombs_.size() + (conflict_ ? own_.size() : 0); }
     size_t bytes() const { return bytes_; }
     bool kept(uint64_t id) const {
         for (const Scene& s : s_) {
@@ -579,6 +663,7 @@ private:
         uint64_t id = 0;
         uint32_t hash = 0;
         std::vector<uint32_t> pending;
+        std::vector<uint64_t> wait_own;  // Co-op+ conflict hold: user 2's own scene ids whose 2292 it waits for
         uint64_t since_us = 0;
         std::vector<OutPacket> q;
         std::vector<uint16_t> ops;
@@ -688,7 +773,27 @@ private:
         out.push_back(std::move(e));
     }
 
+    struct OwnBind {
+        uint64_t id = 0;
+        std::vector<uint32_t> keys;
+    };
+    std::vector<uint64_t> conflicts(const std::vector<uint32_t>& bound) const {
+        std::vector<uint64_t> ids;
+        for (const OwnBind& o : own_) {
+            for (const uint32_t k : bound) {
+                if (std::find(o.keys.begin(), o.keys.end(), k) != o.keys.end()) {
+                    ids.push_back(o.id);
+                    break;
+                }
+            }
+        }
+        return ids;
+    }
+
     HoldLimits l_;
+    bool conflict_ = false;
+    std::vector<OwnBind> own_;      // conflict hold: user 2's own live scenes and the NPCs they bind
+    std::vector<OutPacket> after_;  // conflict hold: packets to queue right after the one just passed
     std::vector<Scene> s_;
     std::vector<Tomb> tombs_;
     size_t bytes_ = 0;

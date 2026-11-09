@@ -43,6 +43,17 @@ std::string ops_text(const hso::Event& e) {
 }
 // S46 phase 3, T2 ACTIVE: what really happened (the packets were kept, released or discarded).
 std::string active_line(const hso::Event& e, const std::string& scene) {
+    if (e.conflict && e.kind == hso::Kind::WouldHold) {
+        return std::format("HoldSceneOrder [CONFLICT held] the host's 2661 of {} binds NPC(s) {} that a live scene of "
+                           "user 2's OWN still binds -> KEPT (with every later packet of this id) until that scene's "
+                           "2292 went to user 2",
+                           scene, keys_text(e.keys));
+    }
+    if (e.conflict && e.kind == hso::Kind::Released) {
+        return std::format("HoldSceneOrder [CONFLICT released] {}: user 2's own scene was deleted {:.1f} ms after this "
+                           "2661: queued right behind that 2292, in order: {}",
+                           scene, static_cast<double>(e.delay_us) / 1000.0, ops_text(e));
+    }
     switch (e.kind) {
         case hso::Kind::WouldHold:
             return std::format("HoldSceneOrder [HELD scene] user 2's own 2661 of {} binds NPC(s) observer_hold still "

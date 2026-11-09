@@ -299,9 +299,26 @@ AckRoute observer_hold_acks_route(uint16_t opcode, std::span<const uint8_t> payl
                 opcode, payload, packet, t2_now_us(), own, [](uint32_t k) { return g_hold.withheld(k); },
                 [] { return g_hold.next_seq(); }, ev);
             t2_keep(ev);
+            if (tk != hso::Take::Pass) {
+                t2_sync();
+                return AckRoute::Held;  // kept, or discarded with its scene: never queued here
+            }
+            // Co-op+ conflict hold: a 2292 of user 2's own scene ended the wait of the host's scenes: they go right
+            // after it, under this lock (nothing of their ids can come between).
+            std::vector<hso::OutPacket> after;
+            g_scene.take_after(after);
             t2_sync();
-            if (tk != hso::Take::Pass) return AckRoute::Held;  // kept, or discarded with its scene: never queued here
-            return AckRoute::Pass;  // none of T2's opcodes is one observer_hold_acks holds (held_key_of: nullopt)
+            if (after.empty()) return AckRoute::Pass;  // none of T2's opcodes is one observer_hold_acks holds
+            out.self_pushed = push(packet);
+            for (hso::OutPacket& o : after) {
+                ++out.extra_pushed;
+                const bool ok = push(o.bytes);
+                if (!ok) ++out.extra_failed;
+                if (ok) out.scene_released.push_back(std::move(o.bytes));
+            }
+            g_pushed_released.fetch_add(out.extra_pushed, std::memory_order_relaxed);
+            if (out.extra_failed) g_push_failed.fetch_add(out.extra_failed, std::memory_order_relaxed);
+            return AckRoute::Pushed;
         }
         if (!g_keys.load(std::memory_order_relaxed)) return AckRoute::Pass;
         if (opcode == oha::kOpAnnounce) {
@@ -383,6 +400,13 @@ void observer_hold_acks_set_scene_order(bool on, uint32_t (*own_key)(),
     g_t2_on.store(on);
 }
 bool observer_hold_acks_scene_order_on() noexcept { return g_t2_on.load(std::memory_order_relaxed); }
+void observer_hold_acks_set_scene_conflict(bool on) noexcept {
+    try {
+        std::lock_guard lock(g_mu);
+        g_scene.set_conflict(on);
+    } catch (...) {
+    }
+}
 hso::HoldCounters observer_hold_acks_scene_counters(size_t& scenes, size_t& tombs, size_t& bytes) {
     std::lock_guard lock(g_mu);
     scenes = g_scene.scenes();

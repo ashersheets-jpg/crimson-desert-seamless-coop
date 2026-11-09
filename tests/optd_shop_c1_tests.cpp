@@ -206,15 +206,15 @@ void test_book() {
 void test_points() {
     static_assert(isl::kPatchA == sizeof isl::kBytesA);
     static_assert(isl::kPatchR == sizeof isl::kBytesR);
-    static_assert(isl::kPatchF == sizeof isl::kBytesF);
+    static_assert(isl::kPatchF <= sizeof isl::kBytesF);  // 3576: F patches the 5-byte mov only
     static_assert(isl::kBytesA[0] == 0x48 && isl::kBytesA[1] == 0x8B && isl::kBytesA[2] == 0xF8);  // mov rdi,rax
     static_assert(isl::kCtxA + sizeof isl::kCtxABytes == isl::kPointA);  // call [rax+0x48] ends at A
     // The call 0x1F6C190 in the lookup context: E8 rel32 from 0x2126A6A.
     const uintptr_t call_at = isl::kCtxLookup + sizeof isl::kCtxLookupBytes - 5;
     int32_t rel = 0;
     std::memcpy(&rel, isl::kCtxLookupBytes + sizeof isl::kCtxLookupBytes - 4, 4);
-    static_assert(isl::kCtxLookup + sizeof isl::kCtxLookupBytes - 5 == 0x2126A6A);
-    CHECK(call_at + 5 + rel == 0x1F6C190);
+    static_assert(isl::kCtxLookup + sizeof isl::kCtxLookupBytes - 5 == 0x22EE424);  // 3576 (2976 0x2126A6A)
+    CHECK(call_at + 5 + rel == 0x21578E0);  // 3576 (2976 0x1F6C190)
     static_assert(isl::kPointR > isl::kPointA && isl::kPointF > isl::kPointR);
 }
 
