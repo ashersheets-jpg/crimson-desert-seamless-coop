@@ -41,6 +41,9 @@ void activity_on_event(const std::vector<uint8_t>& payload);
 // B16b (user 2026-11-09): the player interaction menu asked for (the hold-R prompt on the other player, render/hud.cpp):
 // the next challenge tick acts as Shift+F5 does (opens the challenge list, or accepts a received challenge).
 void activity_request_menu();
+// B16b: the hold prompt on the other player is up now (render/hud.cpp): on a pad the challenge chord then FILLS its
+// ring (the menu opens when full) instead of opening the menu at the press.
+void activity_set_hold_prompt(bool shown);
 // B16b: the open player interaction menu (false: none): its entries (challenges, "Trade (coming soon)", "Leave") and
 // the chosen one, for the HUD's shop-style card.
 bool activity_menu_snapshot(std::string& title, std::vector<std::string>& items, size_t& pick);

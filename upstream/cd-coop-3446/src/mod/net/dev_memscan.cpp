@@ -12,6 +12,7 @@
 
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
+#include "mod/log.h"
 #include "mod/net/dev_watch.h"
 #include "mod/net/local_capture.h"
 
@@ -467,4 +468,48 @@ void dev_watch_status(int offset, int len, int hits) {
     dev_watch_start(*status + offset, len, hits);
 }
 
+}  // namespace cdmp::net
+
+namespace cdmp::net {
+// B11 research (2026-11-09): the item-move definitions 3111's worker 0x2E0B2B0 reads through 0x5560E0.
+void dev_dump_item_move() {
+    const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    uintptr_t table = 0;
+    uint32_t count = 0;
+    if (!game::safe_read(base + 0x71C1060, &table, sizeof table) || !table ||
+        !game::safe_read(table + 8, &count, sizeof count)) {
+        log::warn("Dev script: dumpitemmove: the table [exe+0x71C1060] is not readable");
+        return;
+    }
+    uintptr_t defs = 0;
+    game::safe_read(table + 0x58, &defs, sizeof defs);
+    log::info("Dev script: dumpitemmove: table 0x{:X}, {} definition(s), array 0x{:X}", table, count, defs);
+    if (!defs) return;
+    int lines = 0;
+    for (uint32_t i = 0; i < count && i < 4096 && lines < 400; ++i) {
+        uintptr_t def = 0;
+        if (!game::safe_read(defs + static_cast<uintptr_t>(i) * 8, &def, sizeof def) || !def) continue;
+        uintptr_t entries = 0;
+        uint32_t n = 0;
+        if (!game::safe_read(def + 0x38, &entries, sizeof entries) || !game::safe_read(def + 0x40, &n, sizeof n)) continue;
+        uint16_t key = 0;
+        game::safe_read(def, &key, sizeof key);
+        log::info("Dev script: dumpitemmove: def {} (0x{:X}) key? 0x{:04X}: {} entr{}", i, def, key, n, n == 1 ? "y" : "ies");
+        ++lines;
+        for (uint32_t e = 0; e < n && e < 64 && lines < 400; ++e) {
+            uint8_t rec[0xA0] = {};
+            if (!game::safe_read(entries + static_cast<uintptr_t>(e) * 0xA0, rec, sizeof rec)) break;
+            uint16_t a = 0, b = 0;
+            uint64_t cond = 0;
+            std::memcpy(&a, rec + 2, 2);
+            std::memcpy(&b, rec + 4, 2);
+            std::memcpy(&cond, rec + 0x78, 8);
+            std::string hex;
+            for (int k = 0; k < 0x20; ++k) hex += std::format("{:02X}", rec[k]);
+            log::info("Dev script: dumpitemmove:   def {} entry {}: kind {} inventories 0x{:04X} -> 0x{:04X} condition "
+                      "0x{:X} | {}", i, e, rec[0], a, b, cond, hex);
+            ++lines;
+        }
+    }
+}
 }  // namespace cdmp::net

@@ -595,7 +595,10 @@ void hold_prompt(ImDrawList* dl, float x, float y, float progress, const std::st
     const float kw = text_w(g_serif_bold, ks, key);
     text(dl, g_serif_bold, ks, x - kw * 0.5f, y - ks * 0.55f, p >= 1.0f ? fill : rim, key);
     if (!label.empty()) {
-        text(dl, g_serif_bold, ls, x + r + 8.0f, y - ls * 0.55f, with_alpha(IM_COL32(245, 240, 230, 255), alpha), label);
+        const ImU32 lc = with_alpha(IM_COL32(245, 240, 230, 255), alpha);
+        // A label with an action token ("{Challenge} Interact", a pad's binding drawn as its buttons).
+        if (label.find('{') != std::string::npos) rich_text(dl, x + r + 8.0f, y - ls * 0.55f, ls, label, lc, g_serif_bold);
+        else text(dl, g_serif_bold, ls, x + r + 8.0f, y - ls * 0.55f, lc, label);
     }
 }
 

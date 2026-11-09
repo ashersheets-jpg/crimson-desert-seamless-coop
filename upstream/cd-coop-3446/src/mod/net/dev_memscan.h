@@ -1,4 +1,8 @@
 #pragma once
+// (2026-11-09, B11) dumpitemmove: logs the item-move definitions of MoveItemInventoryToOtherInventoryReq 3111
+// (read only; build 1.0.0.3576).
+#include <cstdint>
+namespace cdmp::net { void dev_dump_item_move(); }
 // Co-op+ dev (research only, dev_script "memscan" / "memdiff" / "memwatch"): the memory-editor way of finding where
 // the game keeps a value. memscan finds every 4-aligned copy of a byte pattern (e.g. a mission key) in the game's
 // read/write memory and keeps the 128 bytes around each; memdiff logs which of those bytes changed since (e.g. a

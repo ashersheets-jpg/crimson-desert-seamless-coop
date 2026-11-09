@@ -108,10 +108,27 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
                               "quest_own_progress=1", "fog_share=1", "anti_grief=1",
                               // B02 far world (2026-11-09, tcB201): the far guest's own NPC stages (U-1 + its timers,
                               // the world anchor, its NPCs' controller)
-                              "user2_stages=1", "user2_timer_route=1", "user2_world_anchor=1", "user2_npc_control=1"}) {
-            // B02b far shops (tcB216 worked: shop_probe=1, user2_shop_route=1, user2_stages_elements=schedule+funcnpc,
-            // observer_hold_scene_order=1) are NOT default yet: with them the guest's near-host shop did not open in
-            // the release flow (tcB217 / tcB219). To find before they go in.
+                              "user2_stages=1", "user2_timer_route=1", "user2_world_anchor=1", "user2_npc_control=1",
+                              // B02b far shops (tcB216): the far guest's own merchants. tcB217 / 219 (the near shop
+                              // not opening with them) were before the U-1 settle gate and the 3576 descriptor offset;
+                              // tcB223 had the near shop open with them.
+                              "shop_probe=1", "user2_shop_route=1", "user2_stages_elements=schedule+funcnpc",
+                              "observer_hold_scene_order=1",
+                              // tcB225: a guest that logged in far (U-1 armed, its own shop scenes) and then came to
+                              // the host kept its copy of the shopkeeper bound to its own (drained) shop scene, so the
+                              // host's shop never showed her: user 2's stages are unloaded at the host's preparation
+                              // near it, before the host's scenes are built (ByJunter's review 2)
+                              "user2_drain_at_host_prepare=1",
+                              // tcB226: the drain alone was not enough (the host's shop scene reached the guest first,
+                              // through ObserverSeqCopy): a host scene that needs an NPC one of the guest's own scenes
+                              // still binds waits for that scene's delete (native conflict hold)
+                              "observer_hold_scene_conflict=1",
+                              // ByJunter's S33 / S35 NPC containment, ported to 3576 (2026-11-09): an NPC given to the
+                              // far guest that never acts is retired on its own instead of U-e stopping for the whole
+                              // run (tcB226: 193 of 196 driven, 3 late -> run-wide abort). Family / road control stay
+                              // off (their descriptor offsets are not verified on 3576).
+                              "npc_activation=1", "npc_action_evidence=1", "npc_containment_guard=1",
+                              "npc_degradation=1", "publication_gate=1"}) {
             line(k);
         }
         // B10 option 2, the player's choice ([coop] shared_quest_credit): an objective one player completes also
@@ -122,7 +139,13 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
                               "guest_remote_update_guard=1", "guest_update_guard=1", "guest_reload_wait_fix=1",
                               "guest_own_save=1", "guest_seq_route=1", "guest_fast_travel_veto=probe",
                               // B02b: the shopkeepers shown (merchant_unhide), the guest's own shop scene (shop_twin)
-                              "merchant_unhide=1", "guest_shop_check=1", "shop_twin=1"}) {
+                              "merchant_unhide=1", "guest_shop_check=1", "shop_twin=1",
+                              // B02 far world (2026-11-09, tcB224): the guest's client loads the NPC schedules before
+                              // the host's NPC records reach it (guest_schedule_load), so it can build and drive the
+                              // NPCs U-e gives it (without it: no first action in 5 s, U-e's abort, and the near shop
+                              // not opening with the far-shop keys); the interaction stage lookup (C1) and the restore
+                              // guard of every working far-world / shop run (tcB194 / 201 / 216 / 223)
+                              "guest_schedule_load=1", "guest_x_interaction_stage=1", "seq_actor_restore=1"}) {
             line(k);
         }
     }

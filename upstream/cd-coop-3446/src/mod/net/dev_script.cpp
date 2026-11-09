@@ -32,7 +32,7 @@ namespace cdmp::net {
 namespace {
 
 struct Step {
-    enum Kind { C2S, S2C, Wait, Teleport, Poke, Time, Watch, Day, Pad, KillGame, KillAll, MemScan, MemDiff, MemWatch, Advance, FScan, FFilter, FWatch, WaitFile, DScan, DFilter, DWatch, GSnap, GDiff, PtrScan, WatchStatus, Key, ClockScan, RideHorse, PrologueDone, GrantXp, GuestHit } kind;
+    enum Kind { C2S, S2C, Wait, Teleport, Poke, Time, Watch, Day, Pad, KillGame, KillAll, MemScan, MemDiff, MemWatch, Advance, FScan, FFilter, FWatch, WaitFile, DScan, DFilter, DWatch, GSnap, GDiff, PtrScan, WatchStatus, Key, ClockScan, RideHorse, PrologueDone, GrantXp, GuestHit, DumpItemMove } kind;
     uintptr_t addr = 0;
     float to[3] = {};
     uint16_t op = 0;
@@ -337,6 +337,11 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
             steps.push_back(st);
             continue;
         }
+        if (kind == "dumpitemmove") {  // dumpitemmove: B11, 3111's item-move definitions (read only)
+            st.kind = Step::DumpItemMove;
+            steps.push_back(st);
+            continue;
+        }
         if (kind == "killall") {  // killall: KillCheatReq on every loaded actor but animals (live quest research)
             st.kind = Step::KillAll;
             steps.push_back(st);
@@ -461,6 +466,8 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                 dev_ptrscan(static_cast<uint32_t>(st.addr));
             } else if (st.kind == Step::ClockScan) {
                 dev_clockscan();
+            } else if (st.kind == Step::DumpItemMove) {
+                dev_dump_item_move();
             } else if (st.kind == Step::GSnap) {
                 dev_gsnap();
             } else if (st.kind == Step::GDiff) {

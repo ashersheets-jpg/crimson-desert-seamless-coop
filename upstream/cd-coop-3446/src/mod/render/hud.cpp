@@ -588,7 +588,10 @@ void hud_draw(float width, float height) {
         DWORD fg_pid = 0;
         GetWindowThreadProcessId(GetForegroundWindow(), &fg_pid);
         const bool ours = fg_pid == GetCurrentProcessId();
-        const bool r_down = ours && (GetAsyncKeyState('R') & 0x8000) != 0;
+        // A pad (2026-11-09): the co-op chord + D-pad Up (the Challenge action) held fills the same ring.
+        const bool on_pad = input::method() != input::Method::Keyboard;
+        const bool r_down = ours && ((GetAsyncKeyState('R') & 0x8000) != 0 ||
+                                     (on_pad && input::action_down(input::Action::Challenge, true)));
         bool shown = false;
         std::string menu_t;
         std::vector<std::string> menu_i;
@@ -611,7 +614,8 @@ void hud_draw(float width, float height) {
                         }
                     }
                     if (fired) t = 1.0f;
-                    ui::hold_prompt(dl, p->x + 48.0f, p->y, t, "R", "Interact");
+                    if (on_pad) ui::hold_prompt(dl, p->x + 48.0f, p->y, t, "", "{Challenge} Interact");
+                    else ui::hold_prompt(dl, p->x + 48.0f, p->y, t, "R", "Interact");
                 }
             }
         }
@@ -619,6 +623,7 @@ void hud_draw(float width, float height) {
             hold_since = 0;
             if (!r_down) fired = false;
         }
+        net::activity_set_hold_prompt(shown);
     }
 
     // B16b: the open player interaction menu (net::activity_menu_snapshot), the shop menu's look.
