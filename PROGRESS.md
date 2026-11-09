@@ -3111,3 +3111,11 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
     the middle of the screen and OUR game window in front (two copies on one PC); full -> activity_request_menu() ->
     the challenge tick acts as Shift+F5 (opens the challenge list, or accepts a received challenge). Shift+F5 kept.
     Next: the menu itself in the shop-menu style (a list of challenges, later trading) instead of the old picker.
+- 2026-11-09 14:55 *** B17: REVIVE BY INTERACTING WORKS (tcB208) ***: both at the butcher, the host down by its
+  KillCheatReq, the guest held E 1.3 m away: host log "Revive: Guest revived us" / "the other player revived us: up
+  where we fell"; both alive, SAVES OK. (Bleed-out timer, the hold progress line and the "X revived you" credit were
+  already there; Q / U kept.)
+  B16b menu built (layer f20face, pushed): the shop menu's look -- the friend's name under "Co-op", stacked choices
+  (each challenge, "Trade (coming soon)" greyed, "Leave"), W / S or up / down choose, Space / Enter select, Esc leaves
+  (the keyboard hook holds them from the game while the menu is open), closes by itself after 60 s idle; the prompt
+  reads "Interact". tcB209 checks it on the guest (hold R facing the host).
