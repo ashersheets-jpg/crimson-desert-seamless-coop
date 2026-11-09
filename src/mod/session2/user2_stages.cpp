@@ -1088,11 +1088,11 @@ Who who_key(uint32_t key) noexcept {
 }
 uint32_t rva_of(uint64_t addr) noexcept { return u2s::rva_in(addr, g_base, g_image_size); }
 
-// S43: an NPC's stage slot for the reason-42 loop check (u2s::r42_slot_id; 0 = unknown): its schedule handle
+// S43: an NPC's stage slot for the reason-42 loop check (u2s::r42_slot_id; 0 = unknown): its schedule handle // 3576: [desc+0x510] (2976 +0x4E8; NPCSchedule desc vf 0x29E06E0 reads it 9 times)
 // [desc+0x4E8] -> u32 +0 data, +4 node (build 2976), read only on a CreateServerActorDesc_NPCSchedule descriptor.
 uint32_t stage_slot_of(uintptr_t desc) noexcept {
     if (!desc || rva_of(rdp(desc)) != u2s::kVtDescNpcSchedule) return 0;
-    const uintptr_t h = rdp(desc + 0x4E8);
+    const uintptr_t h = rdp(desc + 0x510);
     return h ? u2s::r42_slot_id(rdv<uint32_t>(h), rdv<uint32_t>(h + 4)) : 0;
 }
 
@@ -1946,7 +1946,7 @@ bool family_child(uintptr_t& rax, uintptr_t desc, uintptr_t field, uintptr_t act
         if (npcfam::lazy_root(*pr)) {
             const uintptr_t pj2 = g_u2_char.load(std::memory_order_relaxed);
             const uint32_t key2 = pj2 ? rdv<uint32_t>(pj2 + u2s::kActor_Ctl) : 0;
-            const uintptr_t h = rdp(pr->desc + 0x4E8);
+            const uintptr_t h = rdp(pr->desc + 0x510);
             const uint64_t node = h ? static_cast<uint64_t>(rdv<uint32_t>(h)) | static_cast<uint64_t>(rdv<uint32_t>(h + 4)) << 32
                                     : 0;
             const bool host = pr->kind == npcfam::Kind::HostRoot;
@@ -2248,7 +2248,7 @@ void npc_control_impl(uintptr_t& rax, uintptr_t desc, uintptr_t field, uintptr_t
             const size_t slot = wrapped ? static_cast<size_t>(npcfam::wrap_of(scan.bad_wrap)) : kScanSlots - 1;
             g_fam_scan_wrap[slot].fetch_add(1, std::memory_order_relaxed);
             if (g_fam_scan_cap.take(slot, kFamScanFailLines)) {
-                const uintptr_t h = rdp(desc + 0x4E8);
+                const uintptr_t h = rdp(desc + 0x510);
                 p::Event e;
                 e.kind = kNpcFamScanFail; e.qpc_us = p8_now_us(); e.tid = GetCurrentThreadId();
                 e.flags = !(fm == npcact::Mode::On && write);
@@ -2278,7 +2278,7 @@ void npc_control_impl(uintptr_t& rax, uintptr_t desc, uintptr_t field, uintptr_t
             const npcfam::Types types{g_family_types.load(std::memory_order_relaxed), false};
             const bool assignable7 = npcfam::type_in(types, 7);
             const bool probe = !(fm == npcact::Mode::On && write);
-            const uintptr_t h = rdp(desc + 0x4E8);
+            const uintptr_t h = rdp(desc + 0x510);
             const npcact::Node node = fam_node(h ? rdv<uint32_t>(h) : 0, h ? rdv<uint32_t>(h + 4) : 0);
             npcfam::AdmitIn ai;
             ai.scan = scan.v;
@@ -2360,7 +2360,7 @@ void npc_control_impl(uintptr_t& rax, uintptr_t desc, uintptr_t field, uintptr_t
     // Review 6, the line: the descriptor's schedule handle ([desc+0x4E8] -> u32 +0, +4: the schedule data id and the
     // node [H], as the [create] lines' data) and the live stage of that data in user 2's / the host's schedule manager.
     // S43: read before the put, it is the key's stage slot too (Assign: a CreateServerActorDesc_NPCSchedule).
-    const uintptr_t h = rdp(desc + 0x4E8);
+    const uintptr_t h = rdp(desc + 0x510);
     const uint32_t data = h ? rdv<uint32_t>(h) : 0;
     const uint32_t node = h ? rdv<uint32_t>(h + 4) : 0;
     if (!g_ctl_keys.put(key, kind, p8_now_us(), fam_unit, u2s::r42_slot_id(data, node))) {
@@ -2469,7 +2469,7 @@ void npc_observe_birth(uintptr_t rax, uintptr_t desc, uintptr_t actor, const Fam
     const uint32_t descriptor = rva_of(rdp(desc));
     uint32_t data = 0, index = 0;
     if (descriptor == u2s::kVtDescNpcSchedule) {
-        if (const uintptr_t handle = rdp(desc + 0x4E8)) { data = rdv<uint32_t>(handle); index = rdv<uint32_t>(handle + 4); }
+        if (const uintptr_t handle = rdp(desc + 0x510)) { data = rdv<uint32_t>(handle); index = rdv<uint32_t>(handle + 4); }
     }
     const uint64_t generation = g_arm_done_us.load(std::memory_order_relaxed), now = p8_now_us();
     const bool assigned = candidate && controller == g_ctl_key2.load();
