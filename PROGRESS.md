@@ -2715,3 +2715,24 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
     optd_shop_guest. guest_seq_route now reports the host's manager X to C1 (guest_x_veto is not ported to 3576).
   * Harness: -NoGuest, -HostWalkTo / -AfterWalkKeys / -GuestAfterWalkKeys, walkto.py --face=X,Z and
     --sweep=FROM,TO,STEP,VK,PREFIX[,HOLDMS] (turns the camera in steps, holds a key, screenshots each).
+- 2026-11-09 23:00 MERCHANTS HIDDEN IN CO-OP: narrowed (tcB117-tcB131; the user checked by eye in tcB117/tcB120).
+  * The user saw it too: with a guest in, NO merchant at the butcher, the equipment shop or the smithy, for host and
+    guest; also WITHOUT the Co-op+ layer (tcB120, ByJunter's base only) and with the guest on the same advanced save
+    (tcB122: not story progress) and with the guest far away (tcB131: not proximity).
+  * The hide: [[npc+0x68]+0x20] +0x3B8 bit 9 (0x200), read by 0x22E6C70 (eErrNoInteractionTargetIsHidden). HideWatch
+    (hide_watch=1, test builds: a DR0 write watch armed in the host client's 2380 handler point 0xD3414E for
+    cd_seq_funcnpc_butcher, real unwind) catches the writes, all through the setter 0x18CD090 (write at 0x18CD138):
+    BOTH solo and co-op set 0x200 ~2-3 s after the 2380 (protected code 0x9593D33 via the job 0x5B2320). SOLO then
+    CLEARS it (0x221B680 <- 0x3791FE0 <- 0x3791CF0 <- 0x37AB860 <- 0xBDFBD0, the NPC's AI / action chart processing);
+    in co-op that clear never comes. The host's own packets agree: solo Renee's AI goes on at +1.0 s (RotateActorReq,
+    StartAIFunction a8094c03/e4ea17ed, the next StartAction 0x26107D3C -> 0x5762951C, SetQuestDialogReq); in co-op it
+    stops after its first action 0x26107D3C. No server packet differs (the step is the client's own AI timer).
+  * Ruled out by bisecting the host ini (each: still hidden): remote_interp/mount_*/ride_filter/remote_climb/
+    wallup_send/dismount_probe/horse_follow*/ui_pause_block; clock_gate/npc_category_share/user2_fast_travel/
+    child_reannounce; observer_seq_copy*/observer_milestone*; observer_hold_acks/observer_load_defer/
+    observer_hold_family; (observer_hold/character_hold/child_hold off: the guest drops, inconclusive). The host's
+    client-side session2 modules that act only with user 2 are all off by default. Lead: the game's own NPC AI with
+    a second player (e.g. an AI check over all players tripping on the guest's remote character).
+  * Host crash seen once (tcB117, 20:44, the user not touching the PC): 0xC0000005 in
+    TrocTrSyncStageCandidatePostionReq's handler 0x2CEC840 (+0x3F0 writes [vf48()+0x668], vf48 gave null), right
+    after ALL the host's sequencers were deleted (2292 burst) while the host's own client still sent a 3117. To fix.
