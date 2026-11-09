@@ -3232,3 +3232,9 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   S35 containment (npc_activation, npc_action_evidence, npc_containment_guard, npc_degradation, publication_gate,
   npc_action_probe's 0x281CEE0 group roles) is what stops that loop; not ported yet. Checklist: far-world NPCs may
   flicker for the first seconds.
+- 2026-11-09 18:50 The U-e abort (tcB219 / tcB220) was partly OUR port gap: all 27 reason-42 logouts were counted "with
+  no slot" -- the NPC schedule descriptor's handle ({u32 data, u32 node}) is [desc+0x510] on 3576 (its vf 0x29E06E0
+  reads it 9 times; 2976 +0x4E8): the loop check could not tell a respawn loop from ordinary despawns and, failing
+  closed, aborted. Fixed (native 39efe43). The base descriptor's later fields look shifted +0x28 too (0x3C8 -> 0x3F0,
+  0x3CC -> 0x3F4, 0x3CD -> 0x3F5, 0x3D0 -> 0x3F8 in ICreateServerActorDesc vf3 0x29CBEE0): those are the family / road
+  modules' (off in the release ini), not changed yet. tcB221 re-checks the release flow.
