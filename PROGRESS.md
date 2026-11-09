@@ -3164,3 +3164,16 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   TrocTrInteractionPreemptionStepReq's handler 0x2C70910 (frame: requester rbp+0x80, NPC +0x88, interaction -0x48,
   result -0x80), manager state +0x6D0; its opcodes were already 3549's. user2_shops prepares shops at >= 4 cells (was
   10, with U-1's new arm distance). tcB211: far host, the guest at Delkin with R.
+- 2026-11-09 16:45 Far-world shops, status (tcB211 / tcB212, host 6 cells away, user2_stages_elements=schedule+funcnpc +
+  user2_shop_route + shop_probe):
+  * shop_probe on 3576: E / G / P / C / S all hooked. user2_shops' 15 scene-handler vf48 sites: 11 from their TrocTr
+    vtables' slot 2 (2880 0x2CEA189, 2396 0x2CEA570, 2098 0x2CEAC8F, 2752 0x2CE9CEA -- tcB209 caught user 2's 2752 there --,
+    2178 0x2CE902A, 2620 0x2BEE31E, 2869 0x2CEC18F, 2683 0x2CEBAD9, 3113 0x2CEB2F9, 2676 0x2CEB6E9, 2783 0x2CE9943); 2839,
+    3161 and the 2048 / 2059 timers jump into the protected section: matched by opcode for a vf48 called from it. tcB212:
+    "U2-a at the vf48 call of 15 of 15 scene handlers", route live (native d0b473e).
+  * tcB211 (before the sites): user 2's manager saw 29 sequencer elements, 9 of them shops, "SKIPPED (a shop scene:
+    user2_shop_route cannot prepare it)". tcB212 (sites in): 20 sequencer elements, NO shop elements at all, user 2's
+    manager prepared 0 shop scenes. Likely: the guest standing at the market keeps the HOST's shop scenes alive there
+    (tcB191/192), so the cell's shop elements are not offered to user 2's manager. Open: confirm with the host far
+    BEFORE the guest arrives at the market (as tcB172), then the guest's own shop scene; ByJunter's T1 trade list
+    (user2_shop_trade_list) and shop_trade_probe (2976-pinned) are the next pieces if needed.
