@@ -38,37 +38,40 @@ using shp::Who;
 //   E 0x288B7A0  mov rax,rsp ; mov [rax+0x10],rbx                    7 bytes, the entry of 0x288B7A0 (.pdata
 //                                                                    0x288B7A0-0x288BE21); rcx = mgr, rdx = field,
 //                                                                    r8 = the manager's character
-constexpr uintptr_t kE = 0x288B7A0;
+constexpr uintptr_t kE = 0x2AE9650;  // 3576 (2976 0x288B7A0), same head
 constexpr uint32_t kEPatch = 7;
 constexpr uint8_t kEBytes[] = {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x10};
 //   G 0x288B87A  cmp [r15+0x180],eax                                 7 bytes (the jne rel32 after it is not
 //                                                                    patched); a jmp target at its first byte
 //                (0x288B876). Context 0x288B867: mov rax,[r13+0xA0] ; test ; je ; mov eax,[rax+0x60] ; jmp ; mov eax,esi
-constexpr uintptr_t kG = 0x288B87A, kGCtx = 0x288B867;
+constexpr uintptr_t kG = 0x2AE972A, kGCtx = 0x2AE9716;  // 3576: as user2_stages' gate (4th argument in rsi)
 constexpr uint32_t kGPatch = 7;
-constexpr uint8_t kGBytes[] = {0x41, 0x39, 0x87, 0x80, 0x01, 0x00, 0x00, 0x0F, 0x85, 0x67, 0x05, 0x00, 0x00};
+constexpr uint8_t kGBytes[] = {0x41, 0x39, 0x87, 0x80, 0x01, 0x00, 0x00, 0x0F, 0x85, 0x80, 0x05, 0x00, 0x00};
 constexpr uint8_t kGCtxBytes[] = {0x49, 0x8B, 0x85, 0xA0, 0x00, 0x00, 0x00, 0x48, 0x85, 0xC0,
-                                  0x74, 0x05, 0x8B, 0x40, 0x60, 0xEB, 0x02, 0x8B, 0xC6};
+                                  0x74, 0x05, 0x8B, 0x40, 0x60, 0xEB, 0x03, 0x41, 0x8B, 0xC4};
 //   P 0x288AAEF  nop ; mov rcx,[rbp+0x77]                            5 bytes, right after call 0x287C200
 //                Context 0x288AAD6: mov r9,[rdi+0x200] ; lea r8,[rbp-0x51] ; mov rdx,r14 ; mov rcx,r15 ;
 //                vzeroupper ; call 0x287C200 (E8 11 17 FF FF)
-constexpr uintptr_t kP = 0x288AAEF, kPCtx = 0x288AAD6;
+// 3576: in the element 0x2AE8700, after call 0x2AD8E60: nop ; mov r12,[rbp-0x69]. There rcx = r14 (the manager), rdx =
+// r15 (the result), the element in RBX (2976: r15 / r14 / rdi); the frame is unchanged (playData rbp-0x51, inst rbp+0x77).
+constexpr uintptr_t kP = 0x2AE8883, kPCtx = 0x2AE886A;
 constexpr uint32_t kPPatch = 5;
-constexpr uint8_t kPBytes[] = {0x90, 0x48, 0x8B, 0x4D, 0x77};
-constexpr uint8_t kPCtxBytes[] = {0x4C, 0x8B, 0x8F, 0x00, 0x02, 0x00, 0x00, 0x4C, 0x8D, 0x45, 0xAF, 0x49, 0x8B,
-                                  0xD6, 0x49, 0x8B, 0xCF, 0xC5, 0xF8, 0x77, 0xE8, 0x11, 0x17, 0xFF, 0xFF};
+constexpr uint8_t kPBytes[] = {0x90, 0x4C, 0x8B, 0x65, 0x97};
+constexpr uint8_t kPCtxBytes[] = {0x4C, 0x8B, 0x8B, 0x00, 0x02, 0x00, 0x00, 0x4C, 0x8D, 0x45, 0xAF, 0x49, 0x8B,
+                                  0xD7, 0x49, 0x8B, 0xCE, 0xC5, 0xF8, 0x77, 0xE8, 0xDD, 0x05, 0xFF, 0xFF};
 //   C 0x29E9282  mov ebx,[rbp-0x58] ; test ebx,ebx                   5 bytes (the je rel32 after it is not patched)
 //                Context 0x29E9276: mov rcx,[rcx+0x98] ; call 0x2B36860 (E8 DE D5 14 00)
-constexpr uintptr_t kC = 0x29E9282, kCCtx = 0x29E9276;
+// 3576: TrocTrInteractionPreemptionStepReq (vtable 0x5EEC638) slot 2 0x2C70910: mov ebx,[rbp-0x80] after call 0x2DD0720.
+constexpr uintptr_t kC = 0x2C70C39, kCCtx = 0x2C70C2D;
 constexpr uint32_t kCPatch = 5;
-constexpr uint8_t kCBytes[] = {0x8B, 0x5D, 0xA8, 0x85, 0xDB};
-constexpr uint8_t kCCtxBytes[] = {0x48, 0x8B, 0x89, 0x98, 0x00, 0x00, 0x00, 0xE8, 0xDE, 0xD5, 0x14, 0x00};
+constexpr uint8_t kCBytes[] = {0x8B, 0x5D, 0x80, 0x85, 0xDB};
+constexpr uint8_t kCCtxBytes[] = {0x48, 0x8B, 0x89, 0x98, 0x00, 0x00, 0x00, 0xE8, 0xE7, 0xFA, 0x15, 0x00};
 
 // Offsets (server objects; the same ones observer_stage / observer_milestone read).
 constexpr uint32_t kActor_Key = 0x60, kActor_User = 0xA0, kUser_Key = 0x60, kField_Owner = 0x180, kMgr_Actor = 0x18;
 // User 2's character ([user+0xD0], as observer_milestone reads it) and its manager [[[char+0x68]+0xA8]+0x18] (the
 // chain ServerField::vf48 0x2B00CE0 follows for the field owner). +0x6A0: the manager's state byte 0x288B7A0 tests.
-constexpr uint32_t kUser_Main = 0xD0, kActor_Comps = 0x68, kComps_Seq = 0xA8, kSeqComp_Mgr = 0x18, kMgr_State = 0x6A0;
+constexpr uint32_t kUser_Main = 0xD0, kActor_Comps = 0x68, kComps_Seq = 0xA8, kSeqComp_Mgr = 0x18, kMgr_State = 0x6D0;  // 3576 +0x6D0
 // playData as 0x288A970 builds it: 0x48 bytes from [rbp-0x51] (owner +0, id +8, type +0x10, ...) are logged raw.
 constexpr uint32_t kPlayDataLogged = 0x40;
 // 0x288A970's frame (rbp = rsp - 0x2F after its pushes): playData at [rbp-0x51] (owner u32 +0, id u64 +8), the
@@ -77,7 +80,7 @@ constexpr int32_t kP_PlayData = -0x51, kP_Id = -0x49, kP_Inst = 0x77;
 constexpr uint32_t kElem_Res = 0x08, kElem_Bind = 0x200;
 // The 2671 handler's frame: requester u32 [rbp+0x70], NPC u32 [rbp+0x78], interaction u32 [rbp-0x60] (the copy
 // passed as r9), result u32 [rbp-0x58]; r13 = the requester's actor (its lock handle is held over the call).
-constexpr int32_t kC_Requester = 0x70, kC_Npc = 0x78, kC_Interaction = -0x60, kC_Result = -0x58;
+constexpr int32_t kC_Requester = 0x80, kC_Npc = 0x88, kC_Interaction = -0x48, kC_Result = -0x80;  // 3576
 
 uintptr_t g_base = 0;
 std::atomic<bool> g_on{false}, g_started{false};
@@ -175,7 +178,7 @@ void on_g(safetyhook::Context& ctx) noexcept {
     const auto user = static_cast<uint32_t>(ctx.rax);  // the game's own value, logged as it was
     // P8 option U, U-a (user2_stages.h): one hook per address, so option U's gate is asked from here.
     uintptr_t rax = ctx.rax;
-    user2_stages_gate(ctx.rdi, ctx.r13, ctx.r15, ctx.r12, rax);
+    user2_stages_gate(ctx.rdi, ctx.r13, ctx.r15, ctx.rsi, rax);  // 3576: the 4th argument in rsi
     ctx.rax = rax;
     const uint32_t owner = rdv<uint32_t>(ctx.r15 + kField_Owner);
     const bool is_owner = owner == user;
@@ -196,12 +199,12 @@ void on_g(safetyhook::Context& ctx) noexcept {
 void on_p(safetyhook::Context& ctx) noexcept {
     if (!g_p_on.load(std::memory_order_acquire)) return;
     g_prep.fetch_add(1, std::memory_order_relaxed);
-    const uint32_t result = rdv<uint32_t>(ctx.r14);
+    const uint32_t result = rdv<uint32_t>(ctx.r15);  // 3576 (2976 r14)
     if (result) g_prep_fail.fetch_add(1, std::memory_order_relaxed);
     const uint32_t owner = rdv<uint32_t>(ctx.rbp + kP_PlayData);
     const uint64_t id = rdv<uint64_t>(ctx.rbp + kP_Id);
     // The resource's path (a char*): its base name, up to 40 bytes, read byte by byte (SEH, at most 160 bytes).
-    const uintptr_t res = rdp(ctx.rdi + kElem_Res);
+    const uintptr_t res = rdp(ctx.rbx + kElem_Res);  // 3576: the element in rbx
     const uintptr_t path = res ? rdp(rdp(res)) : 0;
     uintptr_t base = path;
     size_t len = 0;
@@ -223,7 +226,7 @@ void on_p(safetyhook::Context& ctx) noexcept {
     constexpr char kPrefix[] = "cd_seq_funcnpc_";
     bool funcnpc = n > sizeof kPrefix - 1;  // review B5: as u2sh::is_funcnpc (the bare prefix is no shop)
     for (size_t i = 0; funcnpc && i < sizeof kPrefix - 1; ++i) funcnpc = head[i] == kPrefix[i];
-    const uintptr_t mgr_actor = rdp(ctx.r15 + kMgr_Actor);
+    const uintptr_t mgr_actor = rdp(ctx.r14 + kMgr_Actor);  // 3576: the manager in r14
     const uint32_t mgr_chr = mgr_actor ? rdv<uint32_t>(mgr_actor + kActor_Key) : 0;
     if (funcnpc && g_twin.load(std::memory_order_relaxed)) {
         // S2 probe: would a twin of this host scene be prepared for user 2? Nothing is called or written.
@@ -254,7 +257,7 @@ void on_p(safetyhook::Context& ctx) noexcept {
     }
     // U2 (user2_shops.h): user 2's own preparations are booked (shop scenes) or checked (anything else).
     // playData +0x20 = the resource's file-name hash (0x288A970: uStack_88, the 2661's @27).
-    user2_shops_prepared(ctx.r15, id, funcnpc, n > 0, rdv<uint32_t>(ctx.rbp + kP_PlayData + 0x20), result);
+    user2_shops_prepared(ctx.r14, id, funcnpc, n > 0, rdv<uint32_t>(ctx.rbp + kP_PlayData + 0x20), result);
     if (funcnpc) {
         g_prep_funcnpc.fetch_add(1, std::memory_order_relaxed);
         if (!result) g_funcnpc.add(id);
@@ -265,8 +268,8 @@ void on_p(safetyhook::Context& ctx) noexcept {
     e.v[0] = result | static_cast<uint64_t>(owner) << 32;
     e.v[1] = id;
     e.v[2] = rdp(ctx.rbp + kP_Inst);
-    e.v[3] = rdp(ctx.rdi + kElem_Bind);
-    e.v[4] = ctx.r15;
+    e.v[3] = rdp(ctx.rbx + kElem_Bind);
+    e.v[4] = ctx.r14;
     e.v[5] = mgr_chr | static_cast<uint64_t>(user_key_of(mgr_actor)) << 32;
     e.v[11] = funcnpc;
     emit(kEPrep, e);
@@ -604,7 +607,7 @@ DWORD WINAPI probe_thread(LPVOID) {
     IMAGE_NT_HEADERS64 nt{};
     std::vector<gad::Section> secs;
     if (g_base != off::kImageBase || !game::safe_read(g_base, &dos, sizeof dos) ||
-        !game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestampUnported ||
+        !game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestamp ||
         !p8_exe_sections(g_base, secs)) {
         log::error("ShopProbe: unsupported game build or unreadable sections; nothing installed (taps still count)");
     } else {

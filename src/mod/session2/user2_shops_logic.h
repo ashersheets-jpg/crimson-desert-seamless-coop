@@ -67,7 +67,7 @@ enum class ElemVerdict : uint8_t {
     SkipNotTrade,   // S46 T1 active: a funcnpc whose base name's dictionary hash is NOT on the trade list (or T1 latched)
     Count
 };
-inline constexpr uint32_t kNewShopMinCells = 10;
+inline constexpr uint32_t kNewShopMinCells = 4;  // Co-op+ 2026-11-09: with U-1 arming at >= 4 cells (was 10)
 // S46 phase 3, T1 active (list_on: user2_shop_trade_list=1, not latched): the trade list decides by the exact hash of
 // the base name (trade), INSTEAD of user2_stages_elements: a funcnpc on the list passes with the route able to prepare
 // and >= 10 cells, any other funcnpc is skipped as today (SkipNotTrade), whatever the elements key says (T1 replaces
