@@ -37,6 +37,19 @@ bool g_on = false, g_guest = false;
 uintptr_t g_base = 0;
 SafetyHookInline g_hook;
 
+// The server's quest-dialog builder (2026-11-09, B02a): SetQuestDialogReq's handler 0x2CD9DD0 calls 0x2B72670(table of
+// the asking player, NPC actor), which looks the NPC up in that player's table (0x1C35790) and collects the dialogs in
+// protected code; the getter hook above is not on that path. With both players on the same save the host still got
+// scene / AI dialog groups (0xF435B, 0xF42B6, ...) for 12 NPCs and the guest only the greeting (tcB186): the NPC's AI
+// sets the category for the player whose client controls it (the host) only. Host: at the builder's entry for user 2's
+// table, an EXISTING record of user 2 whose effective category is 0 gets the host's category in its AI byte (+0x19 of
+// the entry, the byte the getter prefers when < 6). [session2] npc_dialog_share = 1 (default 0 until proven).
+constexpr uintptr_t kBuilder = 0x2B72670;
+constexpr uint8_t kBuilderHead[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74, 0x24, 0x10,
+                                    0x48, 0x89, 0x7C, 0x24, 0x20, 0x55};
+SafetyHookMid g_builder;
+std::atomic<uint64_t> c_builder_u2{0}, c_builder_set{0}, c_builder_missing{0};
+
 SRWLOCK g_lock = SRWLOCK_INIT;
 std::unordered_map<uint32_t, uint8_t> g_host;  // the host's NPC key -> category
 uint64_t g_host_ms = 0;                         // when it was last filled (GetTickCount64)
@@ -107,6 +120,36 @@ bool host_category(uint32_t key, uint8_t& cat, uint64_t now) {
     return ok;
 }
 
+// The entry of `key` in a category table (null if none): the getter's own lookup.
+uintptr_t entry_of(uintptr_t tab, uint32_t key) {
+    uint32_t buckets = 0, count = 0;
+    uintptr_t bk = 0, ents = 0;
+    if (!rd(tab + 0x68, buckets) || !rd(tab + 0x6C, count) || !buckets || !count || !rd(tab + 0x78, bk) ||
+        !rd(tab + 0x80, ents) || !bk || !ents)
+        return 0;
+    const uintptr_t b = bk + static_cast<uintptr_t>(key % buckets) * 0x100;
+    uint32_t n = 0;
+    if (!rd(b, n)) return 0;
+    for (uint32_t i = 0; i < n && i < 31; ++i) {
+        uint32_t k = 0, ix = 0;
+        if (!rd(b + 8 + 8ull * i, k) || k != key || !rd(b + 12 + 8ull * i, ix)) continue;
+        uintptr_t e = 0;
+        uint32_t ek = 0;
+        if (!rd(ents + 8ull * ix, e) || !e || !rd(e + 4, ek) || ek != key) return 0;
+        return e;
+    }
+    return 0;
+}
+
+bool write_u8(uintptr_t at, uint8_t v) {
+    __try {
+        *reinterpret_cast<volatile uint8_t*>(at) = v;
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
 // The guest's character as the subject? Guest: any player character on this client. Host: user 2's character
 // (its key from the server's MainPlayerDataStartAck), on any thread (the server judges it; the host's client never
 // asks for it).
@@ -132,6 +175,31 @@ uint64_t __fastcall detour(uintptr_t tab, uint32_t key) {
     c_host.fetch_add(1, std::memory_order_relaxed);
     if (host) c_changed.fetch_add(1, std::memory_order_relaxed);
     return (native & ~0xFFull) | host;
+}
+
+void on_builder(safetyhook::Context& ctx) {
+    const uintptr_t tab = ctx.rcx, npc = ctx.rdx;
+    uintptr_t owner = 0;
+    uint32_t key = 0;
+    if (!tab || !npc || !rd(tab + 8, owner) || !owner || !is_guest_subject(owner) || !rd(npc + 0x60, key) ||
+        (key >> 28) != 0xB)
+        return;
+    c_builder_u2.fetch_add(1, std::memory_order_relaxed);
+    uint8_t host = 0;
+    if (!host_category(key, host, GetTickCount64()) || !host) return;
+    const uintptr_t e = entry_of(tab, key);
+    if (!e) {
+        c_builder_missing.fetch_add(1, std::memory_order_relaxed);
+        return;
+    }
+    uint8_t c18 = 0, c19 = 0;
+    if (!rd(e + 0x18, c18) || !rd(e + 0x19, c19) || ncl::effective(c18, c19)) return;
+    if (write_u8(e + 0x19, host)) {
+        const uint64_t n = c_builder_set.fetch_add(1, std::memory_order_relaxed) + 1;
+        if (n <= 20)
+            log::info("NpcCategory [dialogs] user 2's dialog list for NPC 0x{:08X} is built with the host's category {}",
+                      key, host);
+    }
 }
 
 // The local user's table: its character [user+0x50] the way 0x24752E0 goes (user, main character), else the user's
@@ -177,6 +245,19 @@ void store(const std::vector<ncl::Entry>& v) {
 }
 
 }  // namespace
+
+void npc_category_dialog_share(bool on) {
+    if (!on || g_guest || !g_on) return;
+    uint8_t h[sizeof kBuilderHead] = {};
+    if (!game::safe_read(g_base + kBuilder, h, sizeof h) || std::memcmp(h, kBuilderHead, sizeof h) != 0) {
+        log::warn("NpcCategory [dialogs] NOT installed: the dialog builder 0x{:X} has other bytes", kBuilder);
+        return;
+    }
+    g_builder = safetyhook::create_mid(reinterpret_cast<void*>(g_base + kBuilder), &on_builder);
+    log::info("NpcCategory [dialogs] {} (npc_dialog_share=1): the server builds user 2's quest-dialog list of an NPC "
+              "with the host's category where user 2's own is 0 (0x{:X})",
+              g_builder ? "ON" : "FAILED", kBuilder);
+}
 
 void npc_category_install(bool on, bool guest) {
     g_guest = guest;
@@ -249,10 +330,12 @@ bool npc_category_guest_on_control(std::span<const uint8_t> payload) {
 
 std::string npc_category_describe() {
     return std::format("NpcCategory ({}{}): host table {} NPCs | getter calls {}: the guest's character's 0 answers "
-                       "from the host {} (non-zero {}), no host entry {} | frames out {} (refused {}) in {} (bad {})",
+                       "from the host {} (non-zero {}), no host entry {} | frames out {} (refused {}) in {} (bad {}) | "
+                       "dialog builds for user 2 {} (with the host's category {}, no record yet {})",
                        g_on ? "on" : "off", g_guest ? ", guest" : ", host", g_last_size.load(), c_calls.load(),
                        c_host.load(), c_changed.load(), c_native.load(), c_frames_out.load(), c_frames_refused.load(),
-                       c_frames_in.load(), c_frames_bad.load());
+                       c_frames_in.load(), c_frames_bad.load(), c_builder_u2.load(), c_builder_set.load(),
+                       c_builder_missing.load());
 }
 
 }  // namespace cdmp::session2

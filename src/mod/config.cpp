@@ -329,6 +329,7 @@ Config load_config(const std::wstring& ini_path) {
     c.s2_test_greet = read_uint(ini_path, L"session2", L"test_greet", 0) != 0;
     c.s2_shop_twin = read_uint(ini_path, L"session2", L"shop_twin", 0) != 0;
     c.s2_stage_candidate_guard = read_uint(ini_path, L"session2", L"stage_candidate_guard", 1) != 0;
+    c.s2_npc_dialog_share = read_uint(ini_path, L"session2", L"npc_dialog_share", 0) != 0;
     c.s2_merchant_unhide = read_uint(ini_path, L"session2", L"merchant_unhide", 0);
     c.s2_guest_shop_check = read_uint(ini_path, L"session2", L"guest_shop_check", 0) != 0;
     c.s2_npc_category_share = read_uint(ini_path, L"session2", L"npc_category_share", 1) != 0;

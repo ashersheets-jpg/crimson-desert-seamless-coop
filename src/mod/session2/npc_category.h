@@ -24,6 +24,8 @@ namespace cdmp::session2 {
 
 // The late-init thread, once (after the game's sections are readable). guest: this PC plays on the host.
 void npc_category_install(bool on, bool guest);
+// Host, after npc_category_install: the server's dialog builder for user 2 uses the host's category where its own is 0.
+void npc_category_dialog_share(bool on);
 // Host: the network loop, every pass (paced inside).
 void npc_category_host_tick(troc::TrocLink& link, uint32_t now_ms);
 // Guest: a control payload of the host (opcode 1). True: a state-16 frame (consumed).

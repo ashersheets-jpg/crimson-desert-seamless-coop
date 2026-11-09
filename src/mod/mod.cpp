@@ -1223,6 +1223,7 @@ DWORD WINAPI worker(LPVOID) {
             net::subject_swap_start(!cfg.s2_guest && cfg.s2_user2_condition_subject_host);
             net::test_greet_start(cfg.s2_guest && cfg.s2_test_greet);
             session2::npc_category_install(cfg.s2_npc_category_share, cfg.s2_guest);
+            session2::npc_category_dialog_share(cfg.s2_npc_dialog_share);
             session2::shop_guest_install(cfg.s2_guest_shop_check, cfg.s2_guest);
             session2::shop_twin_start(cfg.s2_shop_twin, cfg.s2_guest);
             session2::stage_candidate_guard_start(cfg.s2_stage_candidate_guard);
