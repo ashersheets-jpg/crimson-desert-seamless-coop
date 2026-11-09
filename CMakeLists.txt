@@ -164,6 +164,7 @@ add_library(cdmp_mod SHARED
     src/mod/session2/clock_push.cpp
     src/mod/session2/weather_sync.cpp
     src/mod/session2/npc_category.cpp
+    src/mod/session2/shop_guest.cpp
     src/mod/session2/catch_seq.cpp
     src/mod/session2/remote_rope.cpp
     src/mod/session2/rope_probe.cpp
@@ -379,6 +380,11 @@ add_executable(cdmp_tests_optd_npc_category tests/optd_npc_category_tests.cpp)
 cdmp_strict(cdmp_tests_optd_npc_category)
 target_link_libraries(cdmp_tests_optd_npc_category PRIVATE cdmp_common)
 add_test(NAME optd_npc_category COMMAND cdmp_tests_optd_npc_category)
+# Co-op+ (shop_guest_logic.h): the guest's own trade at the host's merchants.
+add_executable(cdmp_tests_optd_shop_guest tests/optd_shop_guest_tests.cpp)
+cdmp_strict(cdmp_tests_optd_shop_guest)
+target_link_libraries(cdmp_tests_optd_shop_guest PRIVATE cdmp_common)
+add_test(NAME optd_shop_guest COMMAND cdmp_tests_optd_shop_guest)
 # P8 session 25 grabs (catch_seq_logic.h): the decision at ClientCatch_ApplyResult's entry, the counters and the
 # self-consistency of the verified build-2976 bytes. Pure.
 add_executable(cdmp_tests_optd_catch_seq tests/optd_catch_seq_tests.cpp)

@@ -22,6 +22,7 @@
 #include "mod/session2/guest_seq_play.h"
 #include "mod/session2/guest_stage_diag.h"
 #include "mod/session2/guest_stage_diag_logic.h"
+#include "mod/session2/guest_x_interaction.h"
 #include "mod/session2/guest_x_veto.h"
 #include "mod/session2/observer_seq_copy_logic.h"
 #include "mod/session2/p8_probe_logic.h"
@@ -1381,6 +1382,9 @@ void guest_seq_route_hook(Point point, safetyhook::Context& ctx) noexcept {
     f.x = manager_of(f.actor);
     f.x_vt = f.x ? rdp(f.x) : 0;
     f.x_key = f.x ? key_of(rdp(f.x + kMgr_Actor)) : 0;
+    // Co-op+ 3576: guest_x_veto (C1's usual source of known X managers) is not ported; the router names X itself:
+    // another character's ClientSequencerStageManager that a host scene packet was resolved to.
+    if (f.x && f.x_vt == f.want_vt && f.x != f.m) guest_x_interaction_note_x(f.x, f.x_key);
     if (point == Point::P2524) {  // review 11: only into an X guest_seq_play ticks
         f.need_known = true;
         f.x_known = f.x && guest_seq_play_knows_x(f.x, f.actor_key);

@@ -553,6 +553,7 @@ struct Config {
     bool s2_user2_knowledge_share = false;  // Co-op+ 2026-11-08: TEST (host)
     bool s2_user2_condition_subject_host = false;  // Co-op+ 2026-11-08: TEST (host)
     bool s2_test_greet = false;  // Co-op+ 2026-11-08: TEST (guest)
+    bool s2_guest_shop_check = false;  // Co-op+ 2026-11-08: the guest trades at the host's merchants (shop_guest.h)
     bool s2_npc_category_share = true;  // Co-op+ 2026-11-08: the host's NPC quest-dialog categories (npc_category.h)
     bool s2_guest_condition_subject_host = false;  // Co-op+ 2026-11-08: TEST (guest)
     // S43 (docs/research/s25/s43-puertas-y-r42.md), HOST: scene_level_share = 0 | probe | 1. A: user 2's own 2598 / 2104

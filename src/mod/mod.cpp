@@ -69,6 +69,7 @@
 #include "mod/session2/user2_funnels.h"
 #include "mod/session2/weather_sync.h"
 #include "mod/session2/npc_category.h"
+#include "mod/session2/shop_guest.h"
 #include "mod/render/dx12_hook.h"
 #include "mod/render/hud.h"
 
@@ -1188,6 +1189,7 @@ DWORD WINAPI worker(LPVOID) {
             net::subject_swap_start(!cfg.s2_guest && cfg.s2_user2_condition_subject_host);
             net::test_greet_start(cfg.s2_guest && cfg.s2_test_greet);
             session2::npc_category_install(cfg.s2_npc_category_share, cfg.s2_guest);
+            session2::shop_guest_install(cfg.s2_guest_shop_check, cfg.s2_guest);
             net::subject_swap_client_start(cfg.s2_guest && cfg.s2_guest_condition_subject_host);
             session2::npc_probe_client_start(cfg.s2_npc_activation, cfg.s2_npc_family_control,
                                             cfg.s2_user2_road_control, cfg.s2_guest, g_stop);
