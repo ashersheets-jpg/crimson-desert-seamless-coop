@@ -50,6 +50,9 @@ Each line: what to do, what should happen. Note anything else odd (FPS too, for 
 - [ ] B09 cutscenes: when the host triggers a story cutscene near the guest, what does the guest see? (Note if its camera / controls get taken over.)
 - [ ] B03 world events: join a world event or siege together: both can fight in it and get credit.
 
+## FPS (for the pre-release pass)
+- [ ] Note the FPS (top-left counter) in the town with both players, at your normal resolution. My two-copy runs today with the release settings read ~95-150 FPS in the world per copy (windowed, DLSS); if yours drops to 20-50 again, note where and what was happening.
+
 ## Already-known open items (no need to test)
 - Shops when the host is far away (the shop scene goes away with the host).
 - Shared quest credit (option 2) is built but off.

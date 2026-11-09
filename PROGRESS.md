@@ -3145,3 +3145,9 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   (host HP 300/300 throughout): the Co-op+ duel's own hit relay applies duel damage -- to check by hand (checklist).
   Items expected to work natively (the other player is a real actor of the shared world) put on the checklist for a
   look / listen: B20 partner audio, B18 combat feedback, B06 mounted hits, B05 other mounts, B09 cutscenes, B03 events.
+- 2026-11-09 15:55 FPS (pre-release item): the release ini already has [sniffer] record=0. The game's own counter in
+  today's two-copy shots with the release settings (tcB205, -Lobby): 96-148 FPS in the world per copy (DLSS, windowed),
+  55-58 in shop menus (no DLSS there); tcB204 80-158. No mod-side slowdown visible here; the user's 20-50 FPS (11-08)
+  came from harness settings (packet recorder, diagnostics on) and/or a heavier scene -- a measurement is on the
+  checklist. B12 shared stash: the bank exchange (ExchangeItemFromBankReq 2113, handler 0x2C8ED90) works on the
+  player's character object (FUN_1422F1DC0(user)), which owns both its bag and its bank: no simple swap; needs RE.
