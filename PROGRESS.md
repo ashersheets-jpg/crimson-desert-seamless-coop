@@ -3350,3 +3350,14 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   conflict keys become the scene's pending keys; the route now releases T2 scenes on any 2005, not only on one
   observer_hold_acks held). Unit suite optd_scene_conflict updated and passing. tcB228 tests it with the S35
   containment keys in the defaults and the host's dumpitemmove (B11).
+- 2026-11-09 18:02 tcB228 (-Lobby; S35 containment + the NPC refresh + dumpitemmove):
+  * S33/S35 CONTAINMENT WORKS ON 3576: "sondas entrada acción=true H1b=true constructor nodo=true" (all three ported
+    hook points verified and in); U-e did NOT abort for the run this time -- late NPCs were rejected / abandoned ONE
+    BY ONE ("contención abandonada ... sólo esta unidad", 3 units over 5 minutes, 215 records), the rest kept going.
+  * The refresh fired for all 9 market shopkeepers at the drain (18:00:20.5, "RemoveActorAck sent, native re-announce
+    queued") -- but my RemoveActorAck lacked the queue's 5-byte packet header (u16 op | 0xFF | u16 len, as
+    clock_push's): user 2's link broke 0.6 s later ("link lost ... reconnection or overflow"), user 2 logged out
+    (the guest game kept running, "host ready no"). Fixed (native, header added); tcB229 repeats.
+  * B11: dumpitemmove read 21 item-move definitions (inventory ids: 1 = the bag; 8 / 5 / 6 / 7 other inventories;
+    def 1 = from the bag: kind-1 moves 1 -> 8 and 1 -> 5, kind-0 moves to 5, 9, 10, 0x13, 0xC, 0xE, 0xF, 0x11,
+    0x12, 7, 6; defs 5 / 6 / 7: back to 1). To map which inventory is what next (the shared stash candidates).
