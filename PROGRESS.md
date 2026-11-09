@@ -3182,3 +3182,10 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   own manager)" 9, "user 2's manager prepared 9 (shop scenes booked 9)". So the shop elements are offered to user 2 once
   the host's own shop scenes are gone (tcB212: with the guest already at the market the host's stayed alive and none was
   offered). Both alive, SAVES OK. tcB214: the guest walks to Delkin and holds R in that state.
+- 2026-11-09 17:05 *** tcB214: THE FAR GUEST'S TOWN IS POPULATED *** (host 430 m away at the Rodbel dock, the guest
+  reaching the grocer after the host left): Delkin stands at his stall and townsfolk walk the square on the guest's
+  screen (docs/research/native-shots/far-world-before-after-2026-11-09.png: tcB198's empty market vs now). user 2's
+  manager prepared its 9 shop scenes. Open: the guest's R at Delkin gives no prompt (no InteractionPreemptionStepReq
+  sent): the far guest's own shop scene is there but its shop entries / prompt are not yet usable -- next: what its
+  client's interaction check refuses (the shop group 0xF4440 entries come from the host's client only, shop_twin's
+  state 17, and the host is far: its client never had Delkin's list).
