@@ -1,6 +1,7 @@
 #include "mod/session2/session2.h"
 #include "mod/session2/shop_twin.h"
 #include "mod/session2/fog_share.h"
+#include "mod/session2/anti_grief.h"
 
 #include <windows.h>
 
@@ -212,7 +213,8 @@ std::atomic<bool> g_tap_scene_diag{false}, g_tap_seq_copy{false}, g_tap_owner_fa
 void sniffer_fanout(const uint8_t* packet, size_t size, uint64_t t_us, bool server_to_client) noexcept {
     npc_probe_client_sniff(packet, size, t_us, server_to_client); // S33: retorna inmediatamente con 0.
     shop_twin_host_sniffed(packet, size, server_to_client);       // Co-op+ 2026-11-09: the host's shop choices
-    fog_share_host_sniffed(packet, size, server_to_client);       // Co-op+ 2026-11-09 B04: the host's map fog
+    fog_share_host_sniffed(packet, size, server_to_client);
+    anti_grief_host_sniffed(packet, size, server_to_client);  // Co-op+ 2026-11-09 B19: the NPCs the host talks to       // Co-op+ 2026-11-09 B04: the host's map fog
     door_trace_packet(server_to_client ? DoorTraceStage::HostClientAck : DoorTraceStage::HostClientReq,
                       std::span<const uint8_t>(packet, size), t_us); // El módulo ignora este tap en el invitado.
     if (g_tap_scene_diag.load(std::memory_order_relaxed)) host_scene_diag_sniffed(packet, size, t_us, server_to_client);
@@ -389,6 +391,8 @@ bool offer(const std::vector<uint8_t>& p) {
     // observes the host's field, its stage candidates). Dropped and counted there (probe: only counted).
     // quest_policy (user2_funnels.h, politica-misiones.md): user 2's 2372 never reaches the host's quest manager.
     // Judged on every offer (a held Req is offered again), recorded once on its final disposition.
+    // Co-op+ 2026-11-09 B19 (anti_grief.h): the guest's hits on the people of the host's world.
+    if (v && anti_grief_drop_user2_req(v->opcode, v->payload)) return true;
     const QuestPolicyVerdict qp = v ? user2_funnels_policy_judge(v->opcode, v->payload) : QuestPolicyVerdict{};
     if (qp.drop) {
         user2_funnels_policy_record(qp, /*handed=*/false);

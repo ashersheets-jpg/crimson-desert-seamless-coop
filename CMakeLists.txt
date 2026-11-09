@@ -169,6 +169,7 @@ add_library(cdmp_mod SHARED
     src/mod/session2/stage_candidate_guard.cpp
     src/mod/session2/quest_route.cpp
     src/mod/session2/fog_share.cpp
+    src/mod/session2/anti_grief.cpp
     src/mod/session2/shop_twin.cpp
     src/mod/session2/catch_seq.cpp
     src/mod/session2/remote_rope.cpp
@@ -404,6 +405,10 @@ add_executable(cdmp_tests_optd_fog_share tests/optd_fog_share_tests.cpp)
 cdmp_strict(cdmp_tests_optd_fog_share)
 target_link_libraries(cdmp_tests_optd_fog_share PRIVATE cdmp_common)
 add_test(NAME optd_fog_share COMMAND cdmp_tests_optd_fog_share)
+add_executable(cdmp_tests_optd_anti_grief tests/optd_anti_grief_tests.cpp)
+cdmp_strict(cdmp_tests_optd_anti_grief)
+target_link_libraries(cdmp_tests_optd_anti_grief PRIVATE cdmp_common)
+add_test(NAME optd_anti_grief COMMAND cdmp_tests_optd_anti_grief)
 # P8 session 25 grabs (catch_seq_logic.h): the decision at ClientCatch_ApplyResult's entry, the counters and the
 # self-consistency of the verified build-2976 bytes. Pure.
 add_executable(cdmp_tests_optd_catch_seq tests/optd_catch_seq_tests.cpp)
