@@ -3309,3 +3309,7 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
 - 2026-11-09 17:40 B16b on a pad: the hold prompt's ring also fills with the co-op chord + D-pad Up (the Challenge
   action); the label shows the pad's buttons ("{Challenge} Interact"); while the prompt is up, the chord's press no
   longer opens the menu at once (the full ring does). Layer built, tests pass; not seen in the game yet.
+- 2026-11-09 17:50 B15 (duel extras) audit: titles and the per-friend scoreboard exist (T43, scoreboard.cpp, a title
+  shown to the friend), the duel already plays round after round (kOverMs then the next round: the rematch). Left:
+  wagers (need B11's item / money transfer between the players), arenas (a named duel ground, e.g. the Goldenfist
+  Arena south of Hernand), a spectator camera (only meaningful with a third player, B21).
