@@ -119,6 +119,8 @@ int main() {
     };
     expect(0, 3, 21, 2);  // Buy
     expect(0, 2, 29, 2);  // the store closes
+    expect(1, 4, 21, 2);  // Sell (host alone, tcB169)
+    expect(0, 2, 29, 2);  // the sell window closes
     expect(3, 7, 21, 2);  // Leave
     expect(1, 0, 29, 2);  // the scene is over
     expect(6, 1, 21, 3);  // and starts again

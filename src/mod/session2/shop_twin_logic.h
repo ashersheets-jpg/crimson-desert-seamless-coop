@@ -116,9 +116,11 @@ inline uint32_t root_of_initial_2920(std::span<const uint8_t> pl) {
 // gets 2). Transitions, from 30 host captures (state = the last 2920 type; the initial 2920 is type 0):
 //   state 0, branch N -> 2708 (on, N != 0), 2436 N, 2920 type 1 N                       (the greeting starts)
 //   state 1, branch N -> 2436 N, 2708 (off), 2920 type 2 N root 0                       (the greeting ends: the menu)
-//   state 2, branch 0 -> 2436 0, 2920 type 3 0                                          (Buy / Sell: the store opens)
-//   state 2, branch N -> 2436 N, 2920 type 7 N                                          (Leave)
-//   state 3, branch N -> 2436 N, 2920 type 2 N root 0                                   (the store closes: the menu)
+//   state 2, branch 0 -> 2436 0, 2920 type 3 0                                          (Buy: the store opens)
+//   state 2, branch 1 -> 2436 1, 2920 type 4 1                                          (Sell, host alone tcB169)
+//   state 2, branch 3 -> 2436 3, 2920 type 7 3                                          (Leave)
+//   state 2, branch N -> type N + 3 (not seen yet: the menu's choices look like the chart's nodes 3, 4, ..)
+//   state 3..6, branch N -> 2436 N, 2920 type 2 N root 0                                (the store closes: the menu)
 //   state 7, branch N -> 2436 N, 2920 type 0 N root 0                                   (the scene is over)
 // Message forms: 2880 StageBranchStateReq id u64 | branch u32 | u16; 2436 (4 | actor | id | N | u8 0);
 // 2708 SetAvoidByCutSceneAck (4 | actor | id | u8 on | actor); 2920 (4 | actor | id | u32 type | u32 N [| root | 0]).
@@ -140,8 +142,8 @@ inline uint32_t next_branch_type(uint32_t state, uint32_t n) {
     switch (state) {
         case 0: return 1;
         case 1: return 2;
-        case 2: return n == 0 ? 3 : 7;
-        case 3: return 2;
+        case 2: return n == 3 ? 7 : n + 3;
+        case 3: case 4: case 5: case 6: return 2;
         case 7: return 0;
         default: return 2;
     }

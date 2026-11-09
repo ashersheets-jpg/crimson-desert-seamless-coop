@@ -166,12 +166,60 @@ bool shop_twin_on_out(std::span<const uint8_t> packet, std::vector<std::vector<u
     }
 }
 
+// Host: its own shop scenes (id -> resource) and the last branch its client asked, to log the server's transitions
+// (the twin's table, stl::next_branch_type, comes from these) and to write the harness's stop flag at the menu.
+std::unordered_map<uint64_t, uint32_t> g_host_scenes;
+std::unordered_map<uint64_t, uint32_t> g_host_asked, g_host_state;
+
+void host_scene_watch(uint16_t op, std::span<const uint8_t> pl, bool s2c) {
+    if (s2c && op == stl::kOpPrepare && pl.size() >= stl::kPrepareFixed && pl[0] == 4 &&
+        mul::is_shop_scene(stl::rd32(pl.data() + stl::kHashAt))) {
+        std::lock_guard lk(g_mu);
+        g_host_scenes[stl::rd64(pl.data() + 9)] = stl::rd32(pl.data() + stl::kHashAt);
+        return;
+    }
+    if (!s2c && op == stl::kOpBranchReq && pl.size() >= 12) {
+        std::lock_guard lk(g_mu);
+        if (g_host_scenes.count(stl::rd64(pl.data()))) g_host_asked[stl::rd64(pl.data())] = stl::rd32(pl.data() + 8);
+        return;
+    }
+    if (s2c && op == stl::kOpBranchState && pl.size() >= 21) {
+        const uint64_t id = stl::id_of_2920(pl);
+        uint32_t res = 0, asked = 0xFFFFFFFFu, prev = 0;
+        {
+            std::lock_guard lk(g_mu);
+            auto it = g_host_scenes.find(id);
+            if (it == g_host_scenes.end()) return;
+            res = it->second;
+            if (auto a = g_host_asked.find(id); a != g_host_asked.end()) {
+                asked = a->second;
+                g_host_asked.erase(a);
+            }
+            prev = g_host_state[id];
+            g_host_state[id] = stl::rd32(pl.data() + 13);
+        }
+        const uint32_t type = stl::rd32(pl.data() + 13), n = stl::rd32(pl.data() + 17);
+        if (asked != 0xFFFFFFFFu) {
+            const bool ours = stl::next_branch_type(prev, asked) == type;
+            log::info("ShopTwin [host scene] 0x{:X} resource 0x{:08X}: state {} branch {} -> type {} n {} (len {}){}", id,
+                      res, prev, asked, type, n, pl.size(), ours ? "" : "  <-- NOT the twin's table");
+        }
+        if (type == 2) {
+            if (HANDLE f = CreateFileW(L"shop_twin_open.flag", GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, 0, nullptr);
+                f != INVALID_HANDLE_VALUE)
+                CloseHandle(f);
+        }
+    }
+}
+
 void shop_twin_host_sniffed(const uint8_t* packet, size_t size, bool server_to_client) noexcept {
-    if (!g_on || g_guest || !server_to_client) return;
+    if (!g_on || g_guest) return;
     try {
         uint16_t op = 0;
         std::span<const uint8_t> pl;
-        if (!stl::split(std::span<const uint8_t>(packet, size), op, pl) || op != stl::kOpQuestDialogAck) return;
+        if (!stl::split(std::span<const uint8_t>(packet, size), op, pl)) return;
+        host_scene_watch(op, pl, server_to_client);
+        if (!server_to_client || op != stl::kOpQuestDialogAck) return;
         uint32_t npc = 0;
         std::vector<stl::Dialog> d;
         if (!stl::shop_dialogs_of(pl, npc, d) || d.empty()) return;  // only NPCs with shop choices
