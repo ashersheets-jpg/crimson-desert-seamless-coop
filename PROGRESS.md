@@ -3361,3 +3361,14 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   * B11: dumpitemmove read 21 item-move definitions (inventory ids: 1 = the bag; 8 / 5 / 6 / 7 other inventories;
     def 1 = from the bag: kind-1 moves 1 -> 8 and 1 -> 5, kind-0 moves to 5, 9, 10, 0x13, 0xC, 0xE, 0xF, 0x11,
     0x12, 7, 6; defs 5 / 6 / 7: back to 1). To map which inventory is what next (the shared stash candidates).
+- 2026-11-09 18:03 B11 item-move map (tcB228 dumpitemmove, the host's 3576 client): definition N = inventory N
+  (21 of them). Bag = 1. Moves OUT of the bag (def 1): kind 1 -> 8 (entry 0) and -> 5 (entry 1); kind 2 -> 8
+  (entries 3-7, the df2560 path); kind 0 -> 5, 9 (with a condition), 0xA, 0x13, 0xC, 0xE, 0xF, 0x11, 0x12, 7, 6.
+  Back INTO the bag: 5, 6, 7, 9, 0xA, 0xB, 0xC, 0xE, 0xF, 0x10, 0x11, 0x12, 0x13, 0x14 -> 1 (kind 0); 8 -> 5 / 6
+  (kind 0) and 8 -> 0 (kind 2). No bag -> bag entry: a player-to-player trade would be two moves (the giver's bag ->
+  an inventory X of the receiver's character, then the receiver's X -> its bag), X one both characters have (5 / 6 /
+  7 look like party-member or mount bags, 8 a storage). The worker resolves BOTH actors by key and checks only the
+  distance between them, so a crafted 3111 with giver = the guest's character, receiver = the host's is the next
+  experiment (it needs an item key the guest holds: the bandits save has 22007 x9; the login AddItemToInventoryAck
+  lists (type 1) carry every bag item -- to decode: element +17 u64 item no, +25 u32 key). build/port3479/make3111.py
+  builds the payload.
