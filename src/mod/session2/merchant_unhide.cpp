@@ -260,6 +260,12 @@ void worker() {
                           g_tick_field.load(), o, local_user_key(), g_tick_calls.load(), mgr, rv<uint8_t>(mgr + 0x259),
                           rv<uint32_t>(mgr + 0x1C0), rv<uint32_t>(mgr + 0x174), rv<uint32_t>(mgr + 0x17C),
                           rv<uint32_t>(mgr + 0x1D0), rv<uint32_t>(mgr + 0x1F0));
+                if (g_guest) {
+                    const uintptr_t own = own_manager();
+                    log::info("MerchantUnhide [field tick] this guest's OWN stage manager 0x{:X}: state +0x259 {} "
+                              "loading +0x174 {} created +0x17C {}",
+                              own, rv<uint8_t>(own + 0x259), rv<uint32_t>(own + 0x174), rv<uint32_t>(own + 0x17C));
+                }
                 last_owner = o;
                 last_tick_log = t;
             }

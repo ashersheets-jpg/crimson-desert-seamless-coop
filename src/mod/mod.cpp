@@ -71,6 +71,7 @@
 #include "mod/session2/npc_category.h"
 #include "mod/session2/shop_guest.h"
 #include "mod/session2/merchant_unhide.h"
+#include "mod/session2/shop_twin.h"
 #include "mod/render/dx12_hook.h"
 #include "mod/render/hud.h"
 
@@ -459,6 +460,7 @@ void run_network(const Config& cfg, LocalSource& local) {
         if (s2_link) session2::weather_sync_host_tick(*s2_link, now);
         // Co-op+ (npc_category.h): the host's NPC quest-dialog categories as control state 16.
         if (s2_link) session2::npc_category_host_tick(*s2_link, now);
+        if (s2_link) session2::shop_twin_host_tick(*s2_link);
         health.mark(Phase::HostTunnel, now_us());
         if (!s2_guest_link && !coop && session2::guest_active()) {
             s2_guest_link = std::make_unique<troc::TrocLink>(
@@ -1192,6 +1194,7 @@ DWORD WINAPI worker(LPVOID) {
             net::test_greet_start(cfg.s2_guest && cfg.s2_test_greet);
             session2::npc_category_install(cfg.s2_npc_category_share, cfg.s2_guest);
             session2::shop_guest_install(cfg.s2_guest_shop_check, cfg.s2_guest);
+            session2::shop_twin_start(cfg.s2_shop_twin, cfg.s2_guest);
             session2::merchant_unhide_start(cfg.s2_merchant_unhide != 0, cfg.s2_guest, cfg.s2_merchant_unhide == 2 ||
                                                 cfg.s2_merchant_unhide == 3,
                                             cfg.s2_merchant_unhide == 1 || cfg.s2_merchant_unhide == 3);

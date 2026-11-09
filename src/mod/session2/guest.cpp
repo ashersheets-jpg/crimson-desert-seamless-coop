@@ -42,6 +42,7 @@
 #include "mod/session2/guest_x_interaction.h"
 #include "mod/session2/shop_trade_probe.h"
 #include "mod/session2/guest_x_veto.h"
+#include "mod/session2/shop_twin.h"
 #include "mod/session2/guest_x_veto_logic.h"
 #include "mod/session2/load_trip.h"
 #include "mod/session2/mount_sync.h"
@@ -1080,8 +1081,18 @@ int* __fastcall guest_send(void* self, int* res, void* pbv) {
                     // P8 S28 (docked_gimmicks.h, mode 1): a state request (3082 2758 2609 2774 3089 2779 2826 2618) of a
                     // gimmick this client drives only for its own screen is WITHHELD the same way (the host stays
                     // its controller); probe counts it.
-                    const bool withheld = mount_sync_guest_outgoing(p.data(), p.size()) ||
-                                          docked_gimmicks_guest_withhold(p.data(), p.size());
+                    bool withheld = mount_sync_guest_outgoing(p.data(), p.size()) ||
+                                    docked_gimmicks_guest_withhold(p.data(), p.size());
+                    // Co-op+ 2026-11-09 (shop_twin.h): a request about the guest's own shop scene never reaches the
+                    // host's server (which never knew the scene); the server's answers come from here.
+                    if (!withheld && !p.empty()) {
+                        std::vector<std::vector<uint8_t>> tw_answers;
+                        if (shop_twin_on_out(p, tw_answers)) {
+                            withheld = true;
+                            std::lock_guard lk(g_in_mutex);
+                            for (auto& a : tw_answers) (void)g_from_host.push(std::move(a), now_us());
+                        }
+                    }
                     // P8 S25 phase B (guest_save_guest.h, guest_own_save=1): the 3093 waits for the host's SAVE_ACK
                     // and the goodbye behind one SaveToFileCurrentPlayerReq 2910 (gs.before); a held packet (and every one after
                     // it) goes later, in order, from guest_pump. Probe or off: nothing changes.
@@ -1729,6 +1740,11 @@ void guest_deliver(std::vector<uint8_t>&& packet) {
             if (remote_live_for_keys()) (void)npc_category_guest_on_control(v->payload);
             return;
         }
+        // Co-op+ (shop_twin.h): the host's shopkeepers' menu choices, state 17. Only while playing on the host.
+        if (!v->payload.empty() && v->payload[0] == 17) {
+            if (remote_live_for_keys()) (void)shop_twin_guest_on_control(v->payload);
+            return;
+        }
         const uint8_t state = v->payload.empty() ? 0 : v->payload[0];
         // P8 S25 phase B: the host's end of the tunnel exists: the own-save upload is queued now, BEFORE the host
         // counts as ready below, so it is ahead of the client's first packet (its 2319 / 2490) in the tunnel.
@@ -1817,9 +1833,15 @@ void deliver_body(std::vector<uint8_t>&& packet) {
     // The mod's network thread only queues: the NetworkThread hands it to the game (guest_pump).
     if (!g_mod_net_tid.load(std::memory_order_relaxed)) g_mod_net_tid.store(GetCurrentThreadId());
     gin::Push pushed = gin::Push::Full;
+    // Co-op+ 2026-11-09 (shop_twin.h): the guest's own shop scenes around the host's (prepared after, deleted before).
+    std::vector<std::vector<uint8_t>> tw_before, tw_after;
+    shop_twin_on_host(packet, tw_before, tw_after);
     {
         std::lock_guard lk(g_in_mutex);
+        for (auto& b : tw_before) (void)g_from_host.push(std::move(b), probe_queued_us);
         pushed = g_from_host.push(std::move(packet), probe_queued_us);
+        for (auto& a : tw_after)
+            if (pushed == gin::Push::Queued) (void)g_from_host.push(std::move(a), probe_queued_us);
     }
     if (pushed != gin::Push::Queued) end_remote("too many packets of the host waiting");
 }

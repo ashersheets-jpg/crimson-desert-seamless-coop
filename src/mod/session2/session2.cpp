@@ -1,4 +1,5 @@
 #include "mod/session2/session2.h"
+#include "mod/session2/shop_twin.h"
 
 #include <windows.h>
 
@@ -209,6 +210,7 @@ std::atomic<bool> g_tap_scene_diag{false}, g_tap_seq_copy{false}, g_tap_owner_fa
     g_tap_quest_policy{false};
 void sniffer_fanout(const uint8_t* packet, size_t size, uint64_t t_us, bool server_to_client) noexcept {
     npc_probe_client_sniff(packet, size, t_us, server_to_client); // S33: retorna inmediatamente con 0.
+    shop_twin_host_sniffed(packet, size, server_to_client);       // Co-op+ 2026-11-09: the host's shop choices
     door_trace_packet(server_to_client ? DoorTraceStage::HostClientAck : DoorTraceStage::HostClientReq,
                       std::span<const uint8_t>(packet, size), t_us); // El módulo ignora este tap en el invitado.
     if (g_tap_scene_diag.load(std::memory_order_relaxed)) host_scene_diag_sniffed(packet, size, t_us, server_to_client);

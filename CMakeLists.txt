@@ -166,6 +166,7 @@ add_library(cdmp_mod SHARED
     src/mod/session2/npc_category.cpp
     src/mod/session2/shop_guest.cpp
     src/mod/session2/merchant_unhide.cpp
+    src/mod/session2/shop_twin.cpp
     src/mod/session2/catch_seq.cpp
     src/mod/session2/remote_rope.cpp
     src/mod/session2/rope_probe.cpp
@@ -391,6 +392,11 @@ add_executable(cdmp_tests_optd_merchant_unhide tests/optd_merchant_unhide_tests.
 cdmp_strict(cdmp_tests_optd_merchant_unhide)
 target_link_libraries(cdmp_tests_optd_merchant_unhide PRIVATE cdmp_common)
 add_test(NAME optd_merchant_unhide COMMAND cdmp_tests_optd_merchant_unhide)
+# Co-op+ (shop_twin_logic.h): the guest's own shop scene.
+add_executable(cdmp_tests_optd_shop_twin tests/optd_shop_twin_tests.cpp)
+cdmp_strict(cdmp_tests_optd_shop_twin)
+target_link_libraries(cdmp_tests_optd_shop_twin PRIVATE cdmp_common)
+add_test(NAME optd_shop_twin COMMAND cdmp_tests_optd_shop_twin)
 # P8 session 25 grabs (catch_seq_logic.h): the decision at ClientCatch_ApplyResult's entry, the counters and the
 # self-consistency of the verified build-2976 bytes. Pure.
 add_executable(cdmp_tests_optd_catch_seq tests/optd_catch_seq_tests.cpp)
