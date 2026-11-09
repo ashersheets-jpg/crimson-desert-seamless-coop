@@ -2857,3 +2857,11 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
     guest its "go" only once the host is IN the world (in.in_world); the guest's existing native path presses Play
     then ("the host's world is up"). The guest's waiting line: "<host> is loading the shared world. You join right
     after." tcB184: the check.
+- 2026-11-09 06:15 *** THE RELEASE FLOW WORKS AGAIN, AND THE GUEST BUYS IN IT (tcB184/185, -Lobby). ***
+  * tcB184: "both games are ready: our game loads the shared world first" -> host in the world -> "the host's world is
+    up: Play" -> guest in 41 s. One stray E: the host's press thread waited for its window and pressed E 2 min after
+    the host was in (E = interact): the press now stops when the game is already loading or in the world.
+  * Harness: the lobby phase keeps each window in front until its game logs "in the shared world" (host, then guest).
+  * tcB185 (usercopy, the release inis written by the layer, no test overrides): host in 06:08:23, guest 06:09:08; the
+    guest opened Renee's shop, 6 -> 1, 0 -> 2, 0 -> 3, bought the Small Bag (money 114.54 -> 113.94, "Inventory
+    Expansion"), closed, left. Both alive, SAVES OK. ROADMAP B02b -> [~].

@@ -149,8 +149,12 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   Shipping it distributes ByJunter's GPL code: ask the user before the release.
 - [ ] **B02 — Same NPCs and townsfolk** (native: one world; check towns, schedules, the playtest's missing NPCs).
   - [~] **B02a — The guest talks to NPCs on its own progress** (2026-11-08: greeting works, tcB88/89/91; npc_category).
-  - [ ] **B02b — Merchants for the guest (user 2026-11-08):** the guest opens a merchant, buys and sells with its own
+  - [~] **B02b — Merchants for the guest (user 2026-11-08):** the guest opens a merchant, buys and sells with its own
     money and stock, and starts and finishes the merchants' quests on its own, without the host at that step.
+    (2026-11-09: merchants shown in co-op for both (merchant_unhide login guard); the guest's own shop scene
+    (shop_twin) -- the guest BOUGHT and SOLD on its own at the Hernand butcher (tcB166/167/170), on by default in the
+    release ini. Open: merchant quests (none available in the test saves yet), shops with the host far away (the
+    server builds the world only around the host: the B02 far-world gap, ByJunter's user2_stages, not ported).)
     Start from ByJunter's S46 shop work (docs/research/s25/s46-tenderos.md: own shop scenes for user 2, U2 routing,
     T1/T2, R0), never run in the game and written for 2976.
 - [ ] **B03 — World events and sieges** joinable by the guest.
