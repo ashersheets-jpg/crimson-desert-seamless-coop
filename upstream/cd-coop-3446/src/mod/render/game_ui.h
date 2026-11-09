@@ -84,6 +84,9 @@ void hand_medallion(ImDrawList* dl, float x, float y, float size, int hand, cons
 
 // The other player's name tag over their head, the game's NPC tag look: a small gold diamond, the name in the serif
 // face, a thin framed health bar (frac < 0: none) and the distance under it, faded by `alpha`, sized by `scale`.
+// B16b: the player interaction menu, the shop menu's look (subtitle over the name, stacked choices, `pick` framed).
+void choice_menu(ImDrawList* dl, float screen_w, float screen_h, const std::string& name, const std::string& subtitle,
+                 const std::vector<std::string>& items, size_t pick);
 // B16b: the game's hold prompt at (x, y): `key` in a ring filled to `progress` (0..1), `label` to its right.
 void hold_prompt(ImDrawList* dl, float x, float y, float progress, const std::string& key, const std::string& label,
                  float alpha = 1.0f);

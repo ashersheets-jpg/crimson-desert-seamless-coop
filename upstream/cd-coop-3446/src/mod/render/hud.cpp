@@ -607,13 +607,24 @@ void hud_draw(float width, float height) {
                         }
                     }
                     if (fired) t = 1.0f;
-                    ui::hold_prompt(dl, p->x + 48.0f, p->y, t, "R", "Challenges");
+                    ui::hold_prompt(dl, p->x + 48.0f, p->y, t, "R", "Interact");
                 }
             }
         }
         if (!r_down || !shown) {
             hold_since = 0;
             if (!r_down) fired = false;
+        }
+    }
+
+    // B16b: the open player interaction menu (net::activity_menu_snapshot), the shop menu's look.
+    {
+        std::string title;
+        std::vector<std::string> items;
+        size_t pick = 0;
+        if (net::activity_menu_snapshot(title, items, pick)) {
+            ui::choice_menu(ImGui::GetForegroundDrawList(), static_cast<float>(width), static_cast<float>(height),
+                            d.peer_name.empty() ? std::string("Your friend") : d.peer_name, title, items, pick);
         }
     }
 

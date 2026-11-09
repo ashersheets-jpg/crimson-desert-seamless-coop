@@ -554,6 +554,30 @@ void hand_medallion(ImDrawList* dl, float x, float y, float s, int hand, const s
     }
 }
 
+void choice_menu(ImDrawList* dl, float screen_w, float screen_h, const std::string& name, const std::string& subtitle,
+                 const std::vector<std::string>& items, size_t pick) {
+    // B16b: the shop menu's look (the merchant's place over the name, then the stacked choices, the chosen one framed).
+    const float bw = 340.0f, bh = 48.0f, gap = 10.0f, x = screen_w * 0.17f;
+    const float total = 70.0f + static_cast<float>(items.size()) * (bh + gap);
+    float y = std::max(40.0f, screen_h * 0.5f - total * 0.5f);
+    const float ss = 19.0f, ns = 30.0f;
+    text(dl, g_serif, ss, x + (bw - text_w(g_serif, ss, subtitle)) * 0.5f, y, IM_COL32(232, 200, 130, 255), subtitle);
+    y += ss + 6.0f;
+    text(dl, g_serif_bold, ns, x + (bw - text_w(g_serif_bold, ns, name)) * 0.5f, y, kText, name);
+    y += ns + 18.0f;
+    for (size_t i = 0; i < items.size(); ++i) {
+        const bool sel = i == pick;
+        const bool dim = items[i].find("(coming soon)") != std::string::npos;
+        dl->AddRectFilled(ImVec2(x, y), ImVec2(x + bw, y + bh), sel ? IM_COL32(58, 52, 42, 235) : IM_COL32(16, 15, 14, 215));
+        dl->AddRect(ImVec2(x, y), ImVec2(x + bw, y + bh),
+                    sel ? IM_COL32(232, 200, 130, 255) : IM_COL32(90, 84, 76, 200), 0.0f, sel ? 2.0f : 1.0f);
+        const float fs = 20.0f, tw = text_w(g_serif_bold, fs, items[i]);
+        text(dl, g_serif_bold, fs, x + (bw - tw) * 0.5f, y + (bh - fs) * 0.5f - 1.0f,
+             dim ? IM_COL32(130, 124, 116, 255) : (sel ? IM_COL32(245, 236, 220, 255) : kText), items[i]);
+        y += bh + gap;
+    }
+}
+
 void hold_prompt(ImDrawList* dl, float x, float y, float progress, const std::string& key, const std::string& label,
                  float alpha) {
     // B16b (user 2026-11-09): the game's hold prompt -- the key in a ring that fills while it is held -- with a label.

@@ -164,7 +164,7 @@ enum ChallengeState : uint8_t { kChNone, kChPick, kChSent, kChReceived, kChOn };
 constexpr uint32_t kWrestleStages[] = {16005100, 1001987, 1001988, 1003873, 1003875, 1018693};
 constexpr float kChallengeNearM = 30.0f;  // how close to the table Shift+F5 finds it
 constexpr uint32_t kInviteMs = 60000;
-constexpr uint32_t kPickMs = 20000;  // the picker closes by itself
+constexpr uint32_t kPickMs = 60000;  // the menu closes by itself (B16b: 60 s, was 20 s)
 struct Challenge {
     ChallengeState state = kChNone;
     uint32_t stage = 0;          // the game's stage key
@@ -175,6 +175,9 @@ struct Challenge {
     std::vector<uint32_t> options;  // kChPick: the games to choose from, and the chosen one
     size_t pick = 0;
 } g_ch;
+// B16b (2026-11-09): the player interaction menu's two non-game entries (options), and its keys caught by the hook.
+constexpr uint32_t kMenuTrade = 1, kMenuLeave = 2;
+std::atomic<bool> g_menu_select{false}, g_menu_cancel{false};
 std::atomic<bool> g_menu_hold{false};  // the picker is open: the keyboard hook keeps the arrow keys
 std::atomic<int> g_menu_step{0};       // arrow presses it caught (-1 left, +1 right, summed)
 // [dev] challenge_test: 1 = a simulated other player accepts our invites; 2 = they also challenge us to a duel once.
@@ -303,6 +306,20 @@ LRESULT CALLBACK keyboard_hook(int code, WPARAM wp, LPARAM lp) {
         const auto* k = reinterpret_cast<const KBDLLHOOKSTRUCT*>(lp);
         if ((k->vkCode == VK_LEFT || k->vkCode == VK_RIGHT) && game_in_front()) {
             if (wp == WM_KEYDOWN || wp == WM_SYSKEYDOWN) g_menu_step.fetch_add(k->vkCode == VK_LEFT ? -1 : 1);
+            return 1;
+        }
+        // B16b: the menu as the game's own menus: up / down (W / S) choose, Space / Enter select, Esc leaves.
+        const DWORD vk = k->vkCode;
+        if ((vk == VK_UP || vk == VK_DOWN || vk == 'W' || vk == 'S') && game_in_front()) {
+            if (wp == WM_KEYDOWN || wp == WM_SYSKEYDOWN) g_menu_step.fetch_add(vk == VK_UP || vk == 'W' ? -1 : 1);
+            return 1;
+        }
+        if ((vk == VK_SPACE || vk == VK_RETURN) && game_in_front()) {
+            if (wp == WM_KEYDOWN || wp == WM_SYSKEYDOWN) g_menu_select = true;
+            return 1;
+        }
+        if (vk == VK_ESCAPE && k->dwExtraInfo != kOurKey && game_in_front()) {
+            if (wp == WM_KEYDOWN || wp == WM_SYSKEYDOWN) g_menu_cancel = true;
             return 1;
         }
     }
@@ -639,6 +656,22 @@ void challenge_tick(ActivityTick& out, bool connected, bool focused, std::option
             c.pick = static_cast<size_t>(((static_cast<int>(c.pick) + step) % n + n) % n);
             if (step) c.since = now;
         }
+        if (c.state == kChPick) {  // B16b: the menu's own keys
+            if (g_menu_cancel.exchange(false)) declined = true;
+            if (g_menu_select.exchange(false)) {
+                const uint32_t sel = c.options.empty() ? 0 : c.options[std::min(c.pick, c.options.size() - 1)];
+                if (sel == kMenuLeave) {
+                    declined = true;
+                } else if (sel == kMenuTrade) {
+                    toast = "Trading with your friend comes in a later update";
+                } else {
+                    pressed = true;
+                }
+            }
+        } else {
+            g_menu_select = false;
+            g_menu_cancel = false;
+        }
         if (declined && c.state == kChPick) {
             c.state = kChNone;
             declined = false;
@@ -684,6 +717,8 @@ void challenge_tick(ActivityTick& out, bool connected, bool focused, std::option
                     c.options.push_back(kRaceStage);  // Co-op+ (T41)
                     c.options.push_back(kHideStage);  // Co-op+ (2026-11-05)
                     c.options.push_back(kFishStage);
+                    c.options.push_back(kMenuTrade);  // B16b: shown, not yet working
+                    c.options.push_back(kMenuLeave);
                     // Co-op+ (T42): rematch -- the picker opens on the game played last ({Challenge} twice).
                     for (size_t i = 0; i < c.options.size(); ++i) {
                         if (c.options[i] == g_last_game) c.pick = i;
@@ -716,8 +751,8 @@ void challenge_tick(ActivityTick& out, bool connected, bool focused, std::option
                 if (!name.empty()) name[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(name[0])));
                 items += i == c.pick ? "   {*}" + name + "{*}" : "   " + name;
             }
-            out.banner = std::format("Challenge {} to:{}      {{MenuPrev}}{{MenuNext}} choose   {{Challenge}} send   "
-                                     "{{Decline}} cancel", who, items);
+            (void)items;  // B16b: the menu card is drawn by the HUD (activity_menu_snapshot); the hint only
+            out.banner = "W / S choose   Space select   Esc leave";
         } else if (out.banner.empty()) {
             const std::string game = activity_minigame_name(c.stage);
             if (c.state == kChReceived) {
@@ -1267,5 +1302,29 @@ MatchHud activity_match_hud() {
 }
 
 void activity_request_menu() { g_menu_request = true; }
+
+bool activity_menu_snapshot(std::string& title, std::vector<std::string>& items, size_t& pick) {
+    std::lock_guard lock(g_mutex);
+    if (g_ch.state != kChPick) return false;
+    items.clear();
+    for (const uint32_t o : g_ch.options) {
+        if (o == kMenuTrade) {
+            items.push_back("Trade (coming soon)");
+            continue;
+        }
+        if (o == kMenuLeave) {
+            items.push_back("Leave");
+            continue;
+        }
+        std::string name = activity_minigame_name(o);
+        if (name.rfind("a ", 0) == 0) name.erase(0, 2);
+        if (name.rfind("an ", 0) == 0) name.erase(0, 3);
+        if (!name.empty()) name[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(name[0])));
+        items.push_back(name);
+    }
+    pick = std::min(g_ch.pick, items.empty() ? size_t{0} : items.size() - 1);
+    title = "Co-op";
+    return true;
+}
 
 }  // namespace cdmp::net
