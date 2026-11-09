@@ -3201,3 +3201,14 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   held only ByJunter's two verified shops (smithy, butcher), not the grocer. Extended to the 9 merchant scenes
   merchant_unhide knows (hashes by lookup3 seed 0xC5EDE: grocery 0x8FA1605E, general 0x2CFAD71A, bank 0xAA015527, pub
   0xEA60A5DF, clothes 0x0591B85B, leather 0x6EA4BC4E, smuggler 0xE2EB7F12). tcB216 repeats with it.
+- 2026-11-09 17:45 *** tcB216: THE GUEST SHOPS FAR FROM THE HOST *** (host 424 m away at the Rodbel dock): with the 9
+  merchant scenes on T2's trade list, T2 kept 7 of user 2's own shop scenes until their shopkeepers were announced
+  (released in order, max 376 ms); the guest held R at Delkin -> its own InteractionPreemptionStepReq / DoStepReq
+  (interaction 0x000F4321) accepted (2120 / 2794), then ITS OWN scene 0x255's branches answered by the server natively
+  (branch 6 -> type 1, branch 0 -> the menu, type 2) -- no shop twin involved: "Hernand Grocer's Shop - Delkin: Buy /
+  Sell / Leave" and the Buy window with the guest's own money (114.94). Both alive, SAVES OK.
+  The release native ini (layer, host) now adds: shop_probe=1, user2_shop_route=1,
+  user2_stages_elements=schedule+funcnpc, observer_hold_scene_order=1 (layer test updated; all pass).
+  Note: the guest must reach the market after the host's shop scenes there are gone (tcB212 / 213) -- the case of the
+  guest standing at a market while the host leaves (the host's scenes kept alive by the guest) still uses the host's
+  scenes + shop twin, which also works (tcB191 / 192).

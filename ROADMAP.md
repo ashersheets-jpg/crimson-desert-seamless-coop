@@ -157,6 +157,8 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
     server builds the world only around the host: the B02 far-world gap, ByJunter's user2_stages, not ported).)
     Start from ByJunter's S46 shop work (docs/research/s25/s46-tenderos.md: own shop scenes for user 2, U2 routing,
     T1/T2, R0), never run in the game and written for 2976.
+    (2026-11-09 evening: FAR FROM THE HOST TOO -- the far guest's town is populated (tcB214) and it opened its own
+    shop at the grocer with the host 424 m away (tcB216: U-1 + shop_probe + user2_shops + T2 ported to 3576).)
     (2026-11-09 later: a second merchant works for the guest -- it bought at the Hernand grocer, tcB194. Far from the
     host: user2_stages + world_anchor PORTED to 3576 (arm check READY in tcB198); arming lowered to >= 4 cells for
     the 4-9 cell dead zone; tcB199 checks the guest's market with the host 430 m away.)
