@@ -554,7 +554,7 @@ void test_npc_control() {
     for (size_t i = 0; i < static_cast<size_t>(u2s::Ctl::Count); ++i) {
         CHECK(std::string(u2s::ctl_name(static_cast<u2s::Ctl>(i))) != "?");
     }
-    static_assert(u2s::kVtDescNpcSchedule == 0x5ECDB60 &&  // 3576 (2976 0x5B04CB0)
+    static_assert(u2s::kVtDescNpcSchedule == 0x5ECDB60 &&  // 3576 (2976 0x5ECDB60)
                   u2s::kActor_Ctl == 0x90 && u2s::kDesc_User == 0x40 &&
                   u2s::kLogoutAiReason == 42);
 }

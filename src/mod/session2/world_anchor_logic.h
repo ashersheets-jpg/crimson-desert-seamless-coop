@@ -67,7 +67,7 @@ using u2f::parse_mode;
 
 // ---------------------------------------------------------------- build 1.0.0.2976 (RVAs, checked on the exe)
 
-inline constexpr uintptr_t kVtServerField = 0x5B29A60;  // pa::ServerField
+inline constexpr uintptr_t kVtServerField = 0x5EF2B10;  // pa::ServerField (3576; 2976 0x5B29A60)
 inline constexpr uintptr_t kVtFieldLock = 0x5B52BF8;  // 3576 RTTI (2976 0x57A30B8)   // pa::WindowsRWLock<4,1>, [field+8] (= field+0x1B8)
 inline constexpr uint32_t kLockSlotUnlock = 0x20;       // vf4 0x1371B70 (u8 shared): exclusive -> owner -1, Release
 inline constexpr uint32_t kLockSlotTry = 0x28;          // vf5 0x1371BA0 (u8 shared): TryAcquireSRWLockExclusive

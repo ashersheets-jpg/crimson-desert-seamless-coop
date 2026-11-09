@@ -34,19 +34,19 @@
 
 namespace cdmp::session2::road {
 
-inline constexpr uint32_t kVtDescBase = 0x5B04BE8;   // pa::ICreateServerActorDesc (0x278EA70, 0x278EAE1)
-inline constexpr uint32_t kVtWrapRider = 0x5B04E60;  // CreateChildServerActorDesc_Rider (.xtls 0x100E63B0)
+inline constexpr uint32_t kVtDescBase = 0x5ECDC48;   // pa::ICreateServerActorDesc (0x278EA70, 0x278EAE1)
+inline constexpr uint32_t kVtWrapRider = 0x5ECDDC0;  // CreateChildServerActorDesc_Rider (.xtls 0x100E63B0)
 // Prueba en dos copias, fase C probe (15-10 noche, cdmp.host-Cprobe.log): los acompañantes de las bandadas (0x1F5) y de
 // los caminantes (0x3FD) cuelgan de su raíz con el envoltorio _Simple (20 de 21 preexámenes fallidos «envoltorio no
 // _Rider», todos envoltorio=exe+0x5B04E80 interior=exe+0x5B04BE8, op 2550, solicitante el invitado). Mismo contrato
 // que 0x281DBD0 (fase B §2.1): {vtable, inner}, [inner+0x2F0] = padre, push_back(padre+0x2F8). _Rider queda para los
 // conductores de vehículo (raíz clase 5).
-inline constexpr uint32_t kVtWrapSimple = 0x5B04E80;
+inline constexpr uint32_t kVtWrapSimple = 0x5ECDD60;
 // Gimmicks hijos de una caravana («Game Mechanic», tipo 7): con el anfitrión (host-kept), la regla de la fase B §2.7
 // (publication_gate=1, que el modo 1 exige). Su propio subárbol (la carga de un carro: hasta 19 tipo 7 en la prueba 3 de
 // la fase B) no se recorre ni cuenta: es del gimmick, también del anfitrión.
-inline constexpr uint32_t kVtInstantGimmick = 0x5B04C68, kVtWrapAutoSpawnGimmick = 0x5B04DA0,
-                          kVtWrapCombinationGimmick = 0x5B04D60;
+inline constexpr uint32_t kVtInstantGimmick = 0x5ECDB08, kVtWrapAutoSpawnGimmick = 0x5ECDD40,
+                          kVtWrapCombinationGimmick = 0x5ECDD00;
 // S40 carros (docs/research/s25/s40-carros.md §2): el vehículo enlazado de un carro. 0x2797510 (sólo si la clase del
 // descriptor padre, +0x68 de sus datos, es 5): hasta dos descriptores base 0x278EA70 por vehículo (bucle de 2, ranuras
 // +0x82/+0x84 de los datos del vehículo), cada uno con +0x490 = la clave del ACTOR padre ([param_4+0x60]), los campos
@@ -56,7 +56,7 @@ inline constexpr uint32_t kVtInstantGimmick = 0x5B04C68, kVtWrapAutoSpawnGimmick
 // (0x43DB70). Lo crea la creación del actor padre: nace DESPUÉS del mid de su padre (siempre tardío). Prueba en dos
 // copias C probe 2 (cdmp.host-Cprobe2.log): la carreta 0xB01002D8 (tipo 5, carretera 0xFA1) con 0xB01002DA (tipo 5,
 // sub 0x0, solicitante y carretera copiados) partía su unidad («no es un viajero del mismo solicitante»).
-inline constexpr uint32_t kVtWrapLinkedVehicle = 0x5B04D80, kDesc_ParentActorKey = 0x490;
+inline constexpr uint32_t kVtWrapLinkedVehicle = 0x5ECDCA0, kDesc_ParentActorKey = 0x490;
 // Envoltorio de un viajero (interior de carretera) / de un gimmick (interior InstantGimmick).
 inline bool traveller_wrap(uint32_t w) noexcept { return w == kVtWrapRider || w == kVtWrapSimple; }
 inline bool gimmick_wrap(uint32_t w) noexcept {
