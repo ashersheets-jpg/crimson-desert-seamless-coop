@@ -3245,3 +3245,12 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   artifact (a walking guest keeps them), handled by the design (the unaccepted ones are removed with reason 25 and come
   back with the host). The near-host shop opened ("stopfile seen"); both alive, SAVES OK. ByJunter's S35 containment
   (per-unit, instead of this run-wide stop) remains the proper fix -- not ported.
+- 2026-11-09 19:15 The far-shop keys vs the near shop: tcB222 (non-lobby, the far keys, but a bare guest ini) did not
+  open -- not comparable (the guest lacked guest_x_interaction_stage / seq_actor_restore / guest_schedule_load of every
+  working non-lobby shop run). tcB223 (non-lobby, the far keys + tcB194's guest keys): the near-host shop OPENS
+  ("stopfile seen"). So the keys alone do not break it; in the lobby runs (tcB217 / 219) U-1 had ARMED at the guest's
+  own login place 5 cells off and (with schedule+funcnpc) its manager likely prepared its own copies of the market's
+  shop scenes, which then coexist with the shop twins when the guest arrives next to the host. Next for making far
+  shops default: shop_twin must not twin a host shop scene whose resource the guest already has as its own scene (and
+  the drain must remove user 2's shop scenes when it comes near), then a lobby run with the far keys. (The lobby's
+  release ini records no packets: a capture of that case needs a dev override.)
