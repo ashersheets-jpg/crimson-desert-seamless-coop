@@ -3092,3 +3092,11 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   Building the local shared-world package with today's work (not published).
 - 2026-11-09 14:20 Local package (NOT published): dist\CrimsonDesert-SeamlessCoop-0.1.0-alpha+9e684aa9-shared-world.zip
   (11.9 MB; native c149dc4 + the layer with the new host defaults). tools/test-install-fake.ps1: ALL STEPS PASS.
+- 2026-11-09 14:35 USER REQUEST (new list item, ROADMAP B16b): a player interaction menu -- hold R on the other
+  player (the game's own HOLD prompt: the R in a circle that fills while held, as at shopkeepers / shop menus) opens a
+  menu like the shop menu with every minigame challenge, later trading (B11) and other player-to-player features.
+  Geonode (Discord) made a proof of concept: "Kliff / R Rock, Paper, Scissors" over the other player (a tap prompt).
+  Our scratch copy of Geonode's CDCO (3549, GPL-3.0) predates it (no such prompt in its source). Plan: on the native
+  base the other player is a real actor on each client, so the prompt can be the game's own interaction UI: find
+  how a shopkeeper's hold-R entry is built (the interaction table entry with the hold type; shop_twin's entries) and
+  add a co-op entry for the other player's actor, or draw our own hold ring in the overlay as a fallback.
