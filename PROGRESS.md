@@ -3387,3 +3387,7 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   KEPT: the guest's far-world keys and ByJunter's S33 / S35 containment (it worked in tcB228/229: no run-wide U-e
   abort). The conflict hold + refresh stay in the native code behind observer_hold_scene_conflict (default 0).
   tcB230 confirms the near shop with these defaults.
+- 2026-11-09 18:15 Far-shop next step (research pointer): the actor's sequencer play data is the
+  CommonSequencerPlayDataActorComponent (server; client ClientSequencerPlayDataActorComponent vtable 0x594FAF0, its
+  scene +0x2E0 / owner as GuestSeqRoute's G5 reads them). Find what it serializes into the 2005 and what clears its
+  scene / owner when a stage closes (reason 19), then clear it for the NPCs of U-1's closed funcnpc stages.
