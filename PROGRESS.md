@@ -2891,3 +2891,10 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   host). npc_category's getter hook (0x1C358E0) covers the condition checks, not this builder. Fix options: copy the
   host's record bytes into user 2's record before the builder runs for user 2 (server side), or share the host's
   entries with the guest's client like the shop choices (then check the server accepts the guest's choice).
+- 2026-11-09 07:05 tcB189 (same save, npc_dialog_share=1, experiment, default 0): the builder hook gave user 2's
+  existing records the host's category 67 times (354 builds for user 2, 226 with no record yet), and the guest's
+  lists STILL lack the extra groups (19 NPCs differ, 0 same). So the category does not gate them: the groups come
+  from per-player dialog lists the NPC's AI / stage fills for the controlling player (RequestNearbyQuestDialog,
+  QuestDialog_Stage). Next idea, not started: the host's extra entries shared with the guest's client as for the shop
+  choices (all groups but 1), then a live check whether the server accepts the guest's choice of such a dialog (it
+  may refuse a dialog absent from user 2's own list). Native local commit (the hook stays, off).
