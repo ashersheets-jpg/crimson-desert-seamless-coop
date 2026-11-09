@@ -38,6 +38,9 @@ void activity_observe_s2c(const uint8_t* packet, size_t size);
 
 // An Activity event from the other player.
 void activity_on_event(const std::vector<uint8_t>& payload);
+// B16b (user 2026-11-09): the player interaction menu asked for (the hold-R prompt on the other player, render/hud.cpp):
+// the next challenge tick acts as Shift+F5 does (opens the challenge list, or accepts a received challenge).
+void activity_request_menu();
 
 struct ActivityTick {
     std::string banner;  // persistent line while the other player is in a cutscene ("" = none)

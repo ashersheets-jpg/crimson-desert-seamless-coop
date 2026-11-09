@@ -575,6 +575,8 @@ void rps_tick(ActivityTick& out, bool connected, const std::string& who) {
     }
 }
 
+std::atomic<bool> g_menu_request{false};  // B16b: activity_request_menu
+
 // Challenges (see Challenge): Shift+F5 / Shift+F6, invites lapsing, the RPS child made willing, banners.
 void challenge_tick(ActivityTick& out, bool connected, bool focused, std::optional<std::array<float, 3>> me,
                     const std::string& who) {
@@ -583,6 +585,7 @@ void challenge_tick(ActivityTick& out, bool connected, bool focused, std::option
     // Shift+F5 / Shift+F6, or on a pad the co-op chord + D-pad Up / Down (input/actions.h).
     static input::Edge challenge_edge, decline_edge;
     bool pressed = challenge_edge(input::action_down(input::Action::Challenge, focused));
+    if (g_menu_request.exchange(false)) pressed = true;  // B16b: the hold-R prompt on the other player
     bool declined = decline_edge(input::action_down(input::Action::Decline, focused));
     // The first-launch card's answer, or the first co-op session's (render/hud.cpp).
     // A card's answer (render/hud.cpp) is not also a challenge: while a card is up, and until both keys are let go
@@ -1262,5 +1265,7 @@ MatchHud activity_match_hud() {
     h.alpha = t < kShowMs - 1000 ? 1.0f : static_cast<float>(kShowMs - t) / 1000.0f;
     return h;
 }
+
+void activity_request_menu() { g_menu_request = true; }
 
 }  // namespace cdmp::net

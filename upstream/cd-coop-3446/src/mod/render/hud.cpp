@@ -21,6 +21,7 @@
 #include "mod/input/pad_input.h"
 #include "mod/render/game_ui.h"
 #include "mod/render/coop_page.h"
+#include "mod/net/coop_activity.h"
 #include "mod/net/coop_lobby.h"
 #include "mod/settings_menu.h"
 #include "mod/net/coop_worlds.h"
@@ -574,6 +575,45 @@ void hud_draw(float width, float height) {
         const proto::Vec3 head{d.remote->pos.x, d.remote->pos.y + kHeadHeight, d.remote->pos.z};
         if (auto p = game::project(*cam, *cam_world, head, width, height)) {
             draw_remote_marker(dl, *p, d, remote_distance);
+        }
+    }
+
+    // B16b (user 2026-11-09): the player interaction menu -- hold R on the other player, the game's hold prompt (the
+    // R in a ring that fills), as at shopkeepers; full after kHoldRingMs it opens the challenges (later trading too).
+    // Within 3 m, the other player near the middle of the screen, our game window in front.
+    {
+        constexpr ULONGLONG kHoldRingMs = 800;
+        static ULONGLONG hold_since = 0;
+        static bool fired = false;
+        DWORD fg_pid = 0;
+        GetWindowThreadProcessId(GetForegroundWindow(), &fg_pid);
+        const bool ours = fg_pid == GetCurrentProcessId();
+        const bool r_down = ours && (GetAsyncKeyState('R') & 0x8000) != 0;
+        bool shown = false;
+        if (d.remote && !d.hide_partner && remote_distance <= 3.0f) {
+            const proto::Vec3 chest{d.remote->pos.x, d.remote->pos.y + 1.1f, d.remote->pos.z};
+            if (auto p = game::project(*cam, *cam_world, chest, width, height)) {
+                if (std::fabs(p->x - width * 0.5f) < width * 0.22f && std::fabs(p->y - height * 0.5f) < height * 0.32f) {
+                    shown = true;
+                    float t = 0.0f;
+                    const ULONGLONG now_ms = GetTickCount64();
+                    if (r_down && !fired) {
+                        if (!hold_since) hold_since = now_ms;
+                        t = static_cast<float>(now_ms - hold_since) / static_cast<float>(kHoldRingMs);
+                        if (t >= 1.0f) {
+                            fired = true;
+                            net::activity_request_menu();
+                            log::info("Hud: the hold-R prompt on the other player opened the interaction menu");
+                        }
+                    }
+                    if (fired) t = 1.0f;
+                    ui::hold_prompt(dl, p->x + 48.0f, p->y, t, "R", "Challenges");
+                }
+            }
+        }
+        if (!r_down || !shown) {
+            hold_since = 0;
+            if (!r_down) fired = false;
         }
     }
 

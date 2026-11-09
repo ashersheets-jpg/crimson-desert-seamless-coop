@@ -554,6 +554,25 @@ void hand_medallion(ImDrawList* dl, float x, float y, float s, int hand, const s
     }
 }
 
+void hold_prompt(ImDrawList* dl, float x, float y, float progress, const std::string& key, const std::string& label,
+                 float alpha) {
+    // B16b (user 2026-11-09): the game's hold prompt -- the key in a ring that fills while it is held -- with a label.
+    const float r = 15.0f, ks = 17.0f, ls = 19.0f;
+    const ImU32 dark = with_alpha(IM_COL32(10, 9, 8, 200), alpha), rim = with_alpha(IM_COL32(222, 214, 200, 230), alpha),
+                fill = with_alpha(IM_COL32(232, 200, 130, 255), alpha);
+    dl->AddCircleFilled(ImVec2(x, y), r, dark, 40);
+    dl->AddCircle(ImVec2(x, y), r, rim, 40, 1.5f);
+    const float p = std::clamp(progress, 0.0f, 1.0f);
+    if (p > 0.0f) {
+        const float a0 = -1.5707963f, a1 = a0 + 6.2831853f * p;
+        dl->PathArcTo(ImVec2(x, y), r, a0, a1, 40);
+        dl->PathStroke(fill, 3.5f);
+    }
+    const float kw = text_w(g_serif_bold, ks, key);
+    text(dl, g_serif_bold, ks, x - kw * 0.5f, y - ks * 0.55f, p >= 1.0f ? fill : rim, key);
+    if (!label.empty()) text(dl, g_serif, ls, x + r + 8.0f, y - ls * 0.55f, with_alpha(kText, alpha), label);
+}
+
 void nameplate(ImDrawList* dl, float x, float y, const std::string& name, float frac, const std::string& distance,
                float alpha, float scale) {
     const float ns = 19.0f * scale, ds = 14.0f * scale, r = 4.5f * scale;
