@@ -2,7 +2,8 @@
 // Co-op+ (roadmap T15): reviving each other.
 //
 // A player who goes down while the other is alive and connected is "downed": for kBleedOutMs the other player can
-// revive them -- within kReachM of them, hold the ReviveFriend action (Shift+F7, pad View + LB) for kHoldMs. The
+// revive them -- within kReachM of them, hold E (the interact key) or the ReviveFriend action (Shift+F7, pad View +
+// LB) for kHoldMs. The
 // downed player then gets up where they fell with full health (revive_prompt.h: revive_in_place) and both get a
 // notice naming who revived whom. The game's own choices (Q Instant Revive, U Revive at Checkpoint) stay available
 // the whole time; after the bleed-out only they remain. Not during a boss fight's wait (boss_death_wait has its own
