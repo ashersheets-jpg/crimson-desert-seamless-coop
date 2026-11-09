@@ -149,9 +149,11 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   Shipping it distributes ByJunter's GPL code: ask the user before the release.
 - [ ] **B02 — Same NPCs and townsfolk** (native: one world; check towns, schedules, the playtest's missing NPCs).
   (2026-11-09 evening: the far guest's own townsfolk and shops work (U-1 / U-e / user2_shops, tcB201 / 214 / 216).
-  Open: a guest that logs in away from the host and then comes to it kept its shopkeeper bound to its own (drained)
-  shop scene (tcB224-226) -- the conflict hold (observer_hold_scene_conflict) is the fix under test; U-e's run-wide
-  abort when a few of ~200 handed NPCs act late -- ByJunter's S33 / S35 per-NPC containment, ported, under test.)
+  S33 / S35 per-NPC containment ported and WORKING (tcB228/229: no run-wide U-e abort), on by default.
+  Open: far shops (B02b far, tcB216) are OFF in the defaults: a guest whose own far shop scene bound a shopkeeper
+  keeps her bound to that scene after it meets the host there -- on its client AND in the server's actor (the
+  refresh re-creates her as she was, tcB229); the near-host shop then shows no shopkeeper for the guest. Next: clear
+  the server actor's binding when U-1's stages close.)
   - [~] **B02a — The guest talks to NPCs on its own progress** (2026-11-08: greeting works, tcB88/89/91; npc_category).
   - [~] **B02b — Merchants for the guest (user 2026-11-08):** the guest opens a merchant, buys and sells with its own
     money and stock, and starts and finishes the merchants' quests on its own, without the host at that step.
