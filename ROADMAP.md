@@ -194,7 +194,8 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
 
 - [~] **B16b — Player interaction menu (user 2026-11-09).** (2026-11-09: built and seen working on the guest,
   tcB209: the hold-R prompt 'Interact' on the other player opens the shop-style menu with every challenge, a greyed
-  'Trade (coming soon)' and 'Leave'; W/S, Space, Esc. To do: trading (B11) in it; a pad button.) Hold R on the other player (the game's own hold prompt:
+  'Trade (coming soon)' and 'Leave'; W/S, Space, Esc. Pad (2026-11-09, built, not seen yet): the co-op chord +
+  D-pad Up held fills the same ring. To do: trading (B11) in it.) Hold R on the other player (the game's own hold prompt:
   the R key in a circle that fills while held, exactly as at shopkeepers and their shop menus -- NOT a plain
   "R Rock, Paper, Scissors" tap prompt) opens a player interaction menu like the shop menu. It holds every minigame
   challenge the two can do (duel, RPS, race, hunt, fishing, hide and seek, arm wrestling...), later trading (B11) and
