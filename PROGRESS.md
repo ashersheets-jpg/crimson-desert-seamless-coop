@@ -2798,3 +2798,21 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   * Tests: optd_shop_twin (twin 2380 / 2920 / 2292 rewrites, local answers byte-exact, the dialog frame and merge).
   * Harness: walkto.py stops its sweep when the guest's mod writes bin64\shop_twin_open.flag (a twin past branch 0);
     an early shot 0.5 s after each key.
+- 2026-11-09 03:45 *** THE GUEST BOUGHT FROM A MERCHANT ON ITS OWN (tcB166): "Butchery | Buy" opened on the guest's
+  screen, "Purchase [Small Bag]? Price 60" confirmed, "Inventory Expansion" shown; on the wire the guest's own
+  BuyStockFromStoreReq (user 2 0xA01001FA) and the host's server answered it exactly as for the host's own purchase
+  (tcB150): RemoveItemToInventoryAck (60 coins from the GUEST's inventory), AddItemToInventoryAck (the bag),
+  VaryExpandedInventorySlotAck. The host bought nothing; its scene untouched. Both alive, SAVES OK.
+  * The block in tcB165: "Buy" brought the greeting back. The server keeps a state per scene (the type of its last
+    2920) and answers the same request differently: branch 0 after the greeting = "the menu" (type 2), branch 0 from
+    the menu = "the store opens" (type 3). The twin always got type 2. From 30 host captures (state = last type,
+    initial 0): 0 -N-> 1 (2708 on), 1 -N-> 2 (+root, 2708 off), 2 -0-> 3 (Buy / Sell), 2 -N-> 7 (Leave), 3 -N-> 2,
+    7 -N-> 0 (+root). shop_twin now keeps that state per twin (stl::next_branch_type); tcB166's guest went
+    6 -> 1, 0 -> 2, 0 -> 3 (store), 0 -> 2, 3 -> 7, 1 -> 0, the host's own sequence.
+  * Harness: walkto.py's stop file path had a literal backspace (python "\b" written by a script): fixed through
+    PowerShell; the flag is now written at the menu (type 2) and removed by twocopy.sh after each run.
+  * HOST CRASH FIX (tcB117's): stage_candidate_guard ([session2] stage_candidate_guard, default 1): a mid hook after
+    the 3117 handler's vf48 call (0x2CECC2B); a null candidate holder (its scene deleted) skips the write and goes on
+    at the handler's own exit 0x2CECCBF (r15 = 0, as the normal path). Bytes checked before installing.
+  * Next: Sell, another shop (smithy / general store), the host shopping at the same merchant at the same time, the
+    twin when the host walks away (its 2292) and comes back.
