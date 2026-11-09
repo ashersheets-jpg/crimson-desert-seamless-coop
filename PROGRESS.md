@@ -3238,3 +3238,10 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   closed, aborted. Fixed (native 39efe43). The base descriptor's later fields look shifted +0x28 too (0x3C8 -> 0x3F0,
   0x3CC -> 0x3F4, 0x3CD -> 0x3F5, 0x3D0 -> 0x3F8 in ICreateServerActorDesc vf3 0x29CBEE0): those are the family / road
   modules' (off in the release ini), not changed yet. tcB221 re-checks the release flow.
+- 2026-11-09 19:00 tcB221 (-Lobby, the descriptor fix): every assigned NPC now has its stage slot (56 reason-42 logouts:
+  37 first in their slot, 19 repeats, none "with no slot") -- no reason-42 abort any more. U-e stopped instead on
+  "an assigned NPC has no accepted StartActionReq 5 s after its birth" (the 5 s watchdog): the NPCs were given to the
+  guest at its own login place, then the harness teleported it to the butcher at once, leaving them undriven -- a test
+  artifact (a walking guest keeps them), handled by the design (the unaccepted ones are removed with reason 25 and come
+  back with the host). The near-host shop opened ("stopfile seen"); both alive, SAVES OK. ByJunter's S35 containment
+  (per-unit, instead of this run-wide stop) remains the proper fix -- not ported.
