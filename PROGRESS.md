@@ -2898,3 +2898,12 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   QuestDialog_Stage). Next idea, not started: the host's extra entries shared with the guest's client as for the shop
   choices (all groups but 1), then a live check whether the server accepts the guest's choice of such a dialog (it
   may refuse a dialog absent from user 2's own list). Native local commit (the hook stays, off).
+- 2026-11-09 07:15 The guest's missing dialog groups ARE STAGE DIALOGS (decomp, B02a). QuestDialogEndReq's handler
+  0x2CD9600 -> 0x2B70F00(the player's table, ...): the dialog key is looked up in the static dialog table
+  ([0x71C6FA0], entry +8 = its stage key) and then 0x2228460(the player's user +0xA0, the stage key) must find that
+  stage in the PLAYER'S OWN stage manager, else it fails (0x714ADA0). So a 0xF435B / 0xF42B6 / ... entry is a
+  QuestDialog_Stage of a scene the host owns (like the shop menu in its funcnpc scene): sharing the list entries alone
+  would show the guest choices the server then refuses. The way that works is the shop's: the guest's own copy of
+  the scene (shop_twin generalized from the 9 shop resources to the NPC scenes with dialogs) + the host's entries for
+  that NPC. Not started: it needs the per-scene branch charts (the shop chart came from captures) -- a bigger piece
+  of B02a.
