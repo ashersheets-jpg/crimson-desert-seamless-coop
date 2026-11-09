@@ -8,6 +8,7 @@
 #include <chrono>
 #include <format>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "mod/game/safe_memory.h"
@@ -484,6 +485,15 @@ void dev_dump_item_move() {
     uintptr_t defs = 0;
     game::safe_read(table + 0x58, &defs, sizeof defs);
     log::info("Dev script: dumpitemmove: table 0x{:X}, {} definition(s), array 0x{:X}", table, count, defs);
+    // The request handlers' "disabled" byte (+0x21: 1 = the server answers 0 and does nothing, as for the cheats):
+    // 3111 MoveItemInventoryToOtherInventoryReq (exe+0x6EB9870), MoveItemInventoryToVehicleReq (exe+0x6EB9900),
+    // AddMinusItemReq (exe+0x6EBA5F0, a cheat: expected 1).
+    for (const auto& [name, at] : {std::pair<const char*, uintptr_t>{"MoveItemInventoryToOtherInventoryReq", 0x6EB9870},
+                                   {"MoveItemInventoryToVehicleReq", 0x6EB9900}, {"AddMinusItemReq", 0x6EBA5F0}}) {
+        uint8_t off = 0xFF;
+        game::safe_read(base + at + 0x21, &off, 1);
+        log::info("Dev script: dumpitemmove: handler {} +0x21 = {}", name, off);
+    }
     if (!defs) return;
     int lines = 0;
     for (uint32_t i = 0; i < count && i < 4096 && lines < 400; ++i) {

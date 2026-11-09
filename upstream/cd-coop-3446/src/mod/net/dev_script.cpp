@@ -540,7 +540,10 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                 if (st.addr == 0x3111 && pl.size() == 30) {  // trade3111: the giver = our character, now
                     const uint32_t me = capture_own_player_key();
                     std::memcpy(&pl[14], &me, 4);
-                    log::info("Dev script: trade3111 giver 0x{:08X}", me);
+                    uint32_t rv = 0;
+                    std::memcpy(&rv, &pl[18], 4);
+                    if (!rv) std::memcpy(&pl[18], &me, 4);  // receiver 0 = ourselves (the single-player move)
+                    log::info("Dev script: trade3111 giver 0x{:08X} receiver 0x{:08X}", me, rv ? rv : me);
                 }
                 const bool ok = sniffer_inject_c2s(make_c2s(st.op, pl));
                 log::info("Dev script: c2s {} ({} bytes){}", st.op, st.payload.size(), ok ? "" : " NOT sent");

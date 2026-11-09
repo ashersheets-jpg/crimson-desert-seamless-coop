@@ -3403,3 +3403,11 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   guest: 1003225, 1000644, 50001, ..., 22007, ...). Layer dev script "trade3111 <item> <count> <receiver> <inventory>
   <entry> [slot]" (giver = our own character, filled in at run time). tcB231 (non-lobby, records packets): the guest
   next to the host sends one 22007 toward the host's inventory 8 (def 1 entry 0) and toward its inventory 5 (entry 1).
+- 2026-11-09 18:36 tcB231 (B11, non-lobby): the guest's four crafted 3111s (one 22007 from its bag to the
+  host's inventory 8 / 5; giver 0xA010020C, receiver 0xA0100001, recorded C>S exactly as built) got NO answer from
+  the host's server at all -- no Add/RemoveItemToInventoryAck, no error notice, nothing in 30 s; both alive, SAVES
+  OK. Either the retail server has this handler disabled (+0x21 = 1: answers 0, does nothing, as the cheats), or the
+  worker failed without a notice. tcB232: the same move to the guest's OWN inventory (receiver = itself) as the
+  control; the layer's dumpitemmove now also reads the handlers' +0x21 (3111 at exe+0x6EB9870, the vehicle move
+  0x6EB9900, AddMinusItem 0x6EBA5F0). (A separate MoveItemInventoryToVehicleReq exists: 3111's "other inventory" is
+  not the horse's.)
