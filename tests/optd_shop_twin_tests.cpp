@@ -79,8 +79,9 @@ int main() {
     stl::wr64(br.data(), tid);
     stl::wr32(br.data() + 8, 6);
     CHECK(stl::root_of_initial_2920(st) == 0x979C909Du);
-    auto a = stl::local_answers(stl::kOpBranchReq, br, guest, 0x979C909Du);
-    CHECK(a.size() == 3);
+    uint32_t state = 0;  // the twin's initial 2920
+    auto a = stl::local_answers(stl::kOpBranchReq, br, guest, 0x979C909Du, state);
+    CHECK(a.size() == 3 && state == 1);
     if (a.size() == 3) {
         uint16_t op = 0;
         std::span<const uint8_t> p;
@@ -90,9 +91,9 @@ int main() {
         CHECK(stl::split(a[2], op, p) && op == 2920 && p.size() == 21 && stl::rd32(p.data() + 13) == 1 &&
               stl::rd32(p.data() + 17) == 6);
     }
-    stl::wr32(br.data() + 8, 0);  // back to the start: the host's own answer to its branch 0 (tcB116)
-    a = stl::local_answers(stl::kOpBranchReq, br, guest, 0x979C909Du);
-    CHECK(a.size() == 3);
+    stl::wr32(br.data() + 8, 0);  // the greeting ends: the menu (the host's own answer, tcB116)
+    a = stl::local_answers(stl::kOpBranchReq, br, guest, 0x979C909Du, state);
+    CHECK(a.size() == 3 && state == 2);
     if (a.size() == 3) {
         uint16_t op = 0;
         std::span<const uint8_t> p;
@@ -101,6 +102,26 @@ int main() {
         CHECK(stl::split(a[2], op, p) && op == 2920 && p.size() == 29 && stl::rd32(p.data() + 13) == 2 &&
               stl::rd32(p.data() + 17) == 0 && stl::rd32(p.data() + 21) == 0x979C909Du && stl::rd32(p.data() + 25) == 0);
     }
+    // Buy from the menu: the store opens (type 3, no root, no 2708); closing it: the menu again (host, 566.4 / 573.6)
+    auto expect = [&](uint32_t branch, uint32_t type, size_t len, size_t n_msgs) {
+        stl::wr32(br.data() + 8, branch);
+        const auto r = stl::local_answers(stl::kOpBranchReq, br, guest, 0x979C909Du, state);
+        CHECK(r.size() == n_msgs && state == type);
+        if (r.empty()) return;
+        uint16_t op = 0;
+        std::span<const uint8_t> p;
+        CHECK(stl::split(r.back(), op, p) && op == 2920 && p.size() == len && stl::rd32(p.data() + 13) == type &&
+              stl::rd32(p.data() + 17) == branch);
+        if (len == 29) CHECK(stl::rd32(p.data() + 21) == 0x979C909Du);
+        bool ev = false;
+        for (const auto& m : r) ev = ev || (stl::split(m, op, p) && op == 2436 && stl::rd32(p.data() + 13) == branch);
+        CHECK(ev);
+    };
+    expect(0, 3, 21, 2);  // Buy
+    expect(0, 2, 29, 2);  // the store closes
+    expect(3, 7, 21, 2);  // Leave
+    expect(1, 0, 29, 2);  // the scene is over
+    expect(6, 1, 21, 3);  // and starts again
     std::vector<uint8_t> ce(17, 0);
     stl::wr64(ce.data(), tid);
     ce[12] = 1;

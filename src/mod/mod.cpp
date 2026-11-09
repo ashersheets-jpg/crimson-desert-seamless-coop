@@ -71,6 +71,7 @@
 #include "mod/session2/npc_category.h"
 #include "mod/session2/shop_guest.h"
 #include "mod/session2/merchant_unhide.h"
+#include "mod/session2/stage_candidate_guard.h"
 #include "mod/session2/shop_twin.h"
 #include "mod/render/dx12_hook.h"
 #include "mod/render/hud.h"
@@ -1195,6 +1196,7 @@ DWORD WINAPI worker(LPVOID) {
             session2::npc_category_install(cfg.s2_npc_category_share, cfg.s2_guest);
             session2::shop_guest_install(cfg.s2_guest_shop_check, cfg.s2_guest);
             session2::shop_twin_start(cfg.s2_shop_twin, cfg.s2_guest);
+            session2::stage_candidate_guard_start(cfg.s2_stage_candidate_guard);
             session2::merchant_unhide_start(cfg.s2_merchant_unhide != 0, cfg.s2_guest, cfg.s2_merchant_unhide == 2 ||
                                                 cfg.s2_merchant_unhide == 3,
                                             cfg.s2_merchant_unhide == 1 || cfg.s2_merchant_unhide == 3);

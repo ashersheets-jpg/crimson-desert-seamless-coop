@@ -26,6 +26,7 @@ struct Twin {
     uint64_t twin = 0;
     bool initialised = false;  // its first 2920 (the initial state) given
     uint32_t root = 0;         // that 2920's root value (the answer to a branch 0 carries it)
+    uint32_t state = 0;        // the type of the last 2920 it was given (stl::next_branch_type)
 };
 std::unordered_map<uint64_t, Twin> g_twins;  // the host's scene id -> its twin
 std::atomic<uint64_t> c_prepared{0}, c_deleted{0}, c_withheld{0}, c_answered{0}, c_branches{0};
@@ -133,27 +134,26 @@ bool shop_twin_on_out(std::span<const uint8_t> packet, std::vector<std::vector<u
         if (!stl::split(packet, op, pl)) return false;
         const uint64_t id = stl::id_of_request(pl);
         if (!stl::is_twin_id(id)) return false;
-        uint32_t root = 0;
+        std::vector<std::vector<uint8_t>> a;
+        uint32_t type = 0;
         {
             std::lock_guard lk(g_mu);
-            bool known = false;
-            for (const auto& [h, t] : g_twins)
-                if (t.twin == id) {
-                    known = true;
-                    root = t.root;
-                }
-            if (!known) return false;
+            Twin* tw = nullptr;
+            for (auto& [h, t] : g_twins)
+                if (t.twin == id) tw = &t;
+            if (!tw) return false;
+            a = stl::local_answers(op, pl, own_key(), tw->root, tw->state);
+            type = tw->state;
         }
-        auto a = stl::local_answers(op, pl, own_key(), root);
         c_withheld.fetch_add(1);
         if (!a.empty()) c_answered.fetch_add(1);
         if (op == stl::kOpBranchReq && pl.size() >= 12) {
             c_branches.fetch_add(1);
             g_last_branch.store(stl::rd32(pl.data() + 8));
-            log::info("ShopTwin [branch] twin 0x{:X} -> branch {} (answered locally; the host's scene is untouched)", id,
-                      stl::rd32(pl.data() + 8));
-            // Test harness aid: a flag file next to the exe while a twin is past its start (the walker stops there).
-            if (stl::rd32(pl.data() + 8) != 0) {
+            log::info("ShopTwin [branch] twin 0x{:X} -> branch {} answered locally with state {} (the host's scene is "
+                      "untouched)", id, stl::rd32(pl.data() + 8), type);
+            // Test harness aid: a flag file next to the exe once a twin's menu is up (the walker stops there).
+            if (type == 2) {
                 if (HANDLE f = CreateFileW(L"shop_twin_open.flag", GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, 0, nullptr);
                     f != INVALID_HANDLE_VALUE)
                     CloseHandle(f);

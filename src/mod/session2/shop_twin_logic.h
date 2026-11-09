@@ -110,16 +110,44 @@ inline uint32_t root_of_initial_2920(std::span<const uint8_t> pl) {
     return pl.size() == 29 && rd32(pl.data() + 13) == 0 && rd32(pl.data() + 17) == 0xFFFFFFFFu ? rd32(pl.data() + 21) : 0;
 }
 
-// The local answers to a withheld request about a twin (what the host's server answers for its own scenes, tcB116):
-//   2880 StageBranchStateReq  id u64 | branch u32 | u16
-//     branch N != 0 -> 2708 SetAvoidByCutSceneAck (4 | actor | id | 1 | actor), 2436 (4 | actor | id | N | 0),
-//                      2920 (4 | actor | id | u32 1 | u32 N)
-//     branch 0      -> 2436 (4 | actor | id | 0 | 0), 2708 (4 | actor | id | 0 | actor),
-//                      2920 (4 | actor | id | u32 2 | u32 0 | u32 root | u32 0)   (root: the scene's initial 2920)
+// The local answers to a withheld request about a twin: what the host's server answers for its own shop scenes. The
+// server keeps a state per scene, the type of its last 2920 (tcB165: the same request, branch 0, is answered "back to
+// the menu" (2) after the greeting and "open the store" (3) from the menu; the client loops on the menu if it always
+// gets 2). Transitions, from 30 host captures (state = the last 2920 type; the initial 2920 is type 0):
+//   state 0, branch N -> 2708 (on, N != 0), 2436 N, 2920 type 1 N                       (the greeting starts)
+//   state 1, branch N -> 2436 N, 2708 (off), 2920 type 2 N root 0                       (the greeting ends: the menu)
+//   state 2, branch 0 -> 2436 0, 2920 type 3 0                                          (Buy / Sell: the store opens)
+//   state 2, branch N -> 2436 N, 2920 type 7 N                                          (Leave)
+//   state 3, branch N -> 2436 N, 2920 type 2 N root 0                                   (the store closes: the menu)
+//   state 7, branch N -> 2436 N, 2920 type 0 N root 0                                   (the scene is over)
+// Message forms: 2880 StageBranchStateReq id u64 | branch u32 | u16; 2436 (4 | actor | id | N | u8 0);
+// 2708 SetAvoidByCutSceneAck (4 | actor | id | u8 on | actor); 2920 (4 | actor | id | u32 type | u32 N [| root | 0]).
 //   2839 UpdateStageChartEventReq  id u64 | 9 bytes          -> 2187 (4 | actor | id | the same 9 bytes)
 //   anything else: no answer (withheld only).
+inline std::vector<uint8_t> branch_state(uint32_t guest, uint64_t id, uint32_t type, uint32_t n, bool with_root,
+                                         uint32_t root) {
+    std::vector<uint8_t> st(with_root ? 29 : 21, 0);
+    st[0] = 4;
+    wr32(st.data() + 1, guest);
+    wr64(st.data() + 5, id);
+    wr32(st.data() + 13, type);
+    wr32(st.data() + 17, n);
+    if (with_root) wr32(st.data() + 21, root);
+    return st;
+}
+// The next state of a scene from `state` on a request for branch `n` (the table above).
+inline uint32_t next_branch_type(uint32_t state, uint32_t n) {
+    switch (state) {
+        case 0: return 1;
+        case 1: return 2;
+        case 2: return n == 0 ? 3 : 7;
+        case 3: return 2;
+        case 7: return 0;
+        default: return 2;
+    }
+}
 inline std::vector<std::vector<uint8_t>> local_answers(uint16_t op, std::span<const uint8_t> pl, uint32_t guest,
-                                                       uint32_t root = 0) {
+                                                       uint32_t root, uint32_t& state) {
     std::vector<std::vector<uint8_t>> out;
     const uint64_t id = id_of_request(pl);
     if (op == kOpBranchReq && pl.size() >= 12) {
@@ -128,32 +156,21 @@ inline std::vector<std::vector<uint8_t>> local_answers(uint16_t op, std::span<co
         wr32(ev + 1, guest);
         wr64(ev + 5, id);
         wr32(ev + 13, branch);
-        uint8_t av[18] = {4};
-        wr32(av + 1, guest);
-        wr64(av + 5, id);
-        av[13] = branch != 0 ? 1 : 0;
-        wr32(av + 14, guest);
-        if (branch != 0) {
-            uint8_t st[21] = {4};
-            wr32(st + 1, guest);
-            wr64(st + 5, id);
-            wr32(st + 13, 1);
-            wr32(st + 17, branch);
-            out.push_back(frame(kOpAvoidByCutScene, av));
-            out.push_back(frame(kOpBranchEvent, ev));
-            out.push_back(frame(kOpBranchState, st));
-        } else {
-            uint8_t st[29] = {4};
-            wr32(st + 1, guest);
-            wr64(st + 5, id);
-            wr32(st + 13, 2);
-            wr32(st + 17, 0);
-            wr32(st + 21, root);
-            wr32(st + 25, 0);
-            out.push_back(frame(kOpBranchEvent, ev));
-            out.push_back(frame(kOpAvoidByCutScene, av));
-            out.push_back(frame(kOpBranchState, st));
-        }
+        auto avoid = [&](bool on) {
+            uint8_t av[18] = {4};
+            wr32(av + 1, guest);
+            wr64(av + 5, id);
+            av[13] = on ? 1 : 0;
+            wr32(av + 14, guest);
+            return frame(kOpAvoidByCutScene, av);
+        };
+        const uint32_t type = next_branch_type(state, branch);
+        if (state == 0 && branch != 0) out.push_back(avoid(true));
+        out.push_back(frame(kOpBranchEvent, ev));
+        if (state == 1) out.push_back(avoid(false));
+        const bool with_root = type == 2 || type == 0;
+        out.push_back(frame(kOpBranchState, branch_state(guest, id, type, branch, with_root, root)));
+        state = type;
     } else if (op == kOpChartEventReq && pl.size() == 17) {
         uint8_t a[22] = {4};
         wr32(a + 1, guest);
@@ -162,6 +179,10 @@ inline std::vector<std::vector<uint8_t>> local_answers(uint16_t op, std::span<co
         out.push_back(frame(kOpChartEventAck, a));
     }
     return out;
+}
+inline std::vector<std::vector<uint8_t>> local_answers(uint16_t op, std::span<const uint8_t> pl, uint32_t guest) {
+    uint32_t st = 0;
+    return local_answers(op, pl, guest, 0, st);
 }
 
 // ---- the shop dialog entries (2026-11-09) --------------------------------------------------------------------------
