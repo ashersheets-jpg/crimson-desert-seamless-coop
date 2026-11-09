@@ -3391,3 +3391,7 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   CommonSequencerPlayDataActorComponent (server; client ClientSequencerPlayDataActorComponent vtable 0x594FAF0, its
   scene +0x2E0 / owner as GuestSeqRoute's G5 reads them). Find what it serializes into the 2005 and what clears its
   scene / owner when a stage closes (reason 19), then clear it for the NPCs of U-1's closed funcnpc stages.
+- 2026-11-09 18:24 tcB230 (-Lobby, the release defaults: far shops off, S35 containment on, the guest's
+  far-world keys): the guest's near-host butcher menu OPENS ("stopfile seen", sweep 4); containment ready (all three
+  probes), 4 late NPCs abandoned one by one, no run-wide U-e abort; both alive, SAVES OK. These are the defaults the
+  package gets.
