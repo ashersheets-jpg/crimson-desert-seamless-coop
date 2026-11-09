@@ -548,12 +548,13 @@ struct Config {
     // S42: 2928/2145/2953 y resultado nativo; probe/1 sólo observan, no fuerzan puertas.
     std::string s2_door_trace = "0";
     bool s2_anim_probe = false;  // Co-op+ 2026-11-08: AnimProbe
-    bool s2_hide_watch = false;  // 2026-11-08 test builds: HideWatch (horse_diag.cpp)
+    uint32_t s2_hide_watch = 0;  // 2026-11-08 test builds: HideWatch (horse_diag.cpp)
     bool s2_interact_probe = false;  // Co-op+ 2026-11-08: InteractProbe
     bool s2_interact_owner_override = false;  // Co-op+ 2026-11-08: TEST
     bool s2_user2_knowledge_share = false;  // Co-op+ 2026-11-08: TEST (host)
     bool s2_user2_condition_subject_host = false;  // Co-op+ 2026-11-08: TEST (host)
     bool s2_test_greet = false;  // Co-op+ 2026-11-08: TEST (guest)
+    uint32_t s2_merchant_unhide = 0;  // 1 on, 2 diagnostics only  // Co-op+ 2026-11-09: shop NPCs hidden in co-op (merchant_unhide.h)
     bool s2_guest_shop_check = false;  // Co-op+ 2026-11-08: the guest trades at the host's merchants (shop_guest.h)
     bool s2_npc_category_share = true;  // Co-op+ 2026-11-08: the host's NPC quest-dialog categories (npc_category.h)
     bool s2_guest_condition_subject_host = false;  // Co-op+ 2026-11-08: TEST (guest)

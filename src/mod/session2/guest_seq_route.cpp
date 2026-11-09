@@ -23,6 +23,7 @@
 #include "mod/session2/guest_stage_diag.h"
 #include "mod/session2/guest_stage_diag_logic.h"
 #include "mod/session2/guest_x_interaction.h"
+#include "mod/session2/merchant_unhide.h"
 #include "mod/session2/guest_x_veto.h"
 #include "mod/session2/observer_seq_copy_logic.h"
 #include "mod/session2/p8_probe_logic.h"
@@ -1321,6 +1322,7 @@ void guest_seq_route_hook(Point point, safetyhook::Context& ctx) noexcept {
             const uintptr_t wrap = rdp(ctx.rbp + 0x100);
             f.actor = rdp(wrap);
             raw = rdp(wrap + kWrap_Raw);
+            if (f.kind_ok) merchant_unhide_note_2380(raw);  // Co-op+ 2026-11-09: the shop scenes' bindings
             break;
         }
         case Point::P2981: {  // 3549: the wrapper's home slot [rbp+0xA0] (r14 reused at 0xD357FE)

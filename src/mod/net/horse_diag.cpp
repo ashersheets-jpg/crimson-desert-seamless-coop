@@ -458,6 +458,8 @@ struct HwHit {
 std::atomic<uintptr_t> g_hw_addr{0};
 std::atomic<bool> g_hw_armed{false}, g_hw_requested{false};
 bool g_hw_enabled = false;
+uint32_t g_hw_mode = 1;  // 1: the hide mask (8 bytes); 2: the scene component's byte +0x3E0 (1 byte); 3: the host
+                         // character's stage manager state +0x259 (1 byte), armed from the probe's tick
 HwHit g_hw_hits[40];
 std::atomic<uint32_t> g_hw_n{0}, g_hw_logged{0};
 LONG CALLBACK hw_veh(EXCEPTION_POINTERS* ep) {
@@ -515,7 +517,7 @@ void hw_arm_all(uintptr_t addr) {
             c.ContextFlags = CONTEXT_DEBUG_REGISTERS;
             if (GetThreadContext(th, &c)) {
                 c.Dr0 = addr;
-                c.Dr7 = (c.Dr7 & ~0xF0003ull) | 1ull | (1ull << 16) | (3ull << 18);  // L0, write, 8 bytes
+                c.Dr7 = (c.Dr7 & ~0xF0003ull) | 1ull | (1ull << 16) | ((g_hw_mode >= 2 ? 0ull : 2ull) << 18);  // L0, write, 1 or 8 bytes
                 if (SetThreadContext(th, &c)) ++armed;
             }
             ResumeThread(th);
@@ -562,9 +564,16 @@ void hw_on_2380(safetyhook::Context& ctx) {
         }
         log::info("HideWatch [2380 butcher scene] NPC 0x{:08X} actor 0x{:X} info 0x{:X}: masks before the binding "
                   "+0x3B8 0x{:016X} +0x3C0 0x{:016X}", key, a ? *a : 0, info, lo, hi);
-        if (info && !g_hw_armed.exchange(true)) {
+        uintptr_t play = 0;
+        uint8_t wait = 0;
+        if (comps) game::safe_read(comps + 0xB0, &play, 8);
+        if (play) game::safe_read(play + 0x3E0, &wait, 1);
+        log::info("HideWatch [2380 butcher scene] NPC 0x{:08X}: scene component 0x{:X} +0x3E0 {} before the binding", key,
+                  play, wait);
+        const uintptr_t target = g_hw_mode == 3 ? 0 : g_hw_mode == 2 ? (play ? play + 0x3E0 : 0) : (info ? info + 0x3B8 : 0);
+        if (target && !g_hw_armed.exchange(true)) {
             g_hw_requested.store(true);
-            hw_arm_sync(info + 0x3B8);
+            hw_arm_sync(target);
         }
     }
 }
@@ -1109,6 +1118,21 @@ void ip_on_keep(safetyhook::Context& ctx) {  // 0xAC0335 cmp byte [rsp+0x30],0
 DWORD WINAPI interact_probe_thread(LPVOID) {
     for (;;) {
         Sleep(5000);
+        if (g_hw_enabled && g_hw_mode == 3 && !g_hw_armed.load()) {  // the host character's stage manager +0x259
+            if (const auto ch = game::find_actor(0xA0100001u); ch && *ch) {
+                uintptr_t comps = 0, seq = 0, mgr = 0;
+                if (game::safe_read(*ch + 0x68, &comps, 8) && comps && game::safe_read(comps + 0xA8, &seq, 8) && seq &&
+                    game::safe_read(seq + 0x18, &mgr, 8) && mgr) {
+                    uint8_t st = 0;
+                    game::safe_read(mgr + 0x259, &st, 1);
+                    if (st == 3) {  // armed once the manager plays: the next write is the one that stops it
+                        log::info("HideWatch: the host character's stage manager 0x{:X} is at state 3: watching +0x259", mgr);
+                        g_hw_requested.store(true);
+                        g_hw_addr.store(mgr + 0x259);
+                    }
+                }
+            }
+        }
         if (g_hw_enabled) {  // HideWatch (above): arm from this thread, never from a hook
             if (const uintptr_t a = g_hw_addr.load(); a && !g_hw_armed.exchange(true)) hw_arm_all(a);
             hw_tick();
@@ -1428,9 +1452,11 @@ void horse_diag_tick() {
     }
 }
 
-void interact_probe_hide_watch(bool on) {
+void interact_probe_hide_watch(uint32_t mode) {
+    const bool on = mode != 0;
+    g_hw_mode = mode >= 2 ? mode : 1;
     g_hw_enabled = on;
-    if (!on) return;
+    if (!on || g_hw_mode == 3) return;  // mode 3 arms from the probe's tick, no 2380 point
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     const uint8_t want[] = {0x41, 0x80, 0xFE, 0x04, 0x74, 0x47};
     uint8_t got[sizeof want] = {};
