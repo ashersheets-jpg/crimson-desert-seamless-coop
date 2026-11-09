@@ -207,9 +207,12 @@ inline const char* arm_name(Arm a) {
 
 // ---------------------------------------------------------------- the would-be state machine (§5.2), probe only
 
+// Co-op+ 2026-11-09 (3576): ByJunter's proposal for the 4-9 cell dead zone (PENDIENTES.md 4; tcB172: the guest's market
+// EMPTY with the host 6.7 cells away: the host's manager creates stages only 1-3 cells around its character, U-1 armed
+// only at >= 10): arm at >= 4 cells after 3 s, drain at <= 2 cells after 5 s; the overlap is U-f2's dup_skip.
 struct Thresholds {
-    uint32_t on_cells = 10, off_cells = 7;
-    uint64_t on_dwell_us = 10'000'000, off_dwell_us = 5'000'000;
+    uint32_t on_cells = 4, off_cells = 2;
+    uint64_t on_dwell_us = 3'000'000, off_dwell_us = 5'000'000;
 };
 enum class Would : uint8_t { Off, On };
 enum class Step : uint8_t { None, WouldArm, WouldDrain };

@@ -148,7 +148,8 @@ void test_arm() {
 }
 
 void test_machine() {
-    const u2s::Thresholds t;  // on >= 10 for 10 s, off <= 7 for 5 s
+    const u2s::Thresholds t{10, 7, 10'000'000, 5'000'000};  // the machine on 2976's thresholds (the defaults are 4 / 2 since 2026-11-09)
+    static_assert(u2s::Thresholds{}.on_cells == 4 && u2s::Thresholds{}.off_cells == 2);
     u2s::Machine m;
     const uint64_t s = 1'000'000;
     CHECK(u2s::step(m, true, 12, 100 * s, t) == u2s::Step::None);

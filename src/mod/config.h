@@ -557,6 +557,7 @@ struct Config {
     bool s2_dialog_share_all = false;  // Co-op+ 2026-11-09: every non-greeting dialog group shared (shop_twin.h)
     bool s2_shop_twin = false;  // Co-op+ 2026-11-09: the guest's own shop scenes (shop_twin.h)
     bool s2_stage_candidate_guard = true;
+    bool s2_fog_share = false;  // Co-op+ 2026-11-09 B04: the guest's map fog OR the host's at its login (fog_share.h)
     bool s2_quest_own_progress = false;   // Co-op+ 2026-11-09 B10: each player's game events to its own quest manager (quest_route.h)
     bool s2_quest_shared_credit = false;  // Co-op+ 2026-11-09 B10: the same event offered to the other player's manager too
     bool s2_npc_dialog_share = false;  // Co-op+ 2026-11-09: user 2's NPC dialog lists with the host's category (npc_category.cpp)  // Co-op+ 2026-11-09: the 3117 handler's null holder (stage_candidate_guard.h)

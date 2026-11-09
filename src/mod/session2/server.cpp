@@ -53,6 +53,7 @@
 #include "mod/session2/user2_shops.h"
 #include "mod/session2/user2_stages.h"
 #include "mod/session2/world_anchor.h"
+#include "mod/session2/fog_share.h"
 
 namespace cdmp::session2 {
 namespace {
@@ -472,6 +473,8 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
         if (v->opcode == kOpRemoveActorAck2516 && world_anchor_active() && self == live_session2()) {
             world_anchor_on_user2_out(v->opcode, v->payload);
         }
+        // Co-op+ 2026-11-09 B04 (fog_share.h): the guest's map fog chunks OR the host's, in place.
+        if (v->opcode == 2196 && self == live_session2()) fog_share_on_user2_out(std::span<uint8_t>(p));
         // C4: the server's answers to user 2's logout (7-byte internal Acks).
         if (v->opcode == troc::kOpLogoutSessionAck || v->opcode == troc::kOpLogoutUserAck) {
             g_n.logout_acks.fetch_add(1, std::memory_order_relaxed);
