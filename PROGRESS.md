@@ -3224,3 +3224,11 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   loop ByJunter contained with his S35 keys, not in our build); and the guest's near-host butcher menu did NOT open
   again. tcB205 (the same flow before the far-shop keys) opened it, so the four far-shop keys are OUT of the release
   defaults again (layer committed) until the conflict is found -- tcB220 checks the near shop without them.
+- 2026-11-09 18:35 tcB220 (-Lobby, far-shop keys out): the guest's near-host butcher menu OPENS again ("stopfile
+  seen"); both alive, SAVES OK. So the four far-shop keys conflict with the near-host shop twin (to find; far shops
+  stay a non-default option for now). Also: U-1 armed at the guest's own saved place (5 cells from the host) and U-e
+  aborted 10 s later on ByJunter's S31 respawn loop: 212 NPCs given to user 2, its client drove 205, 27 despawned by
+  their AI (reason 42) and put back by their stage within a minute -> "user2_npc_control stops assigning". His S33 /
+  S35 containment (npc_activation, npc_action_evidence, npc_containment_guard, npc_degradation, publication_gate,
+  npc_action_probe's 0x281CEE0 group roles) is what stops that loop; not ported yet. Checklist: far-world NPCs may
+  flicker for the first seconds.

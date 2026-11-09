@@ -12,8 +12,8 @@ Each line: what to do, what should happen. Note anything else odd (FPS too, for 
 ## Far from the host (B02)
 - [ ] Host rides / fast-travels 400 m or more away (e.g. to Rodbel Fishing Dock). Guest stays in Hernand market.
 - [ ] After ~10 s the guest's town has townsfolk walking around (before today it was empty).
-- [ ] Do they behave (walk their routes, no flicker / vanish-and-reappear loop)?
-- [ ] Can the guest talk to them? (Shops far away are NOT expected to work yet.)
+- [ ] Do they behave (walk their routes, no flicker / vanish-and-reappear loop)? (Known: some may vanish and come back in the first seconds -- the NPC loop guard stops it after ~10 s; note how it looks.)
+- [ ] Can the guest talk to them? (Shops far away work in my test with extra settings that are not on by default yet.)
 - [ ] Host comes back: no duplicate NPCs, nothing pops.
 
 ## Quests (B10, option 3)
