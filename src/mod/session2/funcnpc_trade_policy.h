@@ -16,9 +16,17 @@ struct Resource {
     std::string_view name;
     uint32_t hash;
 };
-inline constexpr std::array<Resource, 2> kResources = {{
+// Co-op+ 2026-11-09 (3576): every merchant scene merchant_unhide knows (ByJunter's list had the two he verified).
+inline constexpr std::array<Resource, 9> kResources = {{
     {"cd_seq_funcnpc_smithy", 0xA7132561u},
     {"cd_seq_funcnpc_butcher", 0x978345CAu},
+    {"cd_seq_funcnpc_grocery", 0x8FA1605Eu},
+    {"cd_seq_funcnpc_general", 0x2CFAD71Au},
+    {"cd_seq_funcnpc_bank", 0xAA015527u},
+    {"cd_seq_funcnpc_pub", 0xEA60A5DFu},
+    {"cd_seq_funcnpc_clothes", 0x0591B85Bu},
+    {"cd_seq_funcnpc_leather", 0x6EA4BC4Eu},
+    {"cd_seq_funcnpc_smuggler", 0xE2EB7F12u},
 }};
 inline constexpr bool is_trade_resource(std::string_view base) noexcept {
     for (const Resource& r : kResources) {
@@ -82,6 +90,7 @@ inline constexpr uint32_t dict_hash(std::string_view s, uint32_t seed = kDictSee
 }
 static_assert(dict_hash("cd_seq_funcnpc_smithy") == 0xA7132561u, "lookup3 seed 0xC5EDE: smithy");
 static_assert(dict_hash("cd_seq_funcnpc_butcher") == 0x978345CAu, "lookup3 seed 0xC5EDE: butcher");
+static_assert(dict_hash("cd_seq_funcnpc_grocery") == 0x8FA1605Eu && dict_hash("cd_seq_funcnpc_smuggler") == 0xE2EB7F12u);
 // T1's decision: the hash of the base name U-f read is on the list.
 inline constexpr bool is_trade_name_by_hash(std::string_view base) noexcept {
     return !base.empty() && is_trade_hash(dict_hash(base));
