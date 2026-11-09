@@ -3151,3 +3151,8 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   came from harness settings (packet recorder, diagnostics on) and/or a heavier scene -- a measurement is on the
   checklist. B12 shared stash: the bank exchange (ExchangeItemFromBankReq 2113, handler 0x2C8ED90) works on the
   player's character object (FUN_1422F1DC0(user)), which owns both its bag and its bank: no simple swap; needs RE.
+- 2026-11-09 16:05 B10 option 2 is now the optional bonus the design asks for: Co-op+ setting [coop]
+  shared_quest_credit (panel: "Shared quest credit (same step: done for both)", off by default); the lobby writes
+  quest_shared_credit=1 into the host's native ini at the next co-op launch. Layer tests: the native ini text with
+  the new host defaults (quest_own_progress, fog_share, anti_grief, user2_stages, world anchor) and the option -- all
+  tests pass; both layer builds compile.
