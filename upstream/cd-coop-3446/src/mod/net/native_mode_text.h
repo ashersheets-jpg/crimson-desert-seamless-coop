@@ -101,7 +101,13 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
                               "horse_follow=1", "horse_follow_reverse=1", "user2_fast_travel=1",
                               // B02b (2026-11-09): merchants in co-op: the login guard (merchant_unhide), the guest's
                               // store check on the server (guest_shop_check), the host's shop choices for the guest
-                              "merchant_unhide=1", "guest_shop_check=1", "shop_twin=1"}) {
+                              "merchant_unhide=1", "guest_shop_check=1", "shop_twin=1",
+                              // B10 (2026-11-09): each player's quest events to its own quests (option 3); B04: the
+                              // guest's map fog joined with the host's at its login
+                              "quest_own_progress=1", "fog_share=1",
+                              // B02 far world (2026-11-09, tcB201): the far guest's own NPC stages (U-1 + its timers,
+                              // the world anchor, its NPCs' controller)
+                              "user2_stages=1", "user2_timer_route=1", "user2_world_anchor=1", "user2_npc_control=1"}) {
             line(k);
         }
     } else {
