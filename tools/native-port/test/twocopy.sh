@@ -4,7 +4,7 @@
 source /c/Users/asher/CrimsonDesert-SeamlessCoop/build/port3479/test_guard.sh
 N=/c/Users/asher/CrimsonDesert-SeamlessCoop/build/native; H=/c/Users/asher/CrimsonDesert-SeamlessCoop/build/port3479
 BIN="/d/SteamLibrary/steamapps/common/Crimson Desert/bin64"
-REL=/c/Users/asher/CrimsonDesert-SeamlessCoop/dist/CrimsonDesert-SeamlessCoop-0.1.0-alpha+4effc5c0/mod/cdmp.asi
+REL=/c/Users/asher/CrimsonDesert-SeamlessCoop/dist/CrimsonDesert-SeamlessCoop-0.1.0-alpha+862b4256/mod/cdmp.asi
 NAME=${1:-tc1}
 T0=$(powershell -NoProfile -Command "(Get-Date).ToString('o')" | tr -d '\r')
 powershell -NoProfile -ExecutionPolicy Bypass -File "$(cygpath -w $N/twocopy.ps1)" -Name $NAME ${PSARGS:-} 2>&1 < /dev/null
