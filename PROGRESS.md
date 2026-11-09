@@ -2816,3 +2816,13 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
     at the handler's own exit 0x2CECCBF (r15 = 0, as the normal path). Bytes checked before installing.
   * Next: Sell, another shop (smithy / general store), the host shopping at the same merchant at the same time, the
     twin when the host walks away (its 2292) and comes back.
+- 2026-11-09 04:15 *** THE GUEST SOLD TO A MERCHANT ON ITS OWN (tcB170) *** (and bought again in tcB167).
+  * tcB168: "Sell" is branch 1 from the menu; the twin answered it as Leave (type 7) and the shop closed. Host alone
+    (tcB169, -NoGuest) captured the server: menu (2) -1-> 4 (the sell window), back -0-> 2. So the menu's choices
+    lead to the scene chart's nodes: Buy 0 -> 3, Sell 1 -> 4, Leave 3 -> 7 (an unseen choice N: N + 3 for now).
+  * tcB170: the guest went 6 -> 1, 0 -> 2, 1 -> 4 (sell window), 0 -> 2, 3 -> 7, 1 -> 0; its own
+    SellItemToItemStoreReq (user 2) answered by the host's server: RemoveItemToInventoryAck (the item from the
+    guest's inventory) + AddItemToInventoryAck (the coins). Both alive, SAVES OK.
+  * The host now logs its own shop scenes' transitions ("ShopTwin [host scene] ... state S branch N -> type T",
+    flagged when the twin's table would differ) and writes the harness's stop flag at its menu, so other shops'
+    charts can be checked host-alone (tcB171: the smithy).
