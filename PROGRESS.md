@@ -3416,3 +3416,13 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   does not tell. Likely cause instead: the u16 inventory field is the definition's KEY (dumpitemmove "key?" @def+0:
   bag 0xDFE0, 8 = 0x9040, 5 = 0x23E0, 6 = 0xEC70...), mapped to the index by 0x488D4430 -- I sent 1 (0xFFFF from
   the map = error, silently). tcB234 retries with 0xDFE0 (self, then to the host's 8 and 5).
+- 2026-11-09 18:58 tcB234 (B11, inventory key 0xDFE0): still no answer to any 3111 (self or to the host);
+  both alive, SAVES OK. The handler's field sizes, from its disassembly (0x2C948C0: 4, 2, 8, 4, 4, 2, 2, 4 = 30 B),
+  match what the guest sent, so the frame is accepted and the worker fails without a notice (the item's category
+  check 0x1C27940 against the entry, the room in the target, or its slot rule). And NO client code builds this
+  request: the static Troc object exe+0x6EB9870 is referenced only by the server's handler registration
+  (0x2C71490) -- retail players never send 3111 (a server-internal or dev path). B11 via 3111 is parked. Options
+  left for trading: (a) the host's native module calls the bag's own add / remove chain on ServerRunThread (the
+  exchange worker 0x2E05550's steps, reverse-engineering-3576.md "Items") -- deep; (b) a trade made of two shop
+  actions (the giver sells to a merchant, the receiver buys back) -- no; (c) drop-and-pick-up on the ground, if
+  the game has a player item drop (none found in the Troc table, 11-09). B11 stays open.
