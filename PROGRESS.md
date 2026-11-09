@@ -3177,3 +3177,8 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
     (tcB191/192), so the cell's shop elements are not offered to user 2's manager. Open: confirm with the host far
     BEFORE the guest arrives at the market (as tcB172), then the guest's own shop scene; ByJunter's T1 trade list
     (user2_shop_trade_list) and shop_trade_probe (2976-pinned) are the next pieces if needed.
+- 2026-11-09 16:55 *** tcB213: THE FAR GUEST'S OWN MANAGER PREPARES ITS SHOP SCENES *** -- the host teleported 430 m
+  away first, the guest reached the grocer 40 s later: user 2's U-1 manager "LET THROUGH (U2: a shop scene of user 2's
+  own manager)" 9, "user 2's manager prepared 9 (shop scenes booked 9)". So the shop elements are offered to user 2 once
+  the host's own shop scenes are gone (tcB212: with the guest already at the market the host's stayed alive and none was
+  offered). Both alive, SAVES OK. tcB214: the guest walks to Delkin and holds R in that state.
