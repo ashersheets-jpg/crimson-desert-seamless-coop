@@ -192,7 +192,7 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
 **Last (needs the rest stable)**
 - [ ] **B21 — 3-4 player co-op**, only if two-player play stays stable.
 - [ ] **B22 — Release**: package, two-copy regression, the user's OK (GPL native code), GitHub and Discord.
-  - [ ] **B22a — Save protection and installer (Plitos, required for the release; user 2026-11-08: "add this part to
+  - [~] **B22a — Save protection and installer (Plitos, required for the release; user 2026-11-08: "add this part to
     our final package by the time you release it").** The installer reuses an existing Ultimate ASI Loader (e.g.
     `winhttp.dll`) instead of always deploying `winmm.dll`, keeps occupied proxy DLL names, stops on an ambiguous
     loader setup, backs up BOTH the solo and the co-op save trees and verifies the copies by hash before replacing

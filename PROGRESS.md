@@ -2865,3 +2865,29 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   * tcB185 (usercopy, the release inis written by the layer, no test overrides): host in 06:08:23, guest 06:09:08; the
     guest opened Renee's shop, 6 -> 1, 0 -> 2, 0 -> 3, bought the Small Bag (money 114.54 -> 113.94, "Inventory
     Expansion"), closed, left. Both alive, SAVES OK. ROADMAP B02b -> [~].
+- 2026-11-09 07:00 B22a, the mod part: CO-OP IS REFUSED, SOLO STAYS USABLE, THE REASON SHOWN (tcB188).
+  * Native (local commit): in the release path (no CDMP_ROLE, co-op mode from the layer's ini) a failed co-op save
+    redirect no longer ends the game: co-op is refused for this launch (net, coop and session2 forced off, the
+    loaded config too), the save hooks have already rolled themselves back, so the game is a plain solo game on the
+    player's own saves; the reason is exported (cdmp_coop_refused_reason). The test roles (CDMP_ROLE host/guest)
+    stay fail-closed (the game ends: a test must never reach the real folder). Test aid: bin64\
+    cdmp_test_refuse_coop.<host|guest>.flag refuses co-op in that role with the sandbox redirect still installed
+    (harness -RefuseCoop host|guest; twocopy.sh removes the flags).
+  * Layer: the lobby reads the export once the co-op launch starts; the menu says "Co-op could not start on this PC
+    (<reason>). You are playing solo and your saves are safe. Restart the game to try again.", the next launch is
+    solo, and the partner is told (lobby message 22): "<Host>'s game could not start co-op. Restart the game to play
+    solo." (its next launch solo too).
+  * tcB188 (-Lobby -RefuseCoop host): the host refused at its co-op start, the guest was told 15 s later, both stayed
+    solo with the notes on screen; SAVES OK.
+  * Open for B22a: nothing in the mod part; the installer part was done 11-08 (Plitos credited in the changelog at
+    release).
+- 2026-11-09 07:00 Dialog entries the guest lacks (B02a, open): with BOTH players on the same save (tcB186,
+  -GuestVariant usercopy) 12 NPCs still give the host's client extra quest-dialog entries (groups 0xF435B, 0xF42B6,
+  0xF44B6, 0xF4250...) and the guest's only the greeting (group 1). Not progress: per-player state on the server. The
+  server's builder (SetQuestDialogReq handler 0x2CD9DD0 -> 0x2B72670) looks the NPC up in the ASKING player's table
+  (0x1C35790: hash map +0x68/+0x78/+0x80; record +0x10 base category, +0x11 AI category, +0x12 sent in the 3086) and
+  collects candidates in protected code (0x14BAEB240): the categories / dialog lists there are set by the NPC's AI
+  (AIFunction_SetQuestDialogCategory / RequestNearbyQuestDialog) for the player whose client controls the NPC (the
+  host). npc_category's getter hook (0x1C358E0) covers the condition checks, not this builder. Fix options: copy the
+  host's record bytes into user 2's record before the builder runs for user 2 (server side), or share the host's
+  entries with the guest's client like the shop choices (then check the server accepts the guest's choice).

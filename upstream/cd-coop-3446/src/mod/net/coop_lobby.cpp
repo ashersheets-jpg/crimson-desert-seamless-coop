@@ -24,6 +24,7 @@ constexpr uint8_t kMsgPlan = 6;        // u8 | u8 LobbyPlan                     
 // Native base (lobby_native_init): u8 | u8 LobbyPlan | u8 stage (1 = the host restarts now, 2 = your turn: restart as
 // the guest)                                                                     host -> guest
 constexpr uint8_t kMsgNative = 20;  // (7 is prologue_hold.h, 8 xp_share.h: coop_worlds.cpp routes those first)
+constexpr uint8_t kMsgNativeRefused = 22;  // u8: co-op was refused on the sender's PC (B22a)   either way
 constexpr uint8_t kMsgNativeReady = 21;  // u8: the guest's game is in guest mode (after its restart)   guest -> host
 constexpr uint64_t kRestartDelayMs = 1500;  // the message goes out before this game closes
 constexpr uint64_t kCountdownMs = 3000;
@@ -61,6 +62,29 @@ bool g_auto_started = false;     // host: the plan went on after the guest came 
 bool g_resume_cleared = false;   // in the world: the next launch was set back to Solo
 uint64_t g_resume_since = 0;     // a resumed start waiting for its partner since
 std::string g_native_note;       // a line for the menu (e.g. the friend did not come back)
+bool g_refused_seen = false;     // B22a: the native base refused co-op for this launch (its save redirect failed)
+
+// B22a (2026-11-09): the native base's reason when it refused co-op for this launch (cdmp_coop_refused_reason in
+// cdmp.asi), null when co-op is fine or the export is not there.
+const char* native_refused_reason() {
+    using Fn = const char* (*)();
+    static Fn fn = nullptr;
+    if (!fn) {
+        if (HMODULE m = GetModuleHandleW(L"cdmp.asi")) fn = reinterpret_cast<Fn>(GetProcAddress(m, "cdmp_coop_refused_reason"));
+    }
+    return fn ? fn() : nullptr;
+}
+
+bool native_write_ok(const NativeModeSpec& spec);
+
+// Co-op stops for this launch (ours refused, or the partner's): the next launch is solo, nothing more is sent.
+void native_back_to_solo(const std::string& note) {
+    NativeModeSpec solo;
+    native_write_ok(solo);
+    native_resume_clear(g_native_ini);
+    g_resume = NativeResume{};
+    g_native_note = note;
+}
 
 uint64_t now_ms() { return GetTickCount64(); }
 void send(std::vector<uint8_t> m) { g_out.push_back(std::move(m)); }
@@ -180,6 +204,17 @@ void lobby_tick(const LobbyInput& in) {
     {
         std::lock_guard lock(g_m);
         if (in.at_title && !g_was_at_title) g_dismissed = false;  // back at the title: the menu again
+        if (g_native && !g_refused_seen && g_resume.mode != NativeMode::Solo) {
+            if (const char* why = native_refused_reason()) {
+                g_refused_seen = true;
+                log::warn("Co-op lobby: the native base refused co-op for this launch ({}): playing solo, the next "
+                          "launch is solo, the partner is told", why);
+                native_back_to_solo(std::string("Co-op could not start on this PC (") + why +
+                                    "). You are playing solo and your saves are safe. Restart the game to try again.");
+                send({kMsgNativeRefused});
+                reset_phase();
+            }
+        }
         g_was_at_title = in.at_title;
         if (!in.connected) {
             if (g_phase != Phase::Menu && g_phase != Phase::HostSetup) log::info("Co-op lobby: the party broke up");
@@ -468,6 +503,15 @@ void lobby_on_message(const std::vector<uint8_t>& b) {
                     }
                     if (g_phase != Phase::GuestWait) g_gen_mark = g_in.run_generation;
                     g_phase = Phase::GuestWait;
+                }
+                break;
+            case kMsgNativeRefused:
+                if (g_native) {  // also before our own restart (the host refused right after its restart)
+                    log::warn("Co-op lobby: {}'s game could not start co-op (its save protection did not install): "
+                              "the next launch is solo", g_in.partner_name);
+                    native_back_to_solo(g_in.partner_name.empty() ? std::string("Your friend's game could not start co-op. Restart the game to play solo.")
+                                        : g_in.partner_name + "'s game could not start co-op. Restart the game to play solo.");
+                    reset_phase();
                 }
                 break;
             case kMsgFresh:
