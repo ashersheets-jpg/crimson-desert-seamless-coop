@@ -2918,3 +2918,14 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   keeps the scene alive (in tcB172 the guest arrived after the host had left, and the scene was gone by then). So a
   host leaving mid-shop does not pull the guest's shop away. Harness note: Ctrl+Shift+F6 reaches BOTH copies' layers
   (each dev script ran twice, 21 s apart): harmless for tp scripts, keep in mind for others.
+- 2026-11-09 (after the user's return) B02a, which stages the guest gets (tcB186 packet logs: host
+  cdmp_packets.host_20261109-065804.log, guest cdmp_packets.guest_20261109-070012.log; tool scratchpad schedcmp.py):
+  * CreateFactionSpawnStageAck: host 347, guest 0. CreateNPCScheduleStageAck: host 87 (21 deleted later), guest 39;
+    48 schedule stages only the host gets, none only the guest. Every schedule stage in BOTH logs is addressed to
+    user 0xA0100001 (the host's user): the server creates them for the field owner and the guest only sees the
+    ones near it. UpdateStageListAck (2946): host 82, guest 81 (the quest stage lists match).
+  * Format 2989: 04 | user u32 | stage key u32 (0x000F4A87...) | hash u32 | ... | position floats near the end.
+  * The guest's missing dialog groups (0xF4250, 0xF42B6, 0xF435B, 0xF4440 shop, 0xF4490, 0xF44B6, 0xF4614) are NOT
+    schedule stage keys (no overlap with either side's 2989 keys). Same key range, other table: next, the static
+    dialog table entry's stage key (+8) for each group, then which message creates that stage for the host.
+  * In that run the guest's 3086s carried no non-greeting group at all (only group 1), the host 7 groups.
