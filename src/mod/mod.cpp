@@ -86,6 +86,27 @@ constexpr uint32_t kModBuild = CDMP_BUILD_ID;
 
 HMODULE g_self = nullptr;
 HANDLE g_thread = nullptr;
+
+// B22a (2026-11-09, Plitos's rule): when the co-op save redirect cannot be installed, co-op is REFUSED for this launch
+// and the game stays a plain solo game (the save hooks roll themselves back, so the game sees the player's own save
+// folder as usual); nothing of co-op is installed. The Co-op+ layer reads the reason (cdmp_coop_refused_reason) and
+// shows it. Before 2026-11-09 the game was ended instead.
+std::atomic<bool> g_coop_refused{false};
+char g_coop_refused_why[256] = {};
+// Test aid (B22a): bin64\cdmp_test_refuse_coop.<host|guest>.flag makes that role's redirect count as failed (nothing is
+// installed), to check the refusal path; the harness removes the flags after each run.
+bool test_refuse_flag(const std::wstring& dir, bool guest) {
+    const std::wstring flag = dir + (guest ? L"cdmp_test_refuse_coop.guest.flag" : L"cdmp_test_refuse_coop.host.flag");
+    if (GetFileAttributesW(flag.c_str()) == INVALID_FILE_ATTRIBUTES) return false;
+    log::warn("TEST: cdmp_test_refuse_coop.{}.flag is there: the co-op save redirect counts as failed", guest ? "guest" : "host");
+    return true;
+}
+
+void refuse_coop(const char* why) {
+    strncpy_s(g_coop_refused_why, why, _TRUNCATE);
+    g_coop_refused.store(true);
+    log::error("Co-op REFUSED for this launch: {}. The game runs solo (its own saves, nothing of co-op installed)", why);
+}
 HANDLE g_stop = nullptr;
 HANDLE g_late_thread = nullptr;
 
@@ -988,15 +1009,10 @@ DWORD WINAPI worker(LPVOID) {
                 log::info("Co-op save: folder '{}' (seed {}){}", narrow(coop_dir), narrow(std::wstring(buf)),
                           rs.role == role::Role::None && !s2_on ? " -- [session2] enabled=0: not used" : "");
                 if (rs.role == role::Role::None && s2_on && !rs.extra) {
-                    const bool ok = s2_guest ? session2::save_hooks_install_guest_role()
-                                             : session2::save_hooks_install(saveguard::Mode::Redirect);
-                    if (!ok) {
-                        log::error("Co-op save: the save redirect is NOT installed; the game is ended now so that it "
-                                   "never writes the real save folder");
-                        log::flush(2000);
-                        TerminateProcess(GetCurrentProcess(), 0xCD62);
-                        return 0;
-                    }
+                    const bool test_refuse = test_refuse_flag(dir, s2_guest);
+                    const bool ok = !test_refuse && (s2_guest ? session2::save_hooks_install_guest_role()
+                                                              : session2::save_hooks_install(saveguard::Mode::Redirect));
+                    if (!ok) refuse_coop("the co-op save redirect could not be installed");
                 }
             }
         }
@@ -1006,21 +1022,28 @@ DWORD WINAPI worker(LPVOID) {
         if (rs.role == role::Role::Guest && !in_game) {
             log::info("Role guest: not inside the game (test host): the save redirect is not installed");
         } else if (rs.role == role::Role::Guest && !session2::save_hooks_install_guest_role()) {
+            // A test role (CDMP_ROLE): its saves must never reach the real folder, so the game ends (not solo).
             log::error("Role guest: the save redirect is NOT installed; the game is ended now so that it never "
                        "writes the real save folder");
             log::flush(2000);
             TerminateProcess(GetCurrentProcess(), 0xCD60);
             return 0;
+        } else if (rs.role == role::Role::Guest && in_game && test_refuse_flag(dir, true)) {
+            refuse_coop("TEST: the refusal path (the sandbox redirect stays installed)");
         }
         // Co-op+ port: the host role redirects its saves from the start too (into the cdmp_save_sandbox copy), not
         // only once a stage that writes is installed, so that no test run (a read-only probe included) can write the
         // real save folder. A failure ends the game here, as for the guest.
         if (rs.role == role::Role::Host && in_game && !session2::save_hooks_install(saveguard::Mode::Redirect)) {
+            // A test role (CDMP_ROLE): its saves must never reach the real folder, so the game ends (not solo).
             log::error("Role host: the save redirect is NOT installed; the game is ended now so that it never "
                        "writes the real save folder");
             log::flush(2000);
             TerminateProcess(GetCurrentProcess(), 0xCD61);
             return 0;
+        }
+        if (rs.role == role::Role::Host && in_game && test_refuse_flag(dir, false)) {
+            refuse_coop("TEST: the refusal path (the sandbox redirect stays installed)");
         }
         if (rs.extra) {
             log::warn("Role {}: another process of this role runs the mod (the game's short-lived second "
@@ -1035,7 +1058,13 @@ DWORD WINAPI worker(LPVOID) {
                        config_layout_size(), sizeof(Config));
             return 0;
         }
-        const Config cfg = load_config(dir + ini.name);
+        Config cfg = load_config(dir + ini.name);
+        if (g_coop_refused.load()) {  // B22a: a plain solo game for this launch
+            cfg.net_enabled = false;
+            cfg.coop_enabled = false;
+            cfg.s2_enabled = false;
+            loaded_config_force_solo();
+        }
         if (rs.role == role::Role::Guest && !(cfg.s2_enabled && cfg.s2_guest)) {
             log::warn("Role guest: the ini has no [session2] enabled=1 guest=1; this copy is not a P8 guest");
         }
@@ -1361,6 +1390,15 @@ DWORD WINAPI worker(LPVOID) {
 }
 
 }  // namespace
+
+}  // namespace cdmp
+
+// B22a: why co-op was refused for this launch (null: it was not). For the Co-op+ layer (GetProcAddress on cdmp.asi).
+extern "C" __declspec(dllexport) const char* cdmp_coop_refused_reason() {
+    return cdmp::g_coop_refused.load() ? cdmp::g_coop_refused_why : nullptr;
+}
+
+namespace cdmp {
 
 void start(HMODULE self) {
     g_self = self;

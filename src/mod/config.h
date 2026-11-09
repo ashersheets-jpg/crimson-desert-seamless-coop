@@ -740,6 +740,8 @@ Config load_config(const std::wstring& ini_path);
 // The result of the last load_config call (a default Config before the first). Written once by the
 // worker before the late-init thread starts; read from session2::install.
 const Config& loaded_config();
+// B22a: co-op refused for this launch (the save redirect failed): the loaded config becomes a plain solo one.
+void loaded_config_force_solo();
 // sizeof(Config) as config.cpp saw it. A translation unit left compiled against an older config.h reads
 // every field after the change at the wrong offset (S44, 15-10: the guest's title menu vanished); the
 // worker compares this with its own sizeof(Config) and installs nothing on a mismatch.

@@ -437,4 +437,10 @@ Config load_config(const std::wstring& ini_path) {
 
 const Config& loaded_config() { return g_loaded; }
 
+void loaded_config_force_solo() {
+    g_loaded.net_enabled = false;
+    g_loaded.coop_enabled = false;
+    g_loaded.s2_enabled = false;
+}
+
 }  // namespace cdmp
