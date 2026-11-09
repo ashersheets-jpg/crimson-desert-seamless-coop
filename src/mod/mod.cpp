@@ -1184,6 +1184,7 @@ DWORD WINAPI worker(LPVOID) {
         if (session2) {
             session2::door_trace_start(cfg.s2_door_trace, cfg.s2_guest);
             net::anim_probe_start(cfg.s2_anim_probe);
+            net::interact_probe_hide_watch(cfg.s2_hide_watch);
             net::interact_probe_start(cfg.s2_interact_probe, cfg.s2_guest && cfg.s2_interact_owner_override);
             net::knowledge_share_start(!cfg.s2_guest && cfg.s2_user2_knowledge_share);
             net::subject_swap_start(!cfg.s2_guest && cfg.s2_user2_condition_subject_host);

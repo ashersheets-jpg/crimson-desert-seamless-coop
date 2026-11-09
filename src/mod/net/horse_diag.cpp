@@ -2,6 +2,7 @@
 
 #include <windows.h>
 #include <intrin.h>
+#include <tlhelp32.h>
 
 #include <algorithm>
 #include <atomic>
@@ -444,6 +445,142 @@ void ip_on_entry(safetyhook::Context& ctx) {
                   local_key, owner == local && b94 ? "LOCAL" : "NOT LOCAL");
     }
 }
+// 2026-11-08 HideWatch ([session2] interact_probe=1 AND hide_watch=1, test builds only): a hardware write watch
+// (DR0, 8 bytes) on the first hidden target's mask [[t+0x68]+0x20]+0x3B8 (bit 9, tcB118), on every thread of the
+// game, so the code that sets / clears that hide reason is named. Hits are recorded in the handler (RIP, the new
+// value, 8 return addresses) and logged by the probe's tick. 40 hits at most, then the watch is cleared.
+struct HwHit {
+    uintptr_t rip = 0;
+    uint64_t value = 0;
+    uintptr_t frames[8] = {};
+    DWORD tid = 0;
+};
+std::atomic<uintptr_t> g_hw_addr{0};
+std::atomic<bool> g_hw_armed{false}, g_hw_requested{false};
+bool g_hw_enabled = false;
+HwHit g_hw_hits[40];
+std::atomic<uint32_t> g_hw_n{0}, g_hw_logged{0};
+LONG CALLBACK hw_veh(EXCEPTION_POINTERS* ep) {
+    if (!ep || ep->ExceptionRecord->ExceptionCode != EXCEPTION_SINGLE_STEP) return EXCEPTION_CONTINUE_SEARCH;
+    CONTEXT* c = ep->ContextRecord;
+    if (!(c->Dr6 & 1)) return EXCEPTION_CONTINUE_SEARCH;  // not our DR0
+    c->Dr6 = 0;
+    const uint32_t i = g_hw_n.fetch_add(1);
+    if (i < 40) {
+        HwHit& h = g_hw_hits[i];
+        h.rip = c->Rip;
+        h.tid = GetCurrentThreadId();
+        uint64_t v = 0;
+        game::safe_read(g_hw_addr.load(), &v, 8);
+        h.value = v;
+        // the callers: a real unwind (the exe's .pdata) on a copy of the context
+        const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+        CONTEXT u = *c;
+        for (int k = 0; k < 8; ++k) {
+            DWORD64 img = 0;
+            PRUNTIME_FUNCTION fn = RtlLookupFunctionEntry(u.Rip, &img, nullptr);
+            if (!fn) {  // a leaf: the return address is at [rsp]
+                uintptr_t q = 0;
+                if (!game::safe_read(u.Rsp, &q, 8)) break;
+                u.Rip = q;
+                u.Rsp += 8;
+            } else {
+                PVOID hd = nullptr;
+                DWORD64 est = 0;
+                RtlVirtualUnwind(UNW_FLAG_NHANDLER, img, u.Rip, fn, &u, &hd, &est, nullptr);
+            }
+            if (!u.Rip) break;
+            h.frames[k] = (u.Rip > base && u.Rip < base + 0x14000000) ? u.Rip - base : u.Rip;
+        }
+    } else {
+        c->Dr7 &= ~3ull;  // enough: this thread stops watching
+    }
+    return EXCEPTION_CONTINUE_EXECUTION;
+}
+void hw_arm_all(uintptr_t addr) {
+    static PVOID s_veh = AddVectoredExceptionHandler(1, hw_veh);
+    (void)s_veh;
+    g_hw_addr.store(addr);
+    const DWORD me = GetCurrentThreadId(), pid = GetCurrentProcessId();
+    HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+    if (snap == INVALID_HANDLE_VALUE) return;
+    THREADENTRY32 te{sizeof te};
+    int armed = 0;
+    for (BOOL ok = Thread32First(snap, &te); ok; ok = Thread32Next(snap, &te)) {
+        if (te.th32OwnerProcessID != pid || te.th32ThreadID == me) continue;
+        HANDLE th = OpenThread(THREAD_GET_CONTEXT | THREAD_SET_CONTEXT | THREAD_SUSPEND_RESUME, FALSE, te.th32ThreadID);
+        if (!th) continue;
+        if (SuspendThread(th) != static_cast<DWORD>(-1)) {
+            CONTEXT c{};
+            c.ContextFlags = CONTEXT_DEBUG_REGISTERS;
+            if (GetThreadContext(th, &c)) {
+                c.Dr0 = addr;
+                c.Dr7 = (c.Dr7 & ~0xF0003ull) | 1ull | (1ull << 16) | (3ull << 18);  // L0, write, 8 bytes
+                if (SetThreadContext(th, &c)) ++armed;
+            }
+            ResumeThread(th);
+        }
+        CloseHandle(th);
+    }
+    CloseHandle(snap);
+    log::info("HideWatch: DR0 write watch on 0x{:X} armed on {} threads", addr, armed);
+}
+// Arms every thread, the calling one included (a helper thread does it while the caller waits).
+DWORD WINAPI hw_arm_thread(LPVOID p) {
+    hw_arm_all(reinterpret_cast<uintptr_t>(p));
+    return 0;
+}
+void hw_arm_sync(uintptr_t addr) {
+    if (HANDLE t = CreateThread(nullptr, 0, &hw_arm_thread, reinterpret_cast<LPVOID>(addr), 0, nullptr)) {
+        WaitForSingleObject(t, 5000);
+        CloseHandle(t);
+    }
+}
+// The host client's 2380 PrepareSequencerAck handler (guest_seq_route's P2661 point 0xD3414E, cmp r14b,4): for the
+// butcher's scene (cd_seq_funcnpc_butcher 0x978345CA) the bound NPC's mask is logged BEFORE the binding runs and the
+// watch is armed on it, so the write that hides her (if it is the binding's) is caught.
+SafetyHookMid g_hw_2380;
+void hw_on_2380(safetyhook::Context& ctx) {
+    if ((ctx.r14 & 0xFF) != 4 || g_hw_armed.load()) return;
+    uintptr_t wrap = 0, raw = 0;
+    if (!game::safe_read(ctx.rbp + 0x100, &wrap, 8) || !wrap || !game::safe_read(wrap + 0x18, &raw, 8) || !raw) return;
+    const uintptr_t pl = raw + 5;
+    uint32_t hash = 0;
+    uint16_t len = 0;
+    game::safe_read(pl + 27, &hash, 4);
+    game::safe_read(raw + 3, &len, 2);
+    if (hash != 0x978345CAu) return;
+    for (uint32_t o = 92; o + 11 <= len; o += 11) {
+        uint32_t key = 0;
+        if (!game::safe_read(pl + o + 4, &key, 4) || (key >> 28) != 0xB) continue;
+        const auto a = game::find_actor(key);
+        uintptr_t comps = 0, info = 0;
+        uint64_t lo = 0, hi = 0;
+        if (a && *a && game::safe_read(*a + 0x68, &comps, 8) && comps && game::safe_read(comps + 0x20, &info, 8) && info) {
+            game::safe_read(info + 0x3B8, &lo, 8);
+            game::safe_read(info + 0x3C0, &hi, 8);
+        }
+        log::info("HideWatch [2380 butcher scene] NPC 0x{:08X} actor 0x{:X} info 0x{:X}: masks before the binding "
+                  "+0x3B8 0x{:016X} +0x3C0 0x{:016X}", key, a ? *a : 0, info, lo, hi);
+        if (info && !g_hw_armed.exchange(true)) {
+            g_hw_requested.store(true);
+            hw_arm_sync(info + 0x3B8);
+        }
+    }
+}
+void hw_tick() {
+    const uint32_t n = std::min<uint32_t>(g_hw_n.load(), 40);
+    for (uint32_t i = g_hw_logged.load(); i < n; ++i) {
+        const HwHit& h = g_hw_hits[i];
+        const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+        std::string fr;
+        for (uintptr_t f : h.frames)
+            if (f) fr += std::format(" exe+0x{:X}", f);
+        log::info("HideWatch [write {}] T{} at exe+0x{:X} -> mask now 0x{:016X} | stack{}", i, h.tid, h.rip - base,
+                  h.value, fr);
+    }
+    g_hw_logged.store(n);
+}
 void ip_on_gate(safetyhook::Context& ctx) {  // 0xAC027B cmp [rax],r12d (r15 = target)
     IpSlot* sl = ip_slot(ip_key_of(ctx.r15));
     if (!sl) return;
@@ -452,10 +589,33 @@ void ip_on_gate(safetyhook::Context& ctx) {  // 0xAC027B cmp [rax],r12d (r15 = t
     if (game::safe_read(ctx.rax, &code, 4) && code) {
         sl->gate_fail.fetch_add(1, std::memory_order_relaxed);
         sl->gate_code.store(code, std::memory_order_relaxed);
+        // 2026-11-08: eErrNoInteractionTargetIsHidden (0x741F3E3F; co-op hides the merchants, tcB113). 0x22E6C70's
+        // test: [[target+0x68]+0x20] +0x3B8 | +0x3C0 >= 0x80 (two 64-bit masks: the hide reasons). Logged per key
+        // (the first 3 times, then when the masks change), with the target's kind byte [[target+0x88]+1].
+        if (code == 0x741F3E3Fu) {
+            uintptr_t comps = 0, info = 0, kind_obj = 0;
+            uint64_t lo = 0, hi = 0;
+            uint8_t kind = 0;
+            if (game::safe_read(ctx.r15 + 0x68, &comps, 8) && comps && game::safe_read(comps + 0x20, &info, 8) && info) {
+                game::safe_read(info + 0x3B8, &lo, 8);
+                game::safe_read(info + 0x3C0, &hi, 8);
+            }
+            if (game::safe_read(ctx.r15 + 0x88, &kind_obj, 8) && kind_obj) game::safe_read(kind_obj + 1, &kind, 1);
+            static std::atomic<uint32_t> s_lines{0};
+            static std::atomic<uint64_t> s_last_mask{0};
+            const uint64_t mask = lo ^ (hi * 0x9E3779B97F4A7C15ull) ^ ip_key_of(ctx.r15);
+            if (g_hw_enabled && kind == 3 && info && !g_hw_requested.exchange(true)) g_hw_addr.store(info + 0x3B8);
+            if ((s_lines.load() < 12 && sl->gate_fail.load() <= 3) || s_last_mask.exchange(mask) != mask) {
+                if (s_lines.fetch_add(1) < 60)
+                    log::info("InteractProbe [HIDDEN target] 0x{:08X} kind {} | hide masks [[t+0x68]+0x20] 0x{:X}: "
+                              "+0x3B8 0x{:016X} +0x3C0 0x{:016X}", ip_key_of(ctx.r15), kind, info, lo, hi);
+            }
+        }
     }
 }
 std::atomic<uint32_t> g_st_lines{0};
 uint32_t g_st_seen[48] = {};
+
 void ip_on_count(safetyhook::Context& ctx) {  // 0xAC02E4 (after 0x22EAE00): count [rbp-0x78]
     IpSlot* sl = ip_slot(ip_key_of(ctx.r15));
     uint32_t n = 0;
@@ -949,6 +1109,10 @@ void ip_on_keep(safetyhook::Context& ctx) {  // 0xAC0335 cmp byte [rsp+0x30],0
 DWORD WINAPI interact_probe_thread(LPVOID) {
     for (;;) {
         Sleep(5000);
+        if (g_hw_enabled) {  // HideWatch (above): arm from this thread, never from a hook
+            if (const uintptr_t a = g_hw_addr.load(); a && !g_hw_armed.exchange(true)) hw_arm_all(a);
+            hw_tick();
+        }
         struct Row { uint32_t key, d, reached, fail, code, entries, kept, why; };
         std::vector<Row> rows;
         for (auto& sl : g_ip) {
@@ -1264,6 +1428,19 @@ void horse_diag_tick() {
     }
 }
 
+void interact_probe_hide_watch(bool on) {
+    g_hw_enabled = on;
+    if (!on) return;
+    const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    const uint8_t want[] = {0x41, 0x80, 0xFE, 0x04, 0x74, 0x47};
+    uint8_t got[sizeof want] = {};
+    if (!game::safe_read(base + 0xD3414E, got, sizeof got) || std::memcmp(got, want, sizeof want) != 0) {
+        log::warn("HideWatch: the 2380 point 0xD3414E has other bytes; only the probe's own arming");
+        return;
+    }
+    g_hw_2380 = safetyhook::create_mid(reinterpret_cast<void*>(base + 0xD3414E), &hw_on_2380);
+    log::info("HideWatch ON (hide_watch=1, test builds): 2380 point 0xD3414E {}", g_hw_2380 ? "hooked" : "NOT hooked");
+}
 void interact_probe_start(bool on, bool owner_override) {
     g_oc_override.store(owner_override);
     if (owner_override) log::warn("InteractProbe: interact_owner_override=1 (TEST): an owner condition that fails for an "

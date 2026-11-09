@@ -321,6 +321,7 @@ Config load_config(const std::wstring& ini_path) {
     c.s2_enemy_damage_probe = narrow(read_string(ini_path, L"session2", L"enemy_damage_probe", "0"));
     c.s2_door_trace = narrow(read_string(ini_path, L"session2", L"door_trace", "0"));
     c.s2_anim_probe = read_uint(ini_path, L"session2", L"anim_probe", 0) != 0;
+    c.s2_hide_watch = read_uint(ini_path, L"session2", L"hide_watch", 0) != 0;
     c.s2_interact_probe = read_uint(ini_path, L"session2", L"interact_probe", 0) != 0;
     c.s2_interact_owner_override = read_uint(ini_path, L"session2", L"interact_owner_override", 0) != 0;
     c.s2_user2_knowledge_share = read_uint(ini_path, L"session2", L"user2_knowledge_share", 0) != 0;

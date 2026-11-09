@@ -548,6 +548,7 @@ struct Config {
     // S42: 2928/2145/2953 y resultado nativo; probe/1 sólo observan, no fuerzan puertas.
     std::string s2_door_trace = "0";
     bool s2_anim_probe = false;  // Co-op+ 2026-11-08: AnimProbe
+    bool s2_hide_watch = false;  // 2026-11-08 test builds: HideWatch (horse_diag.cpp)
     bool s2_interact_probe = false;  // Co-op+ 2026-11-08: InteractProbe
     bool s2_interact_owner_override = false;  // Co-op+ 2026-11-08: TEST
     bool s2_user2_knowledge_share = false;  // Co-op+ 2026-11-08: TEST (host)

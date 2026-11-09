@@ -28,6 +28,8 @@ void subject_swap_client_start(bool on);
 std::string knowledge_share_describe();
 // Co-op+ (2026-11-08): [session2] interact_probe=1: the client's NPC interaction candidates (read only).
 void interact_probe_start(bool on, bool owner_override = false);
+// 2026-11-08 test builds: a hardware write watch on the first hidden target's hide mask ([session2] hide_watch=1).
+void interact_probe_hide_watch(bool on);
 // The sender's horse key, to watch it next to the copy (any thread).
 void horse_diag_watch(uint32_t key);
 // Writer thread, regularly: summary lines.
