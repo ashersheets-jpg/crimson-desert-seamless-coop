@@ -3189,3 +3189,10 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   sent): the far guest's own shop scene is there but its shop entries / prompt are not yet usable -- next: what its
   client's interaction check refuses (the shop group 0xF4440 entries come from the host's client only, shop_twin's
   state 17, and the host is far: its client never had Delkin's list).
+- 2026-11-09 17:15 tcB214 detail: the guest's client DID receive its own 9 shop scenes (2380 with its character
+  0xA01001DC as the actor, 184-197 s), but no dialog list with the shop group 0xF4440 and no interaction Req at Delkin.
+  ByJunter's s46-tenderos.md §1.1 had this case on 2976: the far guest's client REJECTS its own shop scene
+  (0x3B331F28) because the scene's 2380 arrives before the shopkeeper's 2005 -- observer_hold (in our release ini)
+  holds the 2005 ~350 ms; his T2 = observer_hold_scene_order=1 holds the scene until the NPC is announced. Also
+  needed per §1.1: the store check on the guest's own stage (our guest_shop_check covers the near case; his U2-c =
+  user2_shop_trade_route). tcB215: T2 on.
