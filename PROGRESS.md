@@ -2912,3 +2912,9 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   8a696fd-era build + the layer with tonight's lobby / B22a / shop-key changes). tools/test-install-fake.ps1 on the
   shared-world zip: ALL STEPS PASS (install, vanilla on/off, uninstall leaves bin64 as before, loader reuse cases,
   mod-manager layout).
+- 2026-11-09 07:40 tcB191/192: the host teleports 430 m away while the guest's own store window is open. The guest's
+  store stayed open and normal (shots every 10 s for 2 min), then closed cleanly; both alive, SAVES OK. The host's
+  butcher scene was NOT deleted (other scenes were: 0x1DE, 0x207, 0x208): with the guest standing there the server
+  keeps the scene alive (in tcB172 the guest arrived after the host had left, and the scene was gone by then). So a
+  host leaving mid-shop does not pull the guest's shop away. Harness note: Ctrl+Shift+F6 reaches BOTH copies' layers
+  (each dev script ran twice, 21 s apart): harmless for tp scripts, keep in mind for others.
