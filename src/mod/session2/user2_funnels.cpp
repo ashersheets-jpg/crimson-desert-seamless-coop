@@ -888,8 +888,11 @@ uintptr_t revive_apply_vf48(uintptr_t field, const Frame& fr, uintptr_t ret) {
 // P8 option U (S28, Ghidra): the timer handlers' vf48 calls return to .xtls 0x1082F96A (2043 UpdateStageOnceTimer ->
 // 0x287DBB0), 0x10830A0F (2045 -> 0x2822D00([mgr+0x148])) and 0x10835A8F (2046 -> 0x27FBD60([mgr+0x10])).
 bool timer_vf48_ret(uint32_t rva, uint16_t opcode) noexcept {
-    return (rva == 0x1082F96A && opcode == 2047) || (rva == 0x10830A0F && opcode == 2049) ||
-           (rva == 0x10835A8F && opcode == 2050);
+    // 3576 (2026-11-09, tcB200's caller table: x24 under 2047, x40 under 2049 / 2050, each right after a
+    // call [rax+0x48] in the protected section; 2976: 0x1082F96A / 0x10830A0F / 0x10835A8F). Any of the three for
+    // any of the three timers: the route answers the same object (user 2's manager) for each.
+    const bool timer = opcode == 2047 || opcode == 2049 || opcode == 2050;
+    return timer && (rva == 0xE68CDEA || rva == 0xE6911DF || rva == 0xE6946CF);
 }
 
 // vf48: counted under a subject; changed only by F3 (the 2283's two calls) and F4 (the 2362's setter call).
