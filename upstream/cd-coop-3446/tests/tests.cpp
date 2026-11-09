@@ -1778,7 +1778,7 @@ void test_native_mode_text() {
     // 2026-11-09: the new host defaults, and B10 option 2 only when chosen.
     CHECK(has(ht, "quest_own_progress=1") && has(ht, "fog_share=1") && has(ht, "anti_grief=1") &&
           has(ht, "user2_stages=1") && has(ht, "user2_world_anchor=1") && !has(ht, "quest_shared_credit=1") &&
-          has(ht, "user2_shop_route=1") && has(ht, "user2_stages_elements=schedule+funcnpc"));  // B02b far shops
+          !has(ht, "user2_shop_route=1") && has(ht, "npc_activation=1"));  // far shops off (tcB229); S35 on
     h.shared_quest_credit = true;
     CHECK(has(native_mode_ini_text(h), "quest_shared_credit=1"));
     h.shared_quest_credit = false;

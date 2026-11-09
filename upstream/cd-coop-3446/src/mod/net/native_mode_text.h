@@ -109,20 +109,12 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
                               // B02 far world (2026-11-09, tcB201): the far guest's own NPC stages (U-1 + its timers,
                               // the world anchor, its NPCs' controller)
                               "user2_stages=1", "user2_timer_route=1", "user2_world_anchor=1", "user2_npc_control=1",
-                              // B02b far shops (tcB216): the far guest's own merchants. tcB217 / 219 (the near shop
-                              // not opening with them) were before the U-1 settle gate and the 3576 descriptor offset;
-                              // tcB223 had the near shop open with them.
-                              "shop_probe=1", "user2_shop_route=1", "user2_stages_elements=schedule+funcnpc",
-                              "observer_hold_scene_order=1",
-                              // tcB225: a guest that logged in far (U-1 armed, its own shop scenes) and then came to
-                              // the host kept its copy of the shopkeeper bound to its own (drained) shop scene, so the
-                              // host's shop never showed her: user 2's stages are unloaded at the host's preparation
-                              // near it, before the host's scenes are built (ByJunter's review 2)
-                              "user2_drain_at_host_prepare=1",
-                              // tcB226: the drain alone was not enough (the host's shop scene reached the guest first,
-                              // through ObserverSeqCopy): a host scene that needs an NPC one of the guest's own scenes
-                              // still binds waits for that scene's delete (native conflict hold)
-                              "observer_hold_scene_conflict=1",
+                              // B02b far shops (tcB216: shop_probe, user2_shop_route, user2_stages_elements=
+                              // schedule+funcnpc, observer_hold_scene_order) are NOT default: a guest whose own shop
+                              // scenes (U-1, far) bound a shopkeeper keeps her bound on its client after the drain,
+                              // and the server's own actor keeps that binding too (tcB224-229: the near-host shop
+                              // then has no shopkeeper for the guest). Native conflict hold + refresh built
+                              // (observer_hold_scene_conflict), not enough yet.
                               // ByJunter's S33 / S35 NPC containment, ported to 3576 (2026-11-09): an NPC given to the
                               // far guest that never acts is retired on its own instead of U-e stopping for the whole
                               // run (tcB226: 193 of 196 driven, 3 late -> run-wide abort). Family / road control stay

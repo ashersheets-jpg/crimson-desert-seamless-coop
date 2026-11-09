@@ -3372,3 +3372,18 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   experiment (it needs an item key the guest holds: the bandits save has 22007 x9; the login AddItemToInventoryAck
   lists (type 1) carry every bag item -- to decode: element +17 u64 item no, +25 u32 key). build/port3479/make3111.py
   builds the payload.
+- 2026-11-09 18:14 tcB229 (-Lobby, the refresh with the packet header fixed): no link loss this time, the
+  host KEPT its butcher (host MerchantUnhide: exists, +0xCF 0), ObserverSeqCopy's conflict hold put off 1809 copy
+  releases (it works), the refresh fired for the 5 shopkeepers of user 2's own scenes at 18:10:49 -- but the guest's
+  Renee (0xB010049B) was bound AGAIN to user 2's deleted scene 0x1C8 right then (MerchantUnhide registered a new
+  binding at 18:10:49; G5 at 18:11:09: owner 0xA0100066, scene 0x1C8). So the fresh 2005 carries the server actor's
+  own sequencer state, and the SERVER's Renee still names user 2's (closed) scene after the drain: the guest rebuilds
+  her as she was. The real fix is server-side (clear that binding when U-1's stages close, or have the host's scene
+  take her again); not done. (tcB228's host-side butcher loss came with user 2's broken link / logout, not seen in
+  tcB229.) Menu not open; both alive, SAVES OK.
+  DECISION for the release defaults (layer): far shops OFF again (shop_probe, user2_shop_route,
+  user2_stages_elements=schedule+funcnpc, observer_hold_scene_order, user2_drain_at_host_prepare,
+  observer_hold_scene_conflict out) -- back to tcB220's behaviour where the near-host shop works in the lobby flow;
+  KEPT: the guest's far-world keys and ByJunter's S33 / S35 containment (it worked in tcB228/229: no run-wide U-e
+  abort). The conflict hold + refresh stay in the native code behind observer_hold_scene_conflict (default 0).
+  tcB230 confirms the near shop with these defaults.
