@@ -3196,3 +3196,8 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   holds the 2005 ~350 ms; his T2 = observer_hold_scene_order=1 holds the scene until the NPC is announced. Also
   needed per §1.1: the store check on the guest's own stage (our guest_shop_check covers the near case; his U2-c =
   user2_shop_trade_route). tcB215: T2 on.
+- 2026-11-09 17:30 tcB215 (T2 on): "HoldSceneOrder ... user 2's own trade 2661 0" -- nothing matched: its opcodes were
+  already 3576's (the log text keeps 2976 numbers) and its 2380 prefix 92, but its trade list (funcnpc_trade_policy.h)
+  held only ByJunter's two verified shops (smithy, butcher), not the grocer. Extended to the 9 merchant scenes
+  merchant_unhide knows (hashes by lookup3 seed 0xC5EDE: grocery 0x8FA1605E, general 0x2CFAD71A, bank 0xAA015527, pub
+  0xEA60A5DF, clothes 0x0591B85B, leather 0x6EA4BC4E, smuggler 0xE2EB7F12). tcB216 repeats with it.
