@@ -2777,3 +2777,24 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
     shop scene (mgr2 twin) rather than the host's. Next: decide between that and a guest-local branch of X.
   * Probes added (test builds): per-entry verdicts for shop NPCs, their condition leaves ("client SHOP"), the scene
     check counters at 0x22EE47A / 0x22EE49E / 0x22EE515 / 0x22EE529 / 0x22EE5CA.
+- 2026-11-09 03:20 *** THE GUEST'S OWN SHOP MENU OPENS (tcB164): "Hernand Butchery - Renee: Buy / Sell / Leave" on the
+  guest's screen, with the host in the world; the host's own scene untouched. (User asleep: working down the list.)
+  * Design picked by the user (2026-11-09): the guest's own shop scene. On 3576 the server's prepare starts in
+    protected code (ByJunter's server twin was only ever a probe), so the twin is built on the GUEST'S CLIENT
+    (shop_twin.{h,cpp}, shop_twin_logic.h, [session2] shop_twin=1 on both):
+    - guest: each host 2380 of a shop scene (merchant_unhide_logic's 9 hashes) is followed by a twin 2380: actor,
+      owner and the player binding = the guest's character, id = host id + 0x10000000; its first 2920 likewise; the
+      host's 2292 is preceded by the twin's. The twin lives in the guest's own manager M (state 3), its entries carry
+      the guest's own data condition (the X copy's were null: 0x22EE2D0 refused), its NPC logs in natively.
+    - every client request whose id is a twin's (2880 / 2839 / 2752 / 2620 / 3117...) is WITHHELD in guest_send;
+      a branch is answered locally exactly as the server answers the host (tcB116 bytes): branch N: 2708
+      SetAvoidByCutScene(1), 2436, 2920 (1, N); branch 0: 2436, 2708(0), 2920 (2, 0, the scene's root from its
+      initial 2920, 0). A chart event: its 2187.
+    - the shop menu's choices (SetQuestDialogAck 3086 entries of group 0x000F4440, Renee 0x0A / 0x0B) are in the
+      HOST's per-player table only (put there by the NPC's scene functions on the controlling client): the host
+      collects them from its client's 3086s (sniffer tap) and sends them as tunnel control state 17; the guest adds
+      them to its own 3086 for that NPC. Without them the dialog opened and closed itself (tcB161).
+    - the interaction (3008/3073 with key 0x000F4321) goes to the host's server and is accepted (2120 / 2794).
+  * Tests: optd_shop_twin (twin 2380 / 2920 / 2292 rewrites, local answers byte-exact, the dialog frame and merge).
+  * Harness: walkto.py stops its sweep when the guest's mod writes bin64\shop_twin_open.flag (a twin past branch 0);
+    an early shot 0.5 s after each key.
