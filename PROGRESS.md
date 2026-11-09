@@ -3119,3 +3119,9 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   (each challenge, "Trade (coming soon)" greyed, "Leave"), W / S or up / down choose, Space / Enter select, Esc leaves
   (the keyboard hook holds them from the game while the menu is open), closes by itself after 60 s idle; the prompt
   reads "Interact". tcB209 checks it on the guest (hold R facing the host).
+- 2026-11-09 15:05 *** B16b WORKS ON THE GUEST (tcB209) ***: facing the host 1.3 m away, the "R  Interact" hold
+  prompt drew over the host; holding R 1.3 s logged "the hold-R prompt on the other player opened the interaction
+  menu" and the shop-style menu showed (Host; Duel, Rock paper scissors, Hunting contest, Race to the waypoint, Hide and
+  seek, Fishing contest, Trade (coming soon) greyed, Leave); S twice moved the frame to Hunting contest; Esc closed it.
+  Both alive, SAVES OK. Polish after the shots: more room between "Co-op" and the name, a brighter bold prompt label,
+  the prompt hidden while the menu is open. Both layer builds (native, classic) compile.

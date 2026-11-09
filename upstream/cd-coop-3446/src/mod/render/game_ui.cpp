@@ -562,9 +562,9 @@ void choice_menu(ImDrawList* dl, float screen_w, float screen_h, const std::stri
     float y = std::max(40.0f, screen_h * 0.5f - total * 0.5f);
     const float ss = 19.0f, ns = 30.0f;
     text(dl, g_serif, ss, x + (bw - text_w(g_serif, ss, subtitle)) * 0.5f, y, IM_COL32(232, 200, 130, 255), subtitle);
-    y += ss + 6.0f;
+    y += ss + 14.0f;
     text(dl, g_serif_bold, ns, x + (bw - text_w(g_serif_bold, ns, name)) * 0.5f, y, kText, name);
-    y += ns + 18.0f;
+    y += ns + 22.0f;
     for (size_t i = 0; i < items.size(); ++i) {
         const bool sel = i == pick;
         const bool dim = items[i].find("(coming soon)") != std::string::npos;
@@ -581,7 +581,7 @@ void choice_menu(ImDrawList* dl, float screen_w, float screen_h, const std::stri
 void hold_prompt(ImDrawList* dl, float x, float y, float progress, const std::string& key, const std::string& label,
                  float alpha) {
     // B16b (user 2026-11-09): the game's hold prompt -- the key in a ring that fills while it is held -- with a label.
-    const float r = 15.0f, ks = 17.0f, ls = 19.0f;
+    const float r = 15.0f, ks = 17.0f, ls = 21.0f;
     const ImU32 dark = with_alpha(IM_COL32(10, 9, 8, 200), alpha), rim = with_alpha(IM_COL32(222, 214, 200, 230), alpha),
                 fill = with_alpha(IM_COL32(232, 200, 130, 255), alpha);
     dl->AddCircleFilled(ImVec2(x, y), r, dark, 40);
@@ -594,7 +594,9 @@ void hold_prompt(ImDrawList* dl, float x, float y, float progress, const std::st
     }
     const float kw = text_w(g_serif_bold, ks, key);
     text(dl, g_serif_bold, ks, x - kw * 0.5f, y - ks * 0.55f, p >= 1.0f ? fill : rim, key);
-    if (!label.empty()) text(dl, g_serif, ls, x + r + 8.0f, y - ls * 0.55f, with_alpha(kText, alpha), label);
+    if (!label.empty()) {
+        text(dl, g_serif_bold, ls, x + r + 8.0f, y - ls * 0.55f, with_alpha(IM_COL32(245, 240, 230, 255), alpha), label);
+    }
 }
 
 void nameplate(ImDrawList* dl, float x, float y, const std::string& name, float frac, const std::string& distance,

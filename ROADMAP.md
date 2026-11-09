@@ -190,7 +190,9 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
 - [ ] **B15 — Duel extras and scoreboard** (wagers, arenas, spectator camera, rematch, titles).
 - [ ] **B16 — Emotes and group photo mode.**
 
-- [ ] **B16b — Player interaction menu (user 2026-11-09).** Hold R on the other player (the game's own hold prompt:
+- [~] **B16b — Player interaction menu (user 2026-11-09).** (2026-11-09: built and seen working on the guest,
+  tcB209: the hold-R prompt 'Interact' on the other player opens the shop-style menu with every challenge, a greyed
+  'Trade (coming soon)' and 'Leave'; W/S, Space, Esc. To do: trading (B11) in it; a pad button.) Hold R on the other player (the game's own hold prompt:
   the R key in a circle that fills while held, exactly as at shopkeepers and their shop menus -- NOT a plain
   "R Rock, Paper, Scissors" tap prompt) opens a player interaction menu like the shop menu. It holds every minigame
   challenge the two can do (duel, RPS, race, hunt, fishing, hide and seek, arm wrestling...), later trading (B11) and
@@ -198,7 +200,8 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   R Rock, Paper, Scissors" prompt on the other player; screenshot 2026-11-09), which replaces the Shift+F5 picker.
 
 **Combat and safety**
-- [ ] **B17 — Teammate revive rework** (bleed-out timer, revive by interacting, progress and credit; Q/U kept).
+- [~] **B17 — Teammate revive rework** (2026-11-09: revive by interacting -- hold E next to the downed friend --
+  works, tcB208; the bleed-out timer, progress line and credit notices were there; Q / U kept. User check left.) (bleed-out timer, revive by interacting, progress and credit; Q/U kept).
 - [ ] **B18 — Combat feedback for both** (status effects, knockback, damage numbers, per-player lock-on).
 - [ ] **B19 — Anti-grief protections** (quest NPCs, the host's story items; setting).
 - [ ] **B20 — Partner audio** (footsteps, combat sounds, voice lines, distance falloff).

@@ -590,7 +590,11 @@ void hud_draw(float width, float height) {
         const bool ours = fg_pid == GetCurrentProcessId();
         const bool r_down = ours && (GetAsyncKeyState('R') & 0x8000) != 0;
         bool shown = false;
-        if (d.remote && !d.hide_partner && remote_distance <= 3.0f) {
+        std::string menu_t;
+        std::vector<std::string> menu_i;
+        size_t menu_p = 0;
+        const bool menu_open = net::activity_menu_snapshot(menu_t, menu_i, menu_p);
+        if (!menu_open && d.remote && !d.hide_partner && remote_distance <= 3.0f) {
             const proto::Vec3 chest{d.remote->pos.x, d.remote->pos.y + 1.1f, d.remote->pos.z};
             if (auto p = game::project(*cam, *cam_world, chest, width, height)) {
                 if (std::fabs(p->x - width * 0.5f) < width * 0.22f && std::fabs(p->y - height * 0.5f) < height * 0.32f) {
