@@ -2999,3 +2999,37 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   progress: a mid hook at 0x2B7A7DB gives the event the acting character's own manager ([[[char+0x68]+0x138]+0x18],
   vtables 0x5EE8C80 / 0x5EE8DD0). Shared credit: the thunk (inline hook) runs the callback a second time with the
   other player's manager (the game's apply functions only advance steps that manager has active).
+- 2026-11-09 13:00 world_anchor PORTED to 3576 (native, build + optd_world_anchor pass): the world-observer slot is
+  ServerField +0x198 (u8 on) / +0x19C (u32 key) on 3576 (2976 +0x2E4 / +0x2E8): the 2245 handler's worker 0x2EE64D0
+  writes it at 0x2EE653A (rsi = the field, lock [rsi+8]); ServerField::Reset (vtable 0x5EF2B10 slot 4, 0x2D8E290)
+  clears +0x19C, +0x198 and the owner +0x180. Generation +0x2D0 (the 3549 port's "key"). The field lock
+  pa::WindowsRWLock<4,1>: vtable 0x5B52BF8 (RTTI .?AV?$WindowsRWLock@$03$00@pa@@), Unlock slot 4 0x1554690, TryLock slot
+  5 0x15546C0. Also fixed: world_anchor read the TransformSync's field at +0x500 (2976); 3549+ is +0x518.
+- 2026-11-09 13:05 B04 (shared map / knowledge) research on 3576: fog is a per-player bitmap sent at login as 47
+  FogDataAck (2196, 32705 bytes each; header u8 seq | u32 user), host and guest each get their own; no C>S fog
+  message in play (the reveal is server-side). Visited zones: RegisterVisitZoneReq 2879 / Ack 2564 (handler
+  TrocTrRegisterVisitZoneReq vtable 0x5EEE6F8, slot 2 0x2BFBB80: real logic). Knowledge: AcquireKnowledgeReq 2285,
+  NormalLearnKnowledgeListAck 2711, ShareKnowledgeDataListReq/Ack 2996/2628 (native sharing), LearnKnowledgeByCheatReq
+  2986 (handler 0x2CA2FD0: looks parse-only like the quest cheats). Direction: (map) merge the host's fog bits into the
+  guest's FogDataAck at its login + replay each player's RegisterVisitZoneReq as the other's own Req; (knowledge) the
+  game's ShareKnowledge path or AcquireKnowledgeReq replayed for the other player. Not started.
+- 2026-11-09 13:04 B10 option 3 LIVE (tcB198, quest_own_progress=1 on the host): "QuestRoute: a game event of character
+  0xA01001F6 (the guest) applied to its OWN quest manager 0x5A53E4EF500 (the field's was 0x5A4F219ED80)": the guest's
+  game events no longer go to the host's quests. (Quest steps themselves not yet checked: needs a quest the guest has.)
+  B04 built: fog_share (native, [session2] fog_share, host, default 0): the host's own FogDataAck chunks recorded from
+  its sniffer tap; the guest's FogDataAck chunks OR-ed with them in take_frame (fog_share_logic.h, test passes). The fog
+  is a plain bitmap (full captures of tcB186: runs of 0x01 / 0x80 / 0xC0 bits, 1,520,768 bytes in 47 chunks for both).
+- 2026-11-09 13:08 tcB198: with world_anchor ported, user2_stages' arm check on user 2's manager is READY; the server
+  positions read right after the teleports (host (-10252, -3960), guest (-10681, -3902): 6 cells of 64 m). It did not
+  arm only because U-1 armed at >= 10 cells: ByJunter's own "4-9 cell dead zone" (PENDIENTES.md 4: the host's manager
+  creates stages 1-3 cells around its character), exactly tcB172's empty market. Changed (his proposal): arm at >= 4
+  cells after 3 s, drain at <= 2 after 5 s, the overlap left to U-f2's dup_skip. Native local 5bb2d51 (+ fog_share).
+- 2026-11-09 13:09 tcB198 also: QuestRoute counted 400 game events in 3 min, 45 of the guest's given its own quest
+  manager, 354 the host's (the same as the field's), 0 unreadable; the guest's mission-list updates came at the usual
+  rate (103 in 342 s vs 79 in 262 s without the route): nothing broken. A quest STEP of the guest advancing on its own
+  is still to be shown (needs a quest the guest has active; the usercopy save's are not mapped to places yet).
+  Notes for the next B tasks: B09 on native = the host's scene stages already reach the guest (ByJunter: they took
+  over the guest's camera / UI / input; his guest_seq_foreign is 2976-pinned) -> to test with a host cutscene first.
+  B11: no player item-drop / give message in the 3576 Troc table (only shop / bank / exchange-event ones).
+- 2026-11-09 13:10 tcB198 shots: the guest at the Hernand butcher with the host 441 m away (Rodbel Fishing Dock): the
+  market EMPTY (no Renee, no townsfolk), as tcB172 -- the baseline for tcB199 (U-1 arming at >= 4 cells).
