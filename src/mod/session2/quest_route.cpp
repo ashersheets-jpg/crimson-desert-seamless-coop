@@ -66,8 +66,12 @@ void on_point(safetyhook::Context& ctx) {
     if (t_pass == 2) {  // the other player's pass: its manager, or none (rax 0: the callback skips)
         const uintptr_t other = other_character(actor, nullptr);
         const uintptr_t mgr = other ? manager_of(other) : 0;
-        if (!mgr) c_shared_skipped.fetch_add(1, std::memory_order_relaxed);
-        else c_shared.fetch_add(1, std::memory_order_relaxed);
+        if (!mgr) {
+            c_shared_skipped.fetch_add(1, std::memory_order_relaxed);
+        } else if (c_shared.fetch_add(1, std::memory_order_relaxed) < 5) {
+            log::info("QuestRoute [shared] a game event of character 0x{:08X} also offered to the other player's quest "
+                      "manager 0x{:X}", static_cast<uint32_t>(rdp(actor + 0x60)), mgr);
+        }
         ctx.rax = mgr;
         return;
     }
