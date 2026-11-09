@@ -2929,3 +2929,22 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
     schedule stage keys (no overlap with either side's 2989 keys). Same key range, other table: next, the static
     dialog table entry's stage key (+8) for each group, then which message creates that stage for the host.
   * In that run the guest's 3086s carried no non-greeting group at all (only group 1), the host 7 groups.
+- 2026-11-09 B02a ROOT: the guest's missing dialog groups are WORLD STAGES the server runs only for the field owner.
+  * In tcB186 the host got 36536 UpdateStageStateAck (2349: user | stage key | state u32 ...), the guest NONE at all.
+    The dialog groups the guest lacks are stage keys: 0xF4490 / 0xF44B6 / 0xF435B each get a 2349 (state 0x0A) for user
+    1 right before the NPC's 3086 lists them; 0xF4250 also appears in ActorLoadDataAck / UpdateFactionBlockDataAck.
+    No create message carries them (not 2989 schedule, not 2947 faction spawn, not 2380): they are the cell / region
+    stages the server's world evaluator (0x2AE9650, owner gate 0x2AE972A) runs for the field owner's manager only.
+  * So B02a's missing dialogs and the far-world gap (tcB172) are ONE problem: user 2 has no world stages of its own.
+    The fix for both is ByJunter's user2_stages (user 2's own stage manager evaluated by the world cells), not a
+    per-scene twin. Next: port user2_stages to 3576.
+- 2026-11-09 B02 far-world: ByJunter's U-1 (docs/research/s25, summarised): the far guest's NPCs need user2_stages=1 +
+  user2_timer_route=1 + user2_world_anchor=1 + user2_fast_travel / user2_revive_manager (funnels) and, in practice,
+  user2_npc_control=1 with the S35 containment keys and observer_hold (else NPCs loop: walk, vanish, reappear). Live on
+  2976 (Shadow, two PCs, kit 38/39): town NPCs with routines around the far guest, no duplicates, 0 ERR. Still broken
+  there: shops far away (U-f skips sequencer scenes), a 4-9 cell dead zone, carts. U-1 creates NPC SCHEDULE stages
+  only: no quest-dialog / world stage states for the guest (so it does not fix B02a's dialogs).
+  * Port to 3576 started (build/port-u2s/map.json): matched by call offsets inside already-matched functions (heads
+  alone mislead: the code changed). T 0x2ADA9B0, P 0x2ADBCE0, Arm 0x2ADC230, List 0x2AF5570, Interest 0x2ADC910,
+  L 0x2ADA850, U 0x2ADA6C0, gate fn 0x2AE9650, gate 0x2AE972A / ctx 0x2AE9716. Register allocation CHANGED (the gate's
+  default is r12d on 3576, esi on 2976): every mid hook's register reads must be re-derived, not only its address.
