@@ -485,6 +485,23 @@ void summary() {
               g_filter_drop[5].load(), g_filter_would[1].load(), g_filter_would[2].load(), g_filter_would[3].load(),
               g_filter_would[4].load(), g_filter_would[5].load(), g_drop_outside[0].load(), g_drop_outside[1].load(), g_pass_own[0].load(), g_pass_other[0].load(), g_pass_own[1].load(), g_pass_other[1].load(), g_sniffed.load(),
               g_ring_lost.load());
+    // Co-op+ conflict hold (observer_hold_scene_conflict=1): copies held behind user 2's own scenes.
+    {
+        size_t own = 0;
+        uint64_t blocked = 0;
+        bool on = false;
+        {
+            std::lock_guard lock(g_mu);
+            on = g_copier.own_conflict();
+            own = g_copier.own_binds();
+            blocked = g_copier.own_blocked();
+        }
+        if (on) {
+            log::info("ObserverSeqCopy conflict hold: user 2's own live scenes binding NPCs {} | copy releases put off "
+                      "behind one of them so far {} (a copy waits there until that scene's 2292)",
+                      own, blocked);
+        }
+    }
     // Review M2 (observer_load_defer): the host's 2322 waiting for snapshot copies.
     if (const uint64_t hold_ms = g_milestone_hold_ms.load()) {
         log::info("ObserverSeqCopy 2322 hold (observer_load_defer): while a snapshot copy waits for its actors, the "
