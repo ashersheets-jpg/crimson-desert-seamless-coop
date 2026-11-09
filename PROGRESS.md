@@ -3100,3 +3100,14 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   base the other player is a real actor on each client, so the prompt can be the game's own interaction UI: find
   how a shopkeeper's hold-R entry is built (the interaction table entry with the hold type; shop_twin's entries) and
   add a co-op entry for the other player's actor, or draw our own hold ring in the overlay as a fallback.
+- 2026-11-09 14:45 B17 / B16b built (layer, pushed):
+  * B17 revive by interacting: holding E (the game's interact key) next to the downed friend revives them, as well as
+    Shift+F7 / the pad chord; the hint reads "Hold E or {ReviveFriend} to revive X". tcB206 (bandits, -ReviveWithE):
+    the guest's walk to the downed host stuck at a cliff (194 m) -- no revive tried. tcB207 (both at the butcher, the
+    host's KillCheatReq): the dev script's wait caps at 10 s and Ctrl+Shift+F6 runs BOTH copies' scripts, so the host
+    went down at +10 s and the guest's E came 38 s later, past the 30 s bleed-out. tcB208 retimed (4 x wait 10000).
+  * B16b first version: the hold-R prompt drawn on the other player (render/hud.cpp + ui::hold_prompt in game_ui.cpp:
+    the R in a dark ring, a gold arc filling over 0.8 s, "Challenges" beside it), within 3 m with the other player near
+    the middle of the screen and OUR game window in front (two copies on one PC); full -> activity_request_menu() ->
+    the challenge tick acts as Shift+F5 (opens the challenge list, or accepts a received challenge). Shift+F5 kept.
+    Next: the menu itself in the shop-menu style (a list of challenges, later trading) instead of the old picker.
