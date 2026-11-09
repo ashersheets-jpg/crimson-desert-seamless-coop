@@ -3395,3 +3395,6 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   far-world keys): the guest's near-host butcher menu OPENS ("stopfile seen", sweep 4); containment ready (all three
   probes), 4 late NPCs abandoned one by one, no run-wide U-e abort; both alive, SAVES OK. These are the defaults the
   package gets.
+- 2026-11-09 18:25 Local package (NOT published): dist/CrimsonDesert-SeamlessCoop-0.1.0-alpha+58061ca8-shared-world.zip
+  (11.9 MB; native 4b-series local commits + the layer with tcB230's defaults). tools/test-install-fake.ps1: ALL
+  STEPS PASS.
