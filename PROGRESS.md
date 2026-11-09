@@ -3125,3 +3125,13 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   seek, Fishing contest, Trade (coming soon) greyed, Leave); S twice moved the frame to Hunting contest; Esc closed it.
   Both alive, SAVES OK. Polish after the shots: more room between "Co-op" and the name, a brighter bold prompt label,
   the prompt hidden while the menu is open. Both layer builds (native, classic) compile.
+- 2026-11-09 15:20 B11 (trading) lead on 3576: MoveItemInventoryToOtherInventoryReq 3111 (TrocTr vtable 0x5EEC6F8,
+  handler 0x2C948C0 -> worker 0x2E0B2B0(the sender's character 0x22F1DC0, err, u32, u16, u64, u32* FROM, u32* TO,
+  u16, u16, u32 type)): the worker resolves TWO actors by key with ServerActorManager::vfunction5 (FindActor) and moves
+  an item from one's inventory to the other's, after a condition (CompareTargetParameter) of the "other inventory"
+  type entry ([+0x38] table, stride 0xA0, by the u32 type index). In-game this is most likely the transfer between
+  the player's own party characters (Kliff -> another playable character) -- the game's own item move between two
+  characters, a natural carrier for trades (from = the giver's character, to = the receiver's) if its condition
+  accepts another player's character. Field order from the handler: u32, u16, u64, u32 from, u32 to, u16, u16, u32.
+  No capture of a 3111 yet: put on the user's checklist (move one item to another party character once, the sniffer
+  records it), then a server-side test of from/to across the two players.

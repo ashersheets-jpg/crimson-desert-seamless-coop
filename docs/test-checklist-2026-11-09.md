@@ -33,6 +33,9 @@ Each line: what to do, what should happen. Note anything else odd (FPS too, for 
 ## Revive (B17)
 - [ ] One player goes down; the other walks over and HOLDS E (or Shift+F7): "Reviving X... %" then they stand up where they fell. Q / U still work for the downed player.
 
+## For trading (B11) -- one action that teaches the mod the game's item-move message
+- [ ] If your save has another playable party character: in the inventory, move ONE cheap item from Kliff to that character (and back). Nothing else needed: the mod's log captures it.
+
 ## Already-known open items (no need to test)
 - Shops when the host is far away (the shop scene goes away with the host).
 - Shared quest credit (option 2) is built but off.
