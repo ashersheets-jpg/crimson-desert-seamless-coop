@@ -3293,3 +3293,19 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   inventory key (-> def index), u16 giver SLOT (0xFFFF = any; else 0x22F7FE0(giver, inv +2, slot) must hold that item
   with count >= 1), u32 entry index}. So a crafted trade needs only one valid entry index (kind 1, the two inventory
   ids of the bags), read at runtime from def 0x5560E0 ([0x71C1060] +0x58 table) -- next when B11 gets its turn.
+- 2026-11-09 17:40 tcB225 (-Lobby, far-shop keys + the new guest keys): near-host butcher menu still NOT open; both
+  alive, SAVES OK. Shots: the guest stands at the stall, Renee is NOT there on the guest's screen, while the host's
+  view shows her next to the guest. Cause (logs): U-1 armed 17:23:25 at the guest's login place (5 cells off); user 2's
+  own manager prepared its own copies of all the market's funcnpc scenes (butcher 0x1CD binding Renee 0xB010030B,
+  bank, grocery, leather, smithy, general, clothes, pub). The guest then came to the host: the host's butcher scene
+  0x241 (the SAME NPC 0xB010030B) reached the guest at 17:25:40 (ShopTwin prepared its twin) while Renee was still
+  bound to user 2's own 0x1CD; the distance drain came only at 17:25:43-47 (5 s off timer), its DeleteSequencerAck
+  2292 of 0x1CD reached the guest at 17:25:47 -- and Renee stayed bound to the deleted 0x1CD on the guest
+  (GuestSeqRoute G5: scene +0x2E0 0x1CD, +0xCF 1 = waiting for its scene) for good. An ORDER problem: user 2's stages
+  must be gone before the host's scenes reach it. ByJunter's user2_drain_at_host_prepare=1 (review 2: unload user 2's
+  manager at the host's preparation near it, before the host's evaluation builds its stages; a distance drain waits
+  for that preparation) is that rule: now in the host defaults; tcB226 re-runs the lobby flow. This is not a test
+  artifact: any guest that logs in away from the host and then walks to it hits it.
+- 2026-11-09 17:40 B16b on a pad: the hold prompt's ring also fills with the co-op chord + D-pad Up (the Challenge
+  action); the label shows the pad's buttons ("{Challenge} Interact"); while the prompt is up, the chord's press no
+  longer opens the menu at once (the full ring does). Layer built, tests pass; not seen in the game yet.
