@@ -3068,3 +3068,17 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   containment keys are not on), shops far away (U-f skips the funcnpc scenes: shop_twin needs the host's scene, which
   the server deletes when the host leaves -- ByJunter's user2_shop_trade_list), the host's far spot (Rodbel dock has
   bandits: the host dies in every far run; harmless, but pick a quiet spot).
+- 2026-11-09 13:50 Harness note: the only scripted spots 300-900 m from the Hernand market are camps (Rodbel dock
+  -10238 -3958, events1 / hostcamp -10300 -3690): the far host is attacked and goes down in every far run. Harmless
+  for the guest-side checks so far; a quiet far spot still to find (tprel exists for relative teleports).
+- 2026-11-09 13:55 tcB202 (B04 fog_share=1, host usercopy, guest rps): the host recorded its 47 fog chunks, the
+  guest's 47 were merged (all matched, 37 bytes changed: these two saves have explored nearly the same area -- both
+  maps fully revealed around Hernand in the M-map shots). Mechanism works, no errors, both alive, SAVES OK; a visual
+  proof needs a guest save with much less explored (the earliest prologue save) -- to do.
+- 2026-11-09 14:00 tcB203 (B14, both at tp_inn_table.txt, the host sweeping 360 degrees with R held): the teleport
+  height 617.6 puts the host UNDER the inn's floorboards on 3576 (shots tcB203-sheet.png), so no table prompt; its R
+  presses reached other objects (interactions 0x000F42B1 / 0x2B76). Both alive, SAVES OK. The table's spot on 3576 is
+  unknown: put on the user's hand-test list (a minute by hand vs many scripted runs).
+  Layer (953380c, pushed): the release native ini now turns on for the host quest_own_progress, fog_share and the
+  far-world set (user2_stages, user2_timer_route, user2_world_anchor, user2_npc_control); quest_shared_credit stays off
+  (the optional bonus, to become a setting).
