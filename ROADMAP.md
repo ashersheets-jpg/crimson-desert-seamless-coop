@@ -157,8 +157,13 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
     server builds the world only around the host: the B02 far-world gap, ByJunter's user2_stages, not ported).)
     Start from ByJunter's S46 shop work (docs/research/s25/s46-tenderos.md: own shop scenes for user 2, U2 routing,
     T1/T2, R0), never run in the game and written for 2976.
+    (2026-11-09 later: a second merchant works for the guest -- it bought at the Hernand grocer, tcB194. Far from the
+    host: user2_stages + world_anchor PORTED to 3576 (arm check READY in tcB198); arming lowered to >= 4 cells for
+    the 4-9 cell dead zone; tcB199 checks the guest's market with the host 430 m away.)
 - [ ] **B03 — World events and sieges** joinable by the guest.
-- [ ] **B04 — Shared map and knowledge** (fog / visited zones, knowledge learned by one counts for both).
+- [~] **B04 — Shared map and knowledge** (fog / visited zones, knowledge learned by one counts for both).
+  (2026-11-09: fog_share built -- the guest's map fog at its login OR-ed with the host's on the host's server; live
+  test next. Knowledge: not started.)
 - [ ] **B05 — Other mounts and vehicles** (bears, wolves, raptors...; wagon, skiff, mech) seen and ridden.
 - [ ] **B06 — Mounted combat damage** on shared enemies.
 - [ ] **B07 — Boss mechanics for two** (grabs, finishers, phase triggers, arena locks).
@@ -166,7 +171,9 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   mid-game is not a priority ... people can only join parties from the main menu screen"). Joining is from the title
   screen only (B01's join flow).
 - [ ] **B09 — Shared cutscenes on 3576** (the guest sees the host's boss cutscenes; late1's old crash).
-- [ ] **B10 — Quest sharing on by default** (live quest steps, co-op save per friend: out of experimental).
+- [~] **B10 — Quest sharing on by default** (live quest steps, co-op save per friend: out of experimental).
+  (2026-11-09: quest_route -- option 3 LIVE in tcB198: the guest's game events go to its OWN quest manager instead
+  of the host's; option 2 = quest_shared_credit, built, untested. A guest quest step advancing still to be shown.)
   **Design (user 2026-11-08, after a Discord poll):** option 3 as the base -- each player keeps and plays their OWN
   quests and story in the shared world (start / finish individually, fight together); option 2 as an optional "do it
   together" bonus -- when both are on the SAME step of the same quest, one completing it checks it off for both

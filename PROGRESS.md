@@ -3033,3 +3033,9 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   B11: no player item-drop / give message in the 3576 Troc table (only shop / bank / exchange-event ones).
 - 2026-11-09 13:10 tcB198 shots: the guest at the Hernand butcher with the host 441 m away (Rodbel Fishing Dock): the
   market EMPTY (no Renee, no townsfolk), as tcB172 -- the baseline for tcB199 (U-1 arming at >= 4 cells).
+- 2026-11-09 13:12 Planning notes. B14: on native the merchant fix (merchant_unhide's login guard: another player's
+  login no longer stops this client's stage manager) is the likely cure of T21's empty arm-wrestling table too (an NPC
+  whose AI stalls); the table is in the inn's cellar (aw_route.sh: -10660, -3829, hold R "Try arm wrestling"): a
+  two-copy check there is next after tcB199. B11 / B12: the bag's item transaction (reverse-engineering-3576.md
+  "Items": stage 0x29EA7C0 / 0x29ECDE0, check, commit, notify) has a container-to-container move (0x29F3070, reasons
+  0x18 / 0x13: tx+0x40 remove, tx+0xA8 add) -- a gift = that move from one player's bag to the other's; RE needed.
