@@ -2948,3 +2948,37 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   alone mislead: the code changed). T 0x2ADA9B0, P 0x2ADBCE0, Arm 0x2ADC230, List 0x2AF5570, Interest 0x2ADC910,
   L 0x2ADA850, U 0x2ADA6C0, gate fn 0x2AE9650, gate 0x2AE972A / ctx 0x2AE9716. Register allocation CHANGED (the gate's
   default is r12d on 3576, esi on 2976): every mid hook's register reads must be re-derived, not only its address.
+- 2026-11-09 12:35 tcB193 (same save, butcher, dialog_share_all=1 on both, native local build): the host now sends
+  EVERY non-greeting dialog group of its NPCs (state 17), and the guest's own 3086s get them added: 0xF4490 (NPC
+  0xB010006E), 0xF435B (0xB0100444 / 0x445 / 0x57C / 0x587), the shop groups; both alive, SAVES OK. Correction to
+  07:15's note: QuestDialogEnd's handler 0x2B70F00 fails with 0x714ADA0 on the character / NPC scope (0x2228460 is
+  the character scope attacher, 0x2D11EE0 = SAM::FindActor), and with 0x714BB68 when the dialog's condition
+  (0x253F380) fails for the player's character -- it does NOT look for the stage in the player's own manager. So the
+  guest's pick of a shared dialog may well be accepted. The grocery merchant (0xB0100421, scene cd_seq_funcnpc_grocery)
+  carries shop 02/03 + 0xF435B 0x92: a merchant with an extra dialog. tcB194: the guest opens it.
+- 2026-11-09 12:45 *** tcB194: the guest's own shop at a SECOND merchant: "Hernand Grocer's Shop - Delkin: Buy / Sell /
+  Leave" opened on the guest's screen (shop twin of cd_seq_funcnpc_grocery), the Buy window with the grocer's stock and
+  the guest's own money (114.94), and the guest BOUGHT (its BuyStockFromStoreReq -> RemoveItemToInventoryAck +
+  AddItemToInventoryAck). Both alive, SAVES OK. So the butcher's chart holds for the grocer too.
+  * Delkin's extra dialog (0xF435B 0x92, now in the guest's list with dialog_share_all=1) is not in the shop menu: it is
+    reached through another prompt. Next: host alone at Delkin to read the prompts, then the guest picks it.
+  * user2_stages port (far-world gap): every point mapped and applied (build/port-u2s/apply_u2s.py, map.json): C
+    0x2A5D120, L 0x2ADA850, U 0x2ADA6C0, N 0x2A4BF00, T 0x2ADA9B0, P 0x2ADBCE0, O 0x2225930 (Logout thunk: 26 reason-25
+    callers), gate 0x2AE972A (4th argument in RSI on 3576), gate 2 0x2B7E1DA (frame 0x1D2A8; return 0x2ADEA54), element
+    0x2AE8700, Arm 0x2ADC230, Enqueue 0x29ACC70, List 0x2AF5570, Interest 0x2ADC910, vf40 return 0x2ADDC92, FindActor
+    0x2D11EE0, scope release 0x1618660, data: ServerNet 0x71C05F0, period 0x715A778, 2043 Troc 0x7403090, zero cell
+    0x58F4A30, lookup 0x71C0608; errors by NAME from the game's own registration table (1387 names,
+    build/port-u2s/errglobals.json): eErrNoEmptyStage 0x714C070, eErrNoRequestLogoutBySequencer 0x714B93C,
+    eErrNoUserAlreadyLogouting 0x712DFA8. Vtables by RTTI: StageMgr 0x5EE0B88, SchedMgr 0x5EDFA10, SchedStage 0x5EDFA58,
+    desc NPCSchedule 0x5ECDB60 (+ the child descs). Manager layout: schedule mgr +0x170 (2976 +0x148), cells
+    +0x6A8/+0x6AC, +0x6B9/+0x6BA, state +0x6D0. The controller write (U-e, docked_gimmicks_logic.h) 0x29CCBB1 (same
+    bytes and registers), block 0x29CCB4C, owner read 0x29CCBA6. Not mapped (log only, left REFUSED by their byte
+    checks): D, S, F, H. Fixed in passing: user2_funnels read the manager's +0x6A0, 3576's byte is +0x6D0.
+- 2026-11-09 13:05 tcB195 (host alone at Delkin): the only prompt is "R Shop"; the bottom-right panel lists 5
+  interactions for Delkin (cycled with the mouse wheel / CAPS): the extra dialog is among them. User's question about
+  github.com/cranebeaker/coop-anything: a general agent playbook + sync test tools; its Crimson Desert page (10-21)
+  is a 2976 ByJunter revival with quest-accept replay, behind us. Kept from it: an NPC's quest / hand-in option stays
+  greyed out until the player KNOWS the NPC (NormalLearnKnowledgeListAck, from its meeting scene) -- relevant to the
+  guest's shared dialogs; its `chaos` UDP relay (lag / loss between two copies) as an optional pre-release check.
+  Native local commit 89fbc86 (user2_stages port + dialog_share_all); the user2_stages unit test: 19 failures, the same
+  19 as before the port (fixtures still on 2976 opcodes), the two pinned constants updated.
