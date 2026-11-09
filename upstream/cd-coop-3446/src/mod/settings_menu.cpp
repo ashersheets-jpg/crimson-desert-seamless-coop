@@ -12,6 +12,7 @@
 #include "mod/input/actions.h"
 #include "mod/log.h"
 #include "mod/native_layer.h"
+#include "mod/net/coop_lobby.h"
 #include "mod/net/coop_revive.h"
 #include "mod/net/guest_hits.h"
 #include "mod/net/loot_twin.h"
@@ -144,6 +145,9 @@ void init(const std::wstring& ini_path, const Config& cfg, float health_2p, floa
     g_items.push_back({"Revive each other", L"coop", L"teammate_revive", on_off(), one_zero(),
                        cfg.coop_teammate_revive ? 0 : 1, true,
                        [dev = cfg.dev_revive_test](int i) { net::revive_partner_set(i == 0, dev); }});
+    g_items.push_back({"Shared quest credit (same step: done for both)", L"coop", L"shared_quest_credit", on_off(),
+                       one_zero(), cfg.coop_shared_quest_credit ? 0 : 1, true,
+                       [](int i) { net::lobby_set_shared_quest_credit(i == 0); }});
     g_items.push_back({"After a checkpoint revive", L"coop", L"respawn_at", {"stay at the checkpoint", "back to my friend"},
                        {L"checkpoint", L"partner"}, cfg.coop_respawn_at_partner ? 1 : 0, true,
                        [](int i) { g_respawn_partner = i == 1; }});

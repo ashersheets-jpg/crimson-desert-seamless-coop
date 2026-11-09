@@ -67,6 +67,8 @@ struct LobbyView {
 LobbyView lobby_view();
 
 // Render thread: the menu's actions.
+// B10 option 2: [coop] shared_quest_credit, written into the host's native ini at the next co-op launch.
+void lobby_set_shared_quest_credit(bool on);
 void lobby_start_coop();          // host: opens the question (with a friend in the party)
 void lobby_choose(LobbyPlan plan);  // host: the answer (None = cancel)
 void lobby_dismiss();             // Start Solo / Esc: the game's own title until the next time we are at the title

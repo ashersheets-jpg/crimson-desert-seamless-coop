@@ -1775,6 +1775,12 @@ void test_native_mode_text() {
     CHECK(native_mode_of_text(ht) == NativeMode::Host);
     CHECK(has(ht, "transport=steam") && has(ht, "role=host") && has(ht, "accept_tunnel=1") && !has(ht, "guest=1"));
     CHECK(has(ht, "peer_steamid=76561198000000001") && has(ht, "save_guard=redirect"));
+    // 2026-11-09: the new host defaults, and B10 option 2 only when chosen.
+    CHECK(has(ht, "quest_own_progress=1") && has(ht, "fog_share=1") && has(ht, "anti_grief=1") &&
+          has(ht, "user2_stages=1") && has(ht, "user2_world_anchor=1") && !has(ht, "quest_shared_credit=1"));
+    h.shared_quest_credit = true;
+    CHECK(has(native_mode_ini_text(h), "quest_shared_credit=1"));
+    h.shared_quest_credit = false;
     CHECK(has(ht, "coop_save_dir=coop_worlds\\with_76561198000000001") && has(ht, "coop_save_seed=copy"));
     CHECK(has(ht, "[overlay]") && ht.find("[overlay]\r\nenabled=0") != std::string::npos);
 

@@ -130,6 +130,8 @@ const char* seed_for(LobbyPlan p) {
     }
 }
 
+std::atomic<bool> g_shared_quest_credit{false};  // B10 option 2 ([coop] shared_quest_credit)
+
 // The native ini for this mode with this partner (under g_m).
 bool native_write(NativeMode mode, LobbyPlan plan) {
     NativeModeSpec spec;
@@ -138,6 +140,7 @@ bool native_write(NativeMode mode, LobbyPlan plan) {
     spec.partner_steam_id = g_in.steam ? g_in.partner_steam_id : 0;
     spec.partner_address = g_in.steam ? std::string() : g_in.partner_address;
     spec.player_name = g_in.own_name.empty() ? "Player" : g_in.own_name;
+    spec.shared_quest_credit = g_shared_quest_credit.load();
     // Over udp the Co-op+ link already has its port (Radmin VPN / Direct IP: 37015): the native tunnel takes the next.
     if (!spec.steam) spec.port = static_cast<uint16_t>((g_in.direct_port ? g_in.direct_port : 37015) + 1);
     if (mode != NativeMode::Solo && !(mode == NativeMode::Guest && test_role() == L"guest")) {
@@ -580,5 +583,7 @@ std::string lobby_difficulty_card() {
                        "Settings so the fights are as hard for both of you.",
                        name(own), g_in.partner_name.empty() ? "your friend" : g_in.partner_name, name(g_partner_diff));
 }
+
+void lobby_set_shared_quest_credit(bool on) { g_shared_quest_credit = on; }
 
 }  // namespace cdmp::net

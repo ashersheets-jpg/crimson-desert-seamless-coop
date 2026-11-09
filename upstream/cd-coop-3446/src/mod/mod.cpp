@@ -2233,6 +2233,7 @@ DWORD WINAPI worker(LPVOID) {
         net::hunt_set_test(cfg.dev_hunt_test);
         net::sync_set_test(cfg.dev_desync_test);
         net::revive_partner_set(cfg.coop_teammate_revive, cfg.dev_revive_test);
+        net::lobby_set_shared_quest_credit(cfg.coop_shared_quest_credit);
         net::guest_hits_set_finishes(cfg.coop_guest_finishes);
         net::aggro_set_copy_never_target(cfg.dev_copy_untargetable);
         net::activity_set_event_test(cfg.dev_event_test);

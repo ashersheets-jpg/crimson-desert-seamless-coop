@@ -98,6 +98,7 @@ struct Config {
     bool dev_hunt_test = false;      // Co-op+ dev: hunting contest one-PC test (coop_hunt.h)
     bool dev_zone_copy_test = false; // Co-op+ dev: the guest's dry-run zone is copied for real (enemy_relay.h)
     bool coop_teammate_revive = true;
+    bool coop_shared_quest_credit = false;  // Co-op+ 2026-11-09 B10 option 2: [coop] shared_quest_credit (host)
     bool coop_guest_finishes = true;
     bool coop_respawn_at_partner = false;  // Co-op+ (T26): [coop] respawn_at = checkpoint (default) | partner   // Co-op+ (T17): [coop] guest_finishes  // Co-op+ (T15): [coop] teammate_revive
     bool dev_revive_test = false;

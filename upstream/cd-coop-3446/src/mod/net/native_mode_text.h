@@ -26,6 +26,7 @@ struct NativeModeSpec {
     std::string coop_save_dir;       // relative to %LOCALAPPDATA%\Pearl Abyss\CD (e.g. coop_worlds\host_<id>)
     std::string coop_save_seed = "keep";  // keep | copy | new (native config.h s2_coop_save_dir)
     std::string player_name = "Player";
+    bool shared_quest_credit = false;  // B10 option 2 (host): [session2] quest_shared_credit
 };
 
 inline const char* native_mode_name(NativeMode m) {
@@ -110,6 +111,9 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
                               "user2_stages=1", "user2_timer_route=1", "user2_world_anchor=1", "user2_npc_control=1"}) {
             line(k);
         }
+        // B10 option 2, the player's choice ([coop] shared_quest_credit): an objective one player completes also
+        // counts for the other where the other has that step active.
+        if (s.shared_quest_credit) line("quest_shared_credit=1");
     } else {
         for (const char* k : {"guest=1", "guest_mode=remote", "guest_crash_dump=1", "guest_layer_guard=1",
                               "guest_remote_update_guard=1", "guest_update_guard=1", "guest_reload_wait_fix=1",
