@@ -3254,3 +3254,24 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   shops default: shop_twin must not twin a host shop scene whose resource the guest already has as its own scene (and
   the drain must remove user 2's shop scenes when it comes near), then a lobby run with the far keys. (The lobby's
   release ini records no packets: a capture of that case needs a dev override.)
+- 2026-11-09 17:16 (clock fix: the entries above dated 18:20-19:15 were 16:20-17:05) tcB224 (-Lobby, the far-shop keys
+  back in the host defaults): the near-host butcher menu did NOT open (sweeps 0-14, no "stopfile"), and U-e aborted
+  at 17:11:52, 35 s after the guest entered the world and BEFORE any teleport ("no accepted StartActionReq 5 s after
+  its birth"; 212 tracked, 27 reason 42). The common factor of every failing far-world run (tcB217 / 219 / 220 / 221 /
+  222 / 224) vs every working one (tcB194 / 201 / 214 / 216 / 223): the GUEST's keys. The release guest ini never had
+  guest_schedule_load (the guest client loads the NPC schedules before the host's 2005 / 2335 / 2874 reach it --
+  without it the guest cannot build / drive the NPCs U-e gives it), guest_x_interaction_stage (C1) or
+  seq_actor_restore. Now in the layer's guest defaults (cd-coop-3446 tests updated); tcB225 re-runs the lobby flow.
+- 2026-11-09 17:16 S33 / S35 NPC containment PORTED to 3576 (native, not committed until tested): ServerStartActionLogic
+  0x2D08190 (2976 0x2A78CA0; identical head, H1b 0x2D08550 at the same +0x3C0, the frame / args / out flag / broadcast
+  call bytes identical; the branch flag is block+0x279, was +0x281), the schedule node constructor 0x2A62280 (2976
+  0x281CEE0, identical head). Its 9 callers (2976: 8) mapped by function and order: exact 0x2A5EB72 (0x2A5DD70 =
+  2818AE0), 0x2A5F6E1 / 0x2A5FCF7 (0x2A5F1B0 = 2819E00 +0x52C / +0xB42), 0x2A631A5 (0x2A63090 = 281DBD0); group
+  leader 0x2A5F855 / member 0x2A5F929 (2819E00 mode 3: same prologue, group in [rbp-0x78] = [rsp+0x88], loaded to
+  r13 at 0x2A5F7AE, not rewritten between the calls); parent 0x2A66891 (0x2A66460 = 2820D80, its cmp [r12+0xB0],-1)
+  and 0x2A62EAE (0x2A62D10 = 281D970, 0xA90 after the constructor as in 2976); a NEW 9th caller 0x2A68440 (ret
+  0x2A68794) is Unknown (never vetoed). The cleanup functions (FindActor / scope dtor / Logout) were already ported
+  (U-e's logouts work). Keys (ByJunter's S35 set, without family / road control whose descriptor offsets are not
+  verified on 3576): npc_activation=1, npc_action_evidence=1, npc_containment_guard=1, npc_degradation=1,
+  publication_gate=1. Also fixed a stale shop_c1 test (C1 lookup call 0x22EE424 -> 0x21578E0). The native optd
+  suite still has 2976-numbered troc fixtures failing (optd_tests.cpp:1154-1231, known since 7f33727).
