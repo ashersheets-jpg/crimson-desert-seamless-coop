@@ -3321,3 +3321,13 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   The 100 s bound and the field boundary end it as T2's holds. New unit suite optd_scene_conflict (3576 layouts:
   2380 92-byte prefix, 2292 id @4): passes. (The old optd_hold_scene_order suite crashes on its 2976 fixtures:
   2661 / 91-byte prefix -- known, not ours.) Used if tcB226 (drain at host prepare) does not bring Renee back.
+- 2026-11-09 17:41 tcB226 (-Lobby, + user2_drain_at_host_prepare=1): menu NOT open; both alive, SAVES OK. U-1
+  armed at the login place again (17:34:55, user 2's own butcher 0x1CA binding Renee 0xB01002AC); the host's butcher
+  scene 0x238 went to user 2 at 17:37:11.98 through ObserverSeqCopy (a LIVE copy, server_push_extra -- it bypasses
+  observer_hold_acks' route, so the SceneHold conflict hold would not have seen it either), the drain (distance) came
+  at 17:37:14.998 with the 2292 of 0x1CA right after; on the guest Renee stayed bound to the deleted 0x1CA (G5: scene
+  0x1CA, +0xCF 1). The prepare drain did not run before (the host's manager prepared nothing new there). Built (native
+  78aba55): the conflict hold in ObserverSeqCopy too -- its Copier notes user 2's own scenes' bound NPCs (its own
+  2380s) and keeps a copy pending while one of its required actors is bound by a live own scene, releasing it right
+  behind that scene's 2292 (same key observer_hold_scene_conflict). Layer: observer_hold_scene_conflict=1 in the host
+  defaults. tcB227 tests it.
