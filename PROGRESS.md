@@ -3039,3 +3039,13 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   two-copy check there is next after tcB199. B11 / B12: the bag's item transaction (reverse-engineering-3576.md
   "Items": stage 0x29EA7C0 / 0x29ECDE0, check, commit, notify) has a container-to-container move (0x29F3070, reasons
   0x18 / 0x13: tx+0x40 remove, tx+0xA8 add) -- a gift = that move from one player's bag to the other's; RE needed.
+- 2026-11-09 13:20 *** tcB199: U-1 ARMS ON 3576 *** (host 7 cells away, arm at >= 4): "U ARMED", arms 1, the gate
+  passed 11, the collector's guard on user 2's own manager 11, user 2's manager state 2 with 65 NPC SCHEDULE STAGES
+  of its own (elements: schedule 65 created, sequencer scenes 17 skipped, faction stages 347 skipped -- the
+  user2_stages_elements=schedule filter). world_anchor never set: "its field unreadable" -- its ServerField vtable
+  check was still 2976's (0x5B29A60): fixed to 0x5EF2B10. Also ported: the NPC family / road descriptor vtables
+  (npc_family_logic.h, user2_road_logic.h; RTTI: ICreateServerActorDesc 0x5ECDC48, NPCSchedule 0x5ECDB60,
+  InstantGimmick 0x5ECDB08, child descs Simple 0x5ECDD60 CatchTarget 0x5ECDDE0 AutoSpawnGimmick 0x5ECDD40
+  CombinationGimmick 0x5ECDD00 SavedAttached 0x5ECDCE0 LinkedVehicle 0x5ECDCA0 Docking 0x5ECDDA0 Rider 0x5ECDDC0
+  NPCScheduleGroupActionMember 0x5ECDCC0); their descriptor field offsets are not re-verified. Tests unchanged
+  (npc_family 0, user2_road 8 and user2_stages 19 pre-existing failures, world_anchor passes).
