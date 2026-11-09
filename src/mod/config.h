@@ -554,6 +554,7 @@ struct Config {
     bool s2_user2_knowledge_share = false;  // Co-op+ 2026-11-08: TEST (host)
     bool s2_user2_condition_subject_host = false;  // Co-op+ 2026-11-08: TEST (host)
     bool s2_test_greet = false;  // Co-op+ 2026-11-08: TEST (guest)
+    bool s2_dialog_share_all = false;  // Co-op+ 2026-11-09: every non-greeting dialog group shared (shop_twin.h)
     bool s2_shop_twin = false;  // Co-op+ 2026-11-09: the guest's own shop scenes (shop_twin.h)
     bool s2_stage_candidate_guard = true;
     bool s2_npc_dialog_share = false;  // Co-op+ 2026-11-09: user 2's NPC dialog lists with the host's category (npc_category.cpp)  // Co-op+ 2026-11-09: the 3117 handler's null holder (stage_candidate_guard.h)

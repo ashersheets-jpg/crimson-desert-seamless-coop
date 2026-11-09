@@ -1226,6 +1226,7 @@ DWORD WINAPI worker(LPVOID) {
             session2::npc_category_dialog_share(cfg.s2_npc_dialog_share);
             session2::shop_guest_install(cfg.s2_guest_shop_check, cfg.s2_guest);
             session2::shop_twin_start(cfg.s2_shop_twin, cfg.s2_guest);
+            session2::shop_twin_share_all(cfg.s2_dialog_share_all);
             session2::stage_candidate_guard_start(cfg.s2_stage_candidate_guard);
             session2::merchant_unhide_start(cfg.s2_merchant_unhide != 0, cfg.s2_guest, cfg.s2_merchant_unhide == 2 ||
                                                 cfg.s2_merchant_unhide == 3,

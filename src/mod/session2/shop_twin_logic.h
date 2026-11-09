@@ -201,7 +201,19 @@ struct Dialog {
     uint32_t group = 0, index = 0;
     bool operator==(const Dialog&) const = default;
 };
-// The shop-group entries of a 3086 payload (and its NPC); false when it is not one.
+// The shared entries of a 3086 payload (and its NPC); false when it is not one. Shop group only, or with `all` every
+// group but the greeting (1): the NPCs' quest-dialog stages the server runs for the field owner only (B02a, tcB186:
+// 0xF435B / 0xF42B6 / 0xF4250 / ... on the host, none on the guest), [session2] dialog_share_all.
+inline bool dialogs_of(std::span<const uint8_t> pl, uint32_t& npc, std::vector<Dialog>& out, bool all) {
+    out.clear();
+    if (pl.size() < 9 || pl[0] != 4 || (pl.size() - 9) % 8 != 0) return false;
+    npc = rd32(pl.data() + 5);
+    for (size_t o = 9; o + 8 <= pl.size(); o += 8) {
+        const Dialog d{rd32(pl.data() + o), rd32(pl.data() + o + 4)};
+        if ((d.group == kShopDialogGroup || (all && d.group != 1)) && out.size() < kMaxDialogsPerNpc) out.push_back(d);
+    }
+    return true;
+}
 inline bool shop_dialogs_of(std::span<const uint8_t> pl, uint32_t& npc, std::vector<Dialog>& out) {
     out.clear();
     if (pl.size() < 9 || pl[0] != 4 || (pl.size() - 9) % 8 != 0) return false;

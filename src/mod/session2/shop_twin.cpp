@@ -20,6 +20,7 @@ namespace cdmp::session2 {
 namespace {
 
 bool g_on = false, g_guest = false;
+std::atomic<bool> g_share_all{false};
 uintptr_t g_base = 0;
 std::mutex g_mu;
 struct Twin {
@@ -52,6 +53,13 @@ uint32_t own_key() {
 
 }  // namespace
 
+void shop_twin_share_all(bool on) {
+    g_share_all = on;
+    log::info("ShopTwin [dialogs] dialog_share_all={}: {}", on ? 1 : 0,
+              on ? "every dialog group the host's NPCs offer (not only the shop's) is shared with the guest"
+                 : "only the shop choices are shared");
+}
+
 void shop_twin_start(bool on, bool guest) {
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     g_on = on;
@@ -72,7 +80,7 @@ void shop_twin_on_host(std::vector<uint8_t>& packet, std::vector<std::vector<uin
         if (op == stl::kOpQuestDialogAck) {  // the host's shop choices for this NPC added to the guest's own list
             uint32_t npc = 0;
             std::vector<stl::Dialog> mine;
-            if (!stl::shop_dialogs_of(pl, npc, mine)) return;
+            if (!stl::dialogs_of(pl, npc, mine, g_share_all)) return;
             std::vector<stl::Dialog> host;
             {
                 std::lock_guard lk(g_dmu);
@@ -84,8 +92,9 @@ void shop_twin_on_host(std::vector<uint8_t>& packet, std::vector<std::vector<uin
                 packet = stl::frame(stl::kOpQuestDialogAck, *t);
                 const uint64_t n = c_dialog_rewritten.fetch_add(1) + 1;
                 if (n <= 20)
-                    log::info("ShopTwin [dialogs] the host's {} shop choice(s) added to this client's dialog list of "
-                              "NPC 0x{:08X}", host.size(), npc);
+                    log::info("ShopTwin [dialogs] the host's {} choice(s) added to this client's dialog list of NPC "
+                              "0x{:08X} (first group 0x{:X} index 0x{:X})", host.size(), npc, host[0].group,
+                              host[0].index);
             }
             return;
         }
@@ -222,7 +231,7 @@ void shop_twin_host_sniffed(const uint8_t* packet, size_t size, bool server_to_c
         if (!server_to_client || op != stl::kOpQuestDialogAck) return;
         uint32_t npc = 0;
         std::vector<stl::Dialog> d;
-        if (!stl::shop_dialogs_of(pl, npc, d) || d.empty()) return;  // only NPCs with shop choices
+        if (!stl::dialogs_of(pl, npc, d, g_share_all) || d.empty()) return;  // only NPCs with shared choices
         std::lock_guard lk(g_dmu);
         auto& cur = g_dialogs[npc];
         if (cur != d) {

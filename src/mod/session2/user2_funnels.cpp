@@ -498,7 +498,7 @@ void scene_enter(uintptr_t troc, uintptr_t params, Frame& now) noexcept {
 constexpr uint32_t kUserMainCharacter = 0xD0;
 constexpr uint32_t kComponentsTransformSync = 0x1A0;
 constexpr uint32_t kTsPending = 0x550, kTsBranch18 = 0x568, kTsBranch19 = 0x569, kTsArmed = 0x591;
-constexpr uint32_t kMgrApplyByte = 0x6A0;  // 0x2BC4C80 mov byte [rbx+0x6A0],0
+constexpr uint32_t kMgrApplyByte = 0x6D0;  // 3576: 0x2E68315 mov byte [rbx+0x6D0],0 (2976 0x2BC4C80 +0x6A0)
 
 tpl::TsSnap ts_snap(uintptr_t actor) noexcept {
     tpl::TsSnap s;

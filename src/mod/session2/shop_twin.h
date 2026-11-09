@@ -16,6 +16,8 @@ class TrocLink;
 namespace cdmp::session2 {
 
 void shop_twin_start(bool on, bool guest);
+// [session2] dialog_share_all (both roles, B02a experiment): every non-greeting dialog group of the host's NPCs shared.
+void shop_twin_share_all(bool on);
 // A packet of the host's server (wire form) about to be queued for the game: `before` / `after` get packets to queue
 // around it (in order).
 void shop_twin_on_host(std::vector<uint8_t>& packet, std::vector<std::vector<uint8_t>>& before,

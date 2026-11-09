@@ -158,6 +158,14 @@ int main() {
     bad.push_back(0);
     CHECK(!stl::parse_dialog_payload(bad));
     CHECK(stl::is_twin_id(tid) && !stl::is_twin_id(0x192));
+    // dialog_share_all: every group but the greeting (tcB186's 0xb0100434: shop 02/03 + 0xF435B 0x92, greeting 1)
+    const auto mixed = hexs("04010010a0340410b0" "40440f0002000000" "40440f0003000000" "5b430f0092000000" "0100000018110000");
+    CHECK(stl::dialogs_of(mixed, npc, d, false) && d.size() == 2);
+    CHECK(stl::dialogs_of(mixed, npc, d, true) && npc == 0xB0100434u && d.size() == 3 && d[2].group == 0xF435Bu &&
+          d[2].index == 0x92);
+    const auto g1 = hexs("04e50110a0340410b0" "0100000018110000");
+    const auto m1 = stl::with_shop_dialogs(g1, d);
+    CHECK(m1 && m1->size() == g1.size() + 24 && stl::rd32(m1->data() + 25) == 0xF435Bu);
     if (g_failures) {
         std::printf("%d failure(s)\n", g_failures);
         return 1;

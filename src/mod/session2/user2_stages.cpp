@@ -63,39 +63,41 @@ struct PointDef {
 };
 constexpr uint8_t kCBytes[] = {0x4C, 0x89, 0x4C, 0x24, 0x20, 0x44, 0x88, 0x44, 0x24, 0x18};  // mov [rsp+20],r9 ; mov [rsp+18],r8b
 constexpr uint8_t kDBytes[] = {0xE9, 0x3B, 0xD2, 0xA1, 0x0D};  // jmp .xtls 0x10225FC0
-constexpr uint8_t kLBytes[] = {0xE9, 0xDB, 0x4F, 0xA4, 0x0D};  // jmp .xtls 0x102C2A30
-constexpr uint8_t kUBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x18, 0x88, 0x54, 0x24, 0x10};  // mov [rsp+18],rbx ; mov [rsp+10],dl
-constexpr uint8_t kNBytes[] = {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x10, 0x4C, 0x89, 0x48, 0x20};  // mov rax,rsp ; mov [rax+10],rbx
+constexpr uint8_t kLBytes[] = {0xE9, 0x7B, 0xE8, 0x79, 0x0B};  // 3576: jmp 0xE2790D0 (2976: E9 DB 4F A4 0D)
+constexpr uint8_t kUBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x6C, 0x24, 0x18};  // 3576: mov [rsp+10],rbx ; mov [rsp+18],rbp
+constexpr uint8_t kNBytes[] = {0x48, 0x8B, 0xC4, 0x4C, 0x89, 0x48, 0x20, 0x48, 0x89, 0x50, 0x10};  // 3576: mov rax,rsp ; mov [rax+20],r9
 constexpr uint8_t kTBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x18, 0x44, 0x88, 0x4C, 0x24, 0x20};  // mov [rsp+18],rbx ; mov [rsp+20],r9b
 constexpr uint8_t kSBytes[] = {0xE9, 0xBB, 0xB7, 0xA3, 0x0D};  // jmp .xtls 0x1025E4C0
 constexpr uint8_t kFBytes[] = {0xE9, 0x1B, 0x17, 0xA0, 0x0D};  // jmp .xtls 0x101FD480
 constexpr uint8_t kPBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x4C, 0x89, 0x4C, 0x24, 0x20};  // mov [rsp+10],rbx ; mov [rsp+20],r9
 // U-0b (S29): ServerActor::Logout's thunk (actor rcx, out rdx, reason r8b, error r9d; [rsp] the caller).
-constexpr uint8_t kOBytes[] = {0xE9, 0xAB, 0x17, 0x07, 0x0C};  // jmp .xtls 0xE0D9AF0
+constexpr uint8_t kOBytes[] = {0xE9, 0x8B, 0xEA, 0x64, 0x0A};  // 3576: jmp 0xC8743C0 (26 reason-25 callers)
 
 enum Pt : uint8_t { kPtC, kPtD, kPtL, kPtU, kPtN, kPtT, kPtS, kPtF, kPtP, kPtO, kPtCount };
 const PointDef kPoints[kPtCount] = {
-    {0x2817E80, 5, kCBytes, "C, the stage close (ServerNPCScheduleStage vf13) 0x2817E80"},
+    {0x2A5D120, 5, kCBytes, "C, the stage close (ServerNPCScheduleStage vf13) 0x2A5D120"},  // 3576 (2976 0x2817E80)
     {0x2808D80, 5, kDBytes, "D, DeleteStage of the schedule spawn manager 0x2808D80"},
-    {0x287DA50, 5, kLBytes, "L, the owner's load step 0x287DA50"},
-    {0x287D4C0, 5, kUBytes, "U, the manager's unload-all 0x287D4C0"},
-    {0x28078E0, 7, kNBytes, "N, the schedule stage creation 0x28078E0"},
-    {0x287DBB0, 5, kTBytes, "T, the 2043 tick 0x287DBB0"},
+    {0x2ADA850, 5, kLBytes, "L, the owner's load step 0x2ADA850"},  // 3576 (2976 0x287DA50)
+    {0x2ADA6C0, 5, kUBytes, "U, the manager's unload-all 0x2ADA6C0"},  // 3576: T+0x1BB (2976 0x287D4C0)
+    {0x2A4BF00, 7, kNBytes, "N, the schedule stage creation 0x2A4BF00"},  // 3576: E calls it with the play data (2976 0x28078E0)
+    {0x2ADA9B0, 5, kTBytes, "T, the 2043 tick 0x2ADA9B0"},  // 3576 (2976 0x287DBB0)
     {0x2822D00, 5, kSBytes, "S, the schedule update 0x2822D00"},
     {0x27FBD60, 5, kFBytes, "F, the faction spawn update 0x27FBD60"},
-    {0x287EF60, 5, kPBytes, "P, the manager's preparation 0x287EF60"},
-    {0x2068340, 5, kOBytes, "O, ServerActor::Logout 0x2068340 (reasons and callers)"},
+    {0x2ADBCE0, 5, kPBytes, "P, the manager's preparation 0x2ADBCE0"},  // 3576: T+0x120 (2976 0x287EF60)
+    {0x2225930, 5, kOBytes, "O, ServerActor::Logout 0x2225930 (reasons and callers)"},  // 3576 (2976 0x2068340)
 };
 
 // U-a: the owner gate (ShopProbe's point; this module installs it only when shop_probe is off).
 //   0x288B867 mov rax,[r13+0xA0] ; test ; je ; mov eax,[rax+0x60] ; jmp ; mov eax,esi
 //   0x288B87A cmp [r15+0x180],eax (41 39 87 80 01 00 00) ; 0x288B881 jne 0x288BDEE (not patched; 0x288B876 jumps to
 //   the patch's first byte)
-constexpr uintptr_t kGate = 0x288B87A, kGateCtx = 0x288B867;
+// 3576 (2026-11-09): 0x2AE9650 (2976 0x288B7A0): rdi = mgr, r15 = field, r13 = character as on 2976, but the 4th
+// argument is in RSI and r12 is the zero (2976: r12 / esi): the ctx ends "mov eax,r12d" (3 bytes).
+constexpr uintptr_t kGate = 0x2AE972A, kGateCtx = 0x2AE9716;
 constexpr uint32_t kGatePatch = 7;
-constexpr uint8_t kGateBytes[] = {0x41, 0x39, 0x87, 0x80, 0x01, 0x00, 0x00, 0x0F, 0x85, 0x67, 0x05, 0x00, 0x00};
+constexpr uint8_t kGateBytes[] = {0x41, 0x39, 0x87, 0x80, 0x01, 0x00, 0x00, 0x0F, 0x85, 0x80, 0x05, 0x00, 0x00};
 constexpr uint8_t kGateCtxBytes[] = {0x49, 0x8B, 0x85, 0xA0, 0x00, 0x00, 0x00, 0x48, 0x85, 0xC0,
-                                     0x74, 0x05, 0x8B, 0x40, 0x60, 0xEB, 0x02, 0x8B, 0xC6};
+                                     0x74, 0x05, 0x8B, 0x40, 0x60, 0xEB, 0x03, 0x41, 0x8B, 0xC4};
 // U-a2 (rule of 2026-10-13: the guest follows the HOST's progress). The cell evaluation's context keeps the field
 // owner's ServerQuestManager (ServerField::vf40 at 0x2880D6F, not substituted): the candidate collector 0x2911300, the
 // acceptance cases of 0x28818F0 (+0x178/+0x188 and the stage states +0x48..+0x60) and 0x2896C60's id list all read
@@ -110,15 +112,17 @@ constexpr uint8_t kGateCtxBytes[] = {0x49, 0x8B, 0x85, 0xA0, 0x00, 0x00, 0x00, 0
 // c827729: FindUser on user 2's key fails in its logout window -> rbx 0 -> a null read in 0x387EF0). Frame (prologue:
 // 8 pushes, sub rsp 0x1C2C8): the caller's rsi at [rsp+0x1C2F0], the return address at [rsp+0x1C308], the field
 // (rdx's home slot) at [rsp+0x1C318].
-constexpr uintptr_t kGate2 = 0x2911435, kGate2Ctx = 0x29113F6;
+// 3576: the collector 0x2B7E0A0 (called at 0x2ADEA4F in the cell evaluation 0x2ADE970), FindUser 0x2D11CC0; the
+// not-found case is "mov rbx,r12" (2976: rdi); frame: 8 pushes, sub rsp 0x1D2A8 (2976 0x1C2C8).
+constexpr uintptr_t kGate2 = 0x2B7E1DA, kGate2Ctx = 0x2B7E19B;
 constexpr uint32_t kGate2Patch = 7;
-constexpr uint8_t kGate2Bytes[] = {0x48, 0x8B, 0xD3, 0x48, 0x8D, 0x4D, 0x90, 0xE8, 0xAF, 0x6A, 0xA7, 0xFD,
+constexpr uint8_t kGate2Bytes[] = {0x48, 0x8B, 0xD3, 0x48, 0x8D, 0x4D, 0x90, 0xE8, 0x8A, 0x6E, 0x85, 0xFD,
                                    0x90, 0xBB, 0x01, 0x00, 0x00, 0x00};
-constexpr uint8_t kGate2CtxBytes[] = {0xE8, 0x95, 0x11, 0x17, 0x00, 0x90, 0x80, 0x7D, 0xB0, 0x00, 0x75, 0x05, 0x48, 0x8B,
-                                      0xDF, 0xEB, 0x1A, 0x48, 0x8B, 0x45, 0xA8, 0x48, 0x8B, 0x88, 0xD0, 0x00, 0x00, 0x00,
+constexpr uint8_t kGate2CtxBytes[] = {0xE8, 0x20, 0x3B, 0x19, 0x00, 0x90, 0x80, 0x7D, 0xB0, 0x00, 0x75, 0x05, 0x49, 0x8B,
+                                      0xDC, 0xEB, 0x1A, 0x48, 0x8B, 0x45, 0xA8, 0x48, 0x8B, 0x88, 0xD0, 0x00, 0x00, 0x00,
                                       0x48, 0x8B, 0x41, 0x68, 0x48, 0x8B, 0x88, 0xA8, 0x00, 0x00, 0x00, 0x48, 0x8B, 0x59,
                                       0x18};
-constexpr uint32_t kG2_CallerRsi = 0x1C2F0, kG2_Ret = 0x1C308, kG2_Field = 0x1C318, kG2_RetRva = 0x28819D4;
+constexpr uint32_t kG2_CallerRsi = 0x1D2D0, kG2_Ret = 0x1D2E8, kG2_Field = 0x1D2F8, kG2_RetRva = 0x2ADEA54;  // 3576
 // H (log only, the 288f87b run: second gate passed 42, elements still 0): inside the cell evaluation 0x28818F0,
 // right after 0x2883AA0(mgr, ctx) and the save manager's call (0x2881A13):
 //   0x2881A19 xor edx,edx ; mov [rsp+0x70],rdx   (7 bytes; no branch of the exe lands inside, raw scan)
@@ -134,7 +138,7 @@ constexpr uint8_t kEvalCtxBytes[] = {0x48, 0x8D, 0x55, 0x20, 0x48, 0x8B, 0x0D, 0
                                      0x49, 0x08, 0xE8, 0x68, 0xFC, 0xFE, 0xFE, 0x90};
 // U-f: the stage element 0x288A970(mgr rcx, int* res rdx, stage r8, element r9, a5 [rsp+0x28]); one caller,
 // 0x288760C in 0x2885BD0. Entry: mov [rsp+8],rbx (5 bytes, the inline hook's jmp) ; mov [rsp+0x10],rsi ...
-constexpr uintptr_t kElem = 0x288A970;
+constexpr uintptr_t kElem = 0x2AE8700;  // 3576 (one caller 0x2AE5036; same fields)
 constexpr uint32_t kElemPatch = 5;
 constexpr uint8_t kElemBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74, 0x24, 0x10, 0x48, 0x89, 0x7C, 0x24, 0x18};
 constexpr uint32_t kElem_Res = 0x08, kElem_Schedule = 0x10, kElem_Class2 = 0x18;
@@ -147,18 +151,18 @@ constexpr uint32_t kElem_Res = 0x08, kElem_Schedule = 0x10, kElem_Class2 = 0x18;
 // (user 2's manager made 0x268D4087 six times at six places).
 constexpr uint32_t kElem_Pos = 0x20C, kStage_Id = 0x08, kPlay_Pos = 0x38;
 // What 0x288A970 stores in *res when the schedule creation gave no stage (0x288AD21: mov eax,[exe+0x6CF7DFC] ; mov [r14],eax).
-constexpr uintptr_t kNoStageCode = 0x6CF7DFC;
+constexpr uintptr_t kNoStageCode = 0x714C070;  // 3576: eErrNoEmptyStage (2976 0x6CF7DFC)
 // U-c / U-d: the functions called (first bytes compared before the module's hooks are written).
-constexpr uintptr_t kArmFn = 0x287F450;      // thunk -> .xtls 0x102CA7F0(mgr): +0x6A0 = 2, the cell tables cleared
-constexpr uint8_t kArmFnBytes[] = {0xE9, 0x9B, 0xB3, 0xA4, 0x0D};
-constexpr uintptr_t kLoadFn = 0x287DA50;     // thunk -> .xtls 0x102C2A30(mgr, u8, u8): +0x6A0 = 1 + an immediate 2043
-constexpr uintptr_t kUnloadFn = 0x287D4C0;   // (mgr, u8, u8): every stage of the manager closed (reason 19)
-constexpr uintptr_t kEnqueueFn = 0x2774430;  // thunk -> .xtls 0x100B4050: ServerNet::EnqueueTimer
-constexpr uint8_t kEnqueueFnBytes[] = {0xE9, 0x1B, 0xFC, 0x93, 0x0D};
-constexpr uintptr_t kServerNetSlot = 0x6D69680;   // [exe+...] = g_ServerNet (0x287F188)
-constexpr uintptr_t kPeriodSlot = 0x6D06098;      // i32: the 2043 period / 10 ms (0x287F139)
-constexpr uintptr_t kTroc2043Slot = 0x6FA3ED8;    // the periodic 2043's Troc (0x287F171; set by the host's 0x287EF60)
-constexpr uintptr_t kZeroCell = 0x5545F50;        // the 8-byte zero cell copied into the payload (0x287F0DB)
+constexpr uintptr_t kArmFn = 0x2ADC230;      // thunk -> .xtls 0x102CA7F0(mgr): +0x6A0 = 2, the cell tables cleared
+constexpr uint8_t kArmFnBytes[] = {0xE9, 0x9B, 0x63, 0x7A, 0x0B};  // 3576: P+0x10F
+constexpr uintptr_t kLoadFn = 0x2ADA850;     // thunk -> .xtls 0x102C2A30(mgr, u8, u8): +0x6A0 = 1 + an immediate 2043
+constexpr uintptr_t kUnloadFn = 0x2ADA6C0;   // (mgr, u8, u8): every stage of the manager closed (reason 19)
+constexpr uintptr_t kEnqueueFn = 0x29ACC70;  // thunk -> .xtls 0x100B4050: ServerNet::EnqueueTimer
+constexpr uint8_t kEnqueueFnBytes[] = {0xE9, 0x6B, 0xCF, 0x70, 0x0B};  // 3576: P+0x22F
+constexpr uintptr_t kServerNetSlot = 0x71C05F0;   // [exe+...] = g_ServerNet (0x287F188)
+constexpr uintptr_t kPeriodSlot = 0x715A778;      // i32: the 2043 period / 10 ms (0x287F139)
+constexpr uintptr_t kTroc2043Slot = 0x7403090;    // the periodic 2043's Troc (0x287F171; set by the host's 0x287EF60)
+constexpr uintptr_t kZeroCell = 0x58F4A30;        // the 8-byte zero cell copied into the payload (0x287F0DB)
 constexpr uint16_t kOp2322 = 2384, kOp2335 = 2989, kOp2126 = 2796, kOp2958 = 2616, kOp2909 = 2297;
 constexpr uint16_t kOp2283 = 3074, kOp2362 = 2390, kOp2437 = 2294, kOp2001 = 2001;
 
@@ -172,9 +176,9 @@ constexpr uint16_t kOp2283 = 3074, kOp2362 = 2390, kOp2437 = 2294, kOp2001 = 200
 // Called once per arm, inside its first armed tick at the owner gate (0x288B87A, inside 0x288B7A0 under 0x287DBB0 in
 // its 2043 Troc: the field attached, no manager lock held), with r12 = 0x288B7A0's 4th argument, the same actor the
 // tick passes to 0x287EF60 (0x287DCC2: r9 = [rbp-0x41]).
-constexpr uintptr_t kListFn = 0x2896C60;
-constexpr uint8_t kListFnBytes[] = {0x4C, 0x89, 0x44, 0x24, 0x18, 0x48, 0x89, 0x54, 0x24, 0x10, 0x48, 0x89, 0x4C, 0x24, 0x08};
-constexpr uintptr_t kInterestFn = 0x287FA30;
+constexpr uintptr_t kListFn = 0x2AF5570;  // 3576: P+0x124 (mgr, field, actor as on 2976)
+constexpr uint8_t kListFnBytes[] = {0x4C, 0x89, 0x44, 0x24, 0x18, 0x48, 0x89, 0x4C, 0x24, 0x08, 0x55, 0x53};
+constexpr uintptr_t kInterestFn = 0x2ADC910;  // 3576: P+0x140
 constexpr uint8_t kInterestFnBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x20, 0x48, 0x89, 0x4C, 0x24, 0x08};
 using ListFn = void(__fastcall*)(uintptr_t mgr, uintptr_t field, uintptr_t actor);
 using InterestFn = void(__fastcall*)(uintptr_t mgr, uintptr_t field);
@@ -275,7 +279,7 @@ std::atomic<uint64_t> g_tick_vf40_own{0};
 // user 2's quest manager made the NPCs' buffs flip (ApplyBuffAck x13743, UnapplyBuffAck x2494 to the peer, 95x the
 // run before): only the context builder's call (return 0x2880D74) gets it now; the others are counted.
 std::atomic<uint64_t> g_tick_vf40_other{0};
-constexpr uint32_t kCtxVf40Ret = 0x2880D74;
+constexpr uint32_t kCtxVf40Ret = 0x2ADDC92;  // 3576: 0x2ADDAB0 calls vf40 0x2D98440 directly at 0x2ADDC8D
 // The other vf48 calls inside its armed 2043 tick answered with its own manager (review M3, the 753f275 run).
 std::atomic<uint64_t> g_tick_vf48_own{0};
 // U-f2: schedule elements not created because the other player's manager has that stage alive (user 2's / the host's).
@@ -1670,7 +1674,7 @@ void on_eval(safetyhook::Context& ctx) noexcept {
 // This module's own G (only when shop_probe is off): rdi = mgr, r13 = its character, r15 = the field.
 void on_gate(safetyhook::Context& ctx) noexcept {
     uintptr_t rax = ctx.rax;
-    gate_impl(ctx.rdi, ctx.r13, ctx.r15, ctx.r12, rax);
+    gate_impl(ctx.rdi, ctx.r13, ctx.r15, ctx.rsi, rax);  // 3576: the 4th argument is in rsi
     ctx.rax = rax;
 }
 
@@ -3097,9 +3101,12 @@ bool drain_now(uintptr_t mgr, bool sync, uint16_t op, Cause cause) noexcept {
 // cdmp_FieldAttacher__dtor 0x1434880). Inside it, with the full key and [+0x90] == user 2's key checked,
 // ServerActor::Logout 0x2068340(actor, &out, 0x19, [exe+0x6CF76F8]): the collector's own call (0x2C38F02..0x2C38F14);
 // the client AI's 2291 reaches Logout(42) inside its Req's actor scope too (0x2AC6EA4).
-constexpr uintptr_t kFindActorFn = 0x2A827B0, kScopeDtorFn = 0x1434880, kLookupSlot = 0x6D69698,
-                    kVtScopeBase = 0x5725E48, kLogoutFn = 0x2068340, kLogoutErrSlot = 0x6CF76F8,
-                    kAlreadyLogoutingSlot = 0x6CDB934;  // eErrNoUserAlreadyLogouting, Logout's out when already leaving
+// 3576: FindActor 0x2D11EE0 (FindUser 0x2D11CC0 + 0x220 as on 2976; QuestDialogEnd calls it), the scope release
+// 0x1618660 after the ScopeAttacherBase vtable 0x5AC58E0 (0x2B7107B), Logout's thunk 0x2225930, errors by name
+// (build/port-u2s/errglobals.json): eErrNoRequestLogoutBySequencer 0x714B93C, eErrNoUserAlreadyLogouting 0x712DFA8.
+constexpr uintptr_t kFindActorFn = 0x2D11EE0, kScopeDtorFn = 0x1618660, kLookupSlot = 0x71C0608,
+                    kVtScopeBase = 0x5AC58E0, kLogoutFn = 0x2225930, kLogoutErrSlot = 0x714B93C,
+                    kAlreadyLogoutingSlot = 0x712DFA8;  // eErrNoUserAlreadyLogouting, Logout's out when already leaving
 constexpr uint8_t kFindActorBytes[] = {0x44, 0x89, 0x44, 0x24, 0x18, 0x48, 0x89, 0x54, 0x24, 0x10};
 constexpr uint8_t kScopeDtorBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x18};
 using FindActorFn = void*(__fastcall*)(uintptr_t sam, void* scope, uint32_t key);
@@ -7149,7 +7156,7 @@ DWORD WINAPI probe_thread(LPVOID) {
     IMAGE_NT_HEADERS64 nt{};
     std::vector<gad::Section> secs;
     if (g_base != off::kImageBase || !game::safe_read(g_base, &dos, sizeof dos) ||
-        !game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestampUnported ||
+        !game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestamp ||
         !p8_exe_sections(g_base, secs)) {
         log::error("User2Stages: unsupported game build or unreadable sections; nothing installed");
         g_mode.store(static_cast<uint8_t>(u2s::Mode::Off));
