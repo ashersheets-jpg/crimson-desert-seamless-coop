@@ -3156,3 +3156,11 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   quest_shared_credit=1 into the host's native ini at the next co-op launch. Layer tests: the native ini text with
   the new host defaults (quest_own_progress, fog_share, anti_grief, user2_stages, world anchor) and the option -- all
   tests pass; both layer builds compile.
+- 2026-11-09 16:25 Shops far from the host (B02b "without the host at that step"): ByJunter's chain is
+  user2_stages_elements=schedule+funcnpc (U-f lets user 2's manager prepare the cd_seq_funcnpc_* scenes) + user2_shop_route
+  (user2_shops) + shop_probe (its points). shop_probe PORTED (native ff4cc7e): E 0x2AE9650 (same head), G as
+  user2_stages' gate (4th argument rsi), P 0x2AE8883 in the element 0x2AE8700 after call 0x2AD8E60 (3576: rcx = r14 the
+  manager, rdx = r15 the result, the element in RBX; frame unchanged), C 0x2C70C39 in
+  TrocTrInteractionPreemptionStepReq's handler 0x2C70910 (frame: requester rbp+0x80, NPC +0x88, interaction -0x48,
+  result -0x80), manager state +0x6D0; its opcodes were already 3549's. user2_shops prepares shops at >= 4 cells (was
+  10, with U-1's new arm distance). tcB211: far host, the guest at Delkin with R.
