@@ -3313,3 +3313,11 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   shown to the friend), the duel already plays round after round (kOverMs then the next round: the rematch). Left:
   wagers (need B11's item / money transfer between the players), arenas (a named duel ground, e.g. the Goldenfist
   Arena south of Hernand), a spectator camera (only meaningful with a third player, B21).
+- 2026-11-09 17:37 Built (native 6aefe79, local): the SceneHold CONFLICT hold, [session2]
+  observer_hold_scene_conflict=1 (host, with observer_hold_scene_order=1 + observer_hold_acks=1; default 0): every own
+  2380 of user 2 (U-1's scenes) is noted with the NPCs it binds; a 2380 of ANOTHER owner (the host's) to user 2 that
+  binds one of them is KEPT, with every later packet of its id, until the 2292 (actor @0 = user 2's character) of each
+  such own scene went; then it is queued right after that 2292 (observer_hold_acks' route pushes it, under its lock).
+  The 100 s bound and the field boundary end it as T2's holds. New unit suite optd_scene_conflict (3576 layouts:
+  2380 92-byte prefix, 2292 id @4): passes. (The old optd_hold_scene_order suite crashes on its 2976 fixtures:
+  2661 / 91-byte prefix -- known, not ours.) Used if tcB226 (drain at host prepare) does not bring Renee back.
