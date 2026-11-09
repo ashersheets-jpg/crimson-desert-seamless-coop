@@ -2761,3 +2761,19 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
     each fails its target condition (0x2569C661 / 0x669DBA09): next.
   * Shop scenes by dictionary hash (lookup3 seed 0xC5EDE): butcher, smithy, grocery, general, bank, pub, clothes,
     leather, smuggler (merchant_unhide_logic.h, unit test optd_merchant_unhide).
+- 2026-11-09 02:00 The user tested by hand (tcB150): with merchant_unhide=1 every shopkeeper shows for both players,
+  and the HOST bought an item in co-op (money went down). The guest cannot interact with any shopkeeper. Traced:
+  * The guest's copies of the shop NPCs finish their login after the release (+0xCF 1, hide 0; tcB151).
+  * Their entries 0x06 / 0x07 (the shop, key 0x000F4321) pass every player / NPC condition leaf on the guest once
+    npc_category has the host's table (tcB155; early refusals were CheckQuestDialogCategory before the table came).
+  * The blocker: the dynamic entry's scene check 0x22EE2D0 (C1 redirects its lookup to X; 373 of 373 redirected,
+    all result 0). Counted (tcB156/157): the scene is found, +0x168 0, the focus check 0x215B230 passes, its mission
+    (0xC4FA) checks pass, then `mov r10,[r13+8] ; test r10,r10 ; je 0x22EE66A` (bl = 0): the ENTRY's data condition
+    [entry+8] (CompareSequencerTargetParameter, which player the scene serves) is NULL in the guest's X copy; on the
+    host it exists. So the prompt is refused for the guest at that step.
+  * ByJunter's analysis (s46 nativo.md 1.4) adds: even past the prompt, the shop opens through the scene owner's branch
+    (StageBranchStateReq 2880 branch 6 on the HOST's scene, broadcast ToNear: it would open the host's dialog too),
+    and a buy checks the scene as the manager's current stage (shop_guest covers that). His plan: the guest's own
+    shop scene (mgr2 twin) rather than the host's. Next: decide between that and a guest-local branch of X.
+  * Probes added (test builds): per-entry verdicts for shop NPCs, their condition leaves ("client SHOP"), the scene
+    check counters at 0x22EE47A / 0x22EE49E / 0x22EE515 / 0x22EE529 / 0x22EE5CA.
