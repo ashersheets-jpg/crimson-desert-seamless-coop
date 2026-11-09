@@ -108,11 +108,10 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
                               "quest_own_progress=1", "fog_share=1", "anti_grief=1",
                               // B02 far world (2026-11-09, tcB201): the far guest's own NPC stages (U-1 + its timers,
                               // the world anchor, its NPCs' controller)
-                              "user2_stages=1", "user2_timer_route=1", "user2_world_anchor=1", "user2_npc_control=1",
-                              // B02b far (2026-11-09, tcB216): the far guest's own shop scenes (U-f lets the 9 merchant
-                              // scenes through, routed to its manager, each held until its NPC is announced)
-                              "shop_probe=1", "user2_shop_route=1", "user2_stages_elements=schedule+funcnpc",
-                              "observer_hold_scene_order=1"}) {
+                              "user2_stages=1", "user2_timer_route=1", "user2_world_anchor=1", "user2_npc_control=1"}) {
+            // B02b far shops (tcB216 worked: shop_probe=1, user2_shop_route=1, user2_stages_elements=schedule+funcnpc,
+            // observer_hold_scene_order=1) are NOT default yet: with them the guest's near-host shop did not open in
+            // the release flow (tcB217 / tcB219). To find before they go in.
             line(k);
         }
         // B10 option 2, the player's choice ([coop] shared_quest_credit): an objective one player completes also
