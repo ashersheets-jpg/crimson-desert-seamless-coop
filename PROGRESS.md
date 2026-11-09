@@ -2736,3 +2736,28 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   * Host crash seen once (tcB117, 20:44, the user not touching the PC): 0xC0000005 in
     TrocTrSyncStageCandidatePostionReq's handler 0x2CEC840 (+0x3F0 writes [vf48()+0x668], vf48 gave null), right
     after ALL the host's sequencers were deleted (2292 burst) while the host's own client still sent a 3117. To fix.
+- 2026-11-09 00:50 *** MERCHANTS: ROOT CAUSE FOUND AND THE HOST'S SHOP WORKS IN CO-OP (tcB148). ***
+  * The chain (HideWatch / merchant_unhide=2 snapshots, solo tcB136/140/144 vs co-op tcB137/139/141/143/145):
+    a scene NPC (shop or not) finishes its login (+0xCF, set by 0x9A1880 at 0x9A1D2A) only when none of its
+    components is still loading; its ClientSequencerPlayDataActorComponent (vt 0x594FAF0) says "loading" (vf88
+    0xAF4B20) while its byte +0x3E0 ("waiting for my scene", 2976 +0x3D8) is 1. The scene clears it when the client's
+    stage manager ticks the scene (0x9A0540 -> 0x99C5A0 -> 0xAAABB0 = the FIELD OWNER's character's manager ->
+    0xBA04A0 -> 0xBA2610, which processes stages only while the manager's state +0x259 == 3). Without the login: the
+    NPC's AI stops after its first action, hide bit 9 stays, no interaction ("target is hidden").
+  * Why co-op: when ANOTHER player's character logs in on a client (the guest's on the host, the host's on the guest),
+    the character login 0x99BE90 calls 0x1928650 (jmp .xtls 0xB65B330) at 0x99C17A, which puts the manager it is
+    attached to -- this client's OWN -- back to state 1 (write at .xtls 0x9AC803B; HideWatch mode 3 tcB145). For a
+    client's own login that is the start of its field load (MoveFieldCompleteAck -> 1, PlayAllPreLoadSequencerAck ->
+    2, the world update -> 3); for a remote character nothing ever moves it on: the host's manager stayed at 1 for good
+    (tcB143: 3 until the guest's login at 00:08:42, then 1), so NONE of the host's scenes ticked again.
+  * The fix (merchant_unhide=1, both roles; merchant_unhide.cpp): the LOGIN GUARD, mid hooks 0x99C17A / 0x99C17F: for
+    another player's character ([char+0xA0] != this client's user) this client's own manager state is noted before
+    the call and a 3 that dropped is put back to 3 (tcB147: "state before 3 after 1" -> restored; the host's manager
+    stays at 3). With it the host's shop NPCs finish their login and unhide on their own like solo (+0xCF 1, hide 0
+    at 8 s), and in tcB148 the HOST opened Renee's shop with the guest in the world ("Hernand Butchery - Buy / Sell /
+    Leave"). The guest: its shop NPCs belong to the host's scenes (copies in X) that its client never ticks; after
+    4 s their +0x3E0 is cleared (the scene-start step) and the hide bit cleared with the game's setter 0x18CD090:
+    Renee shows on the guest. The guest's prompt (C1, now fed X by guest_seq_route) finds her 5 shop entries in X but
+    each fails its target condition (0x2569C661 / 0x669DBA09): next.
+  * Shop scenes by dictionary hash (lookup3 seed 0xC5EDE): butcher, smithy, grocery, general, bank, pub, clothes,
+    leather, smuggler (merchant_unhide_logic.h, unit test optd_merchant_unhide).
