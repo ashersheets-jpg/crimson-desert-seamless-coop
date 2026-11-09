@@ -2907,3 +2907,8 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   the scene (shop_twin generalized from the 9 shop resources to the NPC scenes with dialogs) + the host's entries for
   that NPC. Not started: it needs the per-scene branch charts (the shop chart came from captures) -- a bigger piece
   of B02a.
+- 2026-11-09 07:30 Local packages (NOT published; publishing needs the user's OK, GPL native code): tools/package-native.ps1
+  -> dist\CrimsonDesert-SeamlessCoop-0.1.0-alpha+7048ff23.zip and ...+7048ff23-shared-world.zip (11.8 MB; native
+  8a696fd-era build + the layer with tonight's lobby / B22a / shop-key changes). tools/test-install-fake.ps1 on the
+  shared-world zip: ALL STEPS PASS (install, vanilla on/off, uninstall leaves bin64 as before, loader reuse cases,
+  mod-manager layout).
