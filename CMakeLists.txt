@@ -167,6 +167,7 @@ add_library(cdmp_mod SHARED
     src/mod/session2/shop_guest.cpp
     src/mod/session2/merchant_unhide.cpp
     src/mod/session2/stage_candidate_guard.cpp
+    src/mod/session2/quest_route.cpp
     src/mod/session2/shop_twin.cpp
     src/mod/session2/catch_seq.cpp
     src/mod/session2/remote_rope.cpp

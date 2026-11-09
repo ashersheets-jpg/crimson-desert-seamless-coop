@@ -68,16 +68,16 @@ using u2f::parse_mode;
 // ---------------------------------------------------------------- build 1.0.0.2976 (RVAs, checked on the exe)
 
 inline constexpr uintptr_t kVtServerField = 0x5B29A60;  // pa::ServerField
-inline constexpr uintptr_t kVtFieldLock = 0x57A30B8;    // pa::WindowsRWLock<4,1>, [field+8] (= field+0x1B8)
+inline constexpr uintptr_t kVtFieldLock = 0x5B52BF8;  // 3576 RTTI (2976 0x57A30B8)   // pa::WindowsRWLock<4,1>, [field+8] (= field+0x1B8)
 inline constexpr uint32_t kLockSlotUnlock = 0x20;       // vf4 0x1371B70 (u8 shared): exclusive -> owner -1, Release
 inline constexpr uint32_t kLockSlotTry = 0x28;          // vf5 0x1371BA0 (u8 shared): TryAcquireSRWLockExclusive
-inline constexpr uintptr_t kLockUnlock = 0x1371B70, kLockTry = 0x1371BA0;
-inline constexpr uint32_t kFieldLock = 0x08, kFieldOpen = 0x4A, kFieldOwner = 0x180, kFieldGen = 0x2C8;
-inline constexpr uint32_t kFieldSlotOn = 0x2E4;   // u8, 0x29C2915 / collector 0x2C38E28
-inline constexpr uint32_t kFieldSlotKey = 0x2E8;  // u32, 0x29C291C / collector 0x2B06090
+inline constexpr uintptr_t kLockUnlock = 0x1554690, kLockTry = 0x15546C0;  // 3576: the vtable's slots 4 / 5
+inline constexpr uint32_t kFieldLock = 0x08, kFieldOpen = 0x4A, kFieldOwner = 0x180, kFieldGen = 0x2D0;  // 3576: gen +0x2D0 (3549 port)
+inline constexpr uint32_t kFieldSlotOn = 0x198;  // 3576 (2976 0x2E4)  // u8, 0x29C2915 / collector 0x2C38E28
+inline constexpr uint32_t kFieldSlotKey = 0x19C;  // 3576 (2976 0x2E8) // u32, 0x29C291C / collector 0x2B06090
 inline constexpr uint32_t kUserKey = 0x60, kUserMainCharacter = 0xD0, kUserCurrentCharacter = 0xD8;
 inline constexpr uint32_t kActorKey = 0x60, kActorComponents = 0x68, kComponentsTs = 0x1A0;
-inline constexpr uint32_t kTsField = 0x4F0 + 0x10;  // FieldMover (TS+0x4F0) +0x10: ServerField*
+inline constexpr uint32_t kTsField = 0x508 + 0x10;  // FieldMover (TS+0x508 since 3549, field_share.h; 2976 +0x4F0) +0x10: ServerField*
 inline constexpr uint32_t kCharClass = 0xA;         // player characters (key >> 28)
 
 inline constexpr uint16_t kOpGameLoadingStartReq = 2294;
