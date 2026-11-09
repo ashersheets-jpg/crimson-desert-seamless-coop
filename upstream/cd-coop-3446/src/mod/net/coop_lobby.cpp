@@ -252,6 +252,16 @@ void lobby_tick(const LobbyInput& in) {
                         g_gen_mark = in.run_generation;
                         todo = PressNew;
                         log::info("Co-op lobby: our co-op save is ready: New Game (the host picks the difficulty)");
+                    } else if (g_native) {
+                        // Shared world (2026-11-09, tcB174-B183): the host's game loads first and the guest's follows
+                        // once the host is in the world, as in a normal join. Both pressing Play together let the
+                        // guest's character enter while the host's client still loaded, and the host's load never
+                        // finished (the NPC hold releasing the host's NPCs to user 2 meanwhile).
+                        g_phase = Phase::HostSetup;
+                        g_gen_mark = in.run_generation;
+                        todo = PressPlay;
+                        log::info("Co-op lobby: both games are ready: our game loads the shared world first; {}'s "
+                                  "follows once we are in", in.partner_name);
                     } else {
                         g_phase = Phase::Starting;
                         g_go_at = in.now_ms + kCountdownMs;
@@ -266,7 +276,7 @@ void lobby_tick(const LobbyInput& in) {
             case Phase::HostSetup:
                 // The host went through the game's own setup (agreement, difficulty): when its run enters the world, the
                 // guest's game follows.
-                if (in.run_generation > g_gen_mark) {
+                if (in.run_generation > g_gen_mark && (!g_native || in.in_world)) {
                     send({kMsgGo, 1, 0, 0});
                     log::info("Co-op lobby: our run entered the world: the guest's game follows");
                     reset_phase();
@@ -339,7 +349,8 @@ LobbyView lobby_view() {
         v.wait_line = g_new_started ? "Joining the start of the story..."
                       : g_plan == LobbyPlan::NewSave
                           ? f + " is setting up the game. You join at the start of the story."
-                          : f + " is getting ready. You both start together.";
+                          : g_native ? f + " is loading the shared world. You join right after."
+                                     : f + " is getting ready. You both start together.";
     }
     if (g_phase == Phase::NativeRestart) v.status = "Restarting into co-op...";
     if (v.status.empty() && g_native && g_resume.mode == NativeMode::Host && !g_guest_ready && !g_auto_started) {

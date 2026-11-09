@@ -701,6 +701,9 @@ void worlds_lobby_press(bool new_game) {
         }
         for (int attempt = 0; attempt < 6; ++attempt) {
             if (!wait_front("Loading " + label)) return done("Press Play (E) to load.");
+            // Already loading or in the world (the player pressed Play, or an earlier press took): no stray E (it is
+            // "interact" in the world; tcB184 pressed it 2 min after the host was in).
+            if (sniffer_world_loading() || g_in_world.load()) break;
             key('E', 80);
             if (wait_for([] { return sniffer_world_loading() || g_in_world.load(); }, 8000)) break;
         }

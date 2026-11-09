@@ -2841,3 +2841,19 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
     "U-1": user 2's own manager armed >= 64 m from the host, its own cells, its NPCs controlled by user 2, drained
     when close again) is 8200 lines with ~15 hook points written for 2976 and never ported. Recorded as the B02
     far-world gap. (Also: the host's tp to (-10238 640 -3958) left it "Badly hurt" -- a fall; test artifact.)
+- 2026-11-09 05:55 *** REGRESSION FOUND IN THE RELEASE JOIN (B01 lobby): the host never entered the shared world. ***
+  * The release defaults: the layer's native ini (native_mode_text.h) now carries merchant_unhide=1,
+    guest_shop_check=1, shop_twin=1 for both roles (B02b). tcB173 (no -Lobby) showed the harness writes its own inis,
+    so the release path is only exercised with -Lobby; the harness's -Lobby now continues with the scripts / walks on
+    the restarted copies ($LobbyGo).
+  * tcB174-176 (-Lobby, usercopy) and tcB177 (-Lobby, the default save): the guest entered the world, the HOST's client
+    stayed "loading (actor parked at 0,1000,0)" forever behind the Co-op+ title menu (tcB7/8 on 11-07: in 38 s).
+    Bisected with the 11-07 package's native cdmp.asi (works, tcB179) and the native commits (tcB180-183): the cause
+    is 0c78f10 (TransformSync sector +0x548: the NPC hold now really holds and releases NPCs instead of dropping
+    them). In the lobby both games press Play at the countdown, so user 2's character logs in while the host's client
+    is still loading; with the hold working, that load never finishes. (Without the lobby the host is in the world
+    before the guest joins: tcB164-172 fine.)
+  * FIX (layer, coop_lobby.cpp): on the native base the host's game loads first (HostSetup + Play) and sends the
+    guest its "go" only once the host is IN the world (in.in_world); the guest's existing native path presses Play
+    then ("the host's world is up"). The guest's waiting line: "<host> is loading the shared world. You join right
+    after." tcB184: the check.

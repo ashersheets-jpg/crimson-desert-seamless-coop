@@ -98,13 +98,18 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
                               "character_hold=1", "child_settle_ms=4000", "child_reannounce=1", "observer_seq_copy=1",
                               "observer_seq_copy_2322=1", "observer_milestone=1", "observer_milestone_send=1",
                               "observer_milestone_reload=1", "observer_milestone_reload_any=1", "guest_own_save=1",
-                              "horse_follow=1", "horse_follow_reverse=1", "user2_fast_travel=1"}) {
+                              "horse_follow=1", "horse_follow_reverse=1", "user2_fast_travel=1",
+                              // B02b (2026-11-09): merchants in co-op: the login guard (merchant_unhide), the guest's
+                              // store check on the server (guest_shop_check), the host's shop choices for the guest
+                              "merchant_unhide=1", "guest_shop_check=1", "shop_twin=1"}) {
             line(k);
         }
     } else {
         for (const char* k : {"guest=1", "guest_mode=remote", "guest_crash_dump=1", "guest_layer_guard=1",
                               "guest_remote_update_guard=1", "guest_update_guard=1", "guest_reload_wait_fix=1",
-                              "guest_own_save=1", "guest_seq_route=1", "guest_fast_travel_veto=probe"}) {
+                              "guest_own_save=1", "guest_seq_route=1", "guest_fast_travel_veto=probe",
+                              // B02b: the shopkeepers shown (merchant_unhide), the guest's own shop scene (shop_twin)
+                              "merchant_unhide=1", "guest_shop_check=1", "shop_twin=1"}) {
             line(k);
         }
     }
