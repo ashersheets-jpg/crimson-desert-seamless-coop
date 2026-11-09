@@ -3140,3 +3140,8 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   entries at the payload's end, key first). tcB210: the guest's 11 swings at the butcher targeted 0xA01001C8 (a player
   character, not Renee), so nothing to drop -- the check is not shown live yet (user checklist). On by default for the
   host in the layer's ini (it only ever drops hits on people the host can talk to). Both alive, SAVES OK.
+- 2026-11-09 15:45 Local package 0fb316f6 (NOT published; native 6417c60 + the layer with B16b / B17 / anti_grief on):
+  test-install-fake ALL STEPS PASS. tcB210 also showed the guest's swings on a PLAYER character do no damage on native
+  (host HP 300/300 throughout): the Co-op+ duel's own hit relay applies duel damage -- to check by hand (checklist).
+  Items expected to work natively (the other player is a real actor of the shared world) put on the checklist for a
+  look / listen: B20 partner audio, B18 combat feedback, B06 mounted hits, B05 other mounts, B09 cutscenes, B03 events.

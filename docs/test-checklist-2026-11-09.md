@@ -42,6 +42,14 @@ Each line: what to do, what should happen. Note anything else odd (FPS too, for 
 ## For trading (B11) -- one action that teaches the mod the game's item-move message
 - [ ] If your save has another playable party character: in the inventory, move ONE cheap item from Kliff to that character (and back). Nothing else needed: the mod's log captures it.
 
+## Things the shared world should give for free (just look / listen)
+- [ ] B20 partner audio: you hear the other player's footsteps, swings and hits, quieter with distance.
+- [ ] B18 combat feedback: the other player's hits show their effects (stagger, knockback, status) on enemies you see.
+- [ ] B06 mounted combat: the guest on horseback hits an enemy: it takes damage and reacts.
+- [ ] B05 other mounts: if either save has another mount (bear, wolf, wagon...), the other player sees it and the rider on it.
+- [ ] B09 cutscenes: when the host triggers a story cutscene near the guest, what does the guest see? (Note if its camera / controls get taken over.)
+- [ ] B03 world events: join a world event or siege together: both can fight in it and get credit.
+
 ## Already-known open items (no need to test)
 - Shops when the host is far away (the shop scene goes away with the host).
 - Shared quest credit (option 2) is built but off.
