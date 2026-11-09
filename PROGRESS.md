@@ -3082,3 +3082,7 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   Layer (953380c, pushed): the release native ini now turns on for the host quest_own_progress, fog_share and the
   far-world set (user2_stages, user2_timer_route, user2_world_anchor, user2_npc_control); quest_shared_credit stays off
   (the optional bonus, to become a setting).
+- 2026-11-09 14:10 tcB204 (quest_own_progress=1 + quest_shared_credit=1, both in Hernand, same save): the thunk hook
+  installed ("shared credit on"), the guest's events went to its own manager, 0 ERR, both alive, SAVES OK; too few
+  events for the 200-event counter line, so the first shared passes are now logged (native c149dc4). Checklist for the
+  user's next session: docs/test-checklist-2026-11-09.md. tcB205: the release flow (-Lobby) with the new defaults.
