@@ -808,9 +808,15 @@ void observer_seq_copy_on_out(uint16_t opcode, std::span<const uint8_t> payload,
                         std::vector<uint8_t> pk;
                         const uint16_t op = osq::kOpRemove;
                         const size_t len = 6 + 4 * refresh.size();
-                        pk.reserve(len + 2);
+                        // The queue's whole-packet layout (as clock_push's 2816): u16 opcode | u8 0xFF | u16 payload
+                        // length | payload. (tcB228: without the 3 header bytes the stream broke and user 2's link
+                        // went down.)
+                        pk.reserve(len + 5);
                         pk.push_back(static_cast<uint8_t>(op));
                         pk.push_back(static_cast<uint8_t>(op >> 8));
+                        pk.push_back(0xFF);
+                        pk.push_back(static_cast<uint8_t>(len));
+                        pk.push_back(static_cast<uint8_t>(len >> 8));
                         pk.push_back(4);
                         for (int i = 0; i < 4; ++i) pk.push_back(0);
                         pk.push_back(0x1E);
