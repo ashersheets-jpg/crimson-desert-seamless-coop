@@ -104,7 +104,7 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
                               "merchant_unhide=1", "guest_shop_check=1", "shop_twin=1",
                               // B10 (2026-11-09): each player's quest events to its own quests (option 3); B04: the
                               // guest's map fog joined with the host's at its login
-                              "quest_own_progress=1", "fog_share=1",
+                              "quest_own_progress=1", "fog_share=1", "anti_grief=1",
                               // B02 far world (2026-11-09, tcB201): the far guest's own NPC stages (U-1 + its timers,
                               // the world anchor, its NPCs' controller)
                               "user2_stages=1", "user2_timer_route=1", "user2_world_anchor=1", "user2_npc_control=1"}) {

@@ -3135,3 +3135,8 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   accepts another player's character. Field order from the handler: u32, u16, u64, u32 from, u32 to, u16, u16, u32.
   No capture of a 3111 yet: put on the user's checklist (move one item to another party character once, the sniffer
   records it), then a server-side test of from/to across the two players.
+- 2026-11-09 15:35 B19 anti_grief built (native 6417c60, test passes): the host records every NPC its client gets a
+  dialog list for (3086) and drops the guest's DoFrameEventReq 3030 whose targets include one (targets: 677-byte
+  entries at the payload's end, key first). tcB210: the guest's 11 swings at the butcher targeted 0xA01001C8 (a player
+  character, not Renee), so nothing to drop -- the check is not shown live yet (user checklist). On by default for the
+  host in the layer's ini (it only ever drops hits on people the host can talk to). Both alive, SAVES OK.
