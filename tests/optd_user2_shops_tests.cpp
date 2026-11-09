@@ -120,7 +120,7 @@ void test_names_and_verdict() {
     CHECK(u2sh::element_verdict(true, E::Sequencer, true, S, true, false) == V::SkipFuncnpc);
     CHECK(u2sh::element_verdict(true, E::Sequencer, false, SF, true, false) == V::Skip);
     CHECK(u2sh::element_verdict(true, E::Class2, true, SF, true, false) == V::Skip);  // a name never makes a faction pass
-    static_assert(u2sh::kNewShopMinCells == 10);
+    static_assert(u2sh::kNewShopMinCells == 4);  // 2026-11-09 (was 10)
     // And U-1's own skip (unchanged): mode 1, armed, the host's field, not a schedule.
     CHECK(u2s::skip_element(true, u2s::Mode::On, true, true, E::Sequencer));
     CHECK(!u2s::skip_element(true, u2s::Mode::Probe, true, true, E::Sequencer));
@@ -136,13 +136,14 @@ void test_sites() {
     }
     CHECK(!u2sh::site_of(2671) && !u2sh::site_of(2720) && !u2sh::site_of(2100) && !u2sh::site_of(2043));
     CHECK(u2sh::site_index(2671) == u2sh::kSiteCount);
-    CHECK(u2sh::site_of(2436)->ret_rva == 0x2A5C6CB);
-    CHECK(u2sh::site_of(2591)->ret_rva == 0x2C4A8FC);
-    CHECK(u2sh::site_of(2044)->ret_rva == 0x1082FBE7 && u2sh::site_of(2044)->id_at == u2sh::kTimerId);
-    CHECK(u2sh::site_of(2138)->ret_rva == 0x1089F284);
-    // The deferred delete (DeleteSequencerOnceTimer 2054): .xtls 0x10835C57, the id at +3 like the 2044.
-    CHECK(u2sh::site_of(2054)->ret_rva == 0x10835C57 && u2sh::site_of(2054)->id_at == u2sh::kTimerId);
-    CHECK(u2sh::kOpDeleteTimer == 2054);
+    // 3576 (2026-11-09): the opcodes are 3549's; the protected-section sites are 0 (matched by section).
+    CHECK(u2sh::site_of(2880)->ret_rva == 0x2CEA189);
+    CHECK(u2sh::site_of(2839)->ret_rva == 0 && u2sh::site_matches(*u2sh::site_of(2839), 0xE3FA800) &&
+          !u2sh::site_matches(*u2sh::site_of(2839), 0x2CEA189));
+    CHECK(u2sh::site_of(2048)->ret_rva == 0 && u2sh::site_of(2048)->id_at == u2sh::kTimerId);
+    CHECK(u2sh::site_of(2059)->ret_rva == 0 && u2sh::site_of(2059)->id_at == u2sh::kTimerId);
+    CHECK(u2sh::site_matches(*u2sh::site_of(2880), 0x2CEA189) && !u2sh::site_matches(*u2sh::site_of(2880), 0x2CEA18A));
+    CHECK(u2sh::kOpDeleteTimer == 2059);
     // S13 (the host's smithy 0x19D): a 2436 as a packet (u16 opcode | i8 slot | u16 length | payload).
     const auto b2436 = bytes_of({0x84, 0x09, 0x00, 0x0E, 0x00, 0x9D, 0x01, 0, 0, 0, 0, 0, 0, 0x06, 0, 0, 0, 0, 0});
     uint64_t id = 0;

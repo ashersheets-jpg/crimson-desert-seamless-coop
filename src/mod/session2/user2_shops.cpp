@@ -190,7 +190,7 @@ uintptr_t user2_shops_vf48(uint16_t opcode, uint64_t seq_id, uint32_t ret_rva, u
     if (!user2_shops_wanted()) return 0;
     const size_t i = u2sh::site_index(opcode);
     if (i >= u2sh::kSiteCount) return 0;
-    if (ret_rva != u2sh::kSites[i].ret_rva) {
+    if (!u2sh::site_matches(u2sh::kSites[i], ret_rva)) {
         // The other vf48 of a Troc of user 2's own scene (nested: the branch 0x2891FB0 -> .xtls 0x102D2B70, the chart
         // 0x2936060...): the original (the host's manager) is kept; counted, and the first of each (opcode, return) is
         // a WRN line (review M2).
@@ -640,8 +640,10 @@ DWORD WINAPI shops_thread(LPVOID) {
     size_t ok = 0;
     for (size_t i = 0; i < u2sh::kSiteCount; ++i) {
         uint8_t b[3] = {};
-        const bool good = game::safe_read(g_base + u2sh::kSites[i].ret_rva - 3, b, sizeof b) &&
-                          std::memcmp(b, u2sh::kCallVf48, sizeof b) == 0;
+        // 3576: a site in the protected section (ret_rva 0) has no bytes to compare: matched by opcode at run time.
+        const bool good = u2sh::kSites[i].ret_rva == 0 ||
+                          (game::safe_read(g_base + u2sh::kSites[i].ret_rva - 3, b, sizeof b) &&
+                           std::memcmp(b, u2sh::kCallVf48, sizeof b) == 0);
         g_site_ok[i].store(good, std::memory_order_release);
         if (good) {
             ++ok;

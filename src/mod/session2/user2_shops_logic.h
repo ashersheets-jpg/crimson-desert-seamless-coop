@@ -145,27 +145,34 @@ struct Site {
     const char* name;
 };
 inline constexpr uint8_t kReqId = 5, kTimerId = 3;
+// 3576 (2026-11-09): each handler's first call [rax+0x48] from its TrocTr vtable's slot 2 (RTTI; tcB209 caught user 2's
+// 2752 at 0x2CE9CEA, the same); 0 = the handler jumps into the protected section (2839, 3161, the 2048 / 2059 timers):
+// matched by opcode for a vf48 called from the protected section (site_matches).
+inline constexpr uint32_t kProtectedBegin = 0x7A44000, kProtectedEnd = 0x13826000;
 inline constexpr Site kSites[] = {
-    {2880, 0x2A5C6CB, kReqId, "StageBranchStateReq (-> 0x2891FB0)"},
-    {2839, 0x2C4A8FC, kReqId, "UpdateStageChartEventReq (0x2C4A8A0 -> 0x2936060)"},
-    {2396, 0x2A5CA68, kReqId, "StageBranchStateDelayEndReq (-> 0x2892210)"},
-    {2098, 0x2A5D0E1, kReqId, "UpdateStageChartDelayedEventReq (-> 0x28928D0)"},
-    {2752, 0x2A5C283, kReqId, "UpdateSequencerGamePlayDataEventReq (-> 0x2891CE0)"},
-    {2178, 0x2A5B71D, kReqId, "DeleteSequencerReq (-> 0x2879320)"},
-    {2620, 0x2978E20, kReqId, "SequencerTriggerVolumeInOutReq (0x1F6C190 at 0x2978E6E)"},
-    {3161, 0x1089F284, kReqId, "SequencerStageFailReq (.xtls 0x1089F230)"},
-    {2869, 0x2A5E401, kReqId, "ChangeSequencerPivotReq (-> 0x28952F0)"},
-    {2683, 0x2A5DDF1, kReqId, "StageQuitReq (-> 0x28934F0)"},
-    {3113, 0x2A5D6B1, kReqId, "SubTimelinePauseReq (-> 0x2892FE0)"},
-    {2676, 0x2A5DA51, kReqId, "SubTimelineResumeReq (-> 0x2893260)"},
-    {2783, 0x2A5BF4D, kReqId, "SetNextBranchTypeFromAIReq (-> 0x2895DC0)"},
-    {2048, 0x1082FBE7, kTimerId, "StageBranchStateOnceTimer (.xtls 0x1082FB80 -> 0x2895820)"},
+    {2880, 0x2CEA189, kReqId, "StageBranchStateReq (-> 0x2891FB0)"},
+    {2839, 0, kReqId, "UpdateStageChartEventReq (0x2C4A8A0 -> 0x2936060)"},
+    {2396, 0x2CEA570, kReqId, "StageBranchStateDelayEndReq (-> 0x2892210)"},
+    {2098, 0x2CEAC8F, kReqId, "UpdateStageChartDelayedEventReq (-> 0x28928D0)"},
+    {2752, 0x2CE9CEA, kReqId, "UpdateSequencerGamePlayDataEventReq (-> 0x2891CE0)"},
+    {2178, 0x2CE902A, kReqId, "DeleteSequencerReq (-> 0x2879320)"},
+    {2620, 0x2BEE31E, kReqId, "SequencerTriggerVolumeInOutReq (0x1F6C190 at 0x2978E6E)"},
+    {3161, 0, kReqId, "SequencerStageFailReq (.xtls 0x1089F230)"},
+    {2869, 0x2CEC18F, kReqId, "ChangeSequencerPivotReq (-> 0x28952F0)"},
+    {2683, 0x2CEBAD9, kReqId, "StageQuitReq (-> 0x28934F0)"},
+    {3113, 0x2CEB2F9, kReqId, "SubTimelinePauseReq (-> 0x2892FE0)"},
+    {2676, 0x2CEB6E9, kReqId, "SubTimelineResumeReq (-> 0x2893260)"},
+    {2783, 0x2CE9943, kReqId, "SetNextBranchTypeFromAIReq (-> 0x2895DC0)"},
+    {2048, 0, kTimerId, "StageBranchStateOnceTimer (.xtls 0x1082FB80 -> 0x2895820)"},
     // The deferred delete (tiendas-u2.md 12.2): without it a delete of one of user 2's scenes reached the host's
     // manager and was lost (an orphan scene in user 2's manager and in the guest's M).
-    {2059, 0x10835C57, kTimerId, "DeleteSequencerOnceTimer (.xtls 0x10835BF0 -> 0x2879440, the deferred delete)"},
+    {2059, 0, kTimerId, "DeleteSequencerOnceTimer (.xtls 0x10835BF0 -> 0x2879440, the deferred delete)"},
 };
 inline constexpr uint16_t kOpDeleteTimer = 2059;
 inline constexpr size_t kSiteCount = sizeof kSites / sizeof kSites[0];
+inline bool site_matches(const Site& s, uint32_t ret_rva) {
+    return s.ret_rva ? ret_rva == s.ret_rva : (ret_rva >= kProtectedBegin && ret_rva < kProtectedEnd);
+}
 inline const Site* site_of(uint16_t op) {
     for (const Site& s : kSites) {
         if (s.op == op) return &s;
