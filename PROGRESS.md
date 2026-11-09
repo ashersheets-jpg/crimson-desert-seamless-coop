@@ -3287,3 +3287,9 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   opcode literally (the Req is built from its vtable), so the client UI that sends it is still unknown (a horse /
   companion inventory is a guess). Next for B11: a 3111 capture (the game's own use), or a crafted one from the
   guest's layer (the dev script's c2s) with from = guest, to = host, after reading 0x2DF04A0's use of b / c / e.
+- 2026-11-09 17:28 B11, 3111's fields from the move 0x2DF04A0 (the kind-1 path): {u32 item key, u16 b (passed to
+  0x22FFCA0 on the RECEIVER's inventory with the entry's +4 inventory id: likely the receiver's slot / room check),
+  u64 COUNT (checked against the entry's per-item limits at def +0x90 / +0x98), u32 giver key, u32 receiver key, u16
+  inventory key (-> def index), u16 giver SLOT (0xFFFF = any; else 0x22F7FE0(giver, inv +2, slot) must hold that item
+  with count >= 1), u32 entry index}. So a crafted trade needs only one valid entry index (kind 1, the two inventory
+  ids of the bags), read at runtime from def 0x5560E0 ([0x71C1060] +0x58 table) -- next when B11 gets its turn.
