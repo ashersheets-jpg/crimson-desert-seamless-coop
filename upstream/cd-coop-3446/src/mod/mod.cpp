@@ -552,6 +552,7 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
     std::vector<uint8_t> buf(proto::kMaxPacketSize);
     // Co-op+ Steam join: hotkeys, rich presence, and a short notice for the panel.
     HotkeyEdge invite_key, leave_key;
+    uint64_t host_leave_at = 0, host_gone_at = 0;  // tcB291: the host's Leave waits for the guest to go
     uint32_t last_presence = 0;
     std::string presence_said;
     std::string notice;
@@ -615,11 +616,34 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
         // Co-op+ (T07): Leave on any transport (it was read only with Steam, so a room-code / UDP guest could not).
         if (leave_key.pressed(input::action_down(input::Action::Leave, game_has_focus()))) {
             // tcB289: for both roles this is the game's own Return to Title; the guest's link ends at once.
-            game::main_menu_return_to_title();
-            if (!host) {
-                end = {Kind::Leave, 0};
-                break;
+            // tcB291: the host with a guest says goodbye first and returns once the guest has gone (or after 6 s).
+            if (host && session.state() == ClientSession::State::Connected) {
+                if (!host_leave_at) {
+                    net::activity_send_bye();
+                    host_leave_at = now_ms() + 6000;
+                    log::info("Leave: goodbye sent to the guest; back to the title in 6 s at the latest");
+                }
+            } else {
+                game::main_menu_return_to_title();
+                if (!host) {
+                    end = {Kind::Leave, 0};
+                    break;
+                }
             }
+        }
+        if (host_leave_at) {
+            // The guest's layer link ends when it leaves; its game then says goodbye to our server (about 0.5 s).
+            if (session.state() != ClientSession::State::Connected && !host_gone_at) host_gone_at = now_ms() + 2500;
+            if (now_ms() >= host_leave_at || (host_gone_at && now_ms() >= host_gone_at)) {
+                log::info("Leave: back to the title ({})", host_gone_at ? "the guest has gone" : "the guest did not go in time");
+                host_leave_at = host_gone_at = 0;
+                game::main_menu_return_to_title();
+            }
+        }
+        if (!host && net::activity_take_bye()) {
+            game::main_menu_return_to_title();
+            end = {Kind::Leave, 0};
+            break;
         }
         // Co-op+: the co-op menu's Radmin VPN / Direct IP (Host, Join, Back to Steam) restarts the session on it.
         if (auto want = net::direct_take_request()) {

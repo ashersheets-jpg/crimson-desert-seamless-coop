@@ -91,6 +91,11 @@ void activity_set_rps_test(int hand);
 
 // Another Co-op+ module's Activity event (stage_cinema: types 7..9), on the same sequence as ours.
 void activity_send(uint8_t type, const std::vector<uint8_t>& data);
+// tcB291: the host's "Leave the session". The host says goodbye first; the guest goes back to its title (the host's
+// server then unloads the guest the game's own way) and only after that the host returns to its title. Returning
+// with the guest still attached crashed the host in whichever request of the guest came in during the unload.
+void activity_send_bye();   // host
+bool activity_take_bye();   // guest: true once after the host's goodbye arrived
 
 // The rock-paper-scissors duel as the overlay shows it over the two characters (render/hud.cpp): while a duel is on,
 // "choosing" / "picked" over each, and at the reveal both hands (0 scissors, 1 paper, 2 rock) with the winner.

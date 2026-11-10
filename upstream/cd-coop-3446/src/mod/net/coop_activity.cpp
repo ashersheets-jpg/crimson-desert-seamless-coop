@@ -54,7 +54,8 @@ constexpr uint16_t kOpStartActionReq = 2202;      // our client also sends the N
 constexpr float kNearM = 100.0f;                   // the user's rule: cutscenes are shared within 100 m
 constexpr uint32_t kSkipTestDelayMs = 6000;
 
-enum Type : uint8_t { kCutsceneOn = 1, kCutsceneOff = 2, kSkip = 3, kGameOn = 4, kGameOff = 5, kVersus = 6, kRps = 10, kChallenge = 11, kDuel = 12, kQuest = 13, kHunt = 14, kMenu = 16, kLooted = 17, kReviveYou = 18, kWanted = 19, kTravel = 20, kEvent = 21, kChat = 22, kKill = 23, kRace = 24, kTitle = 25, kHide = 26, kFish = 27 };
+enum Type : uint8_t { kCutsceneOn = 1, kCutsceneOff = 2, kSkip = 3, kGameOn = 4, kGameOff = 5, kVersus = 6, kRps = 10, kChallenge = 11, kDuel = 12, kQuest = 13, kHunt = 14, kMenu = 16, kLooted = 17, kReviveYou = 18, kWanted = 19, kTravel = 20, kEvent = 21, kChat = 22, kKill = 23, kRace = 24, kTitle = 25, kHide = 26, kFish = 27, kBye = 28 };
+std::atomic<bool> g_bye{false};  // the host is ending the session (tcB291)
 
 // Co-op+ (T22): world events (reinforcements, bounty hunters, camp and outpost activity) are stages our server starts
 // (PrepareSequencerAck); their fighters are enemies, which the guest already gets as copies near the host. What the
@@ -385,6 +386,8 @@ std::string activity_minigame_name(uint32_t stage) {
     }
 }
 
+bool activity_take_bye() { return g_bye.exchange(false); }
+void activity_send_bye() { send(kBye, nullptr, 0); }
 void activity_send(uint8_t type, const std::vector<uint8_t>& data) { send(static_cast<Type>(type), data.data(), data.size()); }
 
 void activity_set_skip_test(bool on) { g_skip_test = on; }
@@ -1018,6 +1021,11 @@ void activity_on_event(const std::vector<uint8_t>& p) {
                 std::memcpy(&key, p.data() + 5, 4);
                 if (const char* n = event_name(key)) g_toasts.push_back(std::string("World event near {}\n") + n);
             }
+            break;
+        case kBye:  // the host leaves: we go back to the title first, so its server unloads us the native way
+            log::info("Activity: the host is ending the session");
+            g_toasts.push_back("{} ended the session.");
+            g_bye = true;
             break;
         case kTitle:             // scoreboard.h, below
         case kRace:              // coop_race.h, below

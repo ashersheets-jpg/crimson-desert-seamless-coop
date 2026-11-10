@@ -4034,3 +4034,16 @@ invalidates the layout itself. To try: TranslateX on RB (UI thread), re-applied 
   next page in the tab row with the game's own select-by-key (exe+0xA7866B0) and runs the row's "selection changed"
   callback when the select did not open the page by itself. The existing tab filter then lands on Co-op past Others.
 - Still to check: the keyboard's next-tab key with the glyph hidden.
+
+### tcB291: our RB step works; the host's Return to Title with a guest attached crashes somewhere else each time (2026-11-10)
+
+- SAVES OK, user install restored 5/5.
+- RB through the layer: 1 -> 2 -> 3 -> 4 -> Co-op, all four steps (the select moves the row; the row's callback is
+  run by us). Row layout stays "LB Map Inventory Journal Skills Others Co-op RB".
+- Leave row -> Return to Title on the UI thread: the sequencer guard held, but the host crashed 0.6 s later at
+  exe+0xE6911E5 reading 0x170 (stack exe+0x5CCA470, 0x5EE74D0, 0x29AD474, cdmp.asi+0x394A73, exe+0x2D111B3): another
+  request of the guest handled while the host's world unloads. Guarding handlers one by one is the wrong fix.
+- Right fix (built, in test tcB292): the host says goodbye first (Activity event 28). The guest goes back to its own
+  title; its game sends the native goodbye (2001) and the host's server unloads the guest the game's own way
+  (guest_goodbye_logic.h in the native: proven clean). The host returns to its title 2.5 s after the guest's link
+  ended, or 6 s after the goodbye at the latest. The guest sees "<friend> ended the session."
