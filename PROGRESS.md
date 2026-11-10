@@ -3514,3 +3514,18 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   This is the case that failed in tcB217-229 and tcB239 (3100 FailAck) with the same keys.
 - Running tcB243: the same keys, the host 440 m east (tp_far_host.txt) = the far shop in the lobby flow. If it
   opens too, the far keys + interaction_share go into the layer's host defaults.
+
+2026-11-09 20:55 *** tcB243: the FAR shop opens too (host 409 m away), same keys ***
+  Lobby flow, host teleported 440 m east (tp_far_host), guest next to the butcher. Keys by -HostNativeExtra:
+  shop_probe, inter_probe, interaction_share, user2_shop_route, user2_stages_elements=schedule+funcnpc,
+  observer_hold_scene_order, observer_hold_scene_conflict.
+  Result: the guest's menu "Hernand Butchery / Renee: Buy, Sell, Leave" (shot tcB243-b0, the host's marker at
+  409 m). Host log: user 2's 2880 for sequencer 0x1CA passed, 2436 + 2920 acks back, no 0x15DBC102 on either
+  side. 0 "[kept]" lines: with the host far only user 2's scene binds the shopkeeper, so nothing had to be kept
+  (the ledger only acts when both players' scenes hold one NPC: tcB242, 18 kept). U-e 216 assigned, 210 driven,
+  aborted no. Both alive, SAVES OK.
+  So with one set of keys: near-host shop (tcB242) and far shop (tcB243) both open. The tcB224-229 blocker is gone.
+  Layer defaults changed (native_mode_text.h): the far-shop keys + interaction_share are now host defaults; layer
+  test updated; layer builds, all tests pass. tcB244 = the same far run on plain release defaults (running).
+  Chart for the Discord made at the user's request: docs/drafts/progress-2026-11-09.png (estimates).
+  User, 20:50: wants a test version for the playtesters as soon as the core is stable, extras can wait.
