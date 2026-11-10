@@ -1,0 +1,23 @@
+**Crimson Desert Seamless Co-op+ (alpha): feature list, shared world playtest build**
+Two-player co-op (Steam, game 1.0.0.3576). New in this build: you both play in **one shared world**. This is the basic part of the big update; more comes later.
+**Works** = checked with two copies of the game on one PC (still report what you see)
+**Needs testing** = built, needs two real players on two PCs. Please try these!
+**Not yet** = not in this build
+
+**Joining and saves**
+- Co-op menu at the title screen: Invite Friends, then Start Co-op; both games restart once into the shared world: Works
+- Joining over Steam between two PCs: Needs testing (never tried on two PCs)
+- Radmin VPN / Direct IP from the Co-op menu: Needs testing
+- A co-op save per friend; your normal saves are not touched: Works
+- Continue Our Co-op Save: the host carries on from the last co-op autosave: Works
+- The guest keeps their own character and progress between sessions: Works
+- If the guest leaves or drops, the host keeps playing: Works
+- Joining mid-game: Not yet (title screen only)
+
+**One shared world**
+- The same NPCs and townsfolk for both of you; the guest can talk to them: Works
+- Merchants: the guest can buy and sell, also when the host is far away: Works
+- Quests: each player keeps their own progress: Works
+- Revive a downed friend: hold E next to them: Works
+- The same enemies for both, fighting both of you: Needs testing
+- Long sessions (an hour or more): Needs testing

@@ -1,0 +1,16 @@
+**Needs testing (built: look, listen and tell us)**
+- Player menu: walk up to your friend and hold R for the challenges (duel, rock-paper-scissors, race, hunt, fishing, hide and seek)
+- Shared map: the host's explored area shows on the guest's map
+- Your friend can't hurt townsfolk or merchants
+- Hearing your friend's footsteps and hits; their hits staggering enemies you see
+- Fighting from horseback, other mounts, world events, bosses and cutscenes together
+- Frame rate with both players in a town
+- F8 co-op panel, chat (Shift+F2), quick messages and the other extras from earlier builds: not re-checked in the shared world
+
+**Not yet (planned for the full update)**
+- Item trading and gifting, shared stash
+- Real PvP minigames (arm wrestling against each other and more)
+- Emotes and group photos
+- 3-4 players
+- Quest steps credited to both players (built, switched off for now)
+- Joining mid-game

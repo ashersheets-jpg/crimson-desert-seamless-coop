@@ -1,0 +1,25 @@
+**How to install Seamless Co-op+ (shared world playtest)**
+
+**Download:** the newest zip in #download-here: `CrimsonDesert-SeamlessCoop-<version>-shared-world.zip` (not the `-mod-manager` one). **You and your co-op partner need the SAME zip.**
+
+**You need:** Crimson Desert on Steam, game version 1.0.0.3576. You and your partner must be Steam friends with the Steam overlay on.
+
+**Install (game closed):**
+1. Right-click the zip > Properties. If there's an Unblock box at the bottom, tick it > OK.
+2. Right-click the zip > Extract All, anywhere (Desktop is fine).
+3. Double-click `Install Co-op+.cmd`. It backs up your saves and copies the mod into the game's bin64 folder. If SmartScreen pops up: More info > Run anyway.
+4. Start the game from Steam. The Co-op menu shows at the title screen.
+
+**Play (both stay at the title screen, don't load a save):**
+1. Host: **Invite Friends** and pick your friend in the Steam overlay.
+2. Friend: accept the invite (or right-click the host in Steam > Join Game).
+3. Host: **Start Co-op** and pick how the journey begins. Next time, pick **Continue Our Co-op Save**.
+4. Both games restart once into the shared world (about 30 seconds). Joining only works from the title screen.
+
+**Your saves:** co-op has its own save folder, one per friend. Your normal saves are not touched, and the installer backs them up to Documents\CrimsonDesert-CoopPlus-SaveBackups anyway.
+
+**Remove:** `Uninstall Co-op+.cmd`. Turn off for a while: `Vanilla mode on-off.cmd`.
+
+**Found a bug?** Close the game, double-click `Diagnose Co-op+.cmd`, then paste (Ctrl+V) into #bug-reports with what happened and who was host. If that doesn't work, attach `cdmp.log` and `coopplus.log` from the game's bin64 folder.
+
+New builds get announced in #announcements and posted in #download-here.

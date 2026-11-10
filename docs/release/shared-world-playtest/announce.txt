@@ -1,0 +1,15 @@
+**Shared world playtest is out: 0.1.0-alpha+377f2c97**
+The first build of the big update is **available now** in #download-here.
+
+- **One shared world:** your friend joins your actual world. The same NPCs, townsfolk, merchants and enemies for both of you.
+- **Merchants and NPCs work for the guest**, also when the host is far away.
+- **Quests:** each player keeps their own progress.
+- **Co-op saves:** one per friend, apart from your normal saves. Pick Continue Our Co-op Save to carry on; the guest keeps their own character and progress.
+- **Revive:** hold E next to a downed friend.
+- **Join from the title screen:** Invite Friends, then Start Co-op; both games restart once into the shared world.
+
+**This is not the full update we had planned**, only its basic features. Trading, the shared stash, minigames, emotes and 3-4 players come later.
+
+**You are the first two-PC test.** It was tested with two copies of the game on one PC; joining over Steam between two PCs has not been tried yet. Just play the game normally with a friend and tell us what breaks: the list of things to watch is in #general, reports go in #bug-reports.
+
+Both players need the same zip. Install steps: #how-to-install. Full list of what's in and what's not: #features.

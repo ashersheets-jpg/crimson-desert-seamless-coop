@@ -3644,3 +3644,16 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
 - Promises made there: test build **within the next 1-2 days**; it is **not the full planned update**, only the basic features (shared world, NPCs, merchants, quests, revive, co-op saves); trading, shared stash, minigames, emotes, 3-4 players come later.
 - Testers were asked to play normally and watch: Steam join from the title screen, "Continue Our Co-op Save", NPCs/towns, merchants (also far from host), per-player quests, revive (hold E), disconnects. Logs to send: bin64 `cdmp.log` and `coopplus.log`.
 - Still open: sending the build itself needs the user's OK.
+
+### 2026-11-10 00:10 - Shared world playtest build sent out on Discord (user's request)
+
+- User: "post the message instead of in 1-2 days say it is available now, upload the playtest files in the download here tab, and revise the how-to install tab, the announcements tab, and the features tab".
+- #download-here: new post with both zips attached, 0.1.0-alpha+377f2c97 shared-world (11.64 MB) and -shared-world-mod-manager (6.34 MB). sha256 checked in the page before attaching (6a3b9255... and 9dfefe5f...). Symbols zips not uploaded. No GitHub release was made (not asked).
+- #how-to-install: the pinned message edited to the shared-world steps (title-screen Co-op menu: Invite Friends, Start Co-op, Continue Our Co-op Save).
+- #features: the three messages edited to the shared-world build (Works / Needs testing / Not yet / known issues).
+- #announcements: new post "Shared world playtest is out: 0.1.0-alpha+377f2c97".
+- #general: the 11-09 post edited, "should be out within the next 1-2 days" -> "is available now in the download-here channel".
+- Texts as posted: docs/release/shared-world-playtest/.
+- How the upload was done (the app's browser pane has no file-upload tool and discord.com cannot reach loopback): open http://127.0.0.1:<port> in the same tab, read the files into window.name (base64), navigate to Discord (window.name survives), rebuild File objects, set them on the composer's input[type=file] with a DataTransfer and fire "change". Long texts: a synthetic paste event on the focused editor. Editing: Up arrow for the last own message, the hover pencil for older ones; select all with a DOM Range + Backspace (Ctrl+A does not reach the editor).
+- Told the testers honestly: tested with two copies on one PC only; Steam join between two PCs, Radmin / Direct IP untested in the shared world.
+- Next: watch #bug-reports for the first two-PC results; then the feature list (B11 trade probe first).

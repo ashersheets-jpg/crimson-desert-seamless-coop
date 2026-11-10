@@ -1,0 +1,10 @@
+**Download: Seamless Co-op+ SHARED WORLD playtest, 0.1.0-alpha+377f2c97**
+NEW: you and your friend play in **one shared world** (the same NPCs, merchants and enemies) instead of each seeing a copy. This is the basic part of the big update, not all of it.
+
+- `CrimsonDesert-SeamlessCoop-0.1.0-alpha+377f2c97-shared-world.zip`: this is the one you want. Install steps are in #how-to-install
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+You and your co-op partner need the same zip. Game version 1.0.0.3576 (Steam). Run the installer with the game closed.
+**You are the first two-PC test.** It was tested with two copies of the game on one PC. Joining over Steam between two PCs has not been tried yet, so please tell us in #bug-reports how joining goes.
+The previous build (862b4256, above) still works if you want to go back: uninstall this one first.
+Windows Defender scan: no threats. GPL-3.0; the source is inside the zip (source.zip and source-native.zip). Built on Crimson Desert Multiplayer by ByJunter.
