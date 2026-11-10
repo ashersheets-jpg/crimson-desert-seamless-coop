@@ -3537,3 +3537,8 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   SAVES OK. The far-shop keys + interaction_share are committed as host defaults (cd-coop-3446 native_mode_text.h);
   ROADMAP B02 / B02b updated. Still to see: the far guest then meeting the host at the same shop in ONE run.
   Next: rebuild the shared-world package, test install, then a stability pass for a playtest build.
+  21:20 package rebuilt at 0087103: dist\CrimsonDesert-SeamlessCoop-0.1.0-alpha+0087103b-shared-world.zip
+  (11920 KB); tools\test-install-fake.ps1 on it: all steps passed, 0 FAIL.
+  21:25 running tcB246 (release defaults): the guest opens the butcher with the host far, the host then teleports
+  back next to the butcher (tp_far_then_butcher_host.txt, 170 s later) and the guest presses R again = far shop,
+  then the same shop near the host, in ONE run (the tcB224-229 order).
