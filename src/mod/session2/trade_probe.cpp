@@ -666,8 +666,9 @@ int* __fastcall worker_detour(uintptr_t self, int* err, uint32_t item, uint16_t 
         if (to_character) give_raw(gv, self, item, count, r, inv, slot, b);
         log::info("Give: item {} x{} from 0x{:08X} (inventory 0x{:X} slot {} -> {}) to 0x{:08X}: stage {} (5 = given) | "
                   "receiver actor 0x{:X} holder 0x{:X} | slot has item idx 0x{:X} x{} (asked idx 0x{:X}) | distance err "
-                  "{} discard err {} add err {} back err {} | drop entry {}", gv.item_key, count, g, inv, slot, gv.slot, r, gv.stage, gv.actor, gv.holder,
-                  gv.have_idx, gv.have, gv.item_idx, gv.e_dist, gv.e_discard, gv.e_add, gv.e_back, gv.drop);
+                  "{} discard err {} ({}) add err {} ({}) back err {} | drop entry {}", gv.item_key, count, g, inv, slot, gv.slot, r,
+                  gv.stage, gv.actor, gv.holder, gv.have_idx, gv.have, gv.item_idx, gv.e_dist, gv.e_discard,
+                  err_name(gv.e_discard), gv.e_add, err_name(gv.e_add), gv.e_back, gv.drop);
         if (gv.stage < 3) {
             log::info("Give: giver holder 0x{:X} (its actor's holder 0x{:X}) entry 0x{:X} inventory index 0x{:X}", self,
                       gv.giver_holder, gv.entry, gv.inv_idx);
