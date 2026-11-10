@@ -3704,3 +3704,7 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
 - STILL TO DO from that message (plan, not in this fix): the in-world Challenge chord and the co-op panel key stay
   as keys until hold-interact challenges (B16b) and the main-menu Co-op Settings merge replace them.
 - The user cannot playtest again until later on 2026-11-11 (their friend left); the other playtesters go first.
+- 2026-11-10 01:15 tcB264 (final layer, banner removed): both in the shared world, no key banner, SAVES OK, user
+  install restored 5/5. Package 0.1.0-alpha+22e8f365 (dist\...-shared-world.zip 11.9 MB and
+  ...-shared-world-mod-manager.zip); tools\test-install-fake.ps1 result on the shared-world zip: see the commit.
+  NOT posted to Discord and NOT installed in the user's game folder yet (both need the user's OK).
