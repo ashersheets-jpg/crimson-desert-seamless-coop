@@ -3940,3 +3940,11 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
 - Both use the server thread's TLS, so they must run on the server thread: inside our 3111 worker detour, set off by
   a magic `entry` value from the guest (the host checks that the receiver is a character and near).
 - Not usable: DeleteItemCheat worker (clears a whole inventory), AddMinusItem worker (did nothing for bag items).
+
+### RB glyph: the layout lever (2026-11-10, decomp read by an agent; not yet tested)
+The menu root (vftable exe+0x5A033D0 = `UIGamePlayControl_Root_MainMenu`) has no "place RB" function: the glyph is
+laid out by the game's CSS-like engine. The lever is the style length setter `exe+0x712F00 (styleHandle, u8* propId,
+float* value, u8* unit, 0)` with `styleHandle = *(*(*(root+0x178)+8)+0x20)`; property ids: 2 Left, 0x15 MarginLeft,
+0x4A TranslateX, 0xC Display, 0xD Visibility (byte setter exe+0x6D9090); unit 1 = scaled pixels, 2 = percent. It
+invalidates the layout itself. To try: TranslateX on RB (UI thread), re-applied if the key guide refresh
+(exe+0xE446C0) resets it. Root +0x1A8 = the tab controller (exe+0xF1CB50: LB -> previous, RB -> next).
