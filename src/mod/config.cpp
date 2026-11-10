@@ -298,6 +298,9 @@ Config load_config(const std::wstring& ini_path) {
     c.s2_guest_x_interaction_stage =
         narrow(read_string(ini_path, L"session2", L"guest_x_interaction_stage", "0"));
     c.s2_shop_probe = read_uint(ini_path, L"session2", L"shop_probe", 0) != 0;
+    c.s2_trade_probe = read_uint(ini_path, L"session2", L"trade_probe", 0) != 0;
+    c.s2_inter_probe = read_uint(ini_path, L"session2", L"inter_probe", 0) != 0;
+    c.s2_interaction_share = read_uint(ini_path, L"session2", L"interaction_share", 0) != 0;
     c.s2_funcnpc_twin = narrow(read_string(ini_path, L"session2", L"funcnpc_twin", "0"));
     // P8 option U, U-0 (research/s25/mundo-escenarios-propios.md).
     c.s2_user2_stages = narrow(read_string(ini_path, L"session2", L"user2_stages", "0"));

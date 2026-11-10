@@ -508,6 +508,13 @@ struct Config {
     // shop scenes (owner gate 0x288B87A, 0x288AAEF, the 2671 result, the server's 0x2126920) and user 2's
     // 2671/2720/2436/2591 with observer_seq_copy's R1 verdict. Needs create_session=1.
     bool s2_shop_probe = false;
+    // trade_probe, HOST (session2/trade_probe.h; B11 research): read-only probes of the server's 3111 item move.
+    bool s2_trade_probe = false;
+    // inter_probe, HOST (session2/trade_probe.h; far-shop research): read-only probes of NPC dynamic interactions.
+    bool s2_inter_probe = false;
+    // interaction_share = 0 | 1, HOST (session2/interaction_share.h; far shops, tcB239): an NPC's dynamic
+    // interactions stay while a scene of the other player still holds them (the game removes them by key).
+    bool s2_interaction_share = false;
     // funcnpc_twin, HOST (session2/shop_probe.h; pendientes/p8-impl-tenderos-s2.md): "0" | "probe" | "1" (held as
     // probe in this build). S2: logs which shop scene a twin for user 2 would be prepared for; nothing is called.
     std::string s2_funcnpc_twin = "0";

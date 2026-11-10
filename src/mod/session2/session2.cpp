@@ -44,6 +44,8 @@
 #include "mod/session2/tree_bend.h"
 #include "mod/session2/docked_gimmicks.h"
 #include "mod/session2/shop_probe.h"
+#include "mod/session2/trade_probe.h"
+#include "mod/session2/interaction_share.h"
 #include "mod/session2/shop_trade_probe.h"
 #include "mod/session2/observer_hold_scene_order.h"
 #include "mod/session2/user2_shops.h"
@@ -1380,6 +1382,9 @@ bool install(const Options& opt) {
             shop_probe_start(lc.s2_shop_probe, lc.s2_funcnpc_twin);
         }
     }
+    if (lc.s2_trade_probe && opt.create_session) trade_probe_start();
+    if (lc.s2_inter_probe && opt.create_session) inter_probe_start();  // B11 research (read only)
+    if (lc.s2_interaction_share && opt.create_session) interaction_share_start();
     // P8 option U, U-0 (research/s25/mundo-escenarios-propios.md): read-only probe of the stage managers.
     const auto key_on = [](const std::string& v) { return !v.empty() && v != "0"; };
     if (key_on(lc.s2_user2_stages) || key_on(lc.s2_user2_timer_route)) {

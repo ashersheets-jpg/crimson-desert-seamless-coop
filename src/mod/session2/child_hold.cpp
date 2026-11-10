@@ -4759,6 +4759,27 @@ Reannounce child_settle_reannounce(uint32_t key, uint32_t delay_ms, bool dry_run
     return Reannounce::Queued;
 }
 
+// Research: the actor's dynamic interaction entries ([[actor+0x68]+0x98]: array +0x90, count +0x98, 0x38 each).
+static std::string ic_dyn_text(const game::FastReads& m, uintptr_t actor) {
+    std::string t;
+    const auto a68 = m.ptr(actor + 0x68);
+    const auto ic = a68 ? m.ptr(*a68 + 0x98) : std::nullopt;
+    if (!ic) return " | IC ?";
+    const auto arr = m.rd<uintptr_t>(*ic + 0x90);
+    const auto n = m.rd<uint32_t>(*ic + 0x98);
+    t = std::format(" | IC dynamic {}:", n ? *n : 0);
+    for (uint32_t i = 0; arr && n && i < *n && i < 12; ++i) {
+        const uintptr_t e = *arr + i * 0x38ull;
+        const auto idx = m.rd<uint16_t>(e + 0x10);
+        const auto q = m.rd<uint64_t>(e + 0x20);
+        const auto d = m.rd<uint32_t>(e + 0x28);
+        const auto w = m.rd<uint16_t>(e + 0x2E);
+        t += std::format(" [idx 0x{:X} scene 0x{:X} d28 0x{:X} w2e 0x{:X}]", idx ? *idx : 0, q ? *q : 0, d ? *d : 0,
+                         w ? *w : 0);
+    }
+    return t;
+}
+
 void child_hold_npc_playdata_diag(uint32_t key, const char* tag) noexcept {
     try {
         const auto sam = sam_now(true);
@@ -4779,7 +4800,8 @@ void child_hold_npc_playdata_diag(uint32_t key, const char* tag) noexcept {
                 const auto v = m.rd<uint32_t>(*c + o);
                 if (v && *v) t += std::format(" +0x{:X}={:X}", o, *v);
             }
-            log::info("ChildHold [{}] NPC 0x{:08X}: server play data 0x{:X}:{}", tag, key, *c, t);
+            log::info("ChildHold [{}] NPC 0x{:08X}: server play data 0x{:X}:{}{}", tag, key, *c, t,
+                      ic_dyn_text(m, *actor));
             return;
         }
     } catch (...) {
@@ -4819,7 +4841,8 @@ bool child_hold_npc_rebind(uint32_t key, uint32_t stale_owner, uint32_t owner, u
             if (!cur || *cur != stale_owner) return false;  // only what still names user 2's character
             const bool ok = rebind_write(*c, owner, scene, node);
             log::info("ChildHold [rebind] NPC 0x{:08X}: server play data 0x{:X} owner 0x{:08X} -> 0x{:08X}, scene 0x{:X}, "
-                      "node 0x{:08X}{}", key, *c, stale_owner, owner, scene, node, ok ? "" : " FAILED (fault)");
+                      "node 0x{:08X}{}{}", key, *c, stale_owner, owner, scene, node, ok ? "" : " FAILED (fault)",
+                      ic_dyn_text(m, *actor));
             return ok;
         }
     } catch (...) {
