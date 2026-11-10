@@ -4397,3 +4397,18 @@ arriving at Hernand.
   "spawn position" error (eErrNoInvalidSpawnPosition) is the item record's +0xC0 conversion branch, not the drop.
   Built (native): a mid hook at exe+0x2DF184F (bytes checked) that, only while the mod's own give / stash move runs on
   that thread (thread-local flag, giver and receiver matched), lets the compare see the giver's owner. Test tcB318.
+
+### tcB318-tcB321 (2026-11-10 17:57-18:31): the give WORKS (host -> guest, whole record)
+
+- tcB318: with the same-user check hooked ("TradeProbe: the move's same-user check (exe+0x2DF184F) hooked"), the move
+  went past it and failed "Not enough items." (eErrNoItemIsLack).
+- tcB319: a plain route template (no condition, no conversion list; the route of index 7) changed nothing.
+- tcB320: the move's error constants logged (0x714BFDC CantMoveItem -317787844, 0x714B3C8 InvalidExchangeItemTarget
+  -1183012979, ...); ItemIsLack was raised deeper. Cause found in the decompile: the 3111 worker exe+0x2E0B2B0 passes
+  the COUNT BY VALUE as the move's last argument; the mod passed a pointer (read as a huge count).
+- tcB321: count by value -> "Give (whole record): x1 from 0xA0100001 to 0xA0100066: stage 5 (5 = moved) err 0".
+  The host's inventory on screen: the Ricefish gone, 66/99 -> 65/99, the next item moved up; the menu not locked.
+  The game itself moves the whole record (enchant, durability, dye kept) and tells both clients.
+- Not checked yet: the guest seeing the fish arrive and the guest -> host give (the guest's load stalled again: the
+  one-PC memory pressure, WINDOW_B), and the stash (same move, needs an unlocked warehouse). item_sharing stays off
+  by default until the guest side is seen.
