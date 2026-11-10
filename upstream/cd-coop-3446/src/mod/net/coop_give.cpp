@@ -11,6 +11,7 @@
 #include "mod/game/offsets.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
+#include "mod/net/coop_stash.h"
 #include "mod/net/local_capture.h"
 #include "mod/net/troc_sniffer.h"
 
@@ -183,6 +184,7 @@ bool give_offer_stash() { return g_offer_stash.load(); }
 void give_answer(int code) { g_answer = code; }
 
 void give_ui_tick() {
+    stash_ui_tick();  // B12: item names for the stash page (needs this thread)
     if (!g_pending.on) return;
     const int answer = g_answer.exchange(-1);
     if (answer < 0) {

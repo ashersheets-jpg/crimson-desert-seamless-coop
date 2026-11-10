@@ -4242,3 +4242,7 @@ Full notes: build/decomp/notes_inventory_menu.md (local, not published).
   (section). Item names: placeholder "Item <index>" until the name lookup is found (research running).
 - Not checked: whether the host's client keeps its WareHouse filled away from a keeper; the route condition
   skipped on the deposit; saves after a move (the guest's export at leave vs the host's save).
+- Item names (build/decomp/notes_item_names.md, local): item row (exe+0x3DD8A0) +0x90 = the localized name object,
+  its vftable slot 1 returns UTF-8 text. Rows load on demand and are freed 30 s later, so the names are read on the
+  game's UI thread (the pause menu's update hook, via give_ui_tick -> stash_ui_tick) and cached; the stash page shows
+  "Ricefish x3"-style rows ("Item <index>" until resolved). Built, untested.

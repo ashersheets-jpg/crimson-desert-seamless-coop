@@ -38,5 +38,7 @@ bool stash_withdraw(const StashItem& it);
 
 // The display name of an item index ("" when unknown; the caller shows a fallback).
 std::string stash_item_name(uint16_t idx);
+// The game's UI thread (game/main_menu's update hook, through give_ui_tick): resolves the names asked for.
+void stash_ui_tick();
 
 }  // namespace cdmp::net

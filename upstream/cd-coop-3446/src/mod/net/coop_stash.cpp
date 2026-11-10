@@ -6,6 +6,7 @@
 #include <atomic>
 #include <cstring>
 #include <mutex>
+#include <unordered_map>
 #include <optional>
 
 #include "mod/game/offsets.h"
@@ -267,6 +268,58 @@ bool stash_withdraw(const StashItem& it) {
     return ok;
 }
 
-std::string stash_item_name(uint16_t) { return {}; }
+// Item names (build/decomp/notes_item_names.md, local): row = exe+0x3DD8A0(0, idx) (loaded on demand, freed 30 s
+// later: only on the game's UI thread, never kept); its localized name object at row+0x90; the object's vftable slot 1
+// returns the UTF-8 text (const char*, from the localization buffer). Resolved in stash_ui_tick, cached here.
+namespace {
+std::mutex g_names_mu;
+std::unordered_map<uint16_t, std::string> g_names;
+std::vector<uint16_t> g_names_wanted;
+
+bool read_name(uint16_t idx, char* out, size_t cap) noexcept {
+    const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    out[0] = 0;
+    __try {
+        const uintptr_t row = reinterpret_cast<uintptr_t (__fastcall*)(uint64_t, uint32_t)>(base + 0x3DD8A0)(0, idx);
+        if (!row) return false;
+        const uintptr_t obj = *reinterpret_cast<uintptr_t*>(row + 0x90);
+        if (!obj) return false;
+        const uintptr_t vt = *reinterpret_cast<uintptr_t*>(obj);
+        const char* t = reinterpret_cast<const char* (__fastcall*)(uintptr_t, uint64_t)>(
+            *reinterpret_cast<uintptr_t*>(vt + 8))(obj, 0);
+        if (!t) return false;
+        size_t i = 0;
+        for (; i + 1 < cap && t[i]; ++i) out[i] = t[i];
+        out[i] = 0;
+        return i > 0;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        out[0] = 0;
+        return false;
+    }
+}
+}  // namespace
+
+std::string stash_item_name(uint16_t idx) {
+    std::lock_guard lk(g_names_mu);
+    if (auto it = g_names.find(idx); it != g_names.end()) return it->second;
+    if (std::find(g_names_wanted.begin(), g_names_wanted.end(), idx) == g_names_wanted.end() &&
+        g_names_wanted.size() < 512)
+        g_names_wanted.push_back(idx);
+    return {};
+}
+
+void stash_ui_tick() {
+    std::vector<uint16_t> want;
+    {
+        std::lock_guard lk(g_names_mu);
+        want.swap(g_names_wanted);
+    }
+    for (const uint16_t idx : want) {
+        char buf[128];
+        const bool ok = read_name(idx, buf, sizeof buf);
+        std::lock_guard lk(g_names_mu);
+        g_names[idx] = ok ? std::string(buf) : std::string();  // "" = the fallback, not asked again
+    }
+}
 
 }  // namespace cdmp::net
