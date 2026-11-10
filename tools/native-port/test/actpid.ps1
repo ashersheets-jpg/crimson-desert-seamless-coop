@@ -21,13 +21,20 @@ public static class A {
 '@
 $p = Get-Process -Id $GamePid -ErrorAction Stop | Where-Object { $_.MainWindowHandle -ne 0 }
 $h = $p.MainWindowHandle
-# Up to 6 tries (another window may take the focus for a moment): Alt tap, restore, bring to top, focus.
-for ($try = 0; $try -lt 6 -and [A]::GetForegroundWindow() -ne $h; $try++) {
+# Up to 24 tries (another window may take the focus for a moment): Alt tap, restore, bring to top, focus.
+# 2026-11-09 (tcB244 / 246 / 247): while the game loads, the window in front can be ANOTHER window of the same
+# game process than MainWindowHandle; in front = the foreground window belongs to this pid.
+Add-Type -Namespace Fg -Name W -MemberDefinition '[DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint p);'
+function FrontPid { $fp = 0; [void][Fg.W]::GetWindowThreadProcessId([A]::GetForegroundWindow(), [ref]$fp); [int]$fp }
+for ($try = 0; $try -lt 24 -and (FrontPid) -ne $GamePid; $try++) {
   [A]::keybd_event(0x12, 0, 0, [UIntPtr]::Zero); [A]::keybd_event(0x12, 0, 2, [UIntPtr]::Zero)
   [A]::ShowWindow($h, 9) | Out-Null; [A]::BringWindowToTop($h) | Out-Null
   [A]::SetForegroundWindow($h) | Out-Null; Start-Sleep -Milliseconds 500
 }
-if ([A]::GetForegroundWindow() -ne $h) { throw 'game window is not in front' }
+if ((FrontPid) -ne $GamePid) {
+  $q = Get-Process -Id (FrontPid) -ErrorAction SilentlyContinue
+  throw "game window is not in front (in front: pid $(FrontPid) $($q.Name) '$($q.MainWindowTitle)')"
+}
 $vk = @{ ENTER=0x0D; ESC=0x1B; SPACE=0x20; UP=0x26; DOWN=0x28; LEFT=0x25; RIGHT=0x27; CTRL=0x11; TAB=0x09; ALT=0x12;
          SHIFT=0x10; F1=0x70; F2=0x71; F3=0x72; F4=0x73; F5=0x74; F6=0x75; F7=0x76; F8=0x77; F9=0x78; F10=0x79 }
 function code($n) { if ($vk.ContainsKey($n)) { [byte]$vk[$n] } else { [byte][char]$n } }

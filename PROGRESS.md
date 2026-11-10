@@ -3542,3 +3542,15 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   21:25 running tcB246 (release defaults): the guest opens the butcher with the host far, the host then teleports
   back next to the butcher (tp_far_then_butcher_host.txt, 170 s later) and the guest presses R again = far shop,
   then the same shop near the host, in ONE run (the tcB224-229 order).
+
+2026-11-09 22:00 tcB246-248: harness fixes, no game result yet for "far then near in one run"
+  tcB246 and tcB247 stopped like tcB244 ("game window is not in front" right after the host entered; SAVES OK).
+  Cause: while a copy loads, the window in front belongs to the game process but is not its MainWindowHandle.
+  Fix (actpid.ps1): the focus check now compares the pid of the window in front with the game's pid.
+  tcB248 ran to the end (both alive, no 0x15DBC102, 27 [kept], SAVES OK) and the guest's butcher menu opened
+  (shot tcB248-b0), but it did NOT test the planned order, for two script reasons:
+  - dev_script caps every "wait" at 10 s, so "wait 170000" was 10 s: the host was already back (35 m) at the
+    guest's first press. Script rewritten with 11 x "wait 10000".
+  - the guest's keys closed the shop with ESC twice: the second ESC opened the inventory, so the second R went
+    to the inventory. Now one ESC only.
+  So tcB248 counts only as one more near-host shop pass. tcB249 runs the fixed order.
