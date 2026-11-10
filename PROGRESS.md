@@ -9,6 +9,7 @@ test save Out, shipped cdmp.ini restored.
 - Playtest results from the testers (the two-PC test).
 - Release / Discord posts / sending a build: each needs the user's OK first.
 - Controller feel checks (hands on a pad).
+- Decide: may the guest pick up quest items lying in the host's world (B19)?
 
 ## T01 -- Two-PC playtest pack
 Plan: list every 2-PC item (joining incl. room code and invite-only, guest loot, shared enemy set, boss cutscene,
@@ -4200,3 +4201,23 @@ Full notes: build/decomp/notes_inventory_menu.md (local, not published).
   250 ms is handed back to the game afterwards (press_for_game 90 ms), so a tap still jumps. render/hud.cpp. Untested.
 - Discord #bug-reports check not done: the app's browser is not signed in to Discord and Claude in Chrome is not
   connected (Chrome closed). Queued.
+- B16 (emotes, photo) first look, static: the game has a UISocialAction data table (UISocialActionKey, a pascript
+  property type: social actions as game data) and a photo camera ("PhotoCamera", Query_CameraBlockInPhotoMode). In the
+  shared world each character's actions go through the host's server, so a social action or a photo should show both
+  players without our help; to check in game (does the player have a social action wheel on 3576, does the friend
+  see it). Not built.
+
+### 2026-11-10 (Steam closed): B19 anti-grief, finer (native, local commit)
+
+- Decomp research (build/decomp/notes_anti_grief.md, local only): the HP change and the kill are in the protected
+  .tls$ code, so the place to refuse is the request. DoFrameEventReq 3030 handler 0x2BE1C10 reads the target count
+  from the payload size (677-byte entries at the end, keys non-zero and strictly ascending, fewer than 31). Pickups all
+  go through 0x2D37B10(gimmickComp, int* err, picker, kind) (item at [comp+0xC0]); item row 0x3DD8A0 byte +0x29 is
+  very likely the quest-item flag; body loot 0x2E224F0. No essential / invincible flag found for NPCs.
+- Built: before, a guest swing that touched one protected person (an NPC the host has a dialog list for) was dropped
+  whole, so the enemies in the same swing were not hit either. Now only the protected entries are taken out and the
+  rest is handed to the server (agl::without_targets, unit-tested; a swing on protected people only is still dropped
+  whole). Log: "AntiGrief: the guest's hit kept N target(s), M person(s) of the host's world taken out". Untested in
+  game.
+- Open design question for the user (queued): should the guest be stopped from picking up quest items lying in the
+  host's world (the host could lose a story item), or allowed (the guest may need it for its own quest)?
