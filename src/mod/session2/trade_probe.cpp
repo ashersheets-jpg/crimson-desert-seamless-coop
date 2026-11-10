@@ -215,12 +215,17 @@ struct Stash {
 
 bool inventory_indices(uintptr_t base, uint16_t& bag, uint16_t& wh) noexcept {
     __try {
-        const uintptr_t root = *reinterpret_cast<uintptr_t*>(base + 0x71C0498);
+        // The game's own chain (exe+0xEC03A0, exe+0x2D45EE0): *(*(*(*[exe+0x71C0498]) + 8) + 0x240) + 0xA2 / +0xB2.
+        const uintptr_t slot = *reinterpret_cast<uintptr_t*>(base + 0x71C0498);
+        if (!slot) return false;
+        const uintptr_t root = *reinterpret_cast<uintptr_t*>(slot);
         if (!root) return false;
         const uintptr_t info = *reinterpret_cast<uintptr_t*>(root + 8);
         if (!info) return false;
-        bag = *reinterpret_cast<uint16_t*>(info + 0x240 + 0xA2);  // "Character", the main bag
-        wh = *reinterpret_cast<uint16_t*>(info + 0x240 + 0xB2);   // "WareHouse"
+        const uintptr_t mgr = *reinterpret_cast<uintptr_t*>(info + 0x240);
+        if (!mgr) return false;
+        bag = *reinterpret_cast<uint16_t*>(mgr + 0xA2);  // "Character", the main bag
+        wh = *reinterpret_cast<uint16_t*>(mgr + 0xB2);   // "WareHouse"
         return bag != 0xFFFF && wh != 0xFFFF && bag != wh;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return false;
@@ -270,6 +275,72 @@ StashSlot stash_slot(uintptr_t base, uintptr_t holder, uint16_t inv, uint16_t sl
         out = {};
     }
     return out;
+}
+
+// The give (B11) through the same cross-actor move: the giver's bag -> the receiver's bag, whole record kept. The
+// game has no bag -> bag route, so a copy of its WareHouse -> bag route with the source set to the bag is used (the
+// row's item check then is the WareHouse -> bag one). Stage 5 = moved; anything else = not moved (the old discard +
+// add path runs then).
+struct GiveMove {
+    int stage = 0;
+    int err = -1;
+    uint16_t bag = 0xFFFF, slot = 0xFFFF, idx = 0xFFFF, sub = 0;
+    int64_t have = 0;
+};
+alignas(16) uint8_t g_give_route[0xA0];
+void give_move(GiveMove& m, uintptr_t self, uint32_t receiver, uint16_t inv_key, uint16_t slot, uint16_t hint,
+               uint64_t count) noexcept {
+    const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    uint16_t wh = 0xFFFF;
+    if (!inventory_indices(base, m.bag, wh)) return;
+    m.stage = 1;
+    __try {
+        uint64_t out = 0xFFFF;
+        reinterpret_cast<void* (__fastcall*)(uint64_t*, uint16_t)>(base + 0x3D5930)(&out, inv_key);
+        if (static_cast<uint16_t>(out) != m.bag || count < 1) return;  // only from the bag
+        const uintptr_t route = move_route(base, wh, m.bag);
+        if (!route) return;
+        std::memcpy(g_give_route, reinterpret_cast<void*>(route), sizeof g_give_route);
+        *reinterpret_cast<uint16_t*>(g_give_route + 2) = m.bag;
+        m.stage = 2;
+        const uintptr_t giver_actor = *reinterpret_cast<uintptr_t*>(self + 8);
+        const uintptr_t mgr = *reinterpret_cast<uintptr_t*>(*reinterpret_cast<uintptr_t*>(base + 0x71C0610) + 0x50);
+        uint64_t scope[8] = {};
+        reinterpret_cast<void* (__fastcall*)(uintptr_t, uint64_t*, uint64_t)>(base + 0x2D11880)(mgr, scope, receiver);
+        const uintptr_t receiver_actor = scope[1];
+        if ((scope[2] & 0xFF) != 0 && receiver_actor && giver_actor && receiver_actor != giver_actor) {
+            m.stage = 3;
+            auto fits = [&](const StashSlot& x) {
+                return x.idx != 0xFFFF && x.n >= static_cast<int64_t>(count) && (hint == 0xFFFF || x.idx == hint);
+            };
+            StashSlot pick;
+            if (slot != 0xFFFF && fits(pick = stash_slot(base, self, m.bag, slot))) {
+                m.slot = slot;
+            } else if (hint != 0xFFFF) {
+                for (uint16_t i = 0; i < 512; ++i) {
+                    if (fits(pick = stash_slot(base, self, m.bag, i))) {
+                        m.slot = i;
+                        break;
+                    }
+                }
+            }
+            if (m.slot != 0xFFFF) {
+                m.stage = 4;
+                m.idx = pick.idx;
+                m.sub = pick.sub;
+                m.have = pick.n;
+                int64_t n = static_cast<int64_t>(count);
+                reinterpret_cast<int* (__fastcall*)(uintptr_t, int*, uintptr_t, uintptr_t, uintptr_t, uint16_t, uint32_t,
+                                                    uint16_t, int64_t*)>(base + 0x2DF04A0)(
+                    self, &m.err, giver_actor, receiver_actor, reinterpret_cast<uintptr_t>(g_give_route), m.slot,
+                    m.idx, m.sub, &n);
+                if (m.err == 0) m.stage = 5;
+            }
+        }
+        reinterpret_cast<void (__fastcall*)(uint64_t*)>(base + 0x1618660)(scope);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        m.stage = -2;
+    }
 }
 
 // self = the requester's holder (the worker's own first argument), g / r = the packet's giver / receiver keys,
@@ -378,6 +449,17 @@ int* __fastcall worker_detour(uintptr_t self, int* err, uint32_t item, uint16_t 
         return err;
     }
     if (entry == kGiveEntry) {
+        if ((r & 0xF0000000) == 0xA0000000 && r != g) {
+            GiveMove m;
+            give_move(m, self, r, inv, slot, b, count);
+            log::info("Give (whole record): x{} from 0x{:08X} to 0x{:08X}: stage {} (5 = moved) err {} | bag {} slot {} "
+                      "idx 0x{:X} x{} sub {}{}", count, g, r, m.stage, m.err, m.bag, m.slot, m.idx, m.have, m.sub,
+                      m.stage == 5 ? "" : " -> the discard + add path");
+            if (m.stage == 5) {
+                *err = 0;
+                return err;
+            }
+        }
         Give gv;
         const bool to_character = (r & 0xF0000000) == 0xA0000000 && r != g;
         if (to_character) give_raw(gv, self, item, count, r, inv, slot, b);
