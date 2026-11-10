@@ -338,10 +338,11 @@ StashSlot stash_slot(uintptr_t base, uintptr_t holder, uint16_t inv, uint16_t sl
 struct GiveMove {
     int stage = 0;
     int err = -1;
-    uint16_t bag = 0xFFFF, slot = 0xFFFF, idx = 0xFFFF, sub = 0;
+    uint16_t bag = 0xFFFF, slot = 0xFFFF, idx = 0xFFFF, sub = 0, from = 0xFFFF;  // from: the route template's source
     int64_t have = 0;
 };
 alignas(16) uint8_t g_give_route[0xA0];
+uint16_t stash_inventory_index(uintptr_t base) noexcept;
 void give_move(GiveMove& m, uintptr_t self, uint32_t receiver, uint16_t inv_key, uint16_t slot, uint16_t hint,
                uint64_t count) noexcept {
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
@@ -352,11 +353,24 @@ void give_move(GiveMove& m, uintptr_t self, uint32_t receiver, uint16_t inv_key,
         if (inventory_key_of(base, m.bag) != inv_key || count < 1) return;  // only from the bag
         // A plain "storage -> bag" route of the game (tcB315: the manager's +0xB2 index has none; the search below
         // finds one), copied with its source set to the bag.
+        // Plain = no condition (+0x78) and no item-conversion list (+0x70 count; a conversion route needs input items:
+        // tcB318 "Not enough items."). The personal WareHouse's route back to the bag first (tcB305: 9 -> 1).
+        auto plain = [](uintptr_t r) {
+            return r && *reinterpret_cast<uintptr_t*>(r + 0x78) == 0 && *reinterpret_cast<uint32_t*>(r + 0x70) == 0;
+        };
         uintptr_t route = 0;
+        const uint16_t wh9 = stash_inventory_index(base);
+        if (wh9 != 0xFFFF && plain(move_route(base, wh9, m.bag))) {
+            route = move_route(base, wh9, m.bag);
+            m.from = wh9;
+        }
         for (uint16_t i = 0; i < 32 && !route; ++i) {
             if (i == m.bag) continue;
             const uintptr_t r = move_route(base, i, m.bag);
-            if (r && *reinterpret_cast<uintptr_t*>(r + 0x78) == 0) route = r;
+            if (plain(r)) {
+                route = r;
+                m.from = i;
+            }
         }
         if (!route) return;
         std::memcpy(g_give_route, reinterpret_cast<void*>(route), sizeof g_give_route);
@@ -393,10 +407,12 @@ void give_move(GiveMove& m, uintptr_t self, uint32_t receiver, uint16_t inv_key,
                 t_owner_giver = giver_actor;
                 t_owner_receiver = receiver_actor;
                 t_owner_pass = true;
+                // The count goes BY VALUE (the 3111 worker exe+0x2E0B2B0 passes its own count argument; tcB318-320:
+                // a pointer here read as a huge count -> eErrNoItemIsLack "Not enough items.").
                 reinterpret_cast<int* (__fastcall*)(uintptr_t, int*, uintptr_t, uintptr_t, uintptr_t, uint16_t, uint32_t,
-                                                    uint16_t, int64_t*)>(base + 0x2DF04A0)(
+                                                    uint16_t, int64_t)>(base + 0x2DF04A0)(
                     self, &m.err, giver_actor, receiver_actor, reinterpret_cast<uintptr_t>(g_give_route), m.slot,
-                    m.idx, m.sub, &n);
+                    m.idx, m.sub, n);
                 t_owner_pass = false;
                 if (m.err == 0) m.stage = 5;
             }
@@ -604,8 +620,8 @@ void stash_move(Stash& s, uintptr_t self, bool deposit, uint32_t g, uint32_t r, 
                 t_owner_receiver = receiver_actor;
                 t_owner_pass = giver_actor != receiver_actor;
                 reinterpret_cast<int* (__fastcall*)(uintptr_t, int*, uintptr_t, uintptr_t, uintptr_t, uint16_t, uint32_t,
-                                                    uint16_t, int64_t*)>(base + 0x2DF04A0)(
-                    self, &s.err, giver_actor, receiver_actor, route, s.slot, s.have_idx, s.sub, &n);
+                                                    uint16_t, int64_t)>(base + 0x2DF04A0)(
+                    self, &s.err, giver_actor, receiver_actor, route, s.slot, s.have_idx, s.sub, n);  // count by value
                 t_owner_pass = false;
                 if (s.err == 0) s.stage = 5;
             } else {
@@ -682,7 +698,7 @@ int* __fastcall worker_detour(uintptr_t self, int* err, uint32_t item, uint16_t 
             GiveMove m;
             give_move(m, self, r, inv, slot, b, count);
             log::info("Give (whole record): x{} from 0x{:08X} to 0x{:08X}: stage {} (5 = moved) err {} ({}) | bag {} slot {} "
-                      "idx 0x{:X} x{} sub {}{}", count, g, r, m.stage, m.err, err_name(m.err), m.bag, m.slot, m.idx, m.have, m.sub,
+                      "idx 0x{:X} x{} sub {} (route of {}){}", count, g, r, m.stage, m.err, err_name(m.err), m.bag, m.slot, m.idx, m.have, m.sub, m.from,
                       m.stage == 5 ? "" : " -> the discard + add path");
             if (m.stage == 5) {
                 *err = 0;
@@ -885,6 +901,17 @@ void trade_probe_start() {
         }
         log::info("TradeProbe: the move's same-user check (exe+0x2DF184F) {}",
                   g_owner_hook ? "hooked: passes for the mod's own give / stash moves only" : "NOT hooked (bytes differ)");
+    }
+    {  // which check of the move gives which error (live values of its error constants)
+        static const uintptr_t kErr[] = {0x714BFDC, 0x714ADE4, 0x714B480, 0x714BF68, 0x714C044, 0x714C048, 0x714B3C8,
+                                         0x712DFEC, 0x714B154, 0x712DFA8};
+        std::string line;
+        for (const uintptr_t a : kErr) {
+            int v = 0;
+            game::fast_read(base + a, &v, sizeof v);
+            line += std::format(" | 0x{:X}={}", a, v);
+        }
+        log::info("TradeProbe: move error constants{}", line);
     }
     log::info("TradeProbe: worker {} handler {} move {} move2 {} (read only)", static_cast<bool>(g_worker),
               static_cast<bool>(g_handler), static_cast<bool>(g_move), static_cast<bool>(g_move2));
