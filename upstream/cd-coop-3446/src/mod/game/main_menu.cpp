@@ -51,6 +51,54 @@ int page_of(const char* name) {
     return -1;
 }
 
+// The game's own RB glyph sits right after "Others"; our Co-op tab is drawn after that, so the glyph is moved to
+// the right of it with the game's own style setter (exe+0x712F00: handle, &property, &value, &unit, 0; property
+// 0x4A = TranslateX, unit 1 = scaled pixels). It invalidates the layout itself. UI thread only.
+constexpr uintptr_t kStyleSetLength = 0x712F00;
+constexpr uintptr_t kRoot_RbGlyph = 0x178;
+bool g_rb_test = false;
+void shift_rb(uintptr_t root, bool fresh) {
+    const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    uintptr_t vft = 0, glyph = 0, node = 0, handle = 0, probe = 0;
+    if (!root || !safe_read(root, &vft, sizeof vft) || vft != base + kRootVftable) return;
+    if (!safe_read(root + kRoot_RbGlyph, &glyph, sizeof glyph) || !glyph) return;
+    if (!safe_read(glyph + 8, &node, sizeof node) || !node) return;
+    if (!safe_read(node + 0x20, &handle, sizeof handle) || !handle || !safe_read(handle, &probe, sizeof probe)) return;
+    uintptr_t h0 = 0, lock = 0, lock8 = 0;
+    safe_read(handle, &h0, sizeof h0);
+    if (h0 && safe_read(h0 + 0xA0, &lock, sizeof lock) && lock) safe_read(lock + 8, &lock8, sizeof lock8);
+    uint8_t id = 0x4A, unit = 1;
+    float value = kMenuRbShift;
+    const auto set_len = reinterpret_cast<void (*)(uintptr_t, uint8_t*, float*, uint8_t*, uint8_t)>(base + kStyleSetLength);
+    const auto set_byte = reinterpret_cast<void (*)(uintptr_t, uint8_t*, uint8_t*, uint8_t*, uint8_t)>(base + 0x6D9090);
+    if (g_rb_test) {  // [dev] rb_test: another way at each opening of the menu, to see which one the glyph obeys
+        static int opened = -1;
+        if (fresh) ++opened;
+        uint8_t b = 0, f = 0;
+        switch (opened % 6) {
+            case 0: break;                                      // TranslateX, px
+            case 1: id = 0x02; break;                           // Left, px
+            case 2: id = 0x15; break;                           // MarginLeft, px
+            case 3: unit = 2; value = 300.0f; break;            // TranslateX, percent
+            case 4: id = 0x0D; b = 1; set_byte(handle, &id, &b, &f, 0); break;  // Visibility
+            default: id = 0x0C; b = 1; set_byte(handle, &id, &b, &f, 0); break; // Display
+        }
+        if (opened % 6 < 4) set_len(handle, &id, &value, &unit, 0);
+        if (fresh) {
+            log::info("Main menu: [dev] rb_test way {}: property 0x{:X} unit {} value {} (handle 0x{:X}, style lock 0x{:X}/0x{:X})",
+                      opened % 6, id, unit, value, handle, lock, lock8);
+        }
+        return;
+    }
+    set_len(handle, &id, &value, &unit, 0);
+    static bool said = false;
+    if (!said) {
+        said = true;
+        log::info("Main menu: the RB glyph is moved {} px right (style handle 0x{:X}, style lock 0x{:X}/0x{:X})", kMenuRbShift,
+                  handle, lock, lock8);
+    }
+}
+
 // "Open the panel with this name" (shortcut keys, the game's own jumps): never stopped, only reported (from -1).
 void open_panel(uintptr_t self, const char* name, void* sub, uint64_t flag) {
     const int to = page_of(name);
@@ -59,6 +107,7 @@ void open_panel(uintptr_t self, const char* name, void* sub, uint64_t flag) {
         g_page.store(to, std::memory_order_relaxed);
     }
     g_hook.call<void>(self, name, sub, flag);
+    if (to >= 0) shift_rb(self, true);
 }
 
 // The tab row's "selection changed" callback (LB / RB, Q / E, a click on a name): the row (root+0x1A8, a
@@ -88,9 +137,12 @@ void tab_changed(uintptr_t root, uintptr_t list, uint64_t flag) {
         g_page.store(to, std::memory_order_relaxed);
     }
     g_tab_hook.call<void>(root, list, flag);
+    shift_rb(root, false);
 }
 
 }  // namespace
+
+void main_menu_rb_test(bool on) { g_rb_test = on; }
 
 bool main_menu_install(MenuTabFilter filter) {
     if (g_state) return g_state > 0;

@@ -10,6 +10,7 @@
 namespace cdmp::game {
 
 inline constexpr int kMenuPageCount = 5;  // Map 0, Inventory 1, Journal 2, Skills 3, Others 4
+inline constexpr float kMenuRbShift = 160.0f;  // the game's RB glyph goes this far right, past our Co-op tab
 
 // Called on the game's thread before a switch from page `from` to page `to` (both 0..4).
 // Return true to stop the switch (the game stays on `from`).
@@ -17,6 +18,7 @@ using MenuTabFilter = bool (*)(int from, int to);
 
 // Hooks the switch function once (refused when the build is not recognised). True when hooked.
 bool main_menu_install(MenuTabFilter filter);
+void main_menu_rb_test(bool on);  // [dev] rb_test
 
 // The page the menu last switched to (0..4), -1 before the first switch.
 int main_menu_page();

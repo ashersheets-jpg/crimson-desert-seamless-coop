@@ -1128,7 +1128,7 @@ void coop_page_draw(float width, float height, const HudData& d, const std::vect
                 text(dl, cx - text_w(gs, name, true) * 0.5f, cy - gs * 0.58f, gs, name, IM_COL32(230, 226, 218, 255), true);
             };
             glyph(sp.x(78), "LB");
-            glyph(sp.x(912), "RB");
+            glyph(sp.x(912 + game::kMenuRbShift), "RB");
         }
     }
     text(dl, tab_x, tab_y, tab_size, tab, kGold);

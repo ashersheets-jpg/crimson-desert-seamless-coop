@@ -236,6 +236,7 @@ Config load_config(const std::wstring& ini_path) {
     c.dev_skip_test = read_uint(ini_path, L"dev", L"skip_test", 0) != 0;
     c.dev_trace_op = read_uint(ini_path, L"dev", L"trace_op", 0);
     c.dev_ui_preview = static_cast<int>(read_uint(ini_path, L"dev", L"ui_preview", 0));
+    c.dev_rb_test = read_uint(ini_path, L"dev", L"rb_test", 0) != 0;
     c.dev_pad_sim = static_cast<int>(read_uint(ini_path, L"dev", L"pad_sim", 0));
     c.dev_challenge_test = static_cast<int>(read_uint(ini_path, L"dev", L"challenge_test", 0));
     c.dev_duel_test = read_uint(ini_path, L"dev", L"duel_test", 0) != 0;

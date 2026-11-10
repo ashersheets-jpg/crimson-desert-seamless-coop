@@ -3958,3 +3958,21 @@ invalidates the layout itself. To try: TranslateX on RB (UI thread), re-applied 
 - "Leave the session" was NOT tested: the menu reopens on the tab it was closed on (Co-op), so the test's
   second RB x4 walked off to Journal. Test keys fixed in tcB287 (no RB on a second open).
 - SAVES OK, user install restored 5/5.
+
+### tcB287: RB glyph shift, first give, host's Leave row (2026-11-10)
+
+- SAVES OK, user install restored 5/5.
+- RB glyph: shift_rb ran ("the RB glyph is moved 160 px right") but the game's glyph did NOT move (still between
+  "Others" and "Co-op" on the game's own tabs). Our own glyph on the Co-op page sits right of "Co-op": good.
+  Both style setters (exe+0x712F00 lengths, exe+0x6D9090 bytes; same signature handle, &id, &value, &unit, 0) do
+  nothing while *(*handle+0xA0) is set and its +8 is set (a style lock?). tcB288 ([dev] rb_test=1) tries another
+  property at each opening of the menu (TranslateX px, Left, MarginLeft, TranslateX %, Visibility, Display) and
+  logs the lock.
+- Give (magic entry 0xC0DE0001 in 3111, host side): reached stage 2, the receiver's actor and holder were found;
+  the guest's bag has no item 22007 (idx 0x5D7). Its bag: slot 0 idx 0x833 x33, 1 0x826 x41, 2 0x827 x233,
+  3 0x828 x1010, 4 0x829 x10, 5 0x82A x204, 6 0x832 x13, 7 0x82D x3, 8 0x82B x18, 9 0x82C x8.
+  Give now takes item 0 = "what the named slot holds" (key found by search over exe+0x3D7E10). tcB288 gives
+  slot 0 x1 and slot 3 x2.
+- "Leave the session" as the HOST only says "you are the host: your friend leaves from their side (Ctrl+F2)":
+  names a hotkey and does nothing. And on the shared world the guest's Leave only stops the layer's own link.
+  TO FIX: the row must do the game's own Return to Title (research running: the LogoutView handler).
