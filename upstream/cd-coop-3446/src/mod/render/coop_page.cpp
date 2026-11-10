@@ -882,6 +882,11 @@ void coop_page_draw(float width, float height, const HudData& d, const std::vect
         game::main_menu_install(tab_filter);
         game::main_menu_dev_watch_tick();
         if (input::pad_buttons() & (input::kPadLB | input::kPadRB)) g_pad_step_ms = GetTickCount64();
+        // tcB290: the hidden RB glyph no longer takes the press, so RB steps the row through us.
+        static bool rb_was = false;
+        const bool rb = (input::pad_buttons() & input::kPadRB) != 0;
+        if (rb && !rb_was) game::main_menu_step(1);
+        rb_was = rb;
     }
     if (menu || g_open.load()) {
         const bool hover = inside(mouse, tab_x - 20 * sp.s, tab_y - 10 * sp.s, tab_x + tab_w + 20 * sp.s, tab_y + 60 * sp.s);

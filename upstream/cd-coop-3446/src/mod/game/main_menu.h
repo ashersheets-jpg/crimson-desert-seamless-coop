@@ -19,6 +19,8 @@ using MenuTabFilter = bool (*)(int from, int to);
 // Hooks the switch function once (refused when the build is not recognised). True when hooked.
 bool main_menu_install(MenuTabFilter filter);
 void main_menu_rb_test(bool on);  // [dev] rb_test
+// RB with the game's glyph hidden: step the tab row by `delta` pages (any thread; done on the UI thread).
+void main_menu_step(int delta);
 
 // The game's own Return to Title (any thread; done on the UI thread). Nothing happens outside the world.
 void main_menu_return_to_title();

@@ -57,6 +57,7 @@ int page_of(const char* name) {
 // 0x4A = TranslateX, unit 1 = scaled pixels). It invalidates the layout itself. UI thread only.
 constexpr uintptr_t kRoot_RbGlyph = 0x178;
 bool g_rb_test = false;
+std::atomic<bool> g_rb_hidden{false};
 void shift_rb(uintptr_t root, bool fresh) {
     const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     uintptr_t vft = 0, glyph = 0, node = 0, handle = 0, probe = 0;
@@ -77,6 +78,7 @@ void shift_rb(uintptr_t root, bool fresh) {
     float len = kMenuRbShift;
     uint8_t unit = 1;
     reinterpret_cast<void (*)(uintptr_t, uint8_t*, float*, uint8_t*, uint8_t)>(base + 0x712F00)(handle, &id, &len, &unit, 0);
+    g_rb_hidden = true;
     static bool said = false;
     if (!said) {
         said = true;
@@ -172,8 +174,37 @@ uint32_t* seq_data_apply(uintptr_t part, uint32_t* out, uintptr_t data, int n) {
     }
     return g_seq_guard.call<uint32_t*>(part, out, data, n);
 }
-void on_menu_update(SafetyHookContext&) {
+// tcB290: with its RB glyph hidden the game no longer steps the tabs on RB (the glyph is the button that takes the
+// press). So RB is ours: select the next page in the tab row with the game's own "select by key" and, when that did
+// not open the page by itself, run the row's "selection changed" callback. UI thread (the menu's update).
+std::atomic<int> g_step{0};
+void do_step(uintptr_t root, int delta) {
+    const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    uintptr_t vft = 0, row = 0, pages = 0;
+    uint32_t cur = 0xFFFFFFFF, count = 0, after = 0xFFFFFFFF;
+    if (!root || !safe_read(root, &vft, sizeof vft) || vft != base + kRootVftable ||
+        !safe_read(root + kRoot_PageIndex, &cur, sizeof cur) || cur >= kMenuPageCount ||
+        !safe_read(root + kRoot_PageCount, &count, sizeof count) || count != kMenuPageCount ||
+        !safe_read(root + kRoot_TabRow, &row, sizeof row) || !row || !safe_read(root + kRoot_Pages, &pages, sizeof pages) ||
+        !pages) {
+        log::warn("Main menu: RB step refused, the menu's root cannot be read (0x{:X})", root);
+        return;
+    }
+    const uint32_t to = (cur + static_cast<uint32_t>(delta + kMenuPageCount)) % kMenuPageCount;
+    reinterpret_cast<void (*)(uintptr_t, uintptr_t, uint64_t, uint64_t)>(base + kListSelect)(
+        row, pages + static_cast<uintptr_t>(to) * kPageStride + 0x10, 0, 0);
+    int32_t idx = -1;
+    safe_read(row + kList_Index, &idx, sizeof idx);
+    safe_read(root + kRoot_PageIndex, &after, sizeof after);
+    const bool by_itself = after != cur || g_page.load() != static_cast<int>(cur);
+    static int said = 0;
+    if (said++ < 8) log::info("Main menu: RB step {} -> {} (row index {}, page {} after the select: {})", cur, to, idx, after,
+                              by_itself ? "the select opened it" : "running the row's callback");
+    if (after == cur && idx == static_cast<int32_t>(to)) tab_changed(root, row, 0);
+}
+void on_menu_update(SafetyHookContext& ctx) {
     g_update_calls.fetch_add(1, std::memory_order_relaxed);
+    if (const int d = g_step.exchange(0)) do_step(ctx.rcx, d);
     if (g_title_wanted.load(std::memory_order_relaxed)) do_return_to_title("the menu's update, UI thread");
 }
 
@@ -188,6 +219,9 @@ void main_menu_return_to_title() {
 }
 
 void main_menu_rb_test(bool on) { g_rb_test = on; }
+void main_menu_step(int delta) {
+    if (g_rb_hidden.load() && g_update_hook) g_step = delta;
+}
 
 bool main_menu_install(MenuTabFilter filter) {
     if (g_state) return g_state > 0;

@@ -4022,3 +4022,15 @@ invalidates the layout itself. To try: TranslateX on RB (UI thread), re-applied 
   property 0x0C, 160 px, unit 1) together. tcB290 runs that pair.
 - Native (local only): the give now masks the item row's drop entry (row+0x52) around the discard call so a droppable
   item is deleted and not dropped on the ground (commit fe81a15, built, not tested yet).
+
+### tcB290: the RB glyph pair hides it, but RB then no longer steps the tabs (2026-11-10)
+
+- SAVES OK, user install restored 5/5.
+- Byte setter + length setter on property 0x0C: the game's RB glyph is gone and the row reads
+  "LB Map Inventory Journal Skills Others Co-op RB" exactly as wanted.
+- BUT the pad's RB no longer changed the tab (4 presses, the menu stayed on Inventory): the glyph widget is the button
+  that takes the press. So the Leave row was never reached and the crash guard is still untested.
+- Fix (built, in test tcB291): RB is handled by the layer. On an RB press the menu's update (UI thread) selects the
+  next page in the tab row with the game's own select-by-key (exe+0xA7866B0) and runs the row's "selection changed"
+  callback when the select did not open the page by itself. The existing tab filter then lands on Co-op past Others.
+- Still to check: the keyboard's next-tab key with the glyph hidden.
