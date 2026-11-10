@@ -119,9 +119,55 @@ bool read_own_warehouse(std::vector<StashItem>& out) {
     return false;
 }
 
+// The host's server reads its WareHouse (native entry 0xC0DE0004, a 3111 our own client sends it); the result comes
+// back through cdmp.asi's cdmp_stash_list. Our client's own copy is the fallback (empty until a keeper was visited).
+constexpr uint32_t kListEntry = 0xC0DE0004;
+using StashListFn = int (*)(uint32_t*, uint16_t*, uint16_t*, uint32_t*, int);
+StashListFn native_list() {
+    static StashListFn fn = nullptr;
+    if (!fn) {
+        if (HMODULE m = GetModuleHandleW(L"cdmp.asi")) fn = reinterpret_cast<StashListFn>(GetProcAddress(m, "cdmp_stash_list"));
+    }
+    return fn;
+}
+uint32_t native_gen() {
+    uint32_t gen = 0;
+    if (auto fn = native_list()) fn(&gen, nullptr, nullptr, nullptr, 0);
+    return gen;
+}
+bool ask_own_server() {
+    std::vector<uint8_t> pkt(5 + 30);
+    const uint16_t len = 30, none = 0xFFFF;
+    const uint32_t item = 0, who = kHostCharacter, entry = kListEntry;
+    const uint64_t n = 1;
+    std::memcpy(&pkt[0], &kOpMoveItem, 2);
+    std::memcpy(&pkt[3], &len, 2);
+    uint8_t* p = &pkt[5];
+    std::memcpy(p + 0, &item, 4);
+    std::memcpy(p + 4, &none, 2);
+    std::memcpy(p + 6, &n, 8);
+    std::memcpy(p + 14, &who, 4);
+    std::memcpy(p + 18, &who, 4);
+    std::memcpy(p + 22, &none, 2);
+    std::memcpy(p + 24, &none, 2);
+    std::memcpy(p + 26, &entry, 4);
+    return sniffer_inject_c2s(std::move(pkt));
+}
+
 void send_list() {
     std::vector<StashItem> items;
-    const bool ok = read_own_warehouse(items);
+    bool ok = false;
+    if (auto fn = native_list()) {
+        static uint16_t sl[512], ix[512];
+        static uint32_t ct[512];
+        uint32_t gen = 0;
+        const int n = fn(&gen, sl, ix, ct, 512);
+        if (n >= 0) {
+            ok = true;
+            for (int i = 0; i < n; ++i) items.push_back({sl[i], ix[i], ct[i]});
+        }
+    }
+    if (!ok) ok = read_own_warehouse(items);
     static uint32_t list_id = 0;
     ++list_id;
     const size_t pages = std::max<size_t>(1, (items.size() + kPerPage - 1) / kPerPage);
@@ -195,15 +241,28 @@ void stash_tick(bool connected, bool host, uint32_t) {
         return;
     }
     if (host) {
-        bool answer = false;
+        // An ask: our server reads the warehouse first (a new cdmp_stash_list generation), then the list goes out;
+        // after 1.5 s without one, what we have.
+        static uint32_t asked_gen = 0;
+        static uint64_t asked_at = 0;
+        bool ask = false;
         {
             std::lock_guard lk(g_mu);
             if (g_ask_pending && g_ask_pending != g_ask_answered) {
                 g_ask_answered = g_ask_pending;
-                answer = true;
+                ask = true;
             }
         }
-        if (answer) send_list();
+        const uint64_t t = now64();
+        if (ask && !asked_at) {
+            asked_gen = native_gen();
+            asked_at = t;
+            if (!ask_own_server()) asked_at = t - 1500;  // no server read: answer at once
+        }
+        if (asked_at && (native_gen() != asked_gen || t - asked_at >= 1500)) {
+            asked_at = 0;
+            send_list();
+        }
         return;
     }
     // Guest: ask while the page is on screen (and right after a withdraw).

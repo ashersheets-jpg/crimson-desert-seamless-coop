@@ -4266,3 +4266,16 @@ Full notes: build/decomp/notes_inventory_menu.md (local, not published).
 - User 2026-11-10 (new rule): world items are PER PLAYER, Lootr-style (each player can take each item once; it
   disappears only for the one who took it). The quest-item block idea is dropped. Research running.
 - SAVES OK, restored 5/5.
+
+### tcB303 (2026-11-10 15:17): real inventory indices; three fixes after it
+
+- The chain now reads bag index 1 and WareHouse index 8 (key 9) on the host's server (the research table's guessed
+  indices were one off for the warehouses: read at run time, as planned).
+- Guest deposit reached the game's move (stage 4) and was refused, err -317787844 (name unknown then). Logs now print
+  the game's own error name (the inventory's error path: exe+0x160B6A0 table, exe+0x160BBF0 lookup).
+- The give's whole-record path stopped at my key -> index check (stage 1); it now compares the bag row's key.
+- The host's client had NO warehouse contents ("0 stacks, not readable"): the client gets them at a storage keeper.
+  Now the host's layer sends its own server a 3111 with entry 0xC0DE0004; the native reads the host character's
+  WareHouse from the server's holder on the server thread and keeps it for the layer (export cdmp_stash_list); the
+  layer sends that list to the guest (the client copy only as a fallback).
+- SAVES OK, restored 5/5. Next: tcB304.
