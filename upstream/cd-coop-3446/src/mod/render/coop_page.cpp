@@ -292,10 +292,15 @@ std::vector<Row> rows_for(int section, const HudData& d, const std::vector<std::
             const auto items = net::stash_list(known, age);
             const std::string who = d.peer_name.empty() ? std::string("your friend") : d.peer_name;
             rows.push_back({Row::Info, "Put items in", "Inventory: Discard, then Put in the shared stash",
-                            "A stash you and " + who + " share, from anywhere. It is kept with the host's save.", true,
-                            nullptr});
+                            "The host's warehouse, shared: you and " + who + " use it from anywhere.", true, nullptr});
+            const int slots = net::stash_slots();
+            const std::string host_name = d.we_host ? std::string("you have") : (d.peer_name.empty() ? std::string("the host has") : d.peer_name + " has");
             if (!known) {
                 rows.push_back({Row::Info, "Opening the stash...", "", "", true, nullptr});
+            } else if (slots == 0) {
+                rows.push_back({Row::Info, "The stash opens once " + host_name + " a warehouse", "",
+                                "The shared stash is the host's warehouse (storage keepers in towns). Once it has "
+                                "room, both of you can use it from here, from anywhere.", true, nullptr});
             } else if (items.empty()) {
                 rows.push_back({Row::Info, "The stash is empty", "", "", true, nullptr});
             }

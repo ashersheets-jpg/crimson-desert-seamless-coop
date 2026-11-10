@@ -4342,3 +4342,16 @@ arriving at Hernand.
   must never be listed anyway. tcB314: index 7 (100 slots, 30 used; the game has bag -> 7 routes) as a try
   ([session2] stash_inventory=7, research key).
 - SAVES OK, restored 5/5.
+
+### tcB314 (2026-11-10 17:05) and the stash decision
+
+- Index 7 is a special inventory (Light Copper Pouch, Liquor Bottle, Key, Mask x2, Cloth Piece, Broom ...: 30
+  stacks), and a deposit into it was refused ("Not enough items."). The game's move refuses its hidden inventories.
+- The guest stayed in the dark loading void in tcB314 (as in tcB307; tcB313 and the others reached the world): a flaky
+  guest load to look at.
+- User 2026-11-10 (final): the shared stash is the HOST's own warehouse, once the story has unlocked it. Built: the
+  native finds the personal WareHouse by its routes (of manager +0xB4 / +0xB2: the bag has a route to it and it has one
+  back; index 9 on the test save), moves with the game's own routes, reports the warehouse's slots (export
+  cdmp_stash_slots; 0 = locked). The page says "The stash opens once <host> has a warehouse" while it is locked; the
+  card offers "Put in the shared stash" only when it is not known to be locked; both sides ask early (every 10 s until
+  known). Test tcB315 (this save: locked).

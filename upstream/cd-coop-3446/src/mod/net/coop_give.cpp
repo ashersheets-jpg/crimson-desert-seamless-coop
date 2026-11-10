@@ -73,7 +73,8 @@ uint16_t slot_item(int64_t holder, int16_t inventory, int16_t slot) noexcept {
 uint64_t on_discard(int which, int64_t* root, int64_t count, uint64_t a3, uint64_t a4) {
     auto& hook = which ? g_list_hook : g_bag_hook;
     // The question when the friend is near (Give) or, as the guest, anywhere (the shared stash).
-    const bool give = g_near.load(), stash = g_linked.load();  // the shared stash: both players, anywhere
+    // The shared stash: both players, anywhere, once the host's warehouse has room (0 = not unlocked yet).
+    const bool give = g_near.load(), stash = g_linked.load() && stash_slots() != 0;
     if (g_pass || !g_linked.load() || (!give && !stash)) return hook.call<uint64_t>(root, count, a3, a4);
     g_offer_give = give;
     g_offer_stash = stash;

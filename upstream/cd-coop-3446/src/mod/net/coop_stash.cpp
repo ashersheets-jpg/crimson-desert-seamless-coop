@@ -43,6 +43,7 @@ std::atomic<uint64_t> g_page_seen{0};
 std::atomic<uint64_t> g_page_role_seen{0};
 std::atomic<bool> g_is_host{false};
 uint64_t g_asked_at = 0;
+bool g_force_ask = false;  // under g_mu
 uint32_t g_ask_id = 0;
 
 uint64_t now64() { return GetTickCount64(); }
@@ -125,6 +126,15 @@ bool read_own_warehouse(std::vector<StashItem>& out) {
 // back through cdmp.asi's cdmp_stash_list. Our client's own copy is the fallback (empty until a keeper was visited).
 constexpr uint32_t kListEntry = 0xC0DE0004;
 using StashListFn = int (*)(uint32_t*, uint16_t*, uint16_t*, uint32_t*, int);
+using StashSlotsFn = int (*)();
+int native_slots() {
+    static StashSlotsFn fn = nullptr;
+    if (!fn) {
+        if (HMODULE m = GetModuleHandleW(L"cdmp.asi")) fn = reinterpret_cast<StashSlotsFn>(GetProcAddress(m, "cdmp_stash_slots"));
+    }
+    return fn ? fn() : -1;
+}
+std::atomic<int> g_guest_slots{-1};  // the guest: the host's slots as its last page said
 StashListFn native_list() {
     static StashListFn fn = nullptr;
     if (!fn) {
@@ -176,11 +186,13 @@ void send_list() {
     for (size_t pg = 0; pg < pages && pg < 255; ++pg) {
         const size_t from = pg * kPerPage, to = std::min(items.size(), from + kPerPage);
         std::vector<uint8_t> b{kOpPage};
-        b.resize(1 + 4 + 3);
+        b.resize(1 + 4 + 3 + 2);
         std::memcpy(&b[1], &list_id, 4);
         b[5] = static_cast<uint8_t>(pg);
         b[6] = static_cast<uint8_t>(pages);
         b[7] = static_cast<uint8_t>(to - from);
+        const int16_t slots = static_cast<int16_t>(native_slots());
+        std::memcpy(&b[8], &slots, 2);
         for (size_t i = from; i < to; ++i) {
             uint8_t e[8];
             std::memcpy(e, &items[i].slot, 2);
@@ -205,10 +217,15 @@ void stash_on_event(const uint8_t* p, size_t n) {
         if (!g_ask_pending) g_ask_pending = 1;
         return;
     }
-    if (p[0] != kOpPage || n < 8) return;
+    if (p[0] != kOpPage || n < 10) return;
     uint32_t id = 0;
     std::memcpy(&id, p + 1, 4);
     const uint8_t page = p[5], pages = p[6], count = p[7];
+    int16_t slots = -1;
+    std::memcpy(&slots, p + 8, 2);
+    g_guest_slots = slots;
+    p += 2;  // the entries follow the slots
+    n -= 2;
     if (n < 8 + count * 8ull || pages == 0 || page >= pages) return;
     if (id != g_build_id) {
         g_build_id = id;
@@ -243,6 +260,21 @@ void stash_tick(bool connected, bool host, uint32_t) {
         return;
     }
     g_is_host = host;
+    // Early: whether the host's warehouse is unlocked (the card offers the stash only then), asked every 10 s until known.
+    {
+        static uint64_t probe_at = 0;
+        const uint64_t t0 = now64();
+        if (t0 - probe_at >= 10000 && (host ? native_slots() : g_guest_slots.load()) < 0) {
+            probe_at = t0;
+            if (host) {
+                ask_own_server();
+            } else {
+                std::lock_guard lk(g_mu);
+                g_asked_at = 0;  // the guest's next tick asks (below), page or not
+                g_force_ask = true;
+            }
+        }
+    }
     if (host) {
         // Our own page: our server reads the stash every few seconds while it is shown (the list comes back through
         // cdmp_stash_list; stash_list reads it there).
@@ -278,9 +310,15 @@ void stash_tick(bool connected, bool host, uint32_t) {
         }
         return;
     }
-    // Guest: ask while the page is on screen (and right after a withdraw).
+    // Guest: ask while the page is on screen (and right after a withdraw), and once early (above).
     const uint64_t t = now64();
-    if (t - g_page_seen.load() > 1500) return;
+    bool forced = false;
+    {
+        std::lock_guard lk(g_mu);
+        forced = g_force_ask;
+        g_force_ask = false;
+    }
+    if (!forced && t - g_page_seen.load() > 1500) return;
     bool ask = false;
     {
         std::lock_guard lk(g_mu);
@@ -329,6 +367,8 @@ std::vector<StashItem> stash_list(bool& known, uint32_t& age_ms) {
     age_ms = g_known ? static_cast<uint32_t>(std::min<uint64_t>(now64() - g_list_at, 0xFFFFFFFF)) : 0;
     return g_list;
 }
+
+int stash_slots() { return g_is_host.load() ? native_slots() : g_guest_slots.load(); }
 
 bool stash_withdraw(const StashItem& it) {
     const uint32_t me = capture_own_player_key();

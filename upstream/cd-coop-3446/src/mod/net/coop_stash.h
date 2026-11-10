@@ -1,8 +1,8 @@
 #pragma once
-// Co-op+ (B12): the shared stash. User 2026-11-10: an always-on Co-op+ stash, kept in the HOST character's hidden
-// InvisibleInventory (100 slots; the game's own warehouse is locked early in the story). Both players put items in
-// from their inventory (Discard -> "Put in the shared stash", net/coop_give) and take them out in the Co-op tab
-// ("Shared stash"), from anywhere.
+// Co-op+ (B12): the shared stash = the HOST character's own warehouse, once the story has unlocked it (user
+// 2026-11-10; the game refuses its hidden inventories). Both players put items in from their inventory (Discard ->
+// "Put in the shared stash", net/coop_give) and take them out in the Co-op tab ("Shared stash"), from anywhere; the
+// host also has the game's own warehouse screen at a storage keeper.
 //
 // The host's game moves the items itself (the native's 3111 entries 0xC0DE0002 deposit / 0xC0DE0003 withdraw run the
 // game's own cross-actor move exe+0x2DF04A0 between the guest's bag and the host character's WareHouse, so an item
@@ -34,6 +34,8 @@ void stash_on_event(const uint8_t* p, size_t n);
 void stash_page_shown();
 // Guest: the last list (empty and known=false before the host's first answer).
 std::vector<StashItem> stash_list(bool& known, uint32_t& age_ms);
+// The host's warehouse slots as last read (0 = not unlocked yet, -1 = unknown).
+int stash_slots();
 // Guest: take that stack out of the stash (the whole stack). False when it could not be sent.
 bool stash_withdraw(const StashItem& it);
 
