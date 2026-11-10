@@ -452,7 +452,11 @@ void stash_dump(uintptr_t base, uintptr_t holder) {
     }
 }
 
+// The stash's inventory: [session2] stash_inventory = an index (research), else the manager's +0xC8.
+std::atomic<int> g_stash_inventory_override{-1};
 uint16_t stash_inventory_index(uintptr_t base) noexcept {
+    const int o = g_stash_inventory_override.load();
+    if (o >= 0 && o < 0xFFFF) return static_cast<uint16_t>(o);
     const uintptr_t mgr = inventory_manager(base);
     uint16_t idx = 0xFFFF;
     if (mgr) game::fast_read(mgr + 0xC8, &idx, 2);  // "InvisibleInventory"
@@ -802,6 +806,8 @@ extern "C" __declspec(dllexport) int cdmp_stash_list(uint32_t* gen, uint16_t* sl
 }
 
 namespace cdmp::session2 {
+
+void trade_probe_set_stash_inventory(int index) { g_stash_inventory_override = index; }
 
 void trade_probe_start() {
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
