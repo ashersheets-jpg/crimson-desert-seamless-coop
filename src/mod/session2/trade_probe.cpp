@@ -34,7 +34,17 @@ int* __fastcall worker_detour(uintptr_t self, int* err, uint32_t item, uint16_t 
     int* ret = g_worker.unsafe_call<int*>(self, err, item, b, count, giver, receiver, inv, slot, entry);
     int e = -1;
     game::fast_read(reinterpret_cast<uintptr_t>(err), &e, sizeof e);
-    if (say) log::info("TradeProbe [worker out] err {} (0x{:X})", e, static_cast<uint32_t>(e));
+    if (say) {
+        // The worker's two own errors: "no such item / inventory / entry" (0x712DFEC) and "an actor is missing"
+        // (0x712E058); anything else comes from the distance check or the move itself.
+        const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+        int bad = 0, actor = 0;
+        game::fast_read(base + 0x712DFEC, &bad, sizeof bad);
+        game::fast_read(base + 0x712E058, &actor, sizeof actor);
+        log::info("TradeProbe [worker out] err {} (0x{:X}) = {}", e, static_cast<uint32_t>(e),
+                  e == 0 ? "none" : e == bad ? "bad item / inventory / entry" : e == actor ? "actor missing"
+                                                                                           : "distance or move");
+    }
     return ret;
 }
 void on_handler(SafetyHookContext&) {
