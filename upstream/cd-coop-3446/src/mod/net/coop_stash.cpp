@@ -40,6 +40,8 @@ bool g_known = false;
 uint64_t g_list_at = 0;
 // Guest: when the page was last on screen, when we last asked.
 std::atomic<uint64_t> g_page_seen{0};
+std::atomic<uint64_t> g_page_role_seen{0};
+std::atomic<bool> g_is_host{false};
 uint64_t g_asked_at = 0;
 uint32_t g_ask_id = 0;
 
@@ -240,7 +242,18 @@ void stash_tick(bool connected, bool host, uint32_t) {
         g_ask_pending = g_ask_answered = 0;
         return;
     }
+    g_is_host = host;
     if (host) {
+        // Our own page: our server reads the stash every few seconds while it is shown (the list comes back through
+        // cdmp_stash_list; stash_list reads it there).
+        {
+            static uint64_t own_at = 0;
+            const uint64_t t0 = now64();
+            if (t0 - g_page_seen.load() <= 1500 && t0 - own_at >= kAskEveryMs) {
+                own_at = t0;
+                ask_own_server();
+            }
+        }
         // An ask: our server reads the warehouse first (a new cdmp_stash_list generation), then the list goes out;
         // after 1.5 s without one, what we have.
         static uint32_t asked_gen = 0;
@@ -286,6 +299,7 @@ void stash_tick(bool connected, bool host, uint32_t) {
 
 void stash_page_shown() {
     const uint64_t t = now64();
+    g_page_role_seen = t;
     if (t - g_page_seen.load() > 1500) {  // just opened: ask now
         std::lock_guard lk(g_mu);
         g_asked_at = 0;
@@ -294,6 +308,22 @@ void stash_page_shown() {
 }
 
 std::vector<StashItem> stash_list(bool& known, uint32_t& age_ms) {
+    if (g_is_host.load()) {  // the host: what its server read last
+        std::vector<StashItem> out;
+        known = false;
+        age_ms = 0;
+        if (auto fn = native_list()) {
+            static uint16_t sl[512], ix[512];
+            static uint32_t ct[512];
+            uint32_t gen = 0;
+            const int n = fn(&gen, sl, ix, ct, 512);
+            if (n >= 0) {
+                known = true;
+                for (int i = 0; i < n; ++i) out.push_back({sl[i], ix[i], ct[i]});
+            }
+        }
+        return out;
+    }
     std::lock_guard lk(g_mu);
     known = g_known;
     age_ms = g_known ? static_cast<uint32_t>(std::min<uint64_t>(now64() - g_list_at, 0xFFFFFFFF)) : 0;
@@ -302,9 +332,8 @@ std::vector<StashItem> stash_list(bool& known, uint32_t& age_ms) {
 
 bool stash_withdraw(const StashItem& it) {
     const uint32_t me = capture_own_player_key();
-    uint16_t wh = 0xFFFF;
-    const uint16_t key = warehouse_index(wh) ? inventory_key(wh) : 0xFFFF;
-    if (!me || me == kHostCharacter || it.idx == 0xFFFF || it.count < 1) return false;
+    const uint16_t key = 0xFFFF;  // the host's server knows the stash inventory
+    if (!me || it.idx == 0xFFFF || it.count < 1) return false;
     std::vector<uint8_t> pkt(5 + 30);
     const uint16_t len = 30, hint = it.idx, slot = it.slot;
     const uint32_t item = 0, giver = kHostCharacter, entry = kWithdrawEntry;
@@ -321,8 +350,7 @@ bool stash_withdraw(const StashItem& it) {
     std::memcpy(p + 24, &slot, 2);
     std::memcpy(p + 26, &entry, 4);
     const bool ok = sniffer_inject_c2s(std::move(pkt));
-    log::info("Stash: take x{} of item index 0x{:X} from the host's warehouse slot {} (key {}){}", n, hint, slot, key,
-              ok ? "" : " NOT sent");
+    log::info("Stash: take x{} of item index 0x{:X} from the stash slot {}{}", n, hint, slot, ok ? "" : " NOT sent");
     if (ok) {
         std::lock_guard lk(g_mu);
         g_list.erase(std::remove_if(g_list.begin(), g_list.end(), [&](const StashItem& x) { return x.slot == it.slot; }),

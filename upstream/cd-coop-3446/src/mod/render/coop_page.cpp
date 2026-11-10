@@ -285,21 +285,17 @@ std::vector<Row> rows_for(int section, const HudData& d, const std::vector<std::
         if (!d.connected) {
             rows.push_back({Row::Info, "Shared stash", "with a friend", "The host's warehouse becomes a stash you share.",
                             true, nullptr});
-        } else if (d.we_host) {
-            rows.push_back({Row::Info, "Your warehouse is the shared stash", "", "Your friend can take what you store in "
-                            "your warehouse, and store items there for you, from anywhere.", true, nullptr});
-            rows.push_back({Row::Info, "Store or take items", "at any storage keeper", "The game's own warehouse screen.",
-                            true, nullptr});
         } else {
             net::stash_page_shown();
             bool known = false;
             uint32_t age = 0;
             const auto items = net::stash_list(known, age);
-            const std::string host = d.peer_name.empty() ? std::string("The host") : d.peer_name;
+            const std::string who = d.peer_name.empty() ? std::string("your friend") : d.peer_name;
             rows.push_back({Row::Info, "Put items in", "Inventory: Discard, then Put in the shared stash",
-                            "Anything you store goes to " + host + "'s warehouse.", true, nullptr});
+                            "A stash you and " + who + " share, from anywhere. It is kept with the host's save.", true,
+                            nullptr});
             if (!known) {
-                rows.push_back({Row::Info, "Asking " + host + "'s game for the stash...", "", "", true, nullptr});
+                rows.push_back({Row::Info, "Opening the stash...", "", "", true, nullptr});
             } else if (items.empty()) {
                 rows.push_back({Row::Info, "The stash is empty", "", "", true, nullptr});
             }

@@ -73,7 +73,7 @@ uint16_t slot_item(int64_t holder, int16_t inventory, int16_t slot) noexcept {
 uint64_t on_discard(int which, int64_t* root, int64_t count, uint64_t a3, uint64_t a4) {
     auto& hook = which ? g_list_hook : g_bag_hook;
     // The question when the friend is near (Give) or, as the guest, anywhere (the shared stash).
-    const bool give = g_near.load(), stash = g_linked.load() && !g_host.load();
+    const bool give = g_near.load(), stash = g_linked.load();  // the shared stash: both players, anywhere
     if (g_pass || !g_linked.load() || (!give && !stash)) return hook.call<uint64_t>(root, count, a3, a4);
     g_offer_give = give;
     g_offer_stash = stash;
@@ -91,7 +91,8 @@ int* on_client_discard(int64_t holder, int* err, int64_t* actor, uint64_t invent
     const bool stash = g_stash;
     g_give = g_stash = false;
     const uint32_t me = capture_own_player_key();
-    const uint32_t to = g_host.load() ? kGuestCharacter : kHostCharacter;  // the stash is the host character's
+    // The give goes to the friend; the stash is on the host's character (the host's own deposit: itself).
+    const uint32_t to = stash ? kHostCharacter : g_host.load() ? kGuestCharacter : kHostCharacter;
     const uint32_t item = 0, entry = stash ? kStashDepositEntry : kGiveEntry;
     // ClientDiscard's inventory is an index into the game's inventory table; the request carries that row's key
     // (+8), as the game's own request builder does (exe+0xAC9210 -> exe+0x5560E0 -> exe+0xCDCEF0).
@@ -205,8 +206,8 @@ void give_ui_tick() {
         return;
     }
     auto& hook = p.which ? g_list_hook : g_bag_hook;
-    if (answer == 3 && (g_host.load() || !g_linked.load())) {
-        log::info("Give: the shared stash is the guest's only; nothing done");
+    if (answer == 3 && !g_linked.load()) {
+        log::info("Give: the shared stash needs the session; nothing done");
         return;
     }
     g_pass = true;

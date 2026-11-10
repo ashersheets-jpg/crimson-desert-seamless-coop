@@ -1,7 +1,8 @@
 #pragma once
-// Co-op+ (B12): the shared stash. The HOST character's own warehouse is the stash: the host uses the game's
-// warehouse screen as always; the guest sees it in the Co-op tab ("Shared stash") and takes items out of it from
-// anywhere, and puts items in from its inventory (Discard -> "Put in the shared stash", net/coop_give).
+// Co-op+ (B12): the shared stash. User 2026-11-10: an always-on Co-op+ stash, kept in the HOST character's hidden
+// InvisibleInventory (100 slots; the game's own warehouse is locked early in the story). Both players put items in
+// from their inventory (Discard -> "Put in the shared stash", net/coop_give) and take them out in the Co-op tab
+// ("Shared stash"), from anywhere.
 //
 // The host's game moves the items itself (the native's 3111 entries 0xC0DE0002 deposit / 0xC0DE0003 withdraw run the
 // game's own cross-actor move exe+0x2DF04A0 between the guest's bag and the host character's WareHouse, so an item

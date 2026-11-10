@@ -4279,3 +4279,22 @@ Full notes: build/decomp/notes_inventory_menu.md (local, not published).
   WareHouse from the server's holder on the server thread and keeps it for the layer (export cdmp_stash_list); the
   layer sends that list to the guest (the client copy only as a fallback).
 - SAVES OK, restored 5/5. Next: tcB304.
+
+### tcB304-tcB306 (2026-11-10 15:28-15:45): where the stash can live; the Lootr probe
+
+- tcB304: the deposit reached the game's move and was refused "Cannot be moved." (error names now logged).
+- tcB305 dump (the 24 named inventories of the host's character on its server): Money 0 (100 slots, the camp
+  resources), Character (bag) 1, Quest 4, CampWareHouse 7 (100 slots, 30 used), WareHouse 8 at +0xB2 -- but the
+  bag's route with a condition goes 1 -> 9 and 9's only route goes back to 1, so the personal warehouse is index 9
+  (mgr +0xB4); BOTH 8 and 9 have 0 slots on this early save (storage not unlocked yet). InvisibleInventory (mgr
+  +0xC8) = index 13, 100 slots, 1 used.
+- User 2026-11-10: "Always-on Co-op+ stash": kept in the host character's InvisibleInventory, both players use it
+  through Co-op+ (the card's "Put in the shared stash", the Co-op tab's Shared stash page with Take). The moves use a
+  copy of one of the game's own "storage -> bag" routes (no condition) with from / to set. Built; test tcB307.
+- User 2026-11-10 (Lootr): every world item once per player. Research: build/decomp/notes_lootr.md (local) --
+  "virtual first take, real last take": the first taker gets a copy (add worker) and only its client is told the item
+  is gone (a crafted RemoveActorAck to that session); the last taker runs the game's real pickup (the save and the
+  regrow timer stay right); a per-co-op-save list by the gimmick's 16-byte key at comp+0x30. Body loot and chests
+  later. Phase 0 probe (native session2/lootr, lootr_probe=1): logs the pickup worker and the host's packets after it.
+  tcB306: the keyboard walk did not move the pad-sim characters (no pickup). tcB307 teleports the host around in a
+  grid (dev script tprel) and presses Take at each spot.
