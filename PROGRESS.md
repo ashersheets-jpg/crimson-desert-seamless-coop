@@ -3433,3 +3433,11 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   the release defaults keep them off. tcB235 (non-lobby, host far then near): U-1 armed (6 cells) and drained, but
   user 2 had prepared no funcnpc scene there (no refresh), so it did not reproduce; tcB236 = the lobby flow with
   far shops + conflict via native_extra.
+- 2026-11-09 19:21 *** Far-shop root cause on the SERVER (tcB236, lobby + far keys via native_extra) ***:
+  at the refresh (user 2's own funcnpc scenes deleted), each shopkeeper's ServerSequencerPlayDataActorComponent
+  (actor components +0xB0, vtable exe+0x5EF6360) still names user 2's closed scene: +0x2D8 owner = 0xA0100066
+  (user 2's character), +0x2E0 scene = 0x1C5.. (its own), +0x2EC resource hash (0x978345CA butcher, 0x8FA1605E
+  grocery...), +0x2F0 binding node (0x20000004 / 8 / 6), +0x2F4 (0xC4FA.. per NPC), +0x2FC 7, +0x300 -1, +0x320
+  0x10000. That is what the fresh 2005 serialises: the guest rebuilds the shopkeeper bound to the dead scene. Next
+  (tcB237): the same component of NPCs bound by a HOST scene (logged when the host's 2661 reaches the ledger), to
+  rewrite the stale fields to the host's scene before the re-announce.
