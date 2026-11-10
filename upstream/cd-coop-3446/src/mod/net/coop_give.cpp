@@ -23,6 +23,7 @@ constexpr uintptr_t kDiscardBag = 0xEF6560, kDiscardList = 0xEF68F0, kClientDisc
 constexpr uintptr_t kInventoryVftable = 0x59FB218;
 constexpr uint16_t kOpMoveItem = 3111;
 constexpr uint32_t kGiveEntry = 0xC0DE0001;  // the native's give entry (upstream/cdmp-native trade_probe)
+constexpr uint32_t kStashDepositEntry = 0xC0DE0002;  // B12: guest bag -> the host character's WareHouse (native)
 // The character keys of a two-player session (the host's game hands them out in this order).
 constexpr uint32_t kHostCharacter = 0xA0100001, kGuestCharacter = 0xA0100066;
 constexpr uint64_t kQuestionMs = 60000;
@@ -32,6 +33,7 @@ int g_state = 0;
 
 std::atomic<bool> g_linked{false}, g_host{false}, g_near{false};
 std::atomic<bool> g_question{false};
+std::atomic<bool> g_offer_give{false}, g_offer_stash{false};
 std::atomic<int> g_answer{-1};
 
 // UI thread only.
@@ -44,6 +46,7 @@ struct Pending {
 } g_pending;
 bool g_pass = false;  // our own call of a handler: no question
 bool g_give = false;  // ... and ClientDiscard becomes the give
+bool g_stash = false;  // ... or the deposit into the shared stash (B12)
 
 uint16_t inventory_key(uint32_t index) noexcept {
     const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
@@ -68,7 +71,11 @@ uint16_t slot_item(int64_t holder, int16_t inventory, int16_t slot) noexcept {
 
 uint64_t on_discard(int which, int64_t* root, int64_t count, uint64_t a3, uint64_t a4) {
     auto& hook = which ? g_list_hook : g_bag_hook;
-    if (g_pass || !g_linked.load() || !g_near.load()) return hook.call<uint64_t>(root, count, a3, a4);
+    // The question when the friend is near (Give) or, as the guest, anywhere (the shared stash).
+    const bool give = g_near.load(), stash = g_linked.load() && !g_host.load();
+    if (g_pass || !g_linked.load() || (!give && !stash)) return hook.call<uint64_t>(root, count, a3, a4);
+    g_offer_give = give;
+    g_offer_stash = stash;
     g_pending = {true, which, root, count, GetTickCount64()};
     g_answer = -1;
     g_question = true;
@@ -79,11 +86,12 @@ uint64_t on_discard_bag(int64_t* root, int64_t count, uint64_t a3, uint64_t a4) 
 uint64_t on_discard_list(int64_t* root, int64_t count, uint64_t a3, uint64_t a4) { return on_discard(1, root, count, a3, a4); }
 
 int* on_client_discard(int64_t holder, int* err, int64_t* actor, uint64_t inventory, int16_t slot, int64_t count) {
-    if (!g_give) return g_client_hook.call<int*>(holder, err, actor, inventory, slot, count);
-    g_give = false;
+    if (!g_give && !g_stash) return g_client_hook.call<int*>(holder, err, actor, inventory, slot, count);
+    const bool stash = g_stash;
+    g_give = g_stash = false;
     const uint32_t me = capture_own_player_key();
-    const uint32_t to = g_host.load() ? kGuestCharacter : kHostCharacter;
-    const uint32_t item = 0, entry = kGiveEntry;
+    const uint32_t to = g_host.load() ? kGuestCharacter : kHostCharacter;  // the stash is the host character's
+    const uint32_t item = 0, entry = stash ? kStashDepositEntry : kGiveEntry;
     // ClientDiscard's inventory is an index into the game's inventory table; the request carries that row's key
     // (+8), as the game's own request builder does (exe+0xAC9210 -> exe+0x5560E0 -> exe+0xCDCEF0).
     const uint16_t sl = static_cast<uint16_t>(slot);
@@ -105,7 +113,8 @@ int* on_client_discard(int64_t holder, int* err, int64_t* actor, uint64_t invent
     std::memcpy(p + 24, &sl, 2);
     std::memcpy(p + 26, &entry, 4);
     const bool ok = me && inv != 0xFFFF && sniffer_inject_c2s(std::move(pkt));
-    log::info("Give: x{} from inventory {} (key {}) slot {} (item index 0x{:X}) to 0x{:08X} (giver 0x{:08X}){}", n,
+    log::info("Give: {}x{} from inventory {} (key {}) slot {} (item index 0x{:X}) to 0x{:08X} (giver 0x{:08X}){}",
+              stash ? "into the shared stash " : "", n,
               inventory & 0xFFFF, inv, slot, hint, to, me,
               ok ? "" : " NOT sent");
     if (err) *err = 0;
@@ -169,6 +178,8 @@ void give_set_state(bool linked, bool host, bool friend_near) {
 }
 
 bool give_take_question() { return g_question.exchange(false); }
+bool give_offer_give() { return g_offer_give.load(); }
+bool give_offer_stash() { return g_offer_stash.load(); }
 void give_answer(int code) { g_answer = code; }
 
 void give_ui_tick() {
@@ -192,20 +203,25 @@ void give_ui_tick() {
         return;
     }
     auto& hook = p.which ? g_list_hook : g_bag_hook;
+    if (answer == 3 && (g_host.load() || !g_linked.load())) {
+        log::info("Give: the shared stash is the guest's only; nothing done");
+        return;
+    }
     g_pass = true;
     g_give = answer == 1;
+    g_stash = answer == 3;
     bool unlocked = true;
     const uint64_t r = hook.call<uint64_t>(p.root, p.count, uint64_t{0}, uint64_t{0});
     g_pass = false;
-    if (g_give) {
-        g_give = false;
+    if (g_give || g_stash) {
+        g_give = g_stash = false;
         log::info("Give: the game did not reach its discard (nothing given)");
-    } else if (answer == 1) {
+    } else if (answer == 1 || answer == 3) {
         // The handler now waits for the server's answer to a discard that was never sent ("Processing the previous
         // request" on the next action). Its own error path's clean-up: no pending action, the waiting state hidden.
         unlocked = clear_wait(p.root, base);
     }
-    log::info("Give: {} done, the handler returned {}{}", answer == 1 ? "give" : "discard", r & 0xFF,
+    log::info("Give: {} done, the handler returned {}{}", answer == 1 ? "give" : answer == 3 ? "stash" : "discard", r & 0xFF,
               unlocked ? "" : " (the inventory's wait could not be cleared)");
 }
 

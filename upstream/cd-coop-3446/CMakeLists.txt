@@ -145,6 +145,7 @@ add_library(cdmp_mod SHARED
     src/mod/net/coop_travel.cpp
     src/mod/net/coop_chat.cpp
     src/mod/net/coop_give.cpp
+    src/mod/net/coop_stash.cpp
     src/mod/settings_menu.cpp
     src/mod/net/kill_feed.cpp
     src/mod/net/session_summary.cpp

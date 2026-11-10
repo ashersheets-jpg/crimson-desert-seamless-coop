@@ -1,6 +1,7 @@
 #include "mod/native_layer.h"
 #include "mod/net/coop_activity.h"
 #include "mod/net/coop_give.h"
+#include "mod/net/coop_stash.h"
 #include "mod/input/actions.h"
 #include "mod/net/coop_worlds.h"
 #include "mod/optin.h"
@@ -55,7 +56,7 @@ constexpr uint16_t kOpStartActionReq = 2202;      // our client also sends the N
 constexpr float kNearM = 100.0f;                   // the user's rule: cutscenes are shared within 100 m
 constexpr uint32_t kSkipTestDelayMs = 6000;
 
-enum Type : uint8_t { kCutsceneOn = 1, kCutsceneOff = 2, kSkip = 3, kGameOn = 4, kGameOff = 5, kVersus = 6, kRps = 10, kChallenge = 11, kDuel = 12, kQuest = 13, kHunt = 14, kMenu = 16, kLooted = 17, kReviveYou = 18, kWanted = 19, kTravel = 20, kEvent = 21, kChat = 22, kKill = 23, kRace = 24, kTitle = 25, kHide = 26, kFish = 27, kBye = 28 };
+enum Type : uint8_t { kCutsceneOn = 1, kCutsceneOff = 2, kSkip = 3, kGameOn = 4, kGameOff = 5, kVersus = 6, kRps = 10, kChallenge = 11, kDuel = 12, kQuest = 13, kHunt = 14, kMenu = 16, kLooted = 17, kReviveYou = 18, kWanted = 19, kTravel = 20, kEvent = 21, kChat = 22, kKill = 23, kRace = 24, kTitle = 25, kHide = 26, kFish = 27, kBye = 28, kStash = 29 };
 std::atomic<bool> g_bye{false};  // the host is ending the session (tcB291)
 
 // Co-op+ (T22): world events (reinforcements, bounty hunters, camp and outpost activity) are stages our server starts
@@ -185,7 +186,7 @@ std::atomic<bool> g_menu_hold{false};  // the picker is open: the keyboard hook 
 std::atomic<int> g_menu_step{0};       // arrow presses it caught (-1 left, +1 right, summed)
 // Shared world (2026-11-10): the interaction menu while a challenge is sent, received or on -- its answers instead of
 // the game list ("Accept", "Decline", "End the challenge", "Leave"). Under g_mutex.
-enum CtxCode : int { kCtxLeave = 0, kCtxGo = 1, kCtxDecline = 2, kCtxGive = 3, kCtxDiscard = 4 };
+enum CtxCode : int { kCtxLeave = 0, kCtxGo = 1, kCtxDecline = 2, kCtxGive = 3, kCtxDiscard = 4, kCtxStash = 5 };
 struct CtxMenu {
     bool open = false;
     uint32_t since = 0;
@@ -670,9 +671,11 @@ void challenge_tick(ActivityTick& out, bool connected, bool focused, std::option
             if (g_ctx.open && g_ctx.give) give_answer(0);
             g_ctx = CtxMenu{};
             g_ctx.give = true;
-            g_ctx.items = {{"Give to " + who, kCtxGive},
-                           {"Discard", kCtxDiscard},
-                           {"Cancel", kCtxLeave}};
+            g_ctx.items.clear();
+            if (give_offer_give()) g_ctx.items.push_back({"Give to " + who, kCtxGive});
+            if (give_offer_stash()) g_ctx.items.push_back({"Put in the shared stash", kCtxStash});
+            g_ctx.items.push_back({"Discard", kCtxDiscard});
+            g_ctx.items.push_back({"Cancel", kCtxLeave});
             g_ctx.open = true;
             g_ctx.since = now;
             g_ctx.pick = 0;
@@ -745,7 +748,8 @@ void challenge_tick(ActivityTick& out, bool connected, bool focused, std::option
                 g_ctx.open = false;
             } else if (g_menu_select.exchange(false)) {
                 const int code = g_ctx.items[g_ctx.pick].second;
-                if (g_ctx.give) give_answer(code == kCtxGive ? 1 : code == kCtxDiscard ? 2 : 0);
+                if (g_ctx.give)
+                    give_answer(code == kCtxGive ? 1 : code == kCtxDiscard ? 2 : code == kCtxStash ? 3 : 0);
                 if (code == kCtxGo) pressed = true;
                 if (code == kCtxDecline) declined = true;
                 g_ctx.open = false;
@@ -1112,6 +1116,7 @@ void activity_on_event(const std::vector<uint8_t>& p) {
     if (p[4] == kHide) hideseek_on_event(p.data() + 5, p.size() - 5);  // coop_hideseek.h
     if (p[4] == kFish) fishing_on_event(p.data() + 5, p.size() - 5);   // coop_fishing.h
     if (p[4] == kTitle) scoreboard_on_event(p.data() + 5, p.size() - 5);  // scoreboard.h
+    if (p[4] == kStash) stash_on_event(p.data() + 5, p.size() - 5);       // coop_stash.h (records only)
 }
 
 ActivityTick activity_tick(bool connected, bool host, bool focused, std::optional<std::array<float, 3>> me,
@@ -1259,6 +1264,7 @@ ActivityTick activity_tick(bool connected, bool host, bool focused, std::optiona
             near_ = false;
         }
         give_set_state(connected, host, near_);
+        stash_tick(connected, host, now);  // coop_stash.h: the host answers the guest's list asks
     }
     challenge_tick(out, connected, focused, me, who);
     bool duel_on = false, inviter = false;

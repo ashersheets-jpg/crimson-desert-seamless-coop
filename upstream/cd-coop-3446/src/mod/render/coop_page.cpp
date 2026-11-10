@@ -13,6 +13,7 @@
 #include <deque>
 #include <format>
 #include <functional>
+#include <string_view>
 #include <mutex>
 #include <thread>
 
@@ -26,6 +27,7 @@
 #include "mod/render/hud.h"
 #include "mod/settings_menu.h"
 #include "mod/net/coop_give.h"
+#include "mod/net/coop_stash.h"
 #include "mod/net/coop_lobby.h"
 #include "mod/net/direct_ip.h"
 #include "mod/native_layer.h"
@@ -45,7 +47,7 @@ constexpr float kTabY = 50, kTabSize = 21;
 constexpr ImU32 kRule = IM_COL32(205, 195, 175, 90);
 constexpr ULONG_PTR kOurInput = 0xC0C0A7;  // input we send ourselves (coop_worlds / coop_activity mark it so)
 
-const char* const kSections[] = {"Session", "Saves & Story", "Combat & Loot", "Reviving", "World",
+const char* const kSections[] = {"Session", "Shared stash", "Saves & Story", "Combat & Loot", "Reviving", "World",
                                  "Display", "Challenges", "Controls", "Status"};
 constexpr int kSectionCount = static_cast<int>(std::size(kSections));
 
@@ -277,6 +279,39 @@ std::vector<Row> rows_for(int section, const HudData& d, const std::vector<std::
         rows.push_back({Row::Info, "Go to your friend, call them, quick messages, leave", "Session, in this tab", more,
                         true, nullptr});
         rows.push_back(button("Show the controls card", input::Action::Help, "Shows the short co-op guide in the world."));
+    } else if (name == "Shared stash") {
+        // B12 (net/coop_stash): the host character's warehouse, shared.
+        if (!d.connected) {
+            rows.push_back({Row::Info, "Shared stash", "with a friend", "The host's warehouse becomes a stash you share.",
+                            true, nullptr});
+        } else if (d.we_host) {
+            rows.push_back({Row::Info, "Your warehouse is the shared stash", "", "Your friend can take what you store in "
+                            "your warehouse, and store items there for you, from anywhere.", true, nullptr});
+            rows.push_back({Row::Info, "Store or take items", "at any storage keeper", "The game's own warehouse screen.",
+                            true, nullptr});
+        } else {
+            net::stash_page_shown();
+            bool known = false;
+            uint32_t age = 0;
+            const auto items = net::stash_list(known, age);
+            const std::string host = d.peer_name.empty() ? std::string("The host") : d.peer_name;
+            rows.push_back({Row::Info, "Put items in", "Inventory: Discard, then Put in the shared stash",
+                            "Anything you store goes to " + host + "'s warehouse.", true, nullptr});
+            if (!known) {
+                rows.push_back({Row::Info, "Asking " + host + "'s game for the stash...", "", "", true, nullptr});
+            } else if (items.empty()) {
+                rows.push_back({Row::Info, "The stash is empty", "", "", true, nullptr});
+            }
+            for (const auto& it : items) {
+                std::string label = net::stash_item_name(it.idx);
+                if (label.empty()) label = std::format("Item {}", it.idx);
+                if (it.count > 1) label += std::format(" x{}", it.count);
+                Row r{Row::Setting, label, "Take", "Moves the whole stack to your bag.", true, nullptr};
+                const net::StashItem copy = it;
+                r.act = [copy](int) { net::stash_withdraw(copy); };
+                rows.push_back(std::move(r));
+            }
+        }
     } else if (name == "Controls") {
         static const std::pair<const char*, input::Action> kList[] = {
             {"Co-op page", input::Action::Panel},        {"Invite a friend", input::Action::Invite},
@@ -971,7 +1006,9 @@ void coop_page_draw(float width, float height, const HudData& d, const std::vect
         if (!m) return;
         for (int step = 0; step < m; ++step) {
             g_row = (g_row + delta + m) % m;
-            if (rows[g_row].kind != Row::Info || g_section == 7 || g_section == 8) break;
+            if (rows[g_row].kind != Row::Info || std::string_view(kSections[g_section]) == "Controls" ||
+                std::string_view(kSections[g_section]) == "Status")
+                break;
         }
     };
     auto activate = [&](int delta) {

@@ -22,8 +22,11 @@ void give_set_state(bool linked, bool host, bool friend_near);
 
 // Network loop: true once when a discard was held back and the question has to be shown.
 bool give_take_question();
-// The answer: 0 cancel, 1 give, 2 discard. Done on the UI thread by give_ui_tick.
+// The answer: 0 cancel, 1 give, 2 discard, 3 put in the shared stash (guest). Done on the UI thread by give_ui_tick.
 void give_answer(int code);
+// What the held-back discard's card offers: the friend is near (Give), we are the guest (the shared stash, B12).
+bool give_offer_give();
+bool give_offer_stash();
 
 // UI thread, every frame of the pause menu (game/main_menu's update hook).
 void give_ui_tick();

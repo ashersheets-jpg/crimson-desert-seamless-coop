@@ -4221,3 +4221,24 @@ Full notes: build/decomp/notes_inventory_menu.md (local, not published).
   game.
 - Open design question for the user (queued): should the guest be stopped from picking up quest items lying in the
   host's world (the host could lose a story item), or allowed (the guest may need it for its own quest)?
+
+### 2026-11-10 (Steam closed): B12 shared stash, built (untested)
+
+- Research (build/decomp/notes_shared_stash.md, local): the warehouse is an ordinary inventory of each CHARACTER
+  (WareHouse, manager +0xB2); the warehouse screen uses the generic 3111 with giver = receiver; the server's
+  0x2E0B2B0 ends in exe+0x2DF04A0(self, err, giverActor, receiverActor, routeRow, slot, itemIdx, sub, count*), a
+  cross-actor move that copies the whole 200-byte item record (enchant, durability, dye) in one transaction and tells
+  both clients itself. Routes are the inventory row's move table (row+0x38, 0xA0-byte entries, +2 from, +4 to).
+- Design: the HOST character's own warehouse is the shared stash. The host uses the game's warehouse screen as
+  always. The guest: Inventory, Discard, "Put in the shared stash" (the card now also shows away from the friend,
+  for the guest only; with the friend near it offers Give too); the Co-op tab's new "Shared stash" section lists the
+  host's warehouse (asked from the host every 4 s while shown) with a "Take" on each stack.
+- Native (local commit d7fac8d): 3111 entries 0xC0DE0002 deposit / 0xC0DE0003 withdraw run 0x2DF04A0 with the game's
+  WareHouse <-> bag route; only the guest, only between its character and the host's; slot + item index hint
+  (the same item elsewhere when the slots moved). trade_probe (give + stash) is now ON by default (was a dev option:
+  the playtest build had no give at all on the host's server without it).
+- Layer: net/coop_stash (host reads its own client's WareHouse, sends pages of 100 stacks over activity kStash 29;
+  guest assembles, sends the withdraw), coop_give (answer 3 = stash), coop_activity (card items), coop_page
+  (section). Item names: placeholder "Item <index>" until the name lookup is found (research running).
+- Not checked: whether the host's client keeps its WareHouse filled away from a keeper; the route condition
+  skipped on the deposit; saves after a move (the guest's export at leave vs the host's save).
