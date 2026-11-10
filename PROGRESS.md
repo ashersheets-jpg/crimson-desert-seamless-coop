@@ -3558,3 +3558,12 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   SAVES OK), but again not the planned order: my command line gave the scripts a wrong path ("Dev script: cannot
   read"), so nobody teleported, and the second R was a 150 ms tap. The shop prompt needs R HELD (the walk's sweep
   holds it 1800 ms); the tap sent no request at all (no 3008 / 2880 in either log). tcB250: path fixed, R held.
+  22:35 tcB250: harness stop again (a second focus check inside actpid's step loop still compared window
+  handles; now by pid too). SAVES OK, no game result.
+  tcB251 PASS: far shop, then the same shop near the host, in ONE run, on release defaults:
+  - 21:51:08 the guest opens the Hernand butcher with the host at 409 m (shot tcB251-g-01);
+  - the host teleports back next to the butcher; the guest's shop is still open with the host at 5 m (b0);
+  - the guest leaves (b1: world, "R Shop" prompt) and opens it again next to the host (b2: menu + Renee's line).
+  No 0x15DBC102 in either log, 24 [kept], both alive, SAVES OK. This is the order that broke in tcB224-229.
+  Harness notes: dev_script waits cap at 10 s each; the shop prompt needs R held (~1.8 s), a tap does nothing.
+  Next: a soak run (lobby flow, walks, ping / chat / challenge, then 15 minutes idle in town).

@@ -47,7 +47,7 @@ function shot($out) {
   (New-Object System.Drawing.Bitmap $bmp, ([int]($b.Width / 2)), ([int]($b.Height / 2))).Save($out, [System.Drawing.Imaging.ImageFormat]::Png)
 }
 foreach ($s in $Steps) {
-  if ([A]::GetForegroundWindow() -ne $h) { throw "game lost focus before $s" }
+  if ((FrontPid) -ne $GamePid) { throw "game lost focus before $s" }
   $a = $s.Split(':')
   switch ($a[0]) {
     'kd' { key (code $a[1]) $false }
