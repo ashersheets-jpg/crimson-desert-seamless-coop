@@ -3612,3 +3612,15 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   for the host's game to autosave, then a restart with -KeepSlots, to see the host continue from that
   autosave (the short runs wrote none).
   Next: package rebuild with this fix, revive check on release defaults.
+
+### 2026-11-09 23:20 - Package rebuilt with the fix; revive on release defaults: PASS (tcB257)
+  Package 0.1.0-alpha+377f2c97 (native 35abdba with the guest-slot fix); tools\test-install-fake.ps1: all
+  steps passed.
+  tcB257 (lobby flow, kept co-op folder, no ini overrides): the host went down at 23:16:48 (its own
+  KillCheatReq), the guest held E next to it, 23:16:59 guest "Revive: we revived Host", host "the other player
+  revived us: up where we fell" / "we are alive again" (23:17:02). Both alive, SAVES OK, host 5 ERR / guest
+  3 ERR = baseline. The guest slot was set aside at start again and the guest's upload staged.
+  Core stability pass so far, all on release defaults: far + near shops (tcB251), soak (tcB252), leave and
+  rejoin with the guest's own progress (tcB255/256), revive (tcB257).
+  Next: a 15-minute run so the host's game autosaves into the co-op folder, then a restart on the kept folder
+  to see the host continue from that autosave.
