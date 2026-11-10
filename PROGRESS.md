@@ -4191,3 +4191,12 @@ Full notes: build/decomp/notes_inventory_menu.md (local, not published).
 - Built meanwhile: the give also sends the item index the giver's client sees in that slot (the u16 after the item
   key, 0xFFFF before). The native's give, when the named slot does not hold that item, takes the first slot of the
   same bag that holds it with enough count (client and server slot numbers can differ). Untested.
+
+### 2026-11-10 (Steam closed): pad A under the hold prompts
+
+- Open item from tcB277 ("one possible jump when A is held for a remote request, A is not masked there"): built.
+  While a friend's request prompt waits (challenge, come to me, I travelled far) and while the prompt on the friend
+  shows, A is held back from the game; a hold of 800 ms accepts / opens the menu with no jump; a tap shorter than
+  250 ms is handed back to the game afterwards (press_for_game 90 ms), so a tap still jumps. render/hud.cpp. Untested.
+- Discord #bug-reports check not done: the app's browser is not signed in to Discord and Claude in Chrome is not
+  connected (Chrome closed). Queued.

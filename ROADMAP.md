@@ -189,7 +189,9 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   cutscenes) and host-only missions.
 
 **Items** (decomp: the bag's item transaction, docs/research/reverse-engineering-3576.md "Items")
-- [ ] **B11 — Item gifting and trading** (confirm step, no duplication, a log, controller).
+- [~] **B11 — Item gifting and trading** (confirm step, no duplication, a log, controller). (2026-11-10: the inventory's
+  Discard next to the friend asks Give to <name> / Discard / Cancel, pad and keyboard, tcB299; the give reaches the
+  host's server both ways, tcB300; bag key + item index fix built, untested: Steam was closed.)
 - [ ] **B12 — Shared stash.**
 
 **Minigames and challenges**

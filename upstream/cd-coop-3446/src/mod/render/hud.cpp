@@ -606,7 +606,8 @@ void hud_draw(float width, float height) {
     // Within 3 m, the other player near the middle of the screen, our game window in front.
     {
         constexpr ULONGLONG kHoldRingMs = 800;
-        static ULONGLONG hold_since = 0;
+        constexpr ULONGLONG kTapMs = 250;
+        static ULONGLONG hold_since = 0, tap_since = 0;
         static bool fired = false;
         DWORD fg_pid = 0;
         GetWindowThreadProcessId(GetForegroundWindow(), &fg_pid);
@@ -628,10 +629,19 @@ void hud_draw(float width, float height) {
             if (auto p = game::project(*cam, *cam_world, chest, width, height)) {
                 if (std::fabs(p->x - width * 0.5f) < width * 0.22f && std::fabs(p->y - height * 0.5f) < height * 0.32f) {
                     shown = true;
-                    // The pad interact button (A) is ours while the prompt is on the friend: no jump under it.
-                    if (kNativeLayer && on_pad) input::mask_from_game(input::binding(input::Action::Interact).pad, 200);
+                    // The pad interact button (A) is ours while the prompt is on the friend: no jump under a hold; a
+                    // short tap is handed back to the game (a normal jump).
                     float t = 0.0f;
                     const ULONGLONG now_ms = GetTickCount64();
+                    if (kNativeLayer && on_pad) {
+                        const uint16_t a = input::binding(input::Action::Interact).pad;
+                        input::mask_from_game(a, 200);
+                        if (r_down && !tap_since) tap_since = now_ms;
+                        if (!r_down && tap_since) {
+                            if (!fired && now_ms - tap_since < kTapMs) input::press_for_game(a, 90);
+                            tap_since = 0;
+                        }
+                    }
                     if (r_down && !fired) {
                         if (!hold_since) hold_since = now_ms;
                         t = static_cast<float>(now_ms - hold_since) / static_cast<float>(kHoldRingMs);
@@ -662,6 +672,17 @@ void hud_draw(float width, float height) {
                 shown = true;
                 float t = 0.0f;
                 const ULONGLONG now_ms = GetTickCount64();
+                // A pad: the interact button (A, the jump) is held back from the game while the request waits, so a
+                // hold accepts without a jump; a short tap is handed back to the game below (a normal jump).
+                if (on_pad) {
+                    const uint16_t a = input::binding(input::Action::Interact).pad;
+                    input::mask_from_game(a, 200);
+                    if (r_down && !tap_since) tap_since = now_ms;
+                    if (!r_down && tap_since) {
+                        if (!fired && now_ms - tap_since < kTapMs) input::press_for_game(a, 90);
+                        tap_since = 0;
+                    }
+                }
                 if (r_down && !fired) {
                     if (!hold_since) hold_since = now_ms;
                     t = static_cast<float>(now_ms - hold_since) / static_cast<float>(kHoldRingMs);
@@ -681,6 +702,7 @@ void hud_draw(float width, float height) {
                 else ui::hold_prompt(dl, px, py, t, "R", what);
             }
         }
+        if (!shown) tap_since = 0;
         if (!r_down || !shown) {
             hold_since = 0;
             if (!r_down) fired = false;
