@@ -110,12 +110,13 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
                               // B02 far world (2026-11-09, tcB201): the far guest's own NPC stages (U-1 + its timers,
                               // the world anchor, its NPCs' controller)
                               "user2_stages=1", "user2_timer_route=1", "user2_world_anchor=1", "user2_npc_control=1",
-                              // B02b far shops (tcB216: shop_probe, user2_shop_route, user2_stages_elements=
-                              // schedule+funcnpc, observer_hold_scene_order) are NOT default: a guest whose own shop
-                              // scenes (U-1, far) bound a shopkeeper keeps her bound on its client after the drain,
-                              // and the server's own actor keeps that binding too (tcB224-229: the near-host shop
-                              // then has no shopkeeper for the guest). Native conflict hold + refresh built
-                              // (observer_hold_scene_conflict), not enough yet.
+                              // B02b far shops (2026-11-09): the far guest's own shop scenes (tcB216) plus
+                              // interaction_share (tcB239-243): the game removes an NPC's shop interaction by key
+                              // when one player's scene closes, so the other player's shop lost it (tcB224-229);
+                              // the entry now stays while the other player's scene holds it. Near-host shop tcB242,
+                              // shop with the host 409 m away tcB243.
+                              "shop_probe=1", "user2_shop_route=1", "user2_stages_elements=schedule+funcnpc",
+                              "observer_hold_scene_order=1", "observer_hold_scene_conflict=1", "interaction_share=1",
                               // ByJunter's S33 / S35 NPC containment, ported to 3576 (2026-11-09): an NPC given to the
                               // far guest that never acts is retired on its own instead of U-e stopping for the whole
                               // run (tcB226: 193 of 196 driven, 3 late -> run-wide abort). Family / road control stay

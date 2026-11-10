@@ -3529,3 +3529,11 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   test updated; layer builds, all tests pass. tcB244 = the same far run on plain release defaults (running).
   Chart for the Discord made at the user's request: docs/drafts/progress-2026-11-09.png (estimates).
   User, 20:50: wants a test version for the playtesters as soon as the core is stable, extras can wait.
+
+2026-11-09 21:10 tcB245: the far shop on plain RELEASE DEFAULTS (no extra keys)
+  tcB244 was a harness stop (actpid: "game window is not in front" right after the host entered; SAVES OK), not a
+  game result. tcB245, same run again: the guest's Buy / Sell / Leave menu at the Hernand butcher with the host at
+  409 m (shot tcB245-b0), 2880 for sequencer 0x1C2 routed to user 2's own manager, no 0x15DBC102, both alive,
+  SAVES OK. The far-shop keys + interaction_share are committed as host defaults (cd-coop-3446 native_mode_text.h);
+  ROADMAP B02 / B02b updated. Still to see: the far guest then meeting the host at the same shop in ONE run.
+  Next: rebuild the shared-world package, test install, then a stability pass for a playtest build.
