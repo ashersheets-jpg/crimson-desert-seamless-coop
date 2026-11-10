@@ -468,6 +468,14 @@ void lobby_dismiss() {
     log::info("Co-op lobby: closed (the game's own title)");
 }
 
+void lobby_session_ended() {
+    std::lock_guard lock(g_m);
+    if (!g_native) return;
+    g_resume_since = 0;
+    native_back_to_solo("The co-op session has ended. Restart the game to play again.");
+    log::info("Co-op lobby: the session ended by a Leave: the next launch is Solo");
+}
+
 void lobby_reopen() {
     std::lock_guard lock(g_m);
     g_dismissed = false;

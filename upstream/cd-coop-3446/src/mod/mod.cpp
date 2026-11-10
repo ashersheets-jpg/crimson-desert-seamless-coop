@@ -624,6 +624,7 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
                     log::info("Leave: goodbye sent to the guest; back to the title in 6 s at the latest");
                 }
             } else {
+                net::lobby_session_ended();
                 game::main_menu_return_to_title();
                 if (!host) {
                     end = {Kind::Leave, 0};
@@ -637,11 +638,13 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
             if (now_ms() >= host_leave_at || (host_gone_at && now_ms() >= host_gone_at)) {
                 log::info("Leave: back to the title ({})", host_gone_at ? "the guest has gone" : "the guest did not go in time");
                 host_leave_at = host_gone_at = 0;
+                net::lobby_session_ended();
                 game::main_menu_return_to_title();
             }
         }
         if (!host && net::activity_take_bye()) {
-            game::main_menu_return_to_title();
+            net::lobby_session_ended();
+                game::main_menu_return_to_title();
             end = {Kind::Leave, 0};
             break;
         }

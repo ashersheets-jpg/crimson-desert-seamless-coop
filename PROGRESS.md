@@ -4047,3 +4047,20 @@ invalidates the layout itself. To try: TranslateX on RB (UI thread), re-applied 
   title; its game sends the native goodbye (2001) and the host's server unloads the guest the game's own way
   (guest_goodbye_logic.h in the native: proven clean). The host returns to its title 2.5 s after the guest's link
   ended, or 6 s after the goodbye at the latest. The guest sees "<friend> ended the session."
+
+### tcB292: the host's Leave ends cleanly at the title, no crash (2026-11-10)
+
+- SAVES OK, user install restored 5/5.
+- Order now: Leave row -> the host's layer sends a goodbye (activity kBye 28) -> the guest's layer stops its network
+  and calls the game's Return to Title (+1 s, helper thread) -> the guest's game says its own goodbye to the host's
+  server (2001; final save 2122 first, SAVE_RESULT gen10 stored; 2003/2002 answered) -> the host sees the link end
+  and returns to the title 2.5 s later (6 s at the latest). The host reached the title screen, no crash.
+- Leftovers found:
+  - The host's title footer said "Your friend did not come back. Restart the game to play solo." after a deliberate
+    Leave. Fixed (built, in tcB293): lobby_session_ended() writes the next launch as Solo and shows "The co-op
+    session has ended. Restart the game to play again."
+  - The guest's layer logs "Cannot open UDP socket" every 10 s after the Leave. Only on the one-PC test transport:
+    the layer goes back to hosting on the UDP port the real host still holds. Steam transport has no such port.
+  - Both returns ran through the helper thread (the menu's update no longer runs once the row closes the menu).
+    It worked; left as is.
+  - Not checked yet: the guest's screen after leaving, the guest's own Leave (tcB293 does both).
