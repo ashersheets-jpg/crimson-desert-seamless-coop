@@ -205,6 +205,24 @@ void give_raw(Give& g, uintptr_t self, uint32_t item, uint64_t count, uint32_t r
 // the game's own cross-actor move exe+0x2DF04A0 with the game's own move-table route (WareHouse <-> bag), so the item
 // keeps its whole record (enchant, durability, dye) and both clients are told by the game. The distance check and
 // the route's condition are skipped (the stash works anywhere); the mod checks who moves what.
+// The game's cross-actor move exe+0x2DF04A0 only moves between actors of the SAME user (exe+0x2DF184F:
+// cmp [giver+0xA0], rax with rax = receiver+0xA0 -> eErrNoInvalidExchangeItemTarget; build/decomp/notes_give_paths.md).
+// Two players' characters never are. For the mod's own calls only (a thread-local flag set around them, on the server
+// thread), the hook makes that compare see the giver's own owner; every other move of the game is untouched.
+thread_local bool t_owner_pass = false;
+thread_local uintptr_t t_owner_giver = 0, t_owner_receiver = 0;
+std::atomic<uint64_t> g_owner_passes{0};
+safetyhook::MidHook g_owner_hook;
+void on_owner_check(safetyhook::Context& ctx) {
+    if (!t_owner_pass || ctx.rdx != t_owner_giver || ctx.rcx != t_owner_receiver) return;
+    uint64_t owner = 0;
+    if (game::fast_read(ctx.rdx + 0xA0, &owner, sizeof owner)) {
+        ctx.rax = owner;
+        g_owner_passes.fetch_add(1, std::memory_order_relaxed);
+    }
+}
+
+
 constexpr uint32_t kStashDeposit = 0xC0DE0002, kStashWithdraw = 0xC0DE0003;
 // 0xC0DE0004: the host's own Co-op+ layer asks its server for the host character's WareHouse (read here on the
 // server thread, from the server's holder: the host's client only has it after a visit to a storage keeper). The
@@ -372,15 +390,20 @@ void give_move(GiveMove& m, uintptr_t self, uint32_t receiver, uint16_t inv_key,
                 m.sub = pick.sub;
                 m.have = pick.n;
                 int64_t n = static_cast<int64_t>(count);
+                t_owner_giver = giver_actor;
+                t_owner_receiver = receiver_actor;
+                t_owner_pass = true;
                 reinterpret_cast<int* (__fastcall*)(uintptr_t, int*, uintptr_t, uintptr_t, uintptr_t, uint16_t, uint32_t,
                                                     uint16_t, int64_t*)>(base + 0x2DF04A0)(
                     self, &m.err, giver_actor, receiver_actor, reinterpret_cast<uintptr_t>(g_give_route), m.slot,
                     m.idx, m.sub, &n);
+                t_owner_pass = false;
                 if (m.err == 0) m.stage = 5;
             }
         }
         reinterpret_cast<void (__fastcall*)(uint64_t*)>(base + 0x1618660)(scope);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
+        t_owner_pass = false;
         m.stage = -2;
     }
 }
@@ -577,9 +600,13 @@ void stash_move(Stash& s, uintptr_t self, bool deposit, uint32_t g, uint32_t r, 
                 s.have = pick.n;
                 s.sub = pick.sub;
                 int64_t n = static_cast<int64_t>(count);
+                t_owner_giver = giver_actor;
+                t_owner_receiver = receiver_actor;
+                t_owner_pass = giver_actor != receiver_actor;
                 reinterpret_cast<int* (__fastcall*)(uintptr_t, int*, uintptr_t, uintptr_t, uintptr_t, uint16_t, uint32_t,
                                                     uint16_t, int64_t*)>(base + 0x2DF04A0)(
                     self, &s.err, giver_actor, receiver_actor, route, s.slot, s.have_idx, s.sub, &n);
+                t_owner_pass = false;
                 if (s.err == 0) s.stage = 5;
             } else {
                 s.why = "the item is not there (any more)";
@@ -589,6 +616,7 @@ void stash_move(Stash& s, uintptr_t self, bool deposit, uint32_t g, uint32_t r, 
         }
         reinterpret_cast<void (__fastcall*)(uint64_t*)>(base + 0x1618660)(scope);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
+        t_owner_pass = false;
         s.stage = -2;
         s.why = "exception";
     }
@@ -847,6 +875,17 @@ void trade_probe_start() {
     }
     if (auto h = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x2DF04A0), on_move)) g_move = std::move(*h);
     if (auto h = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x2DF2560), on_move2)) g_move2 = std::move(*h);
+    {
+        static const uint8_t kOwnerCmp[9] = {0x48, 0x39, 0x82, 0xA0, 0x00, 0x00, 0x00, 0x74, 0x16};
+        uint8_t got[9] = {};
+        if (game::safe_read(base + 0x2DF184F, got, sizeof got) && std::memcmp(got, kOwnerCmp, sizeof got) == 0) {
+            if (auto h = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x2DF184F), on_owner_check)) {
+                g_owner_hook = std::move(*h);
+            }
+        }
+        log::info("TradeProbe: the move's same-user check (exe+0x2DF184F) {}",
+                  g_owner_hook ? "hooked: passes for the mod's own give / stash moves only" : "NOT hooked (bytes differ)");
+    }
     log::info("TradeProbe: worker {} handler {} move {} move2 {} (read only)", static_cast<bool>(g_worker),
               static_cast<bool>(g_handler), static_cast<bool>(g_move), static_cast<bool>(g_move2));
 }
