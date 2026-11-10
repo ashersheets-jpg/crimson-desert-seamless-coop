@@ -1,5 +1,6 @@
 #include "mod/native_layer.h"
 #include "mod/net/coop_activity.h"
+#include "mod/net/coop_give.h"
 #include "mod/input/actions.h"
 #include "mod/net/coop_worlds.h"
 #include "mod/optin.h"
@@ -184,11 +185,12 @@ std::atomic<bool> g_menu_hold{false};  // the picker is open: the keyboard hook 
 std::atomic<int> g_menu_step{0};       // arrow presses it caught (-1 left, +1 right, summed)
 // Shared world (2026-11-10): the interaction menu while a challenge is sent, received or on -- its answers instead of
 // the game list ("Accept", "Decline", "End the challenge", "Leave"). Under g_mutex.
-enum CtxCode : int { kCtxLeave = 0, kCtxGo = 1, kCtxDecline = 2 };
+enum CtxCode : int { kCtxLeave = 0, kCtxGo = 1, kCtxDecline = 2, kCtxGive = 3, kCtxDiscard = 4 };
 struct CtxMenu {
     bool open = false;
     uint32_t since = 0;
     size_t pick = 0;
+    bool give = false;  // B11: the inventory's "Give / Discard / Cancel" question (net/coop_give)
     std::vector<std::pair<std::string, int>> items;
 } g_ctx;
 // [dev] challenge_test: 1 = a simulated other player accepts our invites; 2 = they also challenge us to a duel once.
@@ -661,6 +663,23 @@ void challenge_tick(ActivityTick& out, bool connected, bool focused, std::option
             g_menu_select = g_menu_cancel = false;
         }
     }
+    // B11: the inventory's discard with the friend close: give, discard or cancel (the same card).
+    {
+        if (give_take_question()) {
+            std::lock_guard lock(g_mutex);
+            if (g_ctx.open && g_ctx.give) give_answer(0);
+            g_ctx = CtxMenu{};
+            g_ctx.give = true;
+            g_ctx.items = {{"Give to " + who, kCtxGive},
+                           {"Discard", kCtxDiscard},
+                           {"Cancel", kCtxLeave}};
+            g_ctx.open = true;
+            g_ctx.since = now;
+            g_ctx.pick = 0;
+            g_menu_step = 0;
+            g_menu_select = g_menu_cancel = false;
+        }
+    }
     bool declined = decline_edge(input::action_down(input::Action::Decline, focused));
     // The first-launch card's answer, or the first co-op session's (render/hud.cpp).
     // A card's answer (render/hud.cpp) is not also a challenge: while a card is up, and until both keys are let go
@@ -719,11 +738,14 @@ void challenge_tick(ActivityTick& out, bool connected, bool focused, std::option
             const auto n = static_cast<int>(g_ctx.items.size());
             g_ctx.pick = static_cast<size_t>(((static_cast<int>(g_ctx.pick) + step) % n + n) % n);
             if (step) g_ctx.since = now;
-            const bool gone = c.state != kChSent && c.state != kChReceived && c.state != kChOn;
+            const bool gone = g_ctx.give ? !connected || !game::ui_menu_open()
+                                         : c.state != kChSent && c.state != kChReceived && c.state != kChOn;
             if (g_menu_cancel.exchange(false) || gone || now - g_ctx.since > kPickMs) {
+                if (g_ctx.give) give_answer(0);
                 g_ctx.open = false;
             } else if (g_menu_select.exchange(false)) {
                 const int code = g_ctx.items[g_ctx.pick].second;
+                if (g_ctx.give) give_answer(code == kCtxGive ? 1 : code == kCtxDiscard ? 2 : 0);
                 if (code == kCtxGo) pressed = true;
                 if (code == kCtxDecline) declined = true;
                 g_ctx.open = false;
@@ -736,7 +758,7 @@ void challenge_tick(ActivityTick& out, bool connected, bool focused, std::option
                 if (sel == kMenuLeave) {
                     declined = true;
                 } else if (sel == kMenuTrade) {
-                    toast = "Trading with your friend comes in a later update";
+                    toast = "To give an item, use Discard on it in your inventory while your friend is close";
                 } else {
                     pressed = true;
                 }
@@ -1227,6 +1249,17 @@ ActivityTick activity_tick(bool connected, bool host, bool focused, std::optiona
     }
     versus_tick(out, connected, host, cut, who, now);
     rps_tick(out, connected, who);
+    {  // B11: giving from the inventory needs the friend within reach (the last known answer while in a menu)
+        constexpr float kGiveReach = 10.0f;
+        static bool near_ = false;
+        if (me && partner) {
+            const float dx = (*me)[0] - (*partner)[0], dy = (*me)[1] - (*partner)[1], dz = (*me)[2] - (*partner)[2];
+            near_ = dx * dx + dy * dy + dz * dz <= kGiveReach * kGiveReach;
+        } else if (!partner) {
+            near_ = false;
+        }
+        give_set_state(connected, host, near_);
+    }
     challenge_tick(out, connected, focused, me, who);
     bool duel_on = false, inviter = false;
     {
@@ -1411,7 +1444,7 @@ bool activity_menu_snapshot(std::string& title, std::vector<std::string>& items,
     items.clear();
     for (const uint32_t o : g_ch.options) {
         if (o == kMenuTrade) {
-            items.push_back("Trade (coming soon)");
+            items.push_back("Give an item");
             continue;
         }
         if (o == kMenuLeave) {

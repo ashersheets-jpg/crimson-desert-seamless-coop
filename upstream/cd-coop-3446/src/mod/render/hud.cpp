@@ -551,6 +551,16 @@ void hud_draw(float width, float height) {
                         ImGui::GetTime());
     }
 
+    // B11: the inventory's "Give / Discard / Cancel" question, over the open menu (net/coop_give).
+    if (game::ui_menu_open()) {
+        std::string title;
+        std::vector<std::string> items;
+        size_t pick = 0;
+        if (net::activity_menu_snapshot(title, items, pick)) {
+            ui::choice_menu(ImGui::GetForegroundDrawList(), static_cast<float>(width), static_cast<float>(height),
+                            d.peer_name.empty() ? std::string("Your friend") : d.peer_name, title, items, pick);
+        }
+    }
     // ---- world markers (not over a full-screen menu: they showed on top of the map)
     if (!cam || !cam_world || game::ui_menu_open()) return;
     ImDrawList* dl = ImGui::GetBackgroundDrawList();

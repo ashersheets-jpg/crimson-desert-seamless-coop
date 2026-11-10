@@ -25,6 +25,9 @@ void main_menu_step(int delta);
 // The game's own Return to Title (any thread; done on the UI thread). Nothing happens outside the world.
 void main_menu_return_to_title();
 
+// Called on the UI thread every frame of the open pause menu (nullptr = none).
+void main_menu_set_ui_tick(void (*fn)());
+
 // The page the menu last switched to (0..4), -1 before the first switch.
 int main_menu_page();
 

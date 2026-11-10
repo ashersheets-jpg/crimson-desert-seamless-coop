@@ -4108,3 +4108,32 @@ Full notes: build/decomp/notes_inventory_menu.md (local, not published).
 - Selected slot widget = element+0xE0: +0x98A i16 slot, +0x8C8 u16 item index, +0x8D0 i64 count.
 - Plan: detour ClientDiscard from the two inventory handlers; when the friend stands close, ask "Give to <name>" or
   "Discard" in our own question box and send the give instead.
+
+### tcB295: Leave leftovers, two faults found (2026-11-10)
+
+- SAVES OK, user install restored 5/5.
+- Guest's Leave from the Co-op tab: worked again ("the session ended by a Leave: the next launch is Solo", Return to
+  Title on the UI thread). Its title still showed no lobby. Cause: a ONE-PC artifact. After a Leave on the udp test
+  transport the copy goes back to hosting and binds port 37115, which the host copy still holds ("Cannot open UDP
+  socket", retry every 10 s); the network loop (which ticks the lobby) never ran. With Steam there is no port. Fix so
+  the tests can see the lobby: a udp host whose port is taken listens on any free port (mod.cpp, tests only).
+- FAULT (host): after the guest's goodbye the host logged "the partner did not come back in 5 minutes: the next
+  launch is Solo" and showed "Your friend did not come back". The resume timer (g_resume_since) was never cleared
+  once the partner HAD come back. Fixed: cleared as soon as the session connects (coop_lobby.cpp).
+- The host's own key sequence pressed "Bring my friend to me" instead of Leave: with nobody connected the Session
+  page has 4 selectable rows, not 6 (Down x5 wrapped). Harness keys, not a mod fault; host alone = Down x3.
+- Give UI (B11) written, first run in tcB296: net/coop_give (hooks on the two discard handlers and ClientDiscard),
+  question card "Give to <name> / Discard / Cancel" drawn over the inventory by the HUD, answer run on the UI thread
+  from the pause menu's update hook.
+
+### tcB296: the guest's lobby after a Leave is right (2026-11-10)
+
+- SAVES OK, user install restored 5/5.
+- Guest's Leave from the Co-op tab, then its title: the lobby is back with "The co-op session has ended." and the
+  Start Solo card says "The game restarts into your own saves." (shot tcB296g-after15). The free-port fallback let
+  the one-PC copy's loop run ("UDP: port 37115 is taken ... listening on a free one").
+- Give hooks install on this build ("Give: inventory hooks installed", at the first pause menu).
+- Cosmetic: the first Net line after a network restart showed a huge kB/s (unsigned underflow of the byte counters
+  across the restart). Fixed.
+- Harness: the host's keys did not run (the guest's copy at its lobby kept the front through 24 tries). actpid now
+  minimises the window in front and tries again.

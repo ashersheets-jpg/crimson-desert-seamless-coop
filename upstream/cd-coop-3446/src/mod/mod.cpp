@@ -473,6 +473,12 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
         bool ok = false;
         if (host) {
             ok = udp->open(cfg.peer_port, /*loopback_only=*/true);
+            if (!ok) {
+                // One-PC tests: after a Leave the other copy still holds the port. Any free port keeps this copy's
+                // loop (the title lobby, the menu) running; nobody connects to it.
+                ok = udp->open(0, true);
+                if (ok) log::warn("UDP: port {} is taken (another copy on this PC); listening on a free one", cfg.peer_port);
+            }
         } else if (auto ep = net::Endpoint::resolve(cfg.peer_host, cfg.peer_port)) {
             if (!ep->is_loopback()) {
                 log::error("UDP only connects within this PC (tests); to play with someone use transport=steam");
@@ -1403,8 +1409,8 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
             static uint64_t last_out = 0, last_in = 0;
             static uint32_t last_bw_ms = 0;
             const uint32_t bw_span = std::max<uint32_t>(1, now_ms() - last_bw_ms);
-            const double kbps_out = static_cast<double>(st.bytes_sent - last_out) / bw_span,
-                         kbps_in = static_cast<double>(st.bytes_received - last_in) / bw_span;
+            const double kbps_out = static_cast<double>(st.bytes_sent >= last_out ? st.bytes_sent - last_out : 0) / bw_span,
+                         kbps_in = static_cast<double>(st.bytes_received >= last_in ? st.bytes_received - last_in : 0) / bw_span;
             last_out = st.bytes_sent, last_in = st.bytes_received, last_bw_ms = now_ms();
             log::info("Net: {} | sent {} recv {} lost {} rejected {} | rtt {:.1f} ms | out {:.1f} kB/s in {:.1f} kB/s | "
                       "remote states {} | last remote {} | reliable pending {} refused {} | unknown kinds {} | {}",

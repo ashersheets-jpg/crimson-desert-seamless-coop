@@ -25,6 +25,7 @@
 #include "mod/render/game_ui.h"
 #include "mod/render/hud.h"
 #include "mod/settings_menu.h"
+#include "mod/net/coop_give.h"
 #include "mod/net/coop_lobby.h"
 #include "mod/net/direct_ip.h"
 #include "mod/native_layer.h"
@@ -880,6 +881,7 @@ void coop_page_draw(float width, float height, const HudData& d, const std::vect
     };
     if (menu) {
         game::main_menu_install(tab_filter);
+        if (net::give_install()) game::main_menu_set_ui_tick(net::give_ui_tick);  // B11
         game::main_menu_dev_watch_tick();
         if (input::pad_buttons() & (input::kPadLB | input::kPadRB)) g_pad_step_ms = GetTickCount64();
         // tcB290: the hidden RB glyph no longer takes the press, so RB steps the row through us.

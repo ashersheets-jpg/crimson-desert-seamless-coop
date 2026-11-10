@@ -256,6 +256,7 @@ void lobby_tick(const LobbyInput& in) {
                 g_gen_mark = in.run_generation;
                 log::info("Co-op lobby: back in co-op as the guest; the host starts the journey");
             }
+            if (in.connected) g_resume_since = 0;  // the partner came back: a later Leave is not "did not come back"
             if (g_resume.mode != NativeMode::Solo && !in.connected && g_resume_since &&
                 in.now_ms - g_resume_since > 5 * 60 * 1000 && g_native_note.empty()) {
                 g_native_note = "Your friend did not come back. Restart the game to play solo.";

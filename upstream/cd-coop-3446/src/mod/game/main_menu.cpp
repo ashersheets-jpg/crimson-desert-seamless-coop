@@ -202,8 +202,10 @@ void do_step(uintptr_t root, int delta) {
                               by_itself ? "the select opened it" : "running the row's callback");
     if (after == cur && idx == static_cast<int32_t>(to)) tab_changed(root, row, 0);
 }
+std::atomic<void (*)()> g_ui_tick{nullptr};
 void on_menu_update(SafetyHookContext& ctx) {
     g_update_calls.fetch_add(1, std::memory_order_relaxed);
+    if (auto* fn = g_ui_tick.load(std::memory_order_relaxed)) fn();
     if (const int d = g_step.exchange(0)) do_step(ctx.rcx, d);
     if (g_title_wanted.load(std::memory_order_relaxed)) do_return_to_title("the menu's update, UI thread");
 }
@@ -218,6 +220,7 @@ void main_menu_return_to_title() {
     }).detach();
 }
 
+void main_menu_set_ui_tick(void (*fn)()) { g_ui_tick = fn; }
 void main_menu_rb_test(bool on) { g_rb_test = on; }
 void main_menu_step(int delta) {
     if (g_rb_hidden.load() && g_update_hook) g_step = delta;
