@@ -3441,3 +3441,11 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   0x10000. That is what the fresh 2005 serialises: the guest rebuilds the shopkeeper bound to the dead scene. Next
   (tcB237): the same component of NPCs bound by a HOST scene (logged when the host's 2661 reaches the ledger), to
   rewrite the stale fields to the host's scene before the re-announce.
+- 2026-11-09 19:32 tcB237 (the reference): every NPC bound by a HOST scene reads owner +0x2D8 = 0xA0100001
+  (the host's character), +0x2E0 = that host scene's id, +0x2F0 = its binding node, +0x320 = 0x10001 (or 1). The
+  market's shopkeepers, when the host's own shop scenes (0x231 butcher, 0x232 grocery, 0x233 smithy, 0x234,
+  0x253...) were prepared, STILL read owner 0xA0100066 + user 2's scene ids (0x1CA..0x1CF): on the server the host's
+  scene never re-took them; at the refresh +0x320 had dropped to 0x10000. Fix built (native, research):
+  child_hold_npc_rebind -- at the refresh, for an NPC still owned by user 2's character, its play data is rewritten
+  to the live host scene requiring it (owner, scene, node from ObserverSeqCopy's ledger; +0x320 = 0x10001; SEH
+  writes), then the RemoveActorAck + native re-announce. tcB238 (lobby, far keys via native_extra) tests it.
