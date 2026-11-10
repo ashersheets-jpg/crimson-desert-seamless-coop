@@ -3463,3 +3463,21 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   takes "Shop" off the shopkeeper on the server, whatever the host's scene did; the play-data rewrite cannot bring
   it back. Next: a probe on 0x255E100 (add/remove, node, scene) and on 0x1940AD0 (the target's dynamic list) to see
   the order, then either keep user 2's remove from running while a host scene requires the NPC, or re-add the entry.
+
+## 2026-11-09 20:05 tcB239: far-shop root cause confirmed, the remove is by key
+
+- Probe (`[session2] inter_probe`, read only): the StageChart interaction node 0x255E100(node, ctx, add) and the
+  lookup 0x1940AD0. Lobby run, far keys on. Both copies alive, SAVES OK, guest still gets 3100 fail on NPC
+  0xB0100391 interaction 0x000F4321.
+- Order on the server thread: user 2's own scenes 0x1C5..0x1CA ADD idx 7/6/9 at 19:54:08; the host's scenes
+  (0x21C, 0x22E..0x231, 0x24F) ADD the same at 19:56:17..21; at 19:56:23.005 user 2's scenes close (the drain) and
+  REMOVE idx 7/6/9. The remove (0x22EBF00 -> 0xCADEB10(component, key)) deletes EVERY dynamic entry of that key,
+  so the host scenes' entries go too. The NPC is left with no shop interaction: eErrNoInvalidInteractionInfo.
+- The ADD passes the scene id ([scene+0x30]) as the entry's i64 +0x20; scene +0x28 = the owner's stage manager.
+- Fix built: `[session2] interaction_share = 1` (HOST; session2/interaction_share*.{h,cpp}, local in cdmp-native).
+  MidHooks on the two call sites (ADD 0x255E45C, REMOVE 0x255E639, byte-guarded): a ledger per (component, index)
+  of the scenes holding the entry; the game's remove is skipped while a scene of ANOTHER stage manager still holds
+  it, and the entry's scene id is handed to that scene. Same-manager cases keep the game's own behaviour.
+- Unit suite: 31 of 91 fail, the same set as before the change (the known 2976 opcode fixtures); none touch the
+  new module (it has no test yet: add one before it becomes a default).
+- Test tcB240 running (tcB239's arguments + interaction_share=1).
