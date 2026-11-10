@@ -4298,3 +4298,11 @@ Full notes: build/decomp/notes_inventory_menu.md (local, not published).
   later. Phase 0 probe (native session2/lootr, lootr_probe=1): logs the pickup worker and the host's packets after it.
   tcB306: the keyboard walk did not move the pad-sim characters (no pickup). tcB307 teleports the host around in a
   grid (dev script tprel) and presses Take at each spot.
+- tcB307: the host's grid teleport put it in the flowers ("Peony (X) Take", with a hold ring) but the X TAP took
+  nothing (no pickup worker call): Take is a HOLD. The host's teleports every 6 s kept the guest in the loading void
+  (its world follows the host), so the guest's stash steps never ran; the host's keys overlapped its 70 s script.
+  Next: tcB308 (probe only, X held 1.6 s at each spot), then the stash on its own (no teleports).
+- tcB308-tcB310 (probe): no pickup reached the server. The dev script's pad X hold does not act in the world (the
+  host's client sent no InteractionPreemptionStepReq 3008 / DoStepReq 3073 at all: only background gimmick traffic
+  2155 / 2787 / 2165 / 2304 / 2605), and the teleported host was not aimed at a plant (no prompt). tcB311: the host
+  discards a Ricefish (it drops at its feet) and picks it up, with pad X held, then E and F, shots after each.
