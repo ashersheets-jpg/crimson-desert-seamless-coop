@@ -3481,3 +3481,23 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
 - Unit suite: 31 of 91 fail, the same set as before the change (the known 2976 opcode fixtures); none touch the
   new module (it has no test yet: add one before it becomes a default).
 - Test tcB240 running (tcB239's arguments + interaction_share=1).
+
+## 2026-11-09 20:50 tcB240: interaction_share keeps the entries; the guest's press never reached the server
+
+- tcB240 (tcB239's arguments + `interaction_share=1`), both copies alive, SAVES OK. Server side the fix works:
+  18 removes skipped ("[kept]"), and the shopkeeper's (0xB010035D) dynamic list still holds its entries after
+  user 2's scenes close (10 entries: idx 7/6/9 scene 0x235, idx 0xA/0x8 scene 0, the set twice).
+- New: the node 0x255E100 runs for BOTH kinds of scene on the same component address in the host process:
+  client-side scenes (scene vtable exe+0x591AE98, client thread, the host's client manager) and server scenes
+  (vtable exe+0x5EE9340, server thread, user 2's server manager). In tcB240 the "other manager" holders that kept
+  the entries were the host's CLIENT-side scenes (0x235, 0x248, 0x236, 0x21E, 0x237, 0x238), not server ones.
+  To check: whether the server-side lookup is satisfied by them (it reads the same list) and whether a ledger
+  that mixes the two kinds is what we want.
+- Not conclusive for the shop: the guest sent NO 3008 in the sweep. In the shots the walk left the guest behind
+  the counter (not in front of the butcher as in tcB239), the camera pulled far back, "R Shop" was DIM and the
+  bottom-right interaction panel was missing. Same character, same walk arguments: the walk ended elsewhere.
+- Correction to the tcB239 reading: every sweep press there did send a 3008 (39, target 0xB0100391 key 0x0F4321,
+  each answered 3100 FailAck). The sweep press is not flaky when the prompt is bright.
+- Unit test for the ledger added (optd_interaction_share, 4 cases, passes; suite 31 of 92 fail = the known set).
+  Local commit 34af2ec in cdmp-native.
+- tcB241 running: the same arguments, to get a press with a bright prompt.
