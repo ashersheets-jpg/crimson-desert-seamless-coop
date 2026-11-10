@@ -55,6 +55,7 @@ NativeResume g_resume;           // this start's restart state (mode Solo = none
 NativeMode g_native_now = NativeMode::Solo;  // the native cdmp.ini's mode at this start
 uint64_t g_restart_at = 0;       // NativeRestart: when this game restarts
 const char* g_restart_why = "";
+uint64_t g_solo_restart_at = 0;  // Start Solo in a game still in co-op mode: when it restarts (tcB295)
 bool g_switch_sent = false;      // host after its restart: the guest was told to switch
 bool g_ready_sent = false;       // guest after its restart: the host was told
 bool g_guest_ready = false;      // host: the guest is in guest mode
@@ -192,7 +193,7 @@ void lobby_native_init(const std::wstring& coopplus_ini, const std::wstring& bin
         native_write_ok(solo);
         native_resume_clear(coopplus_ini);
         if (g_native_now != NativeMode::Solo) {
-            g_native_note = "This game started in co-op mode from an earlier session. Restart it to play solo.";
+            g_native_note = "This game started in co-op mode from an earlier session.";
             log::warn("Co-op lobby: the native base started as the {} with no fresh restart: the next launch is Solo",
                       native_mode_name(g_native_now));
         }
@@ -231,6 +232,11 @@ void lobby_tick(const LobbyInput& in) {
         if (g_phase != Phase::Menu && g_phase != Phase::HostSetup && in.run_generation > g_gen_mark) reset_phase();
         g_in = in;
         if (g_native) {
+            if (g_solo_restart_at && in.now_ms >= g_solo_restart_at) {
+                g_solo_restart_at = 0;
+                g_restart_why = "Start Solo after a co-op session";
+                todo_restart = true;
+            }
             if (g_phase == Phase::NativeRestart && g_restart_at && in.now_ms >= g_restart_at) {
                 g_restart_at = 0;
                 todo_restart = true;
@@ -392,7 +398,10 @@ LobbyView lobby_view() {
                           : g_native ? f + " is loading the shared world. You join right after."
                                      : f + " is getting ready. You both start together.";
     }
+    // This game still runs in co-op mode (host or guest) but its session is over: solo needs a restart.
+    v.solo_restarts = g_native && g_native_now != NativeMode::Solo && g_resume.mode == NativeMode::Solo;
     if (g_phase == Phase::NativeRestart) v.status = "Restarting into co-op...";
+    if (g_solo_restart_at) v.status = "Restarting into solo...";
     if (v.status.empty() && g_native && g_resume.mode == NativeMode::Host && !g_guest_ready && !g_auto_started) {
         v.status = v.connected ? f + "'s game is restarting into co-op..." : "In co-op mode: waiting for " + f + "...";
     }
@@ -461,8 +470,25 @@ void lobby_choose(LobbyPlan plan) {
     log::info("Co-op lobby: the host chose {}", plan_text(plan));
 }
 
+void lobby_start_solo() {
+    {
+        std::lock_guard lock(g_m);
+        if (g_native && g_native_now != NativeMode::Solo && g_resume.mode == NativeMode::Solo) {
+            if (!g_solo_restart_at) {
+                NativeModeSpec solo;
+                native_write_ok(solo);
+                g_solo_restart_at = now_ms() + kRestartDelayMs;
+                log::info("Co-op lobby: Start Solo in a game still in co-op mode: it restarts into solo");
+            }
+            return;
+        }
+    }
+    lobby_dismiss();
+}
+
 void lobby_dismiss() {
     std::lock_guard lock(g_m);
+    if (g_native && g_native_now != NativeMode::Solo && g_resume.mode == NativeMode::Solo) return;  // Esc: stay
     g_dismissed = true;
     g_choosing = false;
     log::info("Co-op lobby: closed (the game's own title)");
@@ -472,7 +498,9 @@ void lobby_session_ended() {
     std::lock_guard lock(g_m);
     if (!g_native) return;
     g_resume_since = 0;
-    native_back_to_solo("The co-op session has ended. Restart the game to play again.");
+    native_back_to_solo("The co-op session has ended.");
+    reset_phase();
+    g_dismissed = false;
     log::info("Co-op lobby: the session ended by a Leave: the next launch is Solo");
 }
 

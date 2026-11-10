@@ -4082,3 +4082,29 @@ invalidates the layout itself. To try: TranslateX on RB (UI thread), re-applied 
   the host re-ran the guest's script (the gives ran many times: harmless here). Fixed: the layer's script hotkey now
   needs the game's focus. twocopy.ps1 has -GuestDev (k=v for the guest layer's [dev], e.g. pad_sim=1). tcB294 uses
   both for the guest's Leave from its Co-op tab.
+
+### tcB294: the guest's Leave from its Co-op tab works (2026-11-10)
+
+- SAVES OK, user install restored 5/5.
+- Guest with a simulated pad (-GuestDev pad_sim=1): Start, RB x4 (our own step: 1 -> 2 -> 3 -> 4 -> Co-op), A, Down x5,
+  A on "Leave the session". The guest's network stopped and the game's Return to Title ran in the menu's update (UI
+  thread, the menu was still open). The guest reached the title; the host stayed in its world ("session with Guest
+  over") with no crash.
+- Leftover: the guest's title was the game's own (Play / New Game / Load), with no lobby and no note, in a game still
+  in guest mode (its Play would not work). Fix (built, in tcB295): a Leave puts the lobby back in its menu phase and
+  shows it with "The co-op session has ended."; while a game still runs in co-op mode with no session, the Start Solo
+  card says "The game restarts into your own saves." and restarts the game into solo (lobby_start_solo); Esc keeps
+  the lobby there.
+- The host's keys did not run in this test (the guest's window was still in front): harness order, not a mod fault.
+
+### Research: the inventory's discard chain, for a native "Give to friend" (static, 2026-11-10)
+
+Full notes: build/decomp/notes_inventory_menu.md (local, not published).
+- CORRECTION: DiscardItemReq is opcode 2626. 3111 is MoveItemInventoryToOtherInventoryReq and the client DOES build
+  it (exe+0xCE0010, caller exe+0xACC0B0). The older note "no client code builds 3111" is wrong.
+- Inventory screen class UIGamePlayControlRootInventoryEquipment (vftable exe+0x59FB218). Discard goes: keyguide ->
+  count dialog exe+0xEF1260 -> exe+0xEF6560 (bag) / exe+0xEF68F0 (second tab), both (root, i64 count) ->
+  exe+0xAC9210 ClientDiscard(holder, int* err, actor, u16 invKey, i16 slot, i64 count) -> builder exe+0xCDCEF0.
+- Selected slot widget = element+0xE0: +0x98A i16 slot, +0x8C8 u16 item index, +0x8D0 i64 count.
+- Plan: detour ClientDiscard from the two inventory handlers; when the friend stands close, ask "Give to <name>" or
+  "Discard" in our own question box and send the give instead.

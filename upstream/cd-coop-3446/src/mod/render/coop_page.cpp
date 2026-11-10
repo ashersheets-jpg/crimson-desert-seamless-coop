@@ -601,7 +601,7 @@ bool draw_lobby(float width, float height, ImDrawList* dl, ImVec2 mouse, const s
         }
     } else if (v.host) {
         header = counting ? std::format("Starting together in {}...", std::max(1, v.countdown)) : "Select how to play.";
-        cards.push_back({Emblem::Solo, "Start Solo", "Your own saves, as without the mod.", !counting, [] { net::lobby_dismiss(); }});
+        cards.push_back({Emblem::Solo, "Start Solo", v.solo_restarts ? "The game restarts into your own saves." : "Your own saves, as without the mod.", !counting, [] { net::lobby_start_solo(); }});
         if (ds.active && ds.host && !ds.invite.empty()) {
             cards.push_back({Emblem::Invite, "Copy Invite", "Radmin VPN / Direct IP: send it to your friend.", !counting, [] {
                                  const net::DirectState d = net::direct_state();
@@ -621,7 +621,7 @@ bool draw_lobby(float width, float height, ImDrawList* dl, ImVec2 mouse, const s
         cards.push_back({Emblem::Settings, "Co-op Settings", "", !counting, [] { coop_page_toggle(); }});
     } else {
         header = v.connected ? "You are in " + v.partner_name + "'s party." : "Select how to play.";
-        cards.push_back({Emblem::Solo, "Start Solo", "Your own saves, as without the mod.", true, [] { net::lobby_dismiss(); }});
+        cards.push_back({Emblem::Solo, "Start Solo", v.solo_restarts ? "The game restarts into your own saves." : "Your own saves, as without the mod.", true, [] { net::lobby_start_solo(); }});
         cards.push_back({Emblem::Coop, v.connected ? "Waiting for " + v.partner_name : "Join a Friend",
                          v.connected ? v.partner_name + " starts the co-op journey." : "Accept their Steam invite.", false, nullptr});
         cards.push_back({Emblem::Invite, v.connected || !ds.active ? "Leave the Party" : "Stop Joining", "",

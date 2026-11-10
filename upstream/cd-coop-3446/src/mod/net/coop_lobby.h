@@ -49,6 +49,7 @@ void lobby_native_init(const std::wstring& coopplus_ini, const std::wstring& bin
 enum class LobbyPlan : uint8_t { None = 0, NewSave = 1, ContinueCoop = 2, FromSolo = 3 };
 
 struct LobbyView {
+    bool solo_restarts = false;   // still in co-op mode with no session: Start Solo restarts the game
     bool show = false;            // the menu is drawn now (at the title, not dismissed)
     bool at_title = false;        // at the title (shown or dismissed)
     bool choosing = false;        // host: Start Co-op's question is open
@@ -73,6 +74,7 @@ void lobby_set_shared_quest_credit(bool on);
 void lobby_set_native_extra(const std::string& kv);
 void lobby_start_coop();          // host: opens the question (with a friend in the party)
 void lobby_choose(LobbyPlan plan);  // host: the answer (None = cancel)
+void lobby_start_solo();          // the Start Solo card (restarts when the game is still in co-op mode)
 void lobby_dismiss();             // Start Solo / Esc: the game's own title until the next time we are at the title
 void lobby_session_ended();    // a deliberate Leave: the next launch is solo, the title says so (tcB293)
 void lobby_reopen();              // F8 at the title
