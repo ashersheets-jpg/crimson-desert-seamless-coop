@@ -3624,3 +3624,16 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   rejoin with the guest's own progress (tcB255/256), revive (tcB257).
   Next: a 15-minute run so the host's game autosaves into the co-op folder, then a restart on the kept folder
   to see the host continue from that autosave.
+
+### 2026-11-09 23:50 - Host continues from its co-op autosave after a restart: PASS (tcB258 / tcB259)
+  tcB258: 15 minutes in the shared world on the kept folder (the user moved Kliff on the host by accident
+  part-way; harmless). The host's game autosaved into the co-op folder: <account>\slot0 written 23:36. Both
+  alive, SAVES OK.
+  tcB259 (restart on the same folder, "Continue Our Co-op Save"): the host loaded slot 0 (its autosave, not
+  the old test slot103 and never the guest's slot204), the guest slot was set aside at start and the guest
+  staged from mailbox gen9. Both alive, SAVES OK, host 5 ERR / guest 2 ERR (baseline or fewer).
+  This closes the core stability pass on release defaults: shops far and near, soak, leave / rejoin with own
+  progress, revive, host continuity.
+  User (23:30): OK to include ByJunter's native base in the playtest build; cannot do a two-PC test (the
+  playtesters are the first real one); wants the progress chart updated when the release is ready; asked for
+  a post in the Discord general chat on what to test, with a time estimate.
