@@ -4306,3 +4306,28 @@ Full notes: build/decomp/notes_inventory_menu.md (local, not published).
   host's client sent no InteractionPreemptionStepReq 3008 / DoStepReq 3073 at all: only background gimmick traffic
   2155 / 2787 / 2165 / 2304 / 2605), and the teleported host was not aimed at a plant (no prompt). tcB311: the host
   discards a Ricefish (it drops at its feet) and picks it up, with pad X held, then E and F, shots after each.
+
+### 2026-11-10 playtest report (Borque, host, two PCs over Steam relay, 0.1.0-alpha+22e8f365)
+
+Report: build/playtest-reports/borque-2026-11-10_22-24-58 (local). Said: the guest got stuck in a loop at the Hernand
+blacksmith, then every NPC vanished for the host; enemies did not seem to react to the guest's attacks; huge desyncs
+arriving at Hernand.
+- Cause of the vanishing and the desync: the host's tunnel to the guest. Its output was ~100 KB/s in the field,
+  340-570 KB/s arriving at Hernand (a town's NPCs); the Steam relay ("relay 100") carried ~70 KB/s, so the backlog went
+  0 -> 16 MB in 45 s (rtt 1.5 s, net loops of ~2 s), hit the 16 MB cap at 22:21:02, the link broke, user 2 was logged
+  out (so the host saw the guest's world go) and nothing more crossed.
+- The tunnel's batch compression (ByJunter's, measured x9.5 on a town burst) was OFF: tunnel_compress defaults to 0
+  and the package never wrote it. Now native_mode_text writes tunnel_compress=1 for host and guest (layer test).
+- Native safety valve (troc_frame TunnelSender): above 2 MB of backlog only the newest MoveActorAck 3094 per actor is
+  kept (a stale position of the same actor is useless once a newer one waits); every other packet stays, in order;
+  checked again every +512 KB and before a push would be refused. Status line: "congestion: N stale move(s) shed".
+  Unit test test_tunnel_sender_shed passes (the optd suite's 11 older failures are the 2661 scene-parser tests,
+  unrelated).
+- "Enemies do not react to the guest": AntiGrief dropped 10 guest hits on NPC 0xB0100520 (22:18:16-22) and one on
+  0xB0100351: an NPC with a dialog list counted as a protected person even when hostile. Now an NPC the HOST attacks
+  (its own DoFrameEventReq) is no longer protected ("AntiGrief: NPC ... is no longer protected: the host fights it"),
+  and a guest swing on enemies and townsfolk at once keeps the enemies (built earlier today).
+- The blacksmith loop: the smithy scene was prepared at 22:20:18, right inside the 2 s network stalls; likely the same
+  lag. Watch for it after the compression fix.
+- Lootr probe (tcB311/tcB312): the hold on X did an interaction 0xF4263 on a nearby gimmick (3008 -> 2120, 3073 ->
+  2794) but no pickup (no item added): not a Take. Probing parked behind the playtest fixes.

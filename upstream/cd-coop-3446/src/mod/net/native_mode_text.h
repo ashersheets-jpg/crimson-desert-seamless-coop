@@ -151,9 +151,12 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
             line(k);
         }
     }
+    // tunnel_compress (both ends; p8-tunel-rendimiento.md: x9.5 on a town's burst): the host compresses the tunnel's
+    // batches once the guest says it decodes them. Playtest 2026-11-10 (Borque, Steam relay): without it the host's
+    // tunnel reached 340-570 KB/s at Hernand, the relay carried ~70 KB/s, the backlog hit 16 MB and the link broke.
     for (const char* k : {"ui_pause_block=1", "remote_interp=1", "mount_sync=1", "mount_seat=1", "mount_relink=1",
                           "ride_filter=1", "ride_dismount=native", "remote_climb=1", "wallup_send=1",
-                          "dismount_probe=1"}) {
+                          "dismount_probe=1", "tunnel_compress=1"}) {
         line(k);
     }
     return t;
