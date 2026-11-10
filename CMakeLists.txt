@@ -649,6 +649,12 @@ add_executable(cdmp_tests_optd_hold_scene_order tests/optd_hold_scene_order_test
 cdmp_strict(cdmp_tests_optd_hold_scene_order)
 target_link_libraries(cdmp_tests_optd_hold_scene_order PRIVATE cdmp_common)
 add_test(NAME optd_hold_scene_order COMMAND cdmp_tests_optd_hold_scene_order)
+
+# Far shops (tcB239): interaction_share's pure logic (interaction_share_logic.h).
+add_executable(cdmp_tests_optd_interaction_share tests/optd_interaction_share_tests.cpp)
+cdmp_strict(cdmp_tests_optd_interaction_share)
+target_link_libraries(cdmp_tests_optd_interaction_share PRIVATE cdmp_common)
+add_test(NAME optd_interaction_share COMMAND cdmp_tests_optd_interaction_share)
 # Co-op+ (2026-11-09): SceneHold's conflict hold on the 3576 layouts.
 add_executable(cdmp_tests_optd_scene_conflict tests/optd_scene_conflict_tests.cpp)
 cdmp_strict(cdmp_tests_optd_scene_conflict)
