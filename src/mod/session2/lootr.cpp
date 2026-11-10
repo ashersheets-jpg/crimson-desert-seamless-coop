@@ -72,10 +72,17 @@ void lootr_start(bool probe, bool guest) {
 }
 
 void lootr_host_sniffed(const uint8_t* packet, size_t size, bool server_to_client) noexcept {
-    if (!g_pickup || size < 5 || GetTickCount64() > g_watch_until.load()) return;
-    static std::atomic<int> n{0};
-    if (n.fetch_add(1) > 400) return;
+    if (!g_pickup || size < 5) return;
     const uint16_t op = static_cast<uint16_t>(packet[0] | (packet[1] << 8));
+    // Always: the interaction / gimmick / item opcodes (notes_lootr.md); after a pickup: everything for 3 s.
+    static const uint16_t kWatch[] = {3008, 3073, 2120, 2794, 2165, 2155, 2787, 2304, 2694, 2760, 3067, 3066, 3110,
+                                      2414, 2491, 2605, 2066};
+    bool watched = false;
+    for (const uint16_t w : kWatch) watched = watched || w == op;
+    const bool after = GetTickCount64() <= g_watch_until.load();
+    if (!watched && !after) return;
+    static std::atomic<int> n{0};
+    if (n.fetch_add(1) > 600) return;
     if (op == 2002 || op == 1001) return;
     char hex[3 * 40 + 1] = {};
     const size_t m = size < 40 ? size : 40;
