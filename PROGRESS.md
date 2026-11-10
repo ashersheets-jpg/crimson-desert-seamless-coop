@@ -3719,3 +3719,9 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   identical; the user's coopplus.ini kept. Backup of the 377f2c97 files:
   build/native/user-install-377f2c97-20261110-011213. NOTE: build/native/user-install-keep still holds the
   377f2c97 files; run_keep.sh re-snapshots the install at each test start, so the next test restores 22e8f365.
+- 2026-11-10 (user: "Yes, publish it"): 22e8f365 shared-world PUBLISHED as a GitHub release on the public downloads
+  repo: https://github.com/ashersheets-jpg/crimson-desert-coop-playtest/releases/tag/v0.1.0-alpha-22e8f365-shared-world
+  (both zips; releases/latest now points to it; the zip contains source-native.zip, which the user OK'd with this).
+  The public README (docs/release/playtest-repo-README.md) got the shared-world play steps and file name;
+  FEATURES.md there is still the pre-shared-world list (to update). The #download-here line now reads
+  "Also on GitHub (always the newest): .../releases/latest". The OK was for this release; ask again for later ones.

@@ -10,4 +10,4 @@ Fixed:
 
 Tested with two copies of the game on one PC. A friend receiving and accepting the invite between two PCs is still untested, so please tell us in #bug-reports how it goes.
 
-GitHub (older builds for now; this build is the two files attached here): https://github.com/ashersheets-jpg/crimson-desert-coop-playtest/releases
+Also on GitHub (always the newest): https://github.com/ashersheets-jpg/crimson-desert-coop-playtest/releases/latest
