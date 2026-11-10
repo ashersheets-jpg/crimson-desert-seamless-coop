@@ -11,6 +11,13 @@ param([string]$Name = 'tc1', [string]$HostVariant = 'coop-test-bandits', [string
       # B01 join flow (-Lobby, needs -CoopPlus): both start SOLO (native off); the host's Co-op+ menu starts co-op,
       # both games restart into the native modes (the layer writes cdmp.<role>.ini), then start together.
       [switch]$Lobby,
+      # B22a test (-Lobby): 'host' | 'guest': that role's co-op save redirect counts as failed (a flag file the
+      # native base checks in co-op mode only); co-op must be refused and the game must stay a solo game.
+      [string]$RefuseCoop = '',
+      # 2026-11-08: the host alone (no guest copy): its script, walk and keys, then -Hold (a solo baseline in the host's mode)
+      [switch]$NoGuest,
+      # B17 (2026-11-09): the guest revives the host by holding E (the interact key) instead of Shift+F7
+      [switch]$ReviveWithE,
       # A Co-op+ dev script per role ([dev] script=..., run with Ctrl+Shift+F6 after the join), e.g. a teleport
       [string]$HostScript = '', [string]$GuestScript = '',
       # actpid steps for the guest after the scripts (e.g. 'kd:CTRL k:F4:120 ku:CTRL w:20000': go to the friend)
@@ -19,10 +26,18 @@ param([string]$Name = 'tc1', [string]$HostVariant = 'coop-test-bandits', [string
       [string]$HostKeys = '',
       # 'x_z': the guest walks there after the scripts and keys (camwalk\walkto.py, 3 m short)
       [string]$GuestWalkTo = '',
+      # the same for the host (after the guest's walk); then -AfterWalkKeys (actpid steps, _-joined) on the host
+      [string]$HostWalkTo = '', [string]$AfterWalkKeys = '', [string]$GuestAfterWalkKeys = '',
       # host ini overrides 'key=value,key=value' (an existing line of that key is replaced)
       [string]$HostSet = '',
       # k=v,k=v for the guest's [session2] (replaces or appends, like -HostSet)
-      [string]$GuestSet = '')
+      [string]$GuestSet = '',
+      # -Lobby research runs: k=v,k=v added to the host's native ini by its layer ([dev] native_extra)
+      [string]$HostNativeExtra = '',
+      # 2026-11-09 (stability pass): -GuestLeave = after -Hold the guest's game is killed (a crash / Alt+F4), the
+      # host plays on for 60 s (its final save of the guest's slot, the mailbox). -KeepSlots = the host's co-op
+      # folder keeps its other slots (the game's autosaves of earlier runs: 'Continue' loads the newest).
+      [switch]$GuestLeave, [switch]$KeepSlots)
 $ErrorActionPreference = 'Stop'
 $bin = 'D:\SteamLibrary\steamapps\common\Crimson Desert\bin64'
 $here = $PSScriptRoot; $saves = 'C:\Users\asher\CrimsonDesert-SeamlessCoop\build\test-saves'
@@ -169,6 +184,9 @@ if ($CoopPlus) {
         $dev = $(if ($Kill -and $r -eq 'host') { "[dev]`nscript=C:\Users\asher\CrimsonDesert-SeamlessCoop\build\port3479\scripts\selfkill.txt" } else { '' })
         $own = $(if ($r -eq 'host') { $HostScript } else { $GuestScript })
         if ($own) { $dev = "[dev]`nscript=$own" }
+        # 2026-11-09: -HostNativeExtra 'k=v,k=v' -> the host layer's [dev] native_extra (added to the native ini the
+        # lobby writes: research runs with keys the release defaults keep off)
+        if ($HostNativeExtra -and $r -eq 'host') { $dev = $(if ($dev) { "$dev`nnative_extra=$HostNativeExtra" } else { "[dev]`nnative_extra=$HostNativeExtra" }) }
         Write-Ini "$bin\coopplus.$r.ini" @"
 [general]
 player_name=$who
@@ -217,7 +235,7 @@ New-Item -ItemType Directory -Force "$here\shots" | Out-Null
 $env:SteamAppId = '3321460'; $env:SteamGameId = '3321460'
 function Start-Copy([string]$role, [string]$add) {
     $env:CDMP_ROLE = $role; $env:CDMP_SANDBOX_ADD = $add
-    $env:CDMP_SANDBOX_ONLY = $(if ($role -eq 'host') { "$acct\slot103" } else { '' })
+    $env:CDMP_SANDBOX_ONLY = $(if ($role -eq 'host' -and -not $KeepSlots) { "$acct\slot103" } else { '' })
     $p = Start-Process "$bin\CrimsonDesert.exe" -ArgumentList 'PlatformServiceType=Steam' -WorkingDirectory $bin -PassThru
     Add-Content "$here\$Name.pids" $p.Id
     "$role pid=$($p.Id)"
@@ -230,6 +248,8 @@ function Start-Copy([string]$role, [string]$add) {
     Start-Sleep 20
     return $p
 }
+Remove-Item "$bin\cdmp_test_refuse_coop.host.flag", "$bin\cdmp_test_refuse_coop.guest.flag" -ErrorAction SilentlyContinue
+if ($RefuseCoop) { Set-Content -Path "$bin\cdmp_test_refuse_coop.$RefuseCoop.flag" -Value 'test'; "B22a test: the $RefuseCoop's co-op save redirect counts as failed" }
 if ($Lobby) {
     # Solo inis (no Co-op+ mark: the layer keeps them once as .before-coopplus and writes its own on Start Co-op).
     foreach ($r in 'host', 'guest') {
@@ -265,13 +285,22 @@ if ($Lobby) {
     $t0 = Get-Date
     while (((Get-Date) - $t0).TotalSeconds -lt 120) {
         Start-Sleep 2
-        if (Select-String -Path "$bin\coopplus.host.log" -Pattern 'both games start in' -Quiet) { break }
+        if (Select-String -Path "$bin\coopplus.host.log" -Pattern 'both games start in|loads the shared world first' -Quiet) { break }
     }
     $new = @(Get-Process CrimsonDesert -ErrorAction SilentlyContinue | Sort-Object StartTime | Select-Object -Last 2)
     if ($new.Count -eq 2) {
         "countdown seen; host pid $($new[0].Id), guest pid $($new[1].Id): each window in front for its Play"
-        & "$here\actpid.ps1" -GamePid $new[0].Id -Seq "w:9000 shot:$Name-L3b-host-play" | Out-Null
-        & "$here\actpid.ps1" -GamePid $new[1].Id -Seq "w:9000 shot:$Name-L3c-guest-play" | Out-Null
+        # 2026-11-09: on the native base the host loads first, the guest once the host is in: each window in front
+        # until its game is in the shared world (a player's window is in front anyway).
+        foreach ($k in @(@{ p = $new[0]; r = 'host' }, @{ p = $new[1]; r = 'guest' })) {
+            $t1 = Get-Date
+            while (((Get-Date) - $t1).TotalSeconds -lt 240) {
+                & "$here\actpid.ps1" -GamePid $k.p.Id -Seq "w:4000" | Out-Null
+                if (Select-String -Path "$bin\coopplus.$($k.r).log" -Pattern 'in the shared world' -Quiet) { break }
+            }
+            "$($k.r) in the shared world: $(Select-String -Path "$bin\coopplus.$($k.r).log" -Pattern 'in the shared world' -Quiet) at $(Get-Date -Format HH:mm:ss.fff)"
+            & $shot -Out "$here\shots\$Name-L3-$($k.r)-in.png" | Out-Null
+        }
     }
     Start-Sleep $JoinWait
     & $shot -Out "$here\shots\$Name-L4-later.png" | Out-Null
@@ -282,10 +311,15 @@ if ($Lobby) {
         Copy-Item "$bin\cdmp.$r.ini" "$here\$Name.cdmp.$r.ini" -ErrorAction SilentlyContinue
     }
     "lobby flow done"
-    exit 0
+    # 2026-11-09 (B02b release check): the release flow, then the usual scripts / walks on the restarted copies.
+    if (-not ($HostScript -or $GuestScript -or $GuestWalkTo -or $HostWalkTo -or $GuestAfterWalkKeys -or $AfterWalkKeys) -or $new.Count -ne 2) { exit 0 }
+    $h = $new[0]; $gp = $new[1]
+    $JoinWait = 0
+    $LobbyGo = $true
 }
 # tcB2: with -CoopPlus the layer's co-op title menu (coop_lobby.h) covers the title and takes the keys; Esc ("Start
 # Solo") gives the game's own title back (the native session is set by the inis, not by that menu yet).
+if (-not $LobbyGo) {
 if ($CoopPlus) { Start-Sleep 8; & "$here\actpid.ps1" -GamePid $h.Id -Seq "k:ESC:120 w:1500 shot:$Name-01-host-menu-closed" | Out-Null }
 & "$here\keyspid.ps1" -GamePid $h.Id -Keys E | Out-Null
 Start-Sleep $LoadWait
@@ -299,6 +333,26 @@ if ($Ride) {
     } catch { "solo horse step failed: $_" }
 }
 
+if ($NoGuest) {
+    if ($HostScript) {
+        "host: its dev script (Ctrl+Shift+F6) at $(Get-Date -Format HH:mm:ss.fff)"
+        & "$here\actpid.ps1" -GamePid $h.Id -Seq "kd:CTRL kd:SHIFT kd:F6 w:400 ku:F6 ku:SHIFT ku:CTRL w:20000 shot:$Name-38-host-after-script" | Out-Null
+    }
+    if ($HostWalkTo) {
+        $xz = $HostWalkTo -split '_'
+        "host walks to ($($xz[0]), $($xz[1])) at $(Get-Date -Format HH:mm:ss.fff)"
+        $env:CD_PID = "$($h.Id)"; cmd /c "python ""$here/camwalk/walkto.py"" $($xz[0]) $($xz[1]) 1.5 --walk $(if ($xz.Count -ge 4) { '--face=' + $xz[2] + ',' + $xz[3] }) $(if ($xz.Count -ge 9) { '--sweep=' + ($xz[4..($xz.Count - 1)] -join ',') }) 2>&1" | Select-Object -Last 3
+        $env:CD_PID = ''
+    }
+    if ($AfterWalkKeys) {
+        $AfterWalkKeys = $AfterWalkKeys -replace "_", " "
+        "host after-walk keys at $(Get-Date -Format HH:mm:ss.fff)"
+        & "$here\actpid.ps1" -GamePid $h.Id -Seq "$AfterWalkKeys shot:$Name-38d-host-after-walk-keys" | Out-Null
+    }
+    Start-Sleep $Hold
+    "host alone: done"
+    exit 0
+}
 $gp = Start-Copy 'guest' ''
 $gp = $gp | Where-Object { $_ -is [System.Diagnostics.Process] }
 & $shot -Out "$here\shots\$Name-20-guest-title.png" | Out-Null
@@ -310,6 +364,7 @@ if (-not (Select-String -Path "$bin\cdmp.guest.log" -Pattern 'LoginCharacterToFi
     & "$here\keyspid.ps1" -GamePid $gp.Id -Keys E | Out-Null
 }
 Start-Sleep $JoinWait
+}  # -not $LobbyGo
 foreach ($pair in @(@{ s = $HostScript; p = $h; n = 'host' }, @{ s = $GuestScript; p = $gp; n = 'guest' })) {
     if (-not $pair.s) { continue }
     "$($pair.n): its dev script (Ctrl+Shift+F6) at $(Get-Date -Format HH:mm:ss.fff)"
@@ -328,12 +383,28 @@ if ($HostKeys) {
 if ($GuestWalkTo) {
     $xz = $GuestWalkTo -split '_'
     "guest walks to ($($xz[0]), $($xz[1])) at $(Get-Date -Format HH:mm:ss.fff)"
-    $env:CD_PID = "$($gp.Id)"; cmd /c "python ""$here/camwalk/walkto.py"" $($xz[0]) $($xz[1]) 3 2>&1" | Select-Object -Last 3
+    $env:CD_PID = "$($gp.Id)"; cmd /c "python ""$here/camwalk/walkto.py"" $($xz[0]) $($xz[1]) 1.5 --walk $(if ($xz.Count -ge 4) { '--face=' + $xz[2] + ',' + $xz[3] }) $(if ($xz.Count -ge 9) { '--sweep=' + ($xz[4..($xz.Count - 1)] -join ',') }) 2>&1" | Select-Object -Last 3
     $env:CD_PID = ''
 }
-if ($HostScript -or $GuestScript -or $GuestKeys -or $HostKeys -or $GuestWalkTo) {
+if ($GuestAfterWalkKeys) {
+    $GuestAfterWalkKeys = $GuestAfterWalkKeys -replace "_", " "
+    "guest after-walk keys at $(Get-Date -Format HH:mm:ss.fff)"
+    & "$here\actpid.ps1" -GamePid $gp.Id -Seq "$GuestAfterWalkKeys shot:$Name-38e-guest-after-walk-keys" | Out-Null
+}
+if ($HostWalkTo) {
+    $xz = $HostWalkTo -split '_'
+    "host walks to ($($xz[0]), $($xz[1])) at $(Get-Date -Format HH:mm:ss.fff)"
+    $env:CD_PID = "$($h.Id)"; cmd /c "python ""$here/camwalk/walkto.py"" $($xz[0]) $($xz[1]) 1.5 --walk $(if ($xz.Count -ge 4) { '--face=' + $xz[2] + ',' + $xz[3] }) $(if ($xz.Count -ge 9) { '--sweep=' + ($xz[4..($xz.Count - 1)] -join ',') }) 2>&1" | Select-Object -Last 3
+    $env:CD_PID = ''
+}
+if ($AfterWalkKeys) {
+    $AfterWalkKeys = $AfterWalkKeys -replace "_", " "
+    "host after-walk keys at $(Get-Date -Format HH:mm:ss.fff)"
+    & "$here\actpid.ps1" -GamePid $h.Id -Seq "$AfterWalkKeys shot:$Name-38d-host-after-walk-keys" | Out-Null
+}
+if ($HostScript -or $GuestScript -or $GuestKeys -or $HostKeys -or $GuestWalkTo -or $HostWalkTo) {
     & "$here\actpid.ps1" -GamePid $h.Id -Seq "w:3000 shot:$Name-39-host-view" | Out-Null
-    & "$here\actpid.ps1" -GamePid $gp.Id -Seq "w:3000 shot:$Name-39-guest-view" | Out-Null
+    try { & "$here\actpid.ps1" -GamePid $gp.Id -Seq "w:3000 shot:$Name-39-guest-view" | Out-Null } catch { "guest view skipped: $_" }
 }
 & $shot -Out "$here\shots\$Name-30-guest-joined.png" | Out-Null
 if ($Walk) {
@@ -439,7 +510,8 @@ if ($Fight) {
             $env:CD_PID = "$($gp.Id)"; cmd /c "python ""$here\camwalk\walkto.py"" $($xz[0]) $($xz[1]) 2.0 2>&1" | Select-Object -Last 3
             $env:CD_PID = ''
             try {
-                & "$here\actpid.ps1" -GamePid $gp.Id -Seq "w:300 shot:$Name-54-guest-by-host kd:SHIFT kd:F7 w:3800 ku:F7 ku:SHIFT w:2500 shot:$Name-55-guest-revived" | Out-Null
+                $rk = if ($ReviveWithE) { "kd:E w:3800 ku:E" } else { "kd:SHIFT kd:F7 w:3800 ku:F7 ku:SHIFT" }
+                & "$here\actpid.ps1" -GamePid $gp.Id -Seq "w:300 shot:$Name-54-guest-by-host $rk w:2500 shot:$Name-55-guest-revived" | Out-Null
                 & "$here\actpid.ps1" -GamePid $h.Id -Seq "w:1500 shot:$Name-56-host-after-revive" | Out-Null
             } catch { "revive step failed: $_" }
         }
@@ -450,6 +522,13 @@ Start-Sleep 3
 & $shot -Out "$here\shots\$Name-31-host.png" | Out-Null
 Start-Sleep $Hold
 & $shot -Out "$here\shots\$Name-40-later.png" | Out-Null
+if ($GuestLeave) {
+    "guest leaves (its game is killed) at $(Get-Date -Format HH:mm:ss.fff)"
+    Stop-Process -Id $gp.Id -Force -ErrorAction SilentlyContinue
+    Start-Sleep 60
+    & "$here\actpid.ps1" -GamePid $h.Id -Seq "w:500 shot:$Name-70-host-after-guest-left k:W:1500 w:1000 shot:$Name-71-host-walks-on" | Out-Null
+    "host running 60 s after the guest left: $(-not (Get-Process -Id $h.Id).HasExited)"
+}
 "host alive=$(-not $h.HasExited) guest alive=$(-not $gp.HasExited)"
 if ($gp.HasExited) { "guest exit code 0x{0:X8} at {1}" -f $gp.ExitCode, $gp.ExitTime }
 if ($h.HasExited) { "host exit code 0x{0:X8} at {1}" -f $h.ExitCode, $h.ExitTime }

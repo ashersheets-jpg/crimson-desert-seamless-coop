@@ -3577,3 +3577,38 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   copies of the game on one PC); only 4 in the 15 idle minutes (worst 1.24 s). Not a soak problem; watch it
   on the two-PC test.
   Next: leave / rejoin and co-op save continuity, then revive, on release defaults.
+
+### 2026-11-09 23:20 - Leave / rejoin: a real bug found (guest's own save off from the 2nd session), fix built
+  tcB253 (second session on the kept co-op folder, 60 s): the lobby's first choice was "Continue Our Co-op
+  Save", the guest joined, both in the shared world, both alive, SAVES OK. The guest's character came from its
+  mailbox (gen8) and stood where it had stopped (Hernand outskirts, 307 m from the host).
+  It could NOT show that the host continues from its autosave: the harness (CDMP_SANDBOX_ONLY) strips every
+  slot but the test slot103 from the co-op folder at each start. New harness switch -KeepSlots leaves the
+  folder as a player's would be. New switch -GuestLeave kills the guest's game after the hold and watches the
+  host for 60 s more.
+  tcB254 (-KeepSlots -GuestLeave): the guest was killed at 22:40:09. The host noticed after 15 s ("the Troc
+  tunnel stops: the guest has been gone for 15 s"), logged user 2 out, and kept running; SAVES OK. Note: that
+  line also says session 2's conversation is lost until the game restarts, so a guest cannot rejoin a host that
+  stays in the game; both restart and join from the title screen (which is the supported way).
+  BUG (real for players, hidden so far by the harness): with the folder kept, last session's guest slot
+  (<account>\slot204) is still in it at the next start, and the host says "guest_own_save=1 is forced OFF:
+  '...\slot204' already exists in the sandbox". The guest's upload is then refused ("user 2 plays a clone"),
+  and no final save is exported when the guest leaves. So from the second co-op session on, the guest would
+  not have had its own character and progress.
+  FIX (native base, local commit only): at start, the host's first process of a run moves a kept folder's
+  <account>\slot204 to <folder>_guest_prev\<account>\slot204 (one earlier copy replaced, never deleted
+  outright; the exported generations are in the guest's mailbox). save_hooks.cpp set_guest_slot_aside, wired
+  with build/port-u2s/apply_guest_slot_aside.py. Native builds; unit tests 31 failed of 92 = the known old
+  2976 fixtures, nothing new. tcB255 tests it (leave), then a rejoin run.
+  23:05 tcB255 PASS (kept folder, guest leaves): host log "last session's guest slot ...\slot204 set aside as
+  ...\with_127_0_0_1_guest_prev\...\slot204"; guest_own_save=1 stays ON; the upload is verified and staged
+  (mailbox gen8); guest killed 22:57:12, host exports the final save = mailbox gen9 (22:57), keeps running
+  60 s more, SAVES OK.
+  tcB256 PASS (rejoin after that): slot204 set aside again, the guest is staged from gen9 (its state at the
+  moment it dropped), both in the world, both alive, SAVES OK. Host 5 ERR / guest 4 ERR: the guest's extra
+  line is the sporadic first-chance "kind 0x8" at <system dll>+0x3870, seen in many earlier runs (tcB218,
+  tcB238, tcB253, tcB254...), handled, not new.
+  So leave / rejoin with the guest's own progress works across sessions. Still open here: a run long enough
+  for the host's game to autosave, then a restart with -KeepSlots, to see the host continue from that
+  autosave (the short runs wrote none).
+  Next: package rebuild with this fix, revive check on release defaults.
