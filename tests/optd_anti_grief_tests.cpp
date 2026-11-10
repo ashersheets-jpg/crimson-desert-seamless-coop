@@ -41,6 +41,28 @@ int main() {
     CHECK(agl::dialog_npc(d) == 0xB0100421u);
     d[8] = 0xA0;
     CHECK(agl::dialog_npc(d) == 0);
+    // Removing a protected target keeps the rest, in order, and the fixed part.
+    {
+        std::vector<uint8_t> three(agl::kFixed + 3 * agl::kEntry, 0);
+        three[0] = 0x04;
+        three[7] = 0x5A;
+        const size_t s = three.size() - 3 * agl::kEntry;
+        put32(three, s, 0xB0100001u);
+        put32(three, s + agl::kEntry, 0xB0100002u);
+        three[s + agl::kEntry + 9] = 0x77;
+        put32(three, s + 2 * agl::kEntry, 0xB0100003u);
+        size_t gone = 0;
+        const auto out = agl::without_targets(three, [](uint32_t k) { return k == 0xB0100001u || k == 0xB0100003u; }, &gone);
+        CHECK(gone == 2);
+        CHECK(out.size() == agl::kFixed + agl::kEntry);
+        CHECK(out[7] == 0x5A && out[agl::kFixed + 9] == 0x77);
+        const auto t2 = agl::targets(out);
+        CHECK(t2.size() == 1 && t2[0] == 0xB0100002u);
+        CHECK(agl::without_targets(three, [](uint32_t) { return false; }).empty());
+        size_t all = 0;
+        const auto none = agl::without_targets(three, [](uint32_t) { return true; }, &all);
+        CHECK(all == 3 && none.size() == agl::kFixed && agl::targets(none).empty());
+    }
     if (g_failures) {
         std::printf("%d failure(s)\n", g_failures);
         return 1;

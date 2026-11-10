@@ -395,6 +395,10 @@ bool offer(const std::vector<uint8_t>& p) {
     // Judged on every offer (a held Req is offered again), recorded once on its final disposition.
     // Co-op+ 2026-11-09 B19 (anti_grief.h): the guest's hits on the people of the host's world.
     if (v && anti_grief_drop_user2_req(v->opcode, v->payload)) return true;
+    if (v) {  // a hit on enemies and townsfolk at once: offered again without the townsfolk (a held Req is re-trimmed)
+        const auto trimmed = anti_grief_strip_user2_req(v->opcode, v->payload);
+        if (!trimmed.empty()) return offer(troc::make(v->opcode, v->slot, trimmed));
+    }
     const QuestPolicyVerdict qp = v ? user2_funnels_policy_judge(v->opcode, v->payload) : QuestPolicyVerdict{};
     if (qp.drop) {
         user2_funnels_policy_record(qp, /*handed=*/false);

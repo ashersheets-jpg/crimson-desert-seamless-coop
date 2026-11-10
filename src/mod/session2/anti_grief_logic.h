@@ -34,6 +34,28 @@ inline std::vector<uint32_t> targets(std::span<const uint8_t> pl) {
     return out;
 }
 
+// The payload without the entries whose target `is_protected` says yes (the order of the others kept: the server
+// wants them strictly ascending, which a removal keeps). The server reads the count from the size
+// (decomp/notes_anti_grief.md). Empty when nothing is removed. `removed` counts what went.
+template <class Pred>
+std::vector<uint8_t> without_targets(std::span<const uint8_t> pl, Pred is_protected, size_t* removed = nullptr) {
+    std::vector<uint8_t> out;
+    if (removed) *removed = 0;
+    const size_t n_targets = targets(pl).size();
+    if (!n_targets) return out;
+    const size_t start = pl.size() - n_targets * kEntry;  // the first (lowest) entry
+    size_t gone = 0;
+    for (size_t i = 0; i < n_targets; ++i) gone += is_protected(rd32(pl.data() + start + i * kEntry)) ? 1 : 0;
+    if (!gone) return out;
+    out.assign(pl.begin(), pl.begin() + static_cast<std::ptrdiff_t>(start));
+    for (size_t i = 0; i < n_targets; ++i) {
+        const uint8_t* e = pl.data() + start + i * kEntry;
+        if (!is_protected(rd32(e))) out.insert(out.end(), e, e + kEntry);
+    }
+    if (removed) *removed = gone;
+    return out;
+}
+
 // The NPC of a SetQuestDialogAck payload (u8 4 | u32 actor | u32 NPC | entries), 0 when not one.
 inline uint32_t dialog_npc(std::span<const uint8_t> pl) {
     if (pl.size() < 9 || pl[0] != 4) return 0;
