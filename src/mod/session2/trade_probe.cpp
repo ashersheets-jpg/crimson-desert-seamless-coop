@@ -196,12 +196,11 @@ void give_raw(Give& g, uintptr_t self, uint32_t item, uint64_t count, uint32_t r
     }
 }
 
-// ---- Shared stash (Co-op+ B12, 3576; build/decomp/notes_shared_stash.md, local). User 2026-11-10: an always-on
-// Co-op+ stash (the game's personal WareHouse has 0 slots until the story unlocks it, tcB305): the HOST character's
-// InvisibleInventory (manager +0xC8: 100 slots, not shown by the game's screens) holds it; both players put in and
-// take out through Co-op+ (the inventory card, the Co-op tab). The moves below use a copy of one of the game's own
-// "storage -> bag" routes with its from / to set (the game has no route to that inventory). Older text: the HOST
-// character's own WareHouse was the stash. The host uses the game's warehouse screen as always; the guest's Co-op+ list sends a 3111 with entry
+// ---- Shared stash (Co-op+ B12, 3576; build/decomp/notes_shared_stash.md, local). User 2026-11-10 (final): the HOST
+// character's own WareHouse, once the story has unlocked it (0 slots before: tcB305); the game refuses moves into its
+// hidden inventories (InvisibleInventory tcB313, index 7 tcB314). Both players put in (the inventory card) and take out
+// (the Co-op tab) from anywhere; the host also has the game's own warehouse screen at storage keepers. The moves run the
+// game's own WareHouse <-> bag routes. The host uses the game's warehouse screen as always; the guest's Co-op+ list sends a 3111 with entry
 // 0xC0DE0002 (deposit: guest bag -> host WareHouse) or 0xC0DE0003 (withdraw: host WareHouse -> guest bag). Both run
 // the game's own cross-actor move exe+0x2DF04A0 with the game's own move-table route (WareHouse <-> bag), so the item
 // keeps its whole record (enchant, durability, dye) and both clients are told by the game. The distance check and
@@ -452,21 +451,30 @@ void stash_dump(uintptr_t base, uintptr_t holder) {
     }
 }
 
-// The stash's inventory: [session2] stash_inventory = an index (research), else the manager's +0xC8.
+// The stash's inventory: [session2] stash_inventory = an index (research), else the personal WareHouse: of the
+// manager's named storages (+0xB2, +0xB4), the one the bag has a route to AND whose route goes back to the bag
+// (tcB305: index 9; index 8's routes go to the money pouch instead).
 std::atomic<int> g_stash_inventory_override{-1};
+std::atomic<int> g_stash_slots{-1};  // the WareHouse's slots in the host's holder at the last list read
 uint16_t stash_inventory_index(uintptr_t base) noexcept {
     const int o = g_stash_inventory_override.load();
     if (o >= 0 && o < 0xFFFF) return static_cast<uint16_t>(o);
     const uintptr_t mgr = inventory_manager(base);
-    uint16_t idx = 0xFFFF;
-    if (mgr) game::fast_read(mgr + 0xC8, &idx, 2);  // "InvisibleInventory"
-    return idx;
+    uint16_t bag = 0xFFFF, unused = 0xFFFF;
+    if (!mgr || !inventory_indices(base, bag, unused)) return 0xFFFF;
+    for (const uintptr_t off : {uintptr_t{0xB4}, uintptr_t{0xB2}}) {
+        uint16_t idx = 0xFFFF;
+        game::fast_read(mgr + off, &idx, 2);
+        if (idx != 0xFFFF && idx != bag && move_route(base, bag, idx) && move_route(base, idx, bag)) return idx;
+    }
+    return 0xFFFF;
 }
 
 // A route the game's move accepts from `from` to `to`: a copy of a plain "storage -> bag" route of the game (no
 // condition) with its two indices set. One buffer per direction (the move runs on the server thread only).
 alignas(16) uint8_t g_route_in[0xA0], g_route_out[0xA0];
 uintptr_t stash_route(uintptr_t base, uint16_t from, uint16_t to) noexcept {
+    if (const uintptr_t own = move_route(base, from, to)) return own;  // the game's own route
     uint16_t bag = 0xFFFF, wh = 0xFFFF;
     if (!inventory_indices(base, bag, wh)) return 0;
     uintptr_t tpl = 0;
@@ -603,10 +611,13 @@ int* __fastcall worker_detour(uintptr_t self, int* err, uint32_t item, uint16_t 
             std::memcpy(g_stash, tmp, sizeof(StashEntry) * n);
             g_stash_n = n;
             ReleaseSRWLockExclusive(&g_stash_lock);
+            g_stash_slots = inventory_slots(self, wh);
             g_stash_gen.fetch_add(1);
         }
         static int logged = 0;
-        if (logged++ < 6) log::info("Stash: the stash (index {}) read for the host's layer: {} stack(s)", wh, n);
+        if (logged++ < 6)
+            log::info("Stash: the host's warehouse (index {}, {} slots) read for its layer: {} stack(s)", wh,
+                      g_stash_slots.load(), n);
         static bool dumped = false;
         if (!dumped && g == kHostCharacter) {
             dumped = true;
@@ -789,6 +800,9 @@ void inter_probe_start() {
 
 // Co-op+ B12: the host character's WareHouse as last read on the server thread (entry 0xC0DE0004). Returns the number
 // of stacks copied (at most max), -1 before any read; *gen counts the reads.
+// The host's WareHouse slots at the last read (0 = not unlocked yet; -1 = never read / unknown).
+extern "C" __declspec(dllexport) int cdmp_stash_slots() { return cdmp::session2::g_stash_slots.load(); }
+
 extern "C" __declspec(dllexport) int cdmp_stash_list(uint32_t* gen, uint16_t* slots, uint16_t* idxs, uint32_t* counts,
                                                      int max) {
     using namespace cdmp::session2;
