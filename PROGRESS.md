@@ -3501,3 +3501,16 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
 - Unit test for the ledger added (optd_interaction_share, 4 cases, passes; suite 31 of 92 fail = the known set).
   Local commit 34af2ec in cdmp-native.
 - tcB241 running: the same arguments, to get a press with a bright prompt.
+
+## 2026-11-09 20:45 *** tcB242: the near-host shop OPENS with the far-shop keys on (interaction_share) ***
+
+- tcB241 (tcB240 again): inconclusive for the same harness reason. walkto.py jumps when it is stuck, and the walk
+  ended on the stall's roof (tcB240: behind the counter). Not the fix, not the guest's state. Server side again
+  18 "[kept]".
+- tcB242: the guest is teleported straight to the spot in front of the butcher (scripts/tp_butcher_guest_near.txt,
+  `tp -10678.5 612 -3904.2`), so the walk arrives at once and only faces + sweeps. First press: the guest's
+  3008 (requester 0xA0100066 -> NPC 0xB01004AD interaction 0x000F4321) -> 2120 SuccessAck, and the menu
+  "Hernand Butchery - Renee: Buy / Sell / Leave" (shots tcB242-g-00a, tcB242-b0). Both alive, SAVES OK.
+  This is the case that failed in tcB217-229 and tcB239 (3100 FailAck) with the same keys.
+- Running tcB243: the same keys, the host 440 m east (tp_far_host.txt) = the far shop in the lobby flow. If it
+  opens too, the far keys + interaction_share go into the layer's host defaults.
