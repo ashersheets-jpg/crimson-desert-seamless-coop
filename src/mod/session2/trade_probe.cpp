@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <format>
 #include <string>
+#include <vector>
 
 #include <safetyhook.hpp>
 
@@ -31,6 +32,28 @@ int* __fastcall worker_detour(uintptr_t self, int* err, uint32_t item, uint16_t 
         log::info("TradeProbe [worker in] self 0x{:X} item {} b 0x{:X} count {} giver 0x{:08X} receiver 0x{:08X} "
                   "inventory 0x{:X} slot 0x{:X} entry {}", self, item, b, count, g, r, inv, slot, entry);
     }
+    static std::atomic<bool> g_listed{false};
+    if (say && !g_listed.exchange(true)) {
+        // Which u16 inventory keys the worker's lookup knows (its own call, exe+0x3D5930: key -> index, 0xFFFF =
+        // unknown), and what the item key maps to (exe+0x3D7E10). Read only.
+        const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+        using InvFn = void* (__fastcall*)(uint64_t*, uint16_t);
+        using ItemFn = void* (__fastcall*)(uint64_t*, uint32_t);
+        const auto inv_fn = reinterpret_cast<InvFn>(base + 0x3D5930);
+        std::string known;
+        int n = 0;
+        for (uint32_t k = 0; k < 0x10000; ++k) {
+            uint64_t out = 0;
+            inv_fn(&out, static_cast<uint16_t>(k));
+            if (static_cast<uint16_t>(out) != 0xFFFF && ++n <= 64) {
+                known += std::format(" 0x{:X}->{}", k, static_cast<uint16_t>(out));
+            }
+        }
+        log::info("TradeProbe [keys] {} inventory keys known:{}", n, known);
+        uint64_t out = 0;
+        reinterpret_cast<ItemFn>(base + 0x3D7E10)(&out, item);
+        log::info("TradeProbe [keys] item {} -> index 0x{:X}", item, static_cast<uint16_t>(out));
+    }
     int* ret = g_worker.unsafe_call<int*>(self, err, item, b, count, giver, receiver, inv, slot, entry);
     int e = -1;
     game::fast_read(reinterpret_cast<uintptr_t>(err), &e, sizeof e);
@@ -44,6 +67,17 @@ int* __fastcall worker_detour(uintptr_t self, int* err, uint32_t item, uint16_t 
         log::info("TradeProbe [worker out] err {} (0x{:X}) = {}", e, static_cast<uint32_t>(e),
                   e == 0 ? "none" : e == bad ? "bad item / inventory / entry" : e == actor ? "actor missing"
                                                                                            : "distance or move");
+        if (e != 0) {  // which of the game's error constants it is (exe+0x7120000..0x7160000), for the decomp
+            std::string where;
+            std::vector<int> block(0x1000 / 4);
+            for (uintptr_t at = base + 0x7120000; at < base + 0x7160000; at += 0x1000) {
+                if (!game::fast_read(at, block.data(), 0x1000)) continue;
+                for (size_t i = 0; i < block.size(); ++i) {
+                    if (block[i] == e) where += std::format(" exe+0x{:X}", at + i * 4 - base);
+                }
+            }
+            log::info("TradeProbe [worker out] that error constant is at:{}", where.empty() ? " (not found)" : where);
+        }
     }
     return ret;
 }
