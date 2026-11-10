@@ -4,6 +4,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <format>
 #include <string>
@@ -195,8 +196,12 @@ void give_raw(Give& g, uintptr_t self, uint32_t item, uint64_t count, uint32_t r
     }
 }
 
-// ---- Shared stash (Co-op+ B12, 3576; build/decomp/notes_shared_stash.md, local): the HOST character's own WareHouse
-// is the stash. The host uses the game's warehouse screen as always; the guest's Co-op+ list sends a 3111 with entry
+// ---- Shared stash (Co-op+ B12, 3576; build/decomp/notes_shared_stash.md, local). User 2026-11-10: an always-on
+// Co-op+ stash (the game's personal WareHouse has 0 slots until the story unlocks it, tcB305): the HOST character's
+// InvisibleInventory (manager +0xC8: 100 slots, not shown by the game's screens) holds it; both players put in and
+// take out through Co-op+ (the inventory card, the Co-op tab). The moves below use a copy of one of the game's own
+// "storage -> bag" routes with its from / to set (the game has no route to that inventory). Older text: the HOST
+// character's own WareHouse was the stash. The host uses the game's warehouse screen as always; the guest's Co-op+ list sends a 3111 with entry
 // 0xC0DE0002 (deposit: guest bag -> host WareHouse) or 0xC0DE0003 (withdraw: host WareHouse -> guest bag). Both run
 // the game's own cross-actor move exe+0x2DF04A0 with the game's own move-table route (WareHouse <-> bag), so the item
 // keeps its whole record (enchant, durability, dye) and both clients are told by the game. The distance check and
@@ -244,6 +249,7 @@ struct Stash {
     uint32_t requester = 0;
 };
 
+uint16_t stash_inventory_index(uintptr_t base) noexcept;
 bool inventory_indices(uintptr_t base, uint16_t& bag, uint16_t& wh) noexcept {
     __try {
         // The game's own chain (exe+0xEC03A0, exe+0x2D45EE0): *(*(*(*[exe+0x71C0498]) + 8) + 0x240) + 0xA2 / +0xB2.
@@ -372,6 +378,111 @@ void give_move(GiveMove& m, uintptr_t self, uint32_t receiver, uint16_t inv_key,
     }
 }
 
+// One-time diagnostics (B12): the 24 named inventories (manager +0xA0..+0xCE: index, key, slots and used slots in
+// this holder) and every move route of the bag and the warehouse (from, to, the first bytes of the entry).
+uintptr_t inventory_manager(uintptr_t base) noexcept {
+    __try {
+        const uintptr_t slot = *reinterpret_cast<uintptr_t*>(base + 0x71C0498);
+        const uintptr_t root = slot ? *reinterpret_cast<uintptr_t*>(slot) : 0;
+        const uintptr_t info = root ? *reinterpret_cast<uintptr_t*>(root + 8) : 0;
+        return info ? *reinterpret_cast<uintptr_t*>(info + 0x240) : 0;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return 0;
+    }
+}
+int16_t inventory_slots(uintptr_t holder, uint16_t idx) noexcept {
+    __try {
+        const uintptr_t list = *reinterpret_cast<uintptr_t*>(holder + 0x18);
+        const uint32_t n = *reinterpret_cast<uint32_t*>(holder + 0x20);
+        for (uint32_t k = 0; list && k < n && k < 64; ++k) {
+            const uintptr_t inv = *reinterpret_cast<uintptr_t*>(list + k * 8);
+            if (inv && *reinterpret_cast<int16_t*>(inv + 0x10) == static_cast<int16_t>(idx))
+                return *reinterpret_cast<int16_t*>(inv + 8);
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    }
+    return -1;
+}
+void route_text(uintptr_t base, uint16_t from, char* out, size_t cap) noexcept {
+    out[0] = 0;
+    size_t at = 0;
+    __try {
+        const uintptr_t row = reinterpret_cast<uintptr_t (__fastcall*)(uint64_t, uint32_t)>(base + 0x5560E0)(0, from);
+        const uintptr_t list = row ? *reinterpret_cast<uintptr_t*>(row + 0x38) : 0;
+        const uint32_t n = row ? *reinterpret_cast<uint32_t*>(row + 0x40) : 0;
+        for (uint32_t i = 0; list && i < n && i < 40 && at + 96 < cap; ++i) {
+            const uint8_t* e = reinterpret_cast<const uint8_t*>(list + static_cast<uintptr_t>(i) * 0xA0);
+            const int w = std::snprintf(out + at, cap - at, " [%u: %u->%u %02X%02X %02X%02X%02X%02X cond %llX]", i,
+                                        *reinterpret_cast<const uint16_t*>(e + 2), *reinterpret_cast<const uint16_t*>(e + 4),
+                                        e[0], e[1], e[6], e[7], e[8], e[9],
+                                        static_cast<unsigned long long>(*reinterpret_cast<const uintptr_t*>(e + 0x78)));
+            if (w > 0) at += static_cast<size_t>(w);
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        out[at] = 0;
+    }
+}
+void stash_dump(uintptr_t base, uintptr_t holder) {
+    static const char* const kNames[] = {"Money", "Character", "PearlUser", "PearlCharacter", "Quest", "PetAndVehicle",
+                                         "Wagon", "Ship", "CampWareHouse", "WareHouse", "Bank", "CampStraw", "BirdFeed",
+                                         "Recovery", "Dresser", "Refrigerator", "Symbol", "Collecting", "Gathered",
+                                         "Kuku", "Invisible", "Xamaca", "Spagnola", "Dragnar"};
+    const uintptr_t mgr = inventory_manager(base);
+    if (!mgr) return;
+    std::string line;
+    for (int i = 0; i < 24; ++i) {
+        uint16_t idx = 0xFFFF;
+        game::fast_read(mgr + 0xA0 + i * 2, &idx, 2);
+        const int16_t slots = idx == 0xFFFF ? -1 : inventory_slots(holder, idx);
+        int used = 0;
+        for (int16_t k = 0; k < slots && k < 512; ++k) {
+            const StashSlot x = stash_slot(base, holder, idx, static_cast<uint16_t>(k));
+            if (x.idx != 0xFFFF && x.n > 0) ++used;
+        }
+        line += std::format(" | {} {}/key {} slots {} used {}", kNames[i], idx,
+                            idx == 0xFFFF ? 0 : inventory_key_of(base, idx), slots, used);
+    }
+    log::info("Stash dump: inventories{}", line);
+    uint16_t bag = 0xFFFF, wh = 0xFFFF;
+    if (!inventory_indices(base, bag, wh)) return;
+    static char buf[4200];
+    for (uint16_t from : {bag, wh, static_cast<uint16_t>(wh + 1)}) {
+        route_text(base, from, buf, sizeof buf);
+        log::info("Stash dump: routes of inventory {}:{}", from, buf);
+    }
+}
+
+uint16_t stash_inventory_index(uintptr_t base) noexcept {
+    const uintptr_t mgr = inventory_manager(base);
+    uint16_t idx = 0xFFFF;
+    if (mgr) game::fast_read(mgr + 0xC8, &idx, 2);  // "InvisibleInventory"
+    return idx;
+}
+
+// A route the game's move accepts from `from` to `to`: a copy of a plain "storage -> bag" route of the game (no
+// condition) with its two indices set. One buffer per direction (the move runs on the server thread only).
+alignas(16) uint8_t g_route_in[0xA0], g_route_out[0xA0];
+uintptr_t stash_route(uintptr_t base, uint16_t from, uint16_t to) noexcept {
+    uint16_t bag = 0xFFFF, wh = 0xFFFF;
+    if (!inventory_indices(base, bag, wh)) return 0;
+    uintptr_t tpl = 0;
+    __try {
+        for (uint16_t i = 0; i < 32 && !tpl; ++i) {
+            if (i == bag) continue;
+            const uintptr_t r = move_route(base, i, bag);
+            if (r && *reinterpret_cast<uintptr_t*>(r + 0x78) == 0) tpl = r;
+        }
+        if (!tpl) return 0;
+        uint8_t* buf = to == bag ? g_route_out : g_route_in;
+        std::memcpy(buf, reinterpret_cast<void*>(tpl), 0xA0);
+        *reinterpret_cast<uint16_t*>(buf + 2) = from;
+        *reinterpret_cast<uint16_t*>(buf + 4) = to;
+        return reinterpret_cast<uintptr_t>(buf);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return 0;
+    }
+}
+
 // self = the requester's holder (the worker's own first argument), g / r = the packet's giver / receiver keys,
 // hint = the item index the requester's list showed (0xFFFF = whatever the slot holds).
 void stash_move(Stash& s, uintptr_t self, bool deposit, uint32_t g, uint32_t r, uint16_t slot, uint16_t hint,
@@ -390,11 +501,17 @@ void stash_move(Stash& s, uintptr_t self, bool deposit, uint32_t g, uint32_t r, 
         s.why = "no requester actor";
         return;
     }
-    // Only the guest moves through here, and only between its own character and the host's.
-    const uint32_t guest = deposit ? g : r, host = deposit ? r : g;
-    if (s.requester == kHostCharacter || guest != s.requester || host != kHostCharacter || (guest >> 28) != 0xA) {
+    // Either player, between its own bag and the stash on the host's character.
+    const uint32_t player = deposit ? g : r, host = deposit ? r : g;
+    if (player != s.requester || host != kHostCharacter || (player >> 28) != 0xA) {
         s.stage = -1;
-        s.why = "not the guest moving between its character and the host's";
+        s.why = "not a player moving between its own bag and the host's stash";
+        return;
+    }
+    s.wh = stash_inventory_index(base);
+    if (s.wh == 0xFFFF) {
+        s.stage = -1;
+        s.why = "the stash inventory is unknown";
         return;
     }
     if (count < 1 || count > 1000000) {
@@ -404,10 +521,10 @@ void stash_move(Stash& s, uintptr_t self, bool deposit, uint32_t g, uint32_t r, 
     }
     s.from = deposit ? s.bag : s.wh;
     s.to = deposit ? s.wh : s.bag;
-    const uintptr_t route = move_route(base, s.from, s.to);
+    const uintptr_t route = stash_route(base, s.from, s.to);
     if (!route) {
         s.stage = -1;
-        s.why = "the game has no route between those inventories";
+        s.why = "no route template";
         return;
     }
     s.stage = 2;
@@ -416,7 +533,7 @@ void stash_move(Stash& s, uintptr_t self, bool deposit, uint32_t g, uint32_t r, 
         uint64_t scope[8] = {};
         reinterpret_cast<void* (__fastcall*)(uintptr_t, uint64_t*, uint64_t)>(base + 0x2D11880)(mgr, scope, kHostCharacter);
         const uintptr_t host_actor = scope[1];
-        if ((scope[2] & 0xFF) != 0 && host_actor) {
+        if ((scope[2] & 0xFF) != 0 && host_actor && (s.requester != kHostCharacter || host_actor == me)) {
             s.stage = 3;
             const uintptr_t giver_actor = deposit ? me : host_actor, receiver_actor = deposit ? host_actor : me;
             const uintptr_t src = reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t)>(base + 0x22F1DC0)(giver_actor);
@@ -468,8 +585,9 @@ int* __fastcall worker_detour(uintptr_t self, int* err, uint32_t item, uint16_t 
         uint32_t me = 0;
         uintptr_t actor = 0;
         int n = -1;
-        if (g == kHostCharacter && inventory_indices(base, bag, wh) && game::fast_read(self + 8, &actor, 8) && actor &&
-            game::fast_read(actor + 0x60, &me, 4) && me == kHostCharacter) {
+        if (g == kHostCharacter && inventory_indices(base, bag, wh) && (wh = stash_inventory_index(base)) != 0xFFFF &&
+            game::fast_read(self + 8, &actor, 8) && actor && game::fast_read(actor + 0x60, &me, 4) &&
+            me == kHostCharacter) {
             StashEntry tmp[512];
             n = 0;
             for (uint16_t i = 0; i < 512 && n < 512; ++i) {
@@ -484,7 +602,12 @@ int* __fastcall worker_detour(uintptr_t self, int* err, uint32_t item, uint16_t 
             g_stash_gen.fetch_add(1);
         }
         static int logged = 0;
-        if (logged++ < 6) log::info("Stash: the host's warehouse (index {}) read for its layer: {} stack(s)", wh, n);
+        if (logged++ < 6) log::info("Stash: the stash (index {}) read for the host's layer: {} stack(s)", wh, n);
+        static bool dumped = false;
+        if (!dumped && g == kHostCharacter) {
+            dumped = true;
+            stash_dump(base, self);
+        }
         *err = 0;
         return err;
     }

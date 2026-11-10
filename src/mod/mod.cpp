@@ -75,6 +75,7 @@
 #include "mod/session2/quest_route.h"
 #include "mod/session2/fog_share.h"
 #include "mod/session2/anti_grief.h"
+#include "mod/session2/lootr.h"
 #include "mod/session2/shop_twin.h"
 #include "mod/render/dx12_hook.h"
 #include "mod/render/hud.h"
@@ -1233,6 +1234,7 @@ DWORD WINAPI worker(LPVOID) {
             session2::shop_twin_share_all(cfg.s2_dialog_share_all);
             session2::stage_candidate_guard_start(cfg.s2_stage_candidate_guard);
             session2::anti_grief_start(cfg.s2_anti_grief, cfg.s2_guest);
+            session2::lootr_start(cfg.s2_lootr_probe, cfg.s2_guest);
             session2::fog_share_start(cfg.s2_fog_share, cfg.s2_guest);
             session2::quest_route_start(cfg.s2_quest_own_progress, cfg.s2_quest_shared_credit, cfg.s2_guest);
             session2::merchant_unhide_start(cfg.s2_merchant_unhide != 0, cfg.s2_guest, cfg.s2_merchant_unhide == 2 ||

@@ -2,6 +2,7 @@
 #include "mod/session2/shop_twin.h"
 #include "mod/session2/fog_share.h"
 #include "mod/session2/anti_grief.h"
+#include "mod/session2/lootr.h"
 
 #include <windows.h>
 
@@ -216,6 +217,7 @@ void sniffer_fanout(const uint8_t* packet, size_t size, uint64_t t_us, bool serv
     npc_probe_client_sniff(packet, size, t_us, server_to_client); // S33: retorna inmediatamente con 0.
     shop_twin_host_sniffed(packet, size, server_to_client);       // Co-op+ 2026-11-09: the host's shop choices
     fog_share_host_sniffed(packet, size, server_to_client);
+    lootr_host_sniffed(packet, size, server_to_client);      // Co-op+ 2026-11-10 Lootr probe
     anti_grief_host_sniffed(packet, size, server_to_client);  // Co-op+ 2026-11-09 B19: the NPCs the host talks to       // Co-op+ 2026-11-09 B04: the host's map fog
     door_trace_packet(server_to_client ? DoorTraceStage::HostClientAck : DoorTraceStage::HostClientReq,
                       std::span<const uint8_t>(packet, size), t_us); // El módulo ignora este tap en el invitado.
