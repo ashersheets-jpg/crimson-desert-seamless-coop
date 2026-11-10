@@ -67,6 +67,8 @@ struct Config {
     bool dev_combat_tests = false;
     // Ctrl+F9 / Ctrl+Shift+F9: next / previous minimap icon for the other player.
     bool dev_minimap_cycle = false;
+    // [dev] native_extra: k=v,k=v appended to the native ini's [session2] the lobby writes (research runs only).
+    std::string dev_native_extra;
     // Ctrl+F5: an enemy targets the other player's copy (aggro_test.h).
     bool dev_aggro_test = false;
     // Ctrl+F6: send the nearest enemy to the other player (enemy_relay.h).

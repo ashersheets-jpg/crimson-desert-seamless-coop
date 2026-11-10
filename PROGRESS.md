@@ -3426,3 +3426,10 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   exchange worker 0x2E05550's steps, reverse-engineering-3576.md "Items") -- deep; (b) a trade made of two shop
   actions (the giver sells to a merchant, the receiver buys back) -- no; (c) drop-and-pick-up on the ground, if
   the game has a player item drop (none found in the Troc table, 11-09). B11 stays open.
+- 2026-11-09 19:09 Far-shop research tooling: native child_hold logs "[refresh diag]" (the server's
+  ServerSequencerPlayDataActorComponent, vtable exe+0x5EF6360, of each refreshed NPC: its non-zero u32s
+  +0x2A0..+0x35C); the layer has [dev] native_extra = k=v,k=v (host: appended to the native ini the lobby writes;
+  players never have it) and twocopy.ps1 -HostNativeExtra fills it -- lobby research runs with far shops on while
+  the release defaults keep them off. tcB235 (non-lobby, host far then near): U-1 armed (6 cells) and drained, but
+  user 2 had prepared no funcnpc scene there (no refresh), so it did not reproduce; tcB236 = the lobby flow with
+  far shops + conflict via native_extra.

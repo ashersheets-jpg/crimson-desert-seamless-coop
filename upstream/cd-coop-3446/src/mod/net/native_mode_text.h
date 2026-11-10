@@ -27,6 +27,7 @@ struct NativeModeSpec {
     std::string coop_save_seed = "keep";  // keep | copy | new (native config.h s2_coop_save_dir)
     std::string player_name = "Player";
     bool shared_quest_credit = false;  // B10 option 2 (host): [session2] quest_shared_credit
+    std::string extra;                 // dev: "k=v,k=v" appended to [session2] (config dev_native_extra)
 };
 
 inline const char* native_mode_name(NativeMode m) {
@@ -126,6 +127,14 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
         // B10 option 2, the player's choice ([coop] shared_quest_credit): an objective one player completes also
         // counts for the other where the other has that step active.
         if (s.shared_quest_credit) line("quest_shared_credit=1");
+        // dev (research runs): extra keys (only keys the defaults do not write: an ini reader takes the first one).
+        for (size_t at = 0; at < s.extra.size();) {
+            size_t comma = s.extra.find(',', at);
+            if (comma == std::string::npos) comma = s.extra.size();
+            const std::string kv = s.extra.substr(at, comma - at);
+            if (kv.find('=') != std::string::npos) line(kv.c_str());
+            at = comma + 1;
+        }
     } else {
         for (const char* k : {"guest=1", "guest_mode=remote", "guest_crash_dump=1", "guest_layer_guard=1",
                               "guest_remote_update_guard=1", "guest_update_guard=1", "guest_reload_wait_fix=1",
