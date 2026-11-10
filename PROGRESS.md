@@ -3815,3 +3815,10 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
 - STEP 3 DONE: hold-interact menu on keyboard and pad, answers by holding interact, the co-op panel's actions in the
   Co-op tab, no in-world hotkeys or key banners on the shared-world build. For the user to judge by hand: the feel of
   the hold (800 ms), one possible jump when A is held for a remote request (A is not masked there).
+
+### 2026-11-10 tcB278: Co-op tab actions, first sweep test (step 4)
+
+- "Go to my friend" from the tab WORKS: the host was taken 300 m to the guest (-10349 -> -10648, "Teleport: arrived" 8 s later, guest name plate at 1 m, hold prompt "Interact" by the friend). SAVES OK, 5/5 restored.
+- Found: the menu stayed open during the trip (B does nothing while the trip runs), so the rest of the key sequence ran in the world and the quick message was never sent from the tab. Not a fault of the quick message row.
+- Change (built, test tcB279 running): an action chosen in the Co-op tab closes the menu, as choosing a place on the game's map does (pad players: a Start press handed to the game through the XInput hook, new input::press_for_game; keyboard: Esc).
+- RB glyph probe (kg.py, read only): the menu root keeps the LB / RB KeyGuideButtons at +0x170 / +0x178. Under RB, 886 / 912 / 926 (left, middle, right edge at 1920 wide) sit in nine sub-trees; only RB+8 -> +28 -> +2E8 has the LB twin (50 / 90). They look like computed quads. tcB279 adds 176 px to each sub-tree in turn (kgw.py, test copy only) to see which one the glyph follows.
