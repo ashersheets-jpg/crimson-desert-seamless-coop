@@ -39,6 +39,9 @@ uint64_t join_take_request();
 // the overlay or the lobby is not available (the caller says so on screen).
 bool join_open_invite(uint64_t lobby);
 
+// True while the Steam overlay (Shift+Tab, the invite dialog) is open: our pages leave the mouse and the keys to it.
+bool join_overlay_active();
+
 // Rich presence: what friends see in their list, and the "Join Game" button.
 // `joinable` = friends may use "Join Game" (false for invite-only hosts).
 void join_presence_hosting(uint64_t lobby, int members, int max_members, bool joinable = true);

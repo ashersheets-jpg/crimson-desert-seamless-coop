@@ -90,8 +90,26 @@ public:
     int GetCallbackSizeBytes() override { return static_cast<int>(sizeof(GameRichPresenceJoinRequested)); }
 };
 
+// GameOverlayActivated_t: k_iSteamFriendsCallbacks (300) + 31. Only the first byte (m_bActive) is read: later SDKs
+// added fields after it.
+constexpr int kGameOverlayActivated = 300 + 31;
+std::atomic<bool> g_overlay_active{false};
+
+class OverlayCallback final : public SteamCallbackBase {
+public:
+    void Run(void* param) override {
+        if (!param) return;
+        const bool active = *static_cast<const uint8_t*>(param) != 0;
+        if (active != g_overlay_active.exchange(active)) g_overlay_changes.fetch_add(1);
+    }
+    void Run(void* param, bool, SteamAPICall_t) override { Run(param); }
+    int GetCallbackSizeBytes() override { return 1; }
+    static inline std::atomic<uint32_t> g_overlay_changes{0};
+};
+
 LobbyJoinCallback g_lobby_cb;
 PresenceJoinCallback g_presence_cb;
+OverlayCallback g_overlay_cb;
 
 // ------------------------------------------------------------ flat API
 // Export names checked against bin64\steam_api64.dll 09.31.86.04 (game 1.0.0.3446).
@@ -198,6 +216,11 @@ void join_poll() {
                    kGameRichPresenceJoinRequested)) {
         return fail("RegisterCallback");
     }
+    // The Steam overlay's open / closed state: while it is open the mouse and the keys are Steam's, not our pages'
+    // (playtest 2026-11-10: our mouse hook ate every click meant for the invite dialog). Not fatal if it fails.
+    if (!call_void(g_api.register_callback, static_cast<SteamCallbackBase*>(&g_overlay_cb), kGameOverlayActivated)) {
+        log::warn("Join: the Steam overlay's state is not available; our pages keep the mouse while it is open");
+    }
     g_registered = true;
     g_status = "join: ready (Steam invites and Join Game)";
     log::info("Join: listening for Steam 'Join Game' and invites");
@@ -207,6 +230,14 @@ uint64_t join_take_request() {
     const uint64_t lobby = g_request.exchange(0);
     if (lobby) log::info("Join: Steam asked to join lobby {} (request {})", lobby, g_requests_seen.load());
     return lobby;
+}
+
+bool join_overlay_active() {
+    static std::atomic<uint32_t> logged{0};
+    const uint32_t n = OverlayCallback::g_overlay_changes.load();
+    const bool active = g_overlay_active.load();
+    if (n != logged.exchange(n)) log::info("Join: the Steam overlay is {}", active ? "open (its mouse and keys are Steam's)" : "closed");
+    return active;
 }
 
 bool join_open_invite(uint64_t lobby) {
@@ -297,6 +328,8 @@ void join_shutdown() {
     if (!g_registered) return;
     call_void(g_api.unregister_callback, static_cast<SteamCallbackBase*>(&g_lobby_cb));
     call_void(g_api.unregister_callback, static_cast<SteamCallbackBase*>(&g_presence_cb));
+    call_void(g_api.unregister_callback, static_cast<SteamCallbackBase*>(&g_overlay_cb));
+    g_overlay_active = false;
     g_registered = false;
     if (g_resolved && !g_disabled) call_void(g_api.clear_rich_presence, g_api.frn);
 }

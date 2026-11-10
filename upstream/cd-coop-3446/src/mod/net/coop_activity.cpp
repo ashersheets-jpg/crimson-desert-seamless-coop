@@ -1,3 +1,4 @@
+#include "mod/native_layer.h"
 #include "mod/net/coop_activity.h"
 #include "mod/input/actions.h"
 #include "mod/net/coop_worlds.h"
@@ -707,7 +708,8 @@ void challenge_tick(ActivityTick& out, bool connected, bool focused, std::option
                 case kChNone: {
                     // The picker: a duel, rock-paper-scissors, and the wrestling table we stand at.
                     if (!connected && !test) {
-                        toast = "No one to challenge: invite a friend first ({Invite})";
+                        toast = kNativeLayer ? "No one to challenge: invite a friend from the title screen first"
+                                             : "No one to challenge: invite a friend first ({Invite})";
                         break;
                     }
                     c = Challenge{};

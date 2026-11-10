@@ -3657,3 +3657,50 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
 - How the upload was done (the app's browser pane has no file-upload tool and discord.com cannot reach loopback): open http://127.0.0.1:<port> in the same tab, read the files into window.name (base64), navigate to Discord (window.name survives), rebuild File objects, set them on the composer's input[type=file] with a DataTransfer and fire "change". Long texts: a synthetic paste event on the focused editor. Editing: Up arrow for the last own message, the hover pencil for older ones; select all with a DOM Range + Backspace (Ctrl+A does not reach the editor).
 - Told the testers honestly: tested with two copies on one PC only; Steam join between two PCs, Radmin / Direct IP untested in the shared world.
 - Next: watch #bug-reports for the first two-PC results; then the feature list (B11 trade probe first).
+- 2026-11-10 00:30 USER BUG REPORT on the playtest build (0.1.0-alpha+377f2c97, their real install): "Invite Friends"
+  opens Steam's dialog but no friend can be invited, and the dialog's X does not close it (only Shift+Tab does).
+  Their coopplus.log: 13 "Co-op lobby: Invite Friends" presses about 1 s apart, each re-opening the dialog.
+  Two causes, both ours (layer, coop_page.cpp):
+  1. mouse_hook (WH_MOUSE_LL) swallows every mouse button while the title lobby page is shown and queues it for our
+     page. With Steam's overlay on top, the click never reached Steam AND pressed our card underneath again.
+  2. game_input_block (GetForegroundWindow / GetActiveWindow return null to the game while our page is up) also
+     starves Steam's overlay: it takes its clicks from the input the game reads. Hover still lit the X; clicks did not.
+  Fix: steam_join.cpp registers a GameOverlayActivated_t (331) callback -> net::join_overlay_active(); while the
+  overlay is open the mouse hook and coop_page_hook_key pass everything through, the page drops queued clicks / keys /
+  pad presses, and the game input block is lifted. Log lines: "Join: the Steam overlay is open (its mouse and keys
+  are Steam's)" / "... is closed".
+- tcB260 (fix 1 only; host alone at the title lobby on a real Steam lobby): overlay state seen; card not re-pressed
+  under the overlay; the X still dead -> cause 2. tcB261 (both fixes): card click -> dialog opens once
+  (00:42:25.418); click on the X -> "overlay is closed" 3.4 s later; W / S move the lobby menu afterwards. SAVES OK,
+  user install restored 5/5.
+- MISTAKE in tcB261, told to the user: at test start Steam's invite dialog was ALREADY open (Steam shows it again
+  for a fresh lobby after the earlier session; seen in tcB260 too and not allowed for). The first test click, aimed at
+  our card (960,570), landed inside the dialog between the rows of two friends (Matikjr / Noah) and the dialog
+  closed: a real invite to a dead test lobby very likely went to one of them. Rule from now on: in any test with
+  the Steam overlay, take a shot FIRST and never click inside the dialog except on its X; close a dialog that is
+  already open with Shift+Tab before anything else.
+- Harness: twocopy.ps1 -TitleHold N (host alone at the title, held N s, then exit) and -HostTransport steam;
+  build/native/run_tcB260.sh NAME keeps the user's playtest install (cdmp.asi, coopplus.asi, both inis, winmm.dll)
+  in build/native/user-install-keep and puts it back after twocopy.sh's cleanup (which still assumes the old
+  release and would remove coopplus.asi). actpid shots are half-size of the 1920x1080 screen (x2 for clicks).
+- Not testable on one PC: the friend actually receiving / accepting the invite (playtesters).
+- 2026-11-10 00:50 USER: the friend's game still showed the old in-game "Seamless Co-op: View+Y Invite a friend /
+  Challenge / Co-op panel" banner and invited through it; "remove the old invite and the remnants of our old
+  invitation and joining system from in-game inviting and game joining". Then: the Challenge / Co-op panel banner is
+  not wanted either: by the end of the update challenges are hold-interact on the friend (B16b) and the co-op panel
+  is merged into the main menu's Co-op Settings.
+  Done in the shared-world build (kNativeLayer; the old standalone build keeps its behaviour):
+  * mod.cpp: the Invite action only works while the title lobby menu is shown (its Invite Friends card); in a world
+    the key does nothing. A Steam join request / accepted invite while in a world is not followed (log "Join: lobby N
+    asked for while in a world: ignored", notice "to join a friend, go back to the title screen first").
+  * the first-time key banner in the world is gone entirely; the "Ctrl+F1: invite a Steam friend" hint is gone.
+  * co-op page: no "Invite a friend" row in Session nor in Controls; the controls card's first line now says
+    "Invite and join friends from the title screen's Co-op menu"; the challenge toast no longer names {Invite}.
+- tcB262 / tcB263 (two copies, title lobby -> shared world, final-minus-banner build): both in the shared world;
+  Ctrl+F1 in the world opens nothing and logs nothing; the co-op page (F8) Session shows Leave / Go to / Bring /
+  Resynchronise only. SAVES OK, user install restored 5/5. Harness: -HostKeys / -GuestKeys now also run after a
+  -Lobby flow; build/native/run_keep.sh NAME (PSARGS from the environment) = any twocopy test with the user's
+  playtest install kept aside and put back.
+- STILL TO DO from that message (plan, not in this fix): the in-world Challenge chord and the co-op panel key stay
+  as keys until hold-interact challenges (B16b) and the main-menu Co-op Settings merge replace them.
+- The user cannot playtest again until later on 2026-11-11 (their friend left); the other playtesters go first.

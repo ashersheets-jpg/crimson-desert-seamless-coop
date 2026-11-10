@@ -642,6 +642,11 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
             if (const uint64_t want = net::join_take_request()) {
                 if (want == net::room_lobby_id()) {
                     log::info("Join: already in lobby {}; nothing to do", want);
+                } else if (kNativeLayer && !net::lobby_view().at_title) {
+                    // Shared world (user, 2026-11-10): inviting and joining happen at the title screen's co-op menu
+                    // only. An invite accepted from inside a world is not followed.
+                    log::info("Join: lobby {} asked for while in a world: ignored (join from the title screen)", want);
+                    say("to join a friend, go back to the title screen first");
                 } else {
                     end = {Kind::Join, want};
                     break;
@@ -649,7 +654,9 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
             }
             const bool focus = game_has_focus();
             if (invite_key.pressed(input::action_down(input::Action::Invite, focus))) {
-                if (!host) {
+                if (kNativeLayer && !net::lobby_view().show) {
+                    // Shared world: the title menu's Invite Friends card is the only invite (no in-game key).
+                } else if (!host) {
                     say("only the host can invite (you are in a friend's world)");
                 } else if (!net::room_lobby_id()) {
                     say("no room yet: load a save, wait a few seconds, then invite again");
@@ -1253,7 +1260,7 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
                 if (!notice.empty() && static_cast<int32_t>(now - notice_until) < 0) {
                     hud.coop_hint = notice;
                 } else if (host) {
-                    hud.coop_hint = net::room_lobby_id() ? "Ctrl+F1: invite a Steam friend" : "";
+                    hud.coop_hint = net::room_lobby_id() && !kNativeLayer ? "Ctrl+F1: invite a Steam friend" : "";
                 } else {
                     hud.coop_hint = "Ctrl+F2: leave and go back to your world";
                 }
@@ -1267,7 +1274,9 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
             }
             // Co-op+: once per session, when we first stand in the world: how to use co-op (the status panel is
             // hidden by default, as the game shows no debug boxes).
-            if (static bool welcomed = false; !welcomed && hud.local) {
+            // Shared world (user, 2026-11-10): no key banner at all. Invites are the title menu's; challenges move to
+            // hold-interact on the friend and the panel into the main menu's Co-op Settings.
+            if (static bool welcomed = false; !kNativeLayer && !welcomed && hud.local) {
                 welcomed = true;
                 toast = "Seamless Co-op\n{Invite} Invite a friend      {Challenge} Challenge      {Panel} Co-op panel";
                 toast_until = now + 9000;

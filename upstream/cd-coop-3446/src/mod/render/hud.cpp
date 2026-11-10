@@ -1,3 +1,4 @@
+#include "mod/native_layer.h"
 #include "mod/render/hud.h"
 
 #include <windows.h>
@@ -457,7 +458,8 @@ void hud_draw(float width, float height) {
         } else {
             const float a = age > 58000 ? static_cast<float>(60000 - age) / 2000.0f : 1.0f;
             ui::guide_card(width, height, "Seamless Co-op+",
-                           {"{Invite}  Invite a Steam friend (or they pick Join Game on you in Steam)",
+                           {kNativeLayer ? "Invite and join friends from the title screen's Co-op menu"
+                                         : "{Invite}  Invite a Steam friend (or they pick Join Game on you in Steam)",
                             "{Panel}  Co-op panel and settings          {Leave}  Leave a friend's world",
                             "{GoToFriend}  Go to your friend          {Summon}  Ask your friend to come to you",
                             input::connected_pad() == input::Method::Keyboard

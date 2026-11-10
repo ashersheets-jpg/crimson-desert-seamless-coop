@@ -23,6 +23,8 @@
 #include "mod/settings_menu.h"
 #include "mod/net/coop_lobby.h"
 #include "mod/net/direct_ip.h"
+#include "mod/native_layer.h"
+#include "mod/net/steam_join.h"
 #include "mod/net/troc_sniffer.h"
 
 namespace cdmp::render {
@@ -58,6 +60,7 @@ int g_wheel = 0;
 std::atomic<long> g_tab_l{0}, g_tab_t{0}, g_tab_r{0}, g_tab_b{0};
 std::atomic<bool> g_tab_shown{false};
 std::atomic<bool> g_swallow_up{false};
+bool g_steam_overlay = false;  // the Steam overlay is open this frame (draw thread only)
 
 int g_section = 0, g_row = 0, g_top = 0;
 bool g_focus_rows = false;  // keyboard / pad: Up / Down move in the rows (true) or the sections (false)
@@ -69,7 +72,7 @@ bool game_in_front() {
 }
 
 LRESULT CALLBACK mouse_hook(int code, WPARAM wp, LPARAM lp) {
-    if (code == HC_ACTION && game_in_front()) {
+    if (code == HC_ACTION && game_in_front() && !net::join_overlay_active()) {
         const auto* m = reinterpret_cast<const MSLLHOOKSTRUCT*>(lp);
         if (m->dwExtraInfo != kOurInput) {
             const bool down = wp == WM_LBUTTONDOWN, up = wp == WM_LBUTTONUP;
@@ -137,8 +140,11 @@ std::vector<Row> rows_for(int section, const HudData& d, const std::vector<std::
     if (name == "Session") {
         rows.push_back({Row::Info, "Playing with", d.connected ? d.peer_name : "nobody yet", "", true, nullptr});
         rows.push_back({Row::Info, "Connection", connection_text(d), "", true, nullptr});
-        rows.push_back(button("Invite a friend", input::Action::Invite,
-                              "Opens Steam's invite list: your friend accepts it and joins your world."));
+        // Shared world: friends are invited from the title screen's co-op menu only.
+        if (!kNativeLayer) {
+            rows.push_back(button("Invite a friend", input::Action::Invite,
+                                  "Opens Steam's invite list: your friend accepts it and joins your world."));
+        }
         rows.push_back(button("Leave the session", input::Action::Leave,
                               "Ends the session: you go back to your own world, nothing of your friend stays."));
         rows.push_back(button("Go to my friend", input::Action::GoToFriend, "Takes you to your friend's side."));
@@ -156,6 +162,7 @@ std::vector<Row> rows_for(int section, const HudData& d, const std::vector<std::
             {"Name tags", input::Action::Nameplates},    {"Resynchronise", input::Action::Resync},
             {"Controls card", input::Action::Help}};
         for (const auto& [label, a] : kList) {
+            if (kNativeLayer && a == input::Action::Invite) continue;
             rows.push_back({Row::Info, label, "{" + std::string(input::binding(a).name) + "}",
                             "Change keys under [keys] in cdmp.ini (README).", true, nullptr});
         }
@@ -513,7 +520,7 @@ bool draw_lobby(float width, float height, ImDrawList* dl, ImVec2 mouse, const s
     // input
     static uint16_t pad_before = 0;
     const uint16_t pad = input::pad_buttons();
-    const uint16_t pressed = pad & ~pad_before;
+    const uint16_t pressed = g_steam_overlay ? 0 : pad & ~pad_before;
     pad_before = pad;
     input::mask_from_game(input::kPadDpad | input::kPadA | input::kPadB | input::kPadStart, 150);
     auto move = [&](int d) {
@@ -633,7 +640,7 @@ void coop_page_toggle() {
 }
 
 bool coop_page_hook_key(unsigned vk, bool down) {
-    if (!game_in_front()) return false;
+    if (!game_in_front() || net::join_overlay_active()) return false;
     if (!g_open.load() && g_lobby_shown.load()) {
         // The title lobby: its keys, and the title's own (Play, New Game, Load, Settings, Exit) kept from the game.
         switch (vk) {
@@ -688,12 +695,24 @@ void coop_page_draw(float width, float height, const HudData& d, const std::vect
         keys.assign(g_keys.begin(), g_keys.end());
         g_keys.clear();
     }
+    // The Steam overlay is open (Shift+Tab, the invite dialog): the mouse, the keys and the pad are Steam's.
+    const bool steam_overlay = net::join_overlay_active();
+    g_steam_overlay = steam_overlay;
+    if (steam_overlay) {
+        mouse = ImVec2(-1, -1);
+        clicks.clear();
+        keys.clear();
+        wheel = 0;
+    }
 
     // ---- the title lobby (before anyone plays). It stands in for the game's title: while it (or the guest's waiting
     // screen) is up the game takes no input of its own (game_input_block.h), except while the mod presses its keys.
     {
         const net::LobbyView lv = net::lobby_view();
-        input::set_game_input_blocked((lv.show || lv.guest_wait) && !lv.driving);
+        // Not while the Steam overlay is open: it takes its clicks from the input the game reads, and a game that
+        // believes it is in the background reads none (tcB260: the dialog's X lit up under the mouse but no click
+        // reached it). The overlay keeps the game's own screens from reacting meanwhile.
+        input::set_game_input_blocked((lv.show || lv.guest_wait) && !lv.driving && !steam_overlay);
     }
     if (!g_open.load() && draw_lobby(width, height, dl, mouse, clicks, keys)) return;
     // ---- a different difficulty from the friend's (net/coop_lobby.h)
@@ -741,7 +760,7 @@ void coop_page_draw(float width, float height, const HudData& d, const std::vect
     // ---- input: keys, pad, mouse
     static uint16_t pad_before = 0;
     const uint16_t pad = input::pad_buttons();
-    const uint16_t pressed = pad & ~pad_before;
+    const uint16_t pressed = g_steam_overlay ? 0 : pad & ~pad_before;
     pad_before = pad;
     input::mask_from_game(input::kPadDpad | input::kPadA | input::kPadB | input::kPadLB | input::kPadRB, 150);
     std::vector<Row> rows = rows_for(g_section, d, status);
