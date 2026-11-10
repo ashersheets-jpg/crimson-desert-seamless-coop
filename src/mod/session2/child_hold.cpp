@@ -4794,6 +4794,24 @@ bool child_hold_npc_reannounce(uint32_t key) noexcept {
         r.controller = *ctrl;
         r.actor = *actor;
         if (const auto info = m.ptr(*actor + hold::kActorInfo)) r.type = m.rd<uint8_t>(*info + hold::kInfoType).value_or(0);
+        // Far-shop research: the server's ServerSequencerPlayDataActorComponent (vtable exe+0x5EF6360) of this NPC.
+        if (const auto comps = m.ptr(*actor + hold::kActorComponents)) {
+            const uintptr_t base = g_seams ? g_seams->base : g_base;
+            for (uint32_t slot = 0; slot < 0x200; slot += 8) {
+                const auto c = m.rd<uintptr_t>(*comps + slot);
+                if (!c || !*c || *c < 0x10000) continue;
+                const auto vt = m.rd<uintptr_t>(*c);
+                if (!vt || *vt != base + 0x5EF6360) continue;
+                std::string t;
+                for (uint32_t o = 0x2A0; o < 0x360; o += 4) {
+                    const auto v = m.rd<uint32_t>(*c + o);
+                    if (v && *v) t += std::format(" +0x{:X}={:X}", o, *v);
+                }
+                log::info("ChildHold [refresh diag] NPC 0x{:08X}: server play data (components +0x{:X}) 0x{:X}:{}", key,
+                          slot, *c, t);
+                break;
+            }
+        }
         std::lock_guard lock(g_mu);
         if (g_npc_table.room() <= g_npc_reserved) return false;
         const bool ok = record_npc_locked(r, server_epoch(), now_ms(), ou.user2_key);
