@@ -3836,7 +3836,7 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   the source. Probe 2 (kgs.py, tcB280): bisection over every float under the RB button, four pointers deep, reading
   the glyph's spot off the screen after each change.
 
-## 2026-11-10 tcB280: first crafted 3111 (trade probe); glyph bisect crashed the host
+## 2026-11-10 tcB280: first crafted 3111 (trade probe); glyph bisect did not run
 
 - Trade probe (native [session2] trade_probe=1, guest sends `trade3111 55F7 1 <receiver> DFE0 <entry>`): the guest's
   3111 reaches the host's handler and the worker 0x2E0B2B0 with giver 0xA0100066 (the guest's character), item 22007,
@@ -3847,7 +3847,30 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
 - The guest's ItemMove table (dumpitemmove): 21 definitions; def 1 (key 0xDFE0, inventory 1 = the bag) has 18
   entries: to 8 (kinds 1 / 2), to 5, 9 (with a condition), 0xA, 0x13, 0xC, 0xE, 0xF, 0x11, 0x12, 7, 6. Defs 5 / 6 / 7
   move back to 1.
-- kgs.py (bisect over the RB glyph's floats) took the host down on its first batch (every float 0.001..5000 changed
-  at once). Made gentler: only pixel-like values (quarter-round, 2..4000), +37, output flushed line by line; and it
-  now runs last in the key list so the rest of a test is not lost. The quick message from the tab is still to be
-  seen (tcB281).
+- CORRECTION (written after tcB282): kgs.py did NOT take the host down in tcB280. The host's first Start press was
+  lost (the harness focuses the guest for its script, then the host; the first pad press after that is dropped), so
+  the pause menu never opened, no menu root existed, and kgs had nothing to walk. Fix in the key lists: `w:5000`
+  first. kgs.py was also hardened (quarter-round values 2..4000 only, +37, flushed output, stderr to stdout, a
+  try / except that prints the traceback: any stderr line from a py step aborts the rest of the key sequence).
+
+## 2026-11-10 tcB281 / tcB282: the trade worker's key checks pass; a USER key as receiver kills the host
+
+- tcB281: same lost first press; nothing new. tcB282 (guest script before the host keys): the host died in the
+  guest script's second call, so the host keys (quick message, glyph bisect) never ran. Both moved to tcB283, which
+  runs without the trade script. Saves OK, install restored 5/5.
+- Worker 0x2E0B2B0, read in the decomp: item key -> index (thunk exe+0x3D7E10, 0xFFFF = unknown) and inventory key
+  -> index (thunk exe+0x3D5930) come first, either unknown = err exe+0x712DFEC. Then both actors by key
+  (ServerActorManager vfunction5), a missing one = exe+0x712E058. Then the entry: row `entry` of the inventory's
+  item-move table (0xA0 bytes each); type 3 or an empty source / target = 0x712DFEC again. Then the entry's
+  condition, the distance check 0x2301D20 (reads both actors' +0x68 -> +0x20 and +0x1A0: they must be CHARACTERS),
+  then type 2 -> 0x2DF2560, else the move 0x2DF04A0.
+- Probe results (host, 3576): the inventory KEY is the plain inventory number: keys 0x1..0x15 -> index 0..20
+  (0xDFE0 from dumpitemmove's "key?" was garbage). Item 22007 (0x55F7) -> index 0x5D7.
+  * `trade3111 55F7 1 0 1 0` (receiver 0 = the giver, inventory 1, entry 0): passes every check, enters the move
+    0x2DF04A0 (kind 1), which returns err 0xED0EF13C. The probe now also says where that constant lives in
+    exe+0x7120000..0x7160000 so the decomp can name it.
+  * `trade3111 55F7 1 90100000 1 0`: the log ends at "[worker in]" = the host process died there. 0x90100000 is the
+    host's USER actor (0x90100065 = the guest's user, 0xA0100001 = the host's character, 0xA0100066 = the guest's
+    character); the distance check dereferences character parts a user actor does not have. NEVER pass a user key.
+    For the real feature the layer must validate the receiver is a character before it sends anything.
+- Next (tcB284): receiver 0xA0100001, inventory 1, entry 3 (the kind 2 rows 3-7, bag -> 8, the 0x2DF2560 path).
