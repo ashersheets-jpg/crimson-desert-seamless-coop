@@ -181,6 +181,15 @@ constexpr uint32_t kMenuTrade = 1, kMenuLeave = 2;
 std::atomic<bool> g_menu_select{false}, g_menu_cancel{false};
 std::atomic<bool> g_menu_hold{false};  // the picker is open: the keyboard hook keeps the arrow keys
 std::atomic<int> g_menu_step{0};       // arrow presses it caught (-1 left, +1 right, summed)
+// Shared world (2026-11-10): the interaction menu while a challenge is sent, received or on -- its answers instead of
+// the game list ("Accept", "Decline", "End the challenge", "Leave"). Under g_mutex.
+enum CtxCode : int { kCtxLeave = 0, kCtxGo = 1, kCtxDecline = 2 };
+struct CtxMenu {
+    bool open = false;
+    uint32_t since = 0;
+    size_t pick = 0;
+    std::vector<std::pair<std::string, int>> items;
+} g_ctx;
 // [dev] challenge_test: 1 = a simulated other player accepts our invites; 2 = they also challenge us to a duel once.
 std::atomic<int> g_challenge_test{0};
 
@@ -519,6 +528,18 @@ void pad_tick() {
     const bool menu = g_menu_hold.load() && GetTickCount64() - g_hold_seen.load() < 500;
     const bool quick = chat_quick_open();  // Co-op+ (T24)
     if (menu || quick) input::mask_from_game(input::kPadLeft | input::kPadRight, 150);
+    // The interaction menu on a pad, as the game's own lists: D-pad up / down choose, A selects, B leaves.
+    static input::Edge m_up, m_down, m_sel, m_back;
+    const uint16_t pb = input::chord_held() ? uint16_t{0} : input::pad_buttons();
+    const bool u_down = m_up((pb & input::kPadUp) != 0), d_down = m_down((pb & input::kPadDown) != 0);
+    const bool a_down = m_sel((pb & input::kPadA) != 0), b_down = m_back((pb & input::kPadB) != 0);
+    if (menu) {
+        input::mask_from_game(input::kPadUp | input::kPadDown | input::kPadA | input::kPadB, 250);
+        if (u_down) g_menu_step.fetch_add(-1);
+        if (d_down) g_menu_step.fetch_add(1);
+        if (a_down) g_menu_select = true;
+        if (b_down) g_menu_cancel = true;
+    }
     const bool p_down = prev(input::action_down(input::Action::MenuPrev, false) && !input::chord_held());
     const bool n_down = next(input::action_down(input::Action::MenuNext, false) && !input::chord_held());
     if (p_down && menu) g_menu_step.fetch_add(-1);
@@ -596,6 +617,10 @@ void rps_tick(ActivityTick& out, bool connected, const std::string& who) {
 std::atomic<bool> g_menu_request{false};  // B16b: activity_request_menu
 std::atomic<bool> g_hold_prompt{false};   // B16b: activity_set_hold_prompt
 
+// Shared world (2026-11-10): takes the old hotkey hints out of a line: a bracket that names {Challenge} / {Decline}
+// goes ("(first to 2;  {Challenge} stops)" -> "(first to 2)"), so does a trailing "{Challenge} to accept".
+void strip_key_hints(std::string& s) { input::strip_unbound_hints(s); }
+
 // Challenges (see Challenge): Shift+F5 / Shift+F6, invites lapsing, the RPS child made willing, banners.
 void challenge_tick(ActivityTick& out, bool connected, bool focused, std::optional<std::array<float, 3>> me,
                     const std::string& who) {
@@ -610,7 +635,29 @@ void challenge_tick(ActivityTick& out, bool connected, bool focused, std::option
         std::lock_guard lock(g_mutex);
         if (g_ch.state == kChNone) pressed = false;
     }
-    if (g_menu_request.exchange(false)) pressed = true;  // B16b: the hold-R prompt on the other player
+    // B16b: the hold prompt on the other player. With nothing going on it opens the game list (as a press does);
+    // with a challenge sent, received or on it opens that challenge's answers (g_ctx) -- a hold never ends a duel.
+    if (g_menu_request.exchange(false)) {
+        std::lock_guard lock(g_mutex);
+        const std::string game = activity_minigame_name(g_ch.stage);
+        g_ctx = CtxMenu{};
+        if (g_ch.state == kChNone) {
+            pressed = true;
+        } else if (g_ch.state == kChReceived) {
+            g_ctx.items = {{"Accept: " + game, kCtxGo}, {"Decline", kCtxDecline}, {"Leave", kCtxLeave}};
+        } else if (g_ch.state == kChSent) {
+            g_ctx.items = {{"Withdraw the challenge", kCtxGo}, {"Leave", kCtxLeave}};
+        } else if (g_ch.state == kChOn) {
+            g_ctx.items = {{"End the challenge", kCtxGo}, {"Leave", kCtxLeave}};
+        }
+        if (!g_ctx.items.empty()) {
+            g_ctx.open = true;
+            g_ctx.since = now;
+            g_ctx.pick = g_ch.state == kChReceived ? 0 : g_ctx.items.size() - 1;  // never "End" by a stray press
+            g_menu_step = 0;
+            g_menu_select = g_menu_cancel = false;
+        }
+    }
     bool declined = decline_edge(input::action_down(input::Action::Decline, focused));
     // The first-launch card's answer, or the first co-op session's (render/hud.cpp).
     // A card's answer (render/hud.cpp) is not also a challenge: while a card is up, and until both keys are let go
@@ -664,7 +711,22 @@ void challenge_tick(ActivityTick& out, bool connected, bool focused, std::option
             c.pick = static_cast<size_t>(((static_cast<int>(c.pick) + step) % n + n) % n);
             if (step) c.since = now;
         }
-        if (c.state == kChPick) {  // B16b: the menu's own keys
+        if (g_ctx.open) {  // a running challenge's answers
+            const int step = g_menu_step.exchange(0);
+            const auto n = static_cast<int>(g_ctx.items.size());
+            g_ctx.pick = static_cast<size_t>(((static_cast<int>(g_ctx.pick) + step) % n + n) % n);
+            if (step) g_ctx.since = now;
+            const bool gone = c.state != kChSent && c.state != kChReceived && c.state != kChOn;
+            if (g_menu_cancel.exchange(false) || gone || now - g_ctx.since > kPickMs) {
+                g_ctx.open = false;
+            } else if (g_menu_select.exchange(false)) {
+                const int code = g_ctx.items[g_ctx.pick].second;
+                if (code == kCtxGo) pressed = true;
+                if (code == kCtxDecline) declined = true;
+                g_ctx.open = false;
+            }
+            g_menu_select = false;
+        } else if (c.state == kChPick) {  // B16b: the menu's own keys
             if (g_menu_cancel.exchange(false)) declined = true;
             if (g_menu_select.exchange(false)) {
                 const uint32_t sel = c.options.empty() ? 0 : c.options[std::min(c.pick, c.options.size() - 1)];
@@ -749,8 +811,10 @@ void challenge_tick(ActivityTick& out, bool connected, bool focused, std::option
                 }
             }
         }
-        g_menu_hold = c.state == kChPick;
-        if (c.state == kChPick) {
+        g_menu_hold = c.state == kChPick || g_ctx.open;
+        if (g_ctx.open) {
+            out.banner = "{MenuUp}{MenuDown} choose   {MenuSelect} select   {MenuBack} leave";
+        } else if (c.state == kChPick) {
             // "Challenge Ana to:   Duel   Rock, paper, scissors" with the chosen one in gold.
             std::string items;
             for (size_t i = 0; i < c.options.size(); ++i) {
@@ -761,7 +825,7 @@ void challenge_tick(ActivityTick& out, bool connected, bool focused, std::option
                 items += i == c.pick ? "   {*}" + name + "{*}" : "   " + name;
             }
             (void)items;  // B16b: the menu card is drawn by the HUD (activity_menu_snapshot); the hint only
-            out.banner = "W / S choose   Space select   Esc leave";
+            out.banner = "{MenuUp}{MenuDown} choose   {MenuSelect} select   {MenuBack} leave";
         } else if (out.banner.empty()) {
             const std::string game = activity_minigame_name(c.stage);
             if (c.state == kChReceived) {
@@ -1294,6 +1358,11 @@ ActivityTick activity_tick(bool connected, bool host, bool focused, std::optiona
     } else if (!out.toast.empty()) {
         journal_after = now + 6500;
     }
+    // Shared world: no key shortcuts in the lines (hold interact on the friend, or the menu's Co-op tab).
+    if (kNativeLayer) {
+        strip_key_hints(out.banner);
+        strip_key_hints(out.toast);
+    }
     return out;
 }
 
@@ -1311,10 +1380,25 @@ MatchHud activity_match_hud() {
 }
 
 void activity_request_menu() { g_menu_request = true; }
+
+ChallengeView activity_challenge_view() {
+    std::lock_guard lock(g_mutex);
+    ChallengeView v;
+    v.state = g_ch.state == kChReceived ? 1 : g_ch.state == kChSent ? 2 : g_ch.state == kChOn ? 3 : 0;
+    if (v.state) v.game = activity_minigame_name(g_ch.stage);
+    return v;
+}
 void activity_set_hold_prompt(bool shown) { g_hold_prompt = shown; }
 
 bool activity_menu_snapshot(std::string& title, std::vector<std::string>& items, size_t& pick) {
     std::lock_guard lock(g_mutex);
+    if (g_ctx.open) {
+        items.clear();
+        for (const auto& it : g_ctx.items) items.push_back(it.first);
+        pick = std::min(g_ctx.pick, items.size() - 1);
+        title = "Co-op";
+        return true;
+    }
     if (g_ch.state != kChPick) return false;
     items.clear();
     for (const uint32_t o : g_ch.options) {

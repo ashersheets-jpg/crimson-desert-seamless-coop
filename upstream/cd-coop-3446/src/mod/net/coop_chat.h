@@ -36,4 +36,9 @@ bool chat_hook_key(uint32_t vk, uint32_t scan, bool down);
 bool chat_quick_open();
 void chat_quick_step(int delta);
 
+// Shared world (2026-11-10): the quick messages for the menu's Co-op tab (no hotkey): their names (nullptr past the
+// last) and "send this one" (the next tick sends it, with its map pin for the "here" ones).
+const char* chat_quick_name(int index);
+void chat_send_quick(int index);
+
 }  // namespace cdmp::net

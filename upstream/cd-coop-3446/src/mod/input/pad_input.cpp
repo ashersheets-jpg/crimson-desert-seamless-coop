@@ -47,6 +47,7 @@ SafetyHookInline g_hook_get_state;
 SafetyHookInline g_hook_get_state_ex;
 
 uint64_t now64() { return GetTickCount64(); }
+std::atomic<bool> g_chord_modifier{true};  // set_chord_modifier
 
 // What the game gets from XInput: our masked buttons removed; a View tap that was really a tap given back.
 void filter(XINPUT_STATE* st) {
@@ -54,8 +55,10 @@ void filter(XINPUT_STATE* st) {
     const uint64_t t = now64();
     WORD b = st->Gamepad.wButtons;
     if (t < g_mask_until.load()) b &= static_cast<WORD>(~g_mask.load());
-    if ((b & XINPUT_GAMEPAD_BACK) && t >= g_back_tap_until.load()) b &= static_cast<WORD>(~XINPUT_GAMEPAD_BACK);
-    if (t < g_back_tap_until.load()) b |= XINPUT_GAMEPAD_BACK;
+    if (g_chord_modifier.load()) {
+        if ((b & XINPUT_GAMEPAD_BACK) && t >= g_back_tap_until.load()) b &= static_cast<WORD>(~XINPUT_GAMEPAD_BACK);
+        if (t < g_back_tap_until.load()) b |= XINPUT_GAMEPAD_BACK;
+    }
     if (b != st->Gamepad.wButtons) {
         st->Gamepad.wButtons = b;
         ++st->dwPacketNumber;
@@ -302,7 +305,7 @@ void poll_loop() {
         }
         // The chord: View held = ours; a quick tap without a chord is given back to the game.
         const uint16_t all = pad_buttons();
-        const bool back = (all & (kPadBack | kPadTouchpad)) != 0;
+        const bool back = g_chord_modifier.load() && (all & (kPadBack | kPadTouchpad)) != 0;
         if (back && !back_was) {
             back_down_at = t;
             chord_used = false;
@@ -340,7 +343,8 @@ uint16_t pad_buttons() {
     return b;
 }
 
-bool chord_held() { return (pad_buttons() & (kPadBack | kPadTouchpad)) != 0; }
+bool chord_held() { return g_chord_modifier.load() && (pad_buttons() & (kPadBack | kPadTouchpad)) != 0; }
+void set_chord_modifier(bool on) { g_chord_modifier = on; }
 
 void mask_from_game(uint16_t buttons, uint32_t ms) {
     const uint64_t until = now64() + ms;

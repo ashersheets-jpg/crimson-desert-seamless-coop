@@ -58,6 +58,16 @@ void add_log(const std::string& text, uint32_t now) {
 bool chat_quick_open() { return g_quick.load(); }
 void chat_quick_step(int delta) { g_quick_step.fetch_add(delta); }
 
+namespace {
+std::atomic<int> g_quick_send{0};  // index + 1 asked for by the Co-op tab
+}
+const char* chat_quick_name(int index) {
+    return index >= 0 && index < static_cast<int>(kQuick.size()) ? kQuick[index] : nullptr;
+}
+void chat_send_quick(int index) {
+    if (chat_quick_name(index)) g_quick_send = index + 1;
+}
+
 std::atomic<uint64_t> g_taken[4];  // key-downs we took (by vk bit): only their key-ups are ours too
 std::atomic<bool> g_open_request{false};  // Shift+F2 seen by the hook (not GetAsyncKeyState: unreliable here, chat2-4)
 std::atomic<bool> g_shift{false};         // Shift as the hook saw it
@@ -156,8 +166,15 @@ ChatView chat_tick(bool connected, const std::string& name, bool focused, uint32
             }
             g_send = g_cancel = false;
         }
-        // The quick list.
-        if (connected && ping_pressed && !g_open.load()) {
+        // A quick message chosen in the menu's Co-op tab.
+        if (const int q = g_quick_send.exchange(0); q && connected) {
+            out.push_back(static_cast<uint8_t>(q));
+            add_log(std::string("You: ") + kQuick[q - 1], now);
+            v.ping = q - 1 < kHereCount;
+            if (v.toast.empty()) v.toast = std::string("Co-op\nYou: ") + kQuick[q - 1];
+            log::info("Chat: quick message \"{}\" (Co-op tab)", kQuick[q - 1]);
+        } else if (connected && ping_pressed && !g_open.load()) {
+            // The quick list.
             if (!g_quick.load()) {
                 g_quick = true;
                 g_quick_index = 0;

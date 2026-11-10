@@ -23,6 +23,7 @@
 #include "mod/render/game_ui.h"
 #include "mod/render/coop_page.h"
 #include "mod/net/coop_activity.h"
+#include "mod/net/coop_travel.h"
 #include "mod/net/coop_lobby.h"
 #include "mod/settings_menu.h"
 #include "mod/net/coop_worlds.h"
@@ -440,7 +441,8 @@ void hud_draw(float width, float height) {
                 std::vector<ui::SummaryLine> rows;
                 for (const auto& r : sc.rows) rows.push_back({r.label, r.ours, r.theirs});
                 ui::summary_card(width, height, sc.title, sc.subtitle, sc.partner, rows,
-                                 "Until your next journey together.        {Decline}  Close", a);
+                                 kNativeLayer ? "Until your next journey together."
+                                              : "Until your next journey together.        {Decline}  Close", a);
                 if (g_guide_since.load()) g_guide_since = GetTickCount64();
             }
         }
@@ -457,6 +459,15 @@ void hud_draw(float width, float height) {
             g_guide_since = 0;
         } else {
             const float a = age > 58000 ? static_cast<float>(60000 - age) / 2000.0f : 1.0f;
+            if (kNativeLayer) {  // shared world: no hotkeys -- the friend, or the menu's Co-op tab
+                ui::guide_card(width, height, "Seamless Co-op+",
+                               {"Invite and join friends from the title screen's Co-op menu.",
+                                "Hold {Interact} on your friend: challenge them to a duel, a race, hide and seek, hunting,",
+                                "fishing, rock-paper-scissors or arm wrestling, and answer their challenges.",
+                                "Hold {Interact} by a downed friend to revive them.",
+                                "Menu > Co-op: go to your friend, call them to you, quick messages, leave, settings."},
+                               "", a);
+            } else
             ui::guide_card(width, height, "Seamless Co-op+",
                            {kNativeLayer ? "Invite and join friends from the title screen's Co-op menu"
                                          : "{Invite}  Invite a Steam friend (or they pick Join Game on you in Steam)",
@@ -592,8 +603,11 @@ void hud_draw(float width, float height) {
         const bool ours = fg_pid == GetCurrentProcessId();
         // A pad (2026-11-09): the co-op chord + D-pad Up (the Challenge action) held fills the same ring.
         const bool on_pad = input::method() != input::Method::Keyboard;
-        const bool r_down = ours && ((GetAsyncKeyState('R') & 0x8000) != 0 ||
-                                     (on_pad && input::action_down(input::Action::Challenge, true)));
+        // Shared world (2026-11-10): the game's own interact button on a pad too (no chord).
+        const bool r_down = kNativeLayer ? input::action_down(input::Action::Interact, ours)
+                                         : ours && ((GetAsyncKeyState('R') & 0x8000) != 0 ||
+                                                    (on_pad && input::action_down(input::Action::Challenge, true)));
+        const net::ChallengeView chv = net::activity_challenge_view();
         bool shown = false;
         std::string menu_t;
         std::vector<std::string> menu_i;
@@ -604,6 +618,8 @@ void hud_draw(float width, float height) {
             if (auto p = game::project(*cam, *cam_world, chest, width, height)) {
                 if (std::fabs(p->x - width * 0.5f) < width * 0.22f && std::fabs(p->y - height * 0.5f) < height * 0.32f) {
                     shown = true;
+                    // The pad interact button (A) is ours while the prompt is on the friend: no jump under it.
+                    if (kNativeLayer && on_pad) input::mask_from_game(input::binding(input::Action::Interact).pad, 200);
                     float t = 0.0f;
                     const ULONGLONG now_ms = GetTickCount64();
                     if (r_down && !fired) {
@@ -616,9 +632,43 @@ void hud_draw(float width, float height) {
                         }
                     }
                     if (fired) t = 1.0f;
-                    if (on_pad) ui::hold_prompt(dl, p->x + 48.0f, p->y, t, "", "{Challenge} Interact");
-                    else ui::hold_prompt(dl, p->x + 48.0f, p->y, t, "R", "Interact");
+                    const char* what = chv.state == 1 ? "Answer" : "Interact";
+                    if (on_pad) {
+                        ui::hold_prompt(dl, p->x + 48.0f, p->y, t, "",
+                                        std::string(kNativeLayer ? "{Interact} " : "{Challenge} ") + what);
+                    } else {
+                        ui::hold_prompt(dl, p->x + 48.0f, p->y, t, "R", what);
+                    }
                 }
+            }
+        }
+        // Shared world: a request from the friend who is not right here (a challenge, "come to me", "I travelled
+        // far") is accepted by the same hold, the prompt under the request's line; it lapses when left alone.
+        // Beside the friend the hold opens the menu instead (Accept / Decline / Leave).
+        if (kNativeLayer && !shown && !menu_open && d.local && !game::ui_menu_open()) {
+            const int travel = net::travel_request();
+            const int request = chv.state == 1 ? 1 : travel ? 2 : 0;
+            if (request) {
+                shown = true;
+                float t = 0.0f;
+                const ULONGLONG now_ms = GetTickCount64();
+                if (r_down && !fired) {
+                    if (!hold_since) hold_since = now_ms;
+                    t = static_cast<float>(now_ms - hold_since) / static_cast<float>(kHoldRingMs);
+                    if (t >= 1.0f) {
+                        fired = true;
+                        input::trigger(request == 1 ? input::Action::Challenge : input::Action::GoToFriend);
+                        log::info("Hud: the hold prompt accepted the friend's request ({})",
+                                  request == 1 ? "challenge" : "travel");
+                    }
+                }
+                if (fired) t = 1.0f;
+                const std::string name = d.peer_name.empty() ? std::string("your friend") : d.peer_name;
+                const std::string what = request == 1 ? "Accept: " + chv.game
+                                         : travel == 1 ? "Go to " + name : "Follow " + name;
+                const float px = static_cast<float>(width) * 0.5f - 70.0f, py = static_cast<float>(height) * 0.30f;
+                if (on_pad) ui::hold_prompt(dl, px, py, t, "", "{Interact} " + what);
+                else ui::hold_prompt(dl, px, py, t, "R", what);
             }
         }
         if (!r_down || !shown) {

@@ -9,6 +9,7 @@
 
 #include "mod/input/actions.h"
 #include "mod/log.h"
+#include "mod/native_layer.h"
 #include "mod/net/coop_activity.h"
 
 namespace cdmp::net {
@@ -35,6 +36,11 @@ float dist2(const proto::Vec3& a, const proto::Vec3& b) {
 }
 
 }  // namespace
+
+int travel_request() {
+    std::lock_guard lock(g_mutex);
+    return g_pending;
+}
 
 void travel_on_event(const uint8_t* d, size_t n) {
     if (n < 1 || (d[0] != kSummon && d[0] != kTravelled)) return;
@@ -88,9 +94,14 @@ TravelTick travel_tick(bool connected, const std::optional<proto::Vec3>& me, con
             if (arrived || now - g_pending_at > kRequestMs) {
                 g_pending = 0;
             } else {
-                out.line = g_pending == kSummon
-                               ? std::format("{} asks you to come to them:   {{GoToFriend}} go", who)
-                               : std::format("{} travelled far away:   {{GoToFriend}} follow them", who);
+                if (kNativeLayer) {  // shared world: answered by holding interact (render/hud.cpp), no hotkey
+                    out.line = g_pending == kSummon ? std::format("{} asks you to come to them", who)
+                                                    : std::format("{} travelled far away", who);
+                } else {
+                    out.line = g_pending == kSummon
+                                   ? std::format("{} asks you to come to them:   {{GoToFriend}} go", who)
+                                   : std::format("{} travelled far away:   {{GoToFriend}} follow them", who);
+                }
             }
         }
     }

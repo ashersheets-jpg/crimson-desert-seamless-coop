@@ -41,6 +41,10 @@ uint16_t pad_buttons();
 // The co-op chord modifier is held: View/Back on Xbox, the touchpad button or Create on PlayStation.
 bool chord_held();
 
+// The chord modifier exists at all (input/actions.cpp: some co-op action is bound to a chord). Off, View / the
+// touchpad button are the game's alone and chord_held() is always false.
+void set_chord_modifier(bool on);
+
 // Keeps `buttons` from the game (XInput pads only) for the next `ms` milliseconds; renew it while needed.
 void mask_from_game(uint16_t buttons, uint32_t ms);
 

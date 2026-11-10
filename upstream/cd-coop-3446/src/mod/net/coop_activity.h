@@ -41,6 +41,13 @@ void activity_on_event(const std::vector<uint8_t>& payload);
 // B16b (user 2026-11-09): the player interaction menu asked for (the hold-R prompt on the other player, render/hud.cpp):
 // the next challenge tick acts as Shift+F5 does (opens the challenge list, or accepts a received challenge).
 void activity_request_menu();
+// Shared world (2026-11-10): the challenge between the two players now, for the HUD's accept prompt and the Co-op
+// tab's rows. state: 0 none, 1 they challenged us (waiting for our answer), 2 we challenged them, 3 on.
+struct ChallengeView {
+    int state = 0;
+    std::string game;  // "a duel"
+};
+ChallengeView activity_challenge_view();
 // B16b: the hold prompt on the other player is up now (render/hud.cpp): on a pad the challenge chord then FILLS its
 // ring (the menu opens when full) instead of opening the menu at the press.
 void activity_set_hold_prompt(bool shown);

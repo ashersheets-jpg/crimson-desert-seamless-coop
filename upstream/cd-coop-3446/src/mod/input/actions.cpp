@@ -3,10 +3,13 @@
 #include <atomic>
 #include <windows.h>
 
+#include <cstring>
+
 #include <cctype>
 #include <format>
 
 #include "mod/input/pad_input.h"
+#include "mod/native_layer.h"
 
 namespace cdmp::input {
 namespace {
@@ -34,6 +37,11 @@ Binding kBindings[] = {  // Co-op+ (T30): not const, [keys] in cdmp.ini rebinds 
     {"Summon", VK_F4, false, true, kPadR3, kPadR3, true},
     {"Chat", VK_F2, false, true, 0, 0, true},  // keyboard only (pads use the quick list on Ping)
     {"Help", VK_F1, false, true, kPadL3, kPadL3, true},  // Co-op+ (T31): the controls card
+    {"MenuUp", 'W', false, false, kPadUp, kPadUp, false},
+    {"MenuDown", 'S', false, false, kPadDown, kPadDown, false},
+    {"MenuSelect", VK_SPACE, false, false, kPadA, kPadA, false},
+    {"MenuBack", VK_ESCAPE, false, false, kPadB, kPadB, false},
+    {"Interact", 'R', false, false, kPadA, kPadA, false},
 };
 static_assert(std::size(kBindings) == static_cast<size_t>(Action::Count));
 
@@ -138,6 +146,13 @@ std::string vk_text(int vk) {
 
 }  // namespace
 
+bool chords_bound() {
+    for (const auto& b : kBindings) {
+        if (b.chord && b.pad) return true;
+    }
+    return false;
+}
+
 std::string key_text(Action a) {
     const Binding& b = binding(a);
     if (!b.vk) return "-";
@@ -146,6 +161,17 @@ std::string key_text(Action a) {
 
 std::vector<std::string> load_bindings(const std::wstring& ini_path) {
     std::vector<std::string> warnings;
+    // Shared world (user 2026-11-10): no hidden key shortcuts. Everything is reached as in the game itself: hold
+    // interact on the friend, or the menu's Co-op tab. The co-op hotkeys start unbound ([keys] can still bind them);
+    // Chat keeps its key (typing needs one).
+    if (kNativeLayer) {
+        for (auto& b : kBindings) {
+            if (!b.chord || b.name == "Chat") continue;
+            b.vk = 0;
+            b.ctrl = b.shift = false;
+            b.pad = b.pad_shown = 0;
+        }
+    }
     for (auto& b : kBindings) {
         if (!b.chord) continue;  // only the co-op hotkeys; prompt keys (Q/U, RPS, Mash, arrows) follow the game's boxes
         const std::wstring name(b.name.begin(), b.name.end());
@@ -176,6 +202,7 @@ std::vector<std::string> load_bindings(const std::wstring& ini_path) {
                                                        b.name, narrow(buf)));
         }
     }
+    set_chord_modifier(chords_bound());
     // Conflicts among the co-op hotkeys, and plain keys the game likely uses.
     for (size_t i = 0; i < std::size(kBindings); ++i) {
         const Binding& a = kBindings[i];
@@ -196,6 +223,40 @@ std::vector<std::string> load_bindings(const std::wstring& ini_path) {
         }
     }
     return warnings;
+}
+
+void strip_unbound_hints(std::string& s) {
+    for (size_t from = 0;;) {
+        const size_t at = s.find('{', from);
+        if (at == std::string::npos) break;
+        const size_t tok_end = s.find('}', at);
+        if (tok_end == std::string::npos) break;
+        const Action a = action_by_name(std::string_view(s).substr(at + 1, tok_end - at - 1));
+        if (a == Action::Count || binding(a).vk || binding(a).pad) {
+            from = at + 1;
+            continue;
+        }
+        const size_t open = s.rfind('(', at), close = s.find(')', at);
+        if (open != std::string::npos && close != std::string::npos && s.find(')', open) == close) {
+            const size_t semi = s.rfind(';', at);
+            if (semi != std::string::npos && semi > open) s.erase(semi, close - semi);  // keeps "(first to 2"
+            else s.erase(open, close - open + 1);
+            from = open;
+        } else {
+            size_t end = tok_end + 1;
+            const std::string_view rest(s.data() + end, s.size() - end);
+            for (const char* tail : {" to accept", " accept", " decline", " stops", " ends", " withdraws", " go",
+                                     " follow them", " send"}) {
+                if (rest.rfind(tail, 0) == 0) {
+                    end += std::strlen(tail);
+                    break;
+                }
+            }
+            s.erase(at, end - at);
+            from = at;
+        }
+    }
+    while (!s.empty() && (s.back() == ' ' || s.back() == ':')) s.pop_back();
 }
 
 Action action_by_name(std::string_view name) {

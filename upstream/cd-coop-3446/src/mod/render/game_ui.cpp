@@ -171,6 +171,7 @@ float action_glyph(ImDrawList* dl, float x, float y, float h, input::Action a) {
         auto key_name = [](int vk) -> std::string {
             if (vk >= VK_F1 && vk <= VK_F12) return "F" + std::to_string(vk - VK_F1 + 1);
             if (vk == 0x1B) return "Esc";
+            if (vk == VK_SPACE) return "Space";
             if (vk == VK_LEFT) return "<";
             if (vk == VK_RIGHT) return ">";
             return std::string(1, static_cast<char>(vk));

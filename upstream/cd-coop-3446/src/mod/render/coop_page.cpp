@@ -1,3 +1,6 @@
+#include "mod/net/coop_activity.h"
+#include "mod/net/coop_travel.h"
+#include "mod/net/coop_chat.h"
 #include "mod/render/coop_page.h"
 
 #include <windows.h>
@@ -182,10 +185,14 @@ std::string connection_text(const HudData& d) {
 }
 
 Row button(const std::string& label, input::Action a, const std::string& help) {
-    Row r{Row::Button, label, "{" + std::string(input::binding(a).name) + "}", help, true, nullptr};
+    // Shared world: no hotkeys, so no key after the row's name.
+    Row r{Row::Button, label, kNativeLayer ? std::string() : "{" + std::string(input::binding(a).name) + "}", help,
+          true, nullptr};
     r.act = [a](int) { input::trigger(a); };
     return r;
 }
+
+int g_quick_pick = 0;  // the quick message chosen in the Session rows (draw thread)
 
 std::vector<Row> rows_for(int section, const HudData& d, const std::vector<std::string>& status) {
     std::vector<Row> rows;
@@ -198,6 +205,56 @@ std::vector<Row> rows_for(int section, const HudData& d, const std::vector<std::
             rows.push_back(button("Invite a friend", input::Action::Invite,
                                   "Opens Steam's invite list: your friend accepts it and joins your world."));
         }
+        if (kNativeLayer) {
+            // What the friend asked for, first: the same answers as holding interact gives.
+            const std::string who = d.peer_name.empty() ? std::string("your friend") : d.peer_name;
+            const net::ChallengeView ch = net::activity_challenge_view();
+            if (ch.state == 1) {
+                rows.push_back(button("Accept the challenge: " + ch.game, input::Action::Challenge,
+                                      who + " challenged you. It starts when you accept."));
+                rows.push_back(button("Decline the challenge", input::Action::Decline, "Tells " + who + " no."));
+            } else if (ch.state == 2) {
+                rows.push_back(button("Withdraw my challenge: " + ch.game, input::Action::Challenge,
+                                      "Takes the challenge back before " + who + " answers."));
+            } else if (ch.state == 3) {
+                rows.push_back(button("End the challenge: " + ch.game, input::Action::Challenge,
+                                      "Stops the challenge for both of you."));
+            }
+            if (const int t = net::travel_request(); t == 1) {
+                rows.push_back(button("Go to " + who + " (they called you)", input::Action::GoToFriend,
+                                      "Takes you to their side."));
+                rows.push_back(button("Stay here", input::Action::Decline, "Tells " + who + " you are staying."));
+            } else if (t == 2) {
+                rows.push_back(button("Follow " + who, input::Action::GoToFriend,
+                                      "They travelled far: takes you to their side."));
+            }
+            rows.push_back(button("Go to my friend", input::Action::GoToFriend, "Takes you to your friend's side."));
+            rows.push_back(button("Bring my friend to me", input::Action::Summon,
+                                  "Asks your friend to come to you; they accept or decline."));
+            if (d.connected) {
+                const char* q = net::chat_quick_name(g_quick_pick);
+                if (!q) q = net::chat_quick_name(g_quick_pick = 0);
+                Row pick{Row::Setting, "Quick message", q, "Left / right choose the message; the row below sends it.",
+                         true, nullptr};
+                pick.act = [](int delta) {
+                    int n = 0;
+                    while (net::chat_quick_name(n)) ++n;
+                    g_quick_pick = ((g_quick_pick + (delta == 0 ? 1 : delta)) % n + n) % n;
+                };
+                rows.push_back(pick);
+                Row send{Row::Button, std::string("Send: ") + q, "",
+                         "Your friend sees it as a notice. \"Go here\", \"Danger here!\" and \"Loot here\" also put "
+                         "a pin on their map where you stand.",
+                         true, nullptr};
+                send.act = [](int) { net::chat_send_quick(g_quick_pick); };
+                rows.push_back(send);
+            }
+            rows.push_back(button("Resynchronise", input::Action::Resync,
+                                  "Joins again from scratch when things drift apart (both characters are sent again)."));
+            rows.push_back(button("Leave the session", input::Action::Leave,
+                                  "Ends the session: you go back to the title screen, nothing of your friend stays."));
+            return rows;
+        }
         rows.push_back(button("Leave the session", input::Action::Leave,
                               "Ends the session: you go back to your own world, nothing of your friend stays."));
         rows.push_back(button("Go to my friend", input::Action::GoToFriend, "Takes you to your friend's side."));
@@ -205,6 +262,20 @@ std::vector<Row> rows_for(int section, const HudData& d, const std::vector<std::
                               "Asks your friend to come to you; they accept or decline."));
         rows.push_back(button("Resynchronise", input::Action::Resync,
                               "Joins again from scratch when things drift apart (both characters are sent again)."));
+    } else if (name == "Controls" && kNativeLayer) {
+        // Shared world: everything is on the friend (hold interact) or in this tab; no hotkeys to list.
+        const std::string more = "Optional shortcuts: [keys] in coopplus.ini (README).";
+        rows.push_back({Row::Info, "Interact with your friend (challenges)", "Hold {Interact} on them", more, true, nullptr});
+        rows.push_back({Row::Info, "Answer a challenge or a call", "Hold {Interact}", more, true, nullptr});
+        rows.push_back({Row::Info, "Revive a downed friend", "Hold {Interact} by them", more, true, nullptr});
+        rows.push_back({Row::Info, "In the interaction menu",
+                        "{MenuUp}{MenuDown} choose   {MenuSelect} select   {MenuBack} leave", more, true, nullptr});
+        if (input::binding(input::Action::Chat).vk) {
+            rows.push_back({Row::Info, "Type a chat line (keyboard)", "{Chat}", more, true, nullptr});
+        }
+        rows.push_back({Row::Info, "Go to your friend, call them, quick messages, leave", "Session, in this tab", more,
+                        true, nullptr});
+        rows.push_back(button("Show the controls card", input::Action::Help, "Shows the short co-op guide in the world."));
     } else if (name == "Controls") {
         static const std::pair<const char*, input::Action> kList[] = {
             {"Co-op page", input::Action::Panel},        {"Invite a friend", input::Action::Invite},

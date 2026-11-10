@@ -25,6 +25,10 @@ TravelTick travel_tick(bool connected, const std::optional<proto::Vec3>& me,
                        const std::optional<proto::Vec3>& partner, const std::string& partner_name, bool focused,
                        uint32_t now_ms);
 
+// Their request waiting for our answer now: 0 none, 1 "come to me" (a summon), 2 they travelled far (follow?).
+// Answered by our own go-to (input::Action::GoToFriend); the shared-world HUD offers it as a hold of interact.
+int travel_request();
+
 // Activity type 20 from the other player.
 void travel_on_event(const uint8_t* data, size_t n);
 

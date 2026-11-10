@@ -3772,3 +3772,46 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   section). Keyboard: Q / E do not change the game's tabs (the game has no tab keys with a mouse), the label is
   clicked. NOT DONE (polish): the game's RB glyph stays between Others and Co-op; its position field in the
   KeyGuideButton (root+0x178) was not found (no plain floats in the object).
+- 2026-11-10 03:30 tcB274 (host at the Hernand butcher; SAVES OK, restored 5/5): the game's interact prompt is
+  "R  Shop" on the keyboard and "A  Shop" on a pad (the A glyph in a ring). So the Interact action = R / pad A.
+  HARNESS NOTE: a `pad:` step runs the host's [dev] script (Ctrl+Shift+F6, both copies): with -HostScript other than
+  scan\pad.txt every pad step re-ran that script (the teleport) and no press reached the game. Pad tests: -HostScript
+  scan\pad.txt, the guest brought to the host with its own script (scan\tp_by_host.txt: beside the usercopy spawn).
+- BUILT (layer, not committed until tcB275 passes) -- shared world without hotkeys, "as the game does it":
+  * input: actions MenuUp / MenuDown / MenuSelect / MenuBack (W S Space Esc; D-pad, A, B) and Interact (R; pad A).
+    In the native layer every chord action except Chat is unbound before [keys] is read (a [keys] line still binds
+    one); with no chord bound the View / Touchpad button is no longer taken from the game (set_chord_modifier).
+  * the hold prompt (hud.cpp): hold the game's interact (R / pad A) on the friend opens the interaction menu; on a
+    pad A is masked from the game while the prompt is on the friend. With a challenge sent / received / on, the
+    same hold opens that challenge's answers (Accept / Decline / Leave; Withdraw / Leave; End / Leave). A request
+    from a friend who is not right there (challenge, "come to me", far travel) shows a hold prompt under the notice
+    ("Accept: a duel", "Go to NAME", "Follow NAME"): the same hold accepts it.
+  * the menu on a pad: D-pad up / down, A, B (masked from the game while it is open); its hint line uses the glyphs.
+  * lines: {Challenge} / {Decline} hints are stripped from banners and notices (strip_key_hints).
+  * revive: hold the Interact action by the downed friend (R / pad A; E still works); "Hold [glyph] to revive NAME".
+  * Co-op tab: Session rows carry no key caps; rows for what the friend asked (Accept / Decline the challenge,
+    Withdraw, End, Go to NAME / Stay here, Follow NAME), Go to my friend, Bring my friend to me, Quick message
+    (left / right choose) + Send (chat_send_quick: the "here" ones still drop a map pin), Resynchronise, Leave.
+    Controls section rewritten (hold interact on the friend, answer, revive, menu buttons, Chat key, the card).
+  * the controls card and the summary card: no hotkeys named.
+- 2026-11-10 03:45 tcB275 PASSED (pad, two copies; SAVES OK, restored 5/5): by the friend the game-style prompt shows
+  "(A) Interact"; holding A opens the interaction menu (Duel ... Leave) with the hint line "D-pad choose  A select
+  B leave" in glyphs; D-pad moves, B closes, A on Duel sends it ("You challenged Guest to a duel", no hotkey named).
+  Holding A again opens the challenge's own answers ("Withdraw the challenge" / "Leave", Leave preselected). Start,
+  RB x4: the Co-op tab's Session rows show "Withdraw my challenge: a duel", Go to my friend, Bring my friend to me,
+  Quick message < Go here >, Send: Go here, Resynchronise, Leave the session (no key caps). The guest (keyboard)
+  sees "Host challenges you to a duel!" and the prompt "(R) Accept: a duel".
+- BUILT after it (tcB276 runs): input::strip_unbound_hints (any {Action} with nothing bound leaves a line, with its
+  bracket or its "to accept"-style tail) used by the activity lines and, in mod.cpp, by every toast / activity
+  banner on the native layer; the "lost the connection" toast points at Menu > Co-op > Leave the session.
+- STILL OPEN (polish, for the fix pass): the game's RB glyph sits between "Others" and "Co-op" in the tab row.
+- 2026-11-10 04:05 tcB277 PASSED (SAVES OK, restored 5/5; tcB276 was a harness miss: the guest spawned 109 m away on
+  a cliff and its walk never arrived -- guests are now teleported beside the host, scan\tp_close_host.txt). The guest
+  (keyboard) held R on the host, chose Duel; the host (pad) saw "Guest challenges you to a duel!" with the prompt
+  "(A) Accept: a duel", held A ("Hud: the hold prompt accepted the friend's request (challenge)") and the duel
+  started: "Duel vs Guest: round 1", no hotkey named anywhere. During the duel the two stand 4 m apart, so the
+  hold prompt on the friend is out of reach: a running challenge is ended from Menu > Co-op > Session ("End the
+  challenge") -- by design, A / R are fight buttons in a duel.
+- STEP 3 DONE: hold-interact menu on keyboard and pad, answers by holding interact, the co-op panel's actions in the
+  Co-op tab, no in-world hotkeys or key banners on the shared-world build. For the user to judge by hand: the feel of
+  the hold (800 ms), one possible jump when A is held for a remote request (A is not masked there).

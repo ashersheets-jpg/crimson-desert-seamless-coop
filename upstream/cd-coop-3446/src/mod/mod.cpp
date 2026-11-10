@@ -831,8 +831,11 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
             toast_until = now + 6000;
         } else if (!connected && was_connected) {
             toast = host ? std::format("Co-op\n{} left your world", toast_name)
-                         : std::format("Co-op\nLost the connection to {}'s world. Reconnecting by itself;"
-                                       " {{Leave}} goes back to your own world", toast_name);
+                    : kNativeLayer
+                          ? std::format("Co-op\nLost the connection to {}'s world. Reconnecting by itself"
+                                        " (Menu > Co-op > Leave the session goes back to the title screen)", toast_name)
+                          : std::format("Co-op\nLost the connection to {}'s world. Reconnecting by itself;"
+                                        " {{Leave}} goes back to your own world", toast_name);
             toast_until = now + 6000;
         }
         // Co-op+ (T29): a guest that cannot reach the host says so after 45 s, with what to check.
@@ -1284,6 +1287,10 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
             }
             if (!toast.empty() && static_cast<int32_t>(now - toast_until) < 0) hud.toast = toast;
             hud.activity = activity_banner;
+            if (kNativeLayer) {  // shared world: no hotkey is named in a line (hold interact, or Menu > Co-op)
+                input::strip_unbound_hints(hud.toast);
+                input::strip_unbound_hints(hud.activity);
+            }
             if (const net::RpsView rv = net::activity_rps_view(); rv.on) {
                 hud.rps_on = true;
                 hud.rps_ours = rv.ours, hud.rps_theirs = rv.theirs;

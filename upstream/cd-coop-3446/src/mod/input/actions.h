@@ -24,6 +24,8 @@ namespace cdmp::input {
 enum class Action : uint8_t {
     Invite, Leave, Ping, GoToFriend, Challenge, Decline, Panel, Nameplates,
     ReviveNow, ReviveCheckpoint, RpsScissors, RpsPaper, RpsRock, Skip, Mash, MenuPrev, MenuNext, Resync, ReviveFriend, Summon, Chat, Help,
+    MenuUp, MenuDown, MenuSelect, MenuBack,  // the player interaction menu (W / S, Space, Esc; D-pad, A, B)
+    Interact,  // the game's own interact button (R / pad A): held on the friend, or to accept a request
     Count
 };
 
@@ -61,11 +63,19 @@ private:
 // Action by its token name ("Challenge"), Count when unknown.
 Action action_by_name(std::string_view name);
 
+// Shared world (2026-11-10): takes the hints of actions with nothing bound out of a line: a bracket naming one goes
+// ("(first to 2;  {Challenge} stops)" -> "(first to 2)"), so does "{Challenge} to accept" outside a bracket.
+void strip_unbound_hints(std::string& s);
+
 // Co-op+ (T30): [keys] in cdmp.ini rebinds the co-op hotkeys, by action name: "Invite=Ctrl+F1", "Panel=F9",
 // "Summon=Shift+G"; "<Action>_pad=..." the pad button (A B X Y LB RB L3 R3 Up Down Left Right). Read once at start.
 // Returns warnings for the player: names or keys not understood, two co-op actions on the same keys, a co-op hotkey
 // with no Ctrl / Shift (the game probably uses that key too). Empty = all fine.
 std::vector<std::string> load_bindings(const std::wstring& ini_path);
+
+// Any co-op chord is bound to a pad button (false in the shared-world build unless [keys] binds one): only then is
+// the View / touchpad button kept from the game as the chord modifier.
+bool chords_bound();
 
 // "Ctrl+F1" for the keyboard part of an action (the panel's key list).
 std::string key_text(Action a);

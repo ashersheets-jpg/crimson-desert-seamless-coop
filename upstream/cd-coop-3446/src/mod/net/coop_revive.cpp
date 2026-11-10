@@ -1,3 +1,4 @@
+#include "mod/native_layer.h"
 #include "mod/net/coop_revive.h"
 
 #include <windows.h>
@@ -86,11 +87,16 @@ ReviveTick revive_partner_tick(bool connected, float hp, float hp_max, const pro
     }
     // B17 (2026-11-09): revive by interacting -- the game's interact key (E) held next to the downed friend counts
     // too, as well as the ReviveFriend action (Shift+F7, pad View + LB).
-    const bool interact = focused && (GetAsyncKeyState('E') & 0x8000) != 0;
+    // Shared world (2026-11-10): the Interact action -- the game's interact button on a pad too, no chord.
+    const bool interact = (focused && (GetAsyncKeyState('E') & 0x8000) != 0) ||
+                          (kNativeLayer && input::action_down(input::Action::Interact, focused));
     const bool holding = interact || input::action_down(input::Action::ReviveFriend, focused);
     if (!holding) {
         g_hold_since = 0;
-        if (out.line.empty()) out.line = std::format("Hold E or {{ReviveFriend}} to revive {}", who);
+        if (out.line.empty()) {
+            out.line = kNativeLayer ? std::format("Hold {{Interact}} to revive {}", who)
+                                    : std::format("Hold E or {{ReviveFriend}} to revive {}", who);
+        }
         return out;
     }
     if (!g_hold_since) g_hold_since = now ? now : 1;
