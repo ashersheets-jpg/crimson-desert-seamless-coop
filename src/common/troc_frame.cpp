@@ -1,6 +1,7 @@
 #include "common/troc_frame.h"
 
 #include <cstring>
+#include <unordered_set>
 
 #include "common/lz_block.h"
 
@@ -171,13 +172,47 @@ bool TunnelSender::push(std::span<const uint8_t> packet) {
         ++refused_;
         return false;
     }
+    if (backlog_bytes_ + packet.size() > kMaxBacklogBytes) shed_stale_moves();
     if (backlog_bytes_ + packet.size() > kMaxBacklogBytes) {
         ++refused_;
         return false;
     }
     backlog_.emplace_back(packet.begin(), packet.end());
     backlog_bytes_ += packet.size();
+    if (backlog_bytes_ > kShedAboveBytes && backlog_bytes_ >= shed_mark_ + kShedEveryBytes) shed_stale_moves();
     return true;
+}
+
+size_t TunnelSender::shed_stale_moves() {
+    constexpr uint16_t kOpMoveActorAck = 3094;
+    constexpr size_t kMoveAckPayload = 235;  // the only length the client takes (horse_follow_logic.h)
+    ++shed_passes_;
+    size_t taken = 0;
+    if (dir_ == Dir::ToGuestClient) {
+        std::unordered_set<uint32_t> newer;  // actors with a newer Move behind
+        std::vector<bool> drop(backlog_.size(), false);
+        for (size_t i = backlog_.size(); i-- > 0;) {
+            const auto& p = backlog_[i];
+            if (p.size() != kHeaderSize + kMoveAckPayload) continue;
+            if (static_cast<uint16_t>(p[0] | (p[1] << 8)) != kOpMoveActorAck) continue;
+            uint32_t key = 0;
+            std::memcpy(&key, p.data() + kHeaderSize, 4);
+            if (!newer.insert(key).second) drop[i] = true;
+        }
+        std::deque<std::vector<uint8_t>> kept;
+        for (size_t i = 0; i < backlog_.size(); ++i) {
+            if (drop[i]) {
+                backlog_bytes_ -= backlog_[i].size();
+                ++taken;
+            } else {
+                kept.push_back(std::move(backlog_[i]));
+            }
+        }
+        backlog_.swap(kept);
+    }
+    shed_packets_ += taken;
+    shed_mark_ = backlog_bytes_;
+    return taken;
 }
 
 size_t TunnelSender::flush() {

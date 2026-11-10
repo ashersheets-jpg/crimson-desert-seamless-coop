@@ -15,7 +15,7 @@ namespace {
 bool g_on = false;
 std::mutex g_mu;
 std::unordered_set<uint32_t> g_protected;  // guarded by g_mu
-std::atomic<uint64_t> c_dropped{0}, c_hits_seen{0}, c_stripped{0};
+std::atomic<uint64_t> c_dropped{0}, c_hits_seen{0}, c_stripped{0}, c_freed{0};
 
 }  // namespace
 
@@ -28,7 +28,24 @@ void anti_grief_start(bool on, bool guest) {
 }
 
 void anti_grief_host_sniffed(const uint8_t* packet, size_t size, bool server_to_client) noexcept {
-    if (!g_on || !server_to_client || size < 5 + 9) return;
+    if (!g_on || size < 5 + 9) return;
+    // Playtest 2026-11-10 (Borque: "enemies seem to not react to guest attacks"): some hostile NPCs have a dialog list
+    // too (quest fights). An NPC the HOST attacks is fair game for both from then on.
+    if (!server_to_client) {
+        if (static_cast<uint16_t>(packet[0] | (packet[1] << 8)) != agl::kOpDoFrameEventReq) return;
+        try {
+            const auto t = agl::targets(std::span<const uint8_t>(packet + 5, size - 5));
+            std::lock_guard lk(g_mu);
+            for (const uint32_t k : t) {
+                if (g_protected.erase(k)) {
+                    const uint64_t n = c_freed.fetch_add(1, std::memory_order_relaxed) + 1;
+                    if (n <= 20) log::info("AntiGrief: NPC 0x{:08X} is no longer protected: the host fights it", k);
+                }
+            }
+        } catch (...) {
+        }
+        return;
+    }
     if (static_cast<uint16_t>(packet[0] | (packet[1] << 8)) != agl::kOpQuestDialogAck) return;
     const uint32_t npc = agl::dialog_npc(std::span<const uint8_t>(packet + 5, size - 5));
     if (!npc) return;
@@ -84,8 +101,9 @@ bool anti_grief_drop_user2_req(uint16_t opcode, std::span<const uint8_t> payload
 
 std::string anti_grief_describe() {
     std::lock_guard lk(g_mu);
-    return std::format("AntiGrief: {} | protected NPCs {} | the guest's hits seen {} dropped {} trimmed {}",
-                       g_on ? "on" : "off", g_protected.size(), c_hits_seen.load(), c_dropped.load(), c_stripped.load());
+    return std::format("AntiGrief: {} | protected NPCs {} | the guest's hits seen {} dropped {} trimmed {} | freed by the host's hits {}",
+                       g_on ? "on" : "off", g_protected.size(), c_hits_seen.load(), c_dropped.load(), c_stripped.load(),
+                       c_freed.load());
 }
 
 }  // namespace cdmp::session2

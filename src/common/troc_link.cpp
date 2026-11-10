@@ -93,6 +93,9 @@ std::string TrocLink::describe() const {
                                 connected() ? "connected" : "not connected", broken_ ? " BROKEN" : "",
                                 sender_.packets_sent(), sender_.batches_sent(), sender_.backlog_bytes(),
                                 receiver_.packets_received(), receiver_.rejected(), dropped_);
+    if (sender_.shed_packets())
+        s += std::format(" | congestion: {} stale move(s) shed in {} pass(es)", sender_.shed_packets(),
+                         sender_.shed_passes());
     if (want_compress_ || sender_.compressed_batches()) {
         const uint64_t raw = sender_.raw_bytes_sent(), wire = sender_.wire_bytes_sent();
         s += std::format(" | compression {} ({}): {} batches compressed, out {} KB as {} KB (x{:.1f})",

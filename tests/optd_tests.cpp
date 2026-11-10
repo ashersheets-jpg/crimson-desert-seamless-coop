@@ -250,6 +250,56 @@ void test_tunnel_sender_batching() {
     CHECK(pushed > 0 && s.backlog_bytes() <= troc::TunnelSender::kMaxBacklogBytes);
 }
 
+// Co-op+ (playtest 2026-11-10): under congestion only the newest MoveActorAck of each actor stays; other packets and
+// the order are kept.
+void test_tunnel_sender_shed() {
+    bool accept = false;
+    std::vector<Bytes> msgs;
+    troc::TunnelSender s(troc::Dir::ToGuestClient, [&](const Bytes& m) {
+        if (!accept) return false;
+        msgs.push_back(m);
+        return true;
+    });
+    auto move = [](uint32_t key, uint8_t tag) {
+        Bytes p(5 + 235, 0);
+        p[0] = static_cast<uint8_t>(3094 & 0xFF);
+        p[1] = static_cast<uint8_t>(3094 >> 8);
+        p[2] = 0xFF;
+        p[3] = 235;
+        p[4] = 0;
+        std::memcpy(p.data() + 5, &key, 4);
+        p[5 + 100] = tag;
+        return p;
+    };
+    CHECK(s.push(move(0xB0000001, 1)));
+    CHECK(s.push(packet(2005, 50)));
+    CHECK(s.push(move(0xB0000002, 1)));
+    CHECK(s.push(move(0xB0000001, 2)));
+    CHECK(s.push(move(0xB0000001, 3)));
+    CHECK(s.shed_stale_moves() == 2);
+    CHECK(s.shed_packets() == 2);
+    // What is left goes out in order: the 2005, B..2's move, then B..1's newest move (tag 3).
+    accept = true;
+    s.flush();
+    CHECK(s.backlog_bytes() == 0 && s.packets_sent() == 3);
+    troc::TunnelReceiver r(troc::Dir::ToGuestClient);
+    std::vector<Bytes> got;
+    for (const auto& m : msgs) {
+        for (auto& p : r.on_message(m)) got.push_back(p);
+    }
+    CHECK(got.size() == 3);
+    if (got.size() == 3) {
+        CHECK(troc::parse(got[0])->opcode == 2005);
+        uint32_t k1 = 0, k2 = 0;
+        std::memcpy(&k1, got[1].data() + 5, 4);
+        std::memcpy(&k2, got[2].data() + 5, 4);
+        CHECK(k1 == 0xB0000002 && k2 == 0xB0000001 && got[2][5 + 100] == 3);
+    }
+    // The guest-to-host direction is never shed.
+    troc::TunnelSender up(troc::Dir::ToHostServer, [&](const Bytes&) { return false; });
+    CHECK(up.shed_stale_moves() == 0);
+}
+
 // End to end over two reliable channels with a lossy, reordering link: a
 // login-sized burst (big ActorLoadDataAck and many small Acks) arrives whole
 // and in order.
@@ -1946,6 +1996,7 @@ int main() {
     test_troc_internal();
     test_packet_queue();
     test_tunnel_sender_batching();
+    test_tunnel_sender_shed();
     test_tunnel_over_reliable();
     test_troc_link();
     test_steam_backpressure();

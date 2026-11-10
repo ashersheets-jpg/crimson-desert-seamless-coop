@@ -185,6 +185,12 @@ public:
     static constexpr size_t kMaxBatchBytes = 64 * 1024;
     // Hard cap on what may wait here for the channel (a stalled link).
     static constexpr size_t kMaxBacklogBytes = 16 * 1024 * 1024;
+    // Co-op+ (playtest 2026-11-10, a town over a Steam relay: the backlog reached the cap and the link broke): above
+    // kShedAboveBytes the queue keeps only the NEWEST MoveActorAck 3094 of each actor (an older position of the same
+    // actor is stale once a newer one waits behind it); every other packet stays, in order. Run again each time the
+    // backlog has grown by kShedEveryBytes, and once more before a push would be refused.
+    static constexpr size_t kShedAboveBytes = 2 * 1024 * 1024;
+    static constexpr size_t kShedEveryBytes = 512 * 1024;
 
     using SendFn = std::function<bool(const std::vector<uint8_t>& message)>;
     TunnelSender(Dir dir, SendFn send) : dir_(dir), send_(std::move(send)) {}
@@ -214,6 +220,11 @@ public:
     uint64_t raw_bytes_sent() const { return raw_bytes_sent_; }
     uint64_t wire_bytes_sent() const { return wire_bytes_sent_; }
     uint64_t compressed_batches() const { return compressed_batches_; }
+    // Stale MoveActorAcks taken out of the backlog (above), and the passes that did it.
+    uint64_t shed_packets() const { return shed_packets_; }
+    uint64_t shed_passes() const { return shed_passes_; }
+    // One pass now (also used by the tests). Returns the packets taken out.
+    size_t shed_stale_moves();
 
 private:
     Dir dir_;
@@ -227,6 +238,8 @@ private:
     bool compress_ = false;
     uint64_t packets_sent_ = 0, batches_sent_ = 0, refused_ = 0;
     uint64_t raw_bytes_sent_ = 0, wire_bytes_sent_ = 0, compressed_batches_ = 0;
+    size_t shed_mark_ = 0;  // the backlog's size after the last pass
+    uint64_t shed_packets_ = 0, shed_passes_ = 0;
 };
 
 // Receiving side: checks the direction and unpacks a batch.
