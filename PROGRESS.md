@@ -3554,3 +3554,7 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   - the guest's keys closed the shop with ESC twice: the second ESC opened the inventory, so the second R went
     to the inventory. Now one ESC only.
   So tcB248 counts only as one more near-host shop pass. tcB249 runs the fixed order.
+  22:15 tcB249: one more far-shop pass (host 336 m: shot tcB249-b0, butcher menu, no 0x15DBC102, both alive,
+  SAVES OK), but again not the planned order: my command line gave the scripts a wrong path ("Dev script: cannot
+  read"), so nobody teleported, and the second R was a 150 ms tap. The shop prompt needs R HELD (the walk's sweep
+  holds it 1800 ms); the tap sent no request at all (no 3008 / 2880 in either log). tcB250: path fixed, R held.
