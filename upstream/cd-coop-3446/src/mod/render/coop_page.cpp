@@ -960,7 +960,25 @@ void coop_page_draw(float width, float height, const HudData& d, const std::vect
         if (g_row < 0 || g_row >= static_cast<int>(rows.size())) return;
         Row& r = rows[g_row];
         if (r.act && (r.kind == Row::Button ? delta == 0 : true)) r.act(delta);
-        if (r.kind == Row::Button && delta == 0) log::info("Co-op page: {}", r.label);
+        if (r.kind == Row::Button && delta == 0) {
+            log::info("Co-op page: {}", r.label);
+            // As the menu's tab an action closes the menu, as choosing a place on the game's map does: the player
+            // sees what it did (the trip, the notice) in the world. A pad's Start for pad players, Esc otherwise.
+            if (as_tab) {
+                if (input::method() == input::Method::Xbox) {
+                    input::press_for_game(input::kPadStart, 120);
+                } else {
+                    INPUT in[2] = {};
+                    in[0].type = in[1].type = INPUT_KEYBOARD;
+                    in[0].ki.wVk = in[1].ki.wVk = VK_ESCAPE;
+                    in[0].ki.wScan = in[1].ki.wScan = static_cast<WORD>(MapVirtualKeyW(VK_ESCAPE, MAPVK_VK_TO_VSC));
+                    in[1].ki.dwFlags = KEYEVENTF_KEYUP;
+                    in[0].ki.dwExtraInfo = in[1].ki.dwExtraInfo = kOurInput;
+                    SendInput(2, in, sizeof(INPUT));
+                }
+                g_focus_rows = false;
+            }
+        }
     };
     bool close = false;
     for (unsigned k : keys) {

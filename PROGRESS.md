@@ -3822,3 +3822,16 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
 - Found: the menu stayed open during the trip (B does nothing while the trip runs), so the rest of the key sequence ran in the world and the quick message was never sent from the tab. Not a fault of the quick message row.
 - Change (built, test tcB279 running): an action chosen in the Co-op tab closes the menu, as choosing a place on the game's map does (pad players: a Start press handed to the game through the XInput hook, new input::press_for_game; keyboard: Esc).
 - RB glyph probe (kg.py, read only): the menu root keeps the LB / RB KeyGuideButtons at +0x170 / +0x178. Under RB, 886 / 912 / 926 (left, middle, right edge at 1920 wide) sit in nine sub-trees; only RB+8 -> +28 -> +2E8 has the LB twin (50 / 90). They look like computed quads. tcB279 adds 176 px to each sub-tree in turn (kgw.py, test copy only) to see which one the glyph follows.
+
+## 2026-11-10 tcB279: tab actions close the menu; RB glyph probe 1
+
+- Change (layer, coop_page.cpp + pad_input): an action chosen in the Co-op tab closes the pause menu (pad: a Start
+  press sent to the game by `press_for_game`; keyboard: Esc), so the trip or the notice is seen in the world.
+- tcB279 PASS for "Go to my friend": "Co-op page: Go to my friend" -> menu closed 0.7 s later -> "Teleport: arrived"
+  10 s later (300 m trip). SAVES OK, user install restored 5/5.
+- The quick message was not reached in this run: the pause menu reopens on the tab it was left on (Co-op), so the
+  test's four RB presses walked past it. Test list fixed in tcB280 (the feature itself is not in doubt yet).
+- RB glyph probe 1 (kgw.py): adding 176 px to the 886 / 912 / 926 floats in each of the nine sub-trees, and in the
+  button's first-level children, moved nothing on screen (shots g0..g8, g99 identical). Those floats are results, not
+  the source. Probe 2 (kgs.py, tcB280): bisection over every float under the RB button, four pointers deep, reading
+  the glyph's spot off the screen after each change.

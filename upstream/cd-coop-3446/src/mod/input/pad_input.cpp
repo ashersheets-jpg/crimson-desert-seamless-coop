@@ -39,6 +39,8 @@ std::atomic<uint64_t> g_sim_until{0};
 std::atomic<int> g_sim_family{0};
 std::atomic<uint16_t> g_mask{0};
 std::atomic<uint64_t> g_mask_until{0};
+std::atomic<uint16_t> g_press{0};      // press_for_game
+std::atomic<uint64_t> g_press_until{0};
 std::atomic<uint64_t> g_back_tap_until{0};  // re-give a View tap to the game
 
 using XInputGetStateFn = DWORD(WINAPI*)(DWORD, XINPUT_STATE*);
@@ -55,6 +57,7 @@ void filter(XINPUT_STATE* st) {
     const uint64_t t = now64();
     WORD b = st->Gamepad.wButtons;
     if (t < g_mask_until.load()) b &= static_cast<WORD>(~g_mask.load());
+    if (t < g_press_until.load()) b |= static_cast<WORD>(g_press.load() & 0xF3FF);
     if (g_chord_modifier.load()) {
         if ((b & XINPUT_GAMEPAD_BACK) && t >= g_back_tap_until.load()) b &= static_cast<WORD>(~XINPUT_GAMEPAD_BACK);
         if (t < g_back_tap_until.load()) b |= XINPUT_GAMEPAD_BACK;
@@ -352,6 +355,11 @@ void mask_from_game(uint16_t buttons, uint32_t ms) {
         g_mask = (now64() < g_mask_until.load() ? g_mask.load() : 0) | buttons;
         g_mask_until = until;
     }
+}
+
+void press_for_game(uint16_t buttons, uint32_t ms) {
+    g_press = buttons;
+    g_press_until = now64() + ms;
 }
 
 void set_sim(int family) {

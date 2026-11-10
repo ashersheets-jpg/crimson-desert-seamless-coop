@@ -48,6 +48,10 @@ void set_chord_modifier(bool on);
 // Keeps `buttons` from the game (XInput pads only) for the next `ms` milliseconds; renew it while needed.
 void mask_from_game(uint16_t buttons, uint32_t ms);
 
+// Presses `buttons` for the game (XInput pads only) for `ms` milliseconds: the Co-op tab closing the menu after an
+// action, as the player's own Start would.
+void press_for_game(uint16_t buttons, uint32_t ms);
+
 // [dev] pad_sim: act as if this pad were in use (1 Xbox, 2 PlayStation; 0 off) and let the dev script press its
 // buttons (dev_pad_press). One-PC test without a controller.
 void set_sim(int family);
