@@ -3888,3 +3888,14 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   (0 RB, 1 the tab group root+0x168, 2 LB, 3 the root) and stops at depth 3; tcB284 walks the group.
 - Saves OK, install restored 5/5.
 
+
+## 2026-11-10 tcB284: the guest receives the tab's quick message; no float moves the RB glyph
+
+- Host "Chat: quick message "Go here" (Co-op tab)" 05:07:14.374, guest "Chat: the friend said "Go here" (quick
+  message)" 05:07:14.376. Quick messages from the Co-op tab: PASS on both sides.
+- kgs.py from the tab group (59 / 1321 / 5751 floats) and from the LB button (180 / 1930 / 6146): nothing moves in
+  the RB glyph's box, the pixel count stays exactly 651. The glyph's place cannot be nudged through memory floats
+  within 3 pointers of the menu root's key-guide objects. Plan B (tcB285, kgh.py): find what HIDES the game's RB
+  glyph (floats 1.0 -> 0, flag bytes 1 -> 0 under the RB button); the layer then draws its own RB after "Co-op".
+- Saves OK, install restored 5/5.
+
