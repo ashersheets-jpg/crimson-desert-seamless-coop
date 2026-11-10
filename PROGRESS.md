@@ -3923,3 +3923,20 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
 - Trading therefore needs another route: remove from the giver + add to the receiver on the host (the server's
   own add-item / remove-item workers), or drop + pick up. To find next in the decomp.
 - SAVES OK, user install restored 5/5 OK.
+
+### Trade route found in the decomp (2026-11-10, read only; not yet built)
+3111 is closed (fixed routes), so a player-to-player give is built from two of the game's own server workers:
+- **Add**: `exe+0x2DD8FC0 (holder, int* err, TrItemValue* v)`: the worker under CreateItemFromTrItemValueCheatReq
+  (handler exe+0x2C8B130 -> exe+0x2EE96F0, which checks a cheat permission first, err exe+0x714BC48; calling the
+  worker directly skips that). TrItemValue is 0x1C0 bytes, built by exe+0x2641950: +0 uid (-1), +8 u32 item key
+  (not 0), +0xC u16 (0), +0x10 i64 count (>= 1), +0x5E u8 level.
+- **Remove**: discard worker `exe+0x2E03330 (holder, int* err, actor, u16 inventory key, i16 slot, i64 count,
+  transform*)` under DiscardItemReq (handler exe+0x2C8DE80). Errors: 0x714BFA0 empty slot, 0x714BFB4 not enough.
+  Two paths by the item's row (+0x52): -1 = plain delete (the item-change transaction, reason 0x2F), position
+  ignored; otherwise the item is DROPPED into the world at transform+0xC0 (zero position -> err 0x714B154).
+- Holder = `exe+0x22F1DC0 (actor)` = `*(*(actor+0x68)+0xB8)` (0 when not a playable character). Holder +8 actor,
+  +0x18 inventory array, +0x20 count; `exe+0x22F7FE0 (holder, inv idx, slot)` -> entry (+0 uid, +8 item idx,
+  +0x10 count).
+- Both use the server thread's TLS, so they must run on the server thread: inside our 3111 worker detour, set off by
+  a magic `entry` value from the guest (the host checks that the receiver is a character and near).
+- Not usable: DeleteItemCheat worker (clears a whole inventory), AddMinusItem worker (did nothing for bag items).
