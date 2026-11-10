@@ -1,0 +1,11 @@
+**Update: shared world playtest 0.1.0-alpha+55722584 (fixes the town lag and disconnects)**
+Please use this build instead of 22e8f365. You and your co-op partner both need it.
+
+Fixed (thanks Borque for the report and logs):
+- **Big desync and everyone vanishing in towns** (Hernand): the host's game sent the guest about 5x more data than the connection could carry in a busy town, the backlog grew until the link broke, and the guest was dropped (that is why all the NPCs disappeared for the host). The co-op link is now compressed (about 6x smaller in our test), and if it still falls behind it skips outdated NPC movement instead of breaking.
+- **Enemies not reacting to the guest's attacks**: the "protect townsfolk" rule could also cover some hostile NPCs. An NPC the host fights is now fair game for both of you, and a swing that hits an enemy and a townsperson together still hits the enemy.
+
+- `CrimsonDesert-SeamlessCoop-0.1.0-alpha+55722584-shared-world.zip`: this is the one you want. Run its installer with the game closed (it replaces the older build).
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tested with two copies of the game on one PC. A slow connection between two PCs is exactly what one PC cannot reproduce, so please tell us in #bug-reports how towns feel now (and send the report zip if anything goes wrong).

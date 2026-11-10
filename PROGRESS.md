@@ -4381,3 +4381,19 @@ arriving at Hernand.
   tests): the game's Discard stays untouched and the Co-op tab's Shared stash section says "coming in a later build".
   This keeps them out of the next playtest build, which carries Borque's fixes (tunnel compression, the congestion
   valve, AntiGrief freeing NPCs the host fights).
+
+### 2026-11-10 17:55: fix build 0.1.0-alpha+55722584 POSTED (user: "Yes, post it")
+
+- dist\CrimsonDesert-SeamlessCoop-0.1.0-alpha+55722584-shared-world.zip (12.3 MB) + -mod-manager.zip, built by
+  tools\package-native.ps1; tools\test-install-fake.ps1: all steps passed. Posted in Discord #download-here at 17:54
+  with both zips (text: docs/release/shared-world-playtest/download-55722584.txt): tunnel compression, the congestion
+  valve, AntiGrief freeing NPCs the host fights; item sharing hidden ([coop] item_sharing=0).
+- How: the app's browser pane, signed in by the user; the zips read on a loopback page into window.name, the Discord
+  channel loaded in the same tab, File objects rebuilt and set on the composer's file input ("change"); the input
+  reads empty afterwards because Discord takes the files (two attachments seen in the composer), text by a synthetic
+  paste. Claude in Chrome is connected again (user), but its upload tool takes at most 10 MB per call.
+- Give / stash root cause (build/decomp/notes_give_paths.md, local): 0x2DF04A0 moves only between actors of the SAME
+  user (exe+0x2DF184F cmp [giver+0xA0], receiver's +0xA0 -> eErrNoInvalidExchangeItemTarget); the discard path's
+  "spawn position" error (eErrNoInvalidSpawnPosition) is the item record's +0xC0 conversion branch, not the drop.
+  Built (native): a mid hook at exe+0x2DF184F (bytes checked) that, only while the mod's own give / stash move runs on
+  that thread (thread-local flag, giver and receiver matched), lets the compare see the giver's owner. Test tcB318.
