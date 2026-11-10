@@ -4331,3 +4331,14 @@ arriving at Hernand.
   lag. Watch for it after the compression fix.
 - Lootr probe (tcB311/tcB312): the hold on X did an interaction 0xF4263 on a nearby gimmick (3008 -> 2120, 3073 ->
   2794) but no pickup (no item added): not a Take. Probing parked behind the playtest fixes.
+
+### tcB313 (2026-11-10 16:51): compression on both ends WORKS; the hidden inventory refuses moves
+
+- "compression ON (the other end decodes it): 9212 batches compressed, out 37513 KB as 6517 KB (x5.8)", backlog 0,
+  0 rejected, the guest "tunnel_compress=1: the host may send compressed batches". The playtest fix holds on one PC.
+- The stash on the InvisibleInventory (index 13): the game's move refuses it: guest deposit "아이템 교환 대상이
+  비정상입니다" (the exchange target is abnormal), host deposit "인벤토리를 사용할 수 없습니다" (the inventory
+  cannot be used), withdraw "Cannot be moved.". The page listed its one hidden stack (item 0x194B): a hidden inventory
+  must never be listed anyway. tcB314: index 7 (100 slots, 30 used; the game has bag -> 7 routes) as a try
+  ([session2] stash_inventory=7, research key).
+- SAVES OK, restored 5/5.
