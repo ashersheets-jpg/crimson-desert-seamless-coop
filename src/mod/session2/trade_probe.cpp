@@ -31,7 +31,7 @@ struct Give {
     int stage = 0;  // 1 receiver found, 2 holder, 3 slot checked, 4 discarded, 5 added; -1 = exception
     int e_dist = -1, e_discard = -1, e_add = -1, e_back = -1;
     int drop = -1;  // the item row's drop entry (+0x52), -1 = the item cannot be dropped
-    uintptr_t actor = 0, holder = 0, entry = 0;
+    uintptr_t actor = 0, holder = 0, entry = 0, giver_holder = 0;
     uint16_t inv_idx = 0xFFFF, item_idx = 0xFFFF, have_idx = 0xFFFF, slot = 0xFFFF;
     int64_t have = 0;
     uint32_t item_key = 0;
@@ -43,8 +43,11 @@ struct Give {
     } seen[10] = {};
     int seen_n = 0;
 };
+// hint: the item index the giver's own client saw in that slot (0xFFFF = none). The client's slot numbers can differ
+// from the server's; when the named slot does not hold the hinted item, the first slot that does (and has enough) is
+// used instead.
 void give_raw(Give& g, uintptr_t self, uint32_t item, uint64_t count, uint32_t receiver, uint16_t inv,
-              uint16_t slot) noexcept {
+              uint16_t slot, uint16_t hint) noexcept {
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     __try {
         uint64_t out = 0;
@@ -70,6 +73,7 @@ void give_raw(Give& g, uintptr_t self, uint32_t item, uint64_t count, uint32_t r
             const uintptr_t giver_actor = *reinterpret_cast<uintptr_t*>(self + 8);
             if (g.holder && g.holder != self && giver_actor) {
                 g.stage = 2;
+                g.giver_holder = reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t)>(base + 0x22F1DC0)(giver_actor);
                 reinterpret_cast<int* (__fastcall*)(uintptr_t, int*, uintptr_t, uintptr_t, float)>(base + 0x2301D20)(
                     mgr, &g.e_dist, giver_actor, g.actor, 0.0f);
                 const auto entry_of = reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t, int16_t, int16_t)>(base + 0x22F7FE0);
@@ -80,6 +84,19 @@ void give_raw(Give& g, uintptr_t self, uint32_t item, uint64_t count, uint32_t r
                             *reinterpret_cast<int64_t*>(e + 0x10) >= static_cast<int64_t>(count)) {
                             slot = static_cast<uint16_t>(i);
                             break;
+                        }
+                    }
+                }
+                if (!item && hint != 0xFFFF && slot != 0xFFFF) {
+                    const uintptr_t e = entry_of(self, static_cast<int16_t>(g.inv_idx), static_cast<int16_t>(slot));
+                    if (!e || *reinterpret_cast<uint16_t*>(e + 8) != hint) {
+                        for (int16_t i = 0; i < 512; ++i) {
+                            const uintptr_t f = entry_of(self, static_cast<int16_t>(g.inv_idx), i);
+                            if (f && *reinterpret_cast<uint16_t*>(f + 8) == hint &&
+                                *reinterpret_cast<int64_t*>(f + 0x10) >= static_cast<int64_t>(count)) {
+                                slot = static_cast<uint16_t>(i);
+                                break;
+                            }
                         }
                     }
                 }
@@ -99,6 +116,17 @@ void give_raw(Give& g, uintptr_t self, uint32_t item, uint64_t count, uint32_t r
                 if (g.entry) {
                     g.have_idx = *reinterpret_cast<uint16_t*>(g.entry + 8);
                     g.have = *reinterpret_cast<int64_t*>(g.entry + 0x10);
+                }
+                if (slot != 0xFFFF && (!g.entry || g.have_idx == 0xFFFF)) {  // an empty slot: what the bag does hold
+                    for (int16_t i = 0; i < 512 && g.seen_n < 10; ++i) {
+                        const uintptr_t e = entry_of(self, static_cast<int16_t>(g.inv_idx), i);
+                        if (!e || *reinterpret_cast<uint16_t*>(e + 8) == 0xFFFF || *reinterpret_cast<int64_t*>(e + 0x10) < 1) continue;
+                        auto& sn = g.seen[g.seen_n++];
+                        sn.slot = i;
+                        sn.idx = *reinterpret_cast<uint16_t*>(e + 8);
+                        sn.n = *reinterpret_cast<int64_t*>(e + 0x10);
+                        std::memcpy(sn.raw, reinterpret_cast<void*>(e + 0x18), sizeof sn.raw);
+                    }
                 }
                 if (!item && g.entry && g.have_idx != 0xFFFF) {  // item 0 = what the slot holds: its key, by search
                     for (uint32_t k = 1; k < 4000000; ++k) {
@@ -175,11 +203,15 @@ int* __fastcall worker_detour(uintptr_t self, int* err, uint32_t item, uint16_t 
     if (entry == kGiveEntry) {
         Give gv;
         const bool to_character = (r & 0xF0000000) == 0xA0000000 && r != g;
-        if (to_character) give_raw(gv, self, item, count, r, inv, slot);
+        if (to_character) give_raw(gv, self, item, count, r, inv, slot, b);
         log::info("Give: item {} x{} from 0x{:08X} (inventory 0x{:X} slot {} -> {}) to 0x{:08X}: stage {} (5 = given) | "
                   "receiver actor 0x{:X} holder 0x{:X} | slot has item idx 0x{:X} x{} (asked idx 0x{:X}) | distance err "
                   "{} discard err {} add err {} back err {} | drop entry {}", gv.item_key, count, g, inv, slot, gv.slot, r, gv.stage, gv.actor, gv.holder,
                   gv.have_idx, gv.have, gv.item_idx, gv.e_dist, gv.e_discard, gv.e_add, gv.e_back, gv.drop);
+        if (gv.stage < 3) {
+            log::info("Give: giver holder 0x{:X} (its actor's holder 0x{:X}) entry 0x{:X} inventory index 0x{:X}", self,
+                      gv.giver_holder, gv.entry, gv.inv_idx);
+        }
         for (int i = 0; i < gv.seen_n; ++i) {
             log::info("Give: the bag's slot {} holds item idx 0x{:X} x{} (+0x18: {:X} {:X} {:X})", gv.seen[i].slot,
                       gv.seen[i].idx, gv.seen[i].n, gv.seen[i].raw[0], gv.seen[i].raw[1], gv.seen[i].raw[2]);
