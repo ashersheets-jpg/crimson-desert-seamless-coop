@@ -614,11 +614,12 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
 
         // Co-op+ (T07): Leave on any transport (it was read only with Steam, so a room-code / UDP guest could not).
         if (leave_key.pressed(input::action_down(input::Action::Leave, game_has_focus()))) {
+            // tcB289: for both roles this is the game's own Return to Title; the guest's link ends at once.
+            game::main_menu_return_to_title();
             if (!host) {
                 end = {Kind::Leave, 0};
                 break;
             }
-            say("you are the host: your friend leaves from their side (Ctrl+F2)");
         }
         // Co-op+: the co-op menu's Radmin VPN / Direct IP (Host, Join, Back to Steam) restarts the session on it.
         if (auto want = net::direct_take_request()) {

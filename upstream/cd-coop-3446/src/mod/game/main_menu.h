@@ -20,6 +20,9 @@ using MenuTabFilter = bool (*)(int from, int to);
 bool main_menu_install(MenuTabFilter filter);
 void main_menu_rb_test(bool on);  // [dev] rb_test
 
+// The game's own Return to Title (any thread; done on the UI thread). Nothing happens outside the world.
+void main_menu_return_to_title();
+
 // The page the menu last switched to (0..4), -1 before the first switch.
 int main_menu_page();
 

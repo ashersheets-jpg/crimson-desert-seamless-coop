@@ -869,6 +869,15 @@ void coop_page_draw(float width, float height, const HudData& d, const std::vect
     const std::string tab = "Co-op";
     const float tab_w = text_w(tab_size, tab);
     const float tab_x = sp.x(kTabX[5]) - tab_w * 0.5f, tab_y = sp.y(kTabY) - tab_size * 0.5f;
+    // A shoulder-button glyph the way the game draws its own (dark plate, pale rim).
+    auto glyph = [&](float cx, const char* name) {
+        const float gw = 38 * sp.s, gh = 28 * sp.s, cy = sp.y(kTabY + 2), gs = 17 * sp.s;
+        dl->AddRectFilled(ImVec2(cx - gw * 0.5f, cy - gh * 0.5f), ImVec2(cx + gw * 0.5f, cy + gh * 0.5f),
+                          IM_COL32(20, 18, 16, 235), 6 * sp.s);
+        dl->AddRect(ImVec2(cx - gw * 0.5f, cy - gh * 0.5f), ImVec2(cx + gw * 0.5f, cy + gh * 0.5f),
+                    IM_COL32(214, 210, 202, 235), 6 * sp.s, 1.6f * sp.s);
+        text(dl, cx - text_w(gs, name, true) * 0.5f, cy - gs * 0.58f, gs, name, IM_COL32(230, 226, 218, 255), true);
+    };
     if (menu) {
         game::main_menu_install(tab_filter);
         game::main_menu_dev_watch_tick();
@@ -878,6 +887,8 @@ void coop_page_draw(float width, float height, const HudData& d, const std::vect
         const bool hover = inside(mouse, tab_x - 20 * sp.s, tab_y - 10 * sp.s, tab_x + tab_w + 20 * sp.s, tab_y + 60 * sp.s);
         if (!g_open.load()) {
             text(dl, tab_x, tab_y, tab_size, tab, hover && input::method() == input::Method::Keyboard ? kGold : kText);
+            // The game's own RB glyph (after Others) is hidden (main_menu.cpp); ours stands after Co-op.
+            if (menu && input::method() != input::Method::Keyboard) glyph(sp.x(912 + game::kMenuRbShift), "RB");
             // On screen (for the mouse hook): the label.
             POINT a{static_cast<LONG>(tab_x - 20 * sp.s), static_cast<LONG>(tab_y - 10 * sp.s)};
             POINT b{static_cast<LONG>(tab_x + tab_w + 20 * sp.s), static_cast<LONG>(sp.y(96))};
@@ -1119,14 +1130,6 @@ void coop_page_draw(float width, float height, const HudData& d, const std::vect
         }
         // The game's two shoulder glyphs, where it draws them (before Map, after Others), on a controller only.
         if (!use_mouse) {
-            auto glyph = [&](float cx, const char* name) {
-                const float gw = 38 * sp.s, gh = 28 * sp.s, cy = sp.y(kTabY + 2), gs = 17 * sp.s;
-                dl->AddRectFilled(ImVec2(cx - gw * 0.5f, cy - gh * 0.5f), ImVec2(cx + gw * 0.5f, cy + gh * 0.5f),
-                                  IM_COL32(20, 18, 16, 235), 6 * sp.s);
-                dl->AddRect(ImVec2(cx - gw * 0.5f, cy - gh * 0.5f), ImVec2(cx + gw * 0.5f, cy + gh * 0.5f),
-                            IM_COL32(214, 210, 202, 235), 6 * sp.s, 1.6f * sp.s);
-                text(dl, cx - text_w(gs, name, true) * 0.5f, cy - gs * 0.58f, gs, name, IM_COL32(230, 226, 218, 255), true);
-            };
             glyph(sp.x(78), "LB");
             glyph(sp.x(912 + game::kMenuRbShift), "RB");
         }

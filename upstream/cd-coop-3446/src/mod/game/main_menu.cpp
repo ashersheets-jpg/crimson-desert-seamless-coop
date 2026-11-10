@@ -7,6 +7,7 @@
 #include <cstring>
 
 #include <safetyhook.hpp>
+#include <thread>
 
 #include "mod/game/offsets.h"
 #include "mod/game/safe_memory.h"
@@ -54,7 +55,6 @@ int page_of(const char* name) {
 // The game's own RB glyph sits right after "Others"; our Co-op tab is drawn after that, so the glyph is moved to
 // the right of it with the game's own style setter (exe+0x712F00: handle, &property, &value, &unit, 0; property
 // 0x4A = TranslateX, unit 1 = scaled pixels). It invalidates the layout itself. UI thread only.
-constexpr uintptr_t kStyleSetLength = 0x712F00;
 constexpr uintptr_t kRoot_RbGlyph = 0x178;
 bool g_rb_test = false;
 void shift_rb(uintptr_t root, bool fresh) {
@@ -67,35 +67,16 @@ void shift_rb(uintptr_t root, bool fresh) {
     uintptr_t h0 = 0, lock = 0, lock8 = 0;
     safe_read(handle, &h0, sizeof h0);
     if (h0 && safe_read(h0 + 0xA0, &lock, sizeof lock) && lock) safe_read(lock + 8, &lock8, sizeof lock8);
-    uint8_t id = 0x4A, unit = 1;
-    float value = kMenuRbShift;
-    const auto set_len = reinterpret_cast<void (*)(uintptr_t, uint8_t*, float*, uint8_t*, uint8_t)>(base + kStyleSetLength);
-    const auto set_byte = reinterpret_cast<void (*)(uintptr_t, uint8_t*, uint8_t*, uint8_t*, uint8_t)>(base + 0x6D9090);
-    if (g_rb_test) {  // [dev] rb_test: another way at each opening of the menu, to see which one the glyph obeys
-        static int opened = -1;
-        if (fresh) ++opened;
-        uint8_t b = 0, f = 0;
-        switch (opened % 6) {
-            case 0: break;                                      // TranslateX, px
-            case 1: id = 0x02; break;                           // Left, px
-            case 2: id = 0x15; break;                           // MarginLeft, px
-            case 3: unit = 2; value = 300.0f; break;            // TranslateX, percent
-            case 4: id = 0x0D; b = 1; set_byte(handle, &id, &b, &f, 0); break;  // Visibility
-            default: id = 0x0C; b = 1; set_byte(handle, &id, &b, &f, 0); break; // Display
-        }
-        if (opened % 6 < 4) set_len(handle, &id, &value, &unit, 0);
-        if (fresh) {
-            log::info("Main menu: [dev] rb_test way {}: property 0x{:X} unit {} value {} (handle 0x{:X}, style lock 0x{:X}/0x{:X})",
-                      opened % 6, id, unit, value, handle, lock, lock8);
-        }
-        return;
-    }
-    set_len(handle, &id, &value, &unit, 0);
+    // tcB288: lengths (TranslateX, Left, MarginLeft) do nothing on this glyph, but Display = 1 through the byte
+    // setter (exe+0x6D9090) hides it; the Co-op tab's code then draws the glyph to the right of "Co-op".
+    if (g_rb_test) return;  // [dev] rb_test: leave the game's glyph alone (to compare)
+    uint8_t id = 0x0C, value = 1, flag = 0;
+    reinterpret_cast<void (*)(uintptr_t, uint8_t*, uint8_t*, uint8_t*, uint8_t)>(base + 0x6D9090)(handle, &id, &value, &flag, 0);
     static bool said = false;
     if (!said) {
         said = true;
-        log::info("Main menu: the RB glyph is moved {} px right (style handle 0x{:X}, style lock 0x{:X}/0x{:X})", kMenuRbShift,
-                  handle, lock, lock8);
+        log::info("Main menu: the game's RB glyph is hidden, ours is drawn past Co-op (style handle 0x{:X}, style lock "
+                  "0x{:X}/0x{:X}, {})", handle, lock, lock8, fresh ? "panel opened" : "tab changed");
     }
 }
 
@@ -140,7 +121,49 @@ void tab_changed(uintptr_t root, uintptr_t list, uint64_t flag) {
     shift_rb(root, false);
 }
 
+// Co-op+ (tcB289): "Leave the session" = the game's own Return to Title. The routine (exe+0x96525F0: game state
+// object, level 2) is the one the pause menu's Return to Title and the console's "logout" end in; the console only
+// calls it while the state byte is 4 (in the world), and so do we. Asked for from any thread, done on the UI thread
+// by the menu root's per-frame update (vftable slot 36, exe+0xF1B8F0) while the menu is open; when that has not run
+// within a second (menu closed), a helper thread does it.
+constexpr uintptr_t kMenuUpdate = 0xF1B8F0;
+constexpr uintptr_t kReturnLevel = 0x96525F0;
+constexpr uintptr_t kStateRootA = 0x71C0158;
+std::atomic<bool> g_title_wanted{false};
+std::atomic<uint32_t> g_update_calls{0};
+SafetyHookMid g_update_hook;
+void do_return_to_title(const char* from) {
+    if (!g_title_wanted.exchange(false)) return;
+    const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    uintptr_t rootp = 0, g = 0, st = 0;
+    uint8_t state = 0, code = 0;
+    if (!safe_read(base + kStateRootA, &rootp, sizeof rootp) || !rootp || !safe_read(rootp + 0x48, &g, sizeof g) || !g ||
+        !safe_read(rootp + 0x98, &st, sizeof st) || !st || !safe_read(st + 0x30, &state, sizeof state) ||
+        !safe_read(base + kReturnLevel, &code, sizeof code)) {
+        log::warn("Main menu: return to title refused, the game's state object cannot be read");
+        return;
+    }
+    if (state != 4) {
+        log::info("Main menu: return to title skipped, the game is not in the world (state {})", state);
+        return;
+    }
+    log::info("Main menu: return to title ({}; the menu's update ran {} times)", from, g_update_calls.load());
+    reinterpret_cast<void (*)(uintptr_t, uint32_t)>(base + kReturnLevel)(g, 2);
+}
+void on_menu_update(SafetyHookContext&) {
+    g_update_calls.fetch_add(1, std::memory_order_relaxed);
+    if (g_title_wanted.load(std::memory_order_relaxed)) do_return_to_title("the menu's update, UI thread");
+}
+
 }  // namespace
+
+void main_menu_return_to_title() {
+    if (g_title_wanted.exchange(true)) return;
+    std::thread([] {
+        Sleep(1000);
+        do_return_to_title("helper thread: the menu's update did not run");
+    }).detach();
+}
 
 void main_menu_rb_test(bool on) { g_rb_test = on; }
 
@@ -170,6 +193,9 @@ bool main_menu_install(MenuTabFilter filter) {
     for (size_t i = 0; i < sizeof head2; ++i) std::snprintf(hex2 + 3 * i, 4, "%02X ", head2[i]);
     g_hook = safetyhook::create_inline(reinterpret_cast<void*>(base + kOpenPanel), reinterpret_cast<void*>(open_panel));
     g_tab_hook = safetyhook::create_inline(reinterpret_cast<void*>(base + kTabChanged), reinterpret_cast<void*>(tab_changed));
+    if (uint8_t op = 0; safe_read(base + kMenuUpdate, &op, sizeof op) && op == 0xE9) {
+        g_update_hook = safetyhook::create_mid(reinterpret_cast<void*>(base + kMenuUpdate), on_menu_update);
+    }
     log::info("Main menu: tab hooks {} / {} (heads {}/ {})", g_hook ? "installed" : "FAILED", g_tab_hook ? "installed" : "FAILED",
               hex, hex2);
     g_state = g_tab_hook ? 1 : -1;

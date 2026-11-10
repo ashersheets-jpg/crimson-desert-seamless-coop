@@ -3976,3 +3976,31 @@ invalidates the layout itself. To try: TranslateX on RB (UI thread), re-applied 
 - "Leave the session" as the HOST only says "you are the host: your friend leaves from their side (Ctrl+F2)":
   names a hotkey and does nothing. And on the shared world the guest's Leave only stops the layer's own link.
   TO FIX: the row must do the game's own Return to Title (research running: the LogoutView handler).
+
+### tcB288: RB glyph can be hidden, FIRST GIVE WORKS, return-to-title research (2026-11-10)
+
+- SAVES OK, user install restored 5/5.
+- **First give between players works.** Guest script `trade3111 0 1 A0100001 1 3235774465 0` (slot 0, x1, to the
+  host's character): host native log "Give: item 1001754 x1 ... stage 5 (5 = given) | discard err 0 add err 0".
+  The script looped, 14 gives in a row, the guest's stack went 33 -> 20, one per give. Route: discard worker
+  exe+0x2E03330 on the giver's holder, then add worker exe+0x2DD8FC0 on the receiver's holder.
+- Second give (slot 3, item 13, idx 0x828, x2) stopped at stage 3: discard err -2082243997 (0x83E37A63). Read from
+  the decomp: when the item's info row (exe+0x3DD8A0(0, idx), global table exe+0x71C1080) has +0x52 != -1 the worker
+  DROPS the item in the world and refuses a zero position (error global exe+0x714B154). Fix written (native,
+  trade_probe.cpp): the row's +0x52 reads -1 for the length of the one discard call, so the worker takes its plain
+  delete; the log now also prints "drop entry". Not built or tested yet (tcB290).
+- RB glyph: the menu opened without "open_panel" being hit with a page name, so rb_test never counted an opening
+  and every call took the Display way (property 0x0C = 1 through the byte setter exe+0x6D9090). Result in all six
+  screenshots: **the game's RB glyph is gone.** So lengths do nothing on it but Display hides it. New code: the
+  layer hides the game's glyph (both hooks) and draws its own after "Co-op" on every page of the menu when a
+  controller is in use (coop_page.cpp; it already did on the Co-op page). [dev] rb_test=1 now means "leave the
+  game's glyph alone". Test: tcB289 screenshot tcB289-menu.
+- Return to Title (subagent's static reading of the decomp, checked against the callers): the routine is
+  exe+0x96525F0(g, level), g = *(*(exe+0x71C0158)+0x48), level 2 = title (callers also use 3 and 4). The console's
+  "logout" (exe+0xF0B530) calls it only when *(u8*)(*(*(exe+0x71C0158)+0x98)+0x30) == 4. The pause menu's own
+  Return to Title (LogoutView, onSelect exe+0xF0A2D0) ends in the same call. Menu root vftable exe+0x5A033D0 slot 36
+  = exe+0xF1B8F0 (a jmp to exe+0xA2A8F80) looks like the per-frame update.
+- "Leave the session" now = the game's Return to Title for host and guest (main_menu.cpp
+  main_menu_return_to_title: asked from any thread, done in a mid hook on exe+0xF1B8F0 when it runs, else by a
+  helper thread after 1 s; the log says which and how often the update ran). The host's hotkey sentence is gone.
+  Test: tcB289.
