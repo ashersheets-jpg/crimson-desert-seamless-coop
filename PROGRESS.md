@@ -3637,3 +3637,10 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   User (23:30): OK to include ByJunter's native base in the playtest build; cannot do a two-PC test (the
   playtesters are the first real one); wants the progress chart updated when the release is ready; asked for
   a post in the Discord general chat on what to test, with a time estimate.
+
+### 2026-11-09: Discord #general post, what to test in the playtest build
+
+- Posted in #general (as the user, at their request, through the app's browser pane): "Co-op+ playtest build: what to test".
+- Promises made there: test build **within the next 1-2 days**; it is **not the full planned update**, only the basic features (shared world, NPCs, merchants, quests, revive, co-op saves); trading, shared stash, minigames, emotes, 3-4 players come later.
+- Testers were asked to play normally and watch: Steam join from the title screen, "Continue Our Co-op Save", NPCs/towns, merchants (also far from host), per-player quests, revive (hold E), disconnects. Logs to send: bin64 `cdmp.log` and `coopplus.log`.
+- Still open: sending the build itself needs the user's OK.
