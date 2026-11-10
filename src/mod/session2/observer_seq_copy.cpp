@@ -808,9 +808,18 @@ void observer_seq_copy_on_out(uint16_t opcode, std::span<const uint8_t> payload,
                 if (!me || osq::le32(payload.data()) != me) return;
                 const uint64_t seq = osq::le64(payload.data() + 4);
                 std::vector<uint32_t> refresh;
+                struct Rebind {
+                    uint32_t key, owner, scene, node;
+                };
+                std::vector<Rebind> rebind;
                 {
                     std::lock_guard lock(g_mu);
                     refresh = g_copier.on_user2_own_deleted_refresh(seq, g_ledger);
+                    for (const uint32_t k : refresh) {
+                        uint64_t hs = 0;
+                        uint32_t ho = 0, hn = 0;
+                        if (g_ledger.host_binding(k, hs, ho, hn)) rebind.push_back({k, ho, static_cast<uint32_t>(hs), hn});
+                    }
                     if (!refresh.empty()) {
                         // Its RemoveActorAck 3067 (u8 4 | u32 0 | u8 0x1E | n x u32 key, the session-7 sample's
                         // layout) right behind the 2292, from this lock (the queue's own lock only).
@@ -836,7 +845,9 @@ void observer_seq_copy_on_out(uint16_t opcode, std::span<const uint8_t> payload,
                     }
                     release_locked();
                 }
-                // Outside this module's lock: the native re-announce (child_hold's own lock and table).
+                // Outside this module's lock: the server's play data rebound to the host's scene, then the native
+                // re-announce (child_hold's own lock and table).
+                for (const Rebind& rb : rebind) child_hold_npc_rebind(rb.key, me, rb.owner, rb.scene, rb.node);
                 for (const uint32_t k : refresh) {
                     const bool q = child_hold_npc_reannounce(k);
                     log::info("ObserverSeqCopy [refresh] user 2's own scene 0x{:X} went: NPC 0x{:08X} bound by it and "

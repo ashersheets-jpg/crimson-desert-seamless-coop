@@ -4786,6 +4786,47 @@ void child_hold_npc_playdata_diag(uint32_t key, const char* tag) noexcept {
     }
 }
 
+// SEH only (no C++ objects): the four u32 writes of child_hold_npc_rebind.
+static bool rebind_write(uintptr_t c, uint32_t owner, uint32_t scene, uint32_t node) noexcept {
+    __try {
+        *reinterpret_cast<volatile uint32_t*>(c + 0x2E0) = scene;
+        *reinterpret_cast<volatile uint32_t*>(c + 0x2F0) = node;
+        *reinterpret_cast<volatile uint32_t*>(c + 0x320) = 0x10001;
+        *reinterpret_cast<volatile uint32_t*>(c + 0x2D8) = owner;
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
+bool child_hold_npc_rebind(uint32_t key, uint32_t stale_owner, uint32_t owner, uint32_t scene,
+                           uint32_t node) noexcept {
+    try {
+        const auto sam = sam_now(true);
+        if (!sam || !owner || !scene || !node) return false;
+        const game::FastReads m;
+        const auto actor = find_actor_with(m, *sam, key);
+        if (!actor || !*actor) return false;
+        const auto comps = m.ptr(*actor + hold::kActorComponents);
+        if (!comps) return false;
+        const uintptr_t base = g_seams ? g_seams->base : g_base;
+        for (uint32_t slot = 0; slot < 0x200; slot += 8) {
+            const auto c = m.rd<uintptr_t>(*comps + slot);
+            if (!c || !*c || *c < 0x10000) continue;
+            const auto vt = m.rd<uintptr_t>(*c);
+            if (!vt || *vt != base + 0x5EF6360) continue;
+            const auto cur = m.rd<uint32_t>(*c + 0x2D8);
+            if (!cur || *cur != stale_owner) return false;  // only what still names user 2's character
+            const bool ok = rebind_write(*c, owner, scene, node);
+            log::info("ChildHold [rebind] NPC 0x{:08X}: server play data 0x{:X} owner 0x{:08X} -> 0x{:08X}, scene 0x{:X}, "
+                      "node 0x{:08X}{}", key, *c, stale_owner, owner, scene, node, ok ? "" : " FAILED (fault)");
+            return ok;
+        }
+    } catch (...) {
+    }
+    return false;
+}
+
 bool child_hold_npc_reannounce(uint32_t key) noexcept {
     try {
         if (!g_observers.load(std::memory_order_relaxed)) return false;

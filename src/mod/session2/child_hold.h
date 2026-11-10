@@ -879,6 +879,10 @@ Reannounce child_settle_reannounce(uint32_t key, uint32_t delay_ms, bool dry_run
 // NotifyAppear([session 2], [key]): a fresh 2005 after the RemoveActorAck the caller sent. Network thread or any
 // thread outside the route's locks (SEH reads, g_mu briefly). True = queued (or already there).
 bool child_hold_npc_reannounce(uint32_t key) noexcept;
+// Far shops (tcB237): rebinds the NPC's server play data (ServerSequencerPlayDataActorComponent, exe+0x5EF6360) to
+// the host's scene (owner = the host's character, scene id, node) when it still names user 2's character `stale`.
+// SEH-guarded writes of four u32s; false = not found / not stale / unwritable.
+bool child_hold_npc_rebind(uint32_t key, uint32_t stale_owner, uint32_t owner, uint32_t scene, uint32_t node) noexcept;
 // Research: logs the server's play data component of an NPC (no lock; SEH reads), tagged.
 void child_hold_npc_playdata_diag(uint32_t key, const char* tag) noexcept;
 

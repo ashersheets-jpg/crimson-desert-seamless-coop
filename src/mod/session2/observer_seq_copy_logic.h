@@ -430,6 +430,20 @@ public:
     }
 
     // Co-op+ NPC refresh: does a live scene of the host require `key`?
+    // The live host scene requiring `key` and its binding node for it (false: none).
+    bool host_binding(uint32_t key, uint64_t& seq, uint32_t& owner, uint32_t& node) const {
+        for (const auto& [s, r] : live_) {
+            for (const Binding& b : r.bindings) {
+                if (b.actor == key && (b.type == 4 || b.type == 5)) {
+                    seq = s;
+                    owner = r.owner;
+                    node = b.node;
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
     bool any_requires(uint32_t key) const {
         for (const auto& [seq, r] : live_) {
             if (std::find(r.required.begin(), r.required.end(), key) != r.required.end()) return true;
