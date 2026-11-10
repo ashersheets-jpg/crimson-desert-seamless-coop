@@ -1,0 +1,13 @@
+**Update: shared world playtest 0.1.0-alpha+22e8f365 (fixes Invite Friends)**
+Please use this build instead of 377f2c97. You and your co-op partner both need it.
+
+Fixed:
+- **Invite Friends** on the title screen's Co-op menu: you could not click a friend in Steam's invite list, and the X did not close it. Both work now.
+- The old in-game invite (View+Y / Ctrl+F1) and its "Seamless Co-op" key banner are removed. Inviting and joining are done from the title screen's Co-op menu only. If you accept an invite while already in a world, go back to the title screen first.
+
+- `CrimsonDesert-SeamlessCoop-0.1.0-alpha+22e8f365-shared-world.zip`: this is the one you want. Run its installer with the game closed (it replaces the older build).
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tested with two copies of the game on one PC. A friend receiving and accepting the invite between two PCs is still untested, so please tell us in #bug-reports how it goes.
+
+GitHub (older builds for now; this build is the two files attached here): https://github.com/ashersheets-jpg/crimson-desert-coop-playtest/releases

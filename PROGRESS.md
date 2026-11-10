@@ -3708,3 +3708,14 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   install restored 5/5. Package 0.1.0-alpha+22e8f365 (dist\...-shared-world.zip 11.9 MB and
   ...-shared-world-mod-manager.zip); tools\test-install-fake.ps1 result on the shared-world zip: see the commit.
   NOT posted to Discord and NOT installed in the user's game folder yet (both need the user's OK).
+- 2026-11-10 (after the user's "Yes, post it"): 0.1.0-alpha+22e8f365 POSTED in Discord #download-here (both zips
+  attached; text in docs/release/shared-world-playtest/download-22e8f365.txt) and a short note in #announcements.
+  On the user's request the #download-here post was edited to add the GitHub link
+  (https://github.com/ashersheets-jpg/crimson-desert-coop-playtest/releases), with the honest note that GitHub
+  only has the older builds: NO GitHub release exists for the shared-world build (never asked/approved; it
+  would put the GPL native source zip on a public repo). Ask before publishing one.
+- 2026-11-10: 22e8f365 INSTALLED in the user's game folder (game closed): coopplus.asi replaced (sha256
+  3b41af6aa97b...), coopplus.ini.new and the CoopPlus-* docs refreshed; cdmp.asi, cdmp.ini, winmm.dll were already
+  identical; the user's coopplus.ini kept. Backup of the 377f2c97 files:
+  build/native/user-install-377f2c97-20261110-011213. NOTE: build/native/user-install-keep still holds the
+  377f2c97 files; run_keep.sh re-snapshots the install at each test start, so the next test restores 22e8f365.
