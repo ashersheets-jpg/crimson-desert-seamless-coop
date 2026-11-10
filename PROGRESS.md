@@ -3835,3 +3835,19 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   button's first-level children, moved nothing on screen (shots g0..g8, g99 identical). Those floats are results, not
   the source. Probe 2 (kgs.py, tcB280): bisection over every float under the RB button, four pointers deep, reading
   the glyph's spot off the screen after each change.
+
+## 2026-11-10 tcB280: first crafted 3111 (trade probe); glyph bisect crashed the host
+
+- Trade probe (native [session2] trade_probe=1, guest sends `trade3111 55F7 1 <receiver> DFE0 <entry>`): the guest's
+  3111 reaches the host's handler and the worker 0x2E0B2B0 with giver 0xA0100066 (the guest's character), item 22007,
+  inventory key 0xDFE0, slot 0xFFFF. All three variants (to self entry 0, to the host 0x90100000 entry 0 / 1) come
+  back with err 0x982103B7 and never reach the move functions. So the request path works for a guest; the worker
+  refuses early. The probe now names which of its own errors it is (bad item / inventory / entry = exe+0x712DFEC,
+  actor missing = exe+0x712E058, else distance or the move). Next run: tcB281.
+- The guest's ItemMove table (dumpitemmove): 21 definitions; def 1 (key 0xDFE0, inventory 1 = the bag) has 18
+  entries: to 8 (kinds 1 / 2), to 5, 9 (with a condition), 0xA, 0x13, 0xC, 0xE, 0xF, 0x11, 0x12, 7, 6. Defs 5 / 6 / 7
+  move back to 1.
+- kgs.py (bisect over the RB glyph's floats) took the host down on its first batch (every float 0.001..5000 changed
+  at once). Made gentler: only pixel-like values (quarter-round, 2..4000), +37, output flushed line by line; and it
+  now runs last in the key list so the rest of a test is not lost. The quick message from the tab is still to be
+  seen (tcB281).
