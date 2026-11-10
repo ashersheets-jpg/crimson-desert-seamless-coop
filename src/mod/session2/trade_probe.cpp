@@ -332,10 +332,18 @@ void give_move(GiveMove& m, uintptr_t self, uint32_t receiver, uint16_t inv_key,
     m.stage = 1;
     __try {
         if (inventory_key_of(base, m.bag) != inv_key || count < 1) return;  // only from the bag
-        const uintptr_t route = move_route(base, wh, m.bag);
+        // A plain "storage -> bag" route of the game (tcB315: the manager's +0xB2 index has none; the search below
+        // finds one), copied with its source set to the bag.
+        uintptr_t route = 0;
+        for (uint16_t i = 0; i < 32 && !route; ++i) {
+            if (i == m.bag) continue;
+            const uintptr_t r = move_route(base, i, m.bag);
+            if (r && *reinterpret_cast<uintptr_t*>(r + 0x78) == 0) route = r;
+        }
         if (!route) return;
         std::memcpy(g_give_route, reinterpret_cast<void*>(route), sizeof g_give_route);
         *reinterpret_cast<uint16_t*>(g_give_route + 2) = m.bag;
+        *reinterpret_cast<uint16_t*>(g_give_route + 4) = m.bag;
         m.stage = 2;
         const uintptr_t giver_actor = *reinterpret_cast<uintptr_t*>(self + 8);
         const uintptr_t mgr = *reinterpret_cast<uintptr_t*>(*reinterpret_cast<uintptr_t*>(base + 0x71C0610) + 0x50);
