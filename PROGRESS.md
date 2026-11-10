@@ -4064,3 +4064,21 @@ invalidates the layout itself. To try: TranslateX on RB (UI thread), re-applied 
   - Both returns ran through the helper thread (the menu's update no longer runs once the row closes the menu).
     It worked; left as is.
   - Not checked yet: the guest's screen after leaving, the guest's own Leave (tcB293 does both).
+
+### tcB293: the give of a droppable item works; the title note after a Leave is right (2026-11-10)
+
+- SAVES OK, user install restored 5/5.
+- Give of a DROPPABLE item (item 13, drop entry 8908, guest's slot 3, x2 each time): stage 5 (given), discard err 0,
+  add err 0, five times in a row; the guest's stack went 1010 -> 1008 -> 1006 -> 1004. The native's mask of row+0x52
+  around the discard (fe81a15) works: nothing was dropped on the ground. The non-droppable item (1001754) still
+  gives too. So the give route now works for both kinds of item.
+- The first two gives logged "distance err 1042994028" and still went through: the distance check only reports.
+  To decide with the give UI: enforce a range or not.
+- The host's title after the Leave shows "The co-op session has ended. Restart the game to play again." (shot
+  tcB293-after30). The host returned to the title with the guest's goodbye first, no crash (second run of that path).
+- The guest's own Leave was NOT tested: the co-op hotkeys are unbound by design, so Ctrl+F2 did nothing. The guest
+  must use its Co-op tab, which needs a simulated pad on the guest.
+- Harness: the dev-script hotkey (Ctrl+Shift+F6) was read by BOTH games whatever the focus, so every pad step on
+  the host re-ran the guest's script (the gives ran many times: harmless here). Fixed: the layer's script hotkey now
+  needs the game's focus. twocopy.ps1 has -GuestDev (k=v for the guest layer's [dev], e.g. pad_sim=1). tcB294 uses
+  both for the guest's Leave from its Co-op tab.

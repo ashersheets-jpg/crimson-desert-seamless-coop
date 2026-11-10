@@ -1033,7 +1033,7 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
                 tp_was_down = tp_down;
                 // [dev] script: Ctrl+Shift+F6 sends the packets written in that file (net/dev_script.h).
                 static bool script_was_down = false;
-                const bool script_down = !cfg.dev_script.empty() && (GetAsyncKeyState(VK_CONTROL) & 0x8000) &&
+                const bool script_down = !cfg.dev_script.empty() && game_has_focus() && (GetAsyncKeyState(VK_CONTROL) & 0x8000) &&
                                          (GetAsyncKeyState(VK_SHIFT) & 0x8000) && (GetAsyncKeyState(VK_F6) & 0x8000);
                 if (script_down && !script_was_down) {
                     net::dev_script_run(cfg.dev_script, net::capture_own_player_key(), s.position.x, s.position.y,
