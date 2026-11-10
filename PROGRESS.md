@@ -3567,3 +3567,13 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   No 0x15DBC102 in either log, 24 [kept], both alive, SAVES OK. This is the order that broke in tcB224-229.
   Harness notes: dev_script waits cap at 10 s each; the shop prompt needs R held (~1.8 s), a tap does nothing.
   Next: a soak run (lobby flow, walks, ping / chat / challenge, then 15 minutes idle in town).
+
+### 2026-11-09 22:50 - tcB252 soak on release defaults: PASS
+  Lobby flow (host creates, guest joins from the title screen), walks, ping / chat / challenge (guest sees
+  "Challenge accepted", "Duel vs Host: round 1", "Fight!"), host ESC menu, then about 15 minutes idle in Hernand.
+  Both alive at the end, SAVES OK, no 0x15DBC102. Host 5 ERR / guest 3 ERR = the same startup lines as the
+  baseline runs (tcB245, tcB251), nothing new.
+  Net loop stalls (> 250 ms): 89, of which 85 fall in 22:00-22:02 = the guest's join and world load (two
+  copies of the game on one PC); only 4 in the 15 idle minutes (worst 1.24 s). Not a soak problem; watch it
+  on the two-PC test.
+  Next: leave / rejoin and co-op save continuity, then revive, on release defaults.
