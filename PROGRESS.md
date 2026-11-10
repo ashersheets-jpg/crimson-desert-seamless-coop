@@ -4368,3 +4368,16 @@ arriving at Hernand.
 - The host's whole-record give stopped at stage 1: it looked for the WareHouse -> bag route under the manager's +0xB2
   index (8: no such route). Now any plain storage -> bag route of the game is copied (source and target = the bag).
   tcB316.
+
+### tcB316-tcB317 (2026-11-10 17:30-17:45): why the host -> guest give fails; item sharing switched off for playtests
+
+- Whole-record move (0x2DF04A0, a bag -> bag copy of a game route): "아이템 교환 대상이 비정상입니다" (the exchange
+  target is abnormal) -- the game refuses that move between two players' characters.
+- Discard + add path: the discard worker refuses with "스폰 위치가 비정상적입니다" (spawn position abnormal): for the
+  host's item it takes the drop branch (row +0x52 still set where it reads it) and a zero position is refused.
+  tcB293's working gives were guest -> host. Research running (build/decomp/notes_give_paths.md).
+- The guest's load stalled again in both runs (memory pressure, see tcB315).
+- Until give and stash work end to end, they are behind [coop] item_sharing (default 0; [dev] item_sharing=1 in
+  tests): the game's Discard stays untouched and the Co-op tab's Shared stash section says "coming in a later build".
+  This keeps them out of the next playtest build, which carries Borque's fixes (tunnel compression, the congestion
+  valve, AntiGrief freeing NPCs the host fights).

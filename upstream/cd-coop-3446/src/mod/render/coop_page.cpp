@@ -282,7 +282,10 @@ std::vector<Row> rows_for(int section, const HudData& d, const std::vector<std::
         rows.push_back(button("Show the controls card", input::Action::Help, "Shows the short co-op guide in the world."));
     } else if (name == "Shared stash") {
         // B12 (net/coop_stash): the host character's warehouse, shared.
-        if (!d.connected) {
+        if (!net::give_enabled()) {
+            rows.push_back({Row::Info, "Shared stash", "coming in a later build",
+                            "Giving items and a shared stash are being finished.", true, nullptr});
+        } else if (!d.connected) {
             rows.push_back({Row::Info, "Shared stash", "with a friend", "The host's warehouse becomes a stash you share.",
                             true, nullptr});
         } else {

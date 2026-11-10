@@ -249,6 +249,7 @@ Config load_config(const std::wstring& ini_path) {
     c.coop_teammate_revive = read_uint(ini_path, L"coop", L"teammate_revive", 1) != 0;
     c.coop_shared_quest_credit = read_uint(ini_path, L"coop", L"shared_quest_credit", 0) != 0;
     c.coop_guest_finishes = read_uint(ini_path, L"coop", L"guest_finishes", 1) != 0;
+    c.coop_item_sharing = read_uint(ini_path, L"coop", L"item_sharing", read_uint(ini_path, L"dev", L"item_sharing", 0)) != 0;
     c.coop_respawn_at_partner = read_string(ini_path, L"coop", L"respawn_at", "checkpoint") == L"partner";
     c.dev_revive_test = read_uint(ini_path, L"dev", L"revive_test", 0) != 0;
     c.dev_copy_untargetable = read_uint(ini_path, L"dev", L"copy_untargetable", 0) != 0;

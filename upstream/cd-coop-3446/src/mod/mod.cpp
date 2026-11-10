@@ -61,6 +61,7 @@
 #include "mod/net/coop_fishing.h"
 #include "mod/net/fast_lane.h"
 #include "mod/net/coop_lobby.h"
+#include "mod/net/coop_give.h"
 #include "mod/net/native_mode.h"
 #include "mod/net/lag_probe.h"
 #include "mod/two_copy.h"
@@ -2285,6 +2286,7 @@ DWORD WINAPI worker(LPVOID) {
         net::sync_set_test(cfg.dev_desync_test);
         net::revive_partner_set(cfg.coop_teammate_revive, cfg.dev_revive_test);
         net::lobby_set_shared_quest_credit(cfg.coop_shared_quest_credit);
+        net::give_set_enabled(cfg.coop_item_sharing);
         net::lobby_set_native_extra(cfg.dev_native_extra);
         net::guest_hits_set_finishes(cfg.coop_guest_finishes);
         net::aggro_set_copy_never_target(cfg.dev_copy_untargetable);

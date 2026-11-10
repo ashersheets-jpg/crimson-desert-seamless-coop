@@ -16,6 +16,9 @@ namespace cdmp::net {
 
 // Hooks the three functions once (refused when their first bytes are not this build's). True when hooked.
 bool give_install();
+// [coop] item_sharing: the give / stash card and the stash page only when on (set at start-up).
+void give_set_enabled(bool on);
+bool give_enabled();
 
 // Network loop: are we linked, are we the host, is the friend within reach.
 void give_set_state(bool linked, bool host, bool friend_near);

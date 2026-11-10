@@ -141,7 +141,12 @@ bool clear_wait(int64_t* root, uintptr_t base) noexcept {
 
 }  // namespace
 
+std::atomic<bool> g_enabled{false};
+void give_set_enabled(bool on) { g_enabled = on; }
+bool give_enabled() { return g_enabled.load(); }
+
 bool give_install() {
+    if (!g_enabled.load()) return false;
     if (g_state) return g_state > 0;
     const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     static const uint8_t kHandlerHead[16] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x6C,
