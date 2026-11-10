@@ -3948,3 +3948,13 @@ float* value, u8* unit, 0)` with `styleHandle = *(*(*(root+0x178)+8)+0x20)`; pro
 0x4A TranslateX, 0xC Display, 0xD Visibility (byte setter exe+0x6D9090); unit 1 = scaled pixels, 2 = percent. It
 invalidates the layout itself. To try: TranslateX on RB (UI thread), re-applied if the key guide refresh
 (exe+0xE446C0) resets it. Root +0x1A8 = the tab controller (exe+0xF1CB50: LB -> previous, RB -> next).
+
+### tcB286: Bring my friend from the Co-op tab (2026-11-10)
+
+- Host: Start, RB x4, A, Down, A on "Bring my friend to me": log "Co-op page: Bring my friend to me" then
+  "Travel: we summon Guest"; the menu closes by itself. Works.
+- The summon is a request (the guest answers by holding interact), so the guest stayed 307 m away: by design.
+  The guest logged nothing on receipt: added "Travel: the friend asks us to come to them" (coop_travel.cpp).
+- "Leave the session" was NOT tested: the menu reopens on the tab it was closed on (Co-op), so the test's
+  second RB x4 walked off to Journal. Test keys fixed in tcB287 (no RB on a second open).
+- SAVES OK, user install restored 5/5.

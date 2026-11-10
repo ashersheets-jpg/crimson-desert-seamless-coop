@@ -47,6 +47,7 @@ void travel_on_event(const uint8_t* d, size_t n) {
     std::lock_guard lock(g_mutex);
     g_pending = d[0];
     g_pending_at = GetTickCount();
+    log::info("Travel: the friend {}", d[0] == kSummon ? "asks us to come to them" : "travelled far away");
 }
 
 TravelTick travel_tick(bool connected, const std::optional<proto::Vec3>& me, const std::optional<proto::Vec3>& partner,
