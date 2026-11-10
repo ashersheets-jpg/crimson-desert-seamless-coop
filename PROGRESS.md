@@ -4355,3 +4355,16 @@ arriving at Hernand.
   cdmp_stash_slots; 0 = locked). The page says "The stash opens once <host> has a warehouse" while it is locked; the
   card offers "Put in the shared stash" only when it is not known to be locked; both sides ask early (every 10 s until
   known). Test tcB315 (this save: locked).
+
+### tcB315 (2026-11-10 17:15): stash state right; the guest load stalls; give route fix
+
+- "Stash: the host's warehouse (index 9, 0 slots)": the personal WareHouse is found by its routes and is locked on
+  this save, as expected.
+- The guest stayed in the loading space (the Abyss-like void): the host's move phase WINDOW_B (2167 / 2190 seen once
+  instead of twice): the guest's second load (into the host's field) never completed. Tally: tcB270-tcB298 0 stalls,
+  tcB299 1; since tcB307: 307, 308, 312, 314, 315 stalled, 309-311 and 313 did not. The PC has 31 GB; Discord now
+  holds 3.1 GB and each game copy 7-9 GB: memory pressure on the one-PC two-copy test is the likely cause (stalls
+  began about when Discord came up); not seen in the playtest report. Watch it.
+- The host's whole-record give stopped at stage 1: it looked for the WareHouse -> bag route under the manager's +0xB2
+  index (8: no such route). Now any plain storage -> bag route of the game is copied (source and target = the bag).
+  tcB316.
