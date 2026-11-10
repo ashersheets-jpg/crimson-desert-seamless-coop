@@ -3449,3 +3449,17 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   child_hold_npc_rebind -- at the refresh, for an NPC still owned by user 2's character, its play data is rewritten
   to the live host scene requiring it (owner, scene, node from ObserverSeqCopy's ledger; +0x320 = 0x10001; SEH
   writes), then the RemoveActorAck + native re-announce. tcB238 (lobby, far keys via native_extra) tests it.
+- 2026-11-09 19:58 tcB238 (lobby, far keys via native_extra, the server rebind): both alive, SAVES OK. The rebind
+  ran for the 6 shopkeepers (0xB01003C4..C9: owner 0xA0100066 -> 0xA0100001, scenes 0x235/0x24C/0x236/0x21C/0x237/
+  0x238) and the guest now SEES "R Shop" on Renee (new). But each R (3008, interaction 0x000F4321) is answered 3100
+  InteractionPreemptionStepFailAck 0x15DBC102 = eErrNoInvalidInteractionInfo; no menu. Decomp: 3008 -> 0x2DD0DC0 ->
+  0x1940AD0(target actor, requester vfunc +0x178, &key, out) lists the target's interactions with 0x22EAE00 from
+  the interaction component IC = [[actor+0x68]+0x98]: its DYNAMIC list (IC+0x90, count +0x98, 0x38 per entry: u16
+  interaction index +0x10, i64 +0x20, u32 +0x28, bytes +0x2C/+0x30, u16 +0x2E) when non-empty, else the static one
+  of the character info; no entry with the key = that error. The dynamic entries have ONE writer: 0x22EBB40, called
+  only by 0x255E100(node, scene ctx, bool add) = a StageChart function node (unnamed vtable ~exe+0x5D45CE8, slot 8
+  0x2552010 = add, slot 9 0x2552020 = remove): at a scene's begin it adds the interaction (node +0x38 = index) to
+  the scene's bound actors, at its end it removes it BY KEY (thunk 0x22EBF00(IC, key)). So user 2's closing scene
+  takes "Shop" off the shopkeeper on the server, whatever the host's scene did; the play-data rewrite cannot bring
+  it back. Next: a probe on 0x255E100 (add/remove, node, scene) and on 0x1940AD0 (the target's dynamic list) to see
+  the order, then either keep user 2's remove from running while a host scene requires the NPC, or re-add the entry.
