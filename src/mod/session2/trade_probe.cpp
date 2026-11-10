@@ -202,6 +202,37 @@ void give_raw(Give& g, uintptr_t self, uint32_t item, uint64_t count, uint32_t r
 // keeps its whole record (enchant, durability, dye) and both clients are told by the game. The distance check and
 // the route's condition are skipped (the stash works anywhere); the mod checks who moves what.
 constexpr uint32_t kStashDeposit = 0xC0DE0002, kStashWithdraw = 0xC0DE0003;
+// 0xC0DE0004: the host's own Co-op+ layer asks its server for the host character's WareHouse (read here on the
+// server thread, from the server's holder: the host's client only has it after a visit to a storage keeper). The
+// layer reads the result through the export cdmp_stash_list.
+constexpr uint32_t kStashList = 0xC0DE0004;
+struct StashEntry {
+    uint16_t slot, idx;
+    uint32_t count;
+};
+SRWLOCK g_stash_lock = SRWLOCK_INIT;
+StashEntry g_stash[512];
+int g_stash_n = 0;
+std::atomic<uint32_t> g_stash_gen{0};
+
+// The game's name of an error code ("eErrNo..."), as the inventory's own error path gets it (exe+0xEF6560:
+// exe+0x160B6A0 the table, exe+0x160BBF0 the lookup).
+const char* err_name(int code) noexcept {
+    if (code == 0) return "none";
+    if (code == -1) return "-";
+    const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    __try {
+        const uintptr_t table = reinterpret_cast<uintptr_t (__fastcall*)()>(base + 0x160B6A0)();
+        if (!table) return "?";
+        uint32_t c = static_cast<uint32_t>(code);
+        const auto e = reinterpret_cast<uintptr_t* (__fastcall*)(uintptr_t, uint32_t*)>(base + 0x160BBF0)(table, &c);
+        if (!e || !*e) return "?";
+        const char* s = *reinterpret_cast<const char**>(*e);
+        return s ? s : "?";
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return "?";
+    }
+}
 constexpr uint32_t kHostCharacter = 0xA0100001;
 struct Stash {
     int stage = 0;  // 1 inventories known, 2 route, 3 actors, 4 slot checked, 5 moved; negative = refused (see why)
@@ -295,9 +326,7 @@ void give_move(GiveMove& m, uintptr_t self, uint32_t receiver, uint16_t inv_key,
     if (!inventory_indices(base, m.bag, wh)) return;
     m.stage = 1;
     __try {
-        uint64_t out = 0xFFFF;
-        reinterpret_cast<void* (__fastcall*)(uint64_t*, uint16_t)>(base + 0x3D5930)(&out, inv_key);
-        if (static_cast<uint16_t>(out) != m.bag || count < 1) return;  // only from the bag
+        if (inventory_key_of(base, m.bag) != inv_key || count < 1) return;  // only from the bag
         const uintptr_t route = move_route(base, wh, m.bag);
         if (!route) return;
         std::memcpy(g_give_route, reinterpret_cast<void*>(route), sizeof g_give_route);
@@ -433,14 +462,40 @@ int* __fastcall worker_detour(uintptr_t self, int* err, uint32_t item, uint16_t 
     uint32_t g = 0, r = 0;
     game::fast_read(reinterpret_cast<uintptr_t>(giver), &g, sizeof g);
     game::fast_read(reinterpret_cast<uintptr_t>(receiver), &r, sizeof r);
+    if (entry == kStashList) {
+        const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+        uint16_t bag = 0xFFFF, wh = 0xFFFF;
+        uint32_t me = 0;
+        uintptr_t actor = 0;
+        int n = -1;
+        if (g == kHostCharacter && inventory_indices(base, bag, wh) && game::fast_read(self + 8, &actor, 8) && actor &&
+            game::fast_read(actor + 0x60, &me, 4) && me == kHostCharacter) {
+            StashEntry tmp[512];
+            n = 0;
+            for (uint16_t i = 0; i < 512 && n < 512; ++i) {
+                const StashSlot x = stash_slot(base, self, wh, i);
+                if (x.idx == 0xFFFF || x.n < 1) continue;
+                tmp[n++] = {i, x.idx, static_cast<uint32_t>(x.n > 0xFFFFFFFF ? 0xFFFFFFFF : x.n)};
+            }
+            AcquireSRWLockExclusive(&g_stash_lock);
+            std::memcpy(g_stash, tmp, sizeof(StashEntry) * n);
+            g_stash_n = n;
+            ReleaseSRWLockExclusive(&g_stash_lock);
+            g_stash_gen.fetch_add(1);
+        }
+        static int logged = 0;
+        if (logged++ < 6) log::info("Stash: the host's warehouse (index {}) read for its layer: {} stack(s)", wh, n);
+        *err = 0;
+        return err;
+    }
     if (entry == kStashDeposit || entry == kStashWithdraw) {
         Stash st;
         const bool deposit = entry == kStashDeposit;
         stash_move(st, self, deposit, g, r, slot, b, count);
-        log::info("Stash: {} x{} slot {} (item index 0x{:X}) {} 0x{:08X} -> 0x{:08X}: stage {} (5 = moved) err {} | bag {} "
+        log::info("Stash: {} x{} slot {} (item index 0x{:X}) {} 0x{:08X} -> 0x{:08X}: stage {} (5 = moved) err {} ({}) | bag {} "
                   "warehouse {} (key {}) route {} -> {} | slot used {} holds idx 0x{:X} x{} sub {}{}{}",
                   deposit ? "deposit" : "withdraw", count, slot, b, deposit ? "bag -> warehouse" : "warehouse -> bag",
-                  g, r, st.stage, st.err, st.bag, st.wh, st.wh_key, st.from, st.to, st.slot, st.have_idx, st.have,
+                  g, r, st.stage, st.err, err_name(st.err), st.bag, st.wh, st.wh_key, st.from, st.to, st.slot, st.have_idx, st.have,
                   st.sub, *st.why ? " | " : "", st.why);
         const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
         int bad = 0;
@@ -452,8 +507,8 @@ int* __fastcall worker_detour(uintptr_t self, int* err, uint32_t item, uint16_t 
         if ((r & 0xF0000000) == 0xA0000000 && r != g) {
             GiveMove m;
             give_move(m, self, r, inv, slot, b, count);
-            log::info("Give (whole record): x{} from 0x{:08X} to 0x{:08X}: stage {} (5 = moved) err {} | bag {} slot {} "
-                      "idx 0x{:X} x{} sub {}{}", count, g, r, m.stage, m.err, m.bag, m.slot, m.idx, m.have, m.sub,
+            log::info("Give (whole record): x{} from 0x{:08X} to 0x{:08X}: stage {} (5 = moved) err {} ({}) | bag {} slot {} "
+                      "idx 0x{:X} x{} sub {}{}", count, g, r, m.stage, m.err, err_name(m.err), m.bag, m.slot, m.idx, m.have, m.sub,
                       m.stage == 5 ? "" : " -> the discard + add path");
             if (m.stage == 5) {
                 *err = 0;
@@ -602,6 +657,28 @@ void inter_probe_start() {
     }
     log::info("InterProbe: node {} lookup {} (read only)", static_cast<bool>(g_node), static_cast<bool>(g_lookup));
 }
+
+}  // namespace cdmp::session2
+
+// Co-op+ B12: the host character's WareHouse as last read on the server thread (entry 0xC0DE0004). Returns the number
+// of stacks copied (at most max), -1 before any read; *gen counts the reads.
+extern "C" __declspec(dllexport) int cdmp_stash_list(uint32_t* gen, uint16_t* slots, uint16_t* idxs, uint32_t* counts,
+                                                     int max) {
+    using namespace cdmp::session2;
+    if (gen) *gen = g_stash_gen.load();
+    if (g_stash_gen.load() == 0) return -1;
+    AcquireSRWLockShared(&g_stash_lock);
+    const int n = g_stash_n < max ? g_stash_n : max;
+    for (int i = 0; i < n; ++i) {
+        if (slots) slots[i] = g_stash[i].slot;
+        if (idxs) idxs[i] = g_stash[i].idx;
+        if (counts) counts[i] = g_stash[i].count;
+    }
+    ReleaseSRWLockShared(&g_stash_lock);
+    return n;
+}
+
+namespace cdmp::session2 {
 
 void trade_probe_start() {
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
