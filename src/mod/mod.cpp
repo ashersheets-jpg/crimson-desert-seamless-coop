@@ -1005,8 +1005,9 @@ DWORD WINAPI worker(LPVOID) {
                 const std::wstring seeded =
                     std::format(L"Local\\cdmp_coop_seeded_{:016X}", std::hash<std::wstring>{}(saveguard::normalize(coop_dir)));
                 CreateMutexW(nullptr, FALSE, seeded.c_str());  // kept for the life of the process
-                if (GetLastError() == ERROR_ALREADY_EXISTS) wcscpy_s(buf, L"keep");
-                session2::save_hooks_set_coop_folder(coop_dir, narrow(std::wstring(buf)));
+                const bool first_process = GetLastError() != ERROR_ALREADY_EXISTS;
+                if (!first_process) wcscpy_s(buf, L"keep");
+                session2::save_hooks_set_coop_folder(coop_dir, narrow(std::wstring(buf)), first_process);
                 const bool s2_on = GetPrivateProfileIntW(L"session2", L"enabled", 0, ip.c_str()) != 0;
                 const bool s2_guest = GetPrivateProfileIntW(L"session2", L"guest", 0, ip.c_str()) != 0;
                 log::info("Co-op save: folder '{}' (seed {}){}", narrow(coop_dir), narrow(std::wstring(buf)),

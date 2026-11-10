@@ -18,6 +18,7 @@
 #include "common/save_guard.h"
 #include "mod/log.h"
 #include "mod/role_logic.h"
+#include "mod/session2/guest_save_logic.h"
 #include "mod/session2/host_save_export.h"
 
 namespace cdmp::session2 {
@@ -574,6 +575,7 @@ bool copy_tree(const std::wstring& from, const std::wstring& to, CopyStats& st) 
 // Co-op+ (config.h s2_coop_save_dir): the co-op save folder of this run, set before either install.
 std::wstring g_coop_dir;
 std::string g_coop_seed = "keep";
+bool g_coop_first = true;
 
 bool is_slot_dir(const wchar_t* name) { return _wcsnicmp(name, L"slot", 4) == 0; }
 
@@ -601,6 +603,40 @@ bool remove_slot_dirs(const std::wstring& root, const std::wstring& save_dir, ui
     }
     for (const auto& d : dirs) ok = remove_slot_dirs(d, save_dir, removed) && ok;
     return ok;
+}
+
+// HOST, a kept co-op folder (tcB254): last session's guest slot (<account>\slot204, user 2's own save) is still
+// there. The game would build it into its store at start-up and guest_own_save would be forced off ("already
+// exists in the sandbox"): from the second session on the guest played a clone. It is moved to
+// <folder>_guest_prev\<account>\slot204 (one earlier copy replaced; the guest's exported generations are in its
+// mailbox, this copy is only a spare). Before any hook exists, by the first process of the run only.
+void set_guest_slot_aside(const std::wstring& coop, const std::wstring& save_dir) {
+    const std::wstring slot = widen(gsv::slot_name(gsv::kGuestSlot).c_str());
+    const std::wstring prev = coop + L"_guest_prev";
+    if (saveguard::is_under(prev, save_dir) || saveguard::is_under(save_dir, prev)) return;
+    WIN32_FIND_DATAW fd;
+    HANDLE f = FindFirstFileExW((coop + L"\\*").c_str(), FindExInfoBasic, &fd, FindExSearchNameMatch, nullptr, 0);
+    if (f == INVALID_HANDLE_VALUE) return;
+    do {
+        if (is_dots(fd.cFileName) || !(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ||
+            (fd.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)) {
+            continue;
+        }
+        const std::wstring from = coop + L"\\" + fd.cFileName + L"\\" + slot;
+        const DWORD a = GetFileAttributesW(from.c_str());
+        if (a == INVALID_FILE_ATTRIBUTES || !(a & FILE_ATTRIBUTE_DIRECTORY) || (a & FILE_ATTRIBUTE_REPARSE_POINT)) continue;
+        const std::wstring to_dir = prev + L"\\" + fd.cFileName, to = to_dir + L"\\" + slot;
+        CreateDirectoryW(prev.c_str(), nullptr);
+        CreateDirectoryW(to_dir.c_str(), nullptr);
+        if (!delete_tree(to, save_dir) || !MoveFileExW(from.c_str(), to.c_str(), 0)) {
+            log::error("Co-op save: last session's guest slot '{}' could not be set aside as '{}' (error {}); the "
+                       "guest's own save will be refused this session", narrow(from), narrow(to), GetLastError());
+            continue;
+        }
+        log::info("Co-op save: last session's guest slot '{}' set aside as '{}' (the guest uploads its own again)",
+                  narrow(from), narrow(to));
+    } while (FindNextFileW(f, &fd));
+    FindClose(f);
 }
 
 // The co-op save folder (Co-op+ docs/design/native-join-and-saves.md): keep = as it was left (a missing one is made
@@ -1208,8 +1244,9 @@ bool save_hooks_install_guest_role() {
 
 bool save_hooks_guest_role() { return g_guest_role.load(); }
 
-void save_hooks_set_coop_folder(const std::wstring& dir, const std::string& seed) {
+void save_hooks_set_coop_folder(const std::wstring& dir, const std::string& seed, bool first_process) {
     if (g_guard) return;  // only before either install
+    g_coop_first = first_process;
     g_coop_dir = dir;
     g_coop_seed = seed == "copy" || seed == "new" ? seed : "keep";
 }
@@ -1257,6 +1294,7 @@ bool save_hooks_install(saveguard::Mode mode) {
                        "(writes refused, 'Failed to save data' will come back)", narrow(sandbox));
             mode = saveguard::Mode::Block;
         } else {
+            if (coop && coop_kept && g_coop_first) set_guest_slot_aside(sandbox, dir);
             // Co-op+ port (tests): CDMP_SANDBOX_ADD="<source>|<path under the save folder>[;...]" copies a test slot
             // folder (e.g. slot103, its files dated now so that the title's Continue picks it) or a single file (e.g.
             // a windowed user_engine_option_save.xml) into the sandbox only: a test never adds anything to the real
