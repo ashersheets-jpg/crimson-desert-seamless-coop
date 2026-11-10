@@ -195,11 +195,188 @@ void give_raw(Give& g, uintptr_t self, uint32_t item, uint64_t count, uint32_t r
     }
 }
 
+// ---- Shared stash (Co-op+ B12, 3576; build/decomp/notes_shared_stash.md, local): the HOST character's own WareHouse
+// is the stash. The host uses the game's warehouse screen as always; the guest's Co-op+ list sends a 3111 with entry
+// 0xC0DE0002 (deposit: guest bag -> host WareHouse) or 0xC0DE0003 (withdraw: host WareHouse -> guest bag). Both run
+// the game's own cross-actor move exe+0x2DF04A0 with the game's own move-table route (WareHouse <-> bag), so the item
+// keeps its whole record (enchant, durability, dye) and both clients are told by the game. The distance check and
+// the route's condition are skipped (the stash works anywhere); the mod checks who moves what.
+constexpr uint32_t kStashDeposit = 0xC0DE0002, kStashWithdraw = 0xC0DE0003;
+constexpr uint32_t kHostCharacter = 0xA0100001;
+struct Stash {
+    int stage = 0;  // 1 inventories known, 2 route, 3 actors, 4 slot checked, 5 moved; negative = refused (see why)
+    const char* why = "";
+    int err = -1;
+    uint16_t bag = 0xFFFF, wh = 0xFFFF, wh_key = 0xFFFF, from = 0xFFFF, to = 0xFFFF, slot = 0xFFFF;
+    uint16_t have_idx = 0xFFFF, sub = 0;
+    int64_t have = 0;
+    uint32_t requester = 0;
+};
+
+bool inventory_indices(uintptr_t base, uint16_t& bag, uint16_t& wh) noexcept {
+    __try {
+        const uintptr_t root = *reinterpret_cast<uintptr_t*>(base + 0x71C0498);
+        if (!root) return false;
+        const uintptr_t info = *reinterpret_cast<uintptr_t*>(root + 8);
+        if (!info) return false;
+        bag = *reinterpret_cast<uint16_t*>(info + 0x240 + 0xA2);  // "Character", the main bag
+        wh = *reinterpret_cast<uint16_t*>(info + 0x240 + 0xB2);   // "WareHouse"
+        return bag != 0xFFFF && wh != 0xFFFF && bag != wh;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
+// The game's move-table entry of inventory `from` that goes to `to` (row+0x38: 0xA0-byte entries, count at +0x40).
+uintptr_t move_route(uintptr_t base, uint16_t from, uint16_t to) noexcept {
+    __try {
+        const uintptr_t row = reinterpret_cast<uintptr_t (__fastcall*)(uint64_t, uint32_t)>(base + 0x5560E0)(0, from);
+        if (!row) return 0;
+        const uintptr_t list = *reinterpret_cast<uintptr_t*>(row + 0x38);
+        const uint32_t n = *reinterpret_cast<uint32_t*>(row + 0x40);
+        if (!list) return 0;
+        for (uint32_t i = 0; i < n && i < 64; ++i) {
+            const uintptr_t e = list + static_cast<uintptr_t>(i) * 0xA0;
+            if (*reinterpret_cast<uint16_t*>(e + 2) == from && *reinterpret_cast<uint16_t*>(e + 4) == to) return e;
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    }
+    return 0;
+}
+
+uint16_t inventory_key_of(uintptr_t base, uint16_t index) noexcept {
+    __try {
+        const uintptr_t row = reinterpret_cast<uintptr_t (__fastcall*)(uint64_t, uint32_t)>(base + 0x5560E0)(0, index);
+        return row ? *reinterpret_cast<uint16_t*>(row + 8) : 0xFFFF;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return 0xFFFF;
+    }
+}
+
+struct StashSlot {
+    uint16_t idx = 0xFFFF, sub = 0;
+    int64_t n = 0;
+};
+StashSlot stash_slot(uintptr_t base, uintptr_t holder, uint16_t inv, uint16_t slot) noexcept {
+    StashSlot out;
+    __try {
+        const uintptr_t e = reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t, int16_t, int16_t)>(base + 0x22F7FE0)(
+            holder, static_cast<int16_t>(inv), static_cast<int16_t>(slot));
+        if (!e) return out;
+        out.idx = *reinterpret_cast<uint16_t*>(e + 8);
+        out.n = *reinterpret_cast<int64_t*>(e + 0x10);
+        out.sub = *reinterpret_cast<uint16_t*>(e + 0xA);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        out = {};
+    }
+    return out;
+}
+
+// self = the requester's holder (the worker's own first argument), g / r = the packet's giver / receiver keys,
+// hint = the item index the requester's list showed (0xFFFF = whatever the slot holds).
+void stash_move(Stash& s, uintptr_t self, bool deposit, uint32_t g, uint32_t r, uint16_t slot, uint16_t hint,
+                uint64_t count) noexcept {
+    const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    if (!inventory_indices(base, s.bag, s.wh)) {
+        s.stage = -1;
+        s.why = "the bag / warehouse indices are unknown";
+        return;
+    }
+    s.stage = 1;
+    s.wh_key = inventory_key_of(base, s.wh);
+    uintptr_t me = 0;
+    if (!game::fast_read(self + 8, &me, sizeof me) || !me || !game::fast_read(me + 0x60, &s.requester, 4)) {
+        s.stage = -1;
+        s.why = "no requester actor";
+        return;
+    }
+    // Only the guest moves through here, and only between its own character and the host's.
+    const uint32_t guest = deposit ? g : r, host = deposit ? r : g;
+    if (s.requester == kHostCharacter || guest != s.requester || host != kHostCharacter || (guest >> 28) != 0xA) {
+        s.stage = -1;
+        s.why = "not the guest moving between its character and the host's";
+        return;
+    }
+    if (count < 1 || count > 1000000) {
+        s.stage = -1;
+        s.why = "bad count";
+        return;
+    }
+    s.from = deposit ? s.bag : s.wh;
+    s.to = deposit ? s.wh : s.bag;
+    const uintptr_t route = move_route(base, s.from, s.to);
+    if (!route) {
+        s.stage = -1;
+        s.why = "the game has no route between those inventories";
+        return;
+    }
+    s.stage = 2;
+    __try {
+        const uintptr_t mgr = *reinterpret_cast<uintptr_t*>(*reinterpret_cast<uintptr_t*>(base + 0x71C0610) + 0x50);
+        uint64_t scope[8] = {};
+        reinterpret_cast<void* (__fastcall*)(uintptr_t, uint64_t*, uint64_t)>(base + 0x2D11880)(mgr, scope, kHostCharacter);
+        const uintptr_t host_actor = scope[1];
+        if ((scope[2] & 0xFF) != 0 && host_actor) {
+            s.stage = 3;
+            const uintptr_t giver_actor = deposit ? me : host_actor, receiver_actor = deposit ? host_actor : me;
+            const uintptr_t src = reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t)>(base + 0x22F1DC0)(giver_actor);
+            auto fits = [&](const StashSlot& x) {
+                return x.idx != 0xFFFF && x.n >= static_cast<int64_t>(count) && (hint == 0xFFFF || x.idx == hint);
+            };
+            StashSlot pick;
+            if (src && slot != 0xFFFF && fits(pick = stash_slot(base, src, s.from, slot))) {
+                s.slot = slot;
+            } else if (src && hint != 0xFFFF) {  // the list was stale or the slots differ: the same item elsewhere
+                for (uint16_t i = 0; i < 512; ++i) {
+                    if (fits(pick = stash_slot(base, src, s.from, i))) {
+                        s.slot = i;
+                        break;
+                    }
+                }
+            }
+            if (s.slot != 0xFFFF) {
+                s.stage = 4;
+                s.have_idx = pick.idx;
+                s.have = pick.n;
+                s.sub = pick.sub;
+                int64_t n = static_cast<int64_t>(count);
+                reinterpret_cast<int* (__fastcall*)(uintptr_t, int*, uintptr_t, uintptr_t, uintptr_t, uint16_t, uint32_t,
+                                                    uint16_t, int64_t*)>(base + 0x2DF04A0)(
+                    self, &s.err, giver_actor, receiver_actor, route, s.slot, s.have_idx, s.sub, &n);
+                if (s.err == 0) s.stage = 5;
+            } else {
+                s.why = "the item is not there (any more)";
+            }
+        } else {
+            s.why = "the host's character is not on the server";
+        }
+        reinterpret_cast<void (__fastcall*)(uint64_t*)>(base + 0x1618660)(scope);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        s.stage = -2;
+        s.why = "exception";
+    }
+}
+
 int* __fastcall worker_detour(uintptr_t self, int* err, uint32_t item, uint16_t b, uint64_t count, uint32_t* giver,
                               uint32_t* receiver, uint16_t inv, uint16_t slot, uint32_t entry) noexcept {
     uint32_t g = 0, r = 0;
     game::fast_read(reinterpret_cast<uintptr_t>(giver), &g, sizeof g);
     game::fast_read(reinterpret_cast<uintptr_t>(receiver), &r, sizeof r);
+    if (entry == kStashDeposit || entry == kStashWithdraw) {
+        Stash st;
+        const bool deposit = entry == kStashDeposit;
+        stash_move(st, self, deposit, g, r, slot, b, count);
+        log::info("Stash: {} x{} slot {} (item index 0x{:X}) {} 0x{:08X} -> 0x{:08X}: stage {} (5 = moved) err {} | bag {} "
+                  "warehouse {} (key {}) route {} -> {} | slot used {} holds idx 0x{:X} x{} sub {}{}{}",
+                  deposit ? "deposit" : "withdraw", count, slot, b, deposit ? "bag -> warehouse" : "warehouse -> bag",
+                  g, r, st.stage, st.err, st.bag, st.wh, st.wh_key, st.from, st.to, st.slot, st.have_idx, st.have,
+                  st.sub, *st.why ? " | " : "", st.why);
+        const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+        int bad = 0;
+        game::fast_read(base + 0x712DFEC, &bad, sizeof bad);
+        *err = st.stage == 5 ? 0 : st.err > 0 ? st.err : bad;
+        return err;
+    }
     if (entry == kGiveEntry) {
         Give gv;
         const bool to_character = (r & 0xF0000000) == 0xA0000000 && r != g;
