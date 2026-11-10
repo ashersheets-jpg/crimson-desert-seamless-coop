@@ -4246,3 +4246,23 @@ Full notes: build/decomp/notes_inventory_menu.md (local, not published).
   its vftable slot 1 returns UTF-8 text. Rows load on demand and are freed 30 s later, so the names are read on the
   game's UI thread (the pause menu's update hook, via give_ui_tick -> stash_ui_tick) and cached; the stash page shows
   "Ricefish x3"-style rows ("Item <index>" until resolved). Built, untested.
+
+### tcB302 (2026-11-10 15:00, Steam opened by Claude at the user's word): give, stash, pad
+
+- Steam had been closed; the user chose "You open Steam and test". Started with -silent.
+- trade_probe on by default works ("TradeProbe: worker true handler true move true move2 true").
+- Guest card on the Ricefish: "Give to Host / Put in the shared stash / Discard / Cancel" (shot g1). The stash page
+  (Co-op tab, "Shared stash") listed 11 stacks with real names ("Hernandian Contribution x33", "Camp Funds x41" ...).
+- Host give: bag key 2, slot 57 held the Ricefish (0x59A): the key + slot fix is right. The game's discard worker then
+  refused it (err -2082243997): the earlier gives that "worked" (tcB293) were money (key 1), not bag items.
+- Stash: the native read bag = warehouse = 0, the layer read index 0 (the money pouch: camp funds etc.). Cause: the
+  manager chain was missing two dereferences; the game's own is *(*(*(*[exe+0x71C0498]) + 8) + 0x240) + 0xB2
+  (exe+0xEC03A0 / 0x2D45EE0). Fixed both sides.
+- Give now goes through the same whole-record move as the stash (exe+0x2DF04A0) with a copy of the game's
+  WareHouse -> bag route whose source is set to the bag (the game has no bag -> bag route); the old discard + add path
+  only if that does not reach stage 5. Enchant / durability / dye are kept that way.
+- The stash's "Take" is a button now (it was a "< Take >" setting); it keeps the menu open.
+- Polish seen (shot g1): on the Inventory tab the game's RB glyph shows between "Others" and "Co-op" again.
+- User 2026-11-10 (new rule): world items are PER PLAYER, Lootr-style (each player can take each item once; it
+  disappears only for the one who took it). The quest-item block idea is dropped. Research running.
+- SAVES OK, restored 5/5.

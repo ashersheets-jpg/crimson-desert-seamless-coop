@@ -178,6 +178,7 @@ struct Row {
     std::string label, value, help;
     bool live = true;
     std::function<void(int)> act;  // Setting: change by delta; Button: press (delta ignored)
+    bool stay = false;             // Button: the menu stays open after it (the stash's Take)
 };
 
 std::string connection_text(const HudData& d) {
@@ -306,9 +307,10 @@ std::vector<Row> rows_for(int section, const HudData& d, const std::vector<std::
                 std::string label = net::stash_item_name(it.idx);
                 if (label.empty()) label = std::format("Item {}", it.idx);
                 if (it.count > 1) label += std::format(" x{}", it.count);
-                Row r{Row::Setting, label, "Take", "Moves the whole stack to your bag.", true, nullptr};
+                Row r{Row::Button, label, "Take", "Moves the whole stack to your bag.", true, nullptr};
                 const net::StashItem copy = it;
                 r.act = [copy](int) { net::stash_withdraw(copy); };
+                r.stay = true;
                 rows.push_back(std::move(r));
             }
         }
@@ -1015,7 +1017,7 @@ void coop_page_draw(float width, float height, const HudData& d, const std::vect
         if (g_row < 0 || g_row >= static_cast<int>(rows.size())) return;
         Row& r = rows[g_row];
         if (r.act && (r.kind == Row::Button ? delta == 0 : true)) r.act(delta);
-        if (r.kind == Row::Button && delta == 0) {
+        if (r.kind == Row::Button && delta == 0 && !r.stay) {
             log::info("Co-op page: {}", r.label);
             // As the menu's tab an action closes the menu, as choosing a place on the game's map does: the player
             // sees what it did (the trip, the notice) in the world. A pad's Start for pad players, Esc otherwise.

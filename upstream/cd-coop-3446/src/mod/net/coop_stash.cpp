@@ -48,11 +48,16 @@ uint64_t now64() { return GetTickCount64(); }
 // The static inventory manager (client side): the WareHouse index at +0xB2.
 bool warehouse_index(uint16_t& wh) {
     const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-    auto root = game::read_ptr(base + 0x71C04A0);
+    // The game's own chain (exe+0xEC03A0): *(*(*(*[exe+0x71C04A0]) + 8) + 0x240) + 0xB2.
+    auto slot = game::read_ptr(base + 0x71C04A0);
+    if (!slot || !*slot) return false;
+    auto root = game::read_ptr(*slot);
     if (!root || !*root) return false;
     auto info = game::read_ptr(*root + 8);
     if (!info || !*info) return false;
-    return game::safe_read(*info + 0x240 + 0xB2, &wh, sizeof wh) && wh != 0xFFFF;
+    auto mgr = game::read_ptr(*info + 0x240);
+    if (!mgr || !*mgr) return false;
+    return game::safe_read(*mgr + 0xB2, &wh, sizeof wh) && wh != 0xFFFF;
 }
 
 uint16_t inventory_key(uint16_t index) {
