@@ -30,6 +30,7 @@ constexpr uint32_t kGiveEntry = 0xC0DE0001;
 struct Give {
     int stage = 0;  // 1 receiver found, 2 holder, 3 slot checked, 4 discarded, 5 added; -1 = exception
     int e_dist = -1, e_discard = -1, e_add = -1, e_back = -1;
+    int drop = -1;  // the item row's drop entry (+0x52), -1 = the item cannot be dropped
     uintptr_t actor = 0, holder = 0, entry = 0;
     uint16_t inv_idx = 0xFFFF, item_idx = 0xFFFF, have_idx = 0xFFFF, slot = 0xFFFF;
     int64_t have = 0;
@@ -123,9 +124,19 @@ void give_raw(Give& g, uintptr_t self, uint32_t item, uint64_t count, uint32_t r
                     std::memcpy(tf + 0x90, &one, 4);
                     std::memcpy(tf + 0xA0, &one, 4);
                     std::memcpy(tf + 0xBC, &one, 4);
+                    // tcB288: an item whose info row has a drop entry (+0x52 != -1) is DROPPED by the worker, and a
+                    // zero position is then refused (exe+0x714B154). A give must never drop: the row's entry reads
+                    // -1 for the length of this one call, so the worker takes its plain delete (reason 0x2F).
+                    const uintptr_t row =
+                        reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t, uint32_t)>(base + 0x3DD8A0)(0, g.item_idx);
+                    int16_t drop = -1;
+                    if (row) drop = *reinterpret_cast<int16_t*>(row + 0x52);
+                    g.drop = drop;
+                    if (row && drop != -1) *reinterpret_cast<int16_t*>(row + 0x52) = -1;
                     reinterpret_cast<int* (__fastcall*)(uintptr_t, int*, uintptr_t, uint16_t, int16_t, int64_t, void*)>(
                         base + 0x2E03330)(self, &g.e_discard, giver_actor, inv, static_cast<int16_t>(slot),
                                           static_cast<int64_t>(count), tf);
+                    if (row && drop != -1) *reinterpret_cast<int16_t*>(row + 0x52) = drop;
                     if (g.e_discard == 0) {
                         g.stage = 4;
                         const auto add = reinterpret_cast<int* (__fastcall*)(uintptr_t, int*, void*)>(base + 0x2DD8FC0);
@@ -167,8 +178,8 @@ int* __fastcall worker_detour(uintptr_t self, int* err, uint32_t item, uint16_t 
         if (to_character) give_raw(gv, self, item, count, r, inv, slot);
         log::info("Give: item {} x{} from 0x{:08X} (inventory 0x{:X} slot {} -> {}) to 0x{:08X}: stage {} (5 = given) | "
                   "receiver actor 0x{:X} holder 0x{:X} | slot has item idx 0x{:X} x{} (asked idx 0x{:X}) | distance err "
-                  "{} discard err {} add err {} back err {}", gv.item_key, count, g, inv, slot, gv.slot, r, gv.stage, gv.actor, gv.holder,
-                  gv.have_idx, gv.have, gv.item_idx, gv.e_dist, gv.e_discard, gv.e_add, gv.e_back);
+                  "{} discard err {} add err {} back err {} | drop entry {}", gv.item_key, count, g, inv, slot, gv.slot, r, gv.stage, gv.actor, gv.holder,
+                  gv.have_idx, gv.have, gv.item_idx, gv.e_dist, gv.e_discard, gv.e_add, gv.e_back, gv.drop);
         for (int i = 0; i < gv.seen_n; ++i) {
             log::info("Give: the bag's slot {} holds item idx 0x{:X} x{} (+0x18: {:X} {:X} {:X})", gv.seen[i].slot,
                       gv.seen[i].idx, gv.seen[i].n, gv.seen[i].raw[0], gv.seen[i].raw[1], gv.seen[i].raw[2]);
