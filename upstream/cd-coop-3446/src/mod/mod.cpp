@@ -20,6 +20,7 @@
 #include "common/udp.h"
 #include "mod/config.h"
 #include "mod/game/game_errors.h"
+#include "mod/game/main_menu.h"
 #include "mod/game/offsets.h"
 #include "mod/game/player_reader.h"
 #include "mod/game/safe_memory.h"

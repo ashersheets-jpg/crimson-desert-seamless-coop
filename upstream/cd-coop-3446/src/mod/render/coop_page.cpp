@@ -13,6 +13,7 @@
 #include <mutex>
 #include <thread>
 
+#include "mod/game/main_menu.h"
 #include "mod/game/ui_state.h"
 #include "mod/input/actions.h"
 #include "mod/input/pad_input.h"
@@ -34,6 +35,9 @@ namespace {
 constexpr ImU32 kGold = IM_COL32(232, 200, 130, 255);
 constexpr ImU32 kText = IM_COL32(232, 228, 220, 255);
 constexpr ImU32 kDim = IM_COL32(170, 164, 152, 255);
+// The pause menu's tab row (1920x1080 positions): the five game tabs and ours after them.
+constexpr float kTabX[] = {166, 324, 484, 644, 804, 980};
+constexpr float kTabY = 50, kTabSize = 21;
 constexpr ImU32 kRule = IM_COL32(205, 195, 175, 90);
 constexpr ULONG_PTR kOurInput = 0xC0C0A7;  // input we send ourselves (coop_worlds / coop_activity mark it so)
 
@@ -63,7 +67,56 @@ std::atomic<bool> g_swallow_up{false};
 bool g_steam_overlay = false;  // the Steam overlay is open this frame (draw thread only)
 
 int g_section = 0, g_row = 0, g_top = 0;
-bool g_focus_rows = false;  // keyboard / pad: Up / Down move in the rows (true) or the sections (false)
+std::atomic<bool> g_focus_rows{false};  // keyboard / pad: Up / Down move in the rows (true) or the sections (false)
+
+// ---- the page as the pause menu's sixth tab (after "Others", before the row wraps round to "Map")
+// The game's own tab keys (RB / LB, and the keyboard's) reach the game; its tab switch (game/main_menu.h) asks
+// tab_filter first. Stepping past either end of the row lands on Co-op and the game stays on the page it was on;
+// stepping on from Co-op goes to the far side (let through) or back (the game is already there: only we close).
+std::atomic<bool> g_as_tab{false};       // the open page is the menu's tab (not the title's settings, not F8)
+std::atomic<uint64_t> g_pad_step_ms{0};  // last frame the pad's LB or RB was down
+std::atomic<uint64_t> g_key_ms{0};       // last key down
+std::atomic<unsigned> g_key_vk{0};
+
+void open_as_tab(const char* how) {
+    g_focus_rows = false;
+    {
+        std::lock_guard lock(g_in_mutex);
+        g_keys.clear();
+        g_clicks.clear();
+        g_wheel = 0;
+    }
+    g_as_tab = true;
+    g_open = true;
+    log::info("Co-op page opened as the menu's tab ({})", how);
+}
+
+void close_tab(const char* how) {
+    if (!g_open.exchange(false)) return;
+    g_as_tab = false;
+    log::info("Co-op page closed ({})", how);
+}
+
+bool tab_filter(int from, int to) {
+    if (from < 0) {  // the game opened a page by name (a shortcut key): never stopped
+        if (g_open.load() && g_as_tab.load()) close_tab("the game opened a page");
+        return false;
+    }
+    const bool wrap = (from == game::kMenuPageCount - 1 && to == 0) || (from == 0 && to == game::kMenuPageCount - 1);
+    if (g_open.load()) {
+        if (!g_as_tab.load()) return false;
+        const bool back = std::abs(from - to) == 1;  // the page under us is where this step should end
+        close_tab(wrap ? "on to the next tab" : back ? "back to the tab before" : "another menu page");
+        return back;
+    }
+    const uint64_t now = GetTickCount64();
+    const bool pad = now - g_pad_step_ms.load() < 400, key = now - g_key_ms.load() < 400;
+    if (!wrap || !g_tab_shown.load()) return false;
+    if (!pad && !key) return false;  // a click on the game's tab, or the game's own doing
+    log::info("Menu tab step {} -> {} ({}, key 0x{:X}): Co-op", from, to, pad ? "pad" : "keyboard", g_key_vk.load());
+    open_as_tab(pad ? "pad" : "keyboard");
+    return true;
+}
 
 bool game_in_front() {
     DWORD pid = 0;
@@ -629,6 +682,7 @@ bool coop_page_details() { return g_details.load(); }
 void coop_page_toggle() {
     const bool now = !g_open.load();
     g_open = now;
+    g_as_tab = false;
     if (now) {
         g_focus_rows = false;
         std::lock_guard lock(g_in_mutex);
@@ -641,6 +695,10 @@ void coop_page_toggle() {
 
 bool coop_page_hook_key(unsigned vk, bool down) {
     if (!game_in_front() || net::join_overlay_active()) return false;
+    if (down) {
+        g_key_vk = vk;
+        g_key_ms = GetTickCount64();
+    }
     if (!g_open.load() && g_lobby_shown.load()) {
         // The title lobby: its keys, and the title's own (Play, New Game, Load, Settings, Exit) kept from the game.
         switch (vk) {
@@ -656,6 +714,14 @@ bool coop_page_hook_key(unsigned vk, bool down) {
         }
     }
     if (!g_open.load()) return false;
+    if (g_as_tab.load()) {
+        // The menu's tab: the game's tab keys go to the game (its switch closes us), and Esc with nothing chosen
+        // closes the whole menu as it does on the game's own tabs.
+        if (vk == 'Q' || vk == 'E' || vk == VK_PRIOR || vk == VK_NEXT) return false;
+        if (vk == VK_ESCAPE && !g_focus_rows.load()) return false;
+    }
+    // W A S D move as the arrows do (the game's menus take both)
+    vk = vk == 'W' ? VK_UP : vk == 'S' ? VK_DOWN : vk == 'A' ? VK_LEFT : vk == 'D' ? VK_RIGHT : vk;
     switch (vk) {
         case VK_UP: case VK_DOWN: case VK_LEFT: case VK_RIGHT: case VK_TAB: case VK_RETURN: case VK_SPACE:
         case VK_ESCAPE: case VK_BACK: case 'Q': case 'E': case VK_PRIOR: case VK_NEXT:
@@ -727,18 +793,21 @@ void coop_page_draw(float width, float height, const HudData& d, const std::vect
     // ---- the tab after the game's "Others", while its menu is open
     const bool menu = game::ui_menu_open() && d.local.has_value() && !net::sniffer_world_loading() &&
                       !net::lobby_view().at_title;
-    const float tab_size = 31.0f * sp.s;
+    // The game's tabs: 160 apart (Map 166 ... Others 804, ours next at 964), their names centred on y 50.
+    const float tab_size = kTabSize * sp.s;
     const std::string tab = "Co-op";
     const float tab_w = text_w(tab_size, tab);
-    const float tab_x = sp.x(964) - tab_w * 0.5f, tab_y = sp.y(50) - tab_size * 0.55f;
+    const float tab_x = sp.x(kTabX[5]) - tab_w * 0.5f, tab_y = sp.y(kTabY) - tab_size * 0.5f;
+    if (menu) {
+        game::main_menu_install(tab_filter);
+        game::main_menu_dev_watch_tick();
+        if (input::pad_buttons() & (input::kPadLB | input::kPadRB)) g_pad_step_ms = GetTickCount64();
+    }
     if (menu || g_open.load()) {
         const bool hover = inside(mouse, tab_x - 20 * sp.s, tab_y - 10 * sp.s, tab_x + tab_w + 20 * sp.s, tab_y + 60 * sp.s);
         if (!g_open.load()) {
-            text(dl, tab_x, tab_y, tab_size, tab, hover ? kGold : kText);
-            const std::string key = "{Panel}";
-            const float kw = text_w(17.0f * sp.s, key);
-            ui::rich_text(dl, sp.x(964) - kw * 0.5f, sp.y(74), 17.0f * sp.s, key, kDim);
-            // On screen (for the mouse hook): the label and its key.
+            text(dl, tab_x, tab_y, tab_size, tab, hover && input::method() == input::Method::Keyboard ? kGold : kText);
+            // On screen (for the mouse hook): the label.
             POINT a{static_cast<LONG>(tab_x - 20 * sp.s), static_cast<LONG>(tab_y - 10 * sp.s)};
             POINT b{static_cast<LONG>(tab_x + tab_w + 20 * sp.s), static_cast<LONG>(sp.y(96))};
             if (g_hwnd.load()) {
@@ -748,7 +817,7 @@ void coop_page_draw(float width, float height, const HudData& d, const std::vect
             g_tab_l = a.x, g_tab_t = a.y, g_tab_r = b.x, g_tab_b = b.y;
             g_tab_shown = menu;
             for (const ImVec2& c : clicks) {
-                if (inside(c, tab_x - 20 * sp.s, tab_y - 10 * sp.s, tab_x + tab_w + 20 * sp.s, sp.y(96))) coop_page_toggle();
+                if (inside(c, tab_x - 20 * sp.s, tab_y - 10 * sp.s, tab_x + tab_w + 20 * sp.s, sp.y(96))) open_as_tab("click");
             }
         }
     } else {
@@ -762,7 +831,37 @@ void coop_page_draw(float width, float height, const HudData& d, const std::vect
     const uint16_t pad = input::pad_buttons();
     const uint16_t pressed = g_steam_overlay ? 0 : pad & ~pad_before;
     pad_before = pad;
-    input::mask_from_game(input::kPadDpad | input::kPadA | input::kPadB | input::kPadLB | input::kPadRB, 150);
+    const bool as_tab = g_as_tab.load();
+    if (as_tab && !menu) {  // the menu went away under us (Start, B, Esc)
+        close_tab("the menu closed");
+        return;
+    }
+    // A click on one of the game's tabs: the page closes and the click goes on to the game's row under it.
+    if (as_tab) {
+        for (const ImVec2& c : clicks) {
+            if (c.y > sp.y(96) || c.x < sp.x(kTabX[0] - 80) || c.x > sp.x(kTabX[4] + 80)) continue;
+            close_tab("a click on a game tab");
+            INPUT in[2] = {};
+            in[0].type = in[1].type = INPUT_MOUSE;
+            in[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+            in[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+            in[0].mi.dwExtraInfo = in[1].mi.dwExtraInfo = kOurInput;
+            SendInput(2, in, sizeof(INPUT));
+            return;
+        }
+    }
+    // As the menu's tab LB / RB stay the game's (tab_filter), and so does B until a row is chosen.
+    input::mask_from_game(input::kPadDpad | input::kPadA |
+                              (as_tab ? (g_focus_rows ? input::kPadB : 0) : input::kPadB | input::kPadLB | input::kPadRB),
+                          150);
+    // The sections with something in them (the shared world decides loot and scaling: that section is not shown).
+    std::vector<int> vis;
+    for (int i = 0; i < kSectionCount; ++i) {
+        if (!rows_for(i, d, status).empty()) vis.push_back(i);
+    }
+    if (vis.empty()) vis.push_back(0);
+    if (std::find(vis.begin(), vis.end(), g_section) == vis.end()) g_section = vis.front();
+    const int vn = static_cast<int>(vis.size());
     std::vector<Row> rows = rows_for(g_section, d, status);
     const int n = static_cast<int>(rows.size());
     auto first_selectable = [&] {
@@ -772,7 +871,8 @@ void coop_page_draw(float width, float height, const HudData& d, const std::vect
         return 0;
     };
     auto change_section = [&](int delta) {
-        g_section = (g_section + delta + kSectionCount) % kSectionCount;
+        const int at = static_cast<int>(std::find(vis.begin(), vis.end(), g_section) - vis.begin());
+        g_section = vis[((at + delta) % vn + vn) % vn];
         rows = rows_for(g_section, d, status);
         g_row = 0;
         g_top = 0;
@@ -812,12 +912,12 @@ void coop_page_draw(float width, float height, const HudData& d, const std::vect
                 if (!g_focus_rows) {
                     g_focus_rows = true;
                     g_row = first_selectable();
-                } else if (rows[g_row].kind == Row::Setting) {
+                } else if (!rows.empty() && rows[g_row].kind == Row::Setting) {
                     activate(1);
                 }
                 break;
             case VK_LEFT:
-                if (g_focus_rows && rows[g_row].kind == Row::Setting) activate(-1);
+                if (g_focus_rows && !rows.empty() && rows[g_row].kind == Row::Setting) activate(-1);
                 else g_focus_rows = false;
                 break;
             case VK_RETURN: case VK_SPACE:
@@ -832,10 +932,12 @@ void coop_page_draw(float width, float height, const HudData& d, const std::vect
     }
     if (pressed & input::kPadB) {
         if (g_focus_rows) g_focus_rows = false;
-        else close = true;
+        else if (!as_tab) close = true;
     }
-    if (pressed & input::kPadRB) change_section(1);
-    if (pressed & input::kPadLB) change_section(-1);
+    if (!as_tab) {
+        if (pressed & input::kPadRB) change_section(1);
+        if (pressed & input::kPadLB) change_section(-1);
+    }
     if (pressed & input::kPadUp) g_focus_rows ? move_row(-1) : change_section(-1);
     if (pressed & input::kPadDown) g_focus_rows ? move_row(1) : change_section(1);
     if (pressed & input::kPadRight) {
@@ -868,12 +970,14 @@ void coop_page_draw(float width, float height, const HudData& d, const std::vect
 
     // mouse: hover picks, click acts, wheel scrolls the rows
     const bool use_mouse = input::method() == input::Method::Keyboard;
-    for (int i = 0; i < kSectionCount; ++i) {
-        const float y = sec_y + i * sec_h;
+    for (int k = 0; k < vn; ++k) {
+        const int i = vis[k];
+        const float y = sec_y + k * sec_h;
         const bool over = inside(mouse, sec_x - 10 * sp.s, y - 6 * sp.s, div_x - 10 * sp.s, y + sec_h - 6 * sp.s);
         for (const ImVec2& c : clicks) {
             if (inside(c, sec_x - 10 * sp.s, y - 6 * sp.s, div_x - 10 * sp.s, y + sec_h - 6 * sp.s) && i != g_section) {
-                change_section(i - g_section);
+                g_section = i;
+                change_section(0);
                 g_focus_rows = false;
             }
         }
@@ -912,10 +1016,40 @@ void coop_page_draw(float width, float height, const HudData& d, const std::vect
 
     // ---- drawing
     dl->AddRectFilled(ImVec2(0, 0), ImVec2(width, height), IM_COL32(8, 7, 6, 205));
-    // our tab, selected (gold, a dot above, a light rule under it, like "Others" when it is chosen)
+    // The menu's tab row, ours chosen: the game's own row is under the page with "Others" (or "Map") still lit, so
+    // the whole row is drawn again here, the way the game draws it (gold name, a rule under it with a dot).
+    if (as_tab) {
+        dl->AddRectFilled(ImVec2(0, 0), ImVec2(width, sp.y(96)), IM_COL32(8, 7, 6, 255));
+        dl->AddRectFilledMultiColor(ImVec2(0, sp.y(96)), ImVec2(width, sp.y(136)), IM_COL32(8, 7, 6, 255),
+                                    IM_COL32(8, 7, 6, 255), IM_COL32(8, 7, 6, 0), IM_COL32(8, 7, 6, 0));
+        static const char* const kNames[] = {"Map", "Inventory", "Journal", "Skills", "Others"};
+        for (int i = 0; i < 5; ++i) {
+            const float w = text_w(tab_size, kNames[i]);
+            const bool over = use_mouse && inside(mouse, sp.x(kTabX[i]) - 70 * sp.s, sp.y(20), sp.x(kTabX[i]) + 70 * sp.s, sp.y(80));
+            text(dl, sp.x(kTabX[i]) - w * 0.5f, tab_y, tab_size, kNames[i], over ? kGold : kText);
+        }
+        // The game's two shoulder glyphs, where it draws them (before Map, after Others), on a controller only.
+        if (!use_mouse) {
+            auto glyph = [&](float cx, const char* name) {
+                const float gw = 38 * sp.s, gh = 28 * sp.s, cy = sp.y(kTabY + 2), gs = 17 * sp.s;
+                dl->AddRectFilled(ImVec2(cx - gw * 0.5f, cy - gh * 0.5f), ImVec2(cx + gw * 0.5f, cy + gh * 0.5f),
+                                  IM_COL32(20, 18, 16, 235), 6 * sp.s);
+                dl->AddRect(ImVec2(cx - gw * 0.5f, cy - gh * 0.5f), ImVec2(cx + gw * 0.5f, cy + gh * 0.5f),
+                            IM_COL32(214, 210, 202, 235), 6 * sp.s, 1.6f * sp.s);
+                text(dl, cx - text_w(gs, name, true) * 0.5f, cy - gs * 0.58f, gs, name, IM_COL32(230, 226, 218, 255), true);
+            };
+            glyph(sp.x(78), "LB");
+            glyph(sp.x(912), "RB");
+        }
+    }
     text(dl, tab_x, tab_y, tab_size, tab, kGold);
-    dl->AddCircleFilled(ImVec2(sp.x(964), sp.y(22)), 3.5f * sp.s, IM_COL32(236, 160, 70, 255));
-    dl->AddLine(ImVec2(tab_x - 40 * sp.s, sp.y(78)), ImVec2(tab_x + tab_w + 40 * sp.s, sp.y(78)), kGold, 1.5f * sp.s);
+    {
+        const float cx = sp.x(kTabX[5]), y = sp.y(kTabY + 17), half = 80 * sp.s;
+        const ImU32 on = IM_COL32(232, 200, 130, 230), off = IM_COL32(232, 200, 130, 0);
+        dl->AddRectFilledMultiColor(ImVec2(cx - half, y), ImVec2(cx, y + 1.5f * sp.s), off, on, on, off);
+        dl->AddRectFilledMultiColor(ImVec2(cx, y), ImVec2(cx + half, y + 1.5f * sp.s), on, off, off, on);
+        dl->AddCircleFilled(ImVec2(cx, y + 0.75f * sp.s), 3.5f * sp.s, IM_COL32(236, 160, 70, 255));
+    }
     // the frame
     dl->AddRectFilled(ImVec2(L, T), ImVec2(R, B), IM_COL32(22, 20, 18, 238));
     dl->AddRect(ImVec2(L, T), ImVec2(R, B), kRule, 0.0f, 1.0f);
@@ -927,8 +1061,9 @@ void coop_page_draw(float width, float height, const HudData& d, const std::vect
     }
     dl->AddLine(ImVec2(sp.x(270), sp.y(250)), ImVec2(sp.x(1650), sp.y(250)), kRule, 1.0f);
     // sections
-    for (int i = 0; i < kSectionCount; ++i) {
-        const float y = sec_y + i * sec_h;
+    for (int k = 0; k < vn; ++k) {
+        const int i = vis[k];
+        const float y = sec_y + k * sec_h;
         const bool sel = i == g_section;
         const bool over = inside(mouse, sec_x - 10 * sp.s, y - 6 * sp.s, div_x - 10 * sp.s, y + sec_h - 6 * sp.s);
         if (sel) {
@@ -984,17 +1119,20 @@ void coop_page_draw(float width, float height, const HudData& d, const std::vect
         const float y = sp.y(1032), size = 19 * sp.s;
         if (input::method() == input::Method::Keyboard) {
             right = hint(dl, right, y, size, "Esc", "Close");
-            right = hint(dl, right, y, size, "Tab", "Section");
+            right = hint(dl, right, y, size, as_tab ? "W S" : "Tab", "Section");
             right = hint(dl, right, y, size, "Enter", "Select");
             hint(dl, right, y, size, "<  >", "Change");
         } else {
-            right = hint(dl, right, y, size, "B", "Back");
-            right = hint(dl, right, y, size, "LB RB", "Section");
+            right = hint(dl, right, y, size, "B", g_focus_rows || !as_tab ? "Back" : "Close");
+            if (!as_tab) right = hint(dl, right, y, size, "LB RB", "Section");
             right = hint(dl, right, y, size, "A", "Select");
-            hint(dl, right, y, size, "D-pad", "Change");
+            hint(dl, right, y, size, "D-pad", as_tab ? "Move" : "Change");
         }
     }
-    if (close) coop_page_toggle();
+    if (close) {
+        if (as_tab) close_tab("closed");
+        else coop_page_toggle();
+    }
 }
 
 }  // namespace cdmp::render

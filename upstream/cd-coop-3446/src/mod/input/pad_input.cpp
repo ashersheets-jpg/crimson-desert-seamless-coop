@@ -62,14 +62,29 @@ void filter(XINPUT_STATE* st) {
     }
 }
 
+// [dev] pad_sim=1: the game gets a pad too (user index 0), with the dev script's presses, so a one-PC test without a
+// controller sees the game's own pad screens (its LB/RB tab switching, its button icons).
+DWORD sim_feed(DWORD i, XINPUT_STATE* st, DWORD r) {
+    if (g_sim_family.load() != 1 || i != 0 || !st) return r;
+    static std::atomic<uint32_t> packet{1};
+    static std::atomic<uint16_t> last{0};
+    if (r != ERROR_SUCCESS) *st = XINPUT_STATE{};
+    const uint16_t sim = now64() < g_sim_until.load() ? static_cast<uint16_t>(g_sim.load() & 0xF3FF) : uint16_t{0};
+    if (last.exchange(sim) != sim) ++packet;
+    st->Gamepad.wButtons |= sim;
+    if (r != ERROR_SUCCESS) st->dwPacketNumber = packet.load();
+    else st->dwPacketNumber += packet.load();
+    return ERROR_SUCCESS;
+}
+
 DWORD WINAPI hooked_get_state(DWORD i, XINPUT_STATE* st) {
-    const DWORD r = g_hook_get_state.stdcall<DWORD>(i, st);
+    const DWORD r = sim_feed(i, st, g_hook_get_state.stdcall<DWORD>(i, st));
     if (r == ERROR_SUCCESS) filter(st);
     return r;
 }
 
 DWORD WINAPI hooked_get_state_ex(DWORD i, XINPUT_STATE* st) {
-    const DWORD r = g_hook_get_state_ex.stdcall<DWORD>(i, st);
+    const DWORD r = sim_feed(i, st, g_hook_get_state_ex.stdcall<DWORD>(i, st));
     if (r == ERROR_SUCCESS) filter(st);
     return r;
 }

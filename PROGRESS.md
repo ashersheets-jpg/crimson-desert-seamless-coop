@@ -3725,3 +3725,50 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   The public README (docs/release/playtest-repo-README.md) got the shared-world play steps and file name;
   FEATURES.md there is still the pre-shared-world list (to update). The #download-here line now reads
   "Also on GitHub (always the newest): .../releases/latest". The OK was for this release; ask again for later ones.
+
+## 2026-11-10: the Co-op tab as a real tab of the pause menu (user: "work natively by pressing RB", "text runs into the tab to the left")
+- Harness: a simulated pad for one-PC pad tests. Layer `[dev] pad_sim=1` (pad_input.cpp sim_feed: pad 0 always
+  reports connected with the simulated buttons); dev-script step `pad <hex> <ms>`; twocopy.ps1 `-HostDev 'k=v,..'`;
+  actpid.ps1 step `pad:HEX:MS` (writes scan\pad.txt and presses Ctrl+Shift+F6). tcB268: Start opens the menu,
+  RB / LB step the tabs. The lobby step now hovers "Start Solo" first (tcB267 ended on Co-op Settings because the
+  mouse had moved the selection).
+- FOUND (3576, live in tcB268): the pause menu's root object UIGamePlayControl_Root_MainMenu (vftable exe+0x5A033D0):
+  +0x158 pages (stride 0x30), +0x160 page count 5, +0x1C8 current page index, +0x1D8 current panel name. Pages:
+  0 Map "WorldMapView", 1 Inventory "InventoryEquipmentPanel", 2 Journal "QuestMenuPanel2", 3 Skills "SkillTreePanel",
+  4 Others "LogoutView". The menu opens on 1. RB wraps 4 -> 0. The ONLY writer of +0x1C8 is exe+0xF19180
+  (root, const char* panelName, sub, flag) = "open the panel with this name"; every tab switch goes through it.
+  The tab row widget is a UIGamePlayControlCommon_CircularList (vftable exe+0x5A70548, owner +0x28 = the root,
+  +0xD0 count, +0x100 index). Tools (build/native, git-ignored): mm.py, mmpoll.py, objs.py, tabbars.py, tabscan.py.
+- Tab row positions (client, 1920x1080): names centred at x 166 / 324 / 484 / 644 / 804 (160 apart), y 50; on a pad
+  the LB glyph sits at 68 and the RB glyph at 904 (100 after "Others"), right where a sixth name would start: that
+  is the overlap the user saw (our label was also 1.5x the game's size, with a key cap under it).
+- BUILT (game/main_menu.{h,cpp}, render/coop_page.cpp): an inline hook on exe+0xF19180 with a filter. Stepping past
+  either end of the row (Others -> Map or Map -> Others, pad LB/RB or a key within 400 ms, not a mouse click) opens
+  the Co-op page instead and the game stays where it was; from Co-op the next step goes on to the far side (let
+  through) or back (only the page closes). As the menu's tab: LB / RB are no longer masked (sections move with the
+  D-pad / W S), B or Esc with no row chosen closes the whole menu like on the game's tabs, the page closes when the
+  menu does, a click on a game tab closes the page and is passed on. The label is the game's size at the sixth
+  slot (no key cap); while open the whole row is drawn again with Co-op lit (the game's row under it still has
+  Others lit). F8 and the title's Co-op Settings still open the page the old way.
+- 2026-11-10 02:40 tcB269 / tcB270 (pad walk through the tabs; SAVES OK, restored 5/5): the label is right (game size,
+  sixth slot, nothing touches "Others"; on a pad the game's RB glyph sits just before it), but RB from Others went
+  to Map: exe+0xF19180 is NOT the RB/LB path (it ran once in the whole walk, with an empty name). CORRECTION of the
+  note above: 0xF19180 is "open the panel with this NAME" (shortcut keys, jumps); its first argument is not the root.
+- 2026-11-10 03:00 tcB271 (dev hardware write watch on root+0x1C8, main_menu_dev_watch): every RB/LB step writes the
+  index at exe+0xF1CF9D..A3, inside exe+0xF1CF40 = `void (root, list, flag)`, the tab row's "selection changed"
+  callback: the row (root+0x1A8, the CircularList) has ALREADY moved; the function reads the row's index
+  (EXT 0x14A78A720 = list+0x100), stores it in root+0x1C8 and opens the page. The game's own way to move the row
+  from code (in 0xF19180): row+0x128 = 1, then EXT 0x14A7866B0(row, pages + i*0x30 + 0x10, 0, flag).
+  Root +0x168 KeyGuideGroup, +0x170 / +0x178 the two KeyGuideButtons (the LB / RB glyphs).
+- BUILT: main_menu.cpp hooks 0xF1CF40 (the filter; a stopped step puts the row back with the game's own select and
+  skips the function) and keeps 0xF19180 as a report only (a page opened by name closes the Co-op tab). tcB272 runs.
+- 2026-11-10 03:25 CO-OP TAB REACHED WITH RB / LB (tcB272, tcB273; SAVES OK, restored 5/5): the hook on the tab row's
+  "selection changed" callback (exe+0xF1CF40) works. RB from Others opens the Co-op page as the sixth tab (the row is
+  put back on Others with the game's own silent select, exe+0xA7866B0), RB again goes on to Map, LB goes back to
+  Others; LB from Map opens Co-op the same way. B backs out of a row, then closes the menu as on the game's pages.
+  Both hooks now check the function's first 16 bytes (another build: no hook, click only). The label sits in the
+  sixth slot (x 980), no overlap with Others. In tab mode on a pad the row is redrawn with LB / RB glyphs where the
+  game has them. Sections with nothing in them are not listed (the shared world hides Combat & Loot: it was an empty
+  section). Keyboard: Q / E do not change the game's tabs (the game has no tab keys with a mouse), the label is
+  clicked. NOT DONE (polish): the game's RB glyph stays between Others and Co-op; its position field in the
+  KeyGuideButton (root+0x178) was not found (no plain floats in the object).
