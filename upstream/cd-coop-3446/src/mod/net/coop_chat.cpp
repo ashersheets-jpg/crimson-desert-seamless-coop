@@ -118,6 +118,7 @@ void chat_on_event(const uint8_t* d, size_t n) {
         text = kQuick[d[0] - 1];
     }
     if (text.empty()) return;
+    log::info("Chat: the friend said \"{}\"{}", text, d[0] ? " (quick message)" : "");
     std::lock_guard lock(g_mutex);
     if (g_incoming.size() < 16) g_incoming.push_back(std::move(text));
 }

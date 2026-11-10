@@ -3874,3 +3874,17 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
     character); the distance check dereferences character parts a user actor does not have. NEVER pass a user key.
     For the real feature the layer must validate the receiver is a character before it sends anything.
 - Next (tcB284): receiver 0xA0100001, inventory 1, entry 3 (the kind 2 rows 3-7, bag -> 8, the 0x2DF2560 path).
+
+## 2026-11-10 tcB283: quick message from the Co-op tab works; the RB glyph's place is not under the RB button
+
+- Quick message: Start, RB x4, A on "Session", down to "Send: Go here", A. Host log: "Co-op page: Send: Go here",
+  "Chat: quick message "Go here" (Co-op tab)", the menu closes by itself and the world shows the notice "Co-op /
+  You: Go here" (shot tcB283-sent). PASS on the sending side. The receiving side had no log line; added
+  ("Chat: the friend said ..."), checked in tcB284.
+- RB glyph bisect (kgs.py, start = the RB KeyGuideButton): changing every pixel-like float 1, 2 and 3 pointers deep
+  (142 / 1922 / 4513 floats, +37) moves nothing in the glyph's box; 45-53 of them are written back by the game
+  every frame (= results). Depth 4 (24400 floats) closed the menu (the walk reaches unrelated objects), so depth 4
+  is out. Conclusion: the glyph's x is an output of the parent's layout. kgs.py now takes the start object
+  (0 RB, 1 the tab group root+0x168, 2 LB, 3 the root) and stops at depth 3; tcB284 walks the group.
+- Saves OK, install restored 5/5.
+
