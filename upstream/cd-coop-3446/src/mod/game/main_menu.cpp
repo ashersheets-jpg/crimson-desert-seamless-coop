@@ -72,6 +72,11 @@ void shift_rb(uintptr_t root, bool fresh) {
     if (g_rb_test) return;  // [dev] rb_test: leave the game's glyph alone (to compare)
     uint8_t id = 0x0C, value = 1, flag = 0;
     reinterpret_cast<void (*)(uintptr_t, uint8_t*, uint8_t*, uint8_t*, uint8_t)>(base + 0x6D9090)(handle, &id, &value, &flag, 0);
+    // tcB289: the byte setter alone left the glyph on screen. tcB288 had ALSO run the length setter (exe+0x712F00)
+    // on the same property with 160 px, and that pair made it vanish.
+    float len = kMenuRbShift;
+    uint8_t unit = 1;
+    reinterpret_cast<void (*)(uintptr_t, uint8_t*, float*, uint8_t*, uint8_t)>(base + 0x712F00)(handle, &id, &len, &unit, 0);
     static bool said = false;
     if (!said) {
         said = true;
@@ -150,6 +155,23 @@ void do_return_to_title(const char* from) {
     log::info("Main menu: return to title ({}; the menu's update ran {} times)", from, g_update_calls.load());
     reinterpret_cast<void (*)(uintptr_t, uint32_t)>(base + kReturnLevel)(g, 2);
 }
+// tcB289: the first Return to Title as the host crashed the game (exe+0x2AEFE94 reading 0): the server's handler of
+// TrocTrUpdateSequencerGamePlayDataEventReq (exe+0x2CE9AD0) asks the sender's actor for a part (vfunction +0x48)
+// that is already gone while the world unloads, and exe+0x2AEFE40 reads through it without a check. Guard: a null
+// part answers with the routine's own "nothing to do" error (exe+0x714B900).
+constexpr uintptr_t kSeqDataApply = 0x2AEFE40;
+SafetyHookInline g_seq_guard;
+uint32_t* seq_data_apply(uintptr_t part, uint32_t* out, uintptr_t data, int n) {
+    if (!part) {
+        static std::atomic<int> said{0};
+        if (said.fetch_add(1) < 3) log::info("Main menu: a sequencer data request for an actor that is unloading was skipped");
+        uint32_t e = 0;
+        safe_read(reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)) + 0x714B900, &e, sizeof e);
+        *out = e ? e : 1;
+        return out;
+    }
+    return g_seq_guard.call<uint32_t*>(part, out, data, n);
+}
 void on_menu_update(SafetyHookContext&) {
     g_update_calls.fetch_add(1, std::memory_order_relaxed);
     if (g_title_wanted.load(std::memory_order_relaxed)) do_return_to_title("the menu's update, UI thread");
@@ -193,6 +215,9 @@ bool main_menu_install(MenuTabFilter filter) {
     for (size_t i = 0; i < sizeof head2; ++i) std::snprintf(hex2 + 3 * i, 4, "%02X ", head2[i]);
     g_hook = safetyhook::create_inline(reinterpret_cast<void*>(base + kOpenPanel), reinterpret_cast<void*>(open_panel));
     g_tab_hook = safetyhook::create_inline(reinterpret_cast<void*>(base + kTabChanged), reinterpret_cast<void*>(tab_changed));
+    if (uint8_t h[4] = {}; safe_read(base + kSeqDataApply, h, sizeof h) && h[0] == 0x48) {
+        g_seq_guard = safetyhook::create_inline(reinterpret_cast<void*>(base + kSeqDataApply), reinterpret_cast<void*>(seq_data_apply));
+    }
     if (uint8_t op = 0; safe_read(base + kMenuUpdate, &op, sizeof op) && op == 0xE9) {
         g_update_hook = safetyhook::create_mid(reinterpret_cast<void*>(base + kMenuUpdate), on_menu_update);
     }

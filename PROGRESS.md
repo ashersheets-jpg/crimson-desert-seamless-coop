@@ -4004,3 +4004,21 @@ invalidates the layout itself. To try: TranslateX on RB (UI thread), re-applied 
   main_menu_return_to_title: asked from any thread, done in a mid hook on exe+0xF1B8F0 when it runs, else by a
   helper thread after 1 s; the log says which and how often the update ran). The host's hotkey sentence is gone.
   Test: tcB289.
+
+### tcB289: Leave the session = Return to Title works, but the host crashed; RB glyph NOT hidden by Display alone (2026-11-10)
+
+- SAVES OK, user install restored 5/5.
+- The menu root's vftable slot 36 (exe+0xF1B8F0) IS the per-frame UI-thread update while the menu is open
+  (ran 1547 times in about 18 s). A mid hook there is a safe place to call UI-thread routines.
+- "Leave the session" now calls the game's own Return to Title (`exe+0x96525F0(g, 2)`) from that hook. The world
+  unload started, then the HOST CRASHED 0.24 s later: AV at exe+0x2AEFE94 reading 0. Caller: the server's handler of
+  TrocTrUpdateSequencerGamePlayDataEventReq (exe+0x2CE9AD0); it asks the sender's actor for a part (vfunction +0x48),
+  gets null while the world unloads, and exe+0x2AEFE40 reads through it with no check. The stack ends in
+  cdmp.asi+0x5A3FD0 (the native's request pump), so the request came from the guest that was still attached.
+- Fix (layer, built, in test tcB290): an inline hook on exe+0x2AEFE40 answers with the routine's own error
+  (exe+0x714B900) when the part is null.
+- CORRECTION to tcB288: the byte setter (exe+0x6D9090, property 0x0C = 1) alone does NOT hide the game's RB glyph;
+  tcB289 showed two RB glyphs. What hid it in tcB288 was the byte setter AND the length setter (exe+0x712F00,
+  property 0x0C, 160 px, unit 1) together. tcB290 runs that pair.
+- Native (local only): the give now masks the item row's drop entry (row+0x52) around the discard call so a droppable
+  item is deleted and not dropped on the ground (commit fe81a15, built, not tested yet).
