@@ -4759,6 +4759,33 @@ Reannounce child_settle_reannounce(uint32_t key, uint32_t delay_ms, bool dry_run
     return Reannounce::Queued;
 }
 
+void child_hold_npc_playdata_diag(uint32_t key, const char* tag) noexcept {
+    try {
+        const auto sam = sam_now(true);
+        if (!sam) return;
+        const game::FastReads m;
+        const auto actor = find_actor_with(m, *sam, key);
+        if (!actor || !*actor) return;
+        const auto comps = m.ptr(*actor + hold::kActorComponents);
+        if (!comps) return;
+        const uintptr_t base = g_seams ? g_seams->base : g_base;
+        for (uint32_t slot = 0; slot < 0x200; slot += 8) {
+            const auto c = m.rd<uintptr_t>(*comps + slot);
+            if (!c || !*c || *c < 0x10000) continue;
+            const auto vt = m.rd<uintptr_t>(*c);
+            if (!vt || *vt != base + 0x5EF6360) continue;
+            std::string t;
+            for (uint32_t o = 0x2A0; o < 0x360; o += 4) {
+                const auto v = m.rd<uint32_t>(*c + o);
+                if (v && *v) t += std::format(" +0x{:X}={:X}", o, *v);
+            }
+            log::info("ChildHold [{}] NPC 0x{:08X}: server play data 0x{:X}:{}", tag, key, *c, t);
+            return;
+        }
+    } catch (...) {
+    }
+}
+
 bool child_hold_npc_reannounce(uint32_t key) noexcept {
     try {
         if (!g_observers.load(std::memory_order_relaxed)) return false;

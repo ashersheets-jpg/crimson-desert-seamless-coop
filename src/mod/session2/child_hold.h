@@ -879,6 +879,8 @@ Reannounce child_settle_reannounce(uint32_t key, uint32_t delay_ms, bool dry_run
 // NotifyAppear([session 2], [key]): a fresh 2005 after the RemoveActorAck the caller sent. Network thread or any
 // thread outside the route's locks (SEH reads, g_mu briefly). True = queued (or already there).
 bool child_hold_npc_reannounce(uint32_t key) noexcept;
+// Research: logs the server's play data component of an NPC (no lock; SEH reads), tagged.
+void child_hold_npc_playdata_diag(uint32_t key, const char* tag) noexcept;
 
 // The owner of a server actor by key ([actor+0xA0], SEH reads; nullopt = not found or unreadable).
 // attach_follow's filter (only users' children follow a parent).

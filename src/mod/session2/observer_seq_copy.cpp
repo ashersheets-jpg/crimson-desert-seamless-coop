@@ -650,6 +650,15 @@ void observer_seq_copy_sniffed(const uint8_t* packet, size_t size, uint64_t t_us
                             g_ledger.live()});
         }
         if (seen == osq::HostSeen::Prepared || seen == osq::HostSeen::Replaced) {
+            // Far-shop research: the server's play data of the NPCs a host scene binds (the reference), first 24.
+            static std::atomic<int> diag_left{24};
+            if (const osq::SeqRec* r = g_ledger.find(seq)) {
+                for (const uint32_t k : r->required) {
+                    if ((k >> 28) == 0xB && diag_left.fetch_sub(1) > 0) {
+                        child_hold_npc_playdata_diag(k, std::format("host scene 0x{:X} diag", seq).c_str());
+                    }
+                }
+            }
             if (const osq::SeqRec* r = g_ledger.find(seq); r && g_copier.on_host_prepared(*r, p8_now_us(), g_ledger)) {
                 const std::vector<uint32_t> w = g_copier.waiting_for(seq, g_ledger);
                 note(kNPending, {seq, r->required.size(), w.size() > 0 ? w[0] : 0u, w.size() > 1 ? w[1] : 0u,
