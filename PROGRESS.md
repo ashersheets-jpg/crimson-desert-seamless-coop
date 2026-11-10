@@ -3899,3 +3899,27 @@ watch_hidden() scan only with diagnostics, enemy retries every 33 ms, DX12 overl
   glyph (floats 1.0 -> 0, flag bytes 1 -> 0 under the RB button); the layer then draws its own RB after "Co-op".
 - Saves OK, install restored 5/5.
 
+
+### tcB285 (2026-11-10): RB glyph hide bisect negative; the trade's two error constants located
+
+- **RB glyph**: zeroing alpha-like floats (1.0 -> 0), lone flag bytes (1 -> 0) and aligned ints (1 -> 0) under the
+  RB KeyGuideButton (depth 0..2) leaves the glyph's box at exactly 651 bright pixels every time. Together with the
+  float-move bisect (tcB28x) the memory route is closed: nothing we can reach moves or hides the game's RB glyph.
+  Next: the layer covers the game's glyph with a bar-coloured patch (bar is flat ~ (24,25,27)) and draws its own
+  RB after "Co-op".
+- **Trade 3111 (item 22007 from the guest's bag)**:
+  - entry 3 (any receiver) -> err 0x982103B7 = exe+0x712DFEC "bad item / inventory / entry": entry 3 is not a row
+    of inventory 1 as passed.
+  - entry 0, receiver = host CHARACTER 0xA0100001: once err 0x3E2AD36C = exe+0x714BDC4 (the distance check
+    0x2301D20; the two were ~300 m apart at that moment); otherwise the move 0x2DF04A0 is entered and returns
+    0xED0EF13C = exe+0x714BFDC.
+  - exe+0x714BFDC is the move's first check, FUN_141c27940(row, giver+8, item index) (exe+0x1C27940): a row of
+    type 0 carries a list of allowed items at row+0x68 (count +0x70, 10 bytes each: item, converted item, .., a
+    condition index at +8) and the item must be in it (with an empty list: a per-inventory lookup through
+    FUN_1405560e0(row, row+4 = target inventory)). So entry 0 (bag -> inventory 8) simply does not take item
+    22007: the rows are fixed "this kind of item may go to that special inventory" routes, and none of the bag's
+    rows targets a bag. 3111 is not a player-to-player give by itself.
+  - The guest script's trade lines repeated 05:15:43..05:17:02 (the dev script loops); harmless.
+- Trading therefore needs another route: remove from the giver + add to the receiver on the host (the server's
+  own add-item / remove-item workers), or drop + pick up. To find next in the decomp.
+- SAVES OK, user install restored 5/5 OK.
