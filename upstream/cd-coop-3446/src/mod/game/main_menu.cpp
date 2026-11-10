@@ -23,6 +23,7 @@ constexpr uintptr_t kRoot_PageIndex = 0x1C8;      // uint32
 const char* const kPanels[kMenuPageCount] = {"WorldMapView", "InventoryEquipmentPanel", "QuestMenuPanel2",
                                              "SkillTreePanel", "LogoutView"};
 
+constexpr uintptr_t kTabButton = 0xF1CB50;       // the menu's LB / RB handler (root, sender, button, 0, 0, float*)
 constexpr uintptr_t kTabChanged = 0xF1CF40;      // void (root, list, flag): the tab row's selection changed
 constexpr uintptr_t kListSelect = 0xA7866B0;      // void (list, page + 0x10, 0, flag): select the item with this key
 constexpr uintptr_t kRoot_Pages = 0x158;          // stride 0x30
@@ -190,16 +191,37 @@ void do_step(uintptr_t root, int delta) {
         log::warn("Main menu: RB step refused, the menu's root cannot be read (0x{:X})", root);
         return;
     }
+    // tcB297: selecting by key and running the callback opened the page but left the row's highlight and the old
+    // page's sub-tab row behind. The game's own LB / RB handler (exe+0xF1CB50: root, sender, button, pressKind 0,
+    // 0, float* axis; build/decomp/notes_menu_tab_step.md) hides the old sub-tab row, steps the list (which runs
+    // the "selection changed" callback) and restarts the highlight. It does not look at the button being hidden.
     const uint32_t to = (cur + static_cast<uint32_t>(delta + kMenuPageCount)) % kMenuPageCount;
-    reinterpret_cast<void (*)(uintptr_t, uintptr_t, uint64_t, uint64_t)>(base + kListSelect)(
-        row, pages + static_cast<uintptr_t>(to) * kPageStride + 0x10, 0, 0);
+    uintptr_t button = 0;
+    uint8_t head = 0;
     int32_t idx = -1;
+    if (safe_read(root + (delta > 0 ? kRoot_RbGlyph : kRoot_RbGlyph - 8), &button, sizeof button) && button &&
+        safe_read(base + kTabButton, &head, 1) && head != 0xCC && head != 0) {
+        float axis = 0.f;
+        reinterpret_cast<void (*)(uintptr_t, uintptr_t, uintptr_t, char, uintptr_t, float*)>(base + kTabButton)(
+            root, 0, button, 0, 0, &axis);
+    }
     safe_read(row + kList_Index, &idx, sizeof idx);
     safe_read(root + kRoot_PageIndex, &after, sizeof after);
-    const bool by_itself = after != cur || g_page.load() != static_cast<int>(cur);
+    const bool own = after != cur || g_page.load() != static_cast<int>(cur) || idx != static_cast<int32_t>(cur);
     static int said = 0;
-    if (said++ < 8) log::info("Main menu: RB step {} -> {} (row index {}, page {} after the select: {})", cur, to, idx, after,
-                              by_itself ? "the select opened it" : "running the row's callback");
+    if (said++ < 8) log::info("Main menu: tab step {} -> {} (row index {}, page {} after the game's handler: {})", cur, to,
+                              idx, after, own ? "stepped" : "nothing moved, selecting by key");
+    if (own) return;
+    // The handler's gate refused: the old way (select by key, then the row's callback).
+    uintptr_t sub = 0, sub_vft = 0, hide = 0;
+    if (safe_read(pages + static_cast<uintptr_t>(cur) * kPageStride + 0x28, &sub, sizeof sub) && sub &&
+        safe_read(sub, &sub_vft, sizeof sub_vft) && sub_vft && safe_read(sub_vft + 0x28, &hide, sizeof hide) && hide) {
+        reinterpret_cast<void (*)(uintptr_t)>(hide)(sub);
+    }
+    reinterpret_cast<void (*)(uintptr_t, uintptr_t, uint64_t, uint64_t)>(base + kListSelect)(
+        row, pages + static_cast<uintptr_t>(to) * kPageStride + 0x10, 0, 1);
+    safe_read(row + kList_Index, &idx, sizeof idx);
+    safe_read(root + kRoot_PageIndex, &after, sizeof after);
     if (after == cur && idx == static_cast<int32_t>(to)) tab_changed(root, row, 0);
 }
 std::atomic<void (*)()> g_ui_tick{nullptr};

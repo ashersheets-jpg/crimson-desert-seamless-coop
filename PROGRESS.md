@@ -4,6 +4,12 @@ Started 2026-11-03 (user handed over ROADMAP.md). Older history: NOTES/LOG.md, N
 One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every test session savecheck.sh --fix,
 test save Out, shipped cdmp.ini restored.
 
+## Waiting on the user (kept current)
+- Steam is closed (since 2026-11-10 ~08:13): game tests (two copies through Steam) are paused until it is open again.
+- Playtest results from the testers (the two-PC test).
+- Release / Discord posts / sending a build: each needs the user's OK first.
+- Controller feel checks (hands on a pad).
+
 ## T01 -- Two-PC playtest pack
 Plan: list every 2-PC item (joining incl. room code and invite-only, guest loot, shared enemy set, boss cutscene,
 final blow, boss death wait, challenges, ending); rewrite docs/tests/PLAYTEST-1.md as numbered tables with
@@ -4137,3 +4143,51 @@ Full notes: build/decomp/notes_inventory_menu.md (local, not published).
   across the restart). Fixed.
 - Harness: the host's keys did not run (the guest's copy at its lobby kept the front through 24 tries). actpid now
   minimises the window in front and tries again.
+
+### tcB297 (2026-11-10): pause menu opens on Inventory; our tab step drew two pages at once
+
+- Pad Start opens the pause menu on the Inventory tab (index 1), not on Map.
+- Our own RB step (select the next tab by key) opened the Journal's content, but the highlight stayed on
+  Inventory and the Inventory's sub-tab labels stayed drawn over the Journal's.
+- Cause (static, build/decomp/notes_menu_tab_step.md, local only): the game's LB/RB handler exe+0xF1CB50
+  (root, sender, button, pressKind, param_5, float* axis) first hides the old page's sub-tab row, then calls the
+  tab row's own previous/next (exe+0xA7802C0 / exe+0xA783860). It does not check whether the button is hidden.
+- Fix (game/main_menu.cpp do_step): call the game's own handler with the LB/RB button object; if nothing moved,
+  fall back to hiding the old sub-tab row and selecting by key. Tested in tcB299.
+
+### tcB298 (2026-11-10): the inventory's pad keys
+
+- Keyguide on the inventory with the pad: A Select Group, X Discard, Y Details, L Ungroup / Group All,
+  R Sort, B Close. Discard and Details are greyed on key items (the first two rows of the test save).
+- B closes the whole pause menu (not just a sub-state).
+- "Give: inventory hooks installed" seen; no discard reached the hook because the cursor was on a key item.
+- Saves OK, user install restored 5/5.
+
+### tcB299 (2026-11-10): the give question shows; the tab step now uses the game's own handler
+
+- Host, inventory open next to the guest, cursor on a Ricefish, X (Discard): our card "Give to Guest / Discard /
+  Cancel" appears beside the friend's name. A on Give: "Give: x1 from inventory 1 slot 57 to 0xA0100066" and the
+  native's 3111 reached the server's handler, but it stopped at stage 2: the server's bag slot 57 was empty.
+- The next action in the inventory said "Processing the previous request": the discard handler waits for a server
+  answer that never comes after a give. Fix: the handler's own error clean-up after a give (root[0x27] = 0, the
+  timeout at +0x138 cleared, exe+0xF1A000 on the owner to hide the waiting state).
+- RB from Inventory: "tab step 1 -> 2 (... stepped)", the Journal opens with its own sub-tabs and the highlight on
+  Journal; RB again: Skills, correct. The old two-pages-at-once bug is gone.
+- Saves OK, user install restored 5/5.
+
+### tcB300 (2026-11-10): give both ways reaches the server; wrong bag key
+
+- Both directions sent and handled (guest -> host and host -> guest), both at stage 2 with slot 57 empty.
+- New native diagnostics: the server's bag "key 1" is index 0 and holds items in slots 0..6; the client's slot 57
+  was in another bag. ClientDiscard's inventory argument is an INDEX into the game's inventory table; the request
+  builder sends that row's key (exe+0xAC9210 -> exe+0x5560E0(_, index)+8 -> exe+0xCDCEF0). The layer now does the
+  same before sending the give. Tested in tcB301.
+- No "Processing the previous request" after the give this time (the clean-up works).
+
+### tcB301 (2026-11-10): not run, Steam was closed
+
+- twocopy.ps1 refused: "Steam is not running" (Steam closed between tcB300 and tcB301, not by us). SAVES OK,
+  install restored 5/5. Game tests wait until Steam is open again (on the "waiting on the user" list).
+- Built meanwhile: the give also sends the item index the giver's client sees in that slot (the u16 after the item
+  key, 0xFFFF before). The native's give, when the named slot does not hold that item, takes the first slot of the
+  same bag that holds it with enough count (client and server slot numbers can differ). Untested.

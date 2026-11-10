@@ -45,6 +45,27 @@ struct Pending {
 bool g_pass = false;  // our own call of a handler: no question
 bool g_give = false;  // ... and ClientDiscard becomes the give
 
+uint16_t inventory_key(uint32_t index) noexcept {
+    const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    __try {
+        const uintptr_t row = reinterpret_cast<uintptr_t (__fastcall*)(uint64_t, uint32_t)>(base + 0x5560E0)(0, index);
+        if (row) return *reinterpret_cast<uint16_t*>(row + 8);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    }
+    return static_cast<uint16_t>(index);
+}
+
+uint16_t slot_item(int64_t holder, int16_t inventory, int16_t slot) noexcept {
+    const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    __try {
+        const uintptr_t e = reinterpret_cast<uintptr_t (__fastcall*)(int64_t, int16_t, int16_t)>(base + 0x22F7FE0)(
+            holder, inventory, slot);
+        if (e && *reinterpret_cast<int64_t*>(e + 0x10) > 0) return *reinterpret_cast<uint16_t*>(e + 8);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    }
+    return 0xFFFF;
+}
+
 uint64_t on_discard(int which, int64_t* root, int64_t count, uint64_t a3, uint64_t a4) {
     auto& hook = which ? g_list_hook : g_bag_hook;
     if (g_pass || !g_linked.load() || !g_near.load()) return hook.call<uint64_t>(root, count, a3, a4);
@@ -63,7 +84,12 @@ int* on_client_discard(int64_t holder, int* err, int64_t* actor, uint64_t invent
     const uint32_t me = capture_own_player_key();
     const uint32_t to = g_host.load() ? kGuestCharacter : kHostCharacter;
     const uint32_t item = 0, entry = kGiveEntry;
-    const uint16_t none = 0xFFFF, inv = static_cast<uint16_t>(inventory), sl = static_cast<uint16_t>(slot);
+    // ClientDiscard's inventory is an index into the game's inventory table; the request carries that row's key
+    // (+8), as the game's own request builder does (exe+0xAC9210 -> exe+0x5560E0 -> exe+0xCDCEF0).
+    const uint16_t sl = static_cast<uint16_t>(slot);
+    const uint16_t inv = inventory_key(static_cast<uint32_t>(inventory & 0xFFFF));
+    // The item the client sees in that slot: the server finds it by this when its slot numbers differ.
+    const uint16_t hint = slot_item(holder, static_cast<int16_t>(inventory & 0xFFFF), slot);
     const uint64_t n = count > 0 ? static_cast<uint64_t>(count) : 1;
     std::vector<uint8_t> pkt(5 + 30);
     const uint16_t len = 30;
@@ -71,18 +97,34 @@ int* on_client_discard(int64_t holder, int* err, int64_t* actor, uint64_t invent
     std::memcpy(&pkt[3], &len, 2);
     uint8_t* p = &pkt[5];
     std::memcpy(p + 0, &item, 4);
-    std::memcpy(p + 4, &none, 2);
+    std::memcpy(p + 4, &hint, 2);
     std::memcpy(p + 6, &n, 8);
     std::memcpy(p + 14, &me, 4);
     std::memcpy(p + 18, &to, 4);
     std::memcpy(p + 22, &inv, 2);
     std::memcpy(p + 24, &sl, 2);
     std::memcpy(p + 26, &entry, 4);
-    const bool ok = me && sniffer_inject_c2s(std::move(pkt));
-    log::info("Give: x{} from inventory {} slot {} to 0x{:08X} (giver 0x{:08X}){}", n, inv, slot, to, me,
+    const bool ok = me && inv != 0xFFFF && sniffer_inject_c2s(std::move(pkt));
+    log::info("Give: x{} from inventory {} (key {}) slot {} (item index 0x{:X}) to 0x{:08X} (giver 0x{:08X}){}", n,
+              inventory & 0xFFFF, inv, slot, hint, to, me,
               ok ? "" : " NOT sent");
     if (err) *err = 0;
     return err;
+}
+
+// The discard handler leaves the inventory waiting for the server's answer ("Processing the previous request" on
+// the next action). A give never gets one: the handler's own error clean-up (no pending action, waiting state hidden).
+bool clear_wait(int64_t* root, uintptr_t base) noexcept {
+    __try {
+        root[0x27] = 0;
+        *reinterpret_cast<int64_t*>(reinterpret_cast<uintptr_t>(root) + 0x138) = 0;
+        const auto owner = reinterpret_cast<int64_t (__fastcall*)(int64_t*)>(
+            *reinterpret_cast<uintptr_t*>(*reinterpret_cast<uintptr_t*>(root) + 0x118))(root);
+        if (owner) reinterpret_cast<void (__fastcall*)(int64_t)>(base + 0xF1A000)(owner);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
 }
 
 }  // namespace
@@ -152,13 +194,19 @@ void give_ui_tick() {
     auto& hook = p.which ? g_list_hook : g_bag_hook;
     g_pass = true;
     g_give = answer == 1;
+    bool unlocked = true;
     const uint64_t r = hook.call<uint64_t>(p.root, p.count, uint64_t{0}, uint64_t{0});
     g_pass = false;
     if (g_give) {
         g_give = false;
         log::info("Give: the game did not reach its discard (nothing given)");
+    } else if (answer == 1) {
+        // The handler now waits for the server's answer to a discard that was never sent ("Processing the previous
+        // request" on the next action). Its own error path's clean-up: no pending action, the waiting state hidden.
+        unlocked = clear_wait(p.root, base);
     }
-    log::info("Give: {} done, the handler returned {}", answer == 1 ? "give" : "discard", r & 0xFF);
+    log::info("Give: {} done, the handler returned {}{}", answer == 1 ? "give" : "discard", r & 0xFF,
+              unlocked ? "" : " (the inventory's wait could not be cleared)");
 }
 
 }  // namespace cdmp::net
