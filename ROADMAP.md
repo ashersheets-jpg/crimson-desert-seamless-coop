@@ -191,8 +191,11 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
 **Items** (decomp: the bag's item transaction, docs/research/reverse-engineering-3576.md "Items")
 - [~] **B11 — Item gifting and trading** (confirm step, no duplication, a log, controller). (2026-11-10: the inventory's
   Discard next to the friend asks Give to <name> / Discard / Cancel, pad and keyboard, tcB299; the give reaches the
-  host's server both ways, tcB300; bag key + item index fix built, untested: Steam was closed.)
-- [ ] **B12 — Shared stash.**
+  host's server both ways, tcB300; 2026-11-10 tcB321: host -> guest give WORKS through the game's own whole-record
+  move (the same-user check passed for the mod's own moves only); hidden behind [coop] item_sharing until the guest
+  side is seen.)
+- [~] **B12 — Shared stash.** (user 2026-11-10: the host's own warehouse once the story unlocks it; built, the
+  page and card follow the warehouse state; same move as the give; untested with an unlocked warehouse.)
 
 **Minigames and challenges**
 - [ ] **B13 — Real PvP minigames** (arm wrestling on each other's live gauge; shot contests, boxing, spear duel, cards).

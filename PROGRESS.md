@@ -5,11 +5,12 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
-- Steam is closed (since 2026-11-10 ~08:13): game tests (two copies through Steam) are paused until it is open again.
 - Playtest results from the testers (the two-PC test).
 - Release / Discord posts / sending a build: each needs the user's OK first.
 - Controller feel checks (hands on a pad).
-- Decide: may the guest pick up quest items lying in the host's world (B19)?
+- Guest-side checks (the guest seeing a gift arrive, guest -> host give, the stash with an unlocked warehouse, Lootr
+  for the guest): the guest copy stalls in its load on this PC since ~15:50 (memory: Discord 3 GB + two copies); the
+  user keeps Discord open (2026-11-10 18:35), so these wait for a lighter moment or the playtesters.
 
 ## T01 -- Two-PC playtest pack
 Plan: list every 2-PC item (joining incl. room code and invite-only, guest loot, shared enemy set, boss cutscene,
