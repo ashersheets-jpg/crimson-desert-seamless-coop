@@ -4451,3 +4451,15 @@ arriving at Hernand.
   then "gimmick 0xB0100156 gave the host item 0x50D (key 757006) x2; kept for the guest (3 packet(s) held)". The
   host side works. The guest's load stalled again (WINDOW_B), so its take was not reached. The stall now blocks
   every guest-side check: diagnosis running (build/native/notes_guest_load_stall.md).
+
+### 2026-11-10 19:45: the guest load stall FOUND (a real race, not memory)
+
+- build/native/notes_guest_load_stall.md (diagnosis over tcB262-tcB327): the deciding line is the guest's
+  "MerchantUnhide [login guard] ... state before X after 1". Good runs: before 0 (the host's character logs in on the
+  guest before the guest's own stage manager reaches 2). Stalled runs: before 2 -- the game's call at 0x99C17A drops
+  the manager to 1 and the guard only put back a 3, so it stayed at 1 (loading 1250 for good), the guest never sent
+  its second 2167, no 2190 / 2762, the loading void. Every stall (tcB264, tcB299, tcB307-tcB327) is "before 2". The
+  wire was clean (backlog 0, 0 rejected, valve shed 0); compression / valve / stash / Lootr / trade_probe ruled out.
+  The race got more frequent as the guest's login of the host's character got slower (0.1 s -> 0.4-1.3 s).
+- Fix (native merchant_unhide.cpp, built): any state of 2 or more the call lowered is put back (was: only 3). A
+  player could hit this too (a late login of the host's character on the guest). Test tcB328 (with Lootr).
