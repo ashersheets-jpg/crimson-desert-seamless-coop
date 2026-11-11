@@ -39,7 +39,7 @@ The report is `build/native/prepost-<tag>.txt`. After each game step, LOOK at th
 | display | the player's own display mode and graphics settings, frame generation on, real Steam lobby, title only | overlay ready and drawing, title menu on the screenshots | exclusive fullscreen on other monitors |
 | lowsave | both players on a save with 1 mission done | both reach the world, linked, no solo-prologue hold | every early story state |
 | chest | host opens the Greymane Shrine chest while the guest is away; guest returns | share kept, waits, notice shown to the guest, guest's bag grows at the chest | the guest opening first (needs two players) |
-| revive | the guest is taken down, sees the death screen, cannot move, presses Q | input held, revive asked, alive again, input back | the friend's own revive by hand; the downed pose |
+| revive | the guest is taken down, lies down, sees the death screen, cannot move, presses Q | the death reaches the client with the game-over state skipped, input held, revive asked, alive again, input back; the lying character and the HUD on the screenshots | the friend holding Interact to revive; going down while riding or in a duel |
 | loot | host loots enemy bodies with the guest nearby | guest gets its own share, bag grows | what each player sees on screen at the body |
 | crime | both fight at the bandit camp | guest's hits are seen and none is booked as a crime | town NPCs, guards, a real wanted level |
 

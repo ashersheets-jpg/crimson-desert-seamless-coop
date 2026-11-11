@@ -5160,3 +5160,37 @@ Run pp1 on package 0.1.0-alpha+0cd46dd8 (layer HEAD 0cd46dd, native 560e3dc; one
   its character: key, kind, distance, HP, position. The guest stands idle at the camp for 95 s while both clients
   log it every 10 s: do bandits exist there for the guest, do they come, does its HP drop. Then the same with the
   host at the camp too (ff3) for comparison.
+
+### ff2-ff3 (2026-11-11 13:45-14:05): SETTLED: enemies of the host stand FROZEN around a guest 108 m from the host
+
+- Tool: dev script step "npcs [radius]" (layer, dev only): the NPC actors this client has loaded near its character,
+  nearest first: key, variant (animal name when known), distance, HP, position. Scripts scan/ff_guest_watch*.txt,
+  ff_host_far_watch.txt, ff_host_lure.txt. Exact switches: build/native/ff2.args, ff3.args.
+- ff2 (guest idle at the dock, host at the shrine 108 m away, the host never went to the dock): NO bandits there at
+  all. Within 60 m of the guest only walkers (hp 90, 180) and small animals (hp 45) on their routes. So the dock
+  "bandit camp" is not a camp: the bandits belong to the host's save (its quest) and come for the HOST. Every
+  earlier "far guest at the bandit camp" run (tcB389, tcB400, tcB413, tcB415, ff1) had no bandits to fight.
+- ff3 (the host goes to the dock for 26 s, its bandits come, then it teleports to the shrine; the guest stands idle at
+  the dock; -Fresh, lowest graphics, one PC):
+  - while the host is there: 17-19 bandits (variants 0x0000D3xx, hp 63) within 40 m, closing to 0.8 m, the host is
+    hit (tally: NPC>host 10 blows, host HP down to about 250).
+  - from the moment the host is 108 m away: every bandit near the guest keeps EXACTLY the same position in all 11
+    samples from 13:57:53 to 13:59:32 (e.g. 0xB0100349 at (-10240.8, 544.9, -3955.9) all 100 s), and screenshots
+    ff3-g2 / ff3-g3 (30 s apart) show the same red bandits in the same mid-fight poses, one with a drawn bow. The
+    party frame reads "Host 111 m".
+  - the guest's HP is 300 / 300 in every 5 s sample of the whole run although the server received 18 blows of
+    bandits on the guest (tally "NPC>guest 18", all from the guest's own client). So those blows do nothing.
+  - (the guest's own character drifted 6 m in two minutes; not explained.)
+- What this is: an NPC has a controller user ([actor+0x90] on the server; the base's log: "controller host
+  0x90100000"); the controller's client runs its AI. The host's client stops driving NPCs that are ~100 m from its
+  own character, and nothing hands them to the nearer player. The base's far-world set (user2_stages /
+  user2_npc_control) gives user 2 its own NPCs only from >= 4 cells away, and only for NPCs born in its own stages;
+  between "next to the host" and that distance there is a dead zone, and the host's own enemies (quest bandits) are
+  never handed over at any distance.
+- For players: fighting side by side works (tcB414, tcB359). A guest who stays in a fight while the host walks or
+  rides ~100 m off is left with statues that cannot hurt it. Not tested: whether the guest's blows hurt those
+  statues; distances between 30 m and 108 m (where the freeze starts); the same with the roles swapped (a guest's
+  own far-world NPCs when the host comes near).
+- Lead: the game itself has TrocTrChangeAiControlAck and TrocTrAiControlChangeCheatReq (cheat requests are live in
+  this build: KillCheatReq 2210 works). Research started (local notes build/decomp/notes_ai_control.md): hand an
+  NPC's AI control to the player who is clearly nearer, and back. B02 / B18.

@@ -161,6 +161,8 @@ revive)
   run2 "$BASE -Hold 10 -HostScript $SCAN\\host_kills_guest.txt -GuestScript $SCAN\\tp_dock_guest.txt -GuestKeys $G"; two_player_checks
   L=$N/$NAME.coopplus.guest.log
   has "$L" "Input: the game's own input held \(we are down\)" "guest: input held while down"
+  has "$L" "our death notice goes to the client"              "guest: the death reaches the client (the character lies down)"
+  has "$L" "game-over state is skipped"                       "guest: the game's own game-over state is skipped (HUD kept)"
   has "$L" "Revive: instant revive asked"                     "guest: Q asked for the instant revive"
   has "$L" "Revive: we are alive again"                       "guest: alive again"
   has "$L" "input back \(up again\)"                          "guest: input back" ;;
