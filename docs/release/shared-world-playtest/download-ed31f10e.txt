@@ -1,0 +1,13 @@
+**Update: shared world playtest 0.1.0-alpha+ed31f10e (going down and reviving fixed, enemy loot for each player)**
+Please use this build instead of 2f4b0dd4. You and your co-op partner both need it. It keeps everything from 2f4b0dd4.
+
+Fixed:
+- **Going down had no way back up**: in the shared world a player at 0 health got no death screen. If your friend did not revive you within 30 seconds you were stuck, and you could still walk around at 0 health. Now you get the "Death has found you" screen with **Q Instant Revive** and **U Revive at Checkpoint** (X / Y on a controller), your friend can still revive you by holding interact next to you, and a downed player can no longer move or attack.
+
+New:
+- **Enemy loot is for each of you**: when one of you loots a body, the other gets the same items if they are within about 30 m (or come that close within 10 minutes). You see them as the usual "acquired" lines.
+
+- `CrimsonDesert-SeamlessCoop-0.1.0-alpha+ed31f10e-shared-world.zip`: this is the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tested with two copies of the game on one PC. Please tell us in #bug-reports how it goes (and send the report zip if anything goes wrong).

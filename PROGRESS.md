@@ -4885,3 +4885,24 @@ arriving at Hernand.
   (rightly) not given. No crash, SAVES OK.
 - Next: the chest test again with these binaries (the share code changed: one settling share per player), then the
   package.
+
+### tcB388-tcB392 (2026-11-11 06:15-06:57): final checks; build 0.1.0-alpha+ed31f10e POSTED
+
+- tcB388 (chest regression with the final files): share of 7 kinds, waited for the far guest (notice + pin), fetched
+  10 s later: "its bag gained 75 piece(s)".
+- The guest going down: bandits do not attack an idle guest when the host is away (tcB389: full health for a minute),
+  a KillCheat by the guest on itself does nothing (tcB390), and the guest's teleport snaps to the ground, so no fall
+  (tcB391). tcB392: the HOST's KillCheat on the guest's character (c2s 2210 66 00 10 A0 00 00 00 00) takes it down:
+  guest "death notice is kept", "input held (we are down)", the death screen on the guest (shot g2), 86 s later Q ->
+  "instant revive asked" -> "alive again" (HP 92) -> "input back". So the self-revive works for the guest too, also
+  after the 30 s in which the friend can revive.
+- Package 0.1.0-alpha+ed31f10e (enemy loot share, death screen + input hold in the shared world, everything of
+  2f4b0dd4): install checks all pass. POSTED under the user's 12-hour authorization: #download-here 06:58 (both zips,
+  attachments checked; docs/release/shared-world-playtest/download-ed31f10e.txt) and #general 07:00
+  (general-ed31f10e.txt).
+- Tester messages seen in #general while posting (both about earlier builds, no report zip yet):
+  D3vils 04:38 "nothing appearing on my main title screen after install. not sure if this is because i own the dlc"
+  (the user answered at 05:54); Borque 06:50 "we tried the new version but inputs of the mod are not didplayed now
+  so we cant properly test". No game update is out (Steam public build 26480954 = ours), so it is not the version
+  guard. The 07:00 post explains where the controls are now (title menu, pause menu's Co-op tab, hold interact,
+  Discard -> Give) and asks both for a screenshot and the Diagnose zip. OPEN: find out what they do not see.

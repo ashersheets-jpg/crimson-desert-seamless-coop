@@ -1,0 +1,13 @@
+**A newer build is out: 0.1.0-alpha+ed31f10e** (in #download-here). Please test with this one instead of 2f4b0dd4.
+It fixes going down in a fight: you now get the death screen with Instant Revive / Revive at Checkpoint, and your friend can still revive you. It also gives enemy loot to both of you: when one loots a body, the other gets the same items if nearby.
+
+**Where the co-op controls are now** (Borque, D3vils: this may be what you are missing)
+The shared world builds no longer show hotkey hints on screen, and the old F-key shortcuts are off. Everything is in menus:
+- Title screen: after the install the title shows our own menu (Start Solo, Invite Friends, Start Co-op, Co-op Settings). Inviting and joining only work there.
+- In the world: open the pause menu and go to the **Co-op** tab (go to your friend, bring them, quick messages, the shared stash, leave).
+- Next to your friend: **hold interact** on them for duels and the other challenges.
+- Give an item: inventory, Discard on the item, then "Give to <name>".
+
+If the title screen shows the normal game menu with nothing from us, the mod did not load. If something else is missing, we need to see it. In both cases please close the game, run **Diagnose Co-op+.cmd** from the folder you extracted, and paste the zip into #bug-reports with a screenshot and one line on what you expected to see. That tells us in minutes what happened on your PC.
+
+The test list above still stands. For going down and reviving, please try all three ways (your friend revives you, Instant Revive, Revive at Checkpoint), once as host and once as guest.
