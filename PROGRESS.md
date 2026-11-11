@@ -13,6 +13,17 @@ test save Out, shipped cdmp.ini restored.
   updates if you feel like it is worth it to do so. Please continue working." So until about 2026-11-11 18:10 a
   build / update post in the Discord (#download-here, #general) may go out without asking, when it is worth it
   (tested, install checks pass, a real improvement). After that: ask again. Never delete messages; never the decomp.
+- Discord, #general, 2026-11-11 12:50 (squidbots32, new member), NOT answered (a reply needs your OK): "how does
+  syncing character looks work? I know the CC mod isnt supported, but what about Heroine of Pywell that doesnt store
+  model xml info seperately? or is it just the fact they are relying on asi files to run that makes it hard to
+  sync?" Draft answer: "In the shared-world builds each player's character is created by the game itself from that
+  player's own save, so the look you made in the game's own character and outfit screens is what your friend sees.
+  A mod that swaps models or textures only on your PC shows on your PC only; your friend sees it if they install the
+  same mod. We have not tested Heroine of Pywell: if it replaces game files it should behave like that; if it
+  changes the character through its own .asi at run time, the other player will not see it unless both run it.
+  Reports with it are welcome in #play-testing-feedback."
+- Checked 2026-11-11 15:00: no tester has written since D3vils at 08:46 (JackyChan retests "tomorrow"); nothing new
+  in #bug-reports or #play-testing-feedback.
 - Playtest results from the testers (the two-PC test).
 - Release / Discord posts / sending a build: each needs the user's OK first.
 - Controller feel checks (hands on a pad).
