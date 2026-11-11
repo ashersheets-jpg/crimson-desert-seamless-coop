@@ -209,6 +209,10 @@ void anti_grief_host_sniffed(const uint8_t* packet, size_t size, bool server_to_
             return;
         }
         if (op != agl::kOpDoFrameEventReq) return;
+        // Only the host's own CHARACTER counts as "the host fights it" (the attacker key is payload + 1). tcB413: with
+        // the host 100 m away, every bandit the guest hit was marked as fought by the host: this tap also carries
+        // frame events whose attacker is somebody else.
+        if (size < 5 + 5 || agl::rd32(packet + 5 + 1) != kHostCharacter) return;
         try {
             const auto t = agl::targets(std::span<const uint8_t>(packet + 5, size - 5));
             std::lock_guard lk(g_mu);
