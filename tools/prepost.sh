@@ -42,7 +42,8 @@ growth() {  # log, who, limit per minute
   # the single most repeated line (numbers and addresses blanked): more than 30 a minute = something logs every
   # second or two for the whole session
   local top cnt
-  top=$(cut -c29- "$f" | sed -E 's/0x[0-9A-Fa-f]+/N/g; s/[0-9]+/N/g' | cut -c1-60 | sort | uniq -c | sort -rn | head -1)
+  # (not the base's horse diagnostics: capped at 400 lines a session by its own counter, horse_diag.cpp kMaxLines)
+  top=$(grep -v "HorseDiag " "$f" | cut -c29- | sed -E 's/0x[0-9A-Fa-f]+/N/g; s/[0-9]+/N/g' | cut -c1-60 | sort | uniq -c | sort -rn | head -1)
   cnt=$(echo "$top" | awk '{print $1}')
   local tper=$(( ${cnt:-0} * 60 / secs ))
   [ $tper -le 30 ] && ok "$2: no line repeats more than 30 times a minute (the most repeated: $tper a minute)" || bad "$2: one line repeats $tper times a minute: $(echo "$top" | cut -c1-90)"

@@ -5396,3 +5396,32 @@ Run pp1 on package 0.1.0-alpha+0cd46dd8 (layer HEAD 0cd46dd, native 560e3dc; one
 - How found: not by a test. I measured which log lines a normal session writes most, then looked at the size of
   the logs in the game folder. Neither is in the checklist yet: a "disk and log growth" check is added next (size
   of everything the session wrote into bin64, lines per minute).
+
+### pp4 (2026-11-11 16:06-, package 0.1.0-alpha+09a188c3): the full checklist; what its screenshots showed
+
+- static, real, fresh, xess, fsr, display, lowsave, chest: PASS (189 checks so far), no FAIL after two corrections of
+  my own checks: (a) the "one line repeats" check tripped on the base's horse diagnostics in the new-save run (256
+  "HorseDiag ... update real" lines); they are capped at 400 lines a session by the base's own counter
+  (horse_diag.cpp kMaxLines), so they are left out of that check. (b) the real-install screenshot used to be a plain
+  screen capture and showed the desktop app over half of the title; it now brings the game window to the front
+  (realtitle.sh uses actpid.ps1).
+- Real install screenshot (pp4-real-02): the footer line is complete ("Invite a friend to begin a co-op journey, or
+  start solo."). The base's log there: "not recording packets to disk".
+- WHAT THE NEW-SAVE STEP REALLY TESTS (learned from its screenshots): in the lobby flow the host's world is the
+  co-op folder coop_worlds\with_127_0_0_1, which persists between runs; the harness's -HostVariant only fills the
+  solo slot and its copy into that folder fails with "error 80" (file exists; I had filed that line under "known").
+  So the HOST was on its usual save (Nas River, red cloak), and only the GUEST was on the 1-mission save. The step
+  is "a brand-new guest joins an established host", not "both new". A both-new run needs a fresh co-op folder
+  (to do: a harness switch that empties it in the sandbox).
+- FOUND there: THE GUEST STARTS WHERE ITS OWN SAVE WAS. In that run 1326 m from the host ("Host 1326 m" in the party
+  frame, the guest in the prologue's "Hills of No Return" with its own quest "Return to your comrades"). In every
+  other test the guest's save simply happens to be saved on the same spot as the host's, so this never showed. A
+  real first-time guest lands wherever its save is and has to find "Go to my friend" in the Co-op tab, although the
+  title menu says the friend "joins your story where you are".
+- Written (layer, source only until pp4 ends): once per start the guest is moved to the host's side when both have
+  been in the world and alive for 4 s and are more than 30 m apart (the same hop as "Go to my friend"), toast "You
+  joined <host>". [coop] join_beside_host (default 1). This changes how a session starts for every guest: listed for
+  the user as a decision to confirm.
+- Frame rate on this PC, two copies, lowest graphics (from the overlay's present counters, last minute of a run):
+  host about 42 a second, guest about 60; with XeSS frame generation 77 / 82. Not comparable to one copy on a
+  player's PC; kept as a baseline for later runs on the same harness.
