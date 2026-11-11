@@ -4687,3 +4687,30 @@ arriving at Hernand.
   running (build/decomp/notes_crime_coop.md): where a crime is registered and how to skip it for an NPC that is
   fighting the other player.
 - tcB355 g3 also shows "Thin Hide x1 acquired" on the guest (its own loot from an animal).
+
+### tcB357 (2026-11-11 00:59): chest probe (log only) hooked; the first "Drop" events seen
+
+- Native: lootr_probe now also hooks the gimmick Drop worker exe+0x2D4EC10 and its roll exe+0x2D4DE40 (log only:
+  gimmick, save key, who, mode, the rolled items). Both hooked, no crash, SAVES OK, guest load STABLE.
+- 4 Drop events in the bandit camp, all by the GUEST's swings (actor 0xA0100066): things it broke each threw one
+  item x4 ON THE GROUND (mode 0), err 0. So breakables use the same worker as chests, and mode 0 gives ground items
+  that the pickup worker handles (a concrete item: one for whoever takes it).
+- Research done (local notes build/decomp/notes_find_chests.md): how to list the gimmicks around the host that have
+  a Drop event (the server actor list, the state data's handler lists, the info row's name, rolls left by the save
+  key). A scan built on it runs in tcB359 to find a real chest for the per-player chest work.
+
+### tcB358 (2026-11-11 01:09): crimes of the guest, first hook: the real cause found
+
+- Research (local notes build/decomp/notes_crime_coop.md): every crime is registered by one server function
+  (exe+0x2BCE6A0); a hit reaches it from exe+0xE3C55B2, a kill from exe+0x2BCDE79; its yes / no test is
+  exe+0x2BCE2A0 (battle state, faction relation, the player's own quest targets).
+- Hooked and logged (22 calls). Facts: the world's NPCs have no user (so the "same user" guess was wrong); the HOST's
+  hits and kills on bandits reach the function too and the game's test clears them; the GUEST's are judged with the
+  guest's own relation / quest data and come out as crimes (type 5 Assault on each hit, type 6 Murder on a kill).
+- The first rule (skip when the host has fought that NPC) caught 1 of 3 kills only: the guest often fights a bandit
+  the host has not touched.
+- New rule (built, test tcB359): the guest is judged as the host would be. For the guest's hit / kill on an NPC the
+  game's own test is asked with the HOST's character; "no crime for the host" = no crime for the guest. An NPC the
+  host has fought is free too. What an NPC's own AI reports is untouched, so real crimes (townsfolk) still count.
+- Seen on the way: a downed host (HP 0, "Guest can revive you") still STANDS on both screens; the revive works, the
+  pose does not show it. Polish item (B17).
