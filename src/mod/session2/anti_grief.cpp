@@ -2,6 +2,7 @@
 #include "mod/session2/anti_grief.h"
 
 #include <atomic>
+#include <cstring>
 #include <format>
 #include <mutex>
 #include <unordered_set>
@@ -15,6 +16,8 @@ namespace {
 bool g_on = false;
 std::mutex g_mu;
 std::unordered_set<uint32_t> g_protected;  // guarded by g_mu
+std::unordered_set<uint32_t> g_dialog, g_fought;  // NPCs with a dialog list / NPCs the host has hit (g_mu)
+std::atomic<uint64_t> c_marked{0};
 std::atomic<uint64_t> c_dropped{0}, c_hits_seen{0}, c_stripped{0}, c_freed{0};
 
 }  // namespace
@@ -22,8 +25,7 @@ std::atomic<uint64_t> c_dropped{0}, c_hits_seen{0}, c_stripped{0}, c_freed{0};
 void anti_grief_start(bool on, bool guest) {
     g_on = on && !guest;
     log::info("AntiGrief {} (anti_grief={}{}): {}", g_on ? "ON" : "off", on ? 1 : 0, guest ? ", guest" : "",
-              g_on ? "the guest's hits on the NPCs the host talks to (townsfolk, merchants, quest givers) never reach "
-                     "the host's server"
+              g_on ? "the guest's hits on the NPCs the host has talked to or traded with never reach the host's server"
                    : "the guest can hit any NPC");
 }
 
@@ -32,11 +34,30 @@ void anti_grief_host_sniffed(const uint8_t* packet, size_t size, bool server_to_
     // Playtest 2026-11-10 (Borque: "enemies seem to not react to guest attacks"): some hostile NPCs have a dialog list
     // too (quest fights). An NPC the HOST attacks is fair game for both from then on.
     if (!server_to_client) {
-        if (static_cast<uint16_t>(packet[0] | (packet[1] << 8)) != agl::kOpDoFrameEventReq) return;
+        const uint16_t op = static_cast<uint16_t>(packet[0] | (packet[1] << 8));
+        // tcB355 (2026-11-11): bandits get a dialog list too (their battle lines), so "has a dialog list" protected
+        // enemies from the guest until the host hit each one. Now an NPC is protected only once the HOST has
+        // interacted with it (InteractionDoStepReq 3073: u32 requester | u32 target | ..., a talk or a shop) AND it has
+        // a dialog list; an NPC the host has fought is never protected again.
+        if (op == 3073 && size >= 5 + 8) {
+            try {
+                uint32_t target = 0;
+                std::memcpy(&target, packet + 5 + 4, 4);
+                std::lock_guard lk(g_mu);
+                if (g_dialog.count(target) && !g_fought.count(target) && g_protected.insert(target).second) {
+                    const uint64_t n = c_marked.fetch_add(1, std::memory_order_relaxed) + 1;
+                    if (n <= 20) log::info("AntiGrief: NPC 0x{:08X} is protected: the host interacts with it", target);
+                }
+            } catch (...) {
+            }
+            return;
+        }
+        if (op != agl::kOpDoFrameEventReq) return;
         try {
             const auto t = agl::targets(std::span<const uint8_t>(packet + 5, size - 5));
             std::lock_guard lk(g_mu);
             for (const uint32_t k : t) {
+                if ((k >> 28) == 0xB) g_fought.insert(k);
                 if (g_protected.erase(k)) {
                     const uint64_t n = c_freed.fetch_add(1, std::memory_order_relaxed) + 1;
                     if (n <= 20) log::info("AntiGrief: NPC 0x{:08X} is no longer protected: the host fights it", k);
@@ -51,7 +72,7 @@ void anti_grief_host_sniffed(const uint8_t* packet, size_t size, bool server_to_
     if (!npc) return;
     try {
         std::lock_guard lk(g_mu);
-        g_protected.insert(npc);
+        g_dialog.insert(npc);  // protected only once the host interacts with it (above)
     } catch (...) {
     }
 }
