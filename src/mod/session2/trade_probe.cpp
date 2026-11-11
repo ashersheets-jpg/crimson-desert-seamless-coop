@@ -677,6 +677,15 @@ int* __fastcall worker_detour(uintptr_t self, int* err, uint32_t item, uint16_t 
         *err = 0;
         return err;
     }
+    if (entry == 0xC0DE0007) {  // Lootr chests: the waiting shares (the host's own request only)
+        uintptr_t actor = 0;
+        uint32_t me = 0;
+        if (g == kHostCharacter && game::fast_read(self + 8, &actor, 8) && actor &&
+            game::fast_read(actor + 0x60, &me, 4) && me == kHostCharacter)
+            lootr_chest_shares(actor);
+        *err = 0;
+        return err;
+    }
     if (entry == 0xC0DE0006) {  // lootr_probe: where are the chests (the host's own request only)
         uintptr_t actor = 0;
         uint32_t me = 0;
@@ -877,6 +886,10 @@ void on_lookup(SafetyHookContext& c) {
               actor, static_cast<int>(c.rdx & 0xFF), rd<uint32_t>(c.r8), dyn_list(actor));
 }
 }  // namespace
+
+int lootr_add_item(uintptr_t holder, uint32_t key, uint64_t count) noexcept {
+    return lootr_add(reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)), holder, key, count);
+}
 
 void inter_probe_start() {
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));

@@ -32,6 +32,15 @@ std::string lootr_describe();
 // lootr_probe (host, the SERVER thread: trade_probe's entry 0xC0DE0006): the gimmicks around the host that have a Drop
 // event (chests, boxes, breakables) are logged with name, position and rolls left. build/decomp/notes_find_chests.md.
 void lootr_chest_scan(uintptr_t host_actor) noexcept;
+// Chests per player, phase 1 ("shared open, each their own content"; tcB365): a chest one player opens puts its
+// content into that player's bag (the gimmick Drop worker, mode 1). What the bag gained is kept as the OTHER player's
+// share and added to their bag as soon as they are within 6 m of the chest (at once when they stand there), for 30
+// minutes. Not yet: the chest staying closed on the other player's screen, shares across sessions.
+void lootr_set_chests(bool on);
+// The SERVER thread (trade_probe's entry 0xC0DE0007, asked by lootr_tick while a share waits).
+void lootr_chest_shares(uintptr_t host_actor) noexcept;
+// trade_probe.cpp: the add worker (the owner's client gets the game's own "acquired" notice). The err, 0 = added.
+int lootr_add_item(uintptr_t holder, uint32_t key, uint64_t count) noexcept;
 // Phase 2a (host's client, OnRecvPacket, the game's thread): what the host is told about a gimmick the GUEST took
 // first is blanked in place (gimmick key 0 / zero save key), so the host still sees it; the originals are kept.
 void lootr_host_recv(uint8_t* packet, uint16_t size) noexcept;

@@ -437,6 +437,26 @@ int* __fastcall body_loot_detour(uintptr_t comp, int* err, uintptr_t looter, uin
 // items {ptr, u32 count}, others, decrease). Logged: who, the gimmick and its save key, the mode (params[1]: 0 ground,
 // 1 bag) and the rolled items.
 safetyhook::InlineHook g_drop, g_drop_roll;
+bool g_chests_on = false;
+struct ChestShare {
+    uint32_t gimmick = 0, opener = 0;
+    float x = 0, y = 0, z = 0;
+    uint32_t item[12] = {};
+    int64_t n[12] = {};
+    int items = 0;
+    uint64_t at = 0;
+    // tcB366: the chest puts ONE bundle item into the bag, which the game then turns into the real content (Meat Soup
+    // x10, Lean Meat x13, Lentils x3). So the bag is compared again once that has settled.
+    bool settled = false;
+    BagSnap before;
+};
+constexpr uint64_t kSettleMs = 1500;
+constexpr int kShareMax = 16;
+ChestShare g_shares[kShareMax];  // the server thread only
+int g_share_n = 0;
+std::atomic<int> g_shares_pending{0};
+std::atomic<uint64_t> c_chest_opened{0}, c_chest_shared{0}, c_chest_expired{0};
+void chest_opened(uintptr_t comp, uintptr_t opener, uint32_t gimmick, uint32_t opener_key, const BagSnap& before) noexcept;
 struct DropSeen {
     uint32_t gimmick = 0, actor = 0, target = 0;
     uint8_t key16[16] = {};
@@ -509,12 +529,17 @@ uint32_t* __fastcall drop_detour(uintptr_t comp, uint32_t* err, uintptr_t field,
     read_drop(s, comp, actor, target, params);
     DropSeen* const outer = t_drop;
     t_drop = &s;
+    // Chests per player: mode 1 puts the content straight into the opener's bag; what the bag gains is the share.
+    static BagSnap before;  // the server thread only
+    const bool share = g_on && g_chests_on && !outer && s.p1 == 1 && target && (s.target >> 28) == 0xA &&
+                       snap_bag(target, before);
     uint32_t* const r = g_drop.call<uint32_t*>(comp, err, field, actor, target, targets, params, a8, a9, a10, a11);
     t_drop = outer;
     uint32_t e = 0xFFFFFFFF;
     if (err) game::fast_read(reinterpret_cast<uintptr_t>(err), &e, 4);
+    if (share && e == 0) chest_opened(comp, target, s.gimmick, s.target, before);
     static std::atomic<int> said{0};
-    if (said.fetch_add(1) < 60) {
+    if (g_probe && said.fetch_add(1) < 60) {
         char key[3 * 16 + 1] = {};
         for (int i = 0; i < 16; ++i) std::snprintf(key + i * 3, 4, "%02X ", s.key16[i]);
         log::info("Lootr probe: DROP event of gimmick 0x{:08X} (save key {}) actor 0x{:08X} target 0x{:08X} | params "
@@ -540,9 +565,25 @@ struct ChestFound {
     uint8_t key16[16] = {};
 };
 constexpr int kChestMax = 48;
+// Walk B by name: every scene object of the field that still has drop rolls; the names are looked up once per info
+// index (kept across scans) and the objects whose name looks like a chest are listed, the nearest first.
+struct RowName {
+    uint16_t idx = 0xFFFF;
+    bool chest = false, said = false;
+    uint32_t seen = 0;
+    char name[48] = {};
+};
+constexpr int kRowNames = 1500;
+RowName g_row_names[kRowNames];  // the server thread only
+int g_row_name_n = 0;
 struct ChestScan {
     ChestFound f[kChestMax];
     int n = 0;
+    ChestFound wide[kChestMax];  // by name, from the scene objects (no actor key)
+    int wide_n = 0;
+    ChestFound near_[24];  // every gimmick actor within 8 m, with or without a Drop event (left = its state hash)
+    int near_n = 0;
+    uint32_t with_rolls = 0;
     uint32_t actors = 0, gimmicks = 0, droppers = 0, objects = 0;
     float hx = 0, hy = 0, hz = 0;
     int stage = 0;
@@ -616,11 +657,20 @@ void chest_scan_read(ChestScan& s, uintptr_t base, uintptr_t host) noexcept {
             const uintptr_t comp = comps ? *reinterpret_cast<uintptr_t*>(comps + 0x30) : 0;
             if (!comp) continue;
             ChestFound f;
-            if (!drop_handler(base, *reinterpret_cast<uintptr_t*>(comp + 0x40), f.mode)) continue;
-            ++s.droppers;
+            const bool has_drop = drop_handler(base, *reinterpret_cast<uintptr_t*>(comp + 0x40), f.mode) != 0;
             if (!actor_pos(base, actor, f.x, f.y, f.z)) continue;
             const float dx = f.x - s.hx, dy = f.y - s.hy, dz = f.z - s.hz;
             f.dist = dx * dx + dy * dy + dz * dz;
+            if (f.dist < 64.0f && s.near_n < 24) {
+                ChestFound g = f;
+                g.key = *reinterpret_cast<uint32_t*>(actor + 0x60);
+                g.idx = *reinterpret_cast<uint16_t*>(comp + 0x48);
+                g.left = *reinterpret_cast<uint32_t*>(comp + 0x270);
+                g.row_rolls = has_drop ? 1 : 0;
+                s.near_[s.near_n++] = g;
+            }
+            if (!has_drop) continue;
+            ++s.droppers;
             int at = s.n;
             if (s.n == kChestMax) {  // keep the nearest
                 at = -1;
@@ -639,6 +689,14 @@ void chest_scan_read(ChestScan& s, uintptr_t base, uintptr_t host) noexcept {
             f.idx = *reinterpret_cast<uint16_t*>(comp + 0x48);
             std::memcpy(f.key16, reinterpret_cast<void*>(comp + 0x30), 16);
             s.f[at] = f;
+        }
+        for (int k = 0; k < s.near_n; ++k) {
+            ChestFound& f = s.near_[k];
+            const uintptr_t row =
+                reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t, uint32_t)>(base + 0x3DE240)(0, f.idx);
+            const uintptr_t h = row ? *reinterpret_cast<uintptr_t*>(row + 8) : 0;
+            const char* text = h ? *reinterpret_cast<const char**>(h) : nullptr;
+            for (size_t c = 0; text && c + 1 < sizeof f.name && text[c]; ++c) f.name[c] = text[c];
         }
         s.stage = 3;
         // The rows (name, starting rolls): only for the kept ones (the call may load a row).
@@ -667,11 +725,70 @@ void chest_scan_read(ChestScan& s, uintptr_t base, uintptr_t host) noexcept {
         for (uint32_t o = 0; o < m; ++o) {
             const uintptr_t e = *reinterpret_cast<uintptr_t*>(oarr + 8ull * o);
             if (!e) continue;
+            const uintptr_t d = *reinterpret_cast<uintptr_t*>(e + 0x18);
+            if (!d) continue;
             for (int k = 0; k < s.n; ++k) {
                 if (std::memcmp(reinterpret_cast<void*>(e + 8), s.f[k].key16, 16) != 0) continue;
-                const uintptr_t d = *reinterpret_cast<uintptr_t*>(e + 0x18);
-                if (d) s.f[k].left = *reinterpret_cast<uint32_t*>(d + 0x10C);
+                s.f[k].left = *reinterpret_cast<uint32_t*>(d + 0x10C);
             }
+            const uint16_t idx = *reinterpret_cast<uint16_t*>(d + 0xB0);
+            const uint32_t left = *reinterpret_cast<uint32_t*>(d + 0x10C);
+            if (idx == 0xFFFF || left == 0 || left > 1000) continue;
+            ++s.with_rolls;
+            int at = -1;
+            for (int k = 0; k < g_row_name_n; ++k) {
+                if (g_row_names[k].idx == idx) {
+                    at = k;
+                    break;
+                }
+            }
+            if (at < 0 && g_row_name_n < kRowNames) {
+                at = g_row_name_n++;
+                RowName& rn = g_row_names[at];
+                rn = RowName{};
+                rn.idx = idx;
+                const uintptr_t row =
+                    reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t, uint32_t)>(base + 0x3DE240)(0, idx);
+                const uintptr_t h = row ? *reinterpret_cast<uintptr_t*>(row + 8) : 0;
+                const char* text = h ? *reinterpret_cast<const char**>(h) : nullptr;
+                char low[sizeof rn.name] = {};
+                for (size_t c = 0; text && c + 1 < sizeof rn.name && text[c]; ++c) {
+                    rn.name[c] = text[c];
+                    low[c] = (text[c] >= 'A' && text[c] <= 'Z') ? static_cast<char>(text[c] + 32) : text[c];
+                }
+                rn.chest = std::strstr(low, "treasure") || std::strstr(low, "chest") || std::strstr(low, "coffer") ||
+                           std::strstr(low, "strongbox") || std::strstr(low, "safe");
+            }
+            if (at < 0) continue;
+            ++g_row_names[at].seen;
+            if (!g_row_names[at].chest) continue;
+            ChestFound f;
+            f.x = *reinterpret_cast<float*>(d + 0xD0);
+            f.y = *reinterpret_cast<float*>(d + 0xD4);
+            f.z = *reinterpret_cast<float*>(d + 0xD8);
+            const float dx = f.x - s.hx, dy = f.y - s.hy, dz = f.z - s.hz;
+            f.dist = dx * dx + dy * dy + dz * dz;
+            int put = s.wide_n;
+            if (s.wide_n == kChestMax) {
+                put = -1;
+                float worst = f.dist;
+                for (int k = 0; k < kChestMax; ++k) {
+                    if (s.wide[k].dist > worst) {
+                        worst = s.wide[k].dist;
+                        put = k;
+                    }
+                }
+                if (put < 0) continue;
+            } else {
+                ++s.wide_n;
+            }
+            f.idx = idx;
+            f.left = left;
+            std::memcpy(f.name, g_row_names[at].name, sizeof f.name < sizeof g_row_names[at].name ? sizeof f.name
+                                                                                                   : sizeof g_row_names[at].name);
+            f.name[sizeof f.name - 1] = 0;
+            std::memcpy(f.key16, reinterpret_cast<void*>(e + 8), 16);
+            s.wide[put] = f;
         }
         s.stage = 5;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
@@ -680,7 +797,164 @@ void chest_scan_read(ChestScan& s, uintptr_t base, uintptr_t host) noexcept {
 }
 std::atomic<int> g_chest_scans{0};
 
+// ---- chests per player, phase 1 (lootr.h).
+bool gimmick_pos(uintptr_t comp, float& x, float& y, float& z) noexcept {
+    __try {
+        const uintptr_t actor = *reinterpret_cast<uintptr_t*>(comp + 8);
+        return actor && actor_pos(reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)), actor, x, y, z);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+void chest_opened(uintptr_t comp, uintptr_t opener, uint32_t gimmick, uint32_t opener_key,
+                  const BagSnap& before) noexcept {
+    (void)opener;
+    static ChestShare sh;  // the server thread only
+    sh = ChestShare{};
+    sh.gimmick = gimmick;
+    sh.opener = opener_key;
+    sh.at = GetTickCount64();
+    sh.before = before;
+    c_chest_opened.fetch_add(1);
+    if (!gimmick_pos(comp, sh.x, sh.y, sh.z)) {
+        log::info("Lootr: chest 0x{:08X} opened by 0x{:08X}: the chest's position is unreadable (no share kept)",
+                  gimmick, opener_key);
+        return;
+    }
+    int slot = g_share_n < kShareMax ? g_share_n++ : 0;  // full: the oldest goes
+    if (slot == 0 && g_share_n == kShareMax && g_shares[0].gimmick) {
+        for (int k = 1; k < kShareMax; ++k) {
+            if (g_shares[k].at < g_shares[slot].at) slot = k;
+        }
+    }
+    g_shares[slot] = sh;
+    g_shares_pending = g_share_n;
+}
+// What the opener's bag gained since the chest was opened. False = its bag cannot be read now.
+bool share_settle(ChestShare& sh, uintptr_t opener_actor) noexcept {
+    static BagSnap after;  // the server thread only
+    if (!snap_bag(opener_actor, after)) return false;
+    const BagSnap& before = sh.before;
+    // By item kind, whatever slot: totals after minus totals before.
+    for (int i = 0; i < after.slots; ++i) {
+        const uint16_t idx = after.idx[i];
+        if (idx == 0xFFFF || after.n[i] <= 0) continue;
+        bool counted = false;
+        for (int j = 0; j < i; ++j) counted = counted || after.idx[j] == idx;
+        if (counted) continue;
+        int64_t now = 0, was = 0;
+        for (int j = 0; j < after.slots; ++j) now += after.idx[j] == idx && after.n[j] > 0 ? after.n[j] : 0;
+        for (int j = 0; j < before.slots; ++j) was += before.idx[j] == idx && before.n[j] > 0 ? before.n[j] : 0;
+        if (now <= was || sh.items == 12) continue;
+        const uint32_t key = item_key_of(idx);
+        if (!key) continue;
+        sh.item[sh.items] = key;
+        sh.n[sh.items++] = now - was;
+    }
+    sh.settled = true;
+    return true;
+}
+struct PlayerAt {
+    uint32_t key = 0;
+    uintptr_t actor = 0, holder = 0;
+    float x = 0, y = 0, z = 0;
+};
+int players_now(PlayerAt* out, int cap) noexcept {
+    int n = 0;
+    const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    __try {
+        const uintptr_t slot = *reinterpret_cast<uintptr_t*>(base + 0x71C0608);
+        const uintptr_t sam = slot ? *reinterpret_cast<uintptr_t*>(slot) : 0;
+        if (!sam) return 0;
+        const uint32_t cnt = *reinterpret_cast<uint32_t*>(sam + 0x9C);
+        const uintptr_t arr = *reinterpret_cast<uintptr_t*>(sam + 0xB0);
+        if (!arr || cnt > 200000) return 0;
+        for (uint32_t i = 0; i < cnt && n < cap; ++i) {
+            const uintptr_t e = *reinterpret_cast<uintptr_t*>(arr + 8ull * i);
+            const uintptr_t actor = e ? *reinterpret_cast<uintptr_t*>(e + 8) : 0;
+            if (!actor) continue;
+            const uint32_t key = *reinterpret_cast<uint32_t*>(actor + 0x60);
+            if ((key >> 28) != 0xA || !*reinterpret_cast<uintptr_t*>(actor + 0xA0)) continue;  // a user's character
+            PlayerAt p;
+            p.key = key;
+            p.actor = actor;
+            if (!actor_pos(base, actor, p.x, p.y, p.z)) continue;
+            p.holder = reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t)>(base + 0x22F1DC0)(actor);
+            if (p.holder) out[n++] = p;
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    }
+    return n;
+}
+
 }  // namespace
+
+void lootr_set_chests(bool on) { g_chests_on = on; }
+
+void lootr_chest_shares(uintptr_t host_actor) noexcept {
+    if (!g_on || !g_chests_on || !host_actor || !g_share_n) return;
+    PlayerAt pl[4];
+    const int n = players_now(pl, 4);
+    const uint64_t now = GetTickCount64();
+    for (int k = g_share_n - 1; k >= 0; --k) {
+        ChestShare& sh = g_shares[k];
+        bool done = false;
+        if (now - sh.at > kKeepMs) {
+            c_chest_expired.fetch_add(1);
+            log::info("Lootr: the share of chest 0x{:08X} was not fetched in 30 min: forgotten", sh.gimmick);
+            done = true;
+        }
+        if (!done && !sh.settled) {
+            if (now - sh.at < kSettleMs) continue;
+            bool read = false;
+            for (int p = 0; p < n; ++p) {
+                if (pl[p].key == sh.opener) read = share_settle(sh, pl[p].actor);
+            }
+            if (!read) {
+                if (now - sh.at < 20000) continue;  // the opener is not there right now: try again
+                done = true;
+            } else if (!sh.items) {
+                log::info("Lootr: chest 0x{:08X} opened by 0x{:08X}: its bag gained nothing we can see (no share)",
+                          sh.gimmick, sh.opener);
+                done = true;
+            } else {
+                std::string list;
+                for (int i = 0; i < sh.items; ++i) list += std::format("{}{} x{}", i ? ", " : "", sh.item[i], sh.n[i]);
+                log::info("Lootr: chest 0x{:08X} at ({:.1f}, {:.1f}, {:.1f}) opened by 0x{:08X}: {} item kind(s) [{}] "
+                          "kept as the other player's share", sh.gimmick, sh.x, sh.y, sh.z, sh.opener, sh.items, list);
+            }
+        }
+        for (int p = 0; p < n && !done; ++p) {
+            if (pl[p].key == sh.opener) continue;
+            const float dx = pl[p].x - sh.x, dy = pl[p].y - sh.y, dz = pl[p].z - sh.z;
+            if (dx * dx + dy * dy + dz * dz > 36.0f) continue;
+            static BagSnap bag0, bag1;  // the server thread only
+            const bool snap0 = snap_bag(pl[p].actor, bag0);
+            std::string list;
+            for (int i = 0; i < sh.items; ++i) {
+                const int e = lootr_add_item(pl[p].holder, sh.item[i], static_cast<uint64_t>(sh.n[i]));
+                list += std::format("{}{} x{}{}", i ? ", " : "", sh.item[i], sh.n[i],
+                                    e == 0 ? "" : std::format(" (NOT added, err {})", e));
+            }
+            int64_t gained = -1;
+            if (snap0 && snap_bag(pl[p].actor, bag1)) {
+                gained = 0;
+                for (int i = 0; i < bag1.slots; ++i) gained += bag1.idx[i] != 0xFFFF && bag1.n[i] > 0 ? bag1.n[i] : 0;
+                for (int i = 0; i < bag0.slots; ++i) gained -= bag0.idx[i] != 0xFFFF && bag0.n[i] > 0 ? bag0.n[i] : 0;
+            }
+            c_chest_shared.fetch_add(1);
+            log::info("Lootr: chest 0x{:08X}: 0x{:08X} is at the chest and got its own share [{}] (opened by 0x{:08X} "
+                      "{} s ago) | its bag gained {} piece(s)", sh.gimmick, pl[p].key, list, sh.opener,
+                      (now - sh.at) / 1000, gained);
+            done = true;
+        }
+        if (done) {
+            g_shares[k] = g_shares[g_share_n - 1];
+            g_shares[--g_share_n] = ChestShare{};
+        }
+    }
+    g_shares_pending = g_share_n;
+}
 
 void lootr_chest_scan(uintptr_t host_actor) noexcept {
     if (!g_probe || !host_actor) return;
@@ -698,6 +972,37 @@ void lootr_chest_scan(uintptr_t host_actor) noexcept {
                   f.left == 0xFFFFFFFF ? std::string("?") : std::to_string(f.left),
                   f.mode == 0 ? "on the ground" : f.mode == 1 ? "into the bag" : "mode ?");
     }
+    for (int k = 0; k < s.near_n; ++k) {
+        const ChestFound& f = s.near_[k];
+        log::info("Lootr probe:   within 8 m: 0x{:08X} '{}' (row {}) at ({:.1f}, {:.1f}, {:.1f}) {:.1f} m | state hash "
+                  "0x{:08X} | {}", f.key, f.name, f.idx, f.x, f.y, f.z, std::sqrt(f.dist), f.left,
+                  f.row_rolls ? "has a Drop event" : "no Drop event");
+    }
+    std::sort(s.wide, s.wide + s.wide_n, [](const ChestFound& a, const ChestFound& b) { return a.dist < b.dist; });
+    log::info("Lootr probe: scene objects with drop rolls left: {} of {} kinds so far; {} look like chests:",
+              s.with_rolls, g_row_name_n, s.wide_n);
+    for (int k = 0; k < s.wide_n && k < 24; ++k) {
+        const ChestFound& f = s.wide[k];
+        log::info("Lootr probe:   chest? '{}' (row {}) at ({:.1f}, {:.1f}, {:.1f}) {:.0f} m | rolls left {} | key "
+                  "{:02X}{:02X}{:02X}{:02X}", f.name, f.idx, f.x, f.y, f.z, std::sqrt(f.dist), f.left, f.key16[0],
+                  f.key16[1], f.key16[2], f.key16[3]);
+    }
+    std::string names;  // the kinds not said yet (the vocabulary), 12 a line
+    int on_line = 0, lines = 0;
+    for (int k = 0; k < g_row_name_n && lines < 60; ++k) {
+        RowName& rn = g_row_names[k];
+        if (rn.said) continue;
+        rn.said = true;
+        names += std::format("{}{} x{}", on_line ? ", " : "", rn.name[0] ? rn.name : "?", rn.seen);
+        if (++on_line == 12) {
+            log::info("Lootr probe:   kinds: {}", names);
+            names.clear();
+            on_line = 0;
+            ++lines;
+        }
+    }
+    if (on_line) log::info("Lootr probe:   kinds: {}", names);
+    for (int k = 0; k < g_row_name_n; ++k) g_row_names[k].seen = 0;
 }
 
 std::string lootr_describe();
@@ -737,7 +1042,7 @@ void lootr_start(bool on, bool probe, bool guest, bool bodies) {
                   : g_keep_body_hook ? ": enemy loot is per player (the second looter gets its own roll)"
                                      : ": per player, but the keep-the-body hook is NOT in");
     }
-    if (g_probe) {
+    if (g_probe || (g_on && g_chests_on)) {
         static const uint8_t kDrop[15] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74, 0x24, 0x10, 0x48, 0x89, 0x7C,
                                           0x24, 0x18};
         static const uint8_t kRoll[15] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x18, 0x48, 0x89, 0x7C,
@@ -748,13 +1053,15 @@ void lootr_start(bool on, bool probe, bool guest, bool bodies) {
                 g_drop = std::move(*h);
             }
         }
-        if (game::safe_read(base + 0x2D4DE40, got, sizeof got) && std::memcmp(got, kRoll, sizeof got) == 0) {
+        if (g_probe && game::safe_read(base + 0x2D4DE40, got, sizeof got) && std::memcmp(got, kRoll, sizeof got) == 0) {
             if (auto h = safetyhook::InlineHook::create(reinterpret_cast<void*>(base + 0x2D4DE40), drop_roll_detour)) {
                 g_drop_roll = std::move(*h);
             }
         }
-        log::info("Lootr probe: the gimmick Drop worker {}, its roll {} (chests: log only)",
-                  g_drop ? "hooked" : "NOT hooked", g_drop_roll ? "hooked" : "NOT hooked");
+        log::info("Lootr: the gimmick Drop worker {}{}: {}", g_drop ? "hooked" : "NOT hooked",
+                  g_drop_roll ? ", its roll logged" : "",
+                  g_on && g_chests_on ? "a chest one player opens gives the other player the same content when they "
+                                        "are at the chest" : "chests log only");
     }
     log::info("Lootr {} (lootr={}, lootr_probe={}): {}", g_on ? "ON" : "probe only", on ? 1 : 0, probe ? 1 : 0,
               !g_pickup ? "the pickup worker NOT hooked"
@@ -823,6 +1130,16 @@ void lootr_tick(std::vector<std::vector<uint8_t>>& to_server) noexcept {
     if (!g_on) return;
     try {
         const uint64_t now = GetTickCount64();
+        static uint64_t next_share = 0;
+        if (g_shares_pending.load() > 0 && now >= next_share) {  // the host's own request: the server thread
+            next_share = now + 2000;
+            std::vector<uint8_t> pl(30, 0);
+            const uint32_t entry = 0xC0DE0007;
+            std::memcpy(&pl[14], &kHostCharacter, 4);
+            std::memcpy(&pl[18], &kHostCharacter, 4);
+            std::memcpy(&pl[26], &entry, 4);
+            net::sniffer_inject_c2s(lrl::make(3111, pl, 0x00));
+        }
         static uint64_t next_scan = 0;
         if (g_probe && g_chest_scans.load() < 8 && now >= next_scan) {  // the host's own request: the server thread
             const bool first = next_scan == 0;
@@ -940,7 +1257,10 @@ std::string lootr_describe() {
                        c_host_blanked.load()) +
            std::format(" | bodies {}: first loots {} second loots {} repeats refused {} lists kept back {}",
                        g_bodies_on ? "per player" : "as the game", c_body_first.load(), c_body_second.load(),
-                       c_body_refused.load(), c_body_2414.load());
+                       c_body_refused.load(), c_body_2414.load()) +
+           std::format(" | chests {}: opened {} shares given {} waiting {} forgotten {}",
+                       g_chests_on ? "per player" : "as the game", c_chest_opened.load(), c_chest_shared.load(),
+                       g_shares_pending.load(), c_chest_expired.load());
 }
 
 void lootr_host_recv(uint8_t* packet, uint16_t size) noexcept {

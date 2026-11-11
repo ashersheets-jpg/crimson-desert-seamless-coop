@@ -516,6 +516,7 @@ struct Config {
     bool s2_lootr = false;
     int s2_lootr_kill_hits = 0;  // [dev] tests only (lootr.h): 1 kill + loot by request, 2 kill only
     bool s2_lootr_bodies = false;     // lootr_bodies = 0 | 1, HOST: body loot per player (needs lootr=1)
+    bool s2_lootr_chests = true;      // lootr_chests = 0 | 1, HOST: a chest's content for each player (needs lootr=1)
     int s2_stash_inventory = 0xFFFF;  // stash_inventory (research): 0xFFFF = the default
     // inter_probe, HOST (session2/trade_probe.h; far-shop research): read-only probes of NPC dynamic interactions.
     bool s2_inter_probe = false;
