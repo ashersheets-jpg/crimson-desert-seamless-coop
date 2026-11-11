@@ -1,5 +1,5 @@
-# Crimson Desert Seamless Co-op+ diagnostics. Started by "Diagnose Co-op+.cmd".
-# Writes CoopPlus-report-<date>.txt and CoopPlus-report-<date>.zip (the report plus the whole cdmp.log) to the
+﻿# Crimson Desert Seamless Co-op+ diagnostics. Started by "Diagnose Co-op+.cmd".
+# Writes CoopPlus-report-<date>.txt and CoopPlus-report-<date>.zip (the report plus the whole cdmp.log and coopplus.log) to the
 # Desktop and puts the zip on the clipboard, ready to paste into a message. Send it when something goes wrong.
 # Reads only; changes nothing in the game. Co-op+ (T37): personal data is taken out first: Steam names (yours and
 # your friend's), SteamIDs, lobby ids, room codes, your Windows user and PC name, IP addresses, e-mail addresses.
@@ -61,7 +61,7 @@ if ($GameDir -and (Test-Path (Join-Path $GameDir 'CrimsonDesert.exe'))) {
     Add "Game running now: $([bool](Get-Process -Name 'CrimsonDesert' -ErrorAction SilentlyContinue))"
     Add ''
     Add '--- mod files in bin64'
-    foreach ($f in 'winmm.dll', 'cdmp.asi', 'cdmp.ini', 'coopplus-installed.txt', 'dinput8.dll', 'winhttp.dll', 'version.dll') {
+    foreach ($f in 'winmm.dll', 'cdmp.asi', 'cdmp.ini', 'coopplus.asi', 'coopplus.ini', 'coopplus-installed.txt', 'dinput8.dll', 'winhttp.dll', 'version.dll') {
         $p = Join-Path $GameDir $f
         if (Test-Path $p) {
             $i = Get-Item $p
@@ -69,7 +69,7 @@ if ($GameDir -and (Test-Path (Join-Path $GameDir 'CrimsonDesert.exe'))) {
                  (Get-FileHash $p -Algorithm SHA256).Hash.Substring(0, 16).ToLower())
         }
     }
-    $asis = Get-ChildItem $GameDir -Filter '*.asi' -ErrorAction SilentlyContinue | Where-Object Name -ne 'cdmp.asi'
+    $asis = Get-ChildItem $GameDir -Filter '*.asi' -ErrorAction SilentlyContinue | Where-Object { $_.Name -ne 'cdmp.asi' -and $_.Name -ne 'coopplus.asi' }
     if ($asis) { Add ("Other ASI mods: " + (($asis | ForEach-Object Name) -join ', ')) }
     $ini = Join-Path $GameDir 'cdmp.ini'
     if (Test-Path $ini) {
@@ -84,6 +84,23 @@ if ($GameDir -and (Test-Path (Join-Path $GameDir 'CrimsonDesert.exe'))) {
             if ($t -and -not $t.StartsWith(';')) { Add $t }
         }
     }
+    # Shared world (2026-11-11): the Co-op+ layer (coopplus.asi) has its own settings and its own log; the menus, the
+    # overlay and the lobby are in that log, so a report without it could not explain a missing Co-op menu.
+    $ini2 = Join-Path $GameDir 'coopplus.ini'
+    if (Test-Path $ini2) {
+        Add ''
+        Add '--- coopplus.ini (settings only)'
+        $bytes = [IO.File]::ReadAllBytes($ini2)
+        $text = if ($bytes.Length -ge 2 -and $bytes[0] -eq 0xFF -and $bytes[1] -eq 0xFE) {
+            [Text.Encoding]::Unicode.GetString($bytes)
+        } else { [Text.Encoding]::UTF8.GetString($bytes) }
+        foreach ($l in ($text -split "`r?`n")) {
+            $t = $l.Trim()
+            if ($t -and -not $t.StartsWith(';')) { Add $t }
+        }
+    }
+    $log2 = Join-Path $GameDir 'coopplus.log'
+    if (Test-Path $log2) { Learn-Names (Get-Content $log2) }
     $log = Join-Path $GameDir 'cdmp.log'
     Add ''
     if (Test-Path $log) { Learn-Names (Get-Content $log) }
@@ -93,6 +110,15 @@ if ($GameDir -and (Test-Path (Join-Path $GameDir 'CrimsonDesert.exe'))) {
         Get-Content $log -Tail $LogLines | ForEach-Object { Add $_ }
     } else {
         Add '--- no cdmp.log: the mod has not run (is winmm.dll there? did the game start through Steam?)'
+    }
+    if (Test-Path (Join-Path $GameDir 'coopplus.asi')) {
+        Add ''
+        if (Test-Path $log2) {
+            Add "--- coopplus.log (last $LogLines lines; written $((Get-Item $log2).LastWriteTime.ToString('s')))"
+            Get-Content $log2 -Tail $LogLines | ForEach-Object { Add $_ }
+        } else {
+            Add '--- no coopplus.log: the Co-op+ layer has not run'
+        }
     }
 } else {
     Add 'Crimson Desert not found through Steam.'
@@ -110,6 +136,10 @@ Copy-Item $file (Join-Path $tmp 'report.txt')
 if ($GameDir -and (Test-Path (Join-Path $GameDir 'cdmp.log'))) {
     Get-Content (Join-Path $GameDir 'cdmp.log') -Tail 50000 | ForEach-Object { Redact $_ } |
         Set-Content -Path (Join-Path $tmp 'cdmp.log') -Encoding UTF8
+}
+if ($GameDir -and (Test-Path (Join-Path $GameDir 'coopplus.log'))) {
+    Get-Content (Join-Path $GameDir 'coopplus.log') -Tail 50000 | ForEach-Object { Redact $_ } |
+        Set-Content -Path (Join-Path $tmp 'coopplus.log') -Encoding UTF8
 }
 Compress-Archive -Path (Join-Path $tmp '*') -DestinationPath $zip -Force
 Remove-Item -Recurse -Force $tmp
