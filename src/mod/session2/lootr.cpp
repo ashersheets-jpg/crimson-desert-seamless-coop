@@ -286,8 +286,9 @@ void lootr_tick(std::vector<std::vector<uint8_t>>& to_server) noexcept {
                 }
                 if (!t.item_known && now - t.at >= 3000) t.state = 2;  // nothing came: not an item pickup
                 if (t.item_known)
-                    log::info("Lootr: gimmick 0x{:08X} gave the host item 0x{:X} (key {}) x{}; kept for the guest "
-                              "({} packet(s) held)", t.g, t.item_idx, t.item_key, t.count, t.held.size());
+                    log::info("Lootr: gimmick 0x{:08X} gave the {} item 0x{:X} (key {}) x{}; kept for the {} ({} "
+                              "packet(s) held)", t.g, t.host_waits ? "guest" : "host", t.item_idx, t.item_key, t.count,
+                              t.host_waits ? "host" : "guest", t.held.size());
             }
             if (t.state == 1 && now >= t.step_at && t.host_waits) {
                 // Phase 2b: the host's copy (its own request, the server thread adds it), then what its client was
