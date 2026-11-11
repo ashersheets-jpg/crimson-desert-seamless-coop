@@ -4624,3 +4624,6 @@ arriving at Hernand.
   some bodies: the keep-the-body hook at exe+0x2E22885 has not run yet), and what the second player sees on the body.
   So [session2] lootr_bodies stays OFF by default; needs a hands-on check (two players, one loots a body, then the
   other).
+- tcB351 (regression, usercopy save, both guards in the build, lootr_bodies off): the normal flow is unchanged: guest
+  load STABLE, plant Lootr host then guest ("the guest's copy: item key 757006 x1 ... added"), no crash, HandleGuard
+  2468 calls / 0 skipped, TextGuard 0. SAVES OK, restored 5/5.
