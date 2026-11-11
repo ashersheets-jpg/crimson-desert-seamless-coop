@@ -4950,10 +4950,11 @@ arriving at Hernand.
   the start"). tcB401: both in the world, no hold line in either log, party frame and the friend prompt on screen,
   SAVES OK. Unit tests pass.
 - tcB400 (a guest alone, 99 m from the host, at the bandit camp): the "[E] Assassinate" prompt on an unaware bandit
-  is greyed and E does nothing; over 2 minutes the bandits around the guest do not move at all (same pose in two
-  shots). So NPCs far from the host are frozen for the guest: their control stays with the host's client. A real
-  limit of the shared world as built (the guest has to stay near the host for a living world); a controller
-  hand-over to the guest's client is the fix, a big piece of B02. Noted, not started.
+  is greyed and E does nothing; in two shots 2 minutes apart the bandits around the guest are in the same pose.
+  NOT established what this means: they may simply be idle (an unprovoked camp), and the greyed prompt may need
+  stealth. The far-world set is on (user2_stages, user2_npc_control). In tcB392 the guest's 60 swings there hit no
+  NPC at all (only 8 "vandalism" calls), so there is no evidence either way on NPCs reacting to a guest far from
+  the host. Open: a test where the far guest really hits one.
 
 ### 2026-11-11 07:48: build 0.1.0-alpha+21f0f6d0 POSTED (the prologue-text fix)
 
