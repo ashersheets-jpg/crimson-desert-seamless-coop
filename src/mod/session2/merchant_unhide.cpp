@@ -122,8 +122,12 @@ void on_login_post(safetyhook::Context&) {  // 0x99C17F: back from 0x1928650
     g_dbg_mgr.store(t_login_mgr);
     g_dbg_before.store(t_login_state);
     g_dbg_after.store(now);
-    if (t_login_state == 3 && now < 3) {
-        *reinterpret_cast<volatile uint8_t*>(t_login_mgr + 0x259) = 3;
+    // 2026-11-10 (build/native/notes_guest_load_stall.md): any state of 2 or more the game's call lowered goes back.
+    // A remote character logging in while this guest's own manager was at 2 (its second load, into the host's field)
+    // dropped it to 1 for good: the guest's 2167 never came and it stayed in the loading void (tcB264, tcB299,
+    // tcB307-tcB327: "before 2" every time). Only 3 was put back before.
+    if (t_login_state >= 2 && now < t_login_state) {
+        *reinterpret_cast<volatile uint8_t*>(t_login_mgr + 0x259) = t_login_state;
         c_login_restored.fetch_add(1);
     }
     t_login_remote = false;
