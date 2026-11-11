@@ -4876,3 +4876,12 @@ arriving at Hernand.
 - docs/drafts/progress-2026-11-11.png (generator: the session's scratchpad chart3.py), sent to the user. Changes:
   gifting 80, stash 50, loot for each player 75, a new row "Fighting together" 85, anti-grief 80, world events 35,
   revive 90 (the gap found today, fixed for the next build), release 70.
+
+### tcB387 (2026-11-11 06:03): enemy loot reaches the guest at 30 m
+
+- lootr_kill_hits=3, both at the dock: 7 loots by the host made shares, 4+ given to the guest ("got its own share
+  [795009 x5, 1000633 x7, 1000659 x7] ... its bag gained 19 piece(s)"; 1, 5, 17 and 23 pieces for the others: each
+  equals the share). One share waited 20 s and was given when the guest came into range; a body 45 m away was
+  (rightly) not given. No crash, SAVES OK.
+- Next: the chest test again with these binaries (the share code changed: one settling share per player), then the
+  package.
