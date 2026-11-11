@@ -2325,7 +2325,11 @@ DWORD WINAPI worker(LPVOID) {
         // which of the two switches is missing instead of reporting "ON".
         const bool loot_wanted = cfg.coop_guest_loot && !cfg.net_role_host;
         const bool relay_needed = cfg.coop_enemy_auto && !cfg.coop_suppress_lab;
-        if (!loot_wanted) {
+        if (kNativeLayer) {
+            // Shared world: the enemy relay is off there by design and loot is the base's work (every item once per
+            // player). The old "enemy_auto=0 ... set it to 1" warning sent the player to a key that was already 1.
+            log::info("Config: loot: shared world: every player takes their own (chests, world items, enemy loot)");
+        } else if (!loot_wanted) {
             // Name WHICH of the two reasons applies. The old message read
             // `guest_loot ? "off (this is the host)" : "off"`, which told a guest
             // who had deliberately left guest_loot=0 nothing, and would have told
