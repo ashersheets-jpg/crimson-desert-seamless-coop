@@ -4473,3 +4473,12 @@ arriving at Hernand.
   replayed", "the guest's copy: item key 757006 x1 to 0xA0100066: added (err 0 none)". The guest's load completed
   (STABLE) for the second run in a row with the guard fix. Next: phase 2 (the guest takes first, the host keeps its
   copy: needs the host client's inbound packets held), then chests / bodies and keeping the list across sessions.
+- Lootr phase 2 (the guest takes first, the host keeps its copy), tcB330-tcB331: phase 2a (built) blanks, in the
+  host client's OnRecvPacket (chained in ride_filter's rewrite callback; the sniffer has one), what the host is told
+  about a gimmick the guest took (2214 / 2760 / 2096 / 3067: key 0 / zero save key, same size), keeping the
+  originals in fixed slots: tcB331 "guest pickups kept for the host 1 | host packets blanked 4", the plant stayed for
+  the host. The host's E then sent 3008 on it; the server answered 3100 InteractionPreemptionStepFailAck (u32 actor
+  | u32 target | u32 interaction | ... | -1). Phase 2b (built): the 3100 for a kept plant is blanked, the host's
+  3008 / 3073 (seen on the sniffer tap) are answered with injected 2120 / 2794 (puppet_inject_s2c), 1.7 s later the
+  host's copy (the item the guest's pickup gave, from the guest's bag) is added by its own 3111 (entry 0xC0DE0005,
+  now for either player) and the originals are delivered to the host's client. Test tcB332.
