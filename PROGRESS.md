@@ -5211,3 +5211,42 @@ Run pp1 on package 0.1.0-alpha+0cd46dd8 (layer HEAD 0cd46dd, native 560e3dc; one
   one PC, two copies, -Fresh, lowest graphics, on foot, killed by KillCheat (not by an enemy's blow), build of
   14:12 (layer 76a596d + the name plate fix, native bf43e6f). NOT tested: going down while riding, in a duel, by a
   boss grab, the U (checkpoint) choice with the pose, two real PCs. Switches: build/native/dp3.args, dp4.args.
+
+### dp5 (2026-11-11 14:22): a REAL death (beaten down by bandits) + the checkpoint choice, with the downed pose
+
+- The host stood at the dock, its bandits beat it from 260 to 0 HP in about 50 s (14:27:10 "our death notice goes to
+  the client", game-over skipped once, input held). Shot dp5-h0: the host lying among the bandits under the death
+  screen. U -> "checkpoint revive, step 1-3 ... to the checkpoint at (-10349.4, 535.5, -3919.7) ... we are alive
+  again ... at the checkpoint", 300 / 300 HP, standing with the whole HUD (dp5-h2), walks again.
+- So the pose also works for a death by enemies and for the checkpoint revive. Switches: build/native/dp5.args.
+
+### 2026-11-11 14:20-14:50: AI control research (local notes build/decomp/notes_ai_control.md) and a first hand-over
+
+- Read in code (research agent, static): the two messages do NOT hand control over. AiControlChangeCheatReq (2940,
+  u32 actor key) only RESTARTS the AI of an NPC the requester already controls (AI session + 1 exe+0x2B64FD0, move
+  session + 1 exe+0x2B66830, action reset exe+0x222C920, then ChangeAiControlAck 2660 to the near sessions); the
+  client's 2660 handler (exe+0xC77370) acts only when its user key == client actor+0x90 (action reset, event
+  "OnAi"), and acts on the PREVIOUS actor when the key is not loaded there (a trap, like 2985).
+- The controller is written once, at creation (exe+0x29CCBB1): the spawner's user, else the owner, else the spawn
+  request's user. Nothing re-assigns it. Every AI / movement request (MoveActorReq, StartAIFunctionReq, ...) is taken
+  from the controller only, silently dropped otherwise.
+- Client: actor+0x90 comes from the load record (first u32 of the actor body in ActorLoadDataAck 2005); the control
+  mode byte actor+0xC8 is computed by exe+0x5AF410 (0 when the local user is not the controller); the AI task
+  (exe+0x9A8000) runs only actors with a non-zero mode and re-checks only those, so taking control needs an explicit
+  exe+0x5AF410 call.
+- Server visibility: 64 m sectors (floor(pos / 64)), a user gets the 3x3 block around its character; RemoveActorAck
+  3067 outside it. The agent GUESSED (80%) that this is the freeze: the host's client no longer has the bandits.
+- MY CHECK OF THAT GUESS, before testing: by the sector numbers the shrine (-10344, -3992) = sector (-162, -63) and
+  the dock bandits (-10241, -3956) = (-161, -62) are NEIGHBOURS, so the host should still have them; and in ff2 the
+  host listed 144 NPC actors within 200 m. So "removed from the host's client" is doubtful; the cause may be a
+  distance rule inside the client's AI steps after all, or the sector grid has another origin. NOT settled.
+- Built (native, local, not committed yet): session2/ai_handoff.cpp, [session2] ai_handoff = 0 | probe | 1, default
+  0. Host, server thread, once a second (trade entry 0xC0DE0008): an NPC with no owner whose controller's character is
+  outside its 3x3 block while another player's is inside, twice in a row -> [actor+0x90] = that player's user key +
+  the game's three restart steps; the new controller's client gets a private 12-byte 2660 (magic 0xC0DEA1C7 | key |
+  new controller) that the receive hook turns into "client actor+0x90 = me, exe+0x5AF410(actor)" and drops, then
+  the game's own 2660. A 2660 for a key that is not loaded is dropped (the trap). Plus a facts line every 10 s: the
+  10 NPCs nearest to the other player with type, controller, distance to both players.
+- ff4 (running): the lure test with ai_handoff=probe and the host listing its loaded NPCs 60-200 m away, to learn
+  who controls the frozen bandits and whether the host's client still has them. The rule (sectors or plain
+  distance) is decided from that.

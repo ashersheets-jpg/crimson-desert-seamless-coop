@@ -34,7 +34,7 @@ namespace cdmp::net {
 
 // [dev] "npcs": what this client has loaded around our character (2026-11-11, ff1: a test needs to SEE whether
 // enemies near a far guest exist, come closer and lose health; blind swings told nothing). Key, kind, distance, HP.
-static void log_npcs_near(float radius) {
+static void log_npcs_near(float radius, float from) {
     const auto me = game::actor_world_position(capture_own_player_key());
     if (!me) {
         log::info("Dev script: npcs: our own position is not known");
@@ -56,7 +56,7 @@ static void log_npcs_near(float radius) {
         if (!at) continue;
         const float dx = at->x - me->x, dy = at->y - me->y, dz = at->z - me->z;
         const float d = std::sqrt(dx * dx + dy * dy + dz * dz);
-        if (d > radius) continue;
+        if (d > radius || d < from) continue;
         Row r{d, key, variant, -1.0f, -1.0f, *at};
         // health: actor -> components -> status -> stat container (as for our own character, player_reader.cpp)
         if (const auto actor = game::find_actor(key)) {
@@ -86,8 +86,8 @@ static void log_npcs_near(float radius) {
         rows.push_back(r);
     }
     std::sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) { return a.d < b.d; });
-    log::info("Dev script: npcs within {:.0f} m of ({:.1f}, {:.1f}, {:.1f}): {} of {} loaded NPC actors", radius, me->x,
-              me->y, me->z, rows.size(), loaded);
+    log::info("Dev script: npcs {:.0f}-{:.0f} m from ({:.1f}, {:.1f}, {:.1f}): {} of {} loaded NPC actors", from, radius,
+              me->x, me->y, me->z, rows.size(), loaded);
     for (size_t i = 0; i < rows.size() && i < 14; ++i) {
         const Row& r = rows[i];
         const char* animal = hunt_animal_name(r.variant);
@@ -476,9 +476,10 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
         }
         if (kind == "npcs") {  // npcs [radius m, default 40]: the loaded NPC actors near us, nearest first (log only)
             st.kind = Step::Npcs;
-            float r = 40.0f;
-            in >> r;
+            float r = 40.0f, from = 0.0f;  // npcs [radius] [from]: only those at least `from` m away
+            in >> r >> from;
             st.to[0] = r > 0 ? r : 40.0f;
+            st.to[1] = from > 0 ? from : 0.0f;
             steps.push_back(std::move(st));
             continue;
         }
@@ -618,7 +619,7 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                 if (ok) std::memcpy(reinterpret_cast<void*>(st.addr), st.payload.data(), st.payload.size());
                 log::info("Dev script: poke 0x{:X} ({} bytes){}", st.addr, st.payload.size(), ok ? "" : " REFUSED (not writable)");
             } else if (st.kind == Step::Npcs) {
-                log_npcs_near(st.to[0]);
+                log_npcs_near(st.to[0], st.to[1]);
             } else if (st.kind == Step::TpActor) {
                 const uint32_t key = st.addr ? static_cast<uint32_t>(st.addr) : hunt_dev_last_kill();
                 const auto at = key ? game::actor_world_position(key) : std::nullopt;
