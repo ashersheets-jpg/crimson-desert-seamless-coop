@@ -7,8 +7,12 @@
 
 #include <atomic>
 #include <cstring>
+#include <algorithm>
 #include <format>
+#include <map>
 #include <mutex>
+#include <utility>
+#include <vector>
 #include <unordered_set>
 
 #include <safetyhook.hpp>
@@ -26,6 +30,43 @@ std::unordered_set<uint32_t> g_protected;  // guarded by g_mu
 std::unordered_set<uint32_t> g_dialog, g_fought;  // NPCs with a dialog list / NPCs the host has hit (g_mu)
 std::atomic<uint64_t> c_marked{0};
 std::atomic<uint64_t> c_dropped{0}, c_hits_seen{0}, c_stripped{0}, c_freed{0};
+
+// ---- fight tally (2026-11-11, tcB413-tcB415: does a guest far from the host really fight? Not settled there: the
+// crime log stops after 60 lines and nobody counted hits per target). Every frame event (a blow) is counted by
+// (attacker, target) and by the client it came from: [0] the host's own client, [1] the guest's. Log only.
+constexpr uint32_t kHostCharacterKey = 0xA0100001;
+std::map<std::pair<uint32_t, uint32_t>, uint32_t> g_tally[2];  // g_mu
+std::atomic<uint64_t> c_kills[2];                              // crimes of the kill path: [0] the host's, [1] the guest's
+void tally_locked(int src, std::span<const uint8_t> payload) {
+    if (payload.size() < 5) return;
+    const uint32_t attacker = agl::rd32(payload.data() + 1);
+    for (const uint32_t t : agl::targets(payload)) {
+        if (g_tally[src].size() < 4000 || g_tally[src].count({attacker, t})) ++g_tally[src][{attacker, t}];
+    }
+}
+std::string tally_text_locked(int src) {
+    // by kind first (who fights whom), then the pairs with the most blows
+    uint64_t g2n = 0, h2n = 0, n2g = 0, n2h = 0, n2n = 0, other = 0;
+    std::vector<std::pair<uint32_t, std::pair<uint32_t, uint32_t>>> top;
+    for (const auto& [k, n] : g_tally[src]) {
+        const uint32_t a = k.first, t = k.second;
+        const bool a_host = a == kHostCharacterKey, a_guest = (a >> 28) == 0xA && !a_host, a_npc = (a >> 28) == 0xB;
+        const bool t_host = t == kHostCharacterKey, t_guest = (t >> 28) == 0xA && !t_host, t_npc = (t >> 28) == 0xB;
+        if (a_guest && t_npc) g2n += n;
+        else if (a_host && t_npc) h2n += n;
+        else if (a_npc && t_guest) n2g += n;
+        else if (a_npc && t_host) n2h += n;
+        else if (a_npc && t_npc) n2n += n;
+        else other += n;
+        top.push_back({n, k});
+    }
+    std::sort(top.begin(), top.end(), [](const auto& x, const auto& y) { return x.first > y.first; });
+    std::string out = std::format("guest>NPC {} host>NPC {} NPC>guest {} NPC>host {} NPC>NPC {} other {} | most:", g2n, h2n,
+                                  n2g, n2h, n2n, other);
+    for (size_t i = 0; i < top.size() && i < 6; ++i)
+        out += std::format(" 0x{:08X}>0x{:08X} x{}", top[i].second.first, top[i].second.second, top[i].first);
+    return out;
+}
 
 // ---- crimes (tcB355 / tcB356: "Crime: Assault" / "Crime: Murder" on the guest for the host's quest bandits;
 // build/decomp/notes_crime_coop.md, local). Every crime is registered by exe+0x2BCE6A0(wanted comp, criminal, victim,
@@ -147,7 +188,8 @@ void __fastcall crime_detour(uintptr_t comp, uintptr_t criminal, uintptr_t victi
     if (guest || s.owner == kHostCharacter) {
         const uint64_t n = c_crime_seen.fetch_add(1) + 1;
         if (skip) c_crime_skipped.fetch_add(1);
-        if (n <= 60 || n % 100 == 0)
+        const uint64_t kills = ret == kCrimeRetKill ? c_kills[guest ? 1 : 0].fetch_add(1) + 1 : 0;
+        if (n <= 60 || n % 100 == 0 || (kills && kills <= 300))
             log::info("AntiGrief: crime type {} of {} 0x{:08X} (attacker 0x{:08X}) on 0x{:08X} from exe+0x{:X} ({}) | "
                       "victim owner key 0x{:08X} user {} | battle {} targets {} host among them {} | {}", type,
                       guest ? "the guest" : "the host", s.owner, s.criminal, s.victim, ret,
@@ -209,6 +251,13 @@ void anti_grief_host_sniffed(const uint8_t* packet, size_t size, bool server_to_
             return;
         }
         if (op != agl::kOpDoFrameEventReq) return;
+        if (size > 5) {
+            try {
+                std::lock_guard lk(g_mu);
+                tally_locked(0, std::span<const uint8_t>(packet + 5, size - 5));
+            } catch (...) {
+            }
+        }
         // Only the host's own CHARACTER counts as "the host fights it" (the attacker key is payload + 1). tcB413: with
         // the host 100 m away, every bandit the guest hit was marked as fought by the host: this tap also carries
         // frame events whose attacker is somebody else.
@@ -263,6 +312,7 @@ bool anti_grief_drop_user2_req(uint16_t opcode, std::span<const uint8_t> payload
         c_hits_seen.fetch_add(1, std::memory_order_relaxed);
         const auto t = agl::targets(payload);
         std::lock_guard lk(g_mu);
+        tally_locked(1, payload);
         size_t prot = 0;
         for (const uint32_t k : t) prot += g_protected.count(k) ? 1 : 0;
         if (prot && prot < t.size()) return false;  // anti_grief_strip_user2_req keeps the others
@@ -282,9 +332,10 @@ bool anti_grief_drop_user2_req(uint16_t opcode, std::span<const uint8_t> payload
 
 std::string anti_grief_describe() {
     std::lock_guard lk(g_mu);
-    return std::format("AntiGrief: {} | protected NPCs {} | the guest's hits seen {} dropped {} trimmed {} | freed by the host's hits {} | crimes seen {} skipped for the guest {}",
+    return std::format("AntiGrief: {} | protected NPCs {} | the guest's hits seen {} dropped {} trimmed {} | freed by the host's hits {} | crimes seen {} skipped for the guest {} | kills host {} guest {} | blows from the host's client: {} | blows from the guest's client: {}",
                        g_on ? "on" : "off", g_protected.size(), c_hits_seen.load(), c_dropped.load(), c_stripped.load(),
-                       c_freed.load(), c_crime_seen.load(), c_crime_skipped.load());
+                       c_freed.load(), c_crime_seen.load(), c_crime_skipped.load(), c_kills[0].load(), c_kills[1].load(),
+                       tally_text_locked(0), tally_text_locked(1));
 }
 
 }  // namespace cdmp::session2

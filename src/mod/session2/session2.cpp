@@ -1649,6 +1649,7 @@ void tunnel_tick(troc::TrocLink& link, uint32_t now_ms) {
         if (now_ms - last_guard_ms >= 60000) {
             last_guard_ms = now_ms;
             log::info("{}", handle_guard_describe());
+            log::info("{}", anti_grief_describe());  // its counts and the fight tally (who hit whom, from which client)
         }
     }
     {  // Co-op+ Lootr: the guest's copy of an item the host took, added on the server thread as its own request.
