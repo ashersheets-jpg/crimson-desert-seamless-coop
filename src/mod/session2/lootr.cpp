@@ -156,6 +156,11 @@ struct Seen {
     char name[48] = {};
     int has_drop = -1;
     uint32_t state = 0;
+    // The gimmick actor's SpawnReason, u8 [[[comp+8]+0x68]+0x20]+0x2F0 (notes_dropped_vs_placed.md, local): 0 = placed
+    // in the level, 0x16 = a player dropped it from the inventory, 0x15 = thrown out by a gimmick's Drop event,
+    // 0x1A / 0x1B from a dead body, 0x2A never set. 0xFF = unreadable.
+    uint8_t reason = 0xFF;
+    uint32_t spawner = 0;  // u32 comp+0x288: who spawned it (0 for level gimmicks)
 };
 int drop_handler(uintptr_t base, uintptr_t b, uint8_t& mode) noexcept;
 void read_pickup(Seen& s, uintptr_t comp, uintptr_t picker) noexcept {
@@ -174,6 +179,12 @@ void read_pickup(Seen& s, uintptr_t comp, uintptr_t picker) noexcept {
         if (picker) s.picker = *reinterpret_cast<uint32_t*>(picker + 0x60);
         const uintptr_t actor = *reinterpret_cast<uintptr_t*>(comp + 8);
         if (actor) s.gimmick = *reinterpret_cast<uint32_t*>(actor + 0x60);
+        if (actor) {
+            const uintptr_t comps = *reinterpret_cast<uintptr_t*>(actor + 0x68);
+            const uintptr_t status = comps ? *reinterpret_cast<uintptr_t*>(comps + 0x20) : 0;
+            if (status) s.reason = *reinterpret_cast<uint8_t*>(status + 0x2F0);
+        }
+        s.spawner = *reinterpret_cast<uint32_t*>(comp + 0x288);
         const uintptr_t rec = *reinterpret_cast<uintptr_t*>(comp + 0xC0);
         if (rec) {
             s.idx = *reinterpret_cast<uint16_t*>(rec + 8);
@@ -189,10 +200,11 @@ thread_local int t_in_pickup = 0;  // a Drop event inside the pickup worker is t
 int* __fastcall pickup_detour(uintptr_t comp, int* err, uintptr_t picker, uint64_t kind) noexcept {
     Seen s;
     read_pickup(s, comp, picker);
-    // Only things that MAKE their item when taken (plants, herbs, nodes: comp+0xC0 empty before the pickup). A
-    // concrete item lying in the world (comp+0xC0 set: something a player dropped, a drop thrown on the ground) is
-    // one object: per player it would be a duplication (drop it, the friend takes it, take "your copy").
-    const bool concrete = s.idx != 0xFFFF;
+    // Per player: things that MAKE their item when taken (plants, herbs, nodes: comp+0xC0 empty before the pickup)
+    // and concrete items PLACED IN THE LEVEL by the game (gear, books, arrows lying in the world: spawn reason 0,
+    // tcB373). A concrete item a player dropped or a gimmick threw out (any other spawn reason, or unreadable) is one
+    // object: per player it would be a duplication (drop it, the friend takes it, take "your copy").
+    const bool concrete = s.idx != 0xFFFF && s.reason != 0;
     const bool guest_first = g_on && !concrete && s.picker != kHostCharacter && (s.picker >> 28) == 0xA && s.gimmick;
     if (guest_first) {
         keep_for_host(s.gimmick, s.key16);  // phase 2a: the guest took it first; the host still sees it
@@ -219,12 +231,13 @@ int* __fastcall pickup_detour(uintptr_t comp, int* err, uintptr_t picker, uint64
     int e = -1;
     if (err) game::fast_read(reinterpret_cast<uintptr_t>(err), &e, 4);
     if ((g_probe || g_on) && g_logged.fetch_add(1) < 40) {
-        log::info("Lootr: pickup by 0x{:08X} kind {} gimmick 0x{:08X} '{}' (row {}, {} Drop event, state 0x{:08X}) item "
-                  "idx 0x{:X} x{} key {:02X}{:02X}{:02X}{:02X}{:02X}{:02X}{:02X}{:02X} -> err {}{}",
-                  s.picker, kind & 0xFF, s.gimmick, s.name, s.row, s.has_drop == 1 ? "has a" : "no", s.state, s.idx,
-                  s.count, s.key16[0], s.key16[1], s.key16[2], s.key16[3],
+        log::info("Lootr: pickup by 0x{:08X} kind {} gimmick 0x{:08X} '{}' (row {}, {} Drop event, state 0x{:08X}, spawn "
+                  "reason 0x{:02X}, spawner 0x{:08X}) item idx 0x{:X} x{} key {:02X}{:02X}{:02X}{:02X}{:02X}{:02X}{:02X}"
+                  "{:02X} -> err {}{}",
+                  s.picker, kind & 0xFF, s.gimmick, s.name, s.row, s.has_drop == 1 ? "has a" : "no", s.state, s.reason,
+                  s.spawner, s.idx, s.count, s.key16[0], s.key16[1], s.key16[2], s.key16[3],
                   s.key16[4], s.key16[5], s.key16[6], s.key16[7], e,
-                  !g_on ? "" : concrete ? " | a concrete item: one for whoever takes it"
+                  !g_on ? "" : concrete ? " | a dropped / thrown item: one for whoever takes it"
                   : s.picker == kHostCharacter ? " | kept for the guest (Lootr)" : " | kept for the host (Lootr)");
     }
     g_watch_until = GetTickCount64() + 3000;
