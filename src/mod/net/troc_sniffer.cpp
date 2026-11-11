@@ -298,8 +298,15 @@ void on_post_packet(safetyhook::Context& ctx) {
                                      pkt.data(), static_cast<uint16_t>(pkt.size()),
                                      static_cast<uint8_t>(a & 0xFF), static_cast<uint16_t>((a >> 8) & 0xFFFF));
         t_posting = false;
-        log::info("Inject C>S: opcode {} ({} bytes, channel {}, flags 0x{:X}) {}", pop, pkt.size(),
-                  a & 0xFF, (a >> 8) & 0xFFFF, ok ? "posted" : "EXCEPTION");
+        // The mod's own once-a-second requests to its server-thread entries travel as 3111 (lootr.h, ai_handoff.h): two
+        // log lines a second for hours (ff7: 654 lines in 9 minutes). Those: the first 10, then every 1000th; a
+        // failure always.
+        static std::atomic<uint64_t> own_3111{0};
+        const uint64_t nth = pop == 3111 ? own_3111.fetch_add(1) + 1 : 0;
+        if (!ok || pop != 3111 || nth <= 10 || nth % 1000 == 0)
+            log::info("Inject C>S: opcode {} ({} bytes, channel {}, flags 0x{:X}) {}{}", pop, pkt.size(),
+                      a & 0xFF, (a >> 8) & 0xFFFF, ok ? "posted" : "EXCEPTION",
+                      pop == 3111 && nth >= 10 ? std::format(" ({} of these so far; logged every 1000th from now)", nth) : "");
         if (!ok) g_post_fn = nullptr;
     }
 }

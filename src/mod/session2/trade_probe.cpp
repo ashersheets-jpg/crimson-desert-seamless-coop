@@ -844,7 +844,9 @@ int* __fastcall worker_detour(uintptr_t self, int* err, uint32_t item, uint16_t 
     return ret;
 }
 void on_handler(SafetyHookContext&) {
-    if (g_left.load() > 0) log::info("TradeProbe [handler] 3111 reached the server's handler");
+    // The first 16 only: the mod's own entries (0xC0DE00xx) never use up g_left, and one arrives every second.
+    static std::atomic<int> said{0};
+    if (g_left.load() > 0 && said.fetch_add(1) < 16) log::info("TradeProbe [handler] 3111 reached the server's handler");
 }
 void on_move(SafetyHookContext&) {
     if (g_left.load() > 0) log::info("TradeProbe [move] 0x2DF04A0 entered (kind 1)");

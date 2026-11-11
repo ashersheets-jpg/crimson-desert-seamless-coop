@@ -136,7 +136,10 @@ Config load_config(const std::wstring& ini_path) {
     c.overlay_enabled = read_uint(ini_path, L"overlay", L"enabled", 1) != 0;
     c.overlay_self_marker = read_uint(ini_path, L"overlay", L"self_marker", 1) != 0;
     c.sniffer_enabled = read_uint(ini_path, L"sniffer", L"enabled", 1) != 0;
-    c.sniffer_record = read_uint(ini_path, L"sniffer", L"record", 1) != 0;
+    // Co-op+ 2026-11-11: default 0 (was 1). Recording every packet to bin64 (cdmp_packets_<date>.log/.bin, no size
+    // limit, about 1 GB an hour) is a research tool; a player's game must never do it unasked. Solo mode's ini had
+    // no [sniffer] section, so solo play with the mod installed recorded.
+    c.sniffer_record = read_uint(ini_path, L"sniffer", L"record", 0) != 0;
     c.dev_clone_hotkeys = read_uint(ini_path, L"dev", L"clone_hotkeys", 0) != 0;
     c.dev_mirror_delay_ms = std::min(read_uint(ini_path, L"dev", L"mirror_delay_ms", 300), 5000u);
     c.dev_mirror_offset_m = read_metres(ini_path, L"dev", L"mirror_offset_m", c.dev_mirror_offset_m);

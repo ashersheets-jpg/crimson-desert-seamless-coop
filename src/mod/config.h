@@ -45,7 +45,7 @@ struct Config {
     bool overlay_self_marker = true;  // dev aid while validating the projection
 
     bool sniffer_enabled = true;  // hook internal client/server packets (needed by co-op)
-    bool sniffer_record = true;   // also write them to cdmp_packets_*.log/.bin (dev; 50-100 MB/session)
+    bool sniffer_record = false;  // also write them to cdmp_packets_*.log/.bin (dev only; no size limit)
 
     // Experiment 4c: F9 spawns a clone of the player, F10 removes it. Writes
     // packets into the game, so it is off unless explicitly enabled.
