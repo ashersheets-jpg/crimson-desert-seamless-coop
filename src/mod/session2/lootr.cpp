@@ -169,12 +169,16 @@ void read_pickup(Seen& s, uintptr_t comp, uintptr_t picker) noexcept {
 int* __fastcall pickup_detour(uintptr_t comp, int* err, uintptr_t picker, uint64_t kind) noexcept {
     Seen s;
     read_pickup(s, comp, picker);
-    const bool guest_first = g_on && s.picker != kHostCharacter && (s.picker >> 28) == 0xA && s.gimmick;
+    // Only things that MAKE their item when taken (plants, herbs, nodes: comp+0xC0 empty before the pickup). A
+    // concrete item lying in the world (comp+0xC0 set: something a player dropped, a drop thrown on the ground) is
+    // one object: per player it would be a duplication (drop it, the friend takes it, take "your copy").
+    const bool concrete = s.idx != 0xFFFF;
+    const bool guest_first = g_on && !concrete && s.picker != kHostCharacter && (s.picker >> 28) == 0xA && s.gimmick;
     if (guest_first) {
         keep_for_host(s.gimmick, s.key16);  // phase 2a: the guest took it first; the host still sees it
         c_guest_first.fetch_add(1);
     }
-    if (g_on && (s.picker == kHostCharacter || guest_first) && s.gimmick) {
+    if (g_on && !concrete && (s.picker == kHostCharacter || guest_first) && s.gimmick) {
         try {
             Taken t;
             t.g = s.gimmick;
@@ -197,7 +201,8 @@ int* __fastcall pickup_detour(uintptr_t comp, int* err, uintptr_t picker, uint64
                   "{:02X}{:02X}{:02X}{:02X} -> err {}{}",
                   s.picker, kind & 0xFF, s.gimmick, s.idx, s.count, s.key16[0], s.key16[1], s.key16[2], s.key16[3],
                   s.key16[4], s.key16[5], s.key16[6], s.key16[7], e,
-                  g_on && s.picker == kHostCharacter ? " | kept for the guest (Lootr)" : "");
+                  !g_on ? "" : concrete ? " | a concrete item: one for whoever takes it"
+                  : s.picker == kHostCharacter ? " | kept for the guest (Lootr)" : " | kept for the host (Lootr)");
     }
     g_watch_until = GetTickCount64() + 3000;
     return r;
