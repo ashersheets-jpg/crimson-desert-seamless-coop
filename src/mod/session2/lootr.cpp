@@ -365,21 +365,30 @@ int* body_loot_per_player(uintptr_t comp, int* err, uintptr_t looter, uint8_t a,
                       took ? " | kept for the other player (re-armed)" : " | nothing taken, not kept");
         return r;
     }
-    // role 2: the game's own second roll and take, then the duplicates of the other kinds go again.
+    // role 2: the game's own second roll and take, then the duplicates of the other kinds go again. Nothing is kept
+    // back from this player any more, so the take's own list and the corrected one reach its client (tcB350: the
+    // corrected list was still dropped for the guest).
+    auto mark = [&](bool both) {
+        try {
+            std::lock_guard lk(g_mu);
+            for (BodyEntry& e : g_bodies) {
+                if (e.body == s.body && e.comp == comp) e.both = both;
+            }
+        } catch (...) {
+        }
+    };
+    mark(true);
+    body_keep_host(s.body, false);
     int* r = g_body_loot.call<int*>(comp, err, looter, a, b);
     BodySeen after;
     read_body(after, comp, 0);
     uint32_t removed = 0;
     bool trimmed = false;
     if (*err == 0 && after.body == s.body) trimmed = body_trim(comp, s.pool, s.sub, &removed);
-    try {
-        std::lock_guard lk(g_mu);
-        for (BodyEntry& e : g_bodies) {
-            if (e.body == s.body && e.comp == comp) e.both = true;
-        }
-    } catch (...) {
+    if (*err != 0) {  // e.g. a full bag: this player may try again
+        mark(false);
+        if (s.looter == kHostCharacter) body_keep_host(s.body, true);
     }
-    body_keep_host(s.body, false);
     c_body_second.fetch_add(1);
     static std::atomic<int> said2{0};
     if (said2.fetch_add(1) < 30)
