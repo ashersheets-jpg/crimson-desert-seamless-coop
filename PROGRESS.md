@@ -4524,3 +4524,6 @@ arriving at Hernand.
   per opening (a new root, or the first update after 500 ms without one). tcB336: the row reads "LB Map Inventory
   Journal Skills Others Co-op RB" right after Start; RB x4 steps 1 -> 2 -> 3 -> 4 -> Co-op through the game's own
   handler. SAVES OK, restored 5/5, guest load STABLE.
+- tcB337 (a typo in the key name, no key pressed) / tcB338 (keyboard, Esc opens the menu on Inventory): the tab row
+  shows no key icons at all with a keyboard (the game has no tab keys there: E / Q do nothing, as in the plain game;
+  tabs are clicked, ours too). So "the keyboard's next-tab key with the icon hidden" is closed: nothing to break.
