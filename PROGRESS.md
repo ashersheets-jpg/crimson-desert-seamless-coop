@@ -4516,3 +4516,11 @@ arriving at Hernand.
 - 2026-11-10 21:07 progress chart regenerated at the user's request: docs/drafts/progress-2026-11-10-evening.png
   (estimates; new row "Per-player world items (Lootr)"; gifting 25 -> 70, stash 10 -> 45, interaction menu 80 -> 90,
   anti-grief 70 -> 75, release 65 -> 70; NPCs 90 -> 85 and merchants 95 -> 90 after the tester's report).
+
+### tcB336 (2026-11-10 21:07): the RB icon on a Start-opened menu
+
+- A menu opened with Start (it lands on Inventory) ran neither open_panel nor tab_changed, so the game's RB icon
+  stayed between "Others" and "Co-op" until the first tab step (seen in tcB302). Now the menu's update hides it once
+  per opening (a new root, or the first update after 500 ms without one). tcB336: the row reads "LB Map Inventory
+  Journal Skills Others Co-op RB" right after Start; RB x4 steps 1 -> 2 -> 3 -> 4 -> Co-op through the game's own
+  handler. SAVES OK, restored 5/5, guest load STABLE.

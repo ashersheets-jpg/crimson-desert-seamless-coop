@@ -227,6 +227,17 @@ void do_step(uintptr_t root, int delta) {
 std::atomic<void (*)()> g_ui_tick{nullptr};
 void on_menu_update(SafetyHookContext& ctx) {
     g_update_calls.fetch_add(1, std::memory_order_relaxed);
+    {
+        // tcB302: a menu opened with Start (it lands on Inventory) runs neither open_panel nor tab_changed, so the
+        // game's RB glyph stayed between "Others" and "Co-op" until the first tab step: hidden once per opening
+        // (a new root, or the first update after a pause in the updates) here.
+        static uintptr_t last_root = 0;
+        static ULONGLONG last_t = 0;
+        const ULONGLONG now = GetTickCount64();
+        if (ctx.rcx != last_root || now - last_t > 500) shift_rb(ctx.rcx, true);
+        last_root = ctx.rcx;
+        last_t = now;
+    }
     if (auto* fn = g_ui_tick.load(std::memory_order_relaxed)) fn();
     if (const int d = g_step.exchange(0)) do_step(ctx.rcx, d);
     if (g_title_wanted.load(std::memory_order_relaxed)) do_return_to_title("the menu's update, UI thread");
