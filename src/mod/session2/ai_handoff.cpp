@@ -14,6 +14,7 @@
 #include "mod/log.h"
 #include "mod/net/remote_puppet.h"
 #include "mod/net/troc_sniffer.h"
+#include "mod/session2/damage_range.h"
 #include "mod/session2/lootr_logic.h"
 #include "mod/session2/server.h"
 
@@ -45,7 +46,7 @@ std::atomic<uint32_t> g_local_user{0};
 struct PlayerAt {
     uint32_t key = 0, user = 0;
     int sx = 0, sz = 0;
-    float x = 0, z = 0;
+    float x = 0, y = 0, z = 0;
 };
 // Facts for the log (2026-11-11: the sector rule was a guess; what do the NPCs around the second player look like on
 // the server): the NPCs nearest to one player.
@@ -62,6 +63,19 @@ struct Cand {
 };
 
 int sector(float v) { return static_cast<int>(std::floor(v * kSector)); }
+
+bool actor_xyz(uintptr_t base, uintptr_t actor, float& x, float& y, float& z) noexcept {
+    const uintptr_t comps = *reinterpret_cast<uintptr_t*>(actor + 0x68);
+    const uintptr_t ts = comps ? *reinterpret_cast<uintptr_t*>(comps + 0x1A0) : 0;
+    if (!ts) return false;
+    alignas(16) uint8_t buf[0x80] = {};
+    reinterpret_cast<void* (__fastcall*)(uintptr_t, void*)>(base + kFnPosition)(ts, buf);
+    const float* f = reinterpret_cast<const float*>(buf);
+    x = f[0] + 1000.0f * static_cast<float>(*reinterpret_cast<int16_t*>(buf + 0xC));
+    y = f[1];
+    z = f[2] + 1000.0f * static_cast<float>(*reinterpret_cast<int16_t*>(buf + 0xE));
+    return true;
+}
 
 bool actor_xz(uintptr_t base, uintptr_t actor, float& x, float& z) noexcept {
     const uintptr_t comps = *reinterpret_cast<uintptr_t*>(actor + 0x68);
@@ -95,14 +109,15 @@ int scan(PlayerAt* pl, int pl_cap, int& n_players, Cand* out, int cap, int& n_np
             const uint32_t key = *reinterpret_cast<uint32_t*>(actor + 0x60);
             const uintptr_t user = *reinterpret_cast<uintptr_t*>(actor + 0xA0);
             if ((key >> 28) != 0xA || !user) continue;
-            float x = 0, z = 0;
-            if (!actor_xz(base, actor, x, z)) continue;
+            float x = 0, y = 0, z = 0;
+            if (!actor_xyz(base, actor, x, y, z)) continue;
             PlayerAt p;
             p.key = key;
             p.user = *reinterpret_cast<uint32_t*>(user + 0x60);
             p.sx = sector(x);
             p.sz = sector(z);
             p.x = x;
+            p.y = y;
             p.z = z;
             if (p.user) pl[n_players++] = p;
         }
@@ -286,7 +301,7 @@ void ai_handoff_start(std::string_view mode, bool guest) {
 }
 
 void ai_handoff_tick() noexcept {
-    if (g_mode == Mode::Off || g_guest) return;
+    if ((g_mode == Mode::Off && !damage_range_on()) || g_guest) return;
     try {
         static uint64_t next = 0;
         const uint64_t now = GetTickCount64();
@@ -302,7 +317,7 @@ void ai_handoff_tick() noexcept {
 }
 
 void ai_handoff_server_tick() noexcept {
-    if (g_mode == Mode::Off || g_guest) return;
+    if ((g_mode == Mode::Off && !damage_range_on()) || g_guest) return;
     try {
         static std::unordered_map<uint32_t, std::pair<uint32_t, int>> pending;  // actor key -> (to, checks in a row)
         static std::unordered_map<uint32_t, uint32_t> born;                     // actor key -> its first controller
@@ -310,6 +325,16 @@ void ai_handoff_server_tick() noexcept {
         static Cand cand[512];
         int n_players = 0, n_npcs = 0, n_orphans = 0;
         const int n = scan(pl, 4, n_players, cand, 512, n_npcs, n_orphans);
+        {  // damage_range.h: where the users' characters are now
+            float xyz[4 * 3];
+            for (int k = 0; k < n_players && k < 4; ++k) {
+                xyz[k * 3] = pl[k].x;
+                xyz[k * 3 + 1] = pl[k].y;
+                xyz[k * 3 + 2] = pl[k].z;
+            }
+            damage_range_players(xyz, n_players);
+        }
+        if (g_mode == Mode::Off) return;
         c_ticks.fetch_add(1);
         c_npcs.store(static_cast<uint64_t>(n_npcs));
         c_orphans.store(static_cast<uint64_t>(n_orphans));

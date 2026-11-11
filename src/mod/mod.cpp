@@ -75,6 +75,7 @@
 #include "mod/session2/quest_route.h"
 #include "mod/session2/fog_share.h"
 #include "mod/session2/ai_handoff.h"
+#include "mod/session2/damage_range.h"
 #include "mod/session2/anti_grief.h"
 #include "mod/session2/lootr.h"
 #include "mod/session2/handle_guard.h"
@@ -1237,6 +1238,7 @@ DWORD WINAPI worker(LPVOID) {
             session2::stage_candidate_guard_start(cfg.s2_stage_candidate_guard);
             session2::anti_grief_start(cfg.s2_anti_grief, cfg.s2_guest);
             session2::ai_handoff_start(cfg.s2_ai_handoff, cfg.s2_guest);
+            session2::damage_range_start(cfg.s2_damage_range_players, cfg.s2_guest);
             session2::lootr_set_chests(cfg.s2_lootr_chests);
             session2::lootr_set_body_share(cfg.s2_lootr_body_share);
             session2::lootr_start(cfg.s2_lootr, cfg.s2_lootr_probe, cfg.s2_guest, cfg.s2_lootr_bodies);

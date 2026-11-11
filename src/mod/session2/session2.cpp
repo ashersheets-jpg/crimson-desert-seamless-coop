@@ -2,6 +2,7 @@
 #include "mod/session2/shop_twin.h"
 #include "mod/session2/fog_share.h"
 #include "mod/session2/ai_handoff.h"
+#include "mod/session2/damage_range.h"
 #include "mod/session2/anti_grief.h"
 #include "mod/session2/lootr.h"
 #include "mod/session2/handle_guard.h"
@@ -1652,6 +1653,7 @@ void tunnel_tick(troc::TrocLink& link, uint32_t now_ms) {
             log::info("{}", handle_guard_describe());
             log::info("{}", anti_grief_describe());  // its counts and the fight tally (who hit whom, from which client)
             if (const std::string a = ai_handoff_describe(); !a.empty()) log::info("{}", a);
+            if (const std::string a = damage_range_describe(); !a.empty()) log::info("{}", a);
         }
     }
     ai_handoff_tick();  // Co-op+: asks for the server-thread check once a second (nothing when off / the guest)

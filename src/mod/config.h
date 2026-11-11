@@ -523,6 +523,9 @@ struct Config {
     // Co-op+ 2026-11-11 (session2/ai_handoff.h): "0" | "probe" | "1". An NPC whose controller's player cannot see
     // it any more goes to the player who can (its client then runs its AI).
     std::string s2_ai_handoff = "0";
+    // Co-op+ 2026-11-11 (session2/damage_range.h): a hit counts when the victim is in range of ANY player's
+    // character, not only the host's (the game zeroes damage 80 m or more from the field owner's character).
+    bool s2_damage_range_players = true;
     int s2_stash_inventory = 0xFFFF;  // stash_inventory (research): 0xFFFF = the default
     // inter_probe, HOST (session2/trade_probe.h; far-shop research): read-only probes of NPC dynamic interactions.
     bool s2_inter_probe = false;

@@ -343,6 +343,7 @@ Config load_config(const std::wstring& ini_path) {
     c.s2_lootr_chests = read_uint(ini_path, L"session2", L"lootr_chests", 1) != 0;
     c.s2_lootr_body_share = read_uint(ini_path, L"session2", L"lootr_body_share", 1) != 0;
     c.s2_ai_handoff = narrow(read_string(ini_path, L"session2", L"ai_handoff", "0"));
+    c.s2_damage_range_players = read_uint(ini_path, L"session2", L"damage_range_players", 1) != 0;
     c.s2_stash_inventory = static_cast<int>(read_uint(ini_path, L"session2", L"stash_inventory", 0xFFFF));
     c.s2_fog_share = read_uint(ini_path, L"session2", L"fog_share", 0) != 0;
     c.s2_quest_own_progress = read_uint(ini_path, L"session2", L"quest_own_progress", 0) != 0;

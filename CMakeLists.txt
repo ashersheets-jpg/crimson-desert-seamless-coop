@@ -172,6 +172,7 @@ add_library(cdmp_mod SHARED
     src/mod/session2/anti_grief.cpp
     src/mod/session2/lootr.cpp
     src/mod/session2/ai_handoff.cpp
+    src/mod/session2/damage_range.cpp
     src/mod/session2/handle_guard.cpp
     src/mod/session2/shop_twin.cpp
     src/mod/session2/catch_seq.cpp
