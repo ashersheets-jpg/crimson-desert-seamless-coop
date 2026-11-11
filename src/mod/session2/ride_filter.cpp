@@ -1,3 +1,4 @@
+#include "mod/session2/lootr.h"
 #include "mod/session2/ride_filter.h"
 
 #include <windows.h>
@@ -128,6 +129,7 @@ bool guarded_rewrite(uint8_t* packet, rfl::Kind kind, bool* out) {
 }
 
 void host_recv(uint8_t* packet, uint16_t size) noexcept {
+    lootr_host_recv(packet, size);  // Co-op+ Lootr phase 2a (the sniffer has one rewrite callback: chained here)
     const auto mode = static_cast<Mode>(g_mode.load(std::memory_order_relaxed));
     if (mode == Mode::Off || size != rfl::kHeader + rfl::kAckSize) return;
     const uint32_t remote = server_user2_player_key();  // user 2's character (0 = not logged in yet)

@@ -96,6 +96,41 @@ struct Taken {
 };
 std::mutex g_mu;
 std::vector<Taken> g_taken;  // guarded by g_mu
+
+// ---- phase 2a: gimmicks the GUEST took first, kept for the host. Written on the server thread, read in the host
+// client's OnRecvPacket (the game's thread: no lock, no allocation, no log there), so fixed slots and atomics.
+struct KeepHost {
+    std::atomic<uint32_t> g{0};
+    uint8_t key16[16] = {};
+    std::atomic<uint64_t> at{0};
+};
+KeepHost g_keep[32];
+std::atomic<uint32_t> g_keep_next{0};
+// The originals of what the host's client was not shown (for a replay when the host takes it).
+struct HostHeld {
+    std::atomic<uint32_t> g{0};
+    uint16_t size = 0;
+    uint8_t bytes[640] = {};
+};
+HostHeld g_host_held[64];
+std::atomic<uint32_t> g_hh_next{0};
+std::atomic<uint64_t> c_host_blanked{0}, c_guest_first{0};
+
+void keep_for_host(uint32_t g, const uint8_t* key16) noexcept {
+    KeepHost& k = g_keep[g_keep_next.fetch_add(1) % 32];
+    k.g.store(0);
+    std::memcpy(k.key16, key16, 16);
+    k.at.store(GetTickCount64());
+    k.g.store(g);
+}
+void host_held_copy(uint32_t g, const uint8_t* packet, uint16_t size) noexcept {
+    if (size > sizeof(HostHeld::bytes)) return;
+    HostHeld& h = g_host_held[g_hh_next.fetch_add(1) % 64];
+    h.g.store(0);
+    std::memcpy(h.bytes, packet, size);
+    h.size = size;
+    h.g.store(g);
+}
 std::atomic<uint64_t> c_taken{0}, c_held{0}, c_given{0};
 
 struct Seen {
@@ -122,6 +157,10 @@ void read_pickup(Seen& s, uintptr_t comp, uintptr_t picker) noexcept {
 int* __fastcall pickup_detour(uintptr_t comp, int* err, uintptr_t picker, uint64_t kind) noexcept {
     Seen s;
     read_pickup(s, comp, picker);
+    if (g_on && s.picker != kHostCharacter && (s.picker >> 28) == 0xA && s.gimmick) {
+        keep_for_host(s.gimmick, s.key16);  // phase 2a: the guest took it first; the host still sees it
+        c_guest_first.fetch_add(1);
+    }
     if (g_on && s.picker == kHostCharacter && s.gimmick) {
         try {
             Taken t;
@@ -266,13 +305,47 @@ void lootr_tick(std::vector<std::vector<uint8_t>>& to_server) noexcept {
 }
 
 std::string lootr_describe() {
-    return std::format("Lootr: {} | host pickups kept for the guest {} | packets held {} | taken by the guest too {}",
-                       g_on ? "on" : "off", c_taken.load(), c_held.load(), c_given.load());
+    return std::format("Lootr: {} | host pickups kept for the guest {} | packets held {} | taken by the guest too {} | "
+                       "guest pickups kept for the host {} | host packets blanked {}",
+                       g_on ? "on" : "off", c_taken.load(), c_held.load(), c_given.load(), c_guest_first.load(),
+                       c_host_blanked.load());
+}
+
+void lootr_host_recv(uint8_t* packet, uint16_t size) noexcept {
+    if (!g_on || size < lrl::kHeader + 4) return;
+    const uint16_t op = static_cast<uint16_t>(packet[0] | (packet[1] << 8));
+    if (op != lrl::kOpGimmickGone && op != lrl::kOpGimmickState && op != lrl::kOpRemoveActor && op != lrl::kOpCoolTime)
+        return;
+    const uint64_t now = GetTickCount64();
+    uint8_t* pl = packet + lrl::kHeader;
+    const size_t n = size - lrl::kHeader;
+    for (KeepHost& k : g_keep) {
+        const uint32_t g = k.g.load();
+        if (!g || now - k.at.load() > kKeepMs) continue;
+        const int a = lrl::about(std::span<const uint8_t>(packet, size), g, k.key16);
+        if (!a) continue;
+        host_held_copy(g, packet, size);
+        // Blank the gimmick in place (the same size): an actor key 0 / a zero save key the client finds nothing for.
+        if (op == lrl::kOpGimmickGone) {
+            std::memset(pl, 0, n >= 8 ? 8 : 4);
+        } else if (op == lrl::kOpGimmickState) {
+            std::memset(pl, 0, 4);
+        } else if (op == lrl::kOpCoolTime && n >= 24) {
+            std::memset(pl + 8, 0, 16);
+        } else if (op == lrl::kOpRemoveActor) {
+            for (size_t i = 6; i + 4 <= n; i += 4) {
+                if (lrl::rd32(pl + i) == g) std::memset(pl + i, 0, 4);
+            }
+        }
+        c_host_blanked.fetch_add(1);
+        return;
+    }
 }
 
 void lootr_host_sniffed(const uint8_t* packet, size_t size, bool server_to_client) noexcept {
     if (!g_probe || !g_pickup || size < 5) return;
     const uint16_t op = static_cast<uint16_t>(packet[0] | (packet[1] << 8));
+    if (!server_to_client && (op == 3008 || op == 3073)) g_watch_until = GetTickCount64() + 3000;  // its answers
     static const uint16_t kWatch[] = {3008, 3073, 2120, 2794, 2066};
     bool watched = false;
     for (const uint16_t w : kWatch) watched = watched || w == op;
