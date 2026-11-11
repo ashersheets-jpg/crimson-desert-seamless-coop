@@ -4783,3 +4783,13 @@ arriving at Hernand.
   one), "tpactor <hex key>" (beside a loaded actor: the guest uses "tpactor A0100001" to come to the host).
 - tcB377 (lootr_bodies=1): the steps work (a goose killed, both players brought to the spot), but no body to loot
   was there (a goose on the river) and the [E] holds did nothing. Enemy loot on screen stays a two-player check.
+
+### tcB378 (2026-11-11 04:20): gear placed in the world is per player
+
+- The host took the Warspike Spear by the shrine: "'item_spear_equip' ... spawn reason 0x00 ... kept for the guest
+  (Lootr)"; the guest then took it too: "the guest's copy: item key 310018 x1: added", and the spear is in the
+  guest's inventory (shot g1, 67 / 99). So the spawn reason reads 0 for level-placed gear, as the research said.
+- The same [E] hold also took two shrine props (a ceramic, a lamp): spawn reason 0x10 (CombinationGimmick, parts of
+  a bigger level object). They stay first come: it is not known whether a player can create such an object from an
+  own item, and a wrong guess would be a duplication. Dropped (0x16) and thrown (0x15) items stay one object.
+- Native committed (local). Copies of gear have the item's default rolls (the add worker takes item + count).
