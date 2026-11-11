@@ -37,6 +37,9 @@ void lootr_chest_scan(uintptr_t host_actor) noexcept;
 // share and added to their bag as soon as they are within 6 m of the chest (at once when they stand there), for 30
 // minutes. Not yet: the chest staying closed on the other player's screen, shares across sessions.
 void lootr_set_chests(bool on);
+// Enemy / animal bodies, the same way (2026-11-11): what one player loots from a body goes to the other player too
+// when they are within 30 m of the body (now, or within 10 minutes). No notice: the game's own "acquired" lines.
+void lootr_set_body_share(bool on);
 // The SERVER thread (trade_probe's entry 0xC0DE0007, asked by lootr_tick while a share waits).
 void lootr_chest_shares(uintptr_t host_actor) noexcept;
 // trade_probe.cpp: the add worker (the owner's client gets the game's own "acquired" notice). The err, 0 = added.

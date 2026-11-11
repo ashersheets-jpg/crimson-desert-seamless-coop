@@ -447,14 +447,21 @@ int* body_loot_per_player(uintptr_t comp, int* err, uintptr_t looter, uint8_t a,
     return r;
 }
 
+bool g_body_share_on = false;
+void body_looted(uintptr_t comp, uint32_t body, uint32_t looter_key, const BagSnap& before) noexcept;
+
 int* __fastcall body_loot_detour(uintptr_t comp, int* err, uintptr_t looter, uint8_t a, uint8_t b) noexcept {
     BodySeen before, after;
     read_body(before, comp, looter);
     bool handled = false;
+    static BagSnap bag0;  // the server thread only
+    const bool share = g_on && g_body_share_on && !g_bodies_on && looter && (before.looter >> 28) == 0xA &&
+                       before.body && snap_bag(looter, bag0);
     int* r = body_loot_per_player(comp, err, looter, a, b, &handled);
     if (!handled) r = g_body_loot.call<int*>(comp, err, looter, a, b);
     int e = -1;
     if (err) game::fast_read(reinterpret_cast<uintptr_t>(err), &e, 4);
+    if (share && e == 0) body_looted(comp, before.body, before.looter, bag0);
     read_body(after, comp, 0);  // the comp may be gone when the body was logged out: SEH-guarded
     static std::atomic<int> said{0};
     if (g_probe && said.fetch_add(1) < 40) {
@@ -483,10 +490,12 @@ struct ChestShare {
     // x10, Lean Meat x13, Lentils x3). So the bag is compared again once that has settled.
     bool settled = false;
     bool told = false;  // the layer was told that this share waits (the other player was not at the chest)
+    bool body = false;  // a dead body's loot: no notice, 30 m, kept 10 minutes
     BagSnap before;
 };
 constexpr uint64_t kSettleMs = 1500;
 constexpr uint64_t kShareKeepMs = 3ull * 60 * 60 * 1000;  // a share nobody fetches is forgotten after 3 hours
+constexpr uint64_t kBodyShareKeepMs = 10ull * 60 * 1000;
 constexpr int kShareMax = 48;
 // For the Co-op+ layer (export cdmp_chest_events): 1 = a share waits for `player` at (x, y, z), 2 = `player` got it.
 struct ChestEvent {
@@ -516,7 +525,7 @@ void chest_event(uint8_t kind, uint32_t player, const ChestShare& sh) noexcept {
 ChestShare g_shares[kShareMax];  // the server thread only
 int g_share_n = 0;
 std::atomic<int> g_shares_pending{0};
-std::atomic<uint64_t> c_chest_opened{0}, c_chest_shared{0}, c_chest_expired{0};
+std::atomic<uint64_t> c_chest_opened{0}, c_chest_shared{0}, c_chest_expired{0}, c_body_looted{0}, c_body_shared{0};
 void chest_opened(uintptr_t comp, uintptr_t opener, uint32_t gimmick, uint32_t opener_key, const BagSnap& before) noexcept;
 struct DropSeen {
     uint32_t gimmick = 0, actor = 0, target = 0;
@@ -870,13 +879,25 @@ bool gimmick_pos(uintptr_t comp, float& x, float& y, float& z) noexcept {
 void chest_opened(uintptr_t comp, uintptr_t opener, uint32_t gimmick, uint32_t opener_key,
                   const BagSnap& before) noexcept {
     (void)opener;
+    c_chest_opened.fetch_add(1);
+    for (int k = 0; k < g_share_n; ++k) {  // one settling share per player (its first bag snapshot covers this too)
+        ChestShare& o = g_shares[k];
+        if (o.settled || o.opener != opener_key) continue;
+        o.at = GetTickCount64();
+        if (o.body) {  // a chest is announced and kept longer
+            o.body = false;
+            o.told = false;
+            o.gimmick = gimmick;
+            gimmick_pos(comp, o.x, o.y, o.z);
+        }
+        return;
+    }
     static ChestShare sh;  // the server thread only
     sh = ChestShare{};
     sh.gimmick = gimmick;
     sh.opener = opener_key;
     sh.at = GetTickCount64();
     sh.before = before;
-    c_chest_opened.fetch_add(1);
     if (!gimmick_pos(comp, sh.x, sh.y, sh.z)) {
         log::info("Lootr: chest 0x{:08X} opened by 0x{:08X}: the chest's position is unreadable (no share kept)",
                   gimmick, opener_key);
@@ -890,6 +911,36 @@ void chest_opened(uintptr_t comp, uintptr_t opener, uint32_t gimmick, uint32_t o
     }
     g_shares[slot] = sh;
     g_shares_pending = g_share_n;
+}
+// A dead body looted (the loot worker returned err 0). One share per looter while it settles: a "take all" may be
+// several calls, and each new call only pushes the settle time on (the first call's bag snapshot covers them all).
+void body_looted(uintptr_t comp, uint32_t body, uint32_t looter_key, const BagSnap& before) noexcept {
+    const uint64_t now = GetTickCount64();
+    for (int k = 0; k < g_share_n; ++k) {
+        ChestShare& o = g_shares[k];
+        if (o.settled || o.opener != looter_key) continue;
+        o.at = now;
+        if (o.body) gimmick_pos(comp, o.x, o.y, o.z);
+        return;
+    }
+    static ChestShare sh;  // the server thread only
+    sh = ChestShare{};
+    sh.gimmick = body;
+    sh.opener = looter_key;
+    sh.at = now;
+    sh.before = before;
+    sh.body = true;
+    sh.told = true;  // never announced
+    if (!gimmick_pos(comp, sh.x, sh.y, sh.z)) return;
+    int slot = g_share_n < kShareMax ? g_share_n++ : 0;
+    if (slot == 0 && g_share_n == kShareMax && g_shares[0].gimmick) {
+        for (int k = 1; k < kShareMax; ++k) {
+            if (g_shares[k].at < g_shares[slot].at) slot = k;
+        }
+    }
+    g_shares[slot] = sh;
+    g_shares_pending = g_share_n;
+    c_body_looted.fetch_add(1);
 }
 // What the opener's bag gained since the chest was opened. False = its bag cannot be read now.
 bool share_settle(ChestShare& sh, uintptr_t opener_actor) noexcept {
@@ -951,18 +1002,19 @@ int players_now(PlayerAt* out, int cap) noexcept {
 }  // namespace
 
 void lootr_set_chests(bool on) { g_chests_on = on; }
+void lootr_set_body_share(bool on) { g_body_share_on = on; }
 
 void lootr_chest_shares(uintptr_t host_actor) noexcept {
-    if (!g_on || !g_chests_on || !host_actor || !g_share_n) return;
+    if (!g_on || !host_actor || !g_share_n) return;
     PlayerAt pl[4];
     const int n = players_now(pl, 4);
     const uint64_t now = GetTickCount64();
     for (int k = g_share_n - 1; k >= 0; --k) {
         ChestShare& sh = g_shares[k];
         bool done = false;
-        if (now - sh.at > kShareKeepMs) {
-            c_chest_expired.fetch_add(1);
-            log::info("Lootr: the share of chest 0x{:08X} was not fetched in 3 hours: forgotten", sh.gimmick);
+        if (now - sh.at > (sh.body ? kBodyShareKeepMs : kShareKeepMs)) {
+            if (!sh.body) c_chest_expired.fetch_add(1);
+            if (!sh.body) log::info("Lootr: the share of chest 0x{:08X} was not fetched in 3 hours: forgotten", sh.gimmick);
             done = true;
         }
         if (!done && !sh.settled) {
@@ -975,20 +1027,22 @@ void lootr_chest_shares(uintptr_t host_actor) noexcept {
                 if (now - sh.at < 20000) continue;  // the opener is not there right now: try again
                 done = true;
             } else if (!sh.items) {
-                log::info("Lootr: chest 0x{:08X} opened by 0x{:08X}: its bag gained nothing we can see (no share)",
-                          sh.gimmick, sh.opener);
+                if (!sh.body)
+                    log::info("Lootr: chest 0x{:08X} opened by 0x{:08X}: its bag gained nothing we can see (no share)",
+                              sh.gimmick, sh.opener);
                 done = true;
             } else {
                 std::string list;
                 for (int i = 0; i < sh.items; ++i) list += std::format("{}{} x{}", i ? ", " : "", sh.item[i], sh.n[i]);
-                log::info("Lootr: chest 0x{:08X} at ({:.1f}, {:.1f}, {:.1f}) opened by 0x{:08X}: {} item kind(s) [{}] "
-                          "kept as the other player's share", sh.gimmick, sh.x, sh.y, sh.z, sh.opener, sh.items, list);
+                log::info("Lootr: {} 0x{:08X} at ({:.1f}, {:.1f}, {:.1f}) {} by 0x{:08X}: {} item kind(s) [{}] "
+                          "kept as the other player's share", sh.body ? "body" : "chest", sh.gimmick, sh.x, sh.y, sh.z,
+                          sh.body ? "looted" : "opened", sh.opener, sh.items, list);
             }
         }
         for (int p = 0; p < n && !done; ++p) {
             if (pl[p].key == sh.opener) continue;
             const float dx = pl[p].x - sh.x, dy = pl[p].y - sh.y, dz = pl[p].z - sh.z;
-            if (dx * dx + dy * dy + dz * dz > 36.0f) continue;
+            if (dx * dx + dy * dy + dz * dz > (sh.body ? 900.0f : 36.0f)) continue;  // a body: 30 m (the fight)
             static BagSnap bag0, bag1;  // the server thread only
             const bool snap0 = snap_bag(pl[p].actor, bag0);
             std::string list;
@@ -1003,11 +1057,13 @@ void lootr_chest_shares(uintptr_t host_actor) noexcept {
                 for (int i = 0; i < bag1.slots; ++i) gained += bag1.idx[i] != 0xFFFF && bag1.n[i] > 0 ? bag1.n[i] : 0;
                 for (int i = 0; i < bag0.slots; ++i) gained -= bag0.idx[i] != 0xFFFF && bag0.n[i] > 0 ? bag0.n[i] : 0;
             }
-            c_chest_shared.fetch_add(1);
-            if (sh.told) chest_event(2, pl[p].key, sh);
-            log::info("Lootr: chest 0x{:08X}: 0x{:08X} is at the chest and got its own share [{}] (opened by 0x{:08X} "
-                      "{} s ago) | its bag gained {} piece(s)", sh.gimmick, pl[p].key, list, sh.opener,
-                      (now - sh.at) / 1000, gained);
+            (sh.body ? c_body_shared : c_chest_shared).fetch_add(1);
+            if (sh.told && !sh.body) chest_event(2, pl[p].key, sh);
+            static std::atomic<int> said_body{0};
+            if (!sh.body || said_body.fetch_add(1) < 40)
+                log::info("Lootr: {} 0x{:08X}: 0x{:08X} is there and got its own share [{}] ({} by 0x{:08X} {} s ago) | "
+                          "its bag gained {} piece(s)", sh.body ? "body" : "chest", sh.gimmick, pl[p].key, list,
+                          sh.body ? "looted" : "opened", sh.opener, (now - sh.at) / 1000, gained);
             done = true;
         }
         if (!done && sh.settled && !sh.told) {  // the other player is somewhere else: the layer tells them
@@ -1119,7 +1175,7 @@ void lootr_start(bool on, bool probe, bool guest, bool bodies) {
     if (auto h = safetyhook::InlineHook::create(reinterpret_cast<void*>(base + 0x2D37B10), pickup_detour)) {
         g_pickup = std::move(*h);
     }
-    if (g_probe || g_bodies_on) {
+    if (g_probe || g_bodies_on || (g_on && g_body_share_on)) {
         static const uint8_t kHead[10] = {0x48, 0x89, 0x5C, 0x24, 0x18, 0x44, 0x88, 0x4C, 0x24, 0x20};
         uint8_t got[10] = {};
         if (game::safe_read(base + 0x2E224F0, got, sizeof got) && std::memcmp(got, kHead, sizeof got) == 0) {
@@ -1137,7 +1193,8 @@ void lootr_start(bool on, bool probe, bool guest, bool bodies) {
             }
         }
         log::info("Lootr: the body loot worker {}{}", g_body_loot ? "hooked" : "NOT hooked",
-                  !g_bodies_on ? " (log only)"
+                  !g_bodies_on ? (g_on && g_body_share_on ? ": what one player loots from a body, the other player "
+                                                            "nearby gets too" : " (log only)")
                   : g_keep_body_hook ? ": enemy loot is per player (the second looter gets its own roll)"
                                      : ": per player, but the keep-the-body hook is NOT in");
     }
@@ -1260,7 +1317,7 @@ void lootr_tick(std::vector<std::vector<uint8_t>>& to_server) noexcept {
                 b.step = 1;
                 const bool ok = net::sniffer_inject_c2s(lrl::make(2491, pl, 0x00));
                 log::info("Lootr probe: [dev] the host loots body 0x{:08X} (2491){}", b.key, ok ? "" : " NOT sent");
-            } else if (b.step == 1 && now - b.at >= 6000) {
+            } else if (b.step == 1 && now - b.at >= 6000 && g_kill_hits.load() == 1) {
                 b.step = 2;
                 to_server.push_back(lrl::make(2491, pl, 0x00));
                 log::info("Lootr probe: [dev] the guest loots body 0x{:08X} (2491, as its own request)", b.key);
@@ -1357,9 +1414,12 @@ std::string lootr_describe() {
            std::format(" | bodies {}: first loots {} second loots {} repeats refused {} lists kept back {}",
                        g_bodies_on ? "per player" : "as the game", c_body_first.load(), c_body_second.load(),
                        c_body_refused.load(), c_body_2414.load()) +
-           std::format(" | chests {}: opened {} shares given {} waiting {} forgotten {}",
+           std::format(" | chests {}: opened {} shares given {} waiting {} forgotten {} | body loot {}: looted {} "
+                       "shares given {}",
                        g_chests_on ? "per player" : "as the game", c_chest_opened.load(), c_chest_shared.load(),
-                       g_shares_pending.load(), c_chest_expired.load());
+                       g_shares_pending.load(), c_chest_expired.load(),
+                       g_body_share_on && !g_bodies_on ? "shared" : "not shared", c_body_looted.load(),
+                       c_body_shared.load());
 }
 
 void lootr_host_recv(uint8_t* packet, uint16_t size) noexcept {
@@ -1454,7 +1514,8 @@ void kill_hits(const uint8_t* packet, size_t size) noexcept {
             std::memcpy(pl, &k, 4);
             const bool ok = net::sniffer_inject_c2s(lrl::make(2210, pl, 0x00));
             log::info("Lootr probe: [dev] the host's hit on 0x{:08X} kills it{}", k, ok ? "" : " (NOT sent)");
-            if (g_kill_hits.load() == 1) {  // then both loot it without the UI: the host 3 s later, the guest 6 s
+            if (g_kill_hits.load() == 1 || g_kill_hits.load() == 3) {  // then loot it without the UI: the host 3 s
+                                                                       // later, (mode 1) the guest 6 s later
                 std::lock_guard lk(g_mu);
                 if (g_dev_bodies.size() < 64) g_dev_bodies.push_back({k, GetTickCount64(), 0});
             }
