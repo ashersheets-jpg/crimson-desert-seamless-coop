@@ -5140,3 +5140,23 @@ Run pp1 on package 0.1.0-alpha+0cd46dd8 (layer HEAD 0cd46dd, native 560e3dc; one
   frame); the host going down; going down while riding / in a duel; Esc while down (dp1: no menu opens, the death
   screen stays -- fine, but the game's menu is not reachable while down). Exact switches: build/native/dp1.args,
   dp2.args.
+
+### ff1 (2026-11-11 13:30): the far-guest fight test by blind swings is INVALID (and so were tcB413 / tcB415)
+
+- New on the host (native, local commit bf43e6f): a tally of every blow (frame event) by attacker and target, per
+  client it came from, and a kill count, in the once-a-minute line "AntiGrief: on | ... | kills host N guest N |
+  blows from the host's client: guest>NPC .. NPC>guest .. | blows from the guest's client: ... | most: A>B xN".
+  (That summary line existed in code but was never logged anywhere before today.)
+- ff1 (guest teleported to the dock camp, host at the shrine 108 m away, 150 left clicks, -Fresh): the guest's
+  position log shows it walking steadily EAST from the first click on: 18 m after 30 s, 173 m after 2.5 minutes,
+  287 m from the host at the end (shots ff1-g1 "Nas River", ff1-g3 "Anvil Riverside"). Each swing steps forward and
+  nothing holds the character at the camp. Of ~150 frame events only 13 had a target: 6 on NPC 0xB0100426 (battle
+  state 0, "the host would be punished too" = a peaceful NPC, a real crime, left to the game), a few on two others,
+  and 5 vandalism crimes on props. No blow by any NPC on the guest, guest HP 300 throughout, no kill.
+- So ff1 says nothing about bandits, and tcB413 / tcB415 (the same method) very likely did not either: "no kill, no
+  damage" there was a guest walking away from the camp, not a broken fight. The earlier corrections stand: nothing
+  is established about a far guest's fights.
+- Next (ff2): a new dev script step "npcs [radius]" (layer, dev only) lists the NPC actors a client has loaded near
+  its character: key, kind, distance, HP, position. The guest stands idle at the camp for 95 s while both clients
+  log it every 10 s: do bandits exist there for the guest, do they come, does its HP drop. Then the same with the
+  host at the camp too (ff3) for comparison.

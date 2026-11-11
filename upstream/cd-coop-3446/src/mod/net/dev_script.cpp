@@ -13,6 +13,8 @@
 #include <vector>
 
 #include "mod/game/actor_lookup.h"
+#include "mod/game/offsets.h"
+#include "mod/game/safe_memory.h"
 #include "mod/log.h"
 #include "mod/net/local_capture.h"
 #include "mod/net/remote_puppet.h"
@@ -29,10 +31,74 @@
 #include "mod/net/guest_hits.h"
 
 namespace cdmp::net {
+
+// [dev] "npcs": what this client has loaded around our character (2026-11-11, ff1: a test needs to SEE whether
+// enemies near a far guest exist, come closer and lose health; blind swings told nothing). Key, kind, distance, HP.
+static void log_npcs_near(float radius) {
+    const auto me = game::actor_world_position(capture_own_player_key());
+    if (!me) {
+        log::info("Dev script: npcs: our own position is not known");
+        return;
+    }
+    const auto exe = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    struct Row {
+        float d;
+        uint32_t key, variant;
+        float hp, hp_max;
+        proto::Vec3 at;
+    };
+    std::vector<Row> rows;
+    int loaded = 0;
+    for (const auto& [key, variant] : enemy_loaded_variants()) {
+        if ((key >> 28) != 0xB) continue;
+        ++loaded;
+        const auto at = game::actor_world_position(key);
+        if (!at) continue;
+        const float dx = at->x - me->x, dy = at->y - me->y, dz = at->z - me->z;
+        const float d = std::sqrt(dx * dx + dy * dy + dz * dz);
+        if (d > radius) continue;
+        Row r{d, key, variant, -1.0f, -1.0f, *at};
+        // health: actor -> components -> status -> stat container (as for our own character, player_reader.cpp)
+        if (const auto actor = game::find_actor(key)) {
+            const auto comps = game::read_ptr(*actor + game::build_3576::kActor_ComponentTable);
+            const auto status = comps ? game::read_ptr(*comps + game::build_3576::kComponents_Status) : std::nullopt;
+            const auto vt = status ? game::read_ptr(*status) : std::nullopt;
+            if (status && vt && *vt == exe + game::build_3576::kVtStatusComponent) {
+                const auto cont = game::read_ptr(*status + game::build_3576::kStatus_StatContainer);
+                const auto entries = cont ? game::read_ptr(*cont + game::build_3576::kStatContainer_Entries) : std::nullopt;
+                const auto count = cont ? game::read<uint32_t>(*cont + game::build_3576::kStatContainer_Count) : std::nullopt;
+                if (entries && count && *count <= game::build_3576::kMaxStatEntries) {
+                    for (uint32_t i = 0; i < *count; ++i) {
+                        const uintptr_t e = *entries + static_cast<uintptr_t>(i) * game::build_3576::kStatEntry_Size;
+                        const auto id = game::read<uint64_t>(e + game::build_3576::kStatEntry_Id);
+                        if (!id || *id != game::build_3576::kStatId_Health) continue;
+                        const auto cur = game::read<int64_t>(e + game::build_3576::kStatEntry_Current);
+                        const auto max = game::read<int64_t>(e + game::build_3576::kStatEntry_Max);
+                        if (cur && max) {
+                            r.hp = static_cast<float>(*cur) / 1000.0f;
+                            r.hp_max = static_cast<float>(*max) / 1000.0f;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        rows.push_back(r);
+    }
+    std::sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) { return a.d < b.d; });
+    log::info("Dev script: npcs within {:.0f} m of ({:.1f}, {:.1f}, {:.1f}): {} of {} loaded NPC actors", radius, me->x,
+              me->y, me->z, rows.size(), loaded);
+    for (size_t i = 0; i < rows.size() && i < 14; ++i) {
+        const Row& r = rows[i];
+        const char* animal = hunt_animal_name(r.variant);
+        log::info("Dev script: npc 0x{:08X} variant 0x{:08X}{}{} | {:.1f} m | hp {:.0f}/{:.0f} | at ({:.1f}, {:.1f}, {:.1f})",
+                  r.key, r.variant, animal ? " " : "", animal ? animal : "", r.d, r.hp, r.hp_max, r.at.x, r.at.y, r.at.z);
+    }
+}
 namespace {
 
 struct Step {
-    enum Kind { C2S, S2C, Wait, Teleport, Poke, Time, Watch, Day, Pad, KillGame, KillAll, MemScan, MemDiff, MemWatch, Advance, FScan, FFilter, FWatch, WaitFile, DScan, DFilter, DWatch, GSnap, GDiff, PtrScan, WatchStatus, Key, ClockScan, RideHorse, PrologueDone, GrantXp, GuestHit, DumpItemMove, TpActor } kind;
+    enum Kind { C2S, S2C, Wait, Teleport, Poke, Time, Watch, Day, Pad, KillGame, KillAll, MemScan, MemDiff, MemWatch, Advance, FScan, FFilter, FWatch, WaitFile, DScan, DFilter, DWatch, GSnap, GDiff, PtrScan, WatchStatus, Key, ClockScan, RideHorse, PrologueDone, GrantXp, GuestHit, DumpItemMove, TpActor, Npcs } kind;
     uintptr_t addr = 0;
     float to[3] = {};
     uint16_t op = 0;
@@ -408,6 +474,14 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
             steps.push_back(std::move(st));
             continue;
         }
+        if (kind == "npcs") {  // npcs [radius m, default 40]: the loaded NPC actors near us, nearest first (log only)
+            st.kind = Step::Npcs;
+            float r = 40.0f;
+            in >> r;
+            st.to[0] = r > 0 ? r : 40.0f;
+            steps.push_back(std::move(st));
+            continue;
+        }
         if (kind == "tpkill" || kind == "tpactor") {  // tpactor <hex key>: 1 m beside a loaded actor; tpkill: beside
             st.kind = Step::TpActor;                    // the animal the last killgame killed
             st.addr = 0;
@@ -543,6 +617,8 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                                 mbi.State == MEM_COMMIT && (mbi.Protect & (PAGE_READWRITE | PAGE_EXECUTE_READWRITE));
                 if (ok) std::memcpy(reinterpret_cast<void*>(st.addr), st.payload.data(), st.payload.size());
                 log::info("Dev script: poke 0x{:X} ({} bytes){}", st.addr, st.payload.size(), ok ? "" : " REFUSED (not writable)");
+            } else if (st.kind == Step::Npcs) {
+                log_npcs_near(st.to[0]);
             } else if (st.kind == Step::TpActor) {
                 const uint32_t key = st.addr ? static_cast<uint32_t>(st.addr) : hunt_dev_last_kill();
                 const auto at = key ? game::actor_world_position(key) : std::nullopt;
