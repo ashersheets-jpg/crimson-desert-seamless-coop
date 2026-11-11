@@ -8,8 +8,8 @@ test save Out, shipped cdmp.ini restored.
 - Playtest results from the testers (the two-PC test).
 - Release / Discord posts / sending a build: each needs the user's OK first.
 - Controller feel checks (hands on a pad).
-- POST the fixed build 0.1.0-alpha+1e04722c (packaged 2026-11-11 04:33, install checks pass; text in
-  docs/release/shared-world-playtest/download-1e04722c.txt): it closes the drop duplication of 24661515, lets the
+- POST the fixed build 0.1.0-alpha+2f4b0dd4 (packaged 2026-11-11 04:54, install checks pass; text in
+  docs/release/shared-world-playtest/download-2f4b0dd4.txt): it closes the drop duplication of 24661515, lets the
   guest hit enemies from the first blow, stops the guest's "crimes" in the host's fights, and adds chests and
   world-placed gear for each player. Needs the OK.
 - Chests, the guest opening first (the host then gets its share): same code with the roles swapped, but not

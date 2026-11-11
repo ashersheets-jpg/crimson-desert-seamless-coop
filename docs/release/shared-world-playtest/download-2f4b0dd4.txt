@@ -1,4 +1,4 @@
-**Update: shared world playtest 0.1.0-alpha+1e04722c (the guest can fight, chests and gear for each player, give items, crash guards)**
+**Update: shared world playtest 0.1.0-alpha+2f4b0dd4 (the guest can fight, chests and gear for each player, give items, crash guards)**
 Please use this build instead of 24661515. You and your co-op partner both need it.
 
 Fixed:
@@ -10,11 +10,11 @@ Fixed:
 
 New:
 - **Give an item to your friend**: stand next to them, open your inventory and press Discard on an item: you are asked "Give to <name> / Discard / Cancel". The item moves with everything on it (upgrades, durability, dye).
-- **Chests are for each of you**: when one of you opens a chest, the other gets the same content as soon as they are at the chest (at once when you stand together). The chest itself still opens for both.
+- **Chests are for each of you**: when one of you opens a chest, the other gets the same content as soon as they are at the chest (at once when you stand together; if you are somewhere else you get a message and a pin on your map). The chest itself still opens for both.
 - **Gear lying in the world is for each of you**: a weapon or other item the game placed in the world can be taken once by each player (as herbs already could). An item one of you DROPS is still a single item.
 - The Co-op tab has a "Shared stash" section. It opens once the host has unlocked a warehouse in the story (it is the host's warehouse, usable by both of you from anywhere). Untested with an unlocked warehouse: tell us how it goes.
 
-- `CrimsonDesert-SeamlessCoop-0.1.0-alpha+1e04722c-shared-world.zip`: this is the one you want. Run its installer with the game closed (it replaces the older build).
+- `CrimsonDesert-SeamlessCoop-0.1.0-alpha+2f4b0dd4-shared-world.zip`: this is the one you want. Run its installer with the game closed (it replaces the older build).
 - `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
 
 Tested with two copies of the game on one PC. Please tell us in #bug-reports how it goes (and send the report zip if anything goes wrong).
