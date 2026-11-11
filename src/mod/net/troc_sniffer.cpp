@@ -26,6 +26,7 @@
 #include "mod/game/rtti.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
+#include "mod/session2/ai_handoff.h"
 #include "mod/game/game_errors.h"
 #include "mod/game/game_fault.h"
 #include "mod/net/local_capture.h"
@@ -340,6 +341,16 @@ void deliver_extra(void* net, void* session, uint64_t arg3, const uint8_t* pkt, 
 
 void on_recv_packet(safetyhook::Context& ctx) {
     capture(Dir::ServerToClient, 0, reinterpret_cast<const uint8_t*>(ctx.r9), ctx.rsp);
+    // Co-op+ AI hand-over (session2/ai_handoff.h): its private notice and the game's own 2660, the mod's injected ones
+    // included (the host's own client gets them that way). Guarded inside.
+    if (g_ret_stub && ctx.r9) {
+        uint16_t size = 0;
+        if (guarded_copy(&size, reinterpret_cast<const void*>(ctx.rsp + off::kHookArgSizeStackOffset), sizeof size) &&
+            session2::ai_handoff_client_recv(reinterpret_cast<const uint8_t*>(ctx.r9), size)) {
+            ctx.rip = reinterpret_cast<uintptr_t>(g_ret_stub);
+            return;
+        }
+    }
     // Co-op+ layer's veto (layer_drops): only on the server's own packets, never on one the mod injects.
     if (g_ret_stub && ctx.r9 && !t_injecting) {
         uint16_t size = 0;

@@ -14,6 +14,7 @@
 
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
+#include "mod/session2/ai_handoff.h"
 #include "mod/session2/lootr.h"
 
 // 3576: handler 0x2C948C0 (MoveItemInventoryToOtherInventoryReq 3111) -> worker 0x2E0B2B0(char, int* err, u32 item,
@@ -683,6 +684,15 @@ int* __fastcall worker_detour(uintptr_t self, int* err, uint32_t item, uint16_t 
         if (g == kHostCharacter && game::fast_read(self + 8, &actor, 8) && actor &&
             game::fast_read(actor + 0x60, &me, 4) && me == kHostCharacter)
             lootr_chest_shares(actor);
+        *err = 0;
+        return err;
+    }
+    if (entry == 0xC0DE0008) {  // AI hand-over (ai_handoff.h): the once-a-second check (the host's own request only)
+        uintptr_t actor = 0;
+        uint32_t me = 0;
+        if (g == kHostCharacter && game::fast_read(self + 8, &actor, 8) && actor &&
+            game::fast_read(actor + 0x60, &me, 4) && me == kHostCharacter)
+            ai_handoff_server_tick();
         *err = 0;
         return err;
     }

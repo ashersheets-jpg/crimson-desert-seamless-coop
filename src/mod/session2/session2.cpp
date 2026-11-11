@@ -1,6 +1,7 @@
 #include "mod/session2/session2.h"
 #include "mod/session2/shop_twin.h"
 #include "mod/session2/fog_share.h"
+#include "mod/session2/ai_handoff.h"
 #include "mod/session2/anti_grief.h"
 #include "mod/session2/lootr.h"
 #include "mod/session2/handle_guard.h"
@@ -1650,8 +1651,10 @@ void tunnel_tick(troc::TrocLink& link, uint32_t now_ms) {
             last_guard_ms = now_ms;
             log::info("{}", handle_guard_describe());
             log::info("{}", anti_grief_describe());  // its counts and the fight tally (who hit whom, from which client)
+            if (const std::string a = ai_handoff_describe(); !a.empty()) log::info("{}", a);
         }
     }
+    ai_handoff_tick();  // Co-op+: asks for the server-thread check once a second (nothing when off / the guest)
     {  // Co-op+ Lootr: the guest's copy of an item the host took, added on the server thread as its own request.
         std::vector<std::vector<uint8_t>> reqs;
         lootr_tick(reqs);

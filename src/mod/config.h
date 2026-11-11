@@ -520,6 +520,9 @@ struct Config {
     // lootr_body_share = 0 | 1, HOST: what one player loots from a body, the other player nearby gets too (needs
     // lootr=1; off when lootr_bodies=1, which gives the second looter an own roll instead)
     bool s2_lootr_body_share = true;
+    // Co-op+ 2026-11-11 (session2/ai_handoff.h): "0" | "probe" | "1". An NPC whose controller's player cannot see
+    // it any more goes to the player who can (its client then runs its AI).
+    std::string s2_ai_handoff = "0";
     int s2_stash_inventory = 0xFFFF;  // stash_inventory (research): 0xFFFF = the default
     // inter_probe, HOST (session2/trade_probe.h; far-shop research): read-only probes of NPC dynamic interactions.
     bool s2_inter_probe = false;
