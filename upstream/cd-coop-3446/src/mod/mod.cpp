@@ -1,6 +1,7 @@
 #include "mod/mod.h"
 #include "mod/native_layer.h"
 #include "mod/input/actions.h"
+#include "mod/input/game_input_block.h"
 #include "mod/input/pad_input.h"
 
 #include <array>
@@ -1089,6 +1090,9 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
                                     ? net::RevivePrompt::None
                                     : net::revive_prompt_tick(linked, s.health, s.health_max, partner_hp,
                                                               game_has_focus(), now);
+                // A downed player (HP 0, our prompt in place of the game's death screen) takes no game input.
+                input::set_game_input_downed(linked && s.health_max > 0 && s.health <= 0 &&
+                                             net::revive_death_withheld());
                 // Co-op+ (T26): [coop] respawn_at=partner -- a revive that put us back at the checkpoint (more than
                 // 50 m from where we fell) is followed by the hop to the other player, once we stand again.
                 {

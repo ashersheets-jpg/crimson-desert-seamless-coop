@@ -56,6 +56,9 @@ bool revive_in_place(uint32_t now_ms);
 // Server -> client, before the game sees it: true = not delivered (our own death notice once a copy has been
 // loaded: revive_prompt.cpp).
 bool revive_filter_s2c(const uint8_t* packet, size_t size);
+// True from the moment our death notice was kept from the client until we are up again (hp > 0): the client does not
+// know it is dead, so the mod holds the game's input meanwhile (input/game_input_block.h).
+bool revive_death_withheld();
 void revive_observe_s2c(const uint8_t* packet, size_t size);
 
 // Co-op+ dev ([dev] kill_key=1, Ctrl+Shift+F4): DoTeleportAck for our player to (x, y, z). Research for

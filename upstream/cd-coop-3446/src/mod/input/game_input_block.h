@@ -13,5 +13,9 @@ bool game_input_block_install();
 // While true the game takes no input (any thread).
 void set_game_input_blocked(bool on);
 bool game_input_blocked();
+// Co-op+ (2026-11-11, tcB382): a second, independent reason: our player is DOWN and waits for a revive. The client is
+// not told about its death (revive_prompt.h), so without this the downed player could still walk and swing. The
+// mod's own keys (revive choices, the friend's revive) keep working.
+void set_game_input_downed(bool on);
 
 }  // namespace cdmp::input

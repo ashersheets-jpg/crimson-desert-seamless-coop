@@ -15,7 +15,7 @@ namespace cdmp::input {
 namespace {
 
 SafetyHookInline g_fg, g_active;
-std::atomic<bool> g_blocked{false};
+std::atomic<bool> g_blocked{false}, g_downed{false};
 uintptr_t g_exe_lo = 0, g_exe_hi = 0;
 
 bool from_game(void* ret) {
@@ -23,13 +23,15 @@ bool from_game(void* ret) {
     return a >= g_exe_lo && a < g_exe_hi;
 }
 
+bool held() { return g_blocked.load(std::memory_order_relaxed) || g_downed.load(std::memory_order_relaxed); }
+
 HWND WINAPI hooked_foreground() {
-    if (g_blocked.load(std::memory_order_relaxed) && from_game(_ReturnAddress())) return nullptr;
+    if (held() && from_game(_ReturnAddress())) return nullptr;
     return g_fg.stdcall<HWND>();
 }
 
 HWND WINAPI hooked_active() {
-    if (g_blocked.load(std::memory_order_relaxed) && from_game(_ReturnAddress())) return nullptr;
+    if (held() && from_game(_ReturnAddress())) return nullptr;
     return g_active.stdcall<HWND>();
 }
 
@@ -61,5 +63,9 @@ void set_game_input_blocked(bool on) {
 }
 
 bool game_input_blocked() { return g_blocked.load(std::memory_order_relaxed); }
+
+void set_game_input_downed(bool on) {
+    if (g_downed.exchange(on) != on) log::info("Input: the game's own input {}", on ? "held (we are down)" : "back (up again)");
+}
 
 }  // namespace cdmp::input

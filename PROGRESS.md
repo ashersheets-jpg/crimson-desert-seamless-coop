@@ -4835,3 +4835,15 @@ arriving at Hernand.
   death (so the HUD and menus stay), and nothing held its input. tcB382: the downed host "killed" two bandits.
   Fix (layer, built): from the kept death notice until we are up again the game takes no input (the game-input hold
   the title menu already uses; the mod's own keys still work: the revive choices, the friend's revive). Test tcB385.
+
+### tcB385 (2026-11-11 05:28): the downed player's input is held; the Q revive NOT confirmed (open)
+
+- "Revive: our death notice is kept from the client" then "Input: the game's own input held (we are down)". A 2.5 s
+  hold of W moved the downed host by 0.2-0.6 m only (pushes from the bandits), not a walk: the hold works.
+- OPEN, check before this goes into a package: the Q press (instant revive) 40 s after the fall did nothing (HP
+  stayed 0, no revive line in the log, no revive line on screen in shot h2). Not known yet whether the input hold
+  stops our own revive keys / prompt, or whether the prompt was not up for another reason (bleed-out over, the
+  fight). Compare with a run without the hold. Until then: the layer change (input/game_input_block, mod.cpp,
+  net/revive_prompt) is in the source but NOT in package 2f4b0dd4, and must not be packaged unverified.
+- Also not in package 2f4b0dd4: the body loot share (native, local commit; works in tcB384, range now 30 m, the
+  30 m range itself not run yet).

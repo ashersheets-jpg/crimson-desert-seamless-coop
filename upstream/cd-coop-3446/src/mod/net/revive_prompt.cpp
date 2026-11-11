@@ -221,8 +221,19 @@ bool revive_in_place(uint32_t now_ms) {
     return true;
 }
 
+std::atomic<bool> g_death_withheld{false};
+std::atomic<uint64_t> g_death_withheld_at{0};
+
+bool revive_death_withheld() { return g_death_withheld.load(); }
+
 RevivePrompt revive_prompt_tick(bool connected, float hp, float hp_max, std::optional<float> partner_hp, bool focused,
                                 uint32_t now_ms) {
+    // Up again (the notice is kept a moment before our HP reads 0, so the first second does not count), or the
+    // friend is gone.
+    if (g_death_withheld.load() &&
+        (!connected || (hp > 0.0f && GetTickCount64() - g_death_withheld_at.load() > 1500))) {
+        g_death_withheld = false;
+    }
     hop_tick(now_ms);
     // The checkpoint revive's second step goes in on time even if we are no longer "dead" by then.
     if (g_loading_req_at && static_cast<int32_t>(now_ms - g_loading_req_at) >= 0) {
@@ -363,6 +374,8 @@ bool revive_filter_s2c(const uint8_t* packet, size_t size) {
     std::memcpy(&dead, packet + 5, 4);
     if (!dead || dead != capture_own_player_key()) return false;
     log::info("Revive: our death notice is kept from the client (its death state would lock the HUD and menus)");
+    g_death_withheld_at = GetTickCount64();
+    g_death_withheld = true;
     return true;
 }
 
