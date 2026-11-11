@@ -52,6 +52,7 @@ struct LobbyView {
     bool solo_restarts = false;   // still in co-op mode with no session: Start Solo restarts the game
     bool show = false;            // the menu is drawn now (at the title, not dismissed)
     bool at_title = false;        // at the title (shown or dismissed)
+    bool dismissed = false;       // at the title and closed by the player (Start Solo / back): the game's own title
     bool choosing = false;        // host: Start Co-op's question is open
     bool guest_wait = false;      // guest: the "waiting for the host" screen covers the game
     bool driving = false;         // the mod is pressing the title's keys itself (the game must take them)

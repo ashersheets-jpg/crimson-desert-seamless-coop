@@ -4965,3 +4965,30 @@ arriving at Hernand.
   ... If the text says something else, please tell us what it says or post a screenshot.").
 - Still open with the testers: no Co-op menu at the title for JackyChan004 / D3vils / a friend of WhoAteMyEggo (all
   with the DLC); no report zip yet.
+
+### tcB402-tcB403 (2026-11-11 07:54-08:01): THE BLOCKER for first-time players: an unanswerable first-launch card
+
+- tcB402 (new harness switch -Fresh: the ini of a first-time player; -TitleHold now takes -HostKeys) showed it: once
+  the title menu is closed, a card sits in the middle of the screen: "NEW: co-op saves + live quests (experimental)
+  ... [?] TURN IT ON / [?] Not now". It is the old layer's first-launch question ([general] experimental_asked),
+  answered with the Challenge / Decline keys, which the shared-world builds unbound on 2026-11-10. So on EVERY fresh
+  install (builds 55722584 to 21f0f6d0) it stayed for good, at the title and in the world, with "?" where the keys
+  were, and the first-run controls card waited behind it for ever. This is Borque's "inputs of the mod are not
+  didplayed now" and "what should we select in the co-op menu to disable that text in the middle". Our harness wrote
+  experimental_asked=1 into its test ini, so no test ever showed it. (The prologue line fixed in 21f0f6d0 was a real
+  leftover too, but not what he saw.)
+- Fix (layer): in the shared world the question is never asked (optin::init gets asked = true). tcB403, two
+  first-time players through the whole flow: "experimental co-op saves + live quests off" (no "asking"), the
+  first-run card "Seamless Co-op+: Invite and join friends from the title screen's Co-op menu / Hold (A) on your
+  friend ... / Menu > Co-op ..." shows once (60 s or until a menu opens), nothing else on screen. SAVES OK.
+- Likely cause of "no Co-op menu at the title" (JackyChan004, D3vils, ...): the title menu took the first key or
+  click it got. "Start Solo" is selected by default and sits in the middle of the screen, the game's own input is
+  held while our menu shows, so the Space / Enter / Esc / click a player gives the intro went to our menu and closed
+  it ("Start Solo" or back); with the shortcuts unbound nothing brought it back before the next launch (the old F8
+  did, until 22e8f365). Not proven without their logs, but it fits "nothing appears" on AMD and Nvidia alike.
+  Fix (layer): the menu ignores keys, pad and clicks for its first 1.5 s; and a closed menu leaves one line at the
+  title ("Seamless Co-op: F8 opens the co-op menu", pad: View), F8 / View open it again whatever [keys] says.
+  tcB402: Esc closed it, F8 "opened again from the title", a Space 0.3 s later was ignored, a later Space chose
+  Start Solo, F8 opened it again.
+- LESSON for the harness: test with -Fresh (no onboarded / experimental_asked marks) before every package, and run
+  build/native/realtitle.sh on the package itself.

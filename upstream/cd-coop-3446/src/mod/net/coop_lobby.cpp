@@ -376,6 +376,7 @@ LobbyView lobby_view() {
     std::lock_guard lock(g_m);
     LobbyView v;
     v.at_title = g_in.at_title;
+    v.dismissed = g_in.at_title && g_dismissed;
     v.host = g_in.host;
     v.connected = g_in.connected;
     v.worlds_on = w.enabled;

@@ -568,7 +568,32 @@ bool draw_lobby(float width, float height, ImDrawList* dl, ImVec2 mouse, const s
         return true;
     }
     g_lobby_shown = v.show && !g_open.load();
+    // Testers 2026-11-11 ("its not showing the co op menu"): the menu closes on Start Solo / back, and since the
+    // shortcuts were unbound nothing brought it back before the next launch. At the title a closed menu now leaves a
+    // small line, and F8 (pad: View) opens it again, whatever [keys] says.
+    static uint64_t shown_since = 0;
+    if (!v.show) shown_since = 0;
+    if (v.dismissed && !v.show && !g_open.load()) {
+        static bool f8_before = true, view_before = true;
+        const bool f8 = game_in_front() && (GetAsyncKeyState(VK_F8) & 0x8000) != 0;
+        const bool view = (input::pad_buttons() & input::kPadBack) != 0;
+        if ((f8 && !f8_before) || (view && !view_before)) {
+            log::info("Co-op lobby: opened again from the title ({})", f8 ? "F8" : "View");
+            net::lobby_reopen();
+        }
+        f8_before = f8;
+        view_before = view;
+        const std::string tag = input::method() == input::Method::Keyboard ? "Seamless Co-op:  F8  opens the co-op menu"
+                                                                           : "Seamless Co-op:  View  opens the co-op menu";
+        const float ts = 20 * s;
+        text(dl, 36 * s, 44 * s, ts, tag, kDim);  // top left: the game's own title keeps its key row at the bottom
+        return false;
+    }
     if (!v.show || g_open.load()) return false;
+    if (!shown_since) shown_since = GetTickCount64();
+    // The first moment belongs to nobody: a key or click meant for the game's intro ("press any key", skipping the
+    // logos) must not choose Start Solo, which is selected and sits in the middle of the screen.
+    const bool settling = GetTickCount64() - shown_since < 1500;
     static bool choosing_before = false, direct_before = false;
     if (v.choosing != choosing_before || g_direct_page != direct_before) g_lobby_sel = 0;
     choosing_before = v.choosing;
@@ -686,7 +711,7 @@ bool draw_lobby(float width, float height, ImDrawList* dl, ImVec2 mouse, const s
     // input
     static uint16_t pad_before = 0;
     const uint16_t pad = input::pad_buttons();
-    const uint16_t pressed = g_steam_overlay ? 0 : pad & ~pad_before;
+    const uint16_t pressed = g_steam_overlay || settling ? 0 : pad & ~pad_before;
     pad_before = pad;
     input::mask_from_game(input::kPadDpad | input::kPadA | input::kPadB | input::kPadStart, 150);
     auto move = [&](int d) {
@@ -707,6 +732,7 @@ bool draw_lobby(float width, float height, ImDrawList* dl, ImVec2 mouse, const s
         else net::lobby_dismiss();
     };
     for (unsigned k : keys) {
+        if (settling) break;
         if (k == VK_UP || k == 'W') move(-1);
         else if (k == VK_DOWN || k == 'S') move(1);
         else if (k == VK_RETURN || k == VK_SPACE) act(g_lobby_sel);
@@ -748,7 +774,7 @@ bool draw_lobby(float width, float height, ImDrawList* dl, ImVec2 mouse, const s
     if (over >= 0 && mouse_moved && cards[over].enabled && input::method() == input::Method::Keyboard) g_lobby_sel = over;
     for (const ImVec2& c : clicks) {
         (void)c;
-        if (over >= 0) act(over);
+        if (over >= 0 && !settling) act(over);
     }
     {
         const float y = 300 * s + 96 * s + n * (92 * s + 14 * s) + 50 * s;

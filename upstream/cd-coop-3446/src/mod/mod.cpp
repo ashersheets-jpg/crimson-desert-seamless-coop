@@ -2150,8 +2150,13 @@ DWORD WINAPI worker(LPVOID) {
         // Co-op+ co-op worlds (save_io.h) + live quests: the experimental opt-in (optin.h), asked on the first launch.
         // Co-op+ on the native base: the restart into co-op (net/native_mode.h), before the network starts.
         if (kNativeLayer && in_game && build_ok && cfg.coop_enabled) net::lobby_native_init(own_file(dir, L".ini"), dir);
+        // Shared world (2026-11-11, testers: "that text in the middle", "inputs of the mod are not displayed"): the
+        // first-launch question is answered with the Challenge / Decline keys, which are unbound there, so the card
+        // stayed on screen for good on every fresh install (and kept the first-run controls card behind it). The
+        // shared world has its own answer to "which save" (the title menu's Start Co-op), so it is never asked.
         optin::init(own_file(dir, L".ini"), in_game && build_ok && cfg.coop_enabled, cfg.coop_coop_worlds,
-                    GetPrivateProfileIntW(L"general", L"experimental_asked", 0, (own_file(dir, L".ini")).c_str()) != 0);
+                    kNativeLayer ||
+                        GetPrivateProfileIntW(L"general", L"experimental_asked", 0, (own_file(dir, L".ini")).c_str()) != 0);
         if (optin::enabled() && !cfg.dev_coop_world_partner.empty()) net::worlds_configure(true, cfg.dev_coop_world_partner);
         net::worlds_dev_as_host(cfg.dev_coop_world_as_host);
         if (!role.empty() && kNativeLayer) {
