@@ -194,6 +194,43 @@ int* __fastcall pickup_detour(uintptr_t comp, int* err, uintptr_t picker, uint64
     return r;
 }
 
+// ---- bodies (probe first; build/decomp/notes_lootr_bodies_chests.md, local): the loot worker
+// exe+0x2E224F0(lootComp, int* err, looter, u8 a, u8 b). comp+8 = the body, comp+0x6C = rolled, pool comp+0x58 /
+// count comp+0x60, sub list count comp+0x50.
+safetyhook::InlineHook g_body_loot;
+struct BodySeen {
+    uint32_t body = 0, looter = 0;
+    uint8_t rolled = 0xFF;
+    uint32_t pool = 0, sub = 0;
+};
+void read_body(BodySeen& s, uintptr_t comp, uintptr_t looter) noexcept {
+    __try {
+        const uintptr_t body = *reinterpret_cast<uintptr_t*>(comp + 8);
+        if (body) s.body = *reinterpret_cast<uint32_t*>(body + 0x60);
+        if (looter) s.looter = *reinterpret_cast<uint32_t*>(looter + 0x60);
+        s.rolled = *reinterpret_cast<uint8_t*>(comp + 0x6C);
+        s.pool = *reinterpret_cast<uint32_t*>(comp + 0x60);
+        s.sub = *reinterpret_cast<uint32_t*>(comp + 0x50);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    }
+}
+int* __fastcall body_loot_detour(uintptr_t comp, int* err, uintptr_t looter, uint8_t a, uint8_t b) noexcept {
+    BodySeen before, after;
+    read_body(before, comp, looter);
+    int* r = g_body_loot.call<int*>(comp, err, looter, a, b);
+    int e = -1;
+    if (err) game::fast_read(reinterpret_cast<uintptr_t>(err), &e, 4);
+    read_body(after, comp, 0);  // the comp may be gone when the body was logged out: SEH-guarded
+    static std::atomic<int> said{0};
+    if (said.fetch_add(1) < 40) {
+        log::info("Lootr probe: body loot by 0x{:08X} of body 0x{:08X} a {} b {} | rolled {} -> {} | pool {} -> {} | "
+                  "sub {} -> {} | body after 0x{:08X} | err {}", before.looter, before.body, a, b, before.rolled,
+                  after.rolled, before.pool, after.pool, before.sub, after.sub, after.body, e);
+    }
+    g_watch_until = GetTickCount64() + 3000;
+    return r;
+}
+
 }  // namespace
 
 std::string lootr_describe();
@@ -207,6 +244,16 @@ void lootr_start(bool on, bool probe, bool guest) {
     if (!game::safe_read(base + 0x2D37B10, head, sizeof head)) return;
     if (auto h = safetyhook::InlineHook::create(reinterpret_cast<void*>(base + 0x2D37B10), pickup_detour)) {
         g_pickup = std::move(*h);
+    }
+    if (g_probe) {
+        static const uint8_t kHead[10] = {0x48, 0x89, 0x5C, 0x24, 0x18, 0x44, 0x88, 0x4C, 0x24, 0x20};
+        uint8_t got[10] = {};
+        if (game::safe_read(base + 0x2E224F0, got, sizeof got) && std::memcmp(got, kHead, sizeof got) == 0) {
+            if (auto h = safetyhook::InlineHook::create(reinterpret_cast<void*>(base + 0x2E224F0), body_loot_detour)) {
+                g_body_loot = std::move(*h);
+            }
+        }
+        log::info("Lootr probe: the body loot worker {}", g_body_loot ? "hooked (log only)" : "NOT hooked");
     }
     log::info("Lootr {} (lootr={}, lootr_probe={}): {}", g_on ? "ON" : "probe only", on ? 1 : 0, probe ? 1 : 0,
               !g_pickup ? "the pickup worker NOT hooked"
