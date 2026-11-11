@@ -1061,6 +1061,37 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
                     }
                 }
                 go_was_down = go_down;
+                // Shared world (2026-11-11, pp4-lowsave): a guest starts where ITS OWN save was, which can be kilometres
+                // from the host (1326 m in that run), although the title menu says the friend "joins your story where
+                // you are". Once per start, when both have been in the world and alive for 4 s: to the host's side, by
+                // the same hop as "Go to my friend". Not when they already stand together. [coop] join_beside_host=0
+                // keeps the old start.
+                {
+                    static bool join_done = false;
+                    static uint64_t both_since = 0;
+                    if (kNativeLayer && cfg.coop_join_beside_host && !join_done && net::lobby_native_guest()) {
+                        const auto& rs = session.remote_state();
+                        const bool ready = linked && s.health > 0.0f && rs && rs->health > 0.0f && !game::ui_menu_open();
+                        if (!ready) {
+                            both_since = 0;
+                        } else if (!both_since) {
+                            both_since = GetTickCount64();
+                        } else if (GetTickCount64() - both_since >= 4000) {
+                            join_done = true;
+                            const float dx = rs->pos.x - s.position.x, dz = rs->pos.z - s.position.z;
+                            const float d = std::sqrt(dx * dx + dz * dz);
+                            if (d > 30.0f) {
+                                net::revive_teleport_to(rs->pos.x + 1.0f, rs->pos.y + 0.5f, rs->pos.z);
+                                toast = "Co-op\nYou joined " + session.peer_name();
+                                toast_until = now + 5000;
+                                log::info("Co-op: joined: our save's place was {:.0f} m from the host: moved to its side "
+                                          "({:.0f}, {:.0f})", d, rs->pos.x, rs->pos.z);
+                            } else {
+                                log::info("Co-op: joined: already {:.0f} m from the host, not moved", d);
+                            }
+                        }
+                    }
+                }
                 // Co-op+: Ctrl+F3 pings our position to the other player (their map + a toast).
                 // Co-op+ (T24): the Ping action opens the quick messages (coop_chat.h); "Go here", "Danger here!",
                 // "Loot here" also drop the pin as before.

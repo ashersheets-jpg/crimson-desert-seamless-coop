@@ -178,8 +178,16 @@ display)
   overlay_checks "$N/$NAME.coopplus.host.log" "host"
   info "screenshots to LOOK AT: $(cd $N/shots && ls $NAME-*.png 2>/dev/null | tr '\n' ' ')" ;;
 lowsave)
-  head_step "both players on a save with 1 mission done (a new game)"
-  run2 "-CoopPlus -Lobby -Fresh -PackageIni $MODW -HostVariant newgame -GuestVariant newgame -Hold 15 -GuestKeys $FLOW_G -HostKeys $FLOW_H"; two_player_checks ;;
+  head_step "a guest on a new save (1 mission done, its save 1.3 km away) joins the host"
+  run2 "-CoopPlus -Lobby -Fresh -PackageIni $MODW -HostVariant newgame -GuestVariant newgame -Hold 15 -GuestKeys $FLOW_G -HostKeys $FLOW_H"; two_player_checks
+  # What this step really is (pp4): the host's co-op world persists, so only the GUEST is on the new save, and that
+  # save's place is 1.3 km from the host. The guest must be brought to the host's side by itself.
+  L=$N/$NAME.coopplus.guest.log
+  has "$L" "Co-op: joined: our save's place was [0-9]+ m from the host: moved to its side" "guest: started far away and was moved to the host's side"
+  near=$(grep "Net: connected" "$L" | tail -1 | sed -n 's/.*last remote (\([-0-9.]*\), [-0-9.]*, \([-0-9.]*\)).*/\1 \2/p')
+  mine=$(grep "Local: pos" "$L" | tail -1 | sed -n 's/.*pos (\([-0-9.]*\), [-0-9.]*, \([-0-9.]*\)).*/\1 \2/p')
+  d=$(echo "$near $mine" | awk 'NF==4{printf "%d", sqrt(($1-$3)^2 + ($2-$4)^2)}')
+  [ -n "$d" ] && [ "$d" -le 30 ] && ok "guest: $d m from the host at the end" || bad "guest: ${d:-?} m from the host at the end (wanted within 30 m)" ;;
 chest)
   head_step "chest: the host opens it, the guest is away, comes back and gets its own share"
   A="w:800_shot:$NAME-h0_kd:E_w:2800_ku:E_w:3600_shot:$NAME-h1_w:10500"
@@ -202,12 +210,28 @@ revive)
   has "$L" "Revive: we are alive again"                       "guest: alive again"
   has "$L" "input back \(up again\)"                          "guest: input back" ;;
 loot)
-  head_step "enemy loot: the host loots bodies, the guest nearby gets its own share"
-  HA=""; for i in $(seq 1 16); do HA="${HA}click:L:90_w:650_"; done
-  run2 "$BASE -Hold 10 -HostNativeExtra lootr_kill_hits=3 -HostScript $SCAN\\tp_dock_host.txt -GuestScript $SCAN\\tp_dock_guest.txt -GuestKeys w:2000_shot:$NAME-g0 -HostKeys w:300_${HA}shot:$NAME-h0_w:6000_${HA}shot:$NAME-h1"; two_player_checks
+  head_step "enemy loot: the host kills ten bandits and loots the bodies, the guest nearby gets its own share"
+  # 2026-11-11: reworked twice. (1) The old step needed an incidental hit to trigger a test cheat (failed twice, pp4).
+  # Now the host waits at its start until the guest stands at the dock, goes there, and its script kills the nearest
+  # bandit (KillCheatReq) and asks for that body's loot (the game's own request). (2) What a body gives is a ROLL:
+  # most requests take nothing ("pool 4 -> 4" in the probe), about one in six takes an item, and the friend's share
+  # exists only when the looter's bag gained something (t5: 0 of 2, t6: 0 of 6, t7: 1 of 6, lt1: 1 of 2). So: ten
+  # bodies, each asked twice. If still no body gave anything, the FAIL line says so: run the step once more.
+  { printf 'wait 10000\nwait 10000\nwait 5000\ntp -10239 546 -3957\nwait 3000\n'
+    for i in 1 2 3 4 5 6 7 8 9 10; do printf 'killnear 15\nwait 3000\nlootlast\nwait 1500\nlootlast\nwait 1500\n'; done; } > $N/scan/loot_host.txt
+  run2 "$BASE -Hold 10 -HostNativeExtra lootr_probe=1 -HostScript $SCAN\\loot_host.txt -GuestScript $SCAN\\tp_dock_guest.txt -GuestKeys w:2000_shot:$NAME-g0 -HostKeys w:40000_shot:$NAME-h0"; two_player_checks
   H=$N/$NAME.host.log
-  has "$H" "Lootr: body 0x[0-9A-F]+ at .* looted by 0xA0100001" "the host looted a body, a share kept"
-  has "$H" "0xA0100066 is there and got its own share .* its bag gained [1-9]" "the guest got its own share (bag grew)" ;;
+  has "$N/$NAME.coopplus.host.log" "killnear: KillCheatReq on 0x" "the host's script killed a bandit"
+  has "$N/$NAME.coopplus.host.log" "lootlast: the body 0x[0-9A-F]+ looted" "the host's script asked for that body's loot"
+  has "$H" "Lootr probe: body loot by 0xA0100001 of body 0x[0-9A-F]+ .* err 0" "the server took the host's loot requests (err 0)"
+  took=$(grep -c "Lootr: body 0x[0-9A-F]* at .* looted by 0xA0100001" "$H" 2>/dev/null)
+  asked=$(grep -c "Lootr probe: body loot by 0xA0100001" "$H" 2>/dev/null)
+  if [ "${took:-0}" -gt 0 ]; then
+    ok "$took of $asked loot requests gave the host an item, a share kept each time"
+    has "$H" "0xA0100066 is there and got its own share .* its bag gained [1-9]" "the guest got its own share (bag grew)"
+  else
+    bad "none of $asked loot requests gave the host an item (a roll, about one in six): the share was not exercised; run this step again"
+  fi ;;
 crime)
   head_step "fight at the bandit camp: guest hits count and are no crime, host fights too"
   GA=""; for i in $(seq 1 12); do GA="${GA}click:L:90_w:350_kd:E_w:1200_ku:E_w:500_"; done

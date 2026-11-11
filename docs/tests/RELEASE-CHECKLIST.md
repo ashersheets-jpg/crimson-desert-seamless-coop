@@ -37,10 +37,10 @@ The report is `build/native/prepost-<tag>.txt`. After each game step, LOOK at th
 | xess | the same with Intel XeSS frame generation | the same + the XeSS-FG class hooked | Intel hardware |
 | fsr | the same with AMD FSR frame generation | the same + the FSR-FG class hooked | AMD hardware (this PC has an Nvidia card; FSR runs, but its driver path differs) |
 | display | the player's own display mode and graphics settings, frame generation on, real Steam lobby, title only | overlay ready and drawing, title menu on the screenshots | exclusive fullscreen on other monitors |
-| lowsave | both players on a save with 1 mission done | both reach the world, linked, no solo-prologue hold | every early story state |
+| lowsave | a guest on a save with 1 mission done, saved 1.3 km from the host, joins a host on its usual save (the host's co-op world persists between runs) | both reach the world, linked, no solo-prologue hold, the guest is moved to the host's side and ends within 30 m | both players new (needs an empty co-op world); every early story state |
 | chest | host opens the Greymane Shrine chest while the guest is away; guest returns | share kept, waits, notice shown to the guest, guest's bag grows at the chest | the guest opening first (needs two players) |
 | revive | the guest is taken down, lies down, sees the death screen, cannot move, presses Q | the death reaches the client with the game-over state skipped, input held, revive asked, alive again, input back; the lying character and the HUD on the screenshots | the friend holding Interact to revive; going down while riding or in a duel |
-| loot | host loots enemy bodies with the guest nearby | guest gets its own share, bag grows | what each player sees on screen at the body |
+| loot | the host's script kills two bandits and loots the bodies with the guest nearby | the bodies are looted, the guest gets its own share, its bag grows | what each player sees on screen at the body; a kill by weapon |
 | crime | both fight at the bandit camp | guest's hits are seen and none is booked as a crime | town NPCs, guards, a real wanted level |
 | farfight | the host draws its quest bandits to the dock and leaves for a spot 108 m away; the guest stays and swings 50 times | the damage range hook is in, hits far from the host are counted, the guest kills at least one enemy and loses health | ordinary camps (only the host's quest bandits are known by coordinates); more than ~130 m from the host |
 

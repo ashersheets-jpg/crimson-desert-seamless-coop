@@ -628,6 +628,8 @@ std::string lobby_difficulty_card() {
 
 void lobby_set_shared_quest_credit(bool on) { g_shared_quest_credit = on; }
 void lobby_set_world_items_lootr(bool on) { g_world_items_lootr = on; }
+bool lobby_native_guest() { return g_native && g_native_now == NativeMode::Guest; }
+
 void lobby_set_native_extra(const std::string& kv) {
     g_native_extra = kv;
     if (!kv.empty()) log::info("Lobby: [dev] native_extra '{}' is added to the host's native ini", kv);

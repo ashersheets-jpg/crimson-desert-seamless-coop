@@ -1,4 +1,4 @@
-**Update: shared world playtest 0.1.0-alpha+09a188c3 (fighting far from the host, lying down when downed, no more packet files)**
+**Update: shared world playtest 0.1.0-alpha+<ID> (fighting far from the host, lying down when downed, no more packet files)**
 Please use this build instead of every earlier one. You and your co-op partner both need it. It keeps everything from 3c46bec5.
 
 Fixed:
@@ -7,9 +7,10 @@ Fixed:
 - The line at the bottom of the title menu was cut off.
 
 New:
+- **The guest starts at the host's side** instead of wherever its own save was (that could be over a kilometre away).
 - **A downed player lies on the ground** (they used to stand upright at 0 health). Your friend sees it too, and can hold Interact next to you to get you up; Q and U work as before.
 
-- `CrimsonDesert-SeamlessCoop-0.1.0-alpha+09a188c3-shared-world.zip`: this is the one you want. Run its installer with the game closed.
+- `CrimsonDesert-SeamlessCoop-0.1.0-alpha+<ID>-shared-world.zip`: this is the one you want. Run its installer with the game closed.
 - `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
 
 Tested with two copies of the game on one PC (NVIDIA card): first launch, a real install, XeSS and FSR frame generation, a new save, chests, enemy loot, going down and getting up, a fight 108 m from the host. Not tested here: two PCs over the internet, AMD and Intel cards, long sessions. Please tell us in #bug-reports how it goes (and send the report zip if anything goes wrong).

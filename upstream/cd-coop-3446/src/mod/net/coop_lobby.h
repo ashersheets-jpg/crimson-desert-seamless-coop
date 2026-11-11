@@ -44,6 +44,8 @@ void lobby_tick(const LobbyInput& in);
 // into the native shared world (host first, then the guest), then both start together. `coopplus_ini` keeps the
 // restart's state ([native_resume]); `bin_dir` holds the native cdmp.ini. Call once at start, before the first tick.
 void lobby_native_init(const std::wstring& coopplus_ini, const std::wstring& bin_dir);
+// Shared world: this game was started as the GUEST of a co-op session (the native mode file says so).
+bool lobby_native_guest();
 
 // How the host's co-op journey begins (Start Co-op's question).
 enum class LobbyPlan : uint8_t { None = 0, NewSave = 1, ContinueCoop = 2, FromSolo = 3 };

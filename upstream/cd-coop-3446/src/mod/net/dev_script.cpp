@@ -4,10 +4,12 @@
 #include <windows.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <cmath>
 #include <cstring>
 #include <fstream>
+#include <optional>
 #include <sstream>
 #include <thread>
 #include <vector>
@@ -34,21 +36,20 @@ namespace cdmp::net {
 
 // [dev] "npcs": what this client has loaded around our character (2026-11-11, ff1: a test needs to SEE whether
 // enemies near a far guest exist, come closer and lose health; blind swings told nothing). Key, kind, distance, HP.
-static void log_npcs_near(float radius, float from) {
-    const auto me = game::actor_world_position(capture_own_player_key());
-    if (!me) {
-        log::info("Dev script: npcs: our own position is not known");
-        return;
-    }
-    const auto exe = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-    struct Row {
-        float d;
-        uint32_t key, variant;
-        float hp, hp_max;
-        proto::Vec3 at;
-    };
+struct NpcRow {
+    float d;
+    uint32_t key, variant;
+    float hp, hp_max;
+    proto::Vec3 at;
+};
+// The loaded NPC actors between `from` and `radius` m of our character, nearest first.
+static std::vector<NpcRow> npcs_near(float radius, float from, std::optional<proto::Vec3>& me, int& loaded) {
+    using Row = NpcRow;
     std::vector<Row> rows;
-    int loaded = 0;
+    loaded = 0;
+    me = game::actor_world_position(capture_own_player_key());
+    if (!me) return rows;
+    const auto exe = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     for (const auto& [key, variant] : enemy_loaded_variants()) {
         if ((key >> 28) != 0xB) continue;
         ++loaded;
@@ -86,6 +87,59 @@ static void log_npcs_near(float radius, float from) {
         rows.push_back(r);
     }
     std::sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) { return a.d < b.d; });
+    return rows;
+}
+
+// [dev] "killnear [radius]": KillCheatReq on the nearest living person (not a wild animal, 40+ max HP) within
+// `radius` m; "lootlast": LootingDropFromDeadBodyReq (2491: u32 body | u8 remove | u8 send list) on that body. Both as
+// our own requests. For the checklist's enemy-loot step (pp4-loot, 2026-11-11: the old trigger, "any hit the host's
+// client reports kills its target", fired only when such a hit happened to come and failed twice in a row).
+static std::atomic<uint32_t> g_last_killnear{0};
+static std::vector<uint8_t> dev_c2s(uint16_t op, const std::vector<uint8_t>& payload) {  // header: op | slot 0 | length
+    std::vector<uint8_t> pkt(5 + payload.size());
+    const uint16_t len = static_cast<uint16_t>(payload.size());
+    std::memcpy(pkt.data(), &op, 2);
+    pkt[2] = 0;
+    std::memcpy(pkt.data() + 3, &len, 2);
+    if (!payload.empty()) std::memcpy(pkt.data() + 5, payload.data(), payload.size());
+    return pkt;
+}
+static void kill_nearest_person(float radius) {
+    std::optional<proto::Vec3> me;
+    int loaded = 0;
+    for (const NpcRow& r : npcs_near(radius, 0.0f, me, loaded)) {
+        if (hunt_animal_name(r.variant) || r.hp_max < 40.0f || r.hp <= 0.0f) continue;
+        std::vector<uint8_t> pl(8, 0);
+        std::memcpy(pl.data(), &r.key, 4);
+        const bool ok = sniffer_inject_c2s(dev_c2s(2210, pl));
+        g_last_killnear = r.key;
+        log::info("Dev script: killnear: KillCheatReq on 0x{:08X} (variant 0x{:08X}, {:.1f} m, hp {:.0f}/{:.0f}){}", r.key,
+                  r.variant, r.d, r.hp, r.hp_max, ok ? "" : " NOT sent");
+        return;
+    }
+    log::info("Dev script: killnear: no living person within {:.0f} m ({} NPC actors loaded)", radius, loaded);
+}
+static void loot_last_killed() {
+    const uint32_t key = g_last_killnear.load();
+    if (!key) {
+        log::info("Dev script: lootlast: nothing was killed by killnear yet");
+        return;
+    }
+    std::vector<uint8_t> pl = {0, 0, 0, 0, 0, 1};
+    std::memcpy(pl.data(), &key, 4);
+    const bool ok = sniffer_inject_c2s(dev_c2s(2491, pl));
+    log::info("Dev script: lootlast: the body 0x{:08X} looted as our own request (2491){}", key, ok ? "" : " NOT sent");
+}
+
+static void log_npcs_near(float radius, float from) {
+    using Row = NpcRow;
+    std::optional<proto::Vec3> me;
+    int loaded = 0;
+    const std::vector<Row> rows = npcs_near(radius, from, me, loaded);
+    if (!me) {
+        log::info("Dev script: npcs: our own position is not known");
+        return;
+    }
     log::info("Dev script: npcs {:.0f}-{:.0f} m from ({:.1f}, {:.1f}, {:.1f}): {} of {} loaded NPC actors", from, radius,
               me->x, me->y, me->z, rows.size(), loaded);
     for (size_t i = 0; i < rows.size() && i < 14; ++i) {
@@ -98,7 +152,7 @@ static void log_npcs_near(float radius, float from) {
 namespace {
 
 struct Step {
-    enum Kind { C2S, S2C, Wait, Teleport, Poke, Time, Watch, Day, Pad, KillGame, KillAll, MemScan, MemDiff, MemWatch, Advance, FScan, FFilter, FWatch, WaitFile, DScan, DFilter, DWatch, GSnap, GDiff, PtrScan, WatchStatus, Key, ClockScan, RideHorse, PrologueDone, GrantXp, GuestHit, DumpItemMove, TpActor, Npcs } kind;
+    enum Kind { C2S, S2C, Wait, Teleport, Poke, Time, Watch, Day, Pad, KillGame, KillAll, MemScan, MemDiff, MemWatch, Advance, FScan, FFilter, FWatch, WaitFile, DScan, DFilter, DWatch, GSnap, GDiff, PtrScan, WatchStatus, Key, ClockScan, RideHorse, PrologueDone, GrantXp, GuestHit, DumpItemMove, TpActor, Npcs, KillNear, LootLast } kind;
     uintptr_t addr = 0;
     float to[3] = {};
     uint16_t op = 0;
@@ -474,6 +528,14 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
             steps.push_back(std::move(st));
             continue;
         }
+        if (kind == "killnear" || kind == "lootlast") {
+            st.kind = kind == "killnear" ? Step::KillNear : Step::LootLast;
+            float r = 15.0f;
+            in >> r;
+            st.to[0] = r > 0 ? r : 15.0f;
+            steps.push_back(std::move(st));
+            continue;
+        }
         if (kind == "npcs") {  // npcs [radius m, default 40]: the loaded NPC actors near us, nearest first (log only)
             st.kind = Step::Npcs;
             float r = 40.0f, from = 0.0f;  // npcs [radius] [from]: only those at least `from` m away
@@ -618,6 +680,10 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                                 mbi.State == MEM_COMMIT && (mbi.Protect & (PAGE_READWRITE | PAGE_EXECUTE_READWRITE));
                 if (ok) std::memcpy(reinterpret_cast<void*>(st.addr), st.payload.data(), st.payload.size());
                 log::info("Dev script: poke 0x{:X} ({} bytes){}", st.addr, st.payload.size(), ok ? "" : " REFUSED (not writable)");
+            } else if (st.kind == Step::KillNear) {
+                kill_nearest_person(st.to[0]);
+            } else if (st.kind == Step::LootLast) {
+                loot_last_killed();
             } else if (st.kind == Step::Npcs) {
                 log_npcs_near(st.to[0], st.to[1]);
             } else if (st.kind == Step::TpActor) {
