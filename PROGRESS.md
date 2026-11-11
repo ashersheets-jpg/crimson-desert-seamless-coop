@@ -5,6 +5,10 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- POSTING, 2026-11-11 ~06:10 (the user, going to sleep for at least 12 hours): "I am giving you authorization to post
+  updates if you feel like it is worth it to do so. Please continue working." So until about 2026-11-11 18:10 a
+  build / update post in the Discord (#download-here, #general) may go out without asking, when it is worth it
+  (tested, install checks pass, a real improvement). After that: ask again. Never delete messages; never the decomp.
 - Playtest results from the testers (the two-PC test).
 - Release / Discord posts / sending a build: each needs the user's OK first.
 - Controller feel checks (hands on a pad).
@@ -4866,3 +4870,9 @@ arriving at Hernand.
 - tcB386: down at 06:01:32 -> "Input: the game's own input held (we are down)"; a 2.5 s hold of W: no movement
   (0.2 m); Q -> "Revive: instant revive asked" -> "we are alive again" -> "input back (up again)", HP 77 / 300; W
   then walked 7 m. Down a second time later: held again. Unit tests pass. NOT in a posted build yet.
+
+### 2026-11-11 06:10: progress chart regenerated
+
+- docs/drafts/progress-2026-11-11.png (generator: the session's scratchpad chart3.py), sent to the user. Changes:
+  gifting 80, stash 50, loot for each player 75, a new row "Fighting together" 85, anti-grief 80, world events 35,
+  revive 90 (the gap found today, fixed for the next build), release 70.
