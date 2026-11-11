@@ -14,6 +14,8 @@
 #include <safetyhook.hpp>
 
 #include "mod/game/safe_memory.h"
+#include "mod/net/remote_puppet.h"
+#include "mod/net/troc_sniffer.h"
 #include "mod/log.h"
 #include "mod/session2/lootr_logic.h"
 #include "mod/session2/server.h"
@@ -90,9 +92,10 @@ struct Taken {
     uint32_t item_key = 0;
     int64_t count = 0;
     std::vector<std::vector<uint8_t>> held;  // what the guest was not shown, to replay
-    int state = 0;                           // 0 waiting for the guest, 1 its gather runs, 2 done
+    int state = 0;                           // 0 waiting for the other player, 1 its gather runs, 2 done
     uint64_t step_at = 0;
     uint32_t requester = 0;
+    bool host_waits = false;                 // phase 2: the GUEST took it first, the host takes its copy later
 };
 std::mutex g_mu;
 std::vector<Taken> g_taken;  // guarded by g_mu
@@ -157,16 +160,18 @@ void read_pickup(Seen& s, uintptr_t comp, uintptr_t picker) noexcept {
 int* __fastcall pickup_detour(uintptr_t comp, int* err, uintptr_t picker, uint64_t kind) noexcept {
     Seen s;
     read_pickup(s, comp, picker);
-    if (g_on && s.picker != kHostCharacter && (s.picker >> 28) == 0xA && s.gimmick) {
+    const bool guest_first = g_on && s.picker != kHostCharacter && (s.picker >> 28) == 0xA && s.gimmick;
+    if (guest_first) {
         keep_for_host(s.gimmick, s.key16);  // phase 2a: the guest took it first; the host still sees it
         c_guest_first.fetch_add(1);
     }
-    if (g_on && s.picker == kHostCharacter && s.gimmick) {
+    if (g_on && (s.picker == kHostCharacter || guest_first) && s.gimmick) {
         try {
             Taken t;
             t.g = s.gimmick;
             std::memcpy(t.key16, s.key16, 16);
             t.picker = picker;
+            t.host_waits = guest_first;
             t.at = GetTickCount64();
             snap_bag(picker, t.before);
             std::lock_guard lk(g_mu);
@@ -191,6 +196,8 @@ int* __fastcall pickup_detour(uintptr_t comp, int* err, uintptr_t picker, uint64
 
 }  // namespace
 
+std::string lootr_describe();
+
 void lootr_start(bool on, bool probe, bool guest) {
     g_on = on && !guest;
     g_probe = probe && !guest;
@@ -212,7 +219,7 @@ bool lootr_on_guest_out(std::vector<uint8_t>& p) noexcept {
     try {
         std::lock_guard lk(g_mu);
         for (Taken& t : g_taken) {
-            if (t.state == 2) continue;
+            if (t.state == 2 || t.host_waits) continue;
             const int a = lrl::about(p, t.g, t.key16);
             if (a == 1) {
                 t.held.push_back(p);
@@ -237,7 +244,7 @@ int lootr_on_guest_req(uint16_t opcode, std::span<const uint8_t> payload) noexce
         const uint32_t requester = lrl::rd32(payload.data()), target = lrl::rd32(payload.data() + 4);
         std::lock_guard lk(g_mu);
         for (Taken& t : g_taken) {
-            if (t.g != target || t.state != 0 || !t.item_known) continue;
+            if (t.g != target || t.state != 0 || !t.item_known || t.host_waits) continue;
             if (opcode == lrl::kOpPreemptReq) {
                 server_push_extra(lrl::answer(lrl::kOpPreemptAck, requester, payload));
             } else {
@@ -257,6 +264,11 @@ void lootr_tick(std::vector<std::vector<uint8_t>>& to_server) noexcept {
     if (!g_on) return;
     try {
         const uint64_t now = GetTickCount64();
+        static uint64_t said = 0;
+        if (now - said >= 30000) {
+            said = now;
+            log::info("{}", lootr_describe());
+        }
         std::lock_guard lk(g_mu);
         for (Taken& t : g_taken) {
             if (!t.item_known && now - t.at >= 150) {  // what the host's pickup added
@@ -276,6 +288,37 @@ void lootr_tick(std::vector<std::vector<uint8_t>>& to_server) noexcept {
                 if (t.item_known)
                     log::info("Lootr: gimmick 0x{:08X} gave the host item 0x{:X} (key {}) x{}; kept for the guest "
                               "({} packet(s) held)", t.g, t.item_idx, t.item_key, t.count, t.held.size());
+            }
+            if (t.state == 1 && now >= t.step_at && t.host_waits) {
+                // Phase 2b: the host's copy (its own request, the server thread adds it), then what its client was
+                // not shown is delivered to it (the plant goes for the host too).
+                std::vector<uint8_t> pl(30, 0);
+                const uint16_t none = 0xFFFF;
+                const uint64_t n = static_cast<uint64_t>(t.count);
+                std::memcpy(&pl[0], &t.item_key, 4);
+                std::memcpy(&pl[4], &none, 2);
+                std::memcpy(&pl[6], &n, 8);
+                std::memcpy(&pl[14], &kHostCharacter, 4);
+                std::memcpy(&pl[18], &kHostCharacter, 4);
+                std::memcpy(&pl[22], &none, 2);
+                std::memcpy(&pl[24], &none, 2);
+                std::memcpy(&pl[26], &kLootrGiveEntry, 4);
+                const bool sent = net::sniffer_inject_c2s(lrl::make(3111, pl, 0x00));
+                size_t replayed = 0;
+                for (HostHeld& h : g_host_held) {
+                    if (h.g.load() != t.g || h.size < lrl::kHeader) continue;
+                    const uint16_t op = static_cast<uint16_t>(h.bytes[0] | (h.bytes[1] << 8));
+                    net::puppet_inject_s2c(op, std::vector<uint8_t>(h.bytes + lrl::kHeader, h.bytes + h.size), 0);
+                    h.g.store(0);
+                    ++replayed;
+                }
+                for (KeepHost& k : g_keep) {
+                    if (k.g.load() == t.g) k.g.store(0);
+                }
+                c_given.fetch_add(1);
+                log::info("Lootr: the host took gimmick 0x{:08X} too (the guest was first): item key {} x{}{}, {} "
+                          "packet(s) replayed", t.g, t.item_key, t.count, sent ? "" : " (add NOT sent)", replayed);
+                t.state = 2;
             }
             if (t.state == 1 && now >= t.step_at) {
                 // The guest's own copy: the add on the server thread (trade_probe's worker, entry 0xC0DE0005),
@@ -314,6 +357,18 @@ std::string lootr_describe() {
 void lootr_host_recv(uint8_t* packet, uint16_t size) noexcept {
     if (!g_on || size < lrl::kHeader + 4) return;
     const uint16_t op = static_cast<uint16_t>(packet[0] | (packet[1] << 8));
+    if (op == 3100 && size >= lrl::kHeader + 8) {  // InteractionPreemptionStepFailAck: u32 actor | u32 target | ...
+        uint8_t* fl = packet + lrl::kHeader;
+        const uint32_t target = lrl::rd32(fl + 4);
+        for (KeepHost& k : g_keep) {
+            if (k.g.load() == target && target) {
+                std::memset(fl + 4, 0, 4);  // not about this plant any more: the client waits for our 2120
+                c_host_blanked.fetch_add(1);
+                return;
+            }
+        }
+        return;
+    }
     if (op != lrl::kOpGimmickGone && op != lrl::kOpGimmickState && op != lrl::kOpRemoveActor && op != lrl::kOpCoolTime)
         return;
     const uint64_t now = GetTickCount64();
@@ -342,13 +397,46 @@ void lootr_host_recv(uint8_t* packet, uint16_t size) noexcept {
     }
 }
 
+void host_take(uint16_t op, const uint8_t* packet, size_t size) noexcept {
+    if (size < lrl::kHeader + 8) return;
+    const std::span<const uint8_t> pl(packet + lrl::kHeader, size - lrl::kHeader);
+    const uint32_t requester = lrl::rd32(pl.data()), target = lrl::rd32(pl.data() + 4);
+    if (requester != kHostCharacter) return;
+    try {
+        std::lock_guard lk(g_mu);
+        for (Taken& t : g_taken) {
+            if (!t.host_waits || t.g != target || t.state != 0 || !t.item_known) continue;
+            if (op == lrl::kOpPreemptReq) {
+                const auto a = lrl::answer(lrl::kOpPreemptAck, requester, pl);
+                net::puppet_inject_s2c(lrl::kOpPreemptAck, std::vector<uint8_t>(a.begin() + lrl::kHeader, a.end()), 0);
+            } else {
+                const auto a = lrl::answer(lrl::kOpDoStepAck, requester, pl);
+                net::puppet_inject_s2c(lrl::kOpDoStepAck, std::vector<uint8_t>(a.begin() + lrl::kHeader, a.end()), 0);
+                t.state = 1;
+                t.requester = requester;
+                t.step_at = GetTickCount64() + kGatherMs;
+            }
+            return;
+        }
+    } catch (...) {
+    }
+}
+
 void lootr_host_sniffed(const uint8_t* packet, size_t size, bool server_to_client) noexcept {
-    if (!g_probe || !g_pickup || size < 5) return;
+    if (size < 5) return;
     const uint16_t op = static_cast<uint16_t>(packet[0] | (packet[1] << 8));
+    if (g_on && !server_to_client && (op == lrl::kOpPreemptReq || op == lrl::kOpDoStepReq)) host_take(op, packet, size);
+    if (!g_probe || !g_pickup) return;
     if (!server_to_client && (op == 3008 || op == 3073)) g_watch_until = GetTickCount64() + 3000;  // its answers
     static const uint16_t kWatch[] = {3008, 3073, 2120, 2794, 2066};
     bool watched = false;
     for (const uint16_t w : kWatch) watched = watched || w == op;
+    // Only the players' interactions (tcB330: NPCs' own 3008 / 2120 used the whole budget).
+    if (watched && size >= 9) {
+        const uint8_t* pl = packet + 5;
+        const uint32_t who = server_to_client ? (size >= 13 ? lrl::rd32(pl + 4) : 0) : lrl::rd32(pl);
+        if ((who >> 28) != 0xA) watched = false;
+    }
     const bool after = GetTickCount64() <= g_watch_until.load();
     if (!watched && !after) return;
     static std::atomic<int> n_watch{0}, n_after{0};
