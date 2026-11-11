@@ -4627,3 +4627,5 @@ arriving at Hernand.
 - tcB351 (regression, usercopy save, both guards in the build, lootr_bodies off): the normal flow is unchanged: guest
   load STABLE, plant Lootr host then guest ("the guest's copy: item key 757006 x1 ... added"), no crash, HandleGuard
   2468 calls / 0 skipped, TextGuard 0. SAVES OK, restored 5/5.
+- 2026-11-10 23:50 Discord checked (read only, the app's browser): #bug-reports has nothing new; #play-testing-feedback
+  ends with Borque's 16:24 report. No feedback yet on builds 55722584 / 24661515.
