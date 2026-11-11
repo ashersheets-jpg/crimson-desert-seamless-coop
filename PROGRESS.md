@@ -4662,3 +4662,17 @@ arriving at Hernand.
   it stays a hands-on check (queued). Guards: 5367 calls, nothing skipped, no crash.
 - Next (tcB355): the guest beside the host in that fight, to see what the guest sees and whether the enemies react
   to its attacks (the tester's complaint), now that AntiGrief frees NPCs the host fights.
+
+### tcB355 (2026-11-11 00:21): both players in the bandit fight; why enemies ignored the guest
+
+- Both teleported to the dock (scan/tp_dock_host.txt / tp_dock_guest.txt). The guest sees the host and the bandits
+  fighting (shot g1); no crash; guest load STABLE.
+- "AntiGrief: NPC 0xB0100270 is no longer protected: the host fights it" x5 and "the guest's hit on NPC 0xB01002FB (a
+  person of the host's world) dropped": BANDITS were in the protected set. They get a quest-dialog list too (their
+  battle lines), so every enemy was immune to the guest until the host had hit that very one. This is the tester's
+  "enemies do not react to the guest's attacks", and yesterday's fix (free what the host hits) only half solved it.
+- Fix (native, built): an NPC is protected only once the HOST has interacted with it (its InteractionDoStepReq 3073
+  names it: a talk, a shop) AND it has a dialog list; an NPC the host has fought is never protected again. Bandits are
+  never interacted with, so the guest's hits reach them from the first blow. Trade-off: a townsperson the host has
+  not talked to yet is not protected from the guest. Test tcB356.
+- This fix is NOT in the packaged ed838ebd: the package has to be rebuilt before posting.
