@@ -1,5 +1,43 @@
 # Changelog
 
+## Shared world playtest builds (0.1.0-alpha+<id>-shared-world; game 1.0.0.3576)
+
+One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
+line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
+
+Not posted yet (2026-11-11, after 3c46bec5):
+- A downed player now lies on the ground, on their own screen and on their friend's (before, the character stood
+  upright at 0 health on its own screen). The death screen, the HUD and both revive choices are as before; the
+  friend's hold-Interact revive and the Q / U choices stand the character up again. `[coop] downed_pose=0` turns it
+  off.
+- The downed friend's name sits by the body instead of floating at head height, and the "Interact" prompt on your
+  friend no longer shows over your own death screen.
+- The title menu's bottom line ("Invite a friend to begin a co-op journey, or start solo.") was cut off halfway.
+- A misleading log line about shared loot ("set enemy_auto=1") is gone in the shared world.
+- Known, not fixed: enemies that belong to the host's quest do not hurt a guest who has not attacked them, and do
+  not go after a guest who is far from the host.
+
+0.1.0-alpha+3c46bec5 (2026-11-11):
+- The Co-op menu, prompts and party frame now show with Intel XeSS and AMD FSR Frame Generation on (found by
+  D3vils). Tested with XeSS; FSR could only be run on an NVIDIA card here.
+
+0.1.0-alpha+0797bafd / 21f0f6d0 / ed31f10e (2026-11-11):
+- First launch: the "NEW: co-op saves + live quests" box could not be answered and stayed in the middle of the
+  screen (found by Borque). It is gone in the shared world.
+- The title menu no longer closes on the first key press; F8 (pad: View) brings it back.
+- Going down in the shared world shows the death screen with Instant Revive / Revive at Checkpoint, and a downed
+  player can no longer move or attack.
+- The "co-op starts after the prologue" hold is off in the shared world.
+- Enemy loot: what one player loots from a body, the other player nearby (30 m) gets too.
+- Diagnose Co-op+ now collects the Co-op+ log.
+
+0.1.0-alpha+2f4b0dd4 (2026-11-11):
+- Enemies no longer ignore the guest's attacks; the guest is no longer a criminal for helping the host.
+- An item one player dropped can be taken once, by whoever picks it up (it could be duplicated).
+- Two crashes fixed (a guest crash on entering the host's world, a host crash after looting).
+- New: give an item to your friend (inventory, Discard, "Give to <name>"); chests and gear lying in the world are
+  for each of you; the shared stash (the host's warehouse, untested with an unlocked one).
+
 ## 0.1.0-alpha (unreleased; single-PC tested on game 1.0.0.3479)
 
 Hotfix (2026-11-07, after a playtester's report):
