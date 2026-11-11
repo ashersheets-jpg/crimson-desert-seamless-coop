@@ -4513,3 +4513,6 @@ arriving at Hernand.
   give: the Ricefish gone (65/99). The game itself moves the whole record and tells both clients. Guest load STABLE.
 - [coop] item_sharing now defaults to 1 (Inventory -> Discard next to the friend: Give to <name> / Discard / Cancel;
   "Put in the shared stash" only once the host's warehouse is unlocked). Not in a posted build yet.
+- 2026-11-10 21:07 progress chart regenerated at the user's request: docs/drafts/progress-2026-11-10-evening.png
+  (estimates; new row "Per-player world items (Lootr)"; gifting 25 -> 70, stash 10 -> 45, interaction menu 80 -> 90,
+  anti-grief 70 -> 75, release 65 -> 70; NPCs 90 -> 85 and merchants 95 -> 90 after the tester's report).
