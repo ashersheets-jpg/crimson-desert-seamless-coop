@@ -4645,3 +4645,8 @@ arriving at Hernand.
   after the guest's and the host's E holds it was gone, with NO pickup worker call: catching goes another way, so
   Lootr never touched it (no duplication there). Whether an ordinary dropped item goes through the worker is what
   tcB353 checks (the host drops the Medium Hernandian Banner Pike instead).
+- tcB353: the dropped Medium Hernandian Banner Pike stands in the world as a pickup; the guest's E took it through the
+  pickup worker with its item set ("pickup by 0xA0100066 kind 0 gimmick 0xB010036C item idx 0x1B4D x1 ... | a concrete
+  item: one for whoever takes it"). So the duplication hole IS real in the posted build 24661515 (there this pickup
+  counted as per player: the dropper could take "its copy"), and the fix closes it. The host's own E then took a
+  peony as usual ("kept for the guest"). A fixed build should replace 24661515: needs the user's OK to post.
