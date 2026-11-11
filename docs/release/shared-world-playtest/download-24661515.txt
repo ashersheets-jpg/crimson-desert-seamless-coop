@@ -1,0 +1,13 @@
+**Update: shared world playtest 0.1.0-alpha+24661515 (fixes the guest stuck loading, adds per-player items)**
+Please use this build instead of 55722584. You and your co-op partner both need it. It keeps everything from the last update (the town lag and disconnect fix).
+
+Fixed:
+- **Guest stuck in a dark loading screen after joining**: a timing race in our code could stop the guest's second load (into the host's world) for good. Fixed.
+
+New:
+- **Items in the world are per player (like the Lootr mod)**: herbs, flowers and other things you pick up from the world can be taken once by EACH of you. When one of you takes it, it disappears only for that player; the other still sees it and can take their own. Setting in Co-op Settings: "Items in the world" (each their own / first come). Enemy loot and chests are not covered yet.
+
+- `CrimsonDesert-SeamlessCoop-0.1.0-alpha+24661515-shared-world.zip`: this is the one you want. Run its installer with the game closed (it replaces the older build).
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tested with two copies of the game on one PC. Please tell us in #bug-reports how it goes (and send the report zip if anything goes wrong).

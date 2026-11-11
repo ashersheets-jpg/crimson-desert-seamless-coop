@@ -4496,3 +4496,11 @@ arriving at Hernand.
 - Lootr still to do: enemy bodies (LootingDropFromDeadBodyReq 2491; the pool is rolled once and emptied by the first
   looter), chests (GimmickBranchState 2165 / 2304, roll count 2694), items lying on the ground with comp+0xC0 set
   (the same flow is kind-agnostic: to check), keeping the lists when the session ends (a sidecar with the co-op save).
+
+### 2026-11-10 20:43: playtest build 0.1.0-alpha+24661515 POSTED (user: "Yes, build and post it")
+
+- tools\package-native.ps1 -> dist\...-24661515-shared-world.zip (12.3 MB) + -mod-manager.zip; test-install-fake: all
+  steps passed. Posted in Discord #download-here 20:43 with both zips (text:
+  docs/release/shared-world-playtest/download-24661515.txt): the guest load-stall fix, Lootr for world pickups (on by
+  default, setting "Items in the world"); keeps 55722584's fixes; give / stash still hidden. Same upload method as
+  17:54 (the app's browser pane, signed in).
