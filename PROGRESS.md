@@ -4816,3 +4816,22 @@ arriving at Hernand.
   share ... its bag gained 58 piece(s)". (tcB380: the script's wait is capped at 10 s, the guest was back early and
   got the share at once.)
 - Native committed (local), layer built and tested (unit tests pass).
+
+### tcB382-tcB384 (2026-11-11 05:00-05:26): enemy loot for both players (the share way); a downed player could move
+
+- New (native, [session2] lootr_body_share, default 1 with lootr; off when lootr_bodies=1): when a player loots a
+  body (the loot worker, err 0) the bag is compared before / 1.5 s after, as for chests; the gain is the other
+  player's share, added when they are within range of the body (now, or within 10 minutes; no notice, the game's own
+  "acquired" lines). One settling share per looter: a "take all" in several calls, or two bodies in one moment,
+  make one share (the first bag snapshot covers them). The body's loot itself stays the game's (gone for both
+  once looted). The older way (lootr_bodies=1: the second looter rolls an own loot) stays optional, still needing its
+  two-player check.
+- [dev] lootr_kill_hits=3: the host's hit kills and only the host loots by request.
+- tcB383: 15 bodies looted by the host, shares recorded ("4 item kind(s) [103 x1, 795009 x1, 1000633 x2, 1000659
+  x3]"; two bodies looted in the same moment made one share), the guest 18 m away: none given at 8 m.
+- tcB384: with the guest closer, 2 of 15 given ("got its own share ... its bag gained 8 piece(s)" and 7): the adds
+  work; 8 m is too tight for a fight. The range is now 30 m (built).
+- FOUND: a downed player (HP 0, "Guest can revive you") still walks and swings: the client is not told about its
+  death (so the HUD and menus stay), and nothing held its input. tcB382: the downed host "killed" two bandits.
+  Fix (layer, built): from the kept death notice until we are up again the game takes no input (the game-input hold
+  the title menu already uses; the mod's own keys still work: the revive choices, the friend's revive). Test tcB385.
