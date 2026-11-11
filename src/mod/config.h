@@ -514,6 +514,7 @@ struct Config {
     bool s2_lootr_probe = false;
     // lootr = 0 | 1, HOST (session2/lootr.h, user 2026-11-10): an item the host takes stays for the guest (phase 1).
     bool s2_lootr = false;
+    bool s2_lootr_kill_hits = false;  // [dev] tests only (lootr.h)
     int s2_stash_inventory = 0xFFFF;  // stash_inventory (research): 0xFFFF = the default
     // inter_probe, HOST (session2/trade_probe.h; far-shop research): read-only probes of NPC dynamic interactions.
     bool s2_inter_probe = false;

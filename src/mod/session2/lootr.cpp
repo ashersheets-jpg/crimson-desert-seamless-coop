@@ -3,6 +3,7 @@
 
 #include <windows.h>
 
+#include <algorithm>
 #include <atomic>
 #include <cstdio>
 #include <cstring>
@@ -17,6 +18,7 @@
 #include "mod/net/remote_puppet.h"
 #include "mod/net/troc_sniffer.h"
 #include "mod/log.h"
+#include "mod/session2/anti_grief_logic.h"
 #include "mod/session2/lootr_logic.h"
 #include "mod/session2/server.h"
 
@@ -32,6 +34,7 @@ bool g_on = false, g_probe = false;
 safetyhook::InlineHook g_pickup;
 std::atomic<uint64_t> g_watch_until{0};
 std::atomic<int> g_logged{0};
+std::atomic<bool> g_kill_hits{false};  // [dev] lootr_kill_hits
 
 // ---- the picker's bag (manager +0xA2): a gather pickup's item is made inside the pickup and added a few ms after
 // the worker returns (tcB325), so the bag is compared again later (tick / the host's 3110).
@@ -234,6 +237,8 @@ int* __fastcall body_loot_detour(uintptr_t comp, int* err, uintptr_t looter, uin
 }  // namespace
 
 std::string lootr_describe();
+
+void lootr_set_kill_hits(bool on) { g_kill_hits = on; }
 
 void lootr_start(bool on, bool probe, bool guest) {
     g_on = on && !guest;
@@ -470,9 +475,27 @@ void host_take(uint16_t op, const uint8_t* packet, size_t size) noexcept {
     }
 }
 
+// [dev] lootr_kill_hits=1 (tests only): every world actor the HOST hits dies at once (KillCheatReq 2210: u32 key |
+// u32 0), so a one-PC test gets bodies to loot without winning a fight.
+void kill_hits(const uint8_t* packet, size_t size) noexcept {
+    try {
+        static std::vector<uint32_t> done;  // the sniffer's writer thread only
+        for (const uint32_t k : agl::targets(std::span<const uint8_t>(packet + 5, size - 5))) {
+            if ((k >> 28) != 0xB || std::find(done.begin(), done.end(), k) != done.end()) continue;
+            if (done.size() < 256) done.push_back(k);
+            uint8_t pl[8] = {};
+            std::memcpy(pl, &k, 4);
+            const bool ok = net::sniffer_inject_c2s(lrl::make(2210, pl, 0x00));
+            log::info("Lootr probe: [dev] the host's hit on 0x{:08X} kills it{}", k, ok ? "" : " (NOT sent)");
+        }
+    } catch (...) {
+    }
+}
+
 void lootr_host_sniffed(const uint8_t* packet, size_t size, bool server_to_client) noexcept {
     if (size < 5) return;
     const uint16_t op = static_cast<uint16_t>(packet[0] | (packet[1] << 8));
+    if (g_kill_hits.load() && !server_to_client && op == agl::kOpDoFrameEventReq) kill_hits(packet, size);
     if (g_on && !server_to_client && (op == lrl::kOpPreemptReq || op == lrl::kOpDoStepReq)) host_take(op, packet, size);
     if (!g_probe || !g_pickup) return;
     if (!server_to_client && (op == 3008 || op == 3073)) g_watch_until = GetTickCount64() + 3000;  // its answers
