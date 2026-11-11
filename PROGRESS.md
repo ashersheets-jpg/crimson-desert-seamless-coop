@@ -5311,3 +5311,34 @@ Run pp1 on package 0.1.0-alpha+0cd46dd8 (layer HEAD 0cd46dd, native 560e3dc; one
 - Corrections to earlier lines of today: ff2-ff3's heading says the host's enemies "stand FROZEN ... nothing hands
   them over ... the host's client stops driving NPCs ~100 m from its character": the observation (they stand, no
   damage to the guest) holds, the explanation does not (see ff4 and this entry).
+
+### 2026-11-11 15:10-15:40: WHY a guest far from the host takes and deals no damage: the game's 80 m rule
+
+- Research (local notes build/decomp/notes_hostility.md; read in code, the cause itself inferred until tested): the
+  server has NO "are they enemies" test on a blow. A blow is accepted from the attacker's controller (exe+0x2BE1C10
+  -> .tls$ 0xE31F4E0), its damage is a Damage buff (0x2B11EB0 -> 0x2E929A0 -> ServerDamageBuffProcessor ->
+  0x225AD70 -> 0x225C8E0), and in 0x225C8E0 (asm 0x225CD3E..0x225D08C) THE AMOUNT IS SET TO 0 WHEN THE VICTIM IS
+  80 m OR MORE HORIZONTALLY (30 m vertically; 500 m with the GlobalDetectTarget buff) FROM THE CHARACTER OF THE USER
+  WHO OWNS THE VICTIM'S FIELD. Switch byte [exe+0x71436A8] (1), limits float [exe+0x7143798] = 80.0 and
+  [exe+0x71437E8] = 30.0. For every victim, player or NPC.
+- In the shared world both players are in the HOST's field. So more than 80 m from the host nothing can be hurt: the
+  guest takes no damage there (ff3 / ff5 at 102-119 m) and its own blows do none (the playtest's "enemies do not
+  react to the guest's attacks" may partly be this). This is the first explanation that fits every run of today.
+  Not explained yet: ff5's 6 blows on the guest reported by the host's client "while both stood at the dock" (the
+  distance per blow was not logged; a second gate, the faction test exe+0x1934E80, is the candidate if it shows
+  again within 80 m).
+- Relations, for the record: exe+0x23EA890(A, B, flag) = 0 enemy, 1 neutral, 2 ally, 4 cannot hurt; by FACTIONS per
+  actor (info row +0x1A8, override u16 [[status+0x428]], extra list status+0xC0), not by a per-user enemy list;
+  "you attacked me" = the NPC's aggro list ([[npc+0x68]+0x90] +0x108), written only by its controller's client.
+  The client AI picks targets among every nearby actor by that relation (no "my own character only" test found).
+- Checked by disassembly (new tool tools/disasm_rva.py, capstone on the archived exe): at exe+0x225D011 the victim's
+  position is in xmm6 / xmm9 / xmm10 (x, z, y), the field owner's in xmm11 / xmm12 / xmm13, the limits in xmm0 /
+  xmm1, the two actors' sizes in xmm8 / xmm7.
+- Built (native, local): session2/damage_range.cpp, [session2] damage_range_players (default 1), host only: a
+  mid-function hook at exe+0x225D011 (bytes checked first): when the field owner's character is out of range of the
+  victim but another player's character is in range, that player's position stands in for the owner's in this one
+  comparison. Far from every player the game's rule still holds (far NPC fights stay harmless). Player positions
+  come from the once-a-second server check (also used by ai_handoff). Log: "DamageRange ON ...", "a hit N m from the
+  field owner's character counts ...", a counts line once a minute.
+- To test next (ff6 / ff7): the lure scene at 108 m with the hook: does the guest lose HP (with ai_handoff=1, so the
+  bandits go for it), and do the guest's own blows there take HP off a bandit (the npcs step shows HP).
