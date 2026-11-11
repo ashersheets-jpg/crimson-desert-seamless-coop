@@ -4629,3 +4629,15 @@ arriving at Hernand.
   2468 calls / 0 skipped, TextGuard 0. SAVES OK, restored 5/5.
 - 2026-11-10 23:50 Discord checked (read only, the app's browser): #bug-reports has nothing new; #play-testing-feedback
   ends with Borque's 16:24 report. No feedback yet on builds 55722584 / 24661515.
+
+### 2026-11-10 23:55: a possible duplication in the posted Lootr (build 24661515), closed in the code
+
+- Lootr treated EVERY pickup through the worker as per player. An item a player drops on the ground (Discard) is a
+  pickup too: A drops it, B takes it, A still sees it and takes "its copy" = two from one. Not seen happening, found
+  by thinking it through; the posted build 24661515 may allow it.
+- Fix (native 6c51e18, local): Lootr only for things that MAKE their item when taken (comp+0xC0 empty before the
+  pickup: plants, herbs, nodes -- the peony logs "item idx 0xFFFF x0"). A concrete item lying in the world (comp+0xC0
+  set) is one object for whoever takes it, as in the plain game. Enemy drops thrown on the ground are first-come
+  again until they can be told from a player's drop.
+- tcB352: the host discards a Ricefish, the guest takes it (E), the host tries again: shows whether a dropped item
+  goes through the worker with its item set, and that no second copy appears.
