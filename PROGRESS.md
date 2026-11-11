@@ -4763,3 +4763,23 @@ arriving at Hernand.
 - Not covered yet: the chest staying closed for the player who has not opened it (the gimmick's state is driven by
   the host's client; see the notes), mode 0 (breakables throwing items on the ground: whoever picks them up),
   shares across sessions.
+
+### tcB370-tcB377 (2026-11-11 03:07-04:14): chest share confirmed; world-placed gear; test-script steps
+
+- tcB370: host opens the shrine chest, guest 4 m away: share of 5 kinds; "its bag gained 52 piece(s)" (10+12+14+10+6)
+  on the guest, and the guest's screen shows the game's own "Onion: Knowledge Acquired". Native committed (local).
+- Guest opens first (tcB371, 372, 375, 376): NOT tested. The guest cannot be brought to the chest by script: its
+  teleport drops it from above (onto the roof or the statue) and the walker makes it climb the doorway pillar. The
+  code path is the same one with the roles swapped. Queued for two players. The harness got -GuestWalkVia x_z (a
+  first walk point).
+- tcB373: the guest's [E] at the "Warspike Spear" beside the shrine took 3 items through the pickup worker as
+  "concrete" items (one for whoever takes it): gear the game placed in the world was first come, like an item a
+  player dropped. Research (local notes build/decomp/notes_dropped_vs_placed.md): every actor has a SpawnReason byte
+  (u8 [[actor+0x68]+0x20]+0x2F0): 0 = placed in the level, 0x16 = dropped from an inventory, 0x15 = thrown out by a
+  gimmick's Drop event, 0x1A / 0x1B from a dead body. New rule (built, test tcB378): a concrete item is per player
+  when its spawn reason is 0; anything else stays one object (the duplication fix of tcB353 keeps holding).
+- tcB374: nothing usable (the host's teleport landed in a tree, the pad sequence did not open the inventory).
+- New test-script steps (layer, dev only): "tpkill" (beside the animal the last "killgame" killed; killgame now kills
+  one), "tpactor <hex key>" (beside a loaded actor: the guest uses "tpactor A0100001" to come to the host).
+- tcB377 (lootr_bodies=1): the steps work (a goose killed, both players brought to the spot), but no body to loot
+  was there (a goose on the river) and the [E] holds did nothing. Enemy loot on screen stays a two-player check.

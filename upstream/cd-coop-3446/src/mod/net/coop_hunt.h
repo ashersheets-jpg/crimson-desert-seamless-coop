@@ -48,5 +48,7 @@ void hunt_set_test(bool on);
 
 // [dev] script step "killgame": KillCheatReq on up to 4 loaded wild animals (false if none is loaded).
 bool hunt_dev_kill();
+// [dev] script step "tpkill": the first animal the last "killgame" killed (0 = none yet).
+uint32_t hunt_dev_last_kill();
 
 }  // namespace cdmp::net

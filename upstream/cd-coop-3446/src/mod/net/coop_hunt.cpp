@@ -61,6 +61,10 @@ std::atomic<bool> g_test{false};
 
 void hunt_set_test(bool on) { g_test = on; }
 
+std::atomic<uint32_t> g_dev_last_kill{0};
+
+uint32_t hunt_dev_last_kill() { return g_dev_last_kill.load(); }
+
 bool hunt_dev_kill() {
     static std::vector<uint32_t> tried;
     const auto loaded = enemy_loaded_variants();
@@ -80,7 +84,8 @@ bool hunt_dev_kill() {
         std::memcpy(pkt.data() + 5, &key, 4);
         const bool ok = sniffer_inject_c2s(std::move(pkt));
         log::info("Hunt: [dev] KillCheatReq on 0x{:08X} ({}){}", key, a->name, ok ? "" : " NOT sent");
-        if (++sent == 4) return ok;
+        if (sent == 0) g_dev_last_kill = key;
+        if (++sent == 1) return ok;  // one body (tests walk to it)
     }
     if (sent) return true;
     log::info("Hunt: [dev] no wild animal loaded");

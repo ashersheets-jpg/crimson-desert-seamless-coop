@@ -32,7 +32,7 @@ namespace cdmp::net {
 namespace {
 
 struct Step {
-    enum Kind { C2S, S2C, Wait, Teleport, Poke, Time, Watch, Day, Pad, KillGame, KillAll, MemScan, MemDiff, MemWatch, Advance, FScan, FFilter, FWatch, WaitFile, DScan, DFilter, DWatch, GSnap, GDiff, PtrScan, WatchStatus, Key, ClockScan, RideHorse, PrologueDone, GrantXp, GuestHit, DumpItemMove } kind;
+    enum Kind { C2S, S2C, Wait, Teleport, Poke, Time, Watch, Day, Pad, KillGame, KillAll, MemScan, MemDiff, MemWatch, Advance, FScan, FFilter, FWatch, WaitFile, DScan, DFilter, DWatch, GSnap, GDiff, PtrScan, WatchStatus, Key, ClockScan, RideHorse, PrologueDone, GrantXp, GuestHit, DumpItemMove, TpActor } kind;
     uintptr_t addr = 0;
     float to[3] = {};
     uint16_t op = 0;
@@ -408,6 +408,17 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
             steps.push_back(std::move(st));
             continue;
         }
+        if (kind == "tpkill" || kind == "tpactor") {  // tpactor <hex key>: 1 m beside a loaded actor; tpkill: beside
+            st.kind = Step::TpActor;                    // the animal the last killgame killed
+            st.addr = 0;
+            std::string h;
+            if (kind == "tpactor" && (!(in >> h) || (st.addr = std::strtoull(h.c_str(), nullptr, 16)) == 0)) {
+                log::warn("Dev script: line {} needs tpactor <hex actor key>", lineno);
+                continue;
+            }
+            steps.push_back(st);
+            continue;
+        }
         if (kind == "tp" || kind == "tprel") {  // tprel dx dy dz: from where we stood when the script started
             st.kind = Step::Teleport;
             if (!(in >> st.to[0] >> st.to[1] >> st.to[2])) {
@@ -532,6 +543,12 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                                 mbi.State == MEM_COMMIT && (mbi.Protect & (PAGE_READWRITE | PAGE_EXECUTE_READWRITE));
                 if (ok) std::memcpy(reinterpret_cast<void*>(st.addr), st.payload.data(), st.payload.size());
                 log::info("Dev script: poke 0x{:X} ({} bytes){}", st.addr, st.payload.size(), ok ? "" : " REFUSED (not writable)");
+            } else if (st.kind == Step::TpActor) {
+                const uint32_t key = st.addr ? static_cast<uint32_t>(st.addr) : hunt_dev_last_kill();
+                const auto at = key ? game::actor_world_position(key) : std::nullopt;
+                if (at) revive_teleport_to(at->x + 1.0f, at->y + 0.5f, at->z);
+                log::info("Dev script: teleport beside actor 0x{:08X}: {}", key,
+                          at ? std::format("({:.1f}, {:.1f}, {:.1f})", at->x, at->y, at->z) : std::string("NOT loaded"));
             } else if (st.kind == Step::Teleport) {
                 revive_teleport_to(st.to[0], st.to[1], st.to[2]);
                 log::info("Dev script: teleport to ({:.0f}, {:.0f}, {:.0f})", st.to[0], st.to[1], st.to[2]);
