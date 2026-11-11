@@ -5012,3 +5012,27 @@ arriving at Hernand.
 - OPEN: whether D3vils' PC draws our overlay at all (nothing of ours on his title, not even the card every fresh
   install had). If the new build shows neither the menu nor the top-left line there, his coopplus.log decides
   (overlay hook lines: "Overlay: hooked Present ..." / "presents N drawn N").
+
+### tcB405-tcB411 (2026-11-11 08:12-08:40): NO CO-OP MENU = frame generation; fixed
+
+- D3vils (#play-testing-feedback 08:15-08:18): "its Xess Frame Generation the moment i turned it off the text
+  appeared" (his settings: Intel XeSS 3.0, Native AA, Intel XeSS Frame Generation, 2 frames). So the missing title
+  menu on the testers' PCs was not the DLC: with XeSS (and very likely AMD FSR) frame generation the game presents
+  through that library's own swap chain class, not through Streamline's, whose Present we hook.
+- Reproduced (tcB406, new harness switches -FrameGen -FrameGenMode Intel_XeSS_Frame_Generation -Upscale
+  Intel_XeSS_3.0): "Overlay: installed true | presents 0 drawn 0". (tcB395's DLSS frame generation goes through
+  Streamline: that one always worked.)
+- Fix (layer, render/dx12_hook.cpp): the swap chain classes of libxess_fg.dll (XefgInterpolationSwapChain) and
+  amd_fidelityfx_framegeneration_dx12.dll (FrameInterpolationSwapChainDX12Stable) are found by their RTTI names and
+  get the same Present / Present1 / ResizeBuffers hooks (own originals; looked for again later, as the libraries
+  load when the option is switched on; tiny "return 0" stubs are not hooked). tcB407 then faulted on the first
+  frame ("exception 0xC0000005 ... stage 11": XeSS's proxy answers GetDevice(ID3D12CommandQueue) with S_OK and
+  something that is not a queue); the queue is now asked for safely (IUnknown + QueryInterface under SEH) and the
+  existing fallback (the present thread's ExecuteCommandLists) takes over. The render hook now says the exception
+  code and a stage number when it disables itself.
+- tcB409 (XeSS-FG, title): "Overlay ready: 4 buffers ... presents 16834 drawn 8416", the title menu on screen.
+  tcB410 (AMD FSR Frame Generation selected, on this Nvidia card): its class hooked, the overlay draws.
+  tcB411 (XeSS-FG, two first-time players, the whole flow into the world): both alive, overlay drawn on both, the
+  pause menu's Co-op tab there, no "Overlay disabled", SAVES OK.
+- tcB405 (new harness switch -PackageIni: both copies on the package's own coopplus.ini): the session works with the
+  real defaults; nothing stuck on screen.

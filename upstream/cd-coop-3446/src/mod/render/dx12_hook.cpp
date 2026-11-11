@@ -1,6 +1,7 @@
 #include "mod/render/dx12_hook.h"
 
 #include <windows.h>
+#include <psapi.h>
 #include <d3d12.h>
 #include <dxgi1_4.h>
 #include <wrl/client.h>
@@ -11,6 +12,7 @@
 #include <safetyhook.hpp>
 
 #include <atomic>
+#include <cstdio>
 #include <cstring>
 #include <mutex>
 #include <string>
@@ -56,6 +58,7 @@ void** g_queue_vtable = nullptr;
 std::atomic<bool> g_execute_hooked{false};
 thread_local ID3D12CommandQueue* t_last_direct_queue = nullptr;
 thread_local bool t_in_present = false;
+volatile int g_stage = 0;  // where the render hook is (said when it faults)
 
 DrawFn g_draw = nullptr;
 CRITICAL_SECTION g_render_cs;
@@ -191,11 +194,31 @@ void shutdown_renderer() {
     g_r = Renderer{};
 }
 
+// The swap chain's command queue through GetDevice, checked: a frame generation proxy (XeSS-FG, tcB408) answers the
+// request for an ID3D12CommandQueue with S_OK and an object that is not one (the first call on it faulted). So the
+// answer is taken as IUnknown and asked for the queue interface itself; anything odd = no queue (the fallback).
+ID3D12CommandQueue* queue_of(IDXGISwapChain* sc) noexcept {
+    ID3D12CommandQueue* q = nullptr;
+    __try {
+        IUnknown* u = nullptr;
+        if (SUCCEEDED(sc->GetDevice(__uuidof(IUnknown), reinterpret_cast<void**>(&u))) && u) {
+            if (FAILED(u->QueryInterface(__uuidof(ID3D12CommandQueue), reinterpret_cast<void**>(&q)))) q = nullptr;
+            u->Release();
+        }
+        if (q) (void)q->GetDesc();  // must behave like a queue
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        q = nullptr;
+    }
+    return q;
+}
+
 ComPtr<ID3D12CommandQueue> find_queue(IDXGISwapChain* sc, std::string& source) {
     ComPtr<ID3D12CommandQueue> queue;
+    g_stage = 10;
     // For D3D12 swap chains, GetDevice() hands back the queue the chain was
     // created with, which is exactly the queue we must submit on.
-    if (SUCCEEDED(sc->GetDevice(IID_PPV_ARGS(&queue)))) {
+    if (ID3D12CommandQueue* q = queue_of(sc)) {
+        queue.Attach(q);
         source = "swapchain->GetDevice";
         return queue;
     }
@@ -216,12 +239,14 @@ ComPtr<ID3D12CommandQueue> find_queue(IDXGISwapChain* sc, std::string& source) {
 bool init_renderer(IDXGISwapChain* sc, const DXGI_SWAP_CHAIN_DESC& desc) {
     std::string source;
     ComPtr<ID3D12CommandQueue> queue = find_queue(sc, source);
+    g_stage = 11;
     if (!queue) return false;  // try again next frame
     if (queue->GetDesc().Type != D3D12_COMMAND_LIST_TYPE_DIRECT) {
         disable("present queue is not a direct queue");
         return false;
     }
 
+    g_stage = 12;
     Renderer r;
     r.owner = sc;
     r.queue = queue;
@@ -256,6 +281,7 @@ bool init_renderer(IDXGISwapChain* sc, const DXGI_SWAP_CHAIN_DESC& desc) {
         FAILED(r.device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&r.fence)))) {
         return disable("command list / fence creation failed"), false;
     }
+    g_stage = 13;
     r.fence_event = CreateEventW(nullptr, FALSE, FALSE, nullptr);
     QueryPerformanceCounter(&r.last_frame);
     g_r = std::move(r);
@@ -290,9 +316,12 @@ bool init_renderer(IDXGISwapChain* sc, const DXGI_SWAP_CHAIN_DESC& desc) {
 }
 
 void draw_frame(IDXGISwapChain* sc, const DXGI_SWAP_CHAIN_DESC& desc) {
+    g_stage = 20;
     ComPtr<IDXGISwapChain3> sc3;
     if (FAILED(sc->QueryInterface(IID_PPV_ARGS(&sc3)))) return disable("no IDXGISwapChain3");
+    g_stage = 21;
     const UINT idx = sc3->GetCurrentBackBufferIndex();
+    g_stage = 22;
     if (idx >= g_r.buffer_count) return;
 
     // Make sure the GPU is done with this buffer's allocator from last time.
@@ -301,8 +330,10 @@ void draw_frame(IDXGISwapChain* sc, const DXGI_SWAP_CHAIN_DESC& desc) {
         if (WaitForSingleObject(g_r.fence_event, 1000) != WAIT_OBJECT_0) return;  // skip frame
     }
 
+    g_stage = 23;
     ComPtr<ID3D12Resource> back_buffer;
     if (FAILED(sc->GetBuffer(idx, IID_PPV_ARGS(&back_buffer)))) return;
+    g_stage = 24;
     D3D12_CPU_DESCRIPTOR_HANDLE rtv = g_r.rtv_heap->GetCPUDescriptorHandleForHeapStart();
     rtv.ptr += static_cast<SIZE_T>(idx) * g_r.rtv_size;
     g_r.device->CreateRenderTargetView(back_buffer.Get(), nullptr, rtv);
@@ -318,11 +349,13 @@ void draw_frame(IDXGISwapChain* sc, const DXGI_SWAP_CHAIN_DESC& desc) {
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize = ImVec2(w, h);
     io.DeltaTime = dt > 0.0f && dt < 1.0f ? dt : 1.0f / 60.0f;
+    g_stage = 25;
     ImGui_ImplDX12_NewFrame();
     ImGui::NewFrame();
     if (g_draw) g_draw(w, h);
     ImGui::Render();
 
+    g_stage = 26;
     auto& alloc = g_r.allocators[idx];
     if (FAILED(alloc->Reset()) || FAILED(g_r.list->Reset(alloc.Get(), nullptr))) return;
 
@@ -341,16 +374,20 @@ void draw_frame(IDXGISwapChain* sc, const DXGI_SWAP_CHAIN_DESC& desc) {
     g_r.list->ResourceBarrier(1, &barrier);
     if (FAILED(g_r.list->Close())) return disable("command list Close failed");
 
+    g_stage = 27;
     ID3D12CommandList* lists[] = {g_r.list.Get()};
     g_r.queue->ExecuteCommandLists(1, lists);
+    g_stage = 28;
     g_r.queue->Signal(g_r.fence.Get(), ++g_r.fence_value);
     g_r.allocator_fence[idx] = g_r.fence_value;
     g_frames.fetch_add(1, std::memory_order_relaxed);
 }
 
 void on_present(IDXGISwapChain* sc) {
+    g_stage = 1;
     DXGI_SWAP_CHAIN_DESC desc{};
     if (FAILED(sc->GetDesc(&desc))) return;
+    g_stage = 2;
     // Ignore tiny helper swap chains; the game's is at least a few hundred px.
     if (desc.BufferDesc.Width < 320 || desc.BufferDesc.Height < 240) return;
 
@@ -375,11 +412,15 @@ void on_present(IDXGISwapChain* sc) {
 // SEH wrapper: no C++ objects with destructors allowed in this function.
 void guarded_present(IDXGISwapChain* sc) {
     EnterCriticalSection(&g_render_cs);
+    DWORD code = 0;
     __try {
         on_present(sc);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    } __except (code = GetExceptionCode(), EXCEPTION_EXECUTE_HANDLER) {
         g_disabled = true;
-        log::write(log::Level::Error, "Overlay disabled: exception inside the render hook");
+        static char line[160];
+        std::snprintf(line, sizeof line, "Overlay disabled: exception 0x%08lX inside the render hook (stage %d)", code,
+                      static_cast<int>(g_stage));
+        log::write(log::Level::Error, line);
     }
     LeaveCriticalSection(&g_render_cs);
 }
@@ -398,27 +439,94 @@ void before_resize(IDXGISwapChain* sc) {
 
 // ------------------------------------------------------------------- hooks
 
-void present_common(IDXGISwapChain* sc, UINT flags) {
+// True = this call took the "in present" mark (and drew): the caller clears it after the original returns. A hook
+// nested inside another one's Present (Present -> Present1, a frame generation proxy -> the class under it) draws
+// nothing and leaves the outer mark alone.
+bool present_common(IDXGISwapChain* sc, UINT flags) {
     g_presents.fetch_add(1, std::memory_order_relaxed);
-    if (g_disabled || (flags & DXGI_PRESENT_TEST) || t_in_present) return;
+    if (g_disabled || (flags & DXGI_PRESENT_TEST) || t_in_present) return false;
     t_in_present = true;  // Present may call Present1 internally; draw once
     guarded_present(sc);
+    return true;
 }
 
 HRESULT STDMETHODCALLTYPE hk_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
-    present_common(sc, flags);
+    const bool mine = present_common(sc, flags);
     HRESULT hr = o_present(sc, sync, flags);
-    t_in_present = false;
+    if (mine) t_in_present = false;
     return hr;
 }
 
 HRESULT STDMETHODCALLTYPE hk_present1(IDXGISwapChain1* sc, UINT sync, UINT flags,
                                       const DXGI_PRESENT_PARAMETERS* params) {
-    present_common(sc, flags);
+    const bool mine = present_common(sc, flags);
     HRESULT hr = o_present1(sc, sync, flags, params);
-    t_in_present = false;
+    if (mine) t_in_present = false;
     return hr;
 }
+
+// ---- frame generation proxies (2026-11-11, testers: no Co-op menu with Intel XeSS Frame Generation on; reproduced
+// in tcB406: "presents 0 drawn 0"). With XeSS-FG or FSR frame generation the game presents through that library's own
+// swap chain class, not through Streamline's, so the hooks above never ran and nothing of ours was drawn. Each
+// such class gets the same hooks (its own originals); the overlay is drawn into the game's frame before the
+// library takes it. The libraries are loaded when the option is on, possibly after us: looked for again later.
+template <int N>
+struct ProxyHooks {
+    static inline SafetyHookInline present, present1, resize, resize1;
+    static inline PresentFn o_present = nullptr;
+    static inline Present1Fn o_present1 = nullptr;
+    static inline ResizeBuffersFn o_resize = nullptr;
+    static inline ResizeBuffers1Fn o_resize1 = nullptr;
+    static HRESULT STDMETHODCALLTYPE hk_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
+        const bool mine = present_common(sc, flags);
+        HRESULT hr = o_present(sc, sync, flags);
+        if (mine) t_in_present = false;
+        return hr;
+    }
+    static HRESULT STDMETHODCALLTYPE hk_present1(IDXGISwapChain1* sc, UINT sync, UINT flags,
+                                                 const DXGI_PRESENT_PARAMETERS* params) {
+        const bool mine = present_common(sc, flags);
+        HRESULT hr = o_present1(sc, sync, flags, params);
+        if (mine) t_in_present = false;
+        return hr;
+    }
+    static HRESULT STDMETHODCALLTYPE hk_resize(IDXGISwapChain* sc, UINT count, UINT w, UINT h, DXGI_FORMAT fmt,
+                                               UINT flags) {
+        before_resize(sc);
+        return o_resize(sc, count, w, h, fmt, flags);
+    }
+    static HRESULT STDMETHODCALLTYPE hk_resize1(IDXGISwapChain3* sc, UINT count, UINT w, UINT h, DXGI_FORMAT fmt,
+                                                UINT flags, const UINT* masks, IUnknown* const* queues) {
+        before_resize(sc);
+        return o_resize1(sc, count, w, h, fmt, flags, masks, queues);
+    }
+    // A stub that returns within its first five bytes ("xor eax, eax; ret": FSR's ResizeBuffers1, tcB407) is left
+    // alone: it is too short for a jump, and the linker may have folded other identical functions onto it.
+    static bool stub(void* f) {
+        const auto* b = static_cast<const uint8_t*>(f);
+        for (int i = 0; i < 5; ++i) {
+            if (b[i] == 0xC3) return true;
+        }
+        return false;
+    }
+    static bool install(void** vt, const char* what) {
+        const std::string n = what;
+        bool ok = true;
+        if (!stub(vt[kSlotResizeBuffers]))
+            ok = hook_function(vt[kSlotResizeBuffers], reinterpret_cast<void*>(&hk_resize), resize, o_resize,
+                               (n + " ResizeBuffers").c_str()) && ok;
+        if (!stub(vt[kSlotResizeBuffers1]))
+            ok = hook_function(vt[kSlotResizeBuffers1], reinterpret_cast<void*>(&hk_resize1), resize1, o_resize1,
+                               (n + " ResizeBuffers1").c_str()) && ok;
+        if (stub(vt[kSlotPresent])) return false;  // nothing to draw on
+        ok = hook_function(vt[kSlotPresent], reinterpret_cast<void*>(&hk_present), present, o_present,
+                           (n + " Present").c_str()) && ok;
+        if (!stub(vt[kSlotPresent1]))
+            ok = hook_function(vt[kSlotPresent1], reinterpret_cast<void*>(&hk_present1), present1, o_present1,
+                               (n + " Present1").c_str()) && ok;
+        return ok;
+    }
+};
 
 HRESULT STDMETHODCALLTYPE hk_resize(IDXGISwapChain* sc, UINT count, UINT w, UINT h,
                                     DXGI_FORMAT fmt, UINT flags) {
@@ -463,6 +571,54 @@ void** find_rtti_vtable(HMODULE module, const char* type_name) {
         }
     }
     return nullptr;
+}
+
+struct ProxyClass {
+    const wchar_t* module;
+    const char* type_name;  // MSVC RTTI name of the library's swap chain class
+    const char* what;
+    bool (*install)(void**, const char*);
+    bool done;
+};
+ProxyClass g_proxies[] = {
+    {L"libxess_fg.dll", ".?AUXefgInterpolationSwapChain@@", "XeSS-FG", &ProxyHooks<0>::install, false},
+    {L"amd_fidelityfx_framegeneration_dx12.dll", ".?AVFrameInterpolationSwapChainDX12Stable@@", "FSR-FG",
+     &ProxyHooks<1>::install, false},
+    {L"amd_fidelityfx_framegeneration_dx12.dll", ".?AVFrameInterpolationSwapChainDX12@@", "FSR-FG (2)",
+     &ProxyHooks<2>::install, false},
+};
+std::mutex g_proxy_mutex;
+std::atomic<bool> g_proxy_ready{false};  // the main hooks are in (install() finished)
+
+// Hooks the frame generation libraries' swap chain classes that are loaded now and not hooked yet. Cheap when
+// there is nothing to do (a module lookup per class).
+void hook_frame_generation_proxies() {
+    if (!g_proxy_ready.load()) return;
+    std::lock_guard lock(g_proxy_mutex);
+    for (ProxyClass& p : g_proxies) {
+        if (p.done) continue;
+        const HMODULE m = GetModuleHandleW(p.module);
+        if (!m) continue;
+        p.done = true;  // one try per class, whatever comes of it
+        void** vt = find_rtti_vtable(m, p.type_name);
+        if (!vt) continue;
+        // The slots must point into that library (a wrong vtable would hook something else).
+        MODULEINFO mi{};
+        if (!GetModuleInformation(GetCurrentProcess(), m, &mi, sizeof mi)) continue;
+        const auto lo = reinterpret_cast<uintptr_t>(mi.lpBaseOfDll), hi = lo + mi.SizeOfImage;
+        bool inside = true;
+        for (const int slot : {kSlotPresent, kSlotPresent1, kSlotResizeBuffers, kSlotResizeBuffers1}) {
+            const auto f = reinterpret_cast<uintptr_t>(vt[slot]);
+            inside = inside && f >= lo && f < hi;
+        }
+        if (!inside) {
+            log::warn("Overlay: {}'s swap chain class found, but its vtable does not look right: not hooked", p.what);
+            continue;
+        }
+        const bool ok = p.install(vt, p.what);
+        log::info("Overlay: frame generation ({}): its swap chain class {}", p.what,
+                  ok ? "is hooked too: the overlay draws with it on" : "could NOT be hooked");
+    }
 }
 
 // Learns the vtable addresses of the swap chain class the game presents through and of D3D12's
@@ -564,10 +720,13 @@ bool install(DrawFn draw) {
     }
     log::info("Overlay hooks installed (swap chain vtable 0x{:X})",
               reinterpret_cast<uintptr_t>(sc_vtable));
+    g_proxy_ready = true;
+    hook_frame_generation_proxies();
     return true;
 }
 
 Status status() {
+    hook_frame_generation_proxies();  // a library loaded since (frame generation switched on in the settings)
     std::lock_guard lock(g_status_mutex);
     Status s = g_status;
     s.disabled = g_disabled;
