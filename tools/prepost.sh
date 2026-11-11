@@ -3,7 +3,8 @@
 # one game session and every step's screenshots can be looked at before the next one starts:
 #
 #   bash tools/prepost.sh TAG "<package folder>" STEP        STEP = static | real | fresh | xess | fsr | display |
-#                                                                   lowsave | chest | revive | loot | crime | summary
+#                                                                   lowsave | chest | revive | loot | crime | farfight |
+#                                                                   summary
 #
 # TAG names the run (pp1 ...): the test names are TAG-STEP, the report is build/native/prepost-TAG.txt.
 # A step appends its checks (PASS / FAIL / INFO lines) to the report. "summary" prints the report and the totals.
@@ -184,8 +185,19 @@ crime)
   has "$H" "AntiGrief: crime type [0-9]+ of the guest .* skipped" "a guest's hit on a bandit was not booked as a crime"
   hasnot "$H" "AntiGrief: crime type [0-9]+ of the guest .* on 0xB.*(left to the game|punished too)" "no guest hit on an NPC at the bandit camp was booked as a crime"
   info "AntiGrief last summary: $(grep -h 'AntiGrief' "$H" | grep -v 'crime type' | tail -1 | cut -d']' -f3- | cut -c1-260)" ;;
+farfight)
+  head_step "a guest fights 108 m from the host: the host draws its bandits to the dock and leaves, the guest stays and swings"
+  GA=""; for i in $(seq 1 50); do GA="${GA}click:L:90_w:800_"; done
+  run2 "$BASE -Hold 10 -HostScript $SCAN\\ff_host_lure.txt -GuestScript $SCAN\\ff_guest_watch40.txt -GuestKeys w:9000_shot:$NAME-g0_${GA}shot:$NAME-g1_w:20000_shot:$NAME-g2 -HostKeys w:500_shot:$NAME-h0"; two_player_checks
+  H=$N/$NAME.host.log
+  has "$H" "DamageRange ON" "host: the damage range hook is in"
+  has "$H" "DamageRange: on .* counted because another player was in range [1-9]" "hits far from the host counted because the guest was in range"
+  has "$H" "kills host [0-9]+ guest [1-9]" "the guest killed at least one enemy far from the host"
+  hurt=$(grep "Local:.*hp" $N/$NAME.coopplus.guest.log 2>/dev/null | grep -vc "hp 300.0/300.0")
+  [ "${hurt:-0}" -gt 0 ] && ok "the guest lost health far from the host ($hurt samples below full)" || bad "the guest never lost health far from the host"
+  ;;
 summary)
-  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c '^== ' "$R") of 11"; exit 0 ;;
+  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c '^== ' "$R") (12 in the list)"; exit 0 ;;
 *) echo "unknown step $STEP"; exit 2 ;;
 esac
 sed -n "/^== $STEP /,\$p" "$R"

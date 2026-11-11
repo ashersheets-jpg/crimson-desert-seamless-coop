@@ -23,7 +23,7 @@ starts while Crimson Desert is running):
 bash tools/prepost.sh pp1 dist/CrimsonDesert-SeamlessCoop-<version>-shared-world static
 ```
 
-Steps, in order: `static real fresh xess fsr display lowsave chest revive loot crime`, then `summary`.
+Steps, in order: `static real fresh xess fsr display lowsave chest revive loot crime farfight`, then `summary`.
 The report is `build/native/prepost-<tag>.txt`. After each game step, LOOK at the screenshots the report lists
 (`build/native/shots/`): a log line saying "overlay draws" is not the same as the menu being on screen.
 
@@ -42,6 +42,7 @@ The report is `build/native/prepost-<tag>.txt`. After each game step, LOOK at th
 | revive | the guest is taken down, lies down, sees the death screen, cannot move, presses Q | the death reaches the client with the game-over state skipped, input held, revive asked, alive again, input back; the lying character and the HUD on the screenshots | the friend holding Interact to revive; going down while riding or in a duel |
 | loot | host loots enemy bodies with the guest nearby | guest gets its own share, bag grows | what each player sees on screen at the body |
 | crime | both fight at the bandit camp | guest's hits are seen and none is booked as a crime | town NPCs, guards, a real wanted level |
+| farfight | the host draws its quest bandits to the dock and leaves for a spot 108 m away; the guest stays and swings 50 times | the damage range hook is in, hits far from the host are counted, the guest kills at least one enemy and loses health | ordinary camps (only the host's quest bandits are known by coordinates); more than ~130 m from the host |
 
 Never covered on this PC (say so in the post): two different PCs and Steam accounts, a real internet connection,
 AMD and Intel graphics cards, a controller in a player's hands, sessions longer than about ten minutes.

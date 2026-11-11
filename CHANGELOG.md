@@ -14,8 +14,11 @@ Not posted yet (2026-11-11, after 3c46bec5):
   friend no longer shows over your own death screen.
 - The title menu's bottom line ("Invite a friend to begin a co-op journey, or start solo.") was cut off halfway.
 - A misleading log line about shared loot ("set enemy_auto=1") is gone in the shared world.
-- Known, not fixed: enemies that belong to the host's quest do not hurt a guest who has not attacked them, and do
-  not go after a guest who is far from the host.
+- A guest more than 80 m from the host can fight: it now takes damage and its blows count there (the game sets all
+  damage to 0 that far from the world's owner, so the guest could neither hurt nor be hurt). Tested 108 m from the
+  host with the host's quest bandits: the guest lost health, killed six, and the bandits fought back.
+  `[session2] damage_range_players=0` in the host's cdmp.ini turns it off.
+- Known: enemies that came for the host do not go after a guest far from the host until the guest attacks them.
 
 0.1.0-alpha+3c46bec5 (2026-11-11):
 - The Co-op menu, prompts and party frame now show with Intel XeSS and AMD FSR Frame Generation on (found by

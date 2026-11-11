@@ -5355,3 +5355,19 @@ Run pp1 on package 0.1.0-alpha+0cd46dd8 (layer HEAD 0cd46dd, native 560e3dc; one
   host 108 m away (tcB413 / tcB415 / ff1: never a kill). Crimes: 45 seen, 44 skipped for the guest.
 - So the 80 m rule was the cause, and the hook fixes it. With the hand-over on, the bandits also went for the guest.
 - ff7 (running): the same with ai_handoff off (the release default): is the damage fix alone enough.
+
+### ff7 (2026-11-11 15:37, damage_range_players=1, ai_handoff OFF = the release defaults): the fix alone is enough
+
+- The same lure scene, the bandits stay under the host's control. Switches: build/native/ff7.args.
+- 47 hits counted by the hook; the guest's HP 300 -> 291 -> 196 -> 116 -> 83 (then regenerating); tally "kills host
+  0 guest 6", guest>NPC 56 blows; blows on the guest came from both clients (the host's 11, its own 6); the npcs
+  step shows bandits at hp 0 / 63 and 1 / 63 after its blows. 33 crimes seen, 33 skipped for the guest.
+- So with the damage rule fixed, the host's own client keeps driving its bandits 108 m away and they fight back
+  when the guest attacks. ai_handoff stays off by default (not needed here; kept for real orphans, untested).
+- State: A GUEST FAR FROM THE HOST CAN FIGHT (takes and deals damage, kills). Tested under: one PC, two copies,
+  -Fresh, lowest graphics, the host's quest bandits, 96-119 m from the host, on foot, melee. NOT tested: farther than
+  ~130 m (where the host's client may no longer have the enemies), ordinary camps, ranged weapons, mounted, bosses,
+  two real PCs. Not changed: enemies that came for the host do not start on an idle guest far from the host (ff3).
+- New checklist step "farfight" (tools/prepost.sh, docs/tests/RELEASE-CHECKLIST.md) runs this scene and checks the
+  hook, the counted hits, a kill by the guest and the guest's health.
+- B18 / B02: the far-guest fight question of tcB413-415 is closed by this.
