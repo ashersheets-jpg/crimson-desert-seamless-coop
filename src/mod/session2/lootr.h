@@ -29,6 +29,9 @@ int lootr_on_guest_req(uint16_t opcode, std::span<const uint8_t> payload) noexce
 // Network thread: requests to hand the server as user 2's (the add of its copy).
 void lootr_tick(std::vector<std::vector<uint8_t>>& to_server) noexcept;
 std::string lootr_describe();
+// lootr_probe (host, the SERVER thread: trade_probe's entry 0xC0DE0006): the gimmicks around the host that have a Drop
+// event (chests, boxes, breakables) are logged with name, position and rolls left. build/decomp/notes_find_chests.md.
+void lootr_chest_scan(uintptr_t host_actor) noexcept;
 // Phase 2a (host's client, OnRecvPacket, the game's thread): what the host is told about a gimmick the GUEST took
 // first is blanked in place (gimmick key 0 / zero save key), so the host still sees it; the originals are kept.
 void lootr_host_recv(uint8_t* packet, uint16_t size) noexcept;

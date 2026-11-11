@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <format>
@@ -431,7 +432,273 @@ int* __fastcall body_loot_detour(uintptr_t comp, int* err, uintptr_t looter, uin
     return r;
 }
 
+// ---- chests / item boxes (probe only, notes_lootr_bodies_chests.md B): the gimmick event "Drop" worker
+// exe+0x2D4EC10(comp, err, field, actor, target, targets, params, ...) and its roll exe+0x2D4DE40(comp, actor, target,
+// items {ptr, u32 count}, others, decrease). Logged: who, the gimmick and its save key, the mode (params[1]: 0 ground,
+// 1 bag) and the rolled items.
+safetyhook::InlineHook g_drop, g_drop_roll;
+struct DropSeen {
+    uint32_t gimmick = 0, actor = 0, target = 0;
+    uint8_t key16[16] = {};
+    uint8_t p0 = 0xFF, p1 = 0xFF, dec = 0xFF;
+};
+void read_drop(DropSeen& s, uintptr_t comp, uintptr_t actor, uintptr_t target, uintptr_t params) noexcept {
+    __try {
+        const uintptr_t g = *reinterpret_cast<uintptr_t*>(comp + 8);
+        if (g) s.gimmick = *reinterpret_cast<uint32_t*>(g + 0x60);
+        std::memcpy(s.key16, reinterpret_cast<void*>(comp + 0x30), 16);
+        if (actor) s.actor = *reinterpret_cast<uint32_t*>(actor + 0x60);
+        if (target) s.target = *reinterpret_cast<uint32_t*>(target + 0x60);
+        if (params) {
+            s.p0 = *reinterpret_cast<uint8_t*>(params);
+            s.p1 = *reinterpret_cast<uint8_t*>(params + 1);
+            s.dec = *reinterpret_cast<uint8_t*>(params + 0x49);
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    }
+}
+// Up to 8 entries of a roll list as "type:index xcount".
+int read_roll(uintptr_t list, char* out, size_t cap) noexcept {
+    int n = -1;
+    out[0] = 0;
+    __try {
+        const uintptr_t p = *reinterpret_cast<uintptr_t*>(list);
+        n = static_cast<int>(*reinterpret_cast<uint32_t*>(list + 8));
+        size_t at = 0;
+        for (int i = 0; i < n && i < 8 && p; ++i) {
+            const uintptr_t e = p + static_cast<uintptr_t>(i) * 0x38;
+            const uint8_t type = *reinterpret_cast<uint8_t*>(e);
+            const uintptr_t rec = *reinterpret_cast<uintptr_t*>(e + 0x30);
+            uint16_t idx = 0xFFFF;
+            int64_t count = -1;
+            if (rec > 0x10000) {
+                idx = *reinterpret_cast<uint16_t*>(rec + 8);
+                count = *reinterpret_cast<int64_t*>(rec + 0x10);
+            }
+            const int w = std::snprintf(out + at, cap - at, "%s%u:%u x%lld", i ? ", " : "", type, idx,
+                                        static_cast<long long>(count));
+            if (w <= 0 || static_cast<size_t>(w) >= cap - at) break;
+            at += static_cast<size_t>(w);
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    }
+    return n;
+}
+thread_local DropSeen* t_drop = nullptr;
+
+uint8_t __fastcall drop_roll_detour(uintptr_t comp, uintptr_t actor, uintptr_t target, uintptr_t items,
+                                    uintptr_t others, uint8_t decrease) noexcept {
+    const uint8_t r = g_drop_roll.call<uint8_t>(comp, actor, target, items, others, decrease);
+    static std::atomic<int> said{0};
+    if (said.fetch_add(1) < 60) {
+        char a[200], b[200];
+        const int na = read_roll(items, a, sizeof a), nb = read_roll(others, b, sizeof b);
+        DropSeen s;
+        read_drop(s, comp, actor, target, 0);
+        log::info("Lootr probe: drop roll of gimmick 0x{:08X} for 0x{:08X} / 0x{:08X} (decrease {}){}: {} | {} item(s) "
+                  "[{}] | {} other(s) [{}]", s.gimmick, s.actor, s.target, decrease, t_drop ? "" : " (not in the Drop "
+                  "worker)", r ? "rolled" : "nothing (no roll left)", na, a, nb, b);
+    }
+    return r;
+}
+
+uint32_t* __fastcall drop_detour(uintptr_t comp, uint32_t* err, uintptr_t field, uintptr_t actor, uintptr_t target,
+                                 uintptr_t targets, uintptr_t params, int a8, uint32_t a9, uintptr_t a10,
+                                 uint8_t a11) noexcept {
+    DropSeen s;
+    read_drop(s, comp, actor, target, params);
+    DropSeen* const outer = t_drop;
+    t_drop = &s;
+    uint32_t* const r = g_drop.call<uint32_t*>(comp, err, field, actor, target, targets, params, a8, a9, a10, a11);
+    t_drop = outer;
+    uint32_t e = 0xFFFFFFFF;
+    if (err) game::fast_read(reinterpret_cast<uintptr_t>(err), &e, 4);
+    static std::atomic<int> said{0};
+    if (said.fetch_add(1) < 60) {
+        char key[3 * 16 + 1] = {};
+        for (int i = 0; i < 16; ++i) std::snprintf(key + i * 3, 4, "%02X ", s.key16[i]);
+        log::info("Lootr probe: DROP event of gimmick 0x{:08X} (save key {}) actor 0x{:08X} target 0x{:08X} | params "
+                  "[0] {} [1] {} ({}) decrease {} | err {}", s.gimmick, key, s.actor, s.target, s.p0, s.p1,
+                  s.p1 == 0 ? "on the ground" : s.p1 == 1 ? "into the bag" : "?", s.dec, e);
+    }
+    g_watch_until = GetTickCount64() + 3000;
+    return r;
+}
+
+// ---- where are the chests (probe only; notes_find_chests.md, local). Walk A: the server actor manager's dense list
+// (sam = [[exe+0x71C0608]], u32 count +0x9C, array +0xB0, entry -> actor at +8); a gimmick has type byte
+// [[actor+0x88]+1] == 7, its component [[actor+0x68]+0x30] holds the info index (u16 +0x48), the save key (+0x30) and
+// the state data B (+0x40) whose handler lists tell a Drop event (vtable exe+0x5D7CC28). Walk B: the field's sync
+// scene objects ([field+0x80]: u32 count +0x64, array +0x78, entry: key16 +8, data +0x18 with u32 +0x10C rolls left).
+struct ChestFound {
+    uint32_t key = 0;
+    uint16_t idx = 0xFFFF;
+    uint32_t row_rolls = 0, left = 0xFFFFFFFF;
+    uint8_t mode = 0xFF;
+    float x = 0, y = 0, z = 0, dist = 0;
+    char name[56] = {};
+    uint8_t key16[16] = {};
+};
+constexpr int kChestMax = 48;
+struct ChestScan {
+    ChestFound f[kChestMax];
+    int n = 0;
+    uint32_t actors = 0, gimmicks = 0, droppers = 0, objects = 0;
+    float hx = 0, hy = 0, hz = 0;
+    int stage = 0;
+};
+bool actor_pos(uintptr_t base, uintptr_t actor, float& x, float& y, float& z) noexcept {
+    const uintptr_t comps = *reinterpret_cast<uintptr_t*>(actor + 0x68);
+    const uintptr_t ts = comps ? *reinterpret_cast<uintptr_t*>(comps + 0x1A0) : 0;
+    if (!ts) return false;
+    alignas(16) uint8_t buf[0x80] = {};
+    reinterpret_cast<void* (__fastcall*)(uintptr_t, void*)>(base + 0x5ACE70)(ts, buf);
+    const float* f = reinterpret_cast<const float*>(buf);
+    x = f[0] + 1000.0f * static_cast<float>(*reinterpret_cast<int16_t*>(buf + 0xC));
+    y = f[1];
+    z = f[2] + 1000.0f * static_cast<float>(*reinterpret_cast<int16_t*>(buf + 0xE));
+    return true;
+}
+// 0 = no Drop handler, 1 = has one (mode = its delivery byte).
+int drop_handler(uintptr_t base, uintptr_t b, uint8_t& mode) noexcept {
+    if (!b) return 0;
+    const uintptr_t vt = base + 0x5D7CC28;
+    auto list = [&](uintptr_t p, uint32_t cnt) {
+        if (!p || cnt > 64) return false;
+        for (uint32_t j = 0; j < cnt; ++j) {
+            const uintptr_t data = *reinterpret_cast<uintptr_t*>(p + 0x10ull * j + 8);
+            if (data && *reinterpret_cast<uintptr_t*>(data) == vt) {
+                mode = *reinterpret_cast<uint8_t*>(data + 0x90);
+                return true;
+            }
+        }
+        return false;
+    };
+    const uint32_t n = *reinterpret_cast<uint32_t*>(b + 0x14);
+    const uintptr_t arr = *reinterpret_cast<uintptr_t*>(b + 0x28);
+    for (uint32_t i = 0; arr && i < n && i < 256; ++i) {
+        const uintptr_t e = *reinterpret_cast<uintptr_t*>(arr + 8ull * i);
+        const uintptr_t st = e ? *reinterpret_cast<uintptr_t*>(e + 8) : 0;
+        if (!st) continue;
+        for (int k = 0; k < 3; ++k) {
+            if (list(*reinterpret_cast<uintptr_t*>(st + 0x20 + 0x10 * k), *reinterpret_cast<uint32_t*>(st + 0x28 + 0x10 * k)))
+                return 1;
+        }
+    }
+    const uintptr_t p = *reinterpret_cast<uintptr_t*>(b + 0x30);
+    const uint32_t m = *reinterpret_cast<uint32_t*>(b + 0x38);
+    for (uint32_t k = 0; p && k < m && k < 4096; ++k) {
+        const uintptr_t e = p + 0x28ull * k;
+        if (list(*reinterpret_cast<uintptr_t*>(e + 8), *reinterpret_cast<uint32_t*>(e + 0x10))) return 1;
+    }
+    return 0;
+}
+void chest_scan_read(ChestScan& s, uintptr_t base, uintptr_t host) noexcept {
+    __try {
+        if (!actor_pos(base, host, s.hx, s.hy, s.hz)) return;
+        s.stage = 1;
+        const uintptr_t slot = *reinterpret_cast<uintptr_t*>(base + 0x71C0608);
+        const uintptr_t sam = slot ? *reinterpret_cast<uintptr_t*>(slot) : 0;
+        if (!sam) return;
+        const uint32_t n = *reinterpret_cast<uint32_t*>(sam + 0x9C);
+        const uintptr_t arr = *reinterpret_cast<uintptr_t*>(sam + 0xB0);
+        if (!arr || n > 200000) return;
+        s.actors = n;
+        s.stage = 2;
+        for (uint32_t i = 0; i < n; ++i) {
+            const uintptr_t e = *reinterpret_cast<uintptr_t*>(arr + 8ull * i);
+            const uintptr_t actor = e ? *reinterpret_cast<uintptr_t*>(e + 8) : 0;
+            if (!actor) continue;
+            const uintptr_t kind = *reinterpret_cast<uintptr_t*>(actor + 0x88);
+            if (!kind || *reinterpret_cast<uint8_t*>(kind + 1) != 7) continue;
+            ++s.gimmicks;
+            const uintptr_t comps = *reinterpret_cast<uintptr_t*>(actor + 0x68);
+            const uintptr_t comp = comps ? *reinterpret_cast<uintptr_t*>(comps + 0x30) : 0;
+            if (!comp) continue;
+            ChestFound f;
+            if (!drop_handler(base, *reinterpret_cast<uintptr_t*>(comp + 0x40), f.mode)) continue;
+            ++s.droppers;
+            if (!actor_pos(base, actor, f.x, f.y, f.z)) continue;
+            const float dx = f.x - s.hx, dy = f.y - s.hy, dz = f.z - s.hz;
+            f.dist = dx * dx + dy * dy + dz * dz;
+            int at = s.n;
+            if (s.n == kChestMax) {  // keep the nearest
+                at = -1;
+                float worst = f.dist;
+                for (int k = 0; k < kChestMax; ++k) {
+                    if (s.f[k].dist > worst) {
+                        worst = s.f[k].dist;
+                        at = k;
+                    }
+                }
+                if (at < 0) continue;
+            } else {
+                ++s.n;
+            }
+            f.key = *reinterpret_cast<uint32_t*>(actor + 0x60);
+            f.idx = *reinterpret_cast<uint16_t*>(comp + 0x48);
+            std::memcpy(f.key16, reinterpret_cast<void*>(comp + 0x30), 16);
+            s.f[at] = f;
+        }
+        s.stage = 3;
+        // The rows (name, starting rolls): only for the kept ones (the call may load a row).
+        for (int k = 0; k < s.n; ++k) {
+            ChestFound& f = s.f[k];
+            const uintptr_t row =
+                reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t, uint32_t)>(base + 0x3DE240)(0, f.idx);
+            if (!row) continue;
+            f.row_rolls = *reinterpret_cast<uint32_t*>(row + 0x268);
+            const uintptr_t h = *reinterpret_cast<uintptr_t*>(row + 8);
+            const char* text = h ? *reinterpret_cast<const char**>(h) : nullptr;
+            for (size_t c = 0; text && c + 1 < sizeof f.name && text[c]; ++c) f.name[c] = text[c];
+        }
+        s.stage = 4;
+        // Walk B: the rolls left, by the save key.
+        const uintptr_t hc = *reinterpret_cast<uintptr_t*>(host + 0x68);
+        const uintptr_t ts = hc ? *reinterpret_cast<uintptr_t*>(hc + 0x1A0) : 0;
+        if (!ts || *reinterpret_cast<uint8_t*>(ts + 0x550) != 0) return;
+        const uintptr_t field = *reinterpret_cast<uintptr_t*>(ts + 0x518);
+        const uintptr_t ssom = field ? *reinterpret_cast<uintptr_t*>(field + 0x80) : 0;
+        if (!ssom) return;
+        const uint32_t m = *reinterpret_cast<uint32_t*>(ssom + 0x64);
+        const uintptr_t oarr = *reinterpret_cast<uintptr_t*>(ssom + 0x78);
+        if (!oarr || m > 2000000) return;
+        s.objects = m;
+        for (uint32_t o = 0; o < m; ++o) {
+            const uintptr_t e = *reinterpret_cast<uintptr_t*>(oarr + 8ull * o);
+            if (!e) continue;
+            for (int k = 0; k < s.n; ++k) {
+                if (std::memcmp(reinterpret_cast<void*>(e + 8), s.f[k].key16, 16) != 0) continue;
+                const uintptr_t d = *reinterpret_cast<uintptr_t*>(e + 0x18);
+                if (d) s.f[k].left = *reinterpret_cast<uint32_t*>(d + 0x10C);
+            }
+        }
+        s.stage = 5;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        s.stage = -s.stage - 1;
+    }
+}
+std::atomic<int> g_chest_scans{0};
+
 }  // namespace
+
+void lootr_chest_scan(uintptr_t host_actor) noexcept {
+    if (!g_probe || !host_actor) return;
+    static ChestScan s;  // the server thread only
+    s = ChestScan{};
+    chest_scan_read(s, reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)), host_actor);
+    std::sort(s.f, s.f + s.n, [](const ChestFound& a, const ChestFound& b) { return a.dist < b.dist; });
+    log::info("Lootr probe: chest scan {} (stage {}): host at ({:.0f}, {:.0f}, {:.0f}) | {} server actors, {} gimmicks, "
+              "{} with a Drop event, {} scene objects | the nearest {}:", g_chest_scans.fetch_add(1) + 1, s.stage, s.hx,
+              s.hy, s.hz, s.actors, s.gimmicks, s.droppers, s.objects, s.n);
+    for (int k = 0; k < s.n; ++k) {
+        const ChestFound& f = s.f[k];
+        log::info("Lootr probe:   0x{:08X} '{}' (row {}) at ({:.1f}, {:.1f}, {:.1f}) {:.0f} m | rolls: row {} left {} | "
+                  "{}", f.key, f.name, f.idx, f.x, f.y, f.z, std::sqrt(f.dist), f.row_rolls,
+                  f.left == 0xFFFFFFFF ? std::string("?") : std::to_string(f.left),
+                  f.mode == 0 ? "on the ground" : f.mode == 1 ? "into the bag" : "mode ?");
+    }
+}
 
 std::string lootr_describe();
 
@@ -469,6 +736,25 @@ void lootr_start(bool on, bool probe, bool guest, bool bodies) {
                   !g_bodies_on ? " (log only)"
                   : g_keep_body_hook ? ": enemy loot is per player (the second looter gets its own roll)"
                                      : ": per player, but the keep-the-body hook is NOT in");
+    }
+    if (g_probe) {
+        static const uint8_t kDrop[15] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74, 0x24, 0x10, 0x48, 0x89, 0x7C,
+                                          0x24, 0x18};
+        static const uint8_t kRoll[15] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x18, 0x48, 0x89, 0x7C,
+                                          0x24, 0x20};
+        uint8_t got[15] = {};
+        if (game::safe_read(base + 0x2D4EC10, got, sizeof got) && std::memcmp(got, kDrop, sizeof got) == 0) {
+            if (auto h = safetyhook::InlineHook::create(reinterpret_cast<void*>(base + 0x2D4EC10), drop_detour)) {
+                g_drop = std::move(*h);
+            }
+        }
+        if (game::safe_read(base + 0x2D4DE40, got, sizeof got) && std::memcmp(got, kRoll, sizeof got) == 0) {
+            if (auto h = safetyhook::InlineHook::create(reinterpret_cast<void*>(base + 0x2D4DE40), drop_roll_detour)) {
+                g_drop_roll = std::move(*h);
+            }
+        }
+        log::info("Lootr probe: the gimmick Drop worker {}, its roll {} (chests: log only)",
+                  g_drop ? "hooked" : "NOT hooked", g_drop_roll ? "hooked" : "NOT hooked");
     }
     log::info("Lootr {} (lootr={}, lootr_probe={}): {}", g_on ? "ON" : "probe only", on ? 1 : 0, probe ? 1 : 0,
               !g_pickup ? "the pickup worker NOT hooked"
@@ -537,6 +823,19 @@ void lootr_tick(std::vector<std::vector<uint8_t>>& to_server) noexcept {
     if (!g_on) return;
     try {
         const uint64_t now = GetTickCount64();
+        static uint64_t next_scan = 0;
+        if (g_probe && g_chest_scans.load() < 8 && now >= next_scan) {  // the host's own request: the server thread
+            const bool first = next_scan == 0;
+            next_scan = now + (first ? 45000 : 60000);
+            if (!first) {
+                std::vector<uint8_t> pl(30, 0);
+                const uint32_t entry = 0xC0DE0006;
+                std::memcpy(&pl[14], &kHostCharacter, 4);
+                std::memcpy(&pl[18], &kHostCharacter, 4);
+                std::memcpy(&pl[26], &entry, 4);
+                net::sniffer_inject_c2s(lrl::make(3111, pl, 0x00));
+            }
+        }
         std::lock_guard lk(g_mu);
         for (DevBody& b : g_dev_bodies) {  // [dev] LootingDropFromDeadBodyReq 2491: u32 body | u8 remove | u8 send list
             uint8_t pl[6] = {0, 0, 0, 0, 0, 1};
