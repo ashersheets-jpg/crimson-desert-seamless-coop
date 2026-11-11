@@ -24,6 +24,11 @@ test save Out, shipped cdmp.ini restored.
   Reports with it are welcome in #play-testing-feedback."
 - Checked 2026-11-11 15:00: no tester has written since D3vils at 08:46 (JackyChan retests "tomorrow"); nothing new
   in #bug-reports or #play-testing-feedback.
+- DISK, your OK needed (2026-11-11 16:00): the game folder (bin64) holds about 45 GB of packet captures from MY test
+  runs of 7 to 9 November: 1652 files named cdmp_packets.host_<date>.log / .bin and cdmp_packets.guest_<date>.log /
+  .bin (only test copies have a role in the name; your own play writes cdmp_packets_<date> without a role, and
+  those 16 files are a few KB each). They are of no use any more. Say "delete the test captures" and I remove
+  exactly those role-named files, nothing else.
 - Playtest results from the testers (the two-PC test).
 - Release / Discord posts / sending a build: each needs the user's OK first.
 - Controller feel checks (hands on a pad).
@@ -5371,3 +5376,23 @@ Run pp1 on package 0.1.0-alpha+0cd46dd8 (layer HEAD 0cd46dd, native 560e3dc; one
 - New checklist step "farfight" (tools/prepost.sh, docs/tests/RELEASE-CHECKLIST.md) runs this scene and checks the
   hook, the counted hits, a kill by the guest and the guest's health.
 - B18 / B02: the far-guest fight question of tcB413-415 is closed by this.
+
+### 2026-11-11 15:50-16:05: two side effects found by reading my own new code and the logs (fixed in source)
+
+- (1) The mod's own once-a-second request to its server-thread entry (trade 3111 with entry 0xC0DE0008, needed by
+  the damage range fix; entry 7 for chest shares before) wrote TWO log lines per second into the host's cdmp.log
+  ("Inject C>S: opcode 3111 ... posted", "TradeProbe [handler] 3111 reached the server's handler"): ff7 had 654 such
+  lines in 9 minutes. Now the first 10 / 16 are logged, then every 1000th (failures always). Native, local.
+- (2) PACKET RECORDING IN SOLO. The base's sniffer default is [sniffer] record=1: every packet goes to
+  bin64\cdmp_packets_<date>.log / .bin, no size limit (the base's own note: 310 MB in 16 minutes). The co-op ini the
+  layer writes has had record=0 since 2026-11-09, but the SOLO ini (also the cdmp.ini shipped in every package)
+  had no [sniffer] section. So a player with the mod installed who sits at the title or plays solo records
+  everything. Seen in the real-install log of pp2: "Sniffer v2 ... writing cdmp_packets_<date-time>.log/.bin",
+  "recording through a disk queue". This is in every posted shared-world build, including 3c46bec5. It may be part
+  of the low frame rate a tester reported; not measured.
+  Fixed three ways: the solo ini text gets "[sniffer] record=0" (layer, net/native_mode_text.h, unit test), the
+  package script writes the same into the shipped cdmp.ini, and the base's own default is now record=0 (native,
+  local). The harness's own test inis still say record=1 for the minute before the lobby restart; to be set to 0.
+- How found: not by a test. I measured which log lines a normal session writes most, then looked at the size of
+  the logs in the game folder. Neither is in the checklist yet: a "disk and log growth" check is added next (size
+  of everything the session wrote into bin64, lines per minute).
