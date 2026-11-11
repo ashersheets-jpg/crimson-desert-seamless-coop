@@ -4430,3 +4430,20 @@ arriving at Hernand.
   visible for them); when they take it, their interaction is answered by us, the same item is added to their bag
   and the held-back packets are replayed to them. The item: the picker's bag diff around the pickup (probe built,
   tcB325). Ground items with comp+0xC0 set and chests / bodies later.
+
+### tcB325-tcB326 (2026-11-10 19:10-19:22) and Lootr phase 1 (built)
+
+- tcB325: the pickup worker returns BEFORE the item is added (the bag compared at its exit: no change); the guest's
+  load stalled again. tcB326: compared when the host's 3110 arrives: "the pickup added item idx 0x50D x2 (slot 60)";
+  the item row's +8 is the item KEY (0x0B8D0E: no key search needed); the 3110 payload: u8 4 | u32 picker | u8 3 |
+  u16 0x1C | u8 1 | u8 1 | u16 0 | u32 0x0F4245 | u32 0 | u32 item key | u16 | i64 count (2) | ... | slot 0x3C.
+- Lootr phase 1, host side (native session2/lootr + lootr_logic.h, [session2] lootr=1, off by default until tested):
+  the HOST's real pickup runs; its gimmick goes on a list with the save key and the host's bag before it; the item and
+  count come from the bag compared 150 ms later (tick). What the server then queues for the guest about that gimmick
+  (2214, 2760 with the save key, 2096, 3067 -- a 3067 listing others loses just that key) is held back
+  (server.cpp, before the queue). When the guest takes it: its 3008 / 3073 are answered here like the server (2120 /
+  2794 = u32 actor | the request), 1.7 s later (the gather time seen) its copy is added on the server thread (a 3111
+  with entry 0xC0DE0005 handed as its own request; trade_probe adds the item with the add worker 0x2DD8FC0, whose
+  own 3110 goes to the guest) and the held packets are replayed (the plant goes for the guest too). Entries the guest
+  never takes are forgotten after 30 min. Not yet: the guest taking first, chests / bodies, keeping the list across
+  sessions. Test tcB327: both teleported to the peony spot; the host takes it (E), then the guest (E).
