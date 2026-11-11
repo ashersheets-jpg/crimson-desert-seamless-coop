@@ -4853,3 +4853,16 @@ arriving at Hernand.
   two PCs (docs/release/shared-world-playtest/general-2f4b0dd4.txt).
 - Not in this build: the enemy-loot share (native, local commit) and the downed player's input hold (layer; the Q
   revive while downed is still unverified, tcB385).
+
+### tcB386 (2026-11-11 05:56): going down in the shared world: the death screen and the revive choices are back
+
+- Cause of tcB385's dead Q: in the shared world our revive prompt was never offered at all. Its test "a copy of the
+  friend was spawned once" never passes there (no copy is spawned on the native base), so a downed player whose
+  friend did not revive them within the 30 s had no way up (and, before the input hold, walked around at 0 HP).
+  This is also the state of the posted build 2f4b0dd4 and the ones before it.
+- Fix (layer): in the shared world the kept death notice is the sign that the game's own screen will not come; our
+  screen is offered then ("Death has found you / Return to your path? / [Q] Instant Revive (30% Health) / [U] Revive
+  at Checkpoint", shot h1).
+- tcB386: down at 06:01:32 -> "Input: the game's own input held (we are down)"; a 2.5 s hold of W: no movement
+  (0.2 m); Q -> "Revive: instant revive asked" -> "we are alive again" -> "input back (up again)", HP 77 / 300; W
+  then walked 7 m. Down a second time later: held again. Unit tests pass. NOT in a posted build yet.

@@ -293,8 +293,12 @@ RevivePrompt revive_prompt_tick(bool connected, float hp, float hp_max, std::opt
     // Only where the game's screen is known to stay away, and never over it or another menu.
     // Co-op+ (2026-11-05): once a copy has been loaded the game's own screen never comes again, connected or not (a
     // death after the friend left had no screen at all), so the prompt is for that whole session.
+    // Shared world (2026-11-11, tcB385): no copy is ever spawned there, so this test never passed and a downed player
+    // whose friend did not revive them in time had no way up at all. There the kept death notice is the sign that the
+    // game's own screen will not come.
     (void)connected;
-    if (!puppet_ever_spawned() || game::ui_menu_open()) return RevivePrompt::None;
+    const bool no_game_screen = puppet_ever_spawned() || (kNativeLayer && revive_death_withheld());
+    if (!no_game_screen || game::ui_menu_open()) return RevivePrompt::None;
     if (now_ms - g_dead_since < kWaitForGameMs) return RevivePrompt::None;
     const uint32_t own = capture_own_player_key();
     if (!own) return RevivePrompt::None;
