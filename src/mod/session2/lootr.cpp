@@ -252,7 +252,7 @@ void lootr_tick(std::vector<std::vector<uint8_t>>& to_server) noexcept {
                 std::memcpy(&pl[22], &none, 2);
                 std::memcpy(&pl[24], &none, 2);
                 std::memcpy(&pl[26], &kLootrGiveEntry, 4);
-                to_server.push_back(lrl::make(3111, pl));
+                to_server.push_back(lrl::make(3111, pl, 0x00));  // a client Req
                 for (const auto& h : t.held) server_push_extra(h);
                 c_given.fetch_add(1);
                 log::info("Lootr: the guest took gimmick 0x{:08X} too: item key {} x{} for 0x{:08X}, {} packet(s) "

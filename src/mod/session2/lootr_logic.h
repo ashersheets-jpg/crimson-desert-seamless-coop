@@ -31,11 +31,12 @@ inline uint32_t rd32(const uint8_t* p) {
     return v;
 }
 inline uint16_t opcode_of(std::span<const uint8_t> pk) { return pk.size() >= 2 ? static_cast<uint16_t>(pk[0] | (pk[1] << 8)) : 0; }
-inline std::vector<uint8_t> make(uint16_t op, std::span<const uint8_t> payload) {
+// slot: 0xFF on the server's Acks, 0x00 on a client's Req (tcB328: a Req made with 0xFF never reached the worker).
+inline std::vector<uint8_t> make(uint16_t op, std::span<const uint8_t> payload, uint8_t slot = 0xFF) {
     std::vector<uint8_t> p(kHeader + payload.size());
     p[0] = static_cast<uint8_t>(op);
     p[1] = static_cast<uint8_t>(op >> 8);
-    p[2] = 0xFF;
+    p[2] = slot;
     p[3] = static_cast<uint8_t>(payload.size());
     p[4] = static_cast<uint8_t>(payload.size() >> 8);
     if (!payload.empty()) std::memcpy(p.data() + kHeader, payload.data(), payload.size());

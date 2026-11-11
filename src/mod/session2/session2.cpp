@@ -1646,7 +1646,10 @@ void tunnel_tick(troc::TrocLink& link, uint32_t now_ms) {
     {  // Co-op+ Lootr: the guest's copy of an item the host took, added on the server thread as its own request.
         std::vector<std::vector<uint8_t>> reqs;
         lootr_tick(reqs);
-        for (auto& r : reqs) g_early.push_back(std::move(r));
+        // Offered now, as a guest Req (held in order behind others only when the server cannot take it yet).
+        for (auto& r : reqs) {
+            if (!g_early.empty() || !offer(r)) g_early.push_back(std::move(r));
+        }
     }
     owner_fanout_tick();        // P8 B step 2: trip lines, the 60 s summary (nothing when off)
     world_anchor_tick();        // user2_world_anchor: the 60 s summary (nothing when off)
