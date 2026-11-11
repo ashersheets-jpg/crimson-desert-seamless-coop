@@ -1,3 +1,7 @@
 # Windows scripts and launchers keep CRLF everywhere.
 *.cmd text eol=crlf
 *.ps1 text eol=crlf
+
+# Bash scripts and the lists they read line by line stay LF (CRLF breaks them).
+tools/prepost.sh text eol=lf
+docs/tests/native-unit-baseline.txt text eol=lf
