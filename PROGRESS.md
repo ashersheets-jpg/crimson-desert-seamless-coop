@@ -4562,3 +4562,10 @@ arriving at Hernand.
   (KillCheatReq 2210 on the targets of its own DoFrameEventReq, sniffer tap). tcB344: the camp with it, then E holds.
 - To do on the crash: a guard for the empty handle in exe+0x36E5FC0 (mid hook after the virtual +0x460 call: when
   the handle is empty, leave the function as its own early-outs do).
+- tcB344 (the camp, lootr_kill_hits=1): "the host's hit on 0xB0100820 kills it" x7, no crash, but the host is knocked
+  around by the other bandits and blind E presses found no body prompt: no loot call. So the dev path now also loots
+  without the UI: 3 s after each kill the host's client sends LootingDropFromDeadBodyReq 2491 (u32 body | u8 0 | u8 1)
+  for it, 6 s after the guest's does (handed to the server as user 2's request). tcB345 records the worker for both.
+- Built with it: HandleGuard (native session2/handle_guard, both roles): a mid hook after the virtual +0x460 call in
+  exe+0x36E5FC0 (bytes checked); an empty handle leaves through the function's own early-out exe+0x36E619A. For the
+  tcB342 guest crash. Counted ("HandleGuard: calls N | empty handles skipped M").
