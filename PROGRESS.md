@@ -8,8 +8,9 @@ test save Out, shipped cdmp.ini restored.
 - Playtest results from the testers (the two-PC test).
 - Release / Discord posts / sending a build: each needs the user's OK first.
 - Controller feel checks (hands on a pad).
-- POST the fixed build 0.1.0-alpha+ed838ebd (packaged 2026-11-11 00:05, install checks pass; text in
-  docs/release/shared-world-playtest/download-ed838ebd.txt): it closes the drop duplication of 24661515. Needs the OK.
+- POST the fixed build 0.1.0-alpha+6d9eecdc (packaged 2026-11-11 01:35, install checks pass; text in
+  docs/release/shared-world-playtest/download-6d9eecdc.txt): it closes the drop duplication of 24661515, lets the
+  guest hit enemies from the first blow and stops the guest's "crimes" in the host's fights. Needs the OK.
 - Per-player enemy loot ([session2] lootr_bodies=1 in the host's cdmp.ini): works in server-side tests; needs two
   players to check on screen (one loots a body, then the other) before it is turned on for everyone.
 - Guest-side checks (the guest seeing a gift arrive, guest -> host give, the stash with an unlocked warehouse, Lootr
@@ -4714,3 +4715,15 @@ arriving at Hernand.
   host has fought is free too. What an NPC's own AI reports is untouched, so real crimes (townsfolk) still count.
 - Seen on the way: a downed host (HP 0, "Guest can revive you") still STANDS on both screens; the revive works, the
   pose does not show it. Polish item (B17).
+
+### tcB359 (2026-11-11 01:19): the guest's "crimes" are gone; the chest scan works
+
+- Crime rule "judged as the host would be": 20 guest hits / kills reached the crime function, 18 skipped because
+  the game's own test says the host would not be punished, 2 because the host had fought that NPC; 0 registered.
+  No "Crime" notice and no wanted mark on the guest's screen (g1, g3; tcB358 g3 still had the mark). The host's own
+  3 calls (type 1, another path) are left to the game. No crash, SAVES OK. Native committed (local).
+- Chest scan (lootr_probe, once a minute, on the server thread): lists the gimmicks with a Drop event around the
+  host with name, position, rolls left and mode. Around the dock: plants (peony_01, weed_sophora_01, Fennel_01),
+  shop baskets and boxes, a breakable sack (all "on the ground"), and lentils_01, pumpkin_01, item_basic_equip
+  ("into the bag"). No treasure box near the dock. Next: scan the whole field's scene objects by name to find one.
+- Package rebuilt with both fixes: 0.1.0-alpha+6d9eecdc, install checks all pass. Not posted (needs the OK).
