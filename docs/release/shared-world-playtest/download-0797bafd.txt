@@ -1,0 +1,12 @@
+**Update: shared world playtest 0.1.0-alpha+0797bafd (fixes the stuck text in the middle of the screen and the vanishing Co-op menu)**
+Please use this build instead of every earlier one. You and your co-op partner both need it. It keeps everything from 21f0f6d0.
+
+Fixed (sorry: these two made the last builds hard or impossible to test):
+- **A box stuck in the middle of the screen** ("NEW: co-op saves + live quests ... TURN IT ON / Not now", thanks Borque): on every first install it could not be answered, because its two buttons were shortcut keys the shared world no longer has. It is gone. In its place you get a short "Seamless Co-op+" card once, which says where the controls are.
+- **The Co-op menu not showing at the title screen**: our title menu reacted to the very first key press or click, so the key you press to skip the intro could close it at once, and nothing brought it back. Now it ignores input for its first moment, and if you close it, the title shows "Seamless Co-op: F8 opens the co-op menu" (View on a controller) in the top left corner.
+- **Diagnose Co-op+.cmd** now also collects the Co-op+ log (the one that records our menus and overlay). The reports so far lacked it.
+
+- `CrimsonDesert-SeamlessCoop-0.1.0-alpha+0797bafd-shared-world.zip`: this is the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+If the title screen still shows nothing from us after this (no menu and no "Seamless Co-op" line in the top left), please run the new Diagnose and post the zip in #bug-reports: then it is something else and that log will show it.

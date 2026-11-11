@@ -4992,3 +4992,23 @@ arriving at Hernand.
   Start Solo, F8 opened it again.
 - LESSON for the harness: test with -Fresh (no onboarded / experimental_asked marks) before every package, and run
   build/native/realtitle.sh on the package itself.
+
+### 2026-11-11 08:09: build 0.1.0-alpha+0797bafd POSTED; a tester's report read
+
+- D3vils (#play-testing-feedback 07:54, build 21f0f6d0): a screenshot of his title screen (2560x1440, the DLC's
+  "CRIMSON DESERT: CHARTING THE UNKNOWN" title; nothing of ours on it, neither the menu nor the stuck card) and a
+  Diagnose report. The report: the native base loaded in Solo and "the Co-op+ layer (coopplus.asi) gets the client's
+  packets", so both files run. It could say no more: Diagnose collected cdmp.log only, NOT the layer's coopplus.log /
+  coopplus.ini, where the lobby and the overlay are logged. He adds: "the dlc has a different main menu and music".
+- Fix (kit/coopplus/diagnose.ps1): coopplus.asi / coopplus.ini in the file list, coopplus.ini's settings and the last
+  300 lines of coopplus.log in the report, the whole coopplus.log in the zip (redacted like the rest; the redaction
+  test passes; a run against the real folder gives a zip with cdmp.log, coopplus.log, report.txt).
+- tcB404: the 6af2380b package as a REAL install: the title menu shows, "REAL SAVES UNCHANGED", install restored.
+  0797bafd = the same game files (coopplus.asi hash equal) + the Diagnose fix; install checks all pass.
+- POSTED under the user's 12-hour authorization: #download-here 08:09 (0797bafd, both zips, attachments checked;
+  docs/release/shared-world-playtest/download-0797bafd.txt); #play-testing-feedback 08:10 (to D3vils: what his
+  report showed, what the new build changes, run the new Diagnose if nothing shows, and his upscaler / frame
+  generation settings); #general 08:10 (to Borque: the box he meant and that it is gone).
+- OPEN: whether D3vils' PC draws our overlay at all (nothing of ours on his title, not even the card every fresh
+  install had). If the new build shows neither the menu nor the top-left line there, his coopplus.log decides
+  (overlay hook lines: "Overlay: hooked Present ..." / "presents N drawn N").
