@@ -4468,3 +4468,8 @@ arriving at Hernand.
   (shot g0: "Peony [E] Take") and took it: "the guest took gimmick 0xB010014D too ... 3 packet(s) replayed". But the
   guest's copy was never added: the add request was built with slot byte 0xFF (an Ack's), a client Req has 0x00;
   fixed (and offered at once). Test tcB329.
+- tcB329: LOOTR WORKS (phase 1, host first): "pickup by 0xA0100001 ... gimmick 0xB0100161 ... kept for the guest",
+  "gave the host item 0x50D (key 757006) x1 ... 3 packet(s) held", "the guest took gimmick 0xB0100161 too ...
+  replayed", "the guest's copy: item key 757006 x1 to 0xA0100066: added (err 0 none)". The guest's load completed
+  (STABLE) for the second run in a row with the guard fix. Next: phase 2 (the guest takes first, the host keeps its
+  copy: needs the host client's inbound packets held), then chests / bodies and keeping the list across sessions.
