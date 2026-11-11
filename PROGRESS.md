@@ -5274,3 +5274,29 @@ Run pp1 on package 0.1.0-alpha+0cd46dd8 (layer HEAD 0cd46dd, native 560e3dc; one
 - Rule changed (native, local): hand an NPC over when its controller's character is more than 60 m from it and
   another player's is within 30 m, twice in a row; back by the same rule. ff5 runs it with ai_handoff=1: do the
   bandits then turn on the guest.
+
+### ff5 (2026-11-11 14:43, ai_handoff=1): the hand-over WORKS mechanically; the guest still takes no damage
+
+- Rule in this run: controller's character more than 60 m from the NPC, another player within 30 m, two checks in a
+  row. Switches: build/native/ff5.args.
+- Host log: 41 hand-overs ("AiHandoff: NPC 0xB01000D7 (type 3) ...: controller 0x90100000 -> 0x90100065"), 0
+  failed; first the animals around the guest's spawn when the host went to the dock (types 6), then the bandits when
+  the host left for the shrine (14:49:24, 12 in one second). Guest log: "AiHandoff: this client now runs NPC ..."
+  40 times. Both games alive to the end, SAVES OK, no new error lines.
+- After it the bandits MOVE around the guest (every 9 s sample a new position, 2-10 m from it; before, in ff3 /
+  ff4, they stood on one spot for 100 s) and the guest's client reports their blows on it: tally "blows from the
+  guest's client: NPC>guest 42, NPC>NPC 9" (ff3 without the hand-over: 18 in all).
+- BUT the guest's HP is 300 / 300 in every sample. Also the 6 blows on the guest that the HOST's client reported
+  while both stood at the dock took nothing off. In tcB414 the guest did lose HP, but only after it had attacked
+  those bandits itself. And the crime gate says the same thing from the other side: these bandits are not the
+  guest's enemies (its hits on them were crimes until today's AntiGrief rule).
+- Reading: hostility is decided per player. The host's quest enemies are neutral to the guest until provoked, so
+  their blows on it are refused, and under the host's control they do not even pick it as a target. This, not AI
+  ownership, is the real gap for "the guest fights the host's enemies". Research started (local notes
+  build/decomp/notes_hostility.md): where the server refuses the damage and how to count the guest as the host's
+  ally for NPC relations (never for player-versus-player, duels must keep working).
+- ai_handoff stays OFF by default (experimental): it is not needed at 100 m (ff4) and does not fix the damage. It is
+  kept for real orphans (controller's client without the actor, beyond ~130-190 m), which are untested.
+- Corrections to earlier lines of today: ff2-ff3's heading says the host's enemies "stand FROZEN ... nothing hands
+  them over ... the host's client stops driving NPCs ~100 m from its character": the observation (they stand, no
+  damage to the guest) holds, the explanation does not (see ff4 and this entry).
