@@ -1235,7 +1235,7 @@ DWORD WINAPI worker(LPVOID) {
             session2::shop_twin_share_all(cfg.s2_dialog_share_all);
             session2::stage_candidate_guard_start(cfg.s2_stage_candidate_guard);
             session2::anti_grief_start(cfg.s2_anti_grief, cfg.s2_guest);
-            session2::lootr_start(cfg.s2_lootr, cfg.s2_lootr_probe, cfg.s2_guest);
+            session2::lootr_start(cfg.s2_lootr, cfg.s2_lootr_probe, cfg.s2_guest, cfg.s2_lootr_bodies);
             session2::lootr_set_kill_hits(cfg.s2_lootr_kill_hits && !cfg.s2_guest);
             session2::handle_guard_start();  // both roles (tcB342)
             session2::fog_share_start(cfg.s2_fog_share, cfg.s2_guest);

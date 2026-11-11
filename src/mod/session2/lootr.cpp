@@ -223,15 +223,184 @@ void read_body(BodySeen& s, uintptr_t comp, uintptr_t looter) noexcept {
     } __except (EXCEPTION_EXECUTE_HANDLER) {
     }
 }
+// ---- bodies, per player ("re-arm the roll", notes_lootr_bodies_chests.md A.4; live facts tcB347: the pool is already
+// rolled when the first player loots, the first take empties its lootable entries and the second player gets nothing).
+// After the FIRST player's take the rolled flag comp+0x6C goes back to 0, so the second player's take rolls again
+// (the game's own roll, for that player) and takes; the entries that second roll added for the other kinds are then
+// removed again (swap-remove exe+0x230FDA0 keeps the old entries below the old count) and the list is sent again
+// (exe+0x2E25FC0). Meanwhile the leftover list 2414 of the first take is kept from the other player, so the body
+// still shows its loot for them. A player who looted a body is refused a second time.
+bool g_bodies_on = false;
+struct BodyEntry {
+    uint32_t body = 0;
+    uintptr_t comp = 0;
+    uint32_t first = 0;  // the first looter's character key
+    bool both = false;
+    uint64_t at = 0;
+};
+std::vector<BodyEntry> g_bodies;  // guarded by g_mu
+// Bodies whose 2414 the HOST's client must not take yet (the guest looted first): read on the game's thread.
+std::atomic<uint32_t> g_body_keep_host[32];
+std::atomic<uint32_t> g_body_keep_next{0};
+std::atomic<uint64_t> c_body_first{0}, c_body_second{0}, c_body_refused{0}, c_body_2414{0};
+thread_local bool t_keep_body = false;
+safetyhook::MidHook g_keep_body_hook;
+alignas(16) uint8_t g_zero_row[0x40] = {};
+void on_keep_body(safetyhook::Context& ctx) {  // exe+0x2E22885: rax = the character row, dil = a
+    if (!t_keep_body) return;
+    ctx.rax = reinterpret_cast<uintptr_t>(g_zero_row);  // row+0x1A reads 0: the game's own "not removed" branch
+    ctx.rdi &= ~static_cast<uintptr_t>(0xFF);
+}
+void body_keep_host(uint32_t body, bool on) noexcept {
+    if (on) {
+        g_body_keep_host[g_body_keep_next.fetch_add(1) % 32].store(body);
+    } else {
+        for (auto& k : g_body_keep_host) {
+            if (k.load() == body) k.store(0);
+        }
+    }
+}
+// The duplicates a second roll appended (index >= n), from the last one down; the sub list count back to s; the
+// list sent again. False on an exception.
+bool body_trim(uintptr_t comp, uint32_t n, uint32_t s, uint32_t* removed) noexcept {
+    const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    __try {
+        uint32_t count = *reinterpret_cast<uint32_t*>(comp + 0x60);
+        while (count > n && count < 4096) {
+            reinterpret_cast<void (__fastcall*)(uintptr_t, uint32_t)>(base + 0x230FDA0)(comp + 0x58, count - 1);
+            const uint32_t now = *reinterpret_cast<uint32_t*>(comp + 0x60);
+            if (now >= count) break;  // nothing went: stop
+            count = now;
+            ++*removed;
+        }
+        if (*reinterpret_cast<uint32_t*>(comp + 0x50) > s) *reinterpret_cast<uint32_t*>(comp + 0x50) = s;
+        reinterpret_cast<void (__fastcall*)(uintptr_t)>(base + 0x2E25FC0)(comp);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+bool write_rolled(uintptr_t comp, uint8_t v) noexcept {
+    __try {
+        *reinterpret_cast<volatile uint8_t*>(comp + 0x6C) = v;
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+int64_t bag_total(uintptr_t actor) noexcept {
+    static BagSnap b;  // the server thread only
+    if (!snap_bag(actor, b)) return -1;
+    int64_t t = 0;
+    for (int i = 0; i < b.slots; ++i) {
+        if (b.idx[i] != 0xFFFF && b.n[i] > 0) t += b.n[i];
+    }
+    return t;
+}
+
+int* body_loot_per_player(uintptr_t comp, int* err, uintptr_t looter, uint8_t a, uint8_t b, bool* handled) noexcept {
+    *handled = false;
+    BodySeen s;
+    read_body(s, comp, looter);
+    const uint32_t guest = server_user2_player_key();
+    if (!g_bodies_on || !err || !s.body || !guest || (s.looter != kHostCharacter && s.looter != guest)) return nullptr;
+    const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    int role = 0;  // 1 first looter, 2 second, 3 a repeat
+    try {
+        std::lock_guard lk(g_mu);
+        const uint64_t now = GetTickCount64();
+        std::erase_if(g_bodies, [&](const BodyEntry& e) { return now - e.at > kKeepMs; });
+        BodyEntry* found = nullptr;
+        for (BodyEntry& e : g_bodies) {
+            if (e.body == s.body && e.comp == comp) found = &e;
+        }
+        if (!found) {
+            role = 1;
+        } else if (found->both || found->first == s.looter) {
+            role = 3;
+        } else {
+            role = 2;
+        }
+    } catch (...) {
+        return nullptr;
+    }
+    *handled = true;
+    if (role == 3) {
+        int none = 0;
+        game::fast_read(base + 0x714BFA0, &none, sizeof none);  // "nothing to loot"
+        *err = none ? none : 1;
+        c_body_refused.fetch_add(1);
+        return err;
+    }
+    const int64_t bag_before = bag_total(looter);
+    if (role == 1) {
+        // The other player keeps seeing the loot: its copy of the leftover list is kept back from now on.
+        try {
+            std::lock_guard lk(g_mu);
+            if (g_bodies.size() < 256) g_bodies.push_back({s.body, comp, s.looter, false, GetTickCount64()});
+        } catch (...) {
+        }
+        if (s.looter != kHostCharacter) body_keep_host(s.body, true);
+        t_keep_body = true;
+        int* r = g_body_loot.call<int*>(comp, err, looter, a, b);
+        t_keep_body = false;
+        BodySeen after;
+        read_body(after, comp, 0);
+        const bool took = *err == 0 && after.body == s.body && after.pool < s.pool;
+        if (took) {
+            write_rolled(comp, 0);  // the re-arm
+            c_body_first.fetch_add(1);
+        } else {  // nothing taken (or the body went): no entry, the next loot is a first one again
+            try {
+                std::lock_guard lk(g_mu);
+                std::erase_if(g_bodies, [&](const BodyEntry& e) { return e.body == s.body && e.comp == comp; });
+            } catch (...) {
+            }
+            body_keep_host(s.body, false);
+        }
+        static std::atomic<int> said{0};
+        if (said.fetch_add(1) < 30)
+            log::info("Lootr: body 0x{:08X} looted first by 0x{:08X}: pool {} -> {}, bag {:+d}, err {}{}", s.body, s.looter,
+                      s.pool, after.pool, static_cast<int>(bag_total(looter) - bag_before), *err,
+                      took ? " | kept for the other player (re-armed)" : " | nothing taken, not kept");
+        return r;
+    }
+    // role 2: the game's own second roll and take, then the duplicates of the other kinds go again.
+    int* r = g_body_loot.call<int*>(comp, err, looter, a, b);
+    BodySeen after;
+    read_body(after, comp, 0);
+    uint32_t removed = 0;
+    bool trimmed = false;
+    if (*err == 0 && after.body == s.body) trimmed = body_trim(comp, s.pool, s.sub, &removed);
+    try {
+        std::lock_guard lk(g_mu);
+        for (BodyEntry& e : g_bodies) {
+            if (e.body == s.body && e.comp == comp) e.both = true;
+        }
+    } catch (...) {
+    }
+    body_keep_host(s.body, false);
+    c_body_second.fetch_add(1);
+    static std::atomic<int> said2{0};
+    if (said2.fetch_add(1) < 30)
+        log::info("Lootr: body 0x{:08X} looted second by 0x{:08X}: rolled {} -> {}, pool {} -> {} (after the take), bag "
+                  "{:+d}, err {} | {} duplicate(s) removed{}", s.body, s.looter, s.rolled, after.rolled, s.pool,
+                  after.pool, static_cast<int>(bag_total(looter) - bag_before), *err, removed,
+                  trimmed ? "" : " (list not trimmed)");
+    return r;
+}
+
 int* __fastcall body_loot_detour(uintptr_t comp, int* err, uintptr_t looter, uint8_t a, uint8_t b) noexcept {
     BodySeen before, after;
     read_body(before, comp, looter);
-    int* r = g_body_loot.call<int*>(comp, err, looter, a, b);
+    bool handled = false;
+    int* r = body_loot_per_player(comp, err, looter, a, b, &handled);
+    if (!handled) r = g_body_loot.call<int*>(comp, err, looter, a, b);
     int e = -1;
     if (err) game::fast_read(reinterpret_cast<uintptr_t>(err), &e, 4);
     read_body(after, comp, 0);  // the comp may be gone when the body was logged out: SEH-guarded
     static std::atomic<int> said{0};
-    if (said.fetch_add(1) < 40) {
+    if (g_probe && said.fetch_add(1) < 40) {
         log::info("Lootr probe: body loot by 0x{:08X} of body 0x{:08X} a {} b {} | rolled {} -> {} | pool {} -> {} | "
                   "sub {} -> {} | body after 0x{:08X} | err {}", before.looter, before.body, a, b, before.rolled,
                   after.rolled, before.pool, after.pool, before.sub, after.sub, after.body, e);
@@ -246,9 +415,10 @@ std::string lootr_describe();
 
 void lootr_set_kill_hits(bool on) { g_kill_hits = on; }
 
-void lootr_start(bool on, bool probe, bool guest) {
+void lootr_start(bool on, bool probe, bool guest, bool bodies) {
     g_on = on && !guest;
     g_probe = probe && !guest;
+    g_bodies_on = bodies && g_on;
     if (!g_on && !g_probe) return;
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     uint8_t head[2]{};
@@ -256,7 +426,7 @@ void lootr_start(bool on, bool probe, bool guest) {
     if (auto h = safetyhook::InlineHook::create(reinterpret_cast<void*>(base + 0x2D37B10), pickup_detour)) {
         g_pickup = std::move(*h);
     }
-    if (g_probe) {
+    if (g_probe || g_bodies_on) {
         static const uint8_t kHead[10] = {0x48, 0x89, 0x5C, 0x24, 0x18, 0x44, 0x88, 0x4C, 0x24, 0x20};
         uint8_t got[10] = {};
         if (game::safe_read(base + 0x2E224F0, got, sizeof got) && std::memcmp(got, kHead, sizeof got) == 0) {
@@ -264,7 +434,19 @@ void lootr_start(bool on, bool probe, bool guest) {
                 g_body_loot = std::move(*h);
             }
         }
-        log::info("Lootr probe: the body loot worker {}", g_body_loot ? "hooked (log only)" : "NOT hooked");
+        if (g_bodies_on && g_body_loot) {
+            static const uint8_t kLea[7] = {0x48, 0x8D, 0x35, 0xF4, 0xC1, 0x0C, 0x03};
+            uint8_t at[7] = {};
+            if (game::safe_read(base + 0x2E22885, at, sizeof at) && std::memcmp(at, kLea, sizeof at) == 0) {
+                if (auto h = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x2E22885), on_keep_body)) {
+                    g_keep_body_hook = std::move(*h);
+                }
+            }
+        }
+        log::info("Lootr: the body loot worker {}{}", g_body_loot ? "hooked" : "NOT hooked",
+                  !g_bodies_on ? " (log only)"
+                  : g_keep_body_hook ? ": enemy loot is per player (the second looter gets its own roll)"
+                                     : ": per player, but the keep-the-body hook is NOT in");
     }
     log::info("Lootr {} (lootr={}, lootr_probe={}): {}", g_on ? "ON" : "probe only", on ? 1 : 0, probe ? 1 : 0,
               !g_pickup ? "the pickup worker NOT hooked"
@@ -276,6 +458,17 @@ bool lootr_on_guest_out(std::vector<uint8_t>& p) noexcept {
     if (!g_on) return false;
     try {
         std::lock_guard lk(g_mu);
+        if (lrl::opcode_of(p) == 2414) {  // LootDropCharacterRewardListAck: u8 4 | u32 body | ...
+            if (p.size() < lrl::kHeader + 5) return false;
+            const uint32_t body = lrl::rd32(p.data() + lrl::kHeader + 1);
+            for (const BodyEntry& e : g_bodies) {
+                if (e.body == body && !e.both && e.first == kHostCharacter) {
+                    c_body_2414.fetch_add(1);
+                    return true;  // the guest still sees the body's loot
+                }
+            }
+            return false;
+        }
         for (Taken& t : g_taken) {
             if (t.state == 2 || t.host_waits) continue;
             const int a = lrl::about(p, t.g, t.key16);
@@ -423,12 +616,27 @@ std::string lootr_describe() {
     return std::format("Lootr: {} | host pickups kept for the guest {} | packets held {} | taken by the guest too {} | "
                        "guest pickups kept for the host {} | host packets blanked {}",
                        g_on ? "on" : "off", c_taken.load(), c_held.load(), c_given.load(), c_guest_first.load(),
-                       c_host_blanked.load());
+                       c_host_blanked.load()) +
+           std::format(" | bodies {}: first loots {} second loots {} repeats refused {} lists kept back {}",
+                       g_bodies_on ? "per player" : "as the game", c_body_first.load(), c_body_second.load(),
+                       c_body_refused.load(), c_body_2414.load());
 }
 
 void lootr_host_recv(uint8_t* packet, uint16_t size) noexcept {
     if (!g_on || size < lrl::kHeader + 4) return;
     const uint16_t op = static_cast<uint16_t>(packet[0] | (packet[1] << 8));
+    if (op == 2414 && size >= lrl::kHeader + 5) {  // the leftover list of a body the guest looted first
+        const uint32_t body = lrl::rd32(packet + lrl::kHeader + 1);
+        if (!body) return;
+        for (auto& k : g_body_keep_host) {
+            if (k.load() == body) {
+                std::memset(packet + lrl::kHeader + 1, 0, 4);
+                c_body_2414.fetch_add(1);
+                return;
+            }
+        }
+        return;
+    }
     if (op == 3100 && size >= lrl::kHeader + 8) {  // InteractionPreemptionStepFailAck: u32 actor | u32 target | ...
         uint8_t* fl = packet + lrl::kHeader;
         const uint32_t target = lrl::rd32(fl + 4);

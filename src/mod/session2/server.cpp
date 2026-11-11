@@ -594,7 +594,8 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
                              self == live_session2();
         // Co-op+ 2026-11-10 Lootr (lootr.h): what the guest is not shown about a gimmick the host took (kept for the
         // guest); a RemoveActorAck may lose that one key (then the view is read again).
-        if (self == live_session2() && (opcode == 2214 || opcode == 2760 || opcode == 2096 || opcode == 3067)) {
+        if (self == live_session2() &&
+            (opcode == 2214 || opcode == 2760 || opcode == 2096 || opcode == 3067 || opcode == 2414)) {
             const size_t before = p.size();
             if (lootr_on_guest_out(p)) return;
             if (p.size() != before) {

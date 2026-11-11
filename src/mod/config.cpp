@@ -339,6 +339,7 @@ Config load_config(const std::wstring& ini_path) {
     c.s2_lootr_probe = read_uint(ini_path, L"session2", L"lootr_probe", 0) != 0;
     c.s2_lootr = read_uint(ini_path, L"session2", L"lootr", 0) != 0;
     c.s2_lootr_kill_hits = read_uint(ini_path, L"session2", L"lootr_kill_hits", 0) != 0;
+    c.s2_lootr_bodies = read_uint(ini_path, L"session2", L"lootr_bodies", 0) != 0;
     c.s2_stash_inventory = static_cast<int>(read_uint(ini_path, L"session2", L"stash_inventory", 0xFFFF));
     c.s2_fog_share = read_uint(ini_path, L"session2", L"fog_share", 0) != 0;
     c.s2_quest_own_progress = read_uint(ini_path, L"session2", L"quest_own_progress", 0) != 0;
