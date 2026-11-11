@@ -5067,3 +5067,47 @@ arriving at Hernand.
 - The tester Borque's remark of 2026-11-08 "you are not able to execute them": the guest's "[E] Assassinate" prompt
   on an unaware bandit far from the host is greyed (tcB400); near the host it is offered (tcB357 g1). Whether it
   works there is still unchecked.
+
+### 2026-11-11 12:30-13:20: the release checklist (after the user's feedback on the morning's re-releases)
+
+- The user (after waking): take more thorough notes so re-releases like this morning's five posts do not happen; do
+  not stop while the mod is not complete; why do "confirmed" features keep showing bugs. Cause of all three tester
+  faults: my tests did not look like a player's PC (first-launch marks pre-set, lowest graphics without frame
+  generation, saves with 490+ missions, the package never run as a real install), so "confirmed" only meant "passed
+  in that harness".
+- NEW RULE (also in memory): no post before the whole checklist has run on that exact package; a "works" always
+  names what it was tested under; one post per batch of fixes.
+- docs/tests/RELEASE-CHECKLIST.md = the list (what each step proves and what it does NOT cover).
+  tools/prepost.sh = its runner, one step per call:
+    bash tools/prepost.sh <tag> <package folder> static|real|fresh|xess|fsr|display|lowsave|chest|revive|loot|crime|summary
+  Report: build/native/prepost-<tag>.txt (every step's exact harness switches are in it). JUDGE_ONLY=1 runs a
+  step's checks again on the files of its last run (no game). Screenshots listed by each step must be LOOKED AT.
+- tools/symaddr.py = names for "cdmp.asi+0x..." / "coopplus.asi+0x..." addresses of a crash-log line from the
+  build's .pdb (dbghelp): python tools/symaddr.py <asi> 0x91013 ...   or   --log <a coopplus.log>.
+- build/native/run_keep.sh now writes NAME.args (the exact switches of every run), so a run can be repeated and
+  noted exactly. (Before today the switches of a run were only in the session transcript.)
+- Native unit tests: 31 of 89 fail and have since 2026-11-09 (fixtures of the older game version 2976); the list
+  is docs/tests/native-unit-baseline.txt; the checklist fails only on a failure outside it.
+- Known, by design, in every run's logs (the checklist counts them as known):
+  layer log WRN "Crash log: exception 0xC0000005 at cdmp.asi+0x91013 / +0x9100B" = the base's fast_read
+  (safe_memory.cpp:100) from probe_sector_layout_once (child_hold.cpp:597), and "+0x47E5E6 / +0x47E616" = rd<> in
+  guest_seq_route.cpp:354: guarded reads that fault on purpose and are caught. Native log ERR: the harness's own
+  sandbox copy (error 80), "User2Stages: D / S / F ... not the expected code of build 2976; REFUSED, not hooked"
+  (three far-world hooks never ported to 3576), "GuestXVeto: unsupported game build".
+
+Run pp1 on package 0.1.0-alpha+0cd46dd8 (layer HEAD 0cd46dd, native 560e3dc; one PC, two copies, Nvidia card):
+| step | result | tested under |
+| --- | --- | --- |
+| static | PASS (12 checks) | no game |
+| real | log checks PASS; **screenshot FAIL: the title menu's footer line is cut off** ("Invite a friend to begin a co-op" and nothing more) | the package's 5 files in the real game folder, started as Steam starts it, title only, my own graphics settings |
+| fresh | PASS | two first-time players, the package's coopplus.ini, lowest graphics, 490-mission host save + early guest save, title -> world, 15 s in the world |
+| xess | PASS | the same + Intel XeSS frame generation + XeSS 3.0 |
+| fsr, display, lowsave, chest, revive, loot, crime | not run on this package: it is replaced (see below); they run on the next one |
+
+- Found by pp1 and fixed in source (in the NEXT package, none posted):
+  1. Title menu footer cut off (also in the posted 3c46bec5): the strip that hides the game's own Play / Load prompts
+     was painted after the footer line; with five cards the line sits inside it. The line is now drawn after the
+     strip and never lower than just above the key hints (render/coop_page.cpp).
+  2. Shared world: the log said "shared loot is ON but [coop] enemy_auto=0 ... Set enemy_auto=1" although the key is
+     1 in the package (the relay is off by design there). Now one plain line (mod.cpp). In 0cd46dd8 already.
+- My own check pattern for (2) was too broad at first (matched the harmless "enemy relay wanted no" line): fixed.

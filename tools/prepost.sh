@@ -35,8 +35,24 @@ overlay_checks() {  # layer log, who
   hasnot "$1" "Overlay disabled"         "$2: overlay never disabled"
   atleast "$1" "Overlay: installed true" "drawn" 100 "$2: overlay draws"
   hasnot "$1" "\] ERR "                  "$2: no error line in the layer log"
-  local w; w=$(grep -c "\] WRN " "$1" 2>/dev/null)
-  [ "${w:-0}" -gt 0 ] && { info "$2: $w warning line(s) in the layer log:"; grep "\] WRN " "$1" | cut -d']' -f3- | cut -c1-150 | sort | uniq -c | sort -rn | head -6 | sed 's/^/          /' >> "$R"; }
+  # Warnings. "Crash log: exception ... at cdmp.asi+0x..." lines are first-chance exceptions; the base's own guarded
+  # reads raise some on purpose and catch them (fast_read, guest_seq_route's rd). Each faulting address is named from
+  # the build's .pdb (tools/symaddr.py): a known guarded read is INFO, anything else is a FAIL to look into.
+  local addrs; addrs=$(grep "Crash log: exception" "$1" 2>/dev/null | sed -n 's/.*exception 0x[0-9A-F]* at \([A-Za-z0-9_.]*+0x[0-9A-F]*\).*/\1/p' | sort -u)
+  local a known=0
+  for a in $addrs; do
+    local m=${a%%+*} o=${a##*+} img="" fn
+    [ "$m" = "cdmp.asi" ] && img=$ROOT/upstream/cdmp-native/build/bin/RelWithDebInfo/cdmp.asi
+    [ "$m" = "coopplus.asi" ] && img=$ROOT/upstream/cd-coop-3446/build-native-layer/bin/RelWithDebInfo/coopplus.asi
+    fn=$([ -n "$img" ] && python $ROOT/tools/symaddr.py "$img" $o 2>/dev/null | cut -d' ' -f3- | tr -d '\r')
+    case "$fn" in
+      *fast_read*|*guest_seq_route.cpp*|*safe_memory*) known=$((known+1)) ;;
+      *) bad "$2: first-chance exception at $a = ${fn:-unknown code} (not a known guarded read)" ;;
+    esac
+  done
+  [ $known -gt 0 ] && info "$2: $known first-chance exception site(s), all the base's own guarded reads (caught by design)"
+  local w; w=$(grep "\] WRN " "$1" 2>/dev/null | grep -vc "Crash log: exception")
+  [ "${w:-0}" -gt 0 ] && { info "$2: $w other warning line(s) in the layer log:"; grep "\] WRN " "$1" | grep -v "Crash log: exception" | cut -d']' -f3- | cut -c1-150 | sort | uniq -c | sort -rn | head -6 | sed 's/^/          /' >> "$R"; }
 }
 
 two_player_checks() {
@@ -51,14 +67,17 @@ two_player_checks() {
     overlay_checks "$L" "$r"
     atleast "$L" "Net: connected" "remote states" 100 "$r: linked to the friend"
     hasnot "$L" "Prologue: we are in the prologue" "$r: no solo-prologue hold"
-    hasnot "$L" "enemy_auto=0"                     "$r: no misleading loot warning"
-    local e; e=$(grep -c "\] ERR " $N/$NAME.$r.log 2>/dev/null)
-    info "$r: native log: ${e:-?} error line(s)"
+    hasnot "$L" "shared loot is ON but"            "$r: no misleading loot warning"
+    # native log errors: the known ones (the harness's own sandbox copy, three far-world hooks not ported to this
+    # game build, the guest's guarded reads) are counted; any other is a FAIL.
+    local e; e=$(grep "\] ERR " $N/$NAME.$r.log 2>/dev/null | grep -vcE "Session2 save redirect: (cannot copy|CDMP_SANDBOX_ADD)|User2Stages: [DSF], .* REFUSED, not hooked|GuestXVeto: unsupported game build|GuestS3 first-chance AV at cdmp.asi")
+    [ "${e:-0}" -eq 0 ] && ok "$r: native log: no error line outside the known set" || { bad "$r: native log: $e unknown error line(s):"; grep "\] ERR " $N/$NAME.$r.log | grep -vE "Session2 save redirect: (cannot copy|CDMP_SANDBOX_ADD)|User2Stages: [DSF], .* REFUSED, not hooked|GuestXVeto: unsupported game build|GuestS3 first-chance AV at cdmp.asi" | cut -d']' -f3- | cut -c1-170 | sort | uniq -c | head -5 | sed 's/^/          /' >> "$R"; }
   done
   info "screenshots to LOOK AT: $(cd $N/shots && ls $NAME-*.png 2>/dev/null | tr '\n' ' ')"
 }
 
-run2() {  # the two-copy harness with $1 = PSARGS
+run2() {  # the two-copy harness with $1 = PSARGS   (JUDGE_ONLY=1: no game, the checks again on the files of the last run)
+  [ -n "$JUDGE_ONLY" ] && { say "  (checks run again on the existing files, no game run)"; return; }
   tasklist | grep -qi CrimsonDesert.exe && { say "  FAIL  Crimson Desert is running: step not started"; echo "GAME RUNNING"; exit 1; }
   say "  args: $1"
   ( cd $N && PSARGS="$1" bash run_keep.sh $NAME > /dev/null 2>&1 )
@@ -91,8 +110,7 @@ static)
   [ -z "$nnew" ] && ok "native unit tests: $nt run, no failure outside the known old list ($(wc -l < $ROOT/docs/tests/native-unit-baseline.txt) old-fixture tests)" || bad "native unit tests: NEW failures:$nnew"
   o=$(cd $ROOT && powershell -NoProfile -ExecutionPolicy Bypass -File tools/test-install-fake.ps1 -Zip "$(cygpath -w "$PKG.zip")" 2>&1 | tr -d '\r')
   echo "$o" | grep -q "All steps passed" && ok "install / uninstall / vanilla on a fake game folder: All steps passed" || { bad "test-install-fake: $(echo "$o" | tail -2 | tr '\n' ' ')"; }
-  o=$(cd $ROOT && powershell -NoProfile -ExecutionPolicy Bypass -File tools/test-diagnose-redact.ps1 2>&1 | tail -1 | tr -d '\r')
-  info "diagnose redaction test: $o"
+  ( cd $ROOT && powershell -NoProfile -ExecutionPolicy Bypass -File tools/test-diagnose-redact.ps1 > /dev/null 2>&1 ) && ok "diagnose report: names and paths are redacted (test-diagnose-redact)" || bad "test-diagnose-redact failed"
   ( cd $ROOT/upstream/cdmp-native && [ -z "$(git status --porcelain -- src)" ] ) && ok "native source: committed (HEAD $(cd $ROOT/upstream/cdmp-native && git log --format=%h -1))" || bad "native source has uncommitted changes"
   ( cd $ROOT && [ -z "$(git status --porcelain -- upstream/cd-coop-3446/src kit tools)" ] ) && ok "layer / kit / tools: committed (HEAD $(cd $ROOT && git log --format=%h -1))" || bad "layer / kit / tools have uncommitted changes"
   ;;
