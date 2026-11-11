@@ -102,6 +102,12 @@ struct Taken {
 };
 std::mutex g_mu;
 std::vector<Taken> g_taken;  // guarded by g_mu
+struct DevBody {
+    uint32_t key;
+    uint64_t at;
+    int step;  // 0 killed, 1 the host asked to loot, 2 the guest asked too
+};
+std::vector<DevBody> g_dev_bodies;  // guarded by g_mu ([dev] lootr_kill_hits)
 
 // ---- phase 2a: gimmicks the GUEST took first, kept for the host. Written on the server thread, read in the host
 // client's OnRecvPacket (the game's thread: no lock, no allocation, no log there), so fixed slots and atomics.
@@ -316,12 +322,25 @@ void lootr_tick(std::vector<std::vector<uint8_t>>& to_server) noexcept {
     if (!g_on) return;
     try {
         const uint64_t now = GetTickCount64();
+        std::lock_guard lk(g_mu);
+        for (DevBody& b : g_dev_bodies) {  // [dev] LootingDropFromDeadBodyReq 2491: u32 body | u8 remove | u8 send list
+            uint8_t pl[6] = {0, 0, 0, 0, 0, 1};
+            std::memcpy(pl, &b.key, 4);
+            if (b.step == 0 && now - b.at >= 3000) {
+                b.step = 1;
+                const bool ok = net::sniffer_inject_c2s(lrl::make(2491, pl, 0x00));
+                log::info("Lootr probe: [dev] the host loots body 0x{:08X} (2491){}", b.key, ok ? "" : " NOT sent");
+            } else if (b.step == 1 && now - b.at >= 6000) {
+                b.step = 2;
+                to_server.push_back(lrl::make(2491, pl, 0x00));
+                log::info("Lootr probe: [dev] the guest loots body 0x{:08X} (2491, as its own request)", b.key);
+            }
+        }
         static uint64_t said = 0;
         if (now - said >= 30000) {
             said = now;
             log::info("{}", lootr_describe());
         }
-        std::lock_guard lk(g_mu);
         for (Taken& t : g_taken) {
             if (!t.item_known && now - t.at >= 150) {  // what the host's pickup added
                 static BagSnap after;
@@ -487,6 +506,10 @@ void kill_hits(const uint8_t* packet, size_t size) noexcept {
             std::memcpy(pl, &k, 4);
             const bool ok = net::sniffer_inject_c2s(lrl::make(2210, pl, 0x00));
             log::info("Lootr probe: [dev] the host's hit on 0x{:08X} kills it{}", k, ok ? "" : " (NOT sent)");
+            {  // [dev] then both players loot it without the UI: the host 3 s later, the guest 6 s later (tick)
+                std::lock_guard lk(g_mu);
+                if (g_dev_bodies.size() < 64) g_dev_bodies.push_back({k, GetTickCount64(), 0});
+            }
         }
     } catch (...) {
     }
