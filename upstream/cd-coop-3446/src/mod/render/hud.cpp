@@ -595,7 +595,9 @@ void hud_draw(float width, float height) {
     if (d.area_active && d.area_radius > 0) ground_ring(d.area_centre, d.area_radius, d.area_outside);
 
     if (d.remote && plates_visible && !d.hide_partner && nameplate::alpha(remote_distance) > 0.0f) {
-        const proto::Vec3 head{d.remote->pos.x, d.remote->pos.y + kHeadHeight, d.remote->pos.z};
+        // A downed friend lies on the ground (dp3, 2026-11-11: the name floated at standing head height over a body).
+        const bool friend_down = d.remote->health_max > 0 && d.remote->health <= 0;
+        const proto::Vec3 head{d.remote->pos.x, d.remote->pos.y + (friend_down ? 0.75f : kHeadHeight), d.remote->pos.z};
         if (auto p = game::project(*cam, *cam_world, head, width, height)) {
             draw_remote_marker(dl, *p, d, remote_distance);
         }

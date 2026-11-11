@@ -5194,3 +5194,20 @@ Run pp1 on package 0.1.0-alpha+0cd46dd8 (layer HEAD 0cd46dd, native 560e3dc; one
 - Lead: the game itself has TrocTrChangeAiControlAck and TrocTrAiControlChangeCheatReq (cheat requests are live in
   this build: KillCheatReq 2210 works). Research started (local notes build/decomp/notes_ai_control.md): hand an
   NPC's AI control to the player who is clearly nearer, and back. B02 / B18.
+
+### dp3-dp4 (2026-11-11 14:05-14:20): the downed pose on the friend's screen, the friend's revive, the host down
+
+- dp3 (the guest down by the shrine, the host walks up from 8 m and faces it): shot dp3-h0 = the guest's body LYING
+  on the host's screen, party frame "Guest / Badly hurt - 2 m", prompt "Hold [R] to revive Guest"; R held 3.5 s ->
+  toast "You revived Guest" (dp3-h1, the guest getting up), guest log "Host revived us ... we are alive again".
+  So the prompt's key (the Interact action, R on a keyboard, A on a pad) works; E counts too (dp2).
+- Found in dp3 and fixed: the downed friend's name floated at standing head height, away from the body (hud.cpp: the
+  plate sits 0.75 m above the ground while the friend's HP is 0). Seen right in dp4-g0.
+- dp4 (the HOST down by its own KillCheat, the guest 2 m away): the host's own screen (dp4-h0): lying, the death
+  screen, "Guest can revive you (10 s)", no stray "[R] Interact" prompt any more; W held 2 s: no movement; Q ->
+  "we are alive again", standing with the whole HUD (dp4-h2). The guest's screen (dp4-g0): the host's body on the
+  ground, "Hold [R] to revive Host".
+- State: DOWNED POSE WORKS for both roles, own screen and friend's screen, Q revive and friend revive. Tested under:
+  one PC, two copies, -Fresh, lowest graphics, on foot, killed by KillCheat (not by an enemy's blow), build of
+  14:12 (layer 76a596d + the name plate fix, native bf43e6f). NOT tested: going down while riding, in a duel, by a
+  boss grab, the U (checkpoint) choice with the pose, two real PCs. Switches: build/native/dp3.args, dp4.args.
