@@ -4490,3 +4490,9 @@ arriving at Hernand.
   own (Lootr)" (default) / "first come" ([coop] world_items = lootr | first_come); the lobby writes lootr=1 into the
   host's native ini when Lootr (layer test). Covers what is picked from the world (plants, herbs, items lying
   around); chests and enemy bodies are not covered yet, nor keeping the list when the session ends.
+- tcB333 (no test overrides): the lobby's default wrote lootr=1 ("Lootr ON (lootr=1 ...)"); host took peony
+  0xB0100153, the guest its own copy ("the guest's copy: item key 757006 x1 to 0xA0100066: added (err 0)"). Guest
+  load STABLE (4th in a row since the guard fix). SAVES OK, restored 5/5.
+- Lootr still to do: enemy bodies (LootingDropFromDeadBodyReq 2491; the pool is rolled once and emptied by the first
+  looter), chests (GimmickBranchState 2165 / 2304, roll count 2694), items lying on the ground with comp+0xC0 set
+  (the same flow is kind-agnostic: to check), keeping the lists when the session ends (a sidecar with the co-op save).
