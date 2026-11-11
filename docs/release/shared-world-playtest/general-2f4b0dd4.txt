@@ -1,0 +1,21 @@
+**Shared world playtest: what is new and what we need you to test**
+The newest build is **0.1.0-alpha+2f4b0dd4** (in #download-here). You and your co-op partner both need it.
+
+**What the last three updates brought**
+- Towns: the lag, the vanishing NPCs and the disconnects when arriving in a town should be gone.
+- Joining: the guest no longer gets stuck in a dark loading screen.
+- Fighting together: the guest's hits land on enemies from the first blow, and the guest is no longer marked as a criminal for helping in the host's fights.
+- Loot for each of you: herbs and flowers, gear lying in the world, and chests. When one of you opens a chest, the other gets the same content at the chest.
+- Give an item to your friend from the inventory (press Discard on it, then "Give to <name>").
+- A shared stash in the Co-op tab, once the host has unlocked a warehouse in the story.
+- Two crash guards and a fix for an item duplication.
+
+**What we need tested (two PCs, which we cannot do ourselves)**
+1. Ride into a town together (Hernand): any lag, NPCs disappearing, a disconnect?
+2. Fight a bandit camp together: do the guest's hits and finishers work? Does the guest see any "Crime" notice?
+3. Chests: the host opens one, then the guest opens another one. Does the other player get the content? Also try it while the other player is far away (they should get a message and a map pin).
+4. Gear and herbs: can each of you take your own?
+5. Give an item, both ways. The shared stash, if the host has a warehouse.
+6. Go down in a fight and revive each other.
+
+Please write in #bug-reports what worked and what did not, say whether you were host or guest, and attach the report zip (Diagnose Co-op+.cmd) if anything went wrong. Thank you!

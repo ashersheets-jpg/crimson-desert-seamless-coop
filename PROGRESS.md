@@ -8,10 +8,6 @@ test save Out, shipped cdmp.ini restored.
 - Playtest results from the testers (the two-PC test).
 - Release / Discord posts / sending a build: each needs the user's OK first.
 - Controller feel checks (hands on a pad).
-- POST the fixed build 0.1.0-alpha+2f4b0dd4 (packaged 2026-11-11 04:54, install checks pass; text in
-  docs/release/shared-world-playtest/download-2f4b0dd4.txt): it closes the drop duplication of 24661515, lets the
-  guest hit enemies from the first blow, stops the guest's "crimes" in the host's fights, and adds chests and
-  world-placed gear for each player. Needs the OK.
 - Chests, the guest opening first (the host then gets its share): same code with the roles swapped, but not
   testable by script on one PC. A two-player check.
 - Per-player enemy loot ([session2] lootr_bodies=1 in the host's cdmp.ini): works in server-side tests; needs two
@@ -4847,3 +4843,13 @@ arriving at Hernand.
   net/revive_prompt) is in the source but NOT in package 2f4b0dd4, and must not be packaged unverified.
 - Also not in package 2f4b0dd4: the body loot share (native, local commit; works in tcB384, range now 30 m, the
   30 m range itself not run yet).
+
+### 2026-11-11 05:52: build 0.1.0-alpha+2f4b0dd4 POSTED (the user's OK: "Yes, go ahead and post it")
+
+- #download-here, 05:52: the update text (docs/release/shared-world-playtest/download-2f4b0dd4.txt, shortened to fit
+  Discord's 2000 characters) with ...-shared-world.zip (11.81 MB) and ...-shared-world-mod-manager.zip (6.44 MB);
+  both attachments checked on the sent message.
+- #general, 05:53 (the user asked for it): what the last three updates brought and the six things we need tested on
+  two PCs (docs/release/shared-world-playtest/general-2f4b0dd4.txt).
+- Not in this build: the enemy-loot share (native, local commit) and the downed player's input hold (layer; the Q
+  revive while downed is still unverified, tcB385).

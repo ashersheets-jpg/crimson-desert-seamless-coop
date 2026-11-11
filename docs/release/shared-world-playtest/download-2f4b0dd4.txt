@@ -2,19 +2,19 @@
 Please use this build instead of 24661515. You and your co-op partner both need it.
 
 Fixed:
-- **Enemies ignored the guest's attacks** (thanks Borque): bandits and other hostile people were protected from the guest until the host had hit that very enemy. Now only people the host has talked to or traded with are protected; the guest's hits land on enemies from the first blow.
-- **The guest became a criminal for helping**: the guest's hits and kills on the host's enemies were booked as "Crime: Assault" / "Crime: Murder". Now the guest is judged the way the host would be: no crime where the host would get none.
-- **Item duplication**: an item one of you dropped on the ground could be taken by both of you. Now a dropped item goes to whoever picks it up; only things you gather (herbs, flowers and the like) are per player.
-- **Two crashes**: a guest crash right after entering the host's world, and a host crash right after looting. Both now have guards.
-- The stray RB icon between "Others" and "Co-op" in the pause menu's tab row is gone.
+- **Enemies ignored the guest's attacks** (thanks Borque): hostile people were protected from the guest until the host had hit that very enemy. Now only people the host has talked to or traded with are protected.
+- **The guest became a criminal for helping**: its hits and kills on the host's enemies counted as "Crime: Assault" / "Crime: Murder". Now the guest is judged the way the host would be.
+- **Item duplication**: an item one of you dropped could be taken by both. Now it goes to whoever picks it up.
+- **Two crashes**: a guest crash right after entering the host's world, and a host crash right after looting.
+- The stray RB icon in the pause menu's tab row is gone.
 
 New:
-- **Give an item to your friend**: stand next to them, open your inventory and press Discard on an item: you are asked "Give to <name> / Discard / Cancel". The item moves with everything on it (upgrades, durability, dye).
-- **Chests are for each of you**: when one of you opens a chest, the other gets the same content as soon as they are at the chest (at once when you stand together; if you are somewhere else you get a message and a pin on your map). The chest itself still opens for both.
-- **Gear lying in the world is for each of you**: a weapon or other item the game placed in the world can be taken once by each player (as herbs already could). An item one of you DROPS is still a single item.
-- The Co-op tab has a "Shared stash" section. It opens once the host has unlocked a warehouse in the story (it is the host's warehouse, usable by both of you from anywhere). Untested with an unlocked warehouse: tell us how it goes.
+- **Give an item to your friend**: stand next to them, open your inventory, press Discard on an item and choose "Give to <name>". The item keeps its upgrades, durability and dye.
+- **Chests are for each of you**: when one of you opens a chest, the other gets the same content at the chest (at once when you stand together; if you are elsewhere you get a message and a map pin). The chest still opens for both.
+- **Gear lying in the world is for each of you**: an item the game placed in the world can be taken once by each player, as herbs already could.
+- **Shared stash** (Co-op tab): the host's warehouse, usable by both from anywhere once the host has unlocked it in the story. Untested with an unlocked warehouse.
 
-- `CrimsonDesert-SeamlessCoop-0.1.0-alpha+2f4b0dd4-shared-world.zip`: this is the one you want. Run its installer with the game closed (it replaces the older build).
+- `CrimsonDesert-SeamlessCoop-0.1.0-alpha+2f4b0dd4-shared-world.zip`: this is the one you want. Run its installer with the game closed.
 - `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
 
 Tested with two copies of the game on one PC. Please tell us in #bug-reports how it goes (and send the report zip if anything goes wrong).
