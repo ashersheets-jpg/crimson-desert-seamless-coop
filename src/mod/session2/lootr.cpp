@@ -34,7 +34,8 @@ bool g_on = false, g_probe = false;
 safetyhook::InlineHook g_pickup;
 std::atomic<uint64_t> g_watch_until{0};
 std::atomic<int> g_logged{0};
-std::atomic<bool> g_kill_hits{false};  // [dev] lootr_kill_hits
+std::atomic<int> g_kill_hits{0};  // [dev] lootr_kill_hits: 1 kill + both loot by request, 2 kill only (the guest
+                                  // loots by request 5 s after the HOST's own first loot of a body)
 
 // ---- the picker's bag (manager +0xA2): a gather pickup's item is made inside the pickup and added a few ms after
 // the worker returns (tcB325), so the bag is compared again later (tick / the host's 3110).
@@ -355,6 +356,13 @@ int* body_loot_per_player(uintptr_t comp, int* err, uintptr_t looter, uint8_t a,
         if (took) {
             write_rolled(comp, 0);  // the re-arm
             c_body_first.fetch_add(1);
+            if (g_kill_hits.load() == 2 && s.looter == kHostCharacter) {  // [dev] the guest's turn, by request, 5 s on
+                try {
+                    std::lock_guard lk(g_mu);
+                    if (g_dev_bodies.size() < 64) g_dev_bodies.push_back({s.body, GetTickCount64() - 1000, 1});
+                } catch (...) {
+                }
+            }
         } else {  // nothing taken (or the body went): no entry, the next loot is a first one again
             try {
                 std::lock_guard lk(g_mu);
@@ -427,7 +435,7 @@ int* __fastcall body_loot_detour(uintptr_t comp, int* err, uintptr_t looter, uin
 
 std::string lootr_describe();
 
-void lootr_set_kill_hits(bool on) { g_kill_hits = on; }
+void lootr_set_kill_hits(int mode) { g_kill_hits = mode; }
 
 void lootr_start(bool on, bool probe, bool guest, bool bodies) {
     g_on = on && !guest;
@@ -728,7 +736,7 @@ void kill_hits(const uint8_t* packet, size_t size) noexcept {
             std::memcpy(pl, &k, 4);
             const bool ok = net::sniffer_inject_c2s(lrl::make(2210, pl, 0x00));
             log::info("Lootr probe: [dev] the host's hit on 0x{:08X} kills it{}", k, ok ? "" : " (NOT sent)");
-            {  // [dev] then both players loot it without the UI: the host 3 s later, the guest 6 s later (tick)
+            if (g_kill_hits.load() == 1) {  // then both loot it without the UI: the host 3 s later, the guest 6 s
                 std::lock_guard lk(g_mu);
                 if (g_dev_bodies.size() < 64) g_dev_bodies.push_back({k, GetTickCount64(), 0});
             }

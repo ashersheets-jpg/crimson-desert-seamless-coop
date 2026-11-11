@@ -19,7 +19,7 @@ namespace cdmp::session2 {
 // bodies: enemy / animal body loot per player too (the second looter gets the game's own second roll).
 void lootr_start(bool on, bool probe, bool guest, bool bodies);
 // [dev] lootr_kill_hits (tests only, host): whatever the host hits dies at once.
-void lootr_set_kill_hits(bool on);
+void lootr_set_kill_hits(int mode);
 void lootr_host_sniffed(const uint8_t* packet, size_t size, bool server_to_client) noexcept;
 // server.cpp, a packet about to be queued for the live session 2: true = held back whole; `p` may be rewritten (a
 // RemoveActorAck without the kept gimmick).
