@@ -4641,3 +4641,7 @@ arriving at Hernand.
   again until they can be told from a player's drop.
 - tcB352: the host discards a Ricefish, the guest takes it (E), the host tries again: shows whether a dropped item
   goes through the worker with its item set, and that no second copy appears.
+- tcB352: the host's discarded Ricefish lies at its feet as "Ricefish (X) Catch" (a creature to catch, not a pickup);
+  after the guest's and the host's E holds it was gone, with NO pickup worker call: catching goes another way, so
+  Lootr never touched it (no duplication there). Whether an ordinary dropped item goes through the worker is what
+  tcB353 checks (the host drops the Medium Hernandian Banner Pike instead).
