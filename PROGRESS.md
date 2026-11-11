@@ -5451,3 +5451,30 @@ Run pp1 on package 0.1.0-alpha+0cd46dd8 (layer HEAD 0cd46dd, native 560e3dc; one
 - The new-save step now also checks that the guest is moved to the host's side ("Co-op: joined: our save's place
   was N m from the host: moved to its side") and ends within 30 m.
 - t5 (running): both reworked steps on the current build, before the package is made again.
+
+### t5, lt1, t6, t7 (2026-11-11 17:46-18:30): the guest joins at the host's side; what a body's loot really is
+
+- JOIN (t5-lowsave, layer build of 17:40 with [coop] join_beside_host, default 1): guest log "Co-op: joined: our
+  save's place was 1321 m from the host: moved to its side (-10349, -3920)"; it ends 1 m from the host; screenshot
+  t5-lowsave-g0 shows both at Nas River, the host's name plate and the Interact prompt, the guest's own prologue
+  quest still tracked ("Return to your comrades"). A guest whose save is already beside the host is left alone
+  ("already 1 m from the host, not moved", t5-loot). Tested: one PC, a guest on a 1-mission save, host on its usual
+  save. NOT tested: a guest who is in a cutscene or on a mount when the 4 s are over, a guest in another region
+  with a loading screen between, two PCs.
+- BODY LOOT (four runs, probe on in lt1 and t7): a loot request for a body (LootingDropFromDeadBodyReq 2491, the
+  same request the old test cheat sent) is answered "err 0" every time, but most requests take NOTHING: the probe
+  shows the body's pool unchanged ("pool 4 -> 4") in 9 of 12 requests and one item taken in 3 ("pool 4 -> 3"). The
+  friend's share is made from what the looter's bag gained, so there is a share only for those. t5: 0 of 2, t6: 0 of
+  6 (hence its FAIL), t7: 1 of 6, lt1: 1 of 2; each share reached the guest ("is there and got its own share ...
+  its bag gained 1 piece(s)"). It was never the package's settings (the native ini files of a failing and a passing
+  run are byte-identical, the layer's Config lines too): my suspicion of that in between was wrong.
+- OPEN QUESTION this raises (not answered): in tcB387 this morning single requests took 4 kinds at once (x2, x5, x9,
+  x7). Why a request takes everything there and nothing here is not understood (kill by a blow against KillCheat at
+  full health? the quest's state?). And how a real player's loot key maps to these requests (one request per item, or
+  one for all) is unchecked. If a player's own looting takes its items LATER than 1.5 s after the request, the
+  friend's share would be missed: to check with the probe on while looting by hand, or by two players. Until then
+  "enemy loot for both" is: works when the request itself takes items; unverified for hand looting.
+- The checklist's loot step now kills ten bandits and asks each body twice, with the probe on, and says plainly when
+  no request took anything (then the step is run again; it says nothing about the share).
+- Layer dev steps (dev only): killnear [radius], lootlast. Switches: build/native/t5-*.args, lt1.args, t6-*.args,
+  t7.args.
