@@ -482,10 +482,37 @@ struct ChestShare {
     // tcB366: the chest puts ONE bundle item into the bag, which the game then turns into the real content (Meat Soup
     // x10, Lean Meat x13, Lentils x3). So the bag is compared again once that has settled.
     bool settled = false;
+    bool told = false;  // the layer was told that this share waits (the other player was not at the chest)
     BagSnap before;
 };
 constexpr uint64_t kSettleMs = 1500;
-constexpr int kShareMax = 16;
+constexpr uint64_t kShareKeepMs = 3ull * 60 * 60 * 1000;  // a share nobody fetches is forgotten after 3 hours
+constexpr int kShareMax = 48;
+// For the Co-op+ layer (export cdmp_chest_events): 1 = a share waits for `player` at (x, y, z), 2 = `player` got it.
+struct ChestEvent {
+    uint8_t kind = 0;
+    uint32_t player = 0;
+    float x = 0, y = 0, z = 0;
+    uint16_t kinds = 0, pieces = 0;
+};
+SRWLOCK g_chest_ev_lock = SRWLOCK_INIT;
+ChestEvent g_chest_ev[16];
+int g_chest_ev_n = 0;
+void chest_event(uint8_t kind, uint32_t player, const ChestShare& sh) noexcept {
+    ChestEvent e;
+    e.kind = kind;
+    e.player = player;
+    e.x = sh.x;
+    e.y = sh.y;
+    e.z = sh.z;
+    e.kinds = static_cast<uint16_t>(sh.items);
+    int64_t pieces = 0;
+    for (int i = 0; i < sh.items; ++i) pieces += sh.n[i];
+    e.pieces = static_cast<uint16_t>(pieces > 0xFFFF ? 0xFFFF : pieces);
+    AcquireSRWLockExclusive(&g_chest_ev_lock);
+    if (g_chest_ev_n < 16) g_chest_ev[g_chest_ev_n++] = e;
+    ReleaseSRWLockExclusive(&g_chest_ev_lock);
+}
 ChestShare g_shares[kShareMax];  // the server thread only
 int g_share_n = 0;
 std::atomic<int> g_shares_pending{0};
@@ -933,9 +960,9 @@ void lootr_chest_shares(uintptr_t host_actor) noexcept {
     for (int k = g_share_n - 1; k >= 0; --k) {
         ChestShare& sh = g_shares[k];
         bool done = false;
-        if (now - sh.at > kKeepMs) {
+        if (now - sh.at > kShareKeepMs) {
             c_chest_expired.fetch_add(1);
-            log::info("Lootr: the share of chest 0x{:08X} was not fetched in 30 min: forgotten", sh.gimmick);
+            log::info("Lootr: the share of chest 0x{:08X} was not fetched in 3 hours: forgotten", sh.gimmick);
             done = true;
         }
         if (!done && !sh.settled) {
@@ -977,10 +1004,21 @@ void lootr_chest_shares(uintptr_t host_actor) noexcept {
                 for (int i = 0; i < bag0.slots; ++i) gained -= bag0.idx[i] != 0xFFFF && bag0.n[i] > 0 ? bag0.n[i] : 0;
             }
             c_chest_shared.fetch_add(1);
+            if (sh.told) chest_event(2, pl[p].key, sh);
             log::info("Lootr: chest 0x{:08X}: 0x{:08X} is at the chest and got its own share [{}] (opened by 0x{:08X} "
                       "{} s ago) | its bag gained {} piece(s)", sh.gimmick, pl[p].key, list, sh.opener,
                       (now - sh.at) / 1000, gained);
             done = true;
+        }
+        if (!done && sh.settled && !sh.told) {  // the other player is somewhere else: the layer tells them
+            for (int p = 0; p < n; ++p) {
+                if (pl[p].key == sh.opener) continue;
+                sh.told = true;
+                chest_event(1, pl[p].key, sh);
+                log::info("Lootr: chest 0x{:08X}: the share waits for 0x{:08X}, who is not at the chest", sh.gimmick,
+                          pl[p].key);
+                break;
+            }
         }
         if (done) {
             g_shares[k] = g_shares[g_share_n - 1];
@@ -989,6 +1027,33 @@ void lootr_chest_shares(uintptr_t host_actor) noexcept {
     }
     g_shares_pending = g_share_n;
 }
+
+}  // namespace cdmp::session2
+
+// The Co-op+ layer (host) polls this: up to `cap` events of 20 bytes each (u8 kind | 3 B | u32 player | f32 x, y, z |
+// u16 kinds | u16 pieces), taken out of the queue.
+extern "C" __declspec(dllexport) int cdmp_chest_events(uint8_t* out, int cap) {
+    using namespace cdmp::session2;
+    if (!out || cap <= 0) return 0;
+    AcquireSRWLockExclusive(&g_chest_ev_lock);
+    const int n = g_chest_ev_n < cap ? g_chest_ev_n : cap;
+    for (int i = 0; i < n; ++i) {
+        const ChestEvent& e = g_chest_ev[i];
+        uint8_t* p = out + 20 * i;
+        std::memset(p, 0, 20);
+        p[0] = e.kind;
+        std::memcpy(p + 4, &e.player, 4);
+        std::memcpy(p + 8, &e.x, 4);
+        std::memcpy(p + 12, &e.y, 4);
+        std::memcpy(p + 16, &e.z, 4);
+    }
+    for (int i = n; i < g_chest_ev_n; ++i) g_chest_ev[i - n] = g_chest_ev[i];
+    g_chest_ev_n -= n;
+    ReleaseSRWLockExclusive(&g_chest_ev_lock);
+    return n;
+}
+
+namespace cdmp::session2 {
 
 void lootr_chest_scan(uintptr_t host_actor) noexcept {
     if (!g_probe || !host_actor) return;
