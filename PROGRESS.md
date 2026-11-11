@@ -8,9 +8,12 @@ test save Out, shipped cdmp.ini restored.
 - Playtest results from the testers (the two-PC test).
 - Release / Discord posts / sending a build: each needs the user's OK first.
 - Controller feel checks (hands on a pad).
-- POST the fixed build 0.1.0-alpha+6d9eecdc (packaged 2026-11-11 01:35, install checks pass; text in
-  docs/release/shared-world-playtest/download-6d9eecdc.txt): it closes the drop duplication of 24661515, lets the
-  guest hit enemies from the first blow and stops the guest's "crimes" in the host's fights. Needs the OK.
+- POST the fixed build 0.1.0-alpha+1e04722c (packaged 2026-11-11 04:33, install checks pass; text in
+  docs/release/shared-world-playtest/download-1e04722c.txt): it closes the drop duplication of 24661515, lets the
+  guest hit enemies from the first blow, stops the guest's "crimes" in the host's fights, and adds chests and
+  world-placed gear for each player. Needs the OK.
+- Chests, the guest opening first (the host then gets its share): same code with the roles swapped, but not
+  testable by script on one PC. A two-player check.
 - Per-player enemy loot ([session2] lootr_bodies=1 in the host's cdmp.ini): works in server-side tests; needs two
   players to check on screen (one loots a body, then the other) before it is turned on for everyone.
 - Guest-side checks (the guest seeing a gift arrive, guest -> host give, the stash with an unlocked warehouse, Lootr
@@ -4793,3 +4796,11 @@ arriving at Hernand.
   a bigger level object). They stay first come: it is not known whether a player can create such an object from an
   own item, and a wrong guess would be a duplication. Dropped (0x16) and thrown (0x15) items stay one object.
 - Native committed (local). Copies of gear have the item's default rolls (the add worker takes item + count).
+
+### tcB379 (2026-11-11 04:27): a dropped item is still one object; package 1e04722c
+
+- Regression of the tcB353 duplication with the new rule: the host dropped an item (spawn reason 0x16, spawner
+  0xA0100001), the guest picked it up: "a dropped / thrown item: one for whoever takes it". No copy. A peony picked in
+  the same run has spawn reason 0x07 (a spawning pool): plants are per player whatever the reason, as before.
+- Package 0.1.0-alpha+1e04722c built (crime fix, guest hits, chests phase 1, world-placed gear, the guards, give /
+  stash), install checks all pass. Not posted (needs the OK).
