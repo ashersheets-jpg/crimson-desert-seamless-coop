@@ -397,6 +397,8 @@ bool offer(const std::vector<uint8_t>& p) {
     // Judged on every offer (a held Req is offered again), recorded once on its final disposition.
     // Co-op+ 2026-11-09 B19 (anti_grief.h): the guest's hits on the people of the host's world.
     if (v && anti_grief_drop_user2_req(v->opcode, v->payload)) return true;
+    // Co-op+ 2026-11-10 Lootr (lootr.h): the guest taking a gimmick the host took (kept for it): answered here.
+    if (v && lootr_on_guest_req(v->opcode, v->payload)) return true;
     if (v) {  // a hit on enemies and townsfolk at once: offered again without the townsfolk (a held Req is re-trimmed)
         const auto trimmed = anti_grief_strip_user2_req(v->opcode, v->payload);
         if (!trimmed.empty()) return offer(troc::make(v->opcode, v->slot, trimmed));
@@ -1641,6 +1643,11 @@ void tunnel_tick(troc::TrocLink& link, uint32_t now_ms) {
         }
     }
     observer_seq_copy_tick();   // P8 S1 option A: the gate's timeout, refused copies again, its lines (nothing when off)
+    {  // Co-op+ Lootr: the guest's copy of an item the host took, added on the server thread as its own request.
+        std::vector<std::vector<uint8_t>> reqs;
+        lootr_tick(reqs);
+        for (auto& r : reqs) g_early.push_back(std::move(r));
+    }
     owner_fanout_tick();        // P8 B step 2: trip lines, the 60 s summary (nothing when off)
     world_anchor_tick();        // user2_world_anchor: the 60 s summary (nothing when off)
     prof(kPartHoldAcks);

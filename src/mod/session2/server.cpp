@@ -1,3 +1,4 @@
+#include "mod/session2/lootr.h"
 #include "mod/session2/server.h"
 
 #include <windows.h>
@@ -591,6 +592,16 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
         const bool to_live = (observer_hold_acks_active() || observer_scene_copy_wanted() || horse_follow_active() ||
                               observer_seq_copy_wanted() || attach_follow_active() || combat_follow_active()) &&
                              self == live_session2();
+        // Co-op+ 2026-11-10 Lootr (lootr.h): what the guest is not shown about a gimmick the host took (kept for the
+        // guest); a RemoveActorAck may lose that one key (then the view is read again).
+        if (self == live_session2() && (opcode == 2214 || opcode == 2760 || opcode == 2096 || opcode == 3067)) {
+            const size_t before = p.size();
+            if (lootr_on_guest_out(p)) return;
+            if (p.size() != before) {
+                v = troc::parse_wire(p, troc::Dir::ToGuestClient);
+                if (!v) return;
+            }
+        }
         // P8 S3 (observer_hold_acks.h): a held NPC's packets wait for its 2005; a 2005 is queued with them.
         AckRouteOut ar;
         const AckRoute route = to_live && observer_hold_acks_active()

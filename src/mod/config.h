@@ -512,6 +512,8 @@ struct Config {
     bool s2_trade_probe = true;  // Co-op+ 2026-11-10: on by default (the give B11 and the shared stash B12 need it)
     // lootr_probe = 0 | 1, HOST (session2/lootr.h): logs the server pickup worker and the host's packets after it.
     bool s2_lootr_probe = false;
+    // lootr = 0 | 1, HOST (session2/lootr.h, user 2026-11-10): an item the host takes stays for the guest (phase 1).
+    bool s2_lootr = false;
     int s2_stash_inventory = 0xFFFF;  // stash_inventory (research): 0xFFFF = the default
     // inter_probe, HOST (session2/trade_probe.h; far-shop research): read-only probes of NPC dynamic interactions.
     bool s2_inter_probe = false;

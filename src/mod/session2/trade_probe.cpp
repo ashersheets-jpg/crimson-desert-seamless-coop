@@ -638,11 +638,43 @@ void stash_move(Stash& s, uintptr_t self, bool deposit, uint32_t g, uint32_t r, 
     }
 }
 
+// Co-op+ Lootr: add `count` of item `key` to a holder (the add worker; its own AddItemToInventoryAck goes to the owner).
+int lootr_add(uintptr_t base, uintptr_t holder, uint32_t key, uint64_t count) noexcept {
+    int e = -1;
+    __try {
+        const auto add = reinterpret_cast<int* (__fastcall*)(uintptr_t, int*, void*)>(base + 0x2DD8FC0);
+        const auto make = reinterpret_cast<void* (__fastcall*)(void*)>(base + 0x2641950);
+        alignas(16) static uint8_t v[0x400];
+        std::memset(v, 0, sizeof v);
+        make(v);
+        *reinterpret_cast<uint32_t*>(v + 8) = key;
+        *reinterpret_cast<int64_t*>(v + 0x10) = static_cast<int64_t>(count);
+        add(holder, &e, v);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        e = -2;
+    }
+    return e;
+}
+
 int* __fastcall worker_detour(uintptr_t self, int* err, uint32_t item, uint16_t b, uint64_t count, uint32_t* giver,
                               uint32_t* receiver, uint16_t inv, uint16_t slot, uint32_t entry) noexcept {
     uint32_t g = 0, r = 0;
     game::fast_read(reinterpret_cast<uintptr_t>(giver), &g, sizeof g);
     game::fast_read(reinterpret_cast<uintptr_t>(receiver), &r, sizeof r);
+    if (entry == 0xC0DE0005) {  // Co-op+ Lootr (lootr.h): the guest's own copy of an item the host took
+        const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+        int e = -1;
+        uint32_t me = 0;
+        uintptr_t actor = 0;
+        const bool ok_req = game::fast_read(self + 8, &actor, 8) && actor && game::fast_read(actor + 0x60, &me, 4) &&
+                            me == g && me == r && (me >> 28) == 0xA && me != kHostCharacter && item && count >= 1 &&
+                            count <= 9999;
+        if (ok_req) e = lootr_add(base, self, item, count);
+        log::info("Lootr: the guest's copy: item key {} x{} to 0x{:08X}: {} (err {} {})", item, count, me,
+                  ok_req ? (e == 0 ? "added" : "NOT added") : "refused (not the guest's own request)", e, err_name(e));
+        *err = 0;
+        return err;
+    }
     if (entry == kStashList) {
         const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
         uint16_t bag = 0xFFFF, wh = 0xFFFF;
