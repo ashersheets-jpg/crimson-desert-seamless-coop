@@ -4727,3 +4727,39 @@ arriving at Hernand.
   shop baskets and boxes, a breakable sack (all "on the ground"), and lentils_01, pumpkin_01, item_basic_equip
   ("into the bag"). No treasure box near the dock. Next: scan the whole field's scene objects by name to find one.
 - Package rebuilt with both fixes: 0.1.0-alpha+6d9eecdc, install checks all pass. Not posted (needs the OK).
+
+### tcB360-tcB365 (2026-11-11 01:40-02:22): a real chest found and opened under the probe
+
+- The scan now also walks the field's scene objects by name: about 2700 objects with drop rolls left of about 420
+  kinds. Chests near the test start: box_chest_shelter_01 (+ its _cover) at (-10347.8, 536.8, -3991.8) inside the
+  Greymane Shrine, a second "Chest" beside it, treasurebox_cabinet_03_cover at (-10261.4, 554.0, -3909.9) near the
+  dock, in_dff_chest_12 at (-10095.7, 607.6, -4083.8). Names seen for containers: itembox_01..06 (+ item_box_NN_cover),
+  box_chest_NN, dff_chest_24, treasurebox_*, Collection_Prop_Chest_*, package_box_*, box_barrel_*, pot_NNNN,
+  gimmick_breakable_sack_NN. Plants are "droppers" too (peony_01 ...), handled by the pickup worker.
+- Getting to it took 4 runs: a teleport into the shrine always lands on its ROOF (whatever the height), and the
+  "R Interact" prompt seen there was our own friend prompt (it opened the co-op menu: Duel / Rock, paper,
+  scissors / ... / Give an item; so that menu works on the keyboard). What works: teleport in front of the entrance
+  (scan/tp_chest4_host.txt) and walk in (-HostWalkTo -10347.8_-3991.8_-10347.8_-3991.8); then "Chest [E] Open".
+- The open, recorded (tcB365): C>S 3008 (requester, chest, interaction 0x2B4A) -> 2120; C>S 3073 -> 2794; S>C 3143,
+  2791, 2677, 2181 (the open plays); the owner client's 2852, 2155 xN, 2165 (state hash 0x150B14D0), 2787; about 3 s
+  after the key the server's Drop event: target = the opener, mode 1 (straight into the bag), ONE rolled item
+  (index 3627 / 3628 / 3625: a bundle), err 0; then 2304 (the saved state, to the field). On screen: "Steamed Eggs
+  x10, Turnip x7, Egg x20 acquired": the bundle is turned into the real content right after.
+- The Drop worker's "actor" argument is 0xA0100066 (the guest's character) even when the host opens; the opener is
+  the TARGET argument.
+
+### tcB366-tcB369 (2026-11-11 02:27-03:00): chests per player, phase 1 (shared open, each their own content)
+
+- Native (built, [session2] lootr_chests, default 1 with lootr): when a player opens a chest (Drop worker, mode 1,
+  err 0) the opener's bag is compared before / 1.5 s after (so the bundle has become the real content); what it
+  gained is kept as the OTHER player's share for 30 minutes and added to their bag (the add worker, on the server
+  thread, asked by the host's own request 0xC0DE0007 every 2 s while a share waits) as soon as they are within 6 m of
+  the chest. Nothing is withheld or made up: the chest opens for both, the save and the roll count stay the game's.
+- tcB366 (first cut, compare at once): the share was the unopened bundle (1 kind x1): wrong, hence the 1.5 s.
+- tcB369: host opens, guest 4 m away: "5 item kind(s) [752005 x15, 1001225 x13, 750024 x4, 1000730 x9, 755015 x10]
+  kept", and 2 s after the open "0xA0100066 is at the chest and got its own share", every add err 0. Host's screen:
+  "Egg x10 acquired, Cooking Oil x15 acquired". Not yet shown: the "acquired" notices on the guest's screen (the
+  screenshot came too early), the guest opening first, the far-away case (walk to the chest later).
+- Not covered yet: the chest staying closed for the player who has not opened it (the gimmick's state is driven by
+  the host's client; see the notes), mode 0 (breakables throwing items on the ground: whoever picks them up),
+  shares across sessions.
