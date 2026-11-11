@@ -5478,3 +5478,11 @@ Run pp1 on package 0.1.0-alpha+0cd46dd8 (layer HEAD 0cd46dd, native 560e3dc; one
   no request took anything (then the step is run again; it says nothing about the share).
 - Layer dev steps (dev only): killnear [radius], lootlast. Switches: build/native/t5-*.args, lt1.args, t6-*.args,
   t7.args.
+- ANSWERED from the earlier research notes (build/decomp/notes_lootr_bodies_chests.md A.1 / A.2, read in code on
+  2026-11-10; I should have read them before writing "open question"): the natural loot (the interaction on a body,
+  its loot buff and timer 2026) and the 2491 request call the SAME worker, and one hook at its entry covers all four
+  call sites. A take is always "every pool entry of kind 0", moved into the looter's bag in ONE bag transaction at
+  that moment (there is no loot window). So hand looting gives the friend its share exactly like the request does,
+  and 1.5 s is not a race. "pool 4 -> 4" means the body had no kind-0 entry: its drops were of the other kinds (kind
+  3 = thrown on the ground by the death event, kinds 6 / 9 special), which never go through the worker. tcB387's big
+  takes were bodies with kind-0 entries. What stays unverified is only what a second player sees on screen.
