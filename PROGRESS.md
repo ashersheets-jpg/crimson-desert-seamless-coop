@@ -5342,3 +5342,16 @@ Run pp1 on package 0.1.0-alpha+0cd46dd8 (layer HEAD 0cd46dd, native 560e3dc; one
   field owner's character counts ...", a counts line once a minute.
 - To test next (ff6 / ff7): the lure scene at 108 m with the hook: does the guest lose HP (with ai_handoff=1, so the
   bandits go for it), and do the guest's own blows there take HP off a bandit (the npcs step shows HP).
+
+### ff6 (2026-11-11 15:27, damage_range_players=1 + ai_handoff=1): A GUEST 108 m FROM THE HOST FIGHTS FOR REAL
+
+- The lure scene again (the host draws its bandits to the dock, leaves for the shrine 108 m away; the guest stays
+  and swings 50 times). Switches: build/native/ff6.args. One PC, two copies, -Fresh, lowest graphics.
+- Host log: "DamageRange ON ...", then "a hit 108 m from the field owner's character counts: another player is 36 m
+  from the victim"; 67 hits counted that the game's rule would have set to 0 (none had the field owner in range).
+- The guest's HP: 300 -> 275 -> 225 -> 190 -> 168 ... -> 18 -> 0 in 75 s (every earlier run at that distance: 300
+  throughout). At 15:34:32 it went down: death notice to the client, game-over skipped, input held (the downed pose).
+- The guest's own blows: tally "guest>NPC 62", "kills host 0 guest 7": SEVEN bandits killed by the guest with the
+  host 108 m away (tcB413 / tcB415 / ff1: never a kill). Crimes: 45 seen, 44 skipped for the guest.
+- So the 80 m rule was the cause, and the hook fixes it. With the hand-over on, the bandits also went for the guest.
+- ff7 (running): the same with ai_handoff off (the release default): is the damage fix alone enough.
