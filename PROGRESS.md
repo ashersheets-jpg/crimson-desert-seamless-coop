@@ -4527,3 +4527,18 @@ arriving at Hernand.
 - tcB337 (a typo in the key name, no key pressed) / tcB338 (keyboard, Esc opens the menu on Inventory): the tab row
   shows no key icons at all with a keyboard (the game has no tab keys there: E / Q do nothing, as in the plain game;
   tabs are clicked, ours too). So "the keyboard's next-tab key with the icon hidden" is closed: nothing to break.
+
+### tcB339 (2026-11-10 21:33): pad tap by the friend, Resynchronise
+
+- "Hud: a short tap of Interact by the friend handed back to the game": a quick A beside the friend goes on to the
+  game (the jump). The 1.3 s hold did not open the menu in this run because the friend stood off-centre (no prompt
+  shown: the hold was the game's); hold -> menu was seen in tcB275.
+- Co-op tab -> Resynchronise: "Co-op page: Resynchronise", "Sync: resync (asked for): leaving and joining again", the
+  notice "Resynchronising with Guest...", the layer link rejoined at once (characters re-sent both ways), the native
+  session untouched (STABLE), the friend still there. SAVES OK, restored 5/5.
+- Lootr for bodies and chests, research (build/decomp/notes_lootr_bodies_chests.md, local): a body's loot is rolled
+  lazily at the first take (flag comp+0x6C in the loot component; worker exe+0x2E224F0(lootComp, err, looter, a, b));
+  the plan is "re-arm the roll": after the first looter, put the flag back so the second looter gets the game's own
+  second roll; only the leftover-list packet 2414 is held back from the other player meanwhile. Chests: the content
+  comes from the gimmick "Drop" event (0x2D4EC10 / 0x2D4DE40), less certain. A log-only probe of the loot worker is
+  written; tcB340 walks the host into the bandit camp near the start to fight and loot.

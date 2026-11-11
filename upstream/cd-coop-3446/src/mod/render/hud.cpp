@@ -638,7 +638,11 @@ void hud_draw(float width, float height) {
                         input::mask_from_game(a, 200);
                         if (r_down && !tap_since) tap_since = now_ms;
                         if (!r_down && tap_since) {
-                            if (!fired && now_ms - tap_since < kTapMs) input::press_for_game(a, 90);
+                            if (!fired && now_ms - tap_since < kTapMs) {
+                                input::press_for_game(a, 90);
+                                static int said = 0;
+                                if (said++ < 5) log::info("Hud: a short tap of Interact by the friend handed back to the game");
+                            }
                             tap_since = 0;
                         }
                     }
