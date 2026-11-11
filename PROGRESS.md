@@ -4542,3 +4542,16 @@ arriving at Hernand.
   second roll; only the leftover-list packet 2414 is held back from the other player meanwhile. Chests: the content
   comes from the gimmick "Drop" event (0x2D4EC10 / 0x2D4DE40), less certain. A log-only probe of the loot worker is
   written; tcB340 walks the host into the bandit camp near the start to fight and loot.
+
+### tcB340-tcB342 (2026-11-10 21:41-22:07): getting to a fight for the body-loot probe; a new guest crash
+
+- tcB340: the walk from the spawn to the camp (-10310, -3675) ends on a cliff (Rocca's Hill, out of stamina).
+- tcB341: teleported there (build/port3479/scripts/hostcamp.txt: tp -10300 600 -3690): the camp is EMPTY in the
+  usercopy save (the user cleared it). No fight.
+- tcB342: host on the old bandit save (-HostVariant coop-test-bandits, starts ~110 m west of the live camp at Rodbel
+  Fishing Dock): the GUEST CRASHED entering the host's world, 22:04:19.895, exe+0x36E601E (read of 0x8), 0.18 s after
+  "RemoteMotion probe: tracking the other player's character 0xA0100001". The function exe+0x36E5FC0(obj, flag)
+  calls obj's virtual +0x460, which hands back an empty handle, and reads through it (no null check). Its callers:
+  exe+0x36EAE50 (a state-change handler, flags 0x14) and exe+0x36E4BB0. Not seen before (66 runs with the usercopy
+  host). The guest's own stage manager was at 0 then (not the login-guard case). Dump kept locally
+  (bin64\cdmp_crash.guest_20261110-220419_36540_1.dmp). tcB343 repeats the run to see if it comes back.
