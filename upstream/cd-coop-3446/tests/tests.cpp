@@ -1764,6 +1764,7 @@ void test_native_mode_text() {
     solo.player_name = "Ana";
     const std::string st = native_mode_ini_text(solo);
     CHECK(has(st, "[session2]") && has(st, "enabled=0") && !has(st, "enabled=1") && has(st, "player_name=Ana"));
+    CHECK(has(st, "[sniffer]\r\nrecord=0"));  // solo never records packets to disk (2026-11-11)
     CHECK(native_mode_of_text(st) == NativeMode::Solo);
 
     NativeModeSpec h;

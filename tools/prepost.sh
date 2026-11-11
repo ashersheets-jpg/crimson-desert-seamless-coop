@@ -29,6 +29,31 @@ hasnot() { if grep -qE -- "$2" "$1" 2>/dev/null; then bad "$3   [$(grep -cE -- "
 lastnum() { grep -E -- "$2" "$1" 2>/dev/null | tail -1 | sed -n "s/.*$3 \([0-9][0-9]*\).*/\1/p"; }
 atleast() { local v; v=$(lastnum "$1" "$2" "$3"); if [ -n "$v" ] && [ "$v" -ge "$4" ]; then ok "$5 ($3 $v)"; else bad "$5 ($3 '${v:-none}', wanted >= $4)   [$(basename "$1")]"; fi; }
 
+# Lines per minute of a log (first to last "[HH:MM:SS" stamp). More than $3 a minute is a FAIL: a player's log must
+# not grow by a line or two every second for hours (2026-11-11: the mod's own once-a-second request did that).
+growth() {  # log, who, limit per minute
+  local f=$1 a b n
+  [ -s "$f" ] || return
+  a=$(grep -m1 -oE "^\[[0-9]{2}:[0-9]{2}:[0-9]{2}" "$f" | tr -d '['); b=$(grep -oE "^\[[0-9]{2}:[0-9]{2}:[0-9]{2}" "$f" | tail -1 | tr -d '[')
+  n=$(grep -c "" "$f")
+  local sa=$((10#${a:0:2}*3600 + 10#${a:3:2}*60 + 10#${a:6:2})) sb=$((10#${b:0:2}*3600 + 10#${b:3:2}*60 + 10#${b:6:2}))
+  local secs=$((sb - sa)); [ $secs -lt 60 ] && secs=60
+  local per=$((n * 60 / secs))
+  # the single most repeated line (numbers and addresses blanked): more than 30 a minute = something logs every
+  # second or two for the whole session
+  local top cnt
+  top=$(cut -c29- "$f" | sed -E 's/0x[0-9A-Fa-f]+/N/g; s/[0-9]+/N/g' | cut -c1-60 | sort | uniq -c | sort -rn | head -1)
+  cnt=$(echo "$top" | awk '{print $1}')
+  local tper=$(( ${cnt:-0} * 60 / secs ))
+  [ $tper -le 30 ] && ok "$2: no line repeats more than 30 times a minute (the most repeated: $tper a minute)" || bad "$2: one line repeats $tper times a minute: $(echo "$top" | cut -c1-90)"
+  [ $per -le $3 ] && ok "$2: log growth $per lines a minute ($n lines in $((secs / 60)) min, limit $3)" || bad "$2: log growth $per lines a minute ($n lines in $((secs / 60)) min, limit $3)"
+}
+# Nothing may record packets to disk in a player's game: the base's log must say so, and no capture of this run may
+# be larger than 64 KB.
+no_recording() {  # native log, who
+  hasnot "$1" "recording through a disk queue" "$2: packets are not recorded to disk"
+}
+
 head_step() { say ""; say "== $STEP ($NAME) $(date '+%Y-%m-%d %H:%M') : $1"; }
 
 overlay_checks() {  # layer log, who
@@ -73,6 +98,9 @@ two_player_checks() {
     # written into it; the hook library traps such threads on purpose and lets them go on. Seen since tc51.)
     # native log errors: the known ones (the harness's own sandbox copy, three far-world hooks not ported to this
     # game build, the guest's guarded reads) are counted; any other is a FAIL.
+    no_recording $N/$NAME.$r.log "$r"
+    growth $N/$NAME.$r.log "$r native" 420
+    growth "$L" "$r layer" 240
     local e; e=$(grep "\] ERR " $N/$NAME.$r.log 2>/dev/null | grep -vcE "Session2 save redirect: (cannot copy|CDMP_SANDBOX_ADD)|User2Stages: [DSF], .* REFUSED, not hooked|GuestXVeto: unsupported game build|GuestS3 first-chance AV at cdmp.asi|GuestS3 first-chance AV at 0x7FF[0-9A-F]+ kind 0x8")
     [ "${e:-0}" -eq 0 ] && ok "$r: native log: no error line outside the known set" || { bad "$r: native log: $e unknown error line(s):"; grep "\] ERR " $N/$NAME.$r.log | grep -vE "Session2 save redirect: (cannot copy|CDMP_SANDBOX_ADD)|User2Stages: [DSF], .* REFUSED, not hooked|GuestXVeto: unsupported game build|GuestS3 first-chance AV at cdmp.asi|GuestS3 first-chance AV at 0x7FF[0-9A-F]+ kind 0x8" | cut -d']' -f3- | cut -c1-170 | sort | uniq -c | head -5 | sed 's/^/          /' >> "$R"; }
   done
@@ -125,6 +153,9 @@ real)
   has "$O" "^REAL SAVES UNCHANGED"          "the real save folder unchanged"
   overlay_checks "$N/$NAME.real.coopplus.log" "real install"
   has "$N/$NAME.real.coopplus.log" "Room: hosting" "real install: the Steam room opened (title Co-op menu can invite)"
+  no_recording "$N/$NAME.real.cdmp.log" "real install (solo mode at the title)"
+  has "$N/$NAME.real.cdmp.log" "not recording packets to disk" "real install: the base says it does not record"
+  growth "$N/$NAME.real.cdmp.log" "real install native" 420
   info "screenshots to LOOK AT: $(cd $N/shots && ls $NAME-*.png 2>/dev/null | tr '\n' ' ')"
   ;;
 fresh)

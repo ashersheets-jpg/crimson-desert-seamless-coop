@@ -18,6 +18,10 @@ Not posted yet (2026-11-11, after 3c46bec5):
   damage to 0 that far from the world's owner, so the guest could neither hurt nor be hurt). Tested 108 m from the
   host with the host's quest bandits: the guest lost health, killed six, and the bandits fought back.
   `[session2] damage_range_players=0` in the host's cdmp.ini turns it off.
+- With the mod installed, playing solo or sitting at the title recorded every network packet to files in the game
+  folder (`bin64\cdmp_packets_<date>.log` / `.bin`) with no size limit. It no longer records. You can delete those
+  files; they are not needed.
+- The host's log no longer gets two lines every second during co-op.
 - Known: enemies that came for the host do not go after a guest far from the host until the guest attacks them.
 
 0.1.0-alpha+3c46bec5 (2026-11-11):

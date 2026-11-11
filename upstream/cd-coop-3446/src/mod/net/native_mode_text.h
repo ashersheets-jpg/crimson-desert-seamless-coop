@@ -68,6 +68,11 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
         line("enabled=0");
         line("[session2]");
         line("enabled=0");
+        // 2026-11-11: without this the base's packet sniffer RECORDS every packet to bin64\cdmp_packets_<date>.log/.bin
+        // (its own default is record=1): solo play with the mod installed wrote them with no size limit. Co-op mode
+        // (below) has had record=0 since 2026-11-09; solo did not.
+        line("[sniffer]");
+        line("record=0");
         return t;
     }
     const bool host = s.mode == NativeMode::Host;

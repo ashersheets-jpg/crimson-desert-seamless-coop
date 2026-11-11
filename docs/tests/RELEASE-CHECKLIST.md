@@ -44,6 +44,11 @@ The report is `build/native/prepost-<tag>.txt`. After each game step, LOOK at th
 | crime | both fight at the bandit camp | guest's hits are seen and none is booked as a crime | town NPCs, guards, a real wanted level |
 | farfight | the host draws its quest bandits to the dock and leaves for a spot 108 m away; the guest stays and swings 50 times | the damage range hook is in, hits far from the host are counted, the guest kills at least one enemy and loses health | ordinary camps (only the host's quest bandits are known by coordinates); more than ~130 m from the host |
 
+Every game step also checks what the session leaves behind (added 2026-11-11 after two faults found by reading the
+logs, not by a test): no packets recorded to disk (the base's log must not say "recording through a disk queue"; the
+real install must say "not recording packets to disk"), no log line that repeats more than 30 times a minute, and a
+ceiling on log lines per minute.
+
 Never covered on this PC (say so in the post): two different PCs and Steam accounts, a real internet connection,
 AMD and Intel graphics cards, a controller in a player's hands, sessions longer than about ten minutes.
 

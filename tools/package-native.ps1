@@ -55,7 +55,7 @@ Copy-Item (Join-Path $layerBin 'coopplus.asi') (Join-Path $stage 'mod\coopplus.a
 $solo = @(
     '; Written by Co-op+ (coopplus.asi): the native base''s mode for this launch. Co-op+ rewrites this file;',
     '; edit coopplus.ini instead.', '; coopplus_mode=solo', '[general]', 'player_name=Player', '[net]', 'enabled=0',
-    '[overlay]', 'enabled=0', '[coop]', 'enabled=0', '[session2]', 'enabled=0') -join "`r`n"
+    '[overlay]', 'enabled=0', '[coop]', 'enabled=0', '[session2]', 'enabled=0', '[sniffer]', 'record=0') -join "`r`n"
 [IO.File]::WriteAllText((Join-Path $stage 'mod\cdmp.ini'), $solo + "`r`n", (New-Object Text.UnicodeEncoding($false, $true)))
 # The native base's GPL source (its own repository, this commit).
 $natSha = (& git -C $nat rev-parse --short=8 HEAD).Trim()
