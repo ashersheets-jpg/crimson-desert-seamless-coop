@@ -4656,3 +4656,9 @@ arriving at Hernand.
   the Lootr duplication fix, HandleGuard + TextGuard, the RB icon fix, item sharing on (give both ways; the stash page
   with its "opens once the host has a warehouse" state), the pad A tap fix, the finer anti-grief trim; lootr_bodies off.
   NOT posted: waits for the user's OK (queued above).
+- tcB354 (kill-only mode, 45 fight cycles, then E holds while walking): 75 kills -- the dock's bandits keep coming
+  (reinforcements), the fight never ends, so the host's E holds never got a quiet body ("??? [E] Skin" on a dead
+  animal was on screen once). No loot through the prompt. The on-screen path for bodies cannot be automated here:
+  it stays a hands-on check (queued). Guards: 5367 calls, nothing skipped, no crash.
+- Next (tcB355): the guest beside the host in that fight, to see what the guest sees and whether the enemies react
+  to its attacks (the tester's complaint), now that AntiGrief frees NPCs the host fights.
