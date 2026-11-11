@@ -6,6 +6,8 @@
 #include <atomic>
 #include <cstdio>
 #include <cstring>
+#include <format>
+#include <string>
 
 #include <safetyhook.hpp>
 
@@ -41,10 +43,71 @@ void read_pickup(Seen& s, uintptr_t comp, uintptr_t picker) noexcept {
     }
 }
 
+// The picker's bag (the inventory manager's +0xA2 index): item index and count of each slot (a gather pickup's item
+// is made inside the pickup; tcB324: comp+0xC0 is empty for a plant), compared before and after.
+struct BagSnap {
+    uint16_t idx[200];
+    int64_t n[200];
+    int slots = 0;
+};
+bool snap_bag(uintptr_t picker, BagSnap& b) noexcept {
+    const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    __try {
+        const uintptr_t slot = *reinterpret_cast<uintptr_t*>(base + 0x71C0498);
+        const uintptr_t root = *reinterpret_cast<uintptr_t*>(slot);
+        const uintptr_t info = *reinterpret_cast<uintptr_t*>(root + 8);
+        const uintptr_t mgr = *reinterpret_cast<uintptr_t*>(info + 0x240);
+        const uint16_t bag = *reinterpret_cast<uint16_t*>(mgr + 0xA2);
+        const uintptr_t holder = reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t)>(base + 0x22F1DC0)(picker);
+        if (!holder) return false;
+        const uintptr_t list = *reinterpret_cast<uintptr_t*>(holder + 0x18);
+        const uint32_t cnt = *reinterpret_cast<uint32_t*>(holder + 0x20);
+        for (uint32_t k = 0; k < cnt && k < 64; ++k) {
+            const uintptr_t inv = *reinterpret_cast<uintptr_t*>(list + k * 8);
+            if (!inv || *reinterpret_cast<int16_t*>(inv + 0x10) != static_cast<int16_t>(bag)) continue;
+            const uintptr_t first = *reinterpret_cast<uintptr_t*>(inv);
+            const int16_t slots = *reinterpret_cast<int16_t*>(inv + 8);
+            b.slots = slots < 0 ? 0 : (slots > 200 ? 200 : slots);
+            for (int i = 0; i < b.slots; ++i) {
+                const uintptr_t e = first + static_cast<uintptr_t>(i) * 200;
+                b.idx[i] = *reinterpret_cast<uint16_t*>(e + 8);
+                b.n[i] = *reinterpret_cast<int64_t*>(e + 0x10);
+            }
+            return true;
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    }
+    return false;
+}
+void row_head(uint16_t idx, uint8_t* out, size_t n) noexcept {
+    const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    std::memset(out, 0, n);
+    __try {
+        const uintptr_t row = reinterpret_cast<uintptr_t (__fastcall*)(uint64_t, uint32_t)>(base + 0x3DD8A0)(0, idx);
+        if (row) std::memcpy(out, reinterpret_cast<void*>(row), n);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    }
+}
+
 int* __fastcall pickup_detour(uintptr_t comp, int* err, uintptr_t picker, uint64_t kind) noexcept {
     Seen s;
     read_pickup(s, comp, picker);
+    static BagSnap before, after;
+    const bool had = snap_bag(picker, before);
     int* r = g_pickup.call<int*>(comp, err, picker, kind);
+    if (had && snap_bag(picker, after) && g_logged.load() < 40) {
+        for (int i = 0; i < after.slots; ++i) {
+            const bool same = i < before.slots && before.idx[i] == after.idx[i];
+            const int64_t was = same ? before.n[i] : 0;
+            if (after.idx[i] == 0xFFFF || after.n[i] == was) continue;
+            uint8_t row[0x40];
+            row_head(after.idx[i], row, sizeof row);
+            std::string hex;
+            for (const uint8_t c : row) hex += std::format("{:02X}", c);
+            log::info("Lootr probe: the pickup added item idx 0x{:X} x{} (slot {}) | its row: {}", after.idx[i],
+                      after.n[i] - was, i, hex);
+        }
+    }
     int e = -1;
     if (err) game::fast_read(reinterpret_cast<uintptr_t>(err), &e, 4);
     if (g_logged.fetch_add(1) < 40) {
@@ -75,14 +138,15 @@ void lootr_host_sniffed(const uint8_t* packet, size_t size, bool server_to_clien
     if (!g_pickup || size < 5) return;
     const uint16_t op = static_cast<uint16_t>(packet[0] | (packet[1] << 8));
     // Always: the interaction / gimmick / item opcodes (notes_lootr.md); after a pickup: everything for 3 s.
-    static const uint16_t kWatch[] = {3008, 3073, 2120, 2794, 2165, 2155, 2787, 2304, 2694, 2760, 3067, 3066, 3110,
-                                      2414, 2491, 2605, 2066};
+    // Always (small budget): the interaction requests and answers. After a pickup (3 s): everything, its own budget
+    // (tcB323: the background gimmick traffic 2155 / 2787 used the whole budget before the pickup).
+    static const uint16_t kWatch[] = {3008, 3073, 2120, 2794, 2066};
     bool watched = false;
     for (const uint16_t w : kWatch) watched = watched || w == op;
     const bool after = GetTickCount64() <= g_watch_until.load();
     if (!watched && !after) return;
-    static std::atomic<int> n{0};
-    if (n.fetch_add(1) > 600) return;
+    static std::atomic<int> n_watch{0}, n_after{0};
+    if (after ? n_after.fetch_add(1) > 800 : n_watch.fetch_add(1) > 100) return;
     if (op == 2002 || op == 1001) return;
     char hex[3 * 40 + 1] = {};
     const size_t m = size < 40 ? size : 40;
