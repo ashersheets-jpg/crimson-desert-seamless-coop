@@ -4937,3 +4937,20 @@ arriving at Hernand.
 - Borque's line may be the same thing or the removed on-screen hints (the 07:00 post explains where the controls
   are). The user's rule "no key banner at all" in the shared world stands; a first-session tip is a question for the
   user (queued).
+
+### tcB400-tcB401 (2026-11-11 07:31-07:47): the "text in the middle" (prologue hold) removed in the shared world
+
+- Borque, #general 07:29: "but what should we select in the co-op menu to disable that text in the middle". The
+  text is the old layer's prologue hold ("Co-op starts after the prologue: you each play it on your own" / "... after
+  your prologue: X is waiting" / "... once X finishes the prologue"): shown, and the co-op link features held, while
+  either player's own save has fewer than 60 completed missions. In the shared world that rule makes no sense (both
+  are in the host's world from the start), and the merged Co-op tab has no "My prologue is done" row, so nothing
+  removed it. Never seen in our tests because the test saves have 490+ missions (the hold flickers for 50 ms).
+- Fix (layer): on the shared-world build the hold is off ("Prologue: shared world: no solo prologue, co-op is on from
+  the start"). tcB401: both in the world, no hold line in either log, party frame and the friend prompt on screen,
+  SAVES OK. Unit tests pass.
+- tcB400 (a guest alone, 99 m from the host, at the bandit camp): the "[E] Assassinate" prompt on an unaware bandit
+  is greyed and E does nothing; over 2 minutes the bandits around the guest do not move at all (same pose in two
+  shots). So NPCs far from the host are frozen for the guest: their control stays with the host's client. A real
+  limit of the shared world as built (the guest has to stay near the host for a living world); a controller
+  hand-over to the guest's client is the fix, a big piece of B02. Noted, not started.

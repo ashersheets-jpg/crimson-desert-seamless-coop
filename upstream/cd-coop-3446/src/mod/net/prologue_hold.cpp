@@ -15,6 +15,7 @@
 
 #include "common/game_save.h"
 #include "mod/log.h"
+#include "mod/native_layer.h"
 #include "mod/save_io.h"
 
 namespace cdmp::net {
@@ -110,6 +111,16 @@ void send_locked(bool ours) {
 }  // namespace
 
 void prologue_configure(bool enabled, uint32_t threshold) {
+    // Shared world (2026-11-11, a tester's "text in the middle" that nothing in the menu removes): there both players
+    // are in the host's world from the first second, so nobody plays a prologue "solo first". The hold only kept the
+    // co-op features off and its line on screen for any player whose own save has few completed missions, and the
+    // merged Co-op tab has no "My prologue is done" row.
+    if (kNativeLayer && enabled) {
+        g_enabled = false;
+        g_threshold = threshold;
+        log::info("Prologue: shared world: no solo prologue, co-op is on from the start");
+        return;
+    }
     g_enabled = enabled;
     g_threshold = threshold;
     log::info("Prologue: {}", enabled ? std::format("played solo (co-op waits below {} completed missions)", threshold)
