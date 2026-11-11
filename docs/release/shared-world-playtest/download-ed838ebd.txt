@@ -1,0 +1,16 @@
+**Update: shared world playtest 0.1.0-alpha+ed838ebd (give items, two crash guards, a duplication fix)**
+Please use this build instead of 24661515. You and your co-op partner both need it.
+
+Fixed:
+- **Item duplication**: an item one of you dropped on the ground could be taken by both of you. Now a dropped item goes to whoever picks it up; only things you gather (herbs, flowers and the like) are per player.
+- **Two crashes**: a guest crash right after entering the host's world, and a host crash right after looting. Both now have guards.
+- The stray RB icon between "Others" and "Co-op" in the pause menu's tab row is gone.
+
+New:
+- **Give an item to your friend**: stand next to them, open your inventory and press Discard on an item: you are asked "Give to <name> / Discard / Cancel". The item moves with everything on it (upgrades, durability, dye).
+- The Co-op tab has a "Shared stash" section. It opens once the host has unlocked a warehouse in the story (it is the host's warehouse, usable by both of you from anywhere). Untested with an unlocked warehouse: tell us how it goes.
+
+- `CrimsonDesert-SeamlessCoop-0.1.0-alpha+ed838ebd-shared-world.zip`: this is the one you want. Run its installer with the game closed (it replaces the older build).
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tested with two copies of the game on one PC. Please tell us in #bug-reports how it goes (and send the report zip if anything goes wrong).

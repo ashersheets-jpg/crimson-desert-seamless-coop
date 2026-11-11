@@ -8,6 +8,8 @@ test save Out, shipped cdmp.ini restored.
 - Playtest results from the testers (the two-PC test).
 - Release / Discord posts / sending a build: each needs the user's OK first.
 - Controller feel checks (hands on a pad).
+- POST the fixed build 0.1.0-alpha+ed838ebd (packaged 2026-11-11 00:05, install checks pass; text in
+  docs/release/shared-world-playtest/download-ed838ebd.txt): it closes the drop duplication of 24661515. Needs the OK.
 - Per-player enemy loot ([session2] lootr_bodies=1 in the host's cdmp.ini): works in server-side tests; needs two
   players to check on screen (one loots a body, then the other) before it is turned on for everyone.
 - Guest-side checks (the guest seeing a gift arrive, guest -> host give, the stash with an unlocked warehouse, Lootr
@@ -4650,3 +4652,7 @@ arriving at Hernand.
   item: one for whoever takes it"). So the duplication hole IS real in the posted build 24661515 (there this pickup
   counted as per player: the dropper could take "its copy"), and the fix closes it. The host's own E then took a
   peony as usual ("kept for the guest"). A fixed build should replace 24661515: needs the user's OK to post.
+- 2026-11-11 00:05 package 0.1.0-alpha+ed838ebd built (tools\package-native.ps1; test-install-fake: all steps passed):
+  the Lootr duplication fix, HandleGuard + TextGuard, the RB icon fix, item sharing on (give both ways; the stash page
+  with its "opens once the host has a warehouse" state), the pad A tap fix, the finer anti-grief trim; lootr_bodies off.
+  NOT posted: waits for the user's OK (queued above).
