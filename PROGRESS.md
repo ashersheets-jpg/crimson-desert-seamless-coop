@@ -5047,3 +5047,21 @@ arriving at Hernand.
   existed for the shared world; it never showed because the stuck box was in front of it. No new banner is needed.
 - Posts today: 2f4b0dd4 05:52, ed31f10e 06:58, 21f0f6d0 07:48, 0797bafd 08:09, 3c46bec5 08:44 (each replaces the one
   before; the older posts were left as they are).
+
+### tcB413-tcB414 (2026-11-11 09:15-09:35): a guest FAR from the host cannot really fight (open); a small fix
+
+- tcB413 (the guest at the bandit camp, the host 100 m away at the shrine): the guest's swings reach the server (60+
+  hit calls on six actors, bandits and their horses), but in about 70 s NO bandit died and the guest took NO damage
+  (HP 300 throughout; the shot shows a bandit in a hit pose). With the host beside it (tcB414, tcB359) the same
+  fight gives kills and the guest is hurt (HP 278, 1 kill in tcB414). So away from the host the enemies neither die
+  nor fight back: the fight only works within the host's reach. Not understood yet (who applies the damage and runs
+  the enemy's AI when its controller, the host's client, is far away). A real limit for testers: stay together in
+  fights. OPEN, B02 / B18.
+- Found there and fixed (native, local commit): every bandit the guest hit was logged as "the host has fought this
+  NPC" although the host was far away: the tap that feeds that list also carries frame events with another
+  attacker. Now only a hit whose attacker is the host's own character counts. tcB414: the guest's 19 hits and 1 kill
+  are skipped as crimes by the rule "the host would not be punished either", none by the fought list; unit tests
+  pass. Not in a posted build yet (not worth a post by itself).
+- The tester Borque's remark of 2026-11-08 "you are not able to execute them": the guest's "[E] Assassinate" prompt
+  on an unaware bandit far from the host is greyed (tcB400); near the host it is offered (tcB357 g1). Whether it
+  works there is still unchecked.
