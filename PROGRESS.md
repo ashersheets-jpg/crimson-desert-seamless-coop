@@ -4591,3 +4591,17 @@ arriving at Hernand.
   leftover list 2414 is kept from the other player (guest: dropped before its queue; host: body key blanked in its
   client). A repeat looter is refused (exe+0x714BFA0). A mid hook at exe+0x2E22885 keeps the body for the first
   looter (the game's own "not removed" branch). Test tcB348.
+
+### tcB348 (2026-11-10 23:04): the first re-arm, and the host crash explained
+
+- "Lootr: the body loot worker hooked: enemy loot is per player". First body: nothing lootable ("pool 1 -> 1 ...
+  nothing taken, not kept", for the host and then the guest: both treated as first looters, as designed). Second:
+  "body 0xB01002D5 looted first by 0xA0100001: pool 3 -> 1, bag +2, err 0 | kept for the other player (re-armed)".
+  The bag grows inside the take (the count is synchronous here, unlike a plant's).
+- 8 ms later the HOST crashed again at exe+0x402C250 (reading 0x1013FF15F), as at the end of tcB347. The code there
+  (exe+0x402C0C0) looks for "(" and ")" in a text and computes length - 1 as a 32-bit number: an EMPTY text makes it
+  scan from text + 0xFFFFFFFF (the faulting address is exactly that). It is the game's code for a text the loot's
+  notice builds; the dev loot (2491 on a body the client never interacted with) most likely gives it an empty one.
+  Guard built (native handle_guard.cpp, "TextGuard", both roles): a mid hook at exe+0x402C23E (bytes checked); a
+  length of 0 goes to the function's own "no ')' found" path (exe+0x402C261). Counts logged once a minute.
+- Test tcB349: the same run with the guard.
