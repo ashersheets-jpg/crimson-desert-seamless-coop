@@ -13,7 +13,9 @@
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
 #include "mod/net/coop_activity.h"
+#include "mod/net/coop_chat.h"
 #include "mod/net/local_capture.h"
+#include "mod/net/remote_puppet.h"
 #include "mod/net/troc_sniffer.h"
 
 namespace cdmp::net {
@@ -251,6 +253,41 @@ void stash_on_event(const uint8_t* p, size_t n) {
     }
 }
 
+// Lootr chests (native lootr.h): a share that waits for a player who was not at the chest. The host's native queues
+// the event (export cdmp_chest_events); the player it waits for gets a notice and a pin on the map.
+void chest_notices() {
+    using EventsFn = int (*)(uint8_t*, int);
+    static EventsFn fn = nullptr;
+    static bool looked = false;
+    if (!looked) {
+        looked = true;
+        if (HMODULE m = GetModuleHandleW(L"cdmp.asi")) fn = reinterpret_cast<EventsFn>(GetProcAddress(m, "cdmp_chest_events"));
+    }
+    if (!fn) return;
+    uint8_t ev[20 * 8] = {};
+    const int n = fn(ev, 8);
+    const uint32_t own = capture_own_player_key();
+    for (int i = 0; i < n; ++i) {
+        const uint8_t* e = ev + 20 * i;
+        uint32_t player = 0;
+        proto::Vec3 at{};
+        std::memcpy(&player, e + 4, 4);
+        std::memcpy(&at.x, e + 8, 4);
+        std::memcpy(&at.y, e + 12, 4);
+        std::memcpy(&at.z, e + 16, 4);
+        if (e[0] != 1) continue;  // 2 = fetched: the game's own "acquired" lines say it
+        const bool ours = player == own && own != 0;
+        log::info("Chest: a share waits for {} at ({:.0f}, {:.0f}, {:.0f})", ours ? "us" : "the friend", at.x, at.y, at.z);
+        if (ours) {
+            chat_notice_local("Your friend opened a chest. Your share waits at the chest (pinned on your map)");
+            puppet_waypoint_pin(own, at);
+        } else {
+            chat_send_notice("Your friend opened a chest. Your share waits at the chest (pinned on your map)");
+            capture_emit_ping(at.x, at.y, at.z);
+        }
+    }
+}
+
 void stash_tick(bool connected, bool host, uint32_t) {
     if (!connected) {
         std::lock_guard lk(g_mu);
@@ -260,6 +297,14 @@ void stash_tick(bool connected, bool host, uint32_t) {
         return;
     }
     g_is_host = host;
+    if (host) {
+        static uint64_t chest_at = 0;
+        const uint64_t t0 = now64();
+        if (t0 - chest_at >= 1000) {
+            chest_at = t0;
+            chest_notices();
+        }
+    }
     // Early: whether the host's warehouse is unlocked (the card offers the stash only then), asked every 10 s until known.
     {
         static uint64_t probe_at = 0;

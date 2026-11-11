@@ -4804,3 +4804,15 @@ arriving at Hernand.
   the same run has spawn reason 0x07 (a spawning pool): plants are per player whatever the reason, as before.
 - Package 0.1.0-alpha+1e04722c built (crime fix, guest hits, chests phase 1, world-placed gear, the guards, give /
   stash), install checks all pass. Not posted (needs the OK).
+
+### tcB380-tcB381 (2026-11-11 04:44-04:53): a chest share that waits: notice, map pin, fetched on arrival
+
+- New: when the other player is not at the chest, the host's native reports it (export cdmp_chest_events), the
+  host's layer tells that player "Your friend opened a chest. Your share waits at the chest (pinned on your map)"
+  (a notice without a name in front: chat kind 0xFE) and pins the chest on their map (the ping's pin). Shares now
+  wait up to 3 hours (48 at most) instead of 30 minutes.
+- tcB381: the guest 14 m away when the host opened: "the share waits for 0xA0100066, who is not at the chest"; the
+  guest's layer got the notice and the pin at (-10348, -3992); 8 s later the guest came to the chest and "got its own
+  share ... its bag gained 58 piece(s)". (tcB380: the script's wait is capped at 10 s, the guest was back early and
+  got the share at once.)
+- Native committed (local), layer built and tested (unit tests pass).

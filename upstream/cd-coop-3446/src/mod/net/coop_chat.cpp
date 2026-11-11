@@ -114,6 +114,9 @@ void chat_on_event(const uint8_t* d, size_t n) {
     std::string text;
     if (d[0] == 0) {
         text = sanitize(std::string(reinterpret_cast<const char*>(d + 1), n - 1));
+    } else if (d[0] == 0xFE) {  // a notice from the other player's mod: no name in front
+        text = sanitize(std::string(reinterpret_cast<const char*>(d + 1), n - 1));
+        if (!text.empty()) text.insert(text.begin(), '\x01');
     } else if (d[0] <= kQuick.size()) {
         text = kQuick[d[0] - 1];
     }
@@ -121,6 +124,21 @@ void chat_on_event(const uint8_t* d, size_t n) {
     log::info("Chat: the friend said \"{}\"{}", text, d[0] ? " (quick message)" : "");
     std::lock_guard lock(g_mutex);
     if (g_incoming.size() < 16) g_incoming.push_back(std::move(text));
+}
+
+void chat_notice_local(const std::string& text) {
+    if (text.empty()) return;
+    std::lock_guard lock(g_mutex);
+    if (g_incoming.size() < 16) g_incoming.push_back(std::string("\x01") + text);
+}
+
+void chat_send_notice(const std::string& text) {
+    if (text.empty()) return;
+    std::vector<uint8_t> out;
+    out.push_back(0xFE);
+    out.insert(out.end(), text.begin(), text.begin() + static_cast<std::ptrdiff_t>(std::min<size_t>(text.size(), kMaxText)));
+    activity_send(kChatType, out);
+    log::info("Chat: notice to the friend \"{}\"", text);
 }
 
 ChatView chat_tick(bool connected, const std::string& name, bool focused, uint32_t now) {
@@ -136,7 +154,8 @@ ChatView chat_tick(bool connected, const std::string& name, bool focused, uint32
         std::lock_guard lock(g_mutex);
         // Incoming.
         while (!g_incoming.empty()) {
-            const std::string line = who + ": " + g_incoming.front();
+            const std::string& in = g_incoming.front();
+            const std::string line = !in.empty() && in[0] == '\x01' ? in.substr(1) : who + ": " + in;
             add_log(line, now);
             v.toast = "Co-op\n" + line;
             g_incoming.pop_front();

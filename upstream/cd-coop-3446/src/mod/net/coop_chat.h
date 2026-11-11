@@ -41,4 +41,9 @@ void chat_quick_step(int delta);
 const char* chat_quick_name(int index);
 void chat_send_quick(int index);
 
+// A notice from the mod itself (no "name:" in front): shown to us / sent to the other player (activity type 22,
+// kind 0xFE | text). The network loop's thread.
+void chat_notice_local(const std::string& text);
+void chat_send_notice(const std::string& text);
+
 }  // namespace cdmp::net
