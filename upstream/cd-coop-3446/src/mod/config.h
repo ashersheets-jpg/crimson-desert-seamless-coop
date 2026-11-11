@@ -105,9 +105,9 @@ struct Config {
     // taken once by EACH player) | first_come (the game's own: the first one takes it). Host; the native's lootr key.
     bool coop_world_items_lootr = true;  // Co-op+ 2026-11-09 B10 option 2: [coop] shared_quest_credit (host)
     bool coop_guest_finishes = true;
-    // Co-op+ 2026-11-10: [coop] item_sharing (B11 give + B12 shared stash): off until both work end to end (playtest
+    // Co-op+ 2026-11-10: [coop] item_sharing (B11 give + B12 shared stash): on since tcB335 (the give works both ways; the
     // builds keep the game's own Discard untouched).
-    bool coop_item_sharing = false;
+    bool coop_item_sharing = true;  // 2026-11-10: on (the give works both ways, tcB335)
     bool coop_respawn_at_partner = false;  // Co-op+ (T26): [coop] respawn_at = checkpoint (default) | partner   // Co-op+ (T17): [coop] guest_finishes  // Co-op+ (T15): [coop] teammate_revive
     bool dev_revive_test = false;
     bool dev_copy_untargetable = false;

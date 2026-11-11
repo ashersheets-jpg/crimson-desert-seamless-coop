@@ -4504,3 +4504,12 @@ arriving at Hernand.
   docs/release/shared-world-playtest/download-24661515.txt): the guest load-stall fix, Lootr for world pickups (on by
   default, setting "Items in the world"); keeps 55722584's fixes; give / stash still hidden. Same upload method as
   17:54 (the app's browser pane, signed in).
+
+### tcB334-tcB335 (2026-11-10 20:48-21:02): the give works BOTH ways; item sharing on
+
+- tcB334: the guest's key steps did not reach its window (a focus slip); rerun.
+- tcB335: guest -> host "Give (whole record): x1 from 0xA0100066 to 0xA0100001: stage 5 err 0"; host -> guest "x1
+  from 0xA0100001 to 0xA0100066: stage 5 err 0" (one of a stack of 9). The guest's inventory on screen after its
+  give: the Ricefish gone (65/99). The game itself moves the whole record and tells both clients. Guest load STABLE.
+- [coop] item_sharing now defaults to 1 (Inventory -> Discard next to the friend: Give to <name> / Discard / Cancel;
+  "Put in the shared stash" only once the host's warehouse is unlocked). Not in a posted build yet.
