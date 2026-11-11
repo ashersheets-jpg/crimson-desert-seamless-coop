@@ -131,7 +131,8 @@ const char* seed_for(LobbyPlan p) {
     }
 }
 
-std::atomic<bool> g_shared_quest_credit{false};  // B10 option 2 ([coop] shared_quest_credit)
+std::atomic<bool> g_shared_quest_credit{false};
+std::atomic<bool> g_world_items_lootr{true};  // [coop] world_items  // B10 option 2 ([coop] shared_quest_credit)
 std::string g_native_extra;                      // dev: [dev] native_extra (set once at start)
 
 // The native ini for this mode with this partner (under g_m).
@@ -143,6 +144,7 @@ bool native_write(NativeMode mode, LobbyPlan plan) {
     spec.partner_address = g_in.steam ? std::string() : g_in.partner_address;
     spec.player_name = g_in.own_name.empty() ? "Player" : g_in.own_name;
     spec.shared_quest_credit = g_shared_quest_credit.load();
+    spec.world_items_lootr = g_world_items_lootr.load();
     if (mode == NativeMode::Host) spec.extra = g_native_extra;
     // Over udp the Co-op+ link already has its port (Radmin VPN / Direct IP: 37015): the native tunnel takes the next.
     if (!spec.steam) spec.port = static_cast<uint16_t>((g_in.direct_port ? g_in.direct_port : 37015) + 1);
@@ -624,6 +626,7 @@ std::string lobby_difficulty_card() {
 }
 
 void lobby_set_shared_quest_credit(bool on) { g_shared_quest_credit = on; }
+void lobby_set_world_items_lootr(bool on) { g_world_items_lootr = on; }
 void lobby_set_native_extra(const std::string& kv) {
     g_native_extra = kv;
     if (!kv.empty()) log::info("Lobby: [dev] native_extra '{}' is added to the host's native ini", kv);

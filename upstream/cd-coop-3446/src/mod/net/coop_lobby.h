@@ -70,6 +70,8 @@ LobbyView lobby_view();
 // Render thread: the menu's actions.
 // B10 option 2: [coop] shared_quest_credit, written into the host's native ini at the next co-op launch.
 void lobby_set_shared_quest_credit(bool on);
+// [coop] world_items (host): lootr (default) writes lootr=1 into the host's native ini at the next co-op launch.
+void lobby_set_world_items_lootr(bool on);
 // dev: [dev] native_extra (host only; research runs).
 void lobby_set_native_extra(const std::string& kv);
 void lobby_start_coop();          // host: opens the question (with a friend in the party)

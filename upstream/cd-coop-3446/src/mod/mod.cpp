@@ -2286,6 +2286,7 @@ DWORD WINAPI worker(LPVOID) {
         net::sync_set_test(cfg.dev_desync_test);
         net::revive_partner_set(cfg.coop_teammate_revive, cfg.dev_revive_test);
         net::lobby_set_shared_quest_credit(cfg.coop_shared_quest_credit);
+        net::lobby_set_world_items_lootr(cfg.coop_world_items_lootr);
         net::give_set_enabled(cfg.coop_item_sharing);
         net::lobby_set_native_extra(cfg.dev_native_extra);
         net::guest_hits_set_finishes(cfg.coop_guest_finishes);

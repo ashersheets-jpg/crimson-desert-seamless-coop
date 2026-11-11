@@ -217,7 +217,10 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
 - [~] **B17 — Teammate revive rework** (2026-11-09: revive by interacting -- hold E next to the downed friend --
   works, tcB208; the bleed-out timer, progress line and credit notices were there; Q / U kept. User check left.) (bleed-out timer, revive by interacting, progress and credit; Q/U kept).
 - [ ] **B18 — Combat feedback for both** (status effects, knockback, damage numbers, per-player lock-on).
-- [ ] **B19 — Anti-grief protections** (quest NPCs, the host's story items; setting).
+- [~] **B19 — Anti-grief protections** (quest NPCs, the host's story items; setting). (2026-11-10: hits on protected
+  people taken out of a swing that also hits enemies; an NPC the host fights is fair game. User 2026-11-10: world items
+  are per player instead of protected ("Lootr", built and seen working both ways for gathered items, tcB329/332;
+  setting "Items in the world"); chests / bodies / across sessions still to do.)
 - [ ] **B20 — Partner audio** (footsteps, combat sounds, voice lines, distance falloff).
 
 **Last (needs the rest stable)**

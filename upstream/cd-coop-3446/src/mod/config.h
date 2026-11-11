@@ -100,7 +100,10 @@ struct Config {
     bool dev_hunt_test = false;      // Co-op+ dev: hunting contest one-PC test (coop_hunt.h)
     bool dev_zone_copy_test = false; // Co-op+ dev: the guest's dry-run zone is copied for real (enemy_relay.h)
     bool coop_teammate_revive = true;
-    bool coop_shared_quest_credit = false;  // Co-op+ 2026-11-09 B10 option 2: [coop] shared_quest_credit (host)
+    bool coop_shared_quest_credit = false;
+    // Co-op+ 2026-11-10 (user: "Lootr"): [coop] world_items = lootr (default: every item / plant lying in the world can be
+    // taken once by EACH player) | first_come (the game's own: the first one takes it). Host; the native's lootr key.
+    bool coop_world_items_lootr = true;  // Co-op+ 2026-11-09 B10 option 2: [coop] shared_quest_credit (host)
     bool coop_guest_finishes = true;
     // Co-op+ 2026-11-10: [coop] item_sharing (B11 give + B12 shared stash): off until both work end to end (playtest
     // builds keep the game's own Discard untouched).

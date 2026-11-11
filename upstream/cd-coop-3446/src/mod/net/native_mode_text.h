@@ -27,6 +27,7 @@ struct NativeModeSpec {
     std::string coop_save_seed = "keep";  // keep | copy | new (native config.h s2_coop_save_dir)
     std::string player_name = "Player";
     bool shared_quest_credit = false;  // B10 option 2 (host): [session2] quest_shared_credit
+    bool world_items_lootr = true;     // user 2026-11-10 (host): [session2] lootr
     std::string extra;                 // dev: "k=v,k=v" appended to [session2] (config dev_native_extra)
 };
 
@@ -128,6 +129,9 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
         // B10 option 2, the player's choice ([coop] shared_quest_credit): an objective one player completes also
         // counts for the other where the other has that step active.
         if (s.shared_quest_credit) line("quest_shared_credit=1");
+        // The player's choice ([coop] world_items, Lootr by default): an item or plant one player takes stays for the
+        // other, who can take it once too.
+        if (s.world_items_lootr) line("lootr=1");
         // dev (research runs): extra keys (only keys the defaults do not write: an ini reader takes the first one).
         for (size_t at = 0; at < s.extra.size();) {
             size_t comma = s.extra.find(',', at);

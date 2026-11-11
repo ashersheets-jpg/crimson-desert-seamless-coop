@@ -4482,3 +4482,11 @@ arriving at Hernand.
   3008 / 3073 (seen on the sniffer tap) are answered with injected 2120 / 2794 (puppet_inject_s2c), 1.7 s later the
   host's copy (the item the guest's pickup gave, from the guest's bag) is added by its own 3111 (entry 0xC0DE0005,
   now for either player) and the originals are delivered to the host's client. Test tcB332.
+- tcB332: LOOTR BOTH WAYS. The guest took peony 0xB0100147 first (its item 0x50D x1); the host still saw it ("host
+  packets blanked 9"), took it with E ("the host took gimmick 0xB0100147 too (the guest was first) ... 4 packet(s)
+  replayed", "the host's copy: item key 757006 x1 to 0xA0100001: added (err 0)"); on the host's screen the peony was
+  gone afterwards. Guest load STABLE (3rd run in a row with the guard fix).
+- Setting (layer, user: "add the Lootr (per player) loot setting"): Co-op Settings "Items in the world": "each their
+  own (Lootr)" (default) / "first come" ([coop] world_items = lootr | first_come); the lobby writes lootr=1 into the
+  host's native ini when Lootr (layer test). Covers what is picked from the world (plants, herbs, items lying
+  around); chests and enemy bodies are not covered yet, nor keeping the list when the session ends.

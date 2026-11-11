@@ -248,6 +248,7 @@ Config load_config(const std::wstring& ini_path) {
     c.dev_desync_test = static_cast<int>(read_uint(ini_path, L"dev", L"desync_test", 0));
     c.coop_teammate_revive = read_uint(ini_path, L"coop", L"teammate_revive", 1) != 0;
     c.coop_shared_quest_credit = read_uint(ini_path, L"coop", L"shared_quest_credit", 0) != 0;
+    c.coop_world_items_lootr = read_string(ini_path, L"coop", L"world_items", "lootr") != L"first_come";
     c.coop_guest_finishes = read_uint(ini_path, L"coop", L"guest_finishes", 1) != 0;
     c.coop_item_sharing = read_uint(ini_path, L"coop", L"item_sharing", read_uint(ini_path, L"dev", L"item_sharing", 0)) != 0;
     c.coop_respawn_at_partner = read_string(ini_path, L"coop", L"respawn_at", "checkpoint") == L"partner";
