@@ -8,6 +8,8 @@ test save Out, shipped cdmp.ini restored.
 - Playtest results from the testers (the two-PC test).
 - Release / Discord posts / sending a build: each needs the user's OK first.
 - Controller feel checks (hands on a pad).
+- Per-player enemy loot ([session2] lootr_bodies=1 in the host's cdmp.ini): works in server-side tests; needs two
+  players to check on screen (one loots a body, then the other) before it is turned on for everyone.
 - Guest-side checks (the guest seeing a gift arrive, guest -> host give, the stash with an unlocked warehouse, Lootr
   for the guest): the guest copy stalls in its load on this PC since ~15:50 (memory: Discord 3 GB + two copies); the
   user keeps Discord open (2026-11-10 18:35), so these wait for a lighter moment or the playtesters.
@@ -4605,3 +4607,20 @@ arriving at Hernand.
   Guard built (native handle_guard.cpp, "TextGuard", both roles): a mid hook at exe+0x402C23E (bytes checked); a
   length of 0 goes to the function's own "no ')' found" path (exe+0x402C261). Counts logged once a minute.
 - Test tcB349: the same run with the guard.
+
+### tcB349-tcB350 (2026-11-10 23:17-23:33): per-player enemy loot works on the server; both guards hold
+
+- tcB349: one hit only (a thing with no loot); guards on, no crash.
+- tcB350 (lootr_bodies=1, the dev kill / loot path): 8 bodies. Each: "looted first by 0xA0100001: pool 3 -> 0, bag
+  +6 ... kept for the other player (re-armed)", then 3 s later "looted second by 0xA0100066: rolled 0 -> 1, pool
+  0 -> 0 (after the take), bag +6, err 0". The guest gets its OWN roll every time (+4 .. +8 items; the host +5 .. +8).
+  The first body had leftovers: "pool 2 -> 4 (after the take) ... 2 duplicate(s) removed" (the trim works). "bodies
+  per player: first loots 7 second loots 7 repeats refused 0 lists kept back 21". Before (tcB347): the guest got 0.
+- TextGuard: "empty texts 7": the empty-text crash of tcB347 / tcB348 would have hit 7 times; no crash, host alive
+  to the end. HandleGuard: 4250 calls, 0 empty handles in this run.
+- Fix after it: the second looter's own lists were still kept back from it (the corrected list too); now nothing is
+  kept back once the second take starts (put back if the take fails, e.g. a full bag).
+- NOT verified: looting through the on-screen prompt (the interaction path ends in the same worker, with a = 1 for
+  some bodies: the keep-the-body hook at exe+0x2E22885 has not run yet), and what the second player sees on the body.
+  So [session2] lootr_bodies stays OFF by default; needs a hands-on check (two players, one loots a body, then the
+  other).
