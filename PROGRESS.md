@@ -5250,3 +5250,27 @@ Run pp1 on package 0.1.0-alpha+0cd46dd8 (layer HEAD 0cd46dd, native 560e3dc; one
 - ff4 (running): the lure test with ai_handoff=probe and the host listing its loaded NPCs 60-200 m away, to learn
   who controls the frozen bandits and whether the host's client still has them. The rule (sectors or plain
   distance) is decided from that.
+
+### ff4 (2026-11-11 14:32, ai_handoff=probe): the "orphaned NPC" guess is WRONG; what really happens
+
+- Server facts line (every 10 s, the 10 NPCs nearest to the guest: type, controller, distances) + the host listing
+  its loaded NPCs 60-200 m away. Switches: build/native/ff4.args.
+- The dock bandits exist on the server BEFORE the host goes there (types 3 = people, 5 = their horses, controller
+  the host's user 0x90100000), 112-118 m from the host's spawn. Animals and birds are type 6, also the host's.
+- After the host lured them and went to the shrine (102-119 m away): the first bandits keep their positions on the
+  SERVER too (0xB01000D7 at (-10239.6, -3960.1) in every line), BUT other host-controlled NPCs at the same distance
+  MOVE (0xB01004CB 17 m in 11 s, 0xB0100459 / 45A, 0xB01004C8 / CA back and forth across x = -10240). And the host's
+  client lists 91-110 loaded NPC actors between 60 and 200 m.
+- So at ~110 m the host's client still has those NPCs and still drives them. The still bandits are not orphans:
+  their AI runs on the HOST's client and plays against the host's character (its target is gone, so they stand and
+  wait). The research agent's 80% guess (removed by the 64 m sector grid) does not hold at this distance, and my own
+  sector arithmetic agreed that they are neighbours. The sector rule also called 287 NPCs "not visible" that were
+  simply being driven fine.
+- What this means for players (still under: one PC, two copies, the host's quest bandits): an enemy fights the
+  player whose game controls it. Enemies born for the host fight the host; a guest alone among them, 100 m from the
+  host, is ignored. Whether ordinary camp enemies behave the same is not tested (no such camp known by coordinates
+  yet). True orphans (controller's client really without the actor) need more than ~130-190 m and are a separate,
+  untested case.
+- Rule changed (native, local): hand an NPC over when its controller's character is more than 60 m from it and
+  another player's is within 30 m, twice in a row; back by the same rule. ff5 runs it with ai_handoff=1: do the
+  bandits then turn on the guest.
