@@ -5,6 +5,11 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- TESTERS BLOCKED (2026-11-11): several see no Co-op menu at the title (all own the DLC; not reproducible here). A
+  Diagnose zip from one of them is needed; asked in #general 07:00. If the user owns or can borrow the DLC, a look
+  at the title screen with it installed would settle it.
+- Question: testers did not find the controls after the hints were removed. Keep "no banner at all", or allow one
+  short tip at the start of a session that names the menu's Co-op tab (no keys)?
 - POSTING, 2026-11-11 ~06:10 (the user, going to sleep for at least 12 hours): "I am giving you authorization to post
   updates if you feel like it is worth it to do so. Please continue working." So until about 2026-11-11 18:10 a
   build / update post in the Discord (#download-here, #general) may go out without asking, when it is worth it
@@ -4906,3 +4911,29 @@ arriving at Hernand.
   so we cant properly test". No game update is out (Steam public build 26480954 = ours), so it is not the version
   guard. The 07:00 post explains where the controls are now (title menu, pause menu's Co-op tab, hold interact,
   Discard -> Give) and asks both for a screenshot and the Diagnose zip. OPEN: find out what they do not see.
+
+### 2026-11-11 07:00-07:30: testers see NO Co-op menu at the title; not reproduced here (tcB393-tcB399)
+
+- Reports (#play-testing-feedback 06:00-06:34, #general 04:38 / 06:50): JackyChan004 (AMD card) and his friend
+  (Nvidia) "installed co op and run the game and its not showing the co op menu", "we both have the latest version
+  with DLC installed"; D3vils "nothing appearing on my main title screen ... not sure if this is because i own the
+  dlc", and "we were able to see join game or invite to game through the steam friend tab but it did nothing";
+  WhoAteMyEggo: a friend on an AMD 9070 XT has it too; Borque "inputs of the mod are not didplayed now". So the mod
+  loads (a Steam lobby exists) but our title menu is not on screen. No report zip from any of them yet (asked for
+  it in the 07:00 #general post).
+- Ruled out on this PC (all show the title menu: Start Solo / Invite Friends / Radmin VPN / Start Co-op / Co-op
+  Settings): a first-time player's ini + a real Steam lobby (tcB393, new harness switch -Fresh), borderless display
+  (tcB394, -KeepDisplay), frame generation on (tcB395, -FrameGen), and a REAL install of the posted ed31f10e:
+  the package's five files in the game folder, started as Steam starts it, no test role (tcB399, new
+  build/native/realtitle.sh + reallaunch.ps1; the player's own install put back 5/5, "REAL SAVES UNCHANGED").
+  Also: no game update is out (Steam public build 26480954 = ours), the package holds the right layer file
+  (hash = build-native-layer), its ini files are the same as in 22e8f365.
+- tcB396-tcB398 were wasted on a wrong start (a hand-started exe relaunches through Steam, which asks "Launch Game
+  with custom arguments"); each time the dialog was closed with its X and Steam sent back to the tray.
+- What all the affected testers share and this PC lacks: the DLC ("Crimson Desert Enhanced: Charting the Unknown",
+  Steam app 5001840, a 29.6 GB depot). Leading guess: with the DLC the title is not the state our lobby waits for
+  ("at the title" = no character of ours and no loading for 3 s; a title scene with a character would count as "in
+  the world"). Needs one tester's Diagnose zip to confirm. The player's own install here is still 22e8f365.
+- Borque's line may be the same thing or the removed on-screen hints (the 07:00 post explains where the controls
+  are). The user's rule "no key banner at all" in the shared world stands; a first-session tip is a question for the
+  user (queued).
