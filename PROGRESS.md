@@ -5048,15 +5048,17 @@ arriving at Hernand.
 - Posts today: 2f4b0dd4 05:52, ed31f10e 06:58, 21f0f6d0 07:48, 0797bafd 08:09, 3c46bec5 08:44 (each replaces the one
   before; the older posts were left as they are).
 
-### tcB413-tcB414 (2026-11-11 09:15-09:35): a guest FAR from the host cannot really fight (open); a small fix
+### tcB413-tcB415 (2026-11-11 09:15-09:55): a guest far from the host in a fight: NOT settled; a small fix
 
-- tcB413 (the guest at the bandit camp, the host 100 m away at the shrine): the guest's swings reach the server (60+
-  hit calls on six actors, bandits and their horses), but in about 70 s NO bandit died and the guest took NO damage
-  (HP 300 throughout; the shot shows a bandit in a hit pose). With the host beside it (tcB414, tcB359) the same
-  fight gives kills and the guest is hurt (HP 278, 1 kill in tcB414). So away from the host the enemies neither die
-  nor fight back: the fight only works within the host's reach. Not understood yet (who applies the damage and runs
-  the enemy's AI when its controller, the host's client, is far away). A real limit for testers: stay together in
-  fights. OPEN, B02 / B18.
+- Question: do enemies near the guest fight properly when the host is 100 m away? tcB413 and tcB415 (the guest at
+  the bandit camp, the host at the shrine): the guest's swings reach the server (the hit path runs for bandits and
+  their horses), the shots show bandits knocked down, in hit poses and running; but no kill in either run and the
+  guest took no damage (HP 300) in about 2 minutes in all. Next to the host (tcB414, tcB359) the guest is hurt (HP
+  278 / 224) and kills come at roughly one per 19 hits. The far runs had at most ~17 logged hits on one target (the
+  crime log stops at 60 lines), so "no kill" proves nothing, and staggered or fleeing bandits explain "no damage".
+  NOT established either way: an earlier line here and a line in the 09:31 chart said "enemies neither die nor
+  fight back", which was more than the data showed (both corrected). Needs one clean test (one target, 40+ hits,
+  the kill line) or two players. B02 / B18.
 - Found there and fixed (native, local commit): every bandit the guest hit was logged as "the host has fought this
   NPC" although the host was far away: the tap that feeds that list also carries frame events with another
   attacker. Now only a hit whose attacker is the host's own character counts. tcB414: the guest's 19 hits and 1 kill
