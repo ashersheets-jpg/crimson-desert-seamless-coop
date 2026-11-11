@@ -100,6 +100,7 @@ struct Config {
     bool dev_hunt_test = false;      // Co-op+ dev: hunting contest one-PC test (coop_hunt.h)
     bool dev_zone_copy_test = false; // Co-op+ dev: the guest's dry-run zone is copied for real (enemy_relay.h)
     bool coop_teammate_revive = true;
+    bool coop_downed_pose = true;  // Co-op+ 2026-11-11: [coop] downed_pose: a downed player lies down (shared world)
     bool coop_shared_quest_credit = false;
     // Co-op+ 2026-11-10 (user: "Lootr"): [coop] world_items = lootr (default: every item / plant lying in the world can be
     // taken once by EACH player) | first_come (the game's own: the first one takes it). Host; the native's lootr key.

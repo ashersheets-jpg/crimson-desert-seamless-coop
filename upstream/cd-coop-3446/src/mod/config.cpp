@@ -247,6 +247,7 @@ Config load_config(const std::wstring& ini_path) {
     c.dev_fake_peer_build = read_uint(ini_path, L"dev", L"fake_peer_build", 0);
     c.dev_desync_test = static_cast<int>(read_uint(ini_path, L"dev", L"desync_test", 0));
     c.coop_teammate_revive = read_uint(ini_path, L"coop", L"teammate_revive", 1) != 0;
+    c.coop_downed_pose = read_uint(ini_path, L"coop", L"downed_pose", 1) != 0;
     c.coop_shared_quest_credit = read_uint(ini_path, L"coop", L"shared_quest_credit", 0) != 0;
     c.coop_world_items_lootr = read_string(ini_path, L"coop", L"world_items", "lootr") != L"first_come";
     c.coop_guest_finishes = read_uint(ini_path, L"coop", L"guest_finishes", 1) != 0;

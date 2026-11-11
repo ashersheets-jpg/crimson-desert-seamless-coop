@@ -59,6 +59,11 @@ bool revive_filter_s2c(const uint8_t* packet, size_t size);
 // True from the moment our death notice was kept from the client until we are up again (hp > 0): the client does not
 // know it is dead, so the mod holds the game's input meanwhile (input/game_input_block.h).
 bool revive_death_withheld();
+// The downed pose (shared world): hooks the client's game-over stub so our own death notice can reach the client (the
+// character falls and stays down) without the UI's death state. False = not installed (the notice is kept, the
+// character stands). Call once after the config is read. revive_pose_down(): true while we lie down that way.
+bool revive_downed_pose_install(bool on);
+bool revive_pose_down();
 void revive_observe_s2c(const uint8_t* packet, size_t size);
 
 // Co-op+ dev ([dev] kill_key=1, Ctrl+Shift+F4): DoTeleportAck for our player to (x, y, z). Research for

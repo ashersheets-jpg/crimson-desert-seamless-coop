@@ -776,8 +776,18 @@ bool draw_lobby(float width, float height, ImDrawList* dl, ImVec2 mouse, const s
         (void)c;
         if (over >= 0 && !settling) act(over);
     }
+    draw_party(dl, width, height, v);
+    // the title's own prompts (Play, New Game, Load, Exit) are not in play while the lobby is up: hidden
+    dl->AddRectFilledMultiColor(ImVec2(width * 0.30f, height - 120 * s), ImVec2(width * 0.55f, height), IM_COL32(6, 5, 4, 0),
+                                IM_COL32(6, 5, 4, 255), IM_COL32(6, 5, 4, 255), IM_COL32(6, 5, 4, 0));
+    dl->AddRectFilled(ImVec2(width * 0.55f, height - 120 * s), ImVec2(width, height), IM_COL32(6, 5, 4, 255));
+    dl->AddRectFilledMultiColor(ImVec2(0, height - 120 * s), ImVec2(width * 0.2f, height), IM_COL32(6, 5, 4, 255),
+                                IM_COL32(6, 5, 4, 0), IM_COL32(6, 5, 4, 0), IM_COL32(6, 5, 4, 255));
+    // The footer line is drawn AFTER the cover above (pp1-real, 2026-11-11: with five cards the line sits inside the
+    // covered strip and its second half was painted over: "Invite a friend to begin a co-op" and nothing more).
     {
-        const float y = 300 * s + 96 * s + n * (92 * s + 14 * s) + 50 * s;
+        // never lower than just above the key hints (a sixth card would push it off the screen)
+        const float y = std::min(300 * s + 96 * s + n * (92 * s + 14 * s) + 50 * s, height - 112 * s);
         std::string line = v.status;
         if (g_direct_page) {
             std::string name, why;
@@ -789,13 +799,6 @@ bool draw_lobby(float width, float height, ImDrawList* dl, ImVec2 mouse, const s
         if ((g_direct_page || ds.active) && !g_direct_note.empty()) line = g_direct_note;
         text(dl, width * 0.5f - text_w(21 * s, line) * 0.5f, y, 21 * s, line, kDim);
     }
-    draw_party(dl, width, height, v);
-    // the title's own prompts (Play, New Game, Load, Exit) are not in play while the lobby is up: hidden
-    dl->AddRectFilledMultiColor(ImVec2(width * 0.30f, height - 120 * s), ImVec2(width * 0.55f, height), IM_COL32(6, 5, 4, 0),
-                                IM_COL32(6, 5, 4, 255), IM_COL32(6, 5, 4, 255), IM_COL32(6, 5, 4, 0));
-    dl->AddRectFilled(ImVec2(width * 0.55f, height - 120 * s), ImVec2(width, height), IM_COL32(6, 5, 4, 255));
-    dl->AddRectFilledMultiColor(ImVec2(0, height - 120 * s), ImVec2(width * 0.2f, height), IM_COL32(6, 5, 4, 255),
-                                IM_COL32(6, 5, 4, 0), IM_COL32(6, 5, 4, 0), IM_COL32(6, 5, 4, 255));
     {
         float right = width - 60 * s;
         const float y = height - 64 * s, size = 20 * s;

@@ -11,6 +11,8 @@
 #include <mutex>
 #include <vector>
 
+#include <safetyhook.hpp>
+
 #include "mod/game/actor_lookup.h"
 #include "mod/input/actions.h"
 #include "mod/game/offsets.h"
@@ -224,6 +226,28 @@ bool revive_in_place(uint32_t now_ms) {
 std::atomic<bool> g_death_withheld{false};
 std::atomic<uint64_t> g_death_withheld_at{0};
 
+// ---- the downed pose (2026-11-11; research: build/decomp/notes_downed_pose.md, local) ----
+// Keeping our own death notice (2985) from the client keeps the HUD and menus, but the character then STANDS at 0 HP
+// on its own player's screen. The client's "on dead" (exe+0x6E7640) does two things: the actor part (the event
+// "OnBattle_HandleDeadSelf" = the fall, collision, the dead flag) and, for the locally controlled character only,
+// one call of the 5-byte jmp stub exe+0xBA3700, which puts the UI into its "gameover" sub-phase (HUD hidden, menus
+// locked, the game's own death screen). With the stub skipped while we are down in co-op, the notice can go to the
+// client: the character falls and stays down, the UI stays ours. The game's two revive packets stand it up again.
+constexpr uintptr_t kGameOverStub = 0xBA3700;
+constexpr uint8_t kGameOverStubBytes[5] = {0xE9, 0xCB, 0xD3, 0xF2, 0x08};  // build 1.0.0.3576
+SafetyHookInline g_gameover;
+std::atomic<bool> g_pose_down{false};
+std::atomic<uint32_t> g_gameover_skipped{0};
+
+void hooked_gameover(void* field) {
+    if (g_pose_down.load(std::memory_order_relaxed)) {
+        const uint32_t n = g_gameover_skipped.fetch_add(1) + 1;
+        if (n <= 5) log::info("Revive: the game's own game-over state is skipped (we are down in co-op; {} so far)", n);
+        return;
+    }
+    g_gameover.call<void>(field);
+}
+
 bool revive_death_withheld() { return g_death_withheld.load(); }
 
 RevivePrompt revive_prompt_tick(bool connected, float hp, float hp_max, std::optional<float> partner_hp, bool focused,
@@ -233,6 +257,7 @@ RevivePrompt revive_prompt_tick(bool connected, float hp, float hp_max, std::opt
     if (g_death_withheld.load() &&
         (!connected || (hp > 0.0f && GetTickCount64() - g_death_withheld_at.load() > 1500))) {
         g_death_withheld = false;
+        if (g_pose_down.exchange(false)) log::info("Revive: up again: the game-over skip is off");
     }
     hop_tick(now_ms);
     // The checkpoint revive's second step goes in on time even if we are no longer "dead" by then.
@@ -377,11 +402,41 @@ bool revive_filter_s2c(const uint8_t* packet, size_t size) {
     uint32_t dead = 0;
     std::memcpy(&dead, packet + 5, 4);
     if (!dead || dead != capture_own_player_key()) return false;
-    log::info("Revive: our death notice is kept from the client (its death state would lock the HUD and menus)");
     g_death_withheld_at = GetTickCount64();
     g_death_withheld = true;
+    if (kNativeLayer && g_gameover) {
+        // The downed pose: the notice goes through, only the UI's game-over state is skipped (above).
+        g_pose_down = true;
+        log::info("Revive: our death notice goes to the client (the character falls); its game-over state is skipped, "
+                  "our revive screen stands in");
+        return false;
+    }
+    log::info("Revive: our death notice is kept from the client (its death state would lock the HUD and menus)");
     return true;
 }
+
+bool revive_downed_pose_install(bool on) {
+    if (!on || !kNativeLayer) {
+        log::info("Revive: downed pose off{}", on ? " (not the shared world)" : " ([coop] downed_pose=0)");
+        return false;
+    }
+    if (g_gameover) return true;
+    const auto exe = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    auto* stub = reinterpret_cast<uint8_t*>(exe + kGameOverStub);
+    uint8_t have[5]{};
+    if (!game::safe_read(reinterpret_cast<uintptr_t>(stub), have, sizeof have) ||
+        std::memcmp(have, kGameOverStubBytes, sizeof have) != 0) {
+        log::warn("Revive: downed pose off: the game-over stub at exe+0x{:X} is not the expected code (another game "
+                  "build?): a downed player keeps standing, everything else works", kGameOverStub);
+        return false;
+    }
+    g_gameover = safetyhook::create_inline(stub, reinterpret_cast<void*>(hooked_gameover));
+    log::info("Revive: downed pose {} (exe+0x{:X}: the UI's game-over state is skipped while we are down in co-op)",
+              g_gameover ? "ready" : "NOT hooked", kGameOverStub);
+    return static_cast<bool>(g_gameover);
+}
+
+bool revive_pose_down() { return g_pose_down.load(std::memory_order_relaxed); }
 
 void revive_observe_s2c(const uint8_t* packet, size_t size) {
     if (size < 5 + 40 || (packet[0] | packet[1] << 8) != kOpLoadingFieldDataAck || !g_checkpoint_asked) return;

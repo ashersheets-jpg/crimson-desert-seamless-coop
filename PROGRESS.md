@@ -5111,3 +5111,32 @@ Run pp1 on package 0.1.0-alpha+0cd46dd8 (layer HEAD 0cd46dd, native 560e3dc; one
   2. Shared world: the log said "shared loot is ON but [coop] enemy_auto=0 ... Set enemy_auto=1" although the key is
      1 in the package (the relay is off by design there). Now one plain line (mod.cpp). In 0cd46dd8 already.
 - My own check pattern for (2) was too broad at first (matched the harmless "enemy relay wanted no" line): fixed.
+
+### dp1-dp2 (2026-11-11 13:10-13:30): a downed player now LIES DOWN (shared world)
+
+- Before: our own death notice (NotifyHandleDeadAck 2985) was kept from the dying player's client so its HUD and
+  menus stayed; the character then stood upright at 0 HP on its own screen.
+- Research (local notes build/decomp/notes_downed_pose.md, read from code): the client's "on dead"
+  (exe+0x6E7640, reached from the 2985 handler exe+0xC89A10 -> 0x8F65BF0 -> 0xB5A83F0) does the actor part (the event
+  "OnBattle_HandleDeadSelf" = the fall, collision off, dead flag status+0x293) and, only for the locally controlled
+  character, ONE call of the 5-byte jmp stub exe+0xBA3700 (bytes E9 CB D3 F2 08) which puts the UI into its
+  "gameover" sub-phase. The game's two revive packets (NotifyHandleReviveAck, ReviveAck 3053 -> "OnBattle_
+  HandleRevive") undo the actor part.
+- Built (layer, net/revive_prompt.cpp): the stub is hooked (bytes checked first; another game build = the old
+  behaviour, a warning in the log); while we are down in co-op its call returns at once, and the death notice now
+  goes to the client. New key [coop] downed_pose (default 1). Log: "Revive: downed pose ready", "our death notice goes
+  to the client (the character falls)", "the game's own game-over state is skipped", "up again: the game-over skip is
+  off".
+- dp1 (guest at the dock, taken down by the host's KillCheat, -Fresh, lowest graphics, one PC): game-over skipped
+  once, input held, the death screen with Q / U on screen, date / region text still there; Q -> alive at 92 HP, HUD
+  complete after the revive (party frame, minimap), walks again. The body was hidden in tall flowers (a dark shape).
+- dp2 (the same on bare ground by the Greymane Shrine, the host 1.3 m away): shot dp2-g1 shows the guest's
+  character lying on the ground under the death screen, "Host can revive you (9 s)"; the host's screen: party frame
+  "Badly hurt - 3 m", prompt "Hold [R] to revive Guest"; the host's hold (E, which counts like the Interact key)
+  revived it: "You revived Guest" toast, guest log "Host revived us ... we are alive again".
+- Found in dp2 and fixed: the friend's "[R] Interact" prompt stood in the middle of the downed player's death screen
+  (hud.cpp: not shown while our own HP is 0).
+- NOT checked yet: the downed friend's pose on the OTHER player's screen (the host's camera did not have the body in
+  frame); the host going down; going down while riding / in a duel; Esc while down (dp1: no menu opens, the death
+  screen stays -- fine, but the game's menu is not reachable while down). Exact switches: build/native/dp1.args,
+  dp2.args.
