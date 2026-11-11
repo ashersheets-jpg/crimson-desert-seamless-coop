@@ -5,11 +5,10 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
-- TESTERS BLOCKED (2026-11-11): several see no Co-op menu at the title (all own the DLC; not reproducible here). A
-  Diagnose zip from one of them is needed; asked in #general 07:00. If the user owns or can borrow the DLC, a look
-  at the title screen with it installed would settle it.
-- Question: testers did not find the controls after the hints were removed. Keep "no banner at all", or allow one
-  short tip at the start of a session that names the menu's Co-op tab (no keys)?
+- Testers (2026-11-11): the three blockers found this morning are fixed in 0.1.0-alpha+3c46bec5 (posted 08:44): the
+  unanswerable first-launch box, the title menu closing on the first key, and no overlay with XeSS / FSR frame
+  generation. Waiting for their word that it works on their PCs (AMD FSR frame generation could not be run here
+  for real: its class is hooked the same way as XeSS's).
 - POSTING, 2026-11-11 ~06:10 (the user, going to sleep for at least 12 hours): "I am giving you authorization to post
   updates if you feel like it is worth it to do so. Please continue working." So until about 2026-11-11 18:10 a
   build / update post in the Discord (#download-here, #general) may go out without asking, when it is worth it
@@ -5036,3 +5035,15 @@ arriving at Hernand.
   pause menu's Co-op tab there, no "Overlay disabled", SAVES OK.
 - tcB405 (new harness switch -PackageIni: both copies on the package's own coopplus.ini): the session works with the
   real defaults; nothing stuck on screen.
+
+### 2026-11-11 08:44: build 0.1.0-alpha+3c46bec5 POSTED (frame generation)
+
+- tcB412: the package as a REAL install on this PC: overlay ready and drawing, the frame generation classes hooked,
+  "REAL SAVES UNCHANGED", the player's install put back. Install checks all pass.
+- Posted under the user's 12-hour authorization: #download-here 08:44 (both zips, attachments checked;
+  docs/release/shared-world-playtest/download-3c46bec5.txt), #play-testing-feedback 08:44 (to D3vils and the AMD
+  testers: what it was, that the new build fixes it, switch frame generation off on older builds).
+- The answer to this morning's queued question: the first-run card "Seamless Co-op+" (where the controls are) already
+  existed for the shared world; it never showed because the stuck box was in front of it. No new banner is needed.
+- Posts today: 2f4b0dd4 05:52, ed31f10e 06:58, 21f0f6d0 07:48, 0797bafd 08:09, 3c46bec5 08:44 (each replaces the one
+  before; the older posts were left as they are).

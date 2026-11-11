@@ -1,0 +1,13 @@
+**Update: shared world playtest 0.1.0-alpha+3c46bec5 (the Co-op menu now shows with frame generation on)**
+Please use this build instead of every earlier one. You and your co-op partner both need it. It keeps everything from 0797bafd.
+
+Fixed:
+- **Nothing of ours on screen with Intel XeSS or AMD FSR Frame Generation switched on** (found by D3vils, thank you): no Co-op menu at the title, no prompts, no party frame. With those two the game shows its frames through a different path that we did not draw on. Now we do. NVIDIA DLSS Frame Generation already worked.
+  If you turned frame generation off to get the menu, you can turn it back on with this build.
+
+Also in this build since this morning (if you skipped a few): the box stuck in the middle of the screen is gone, the title menu no longer closes on the first key press (and F8 / View brings it back), going down gives you the death screen with both revive choices, enemy loot and chests are for each of you, and Diagnose now collects the Co-op+ log.
+
+- `CrimsonDesert-SeamlessCoop-0.1.0-alpha+3c46bec5-shared-world.zip`: this is the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tested with two copies of the game on one PC, with XeSS frame generation on and off. Please tell us in #bug-reports how it goes (and send the report zip if anything goes wrong).
