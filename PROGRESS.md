@@ -4676,3 +4676,14 @@ arriving at Hernand.
   never interacted with, so the guest's hits reach them from the first blow. Trade-off: a townsperson the host has
   not talked to yet is not protected from the guest. Test tcB356.
 - This fix is NOT in the packaged ed838ebd: the package has to be rebuilt before posting.
+
+### tcB356 (2026-11-11 00:31): the guest's hits land; a new finding: its kills count as CRIMES
+
+- With the new rule no guest hit was dropped ("AntiGrief: the guest's hit" 0 lines; in tcB355 one was). The guest's
+  screen: "You defeated an enemy". Both alive, no crash, SAVES OK.
+- NEW: on the guest's screen "Crime: Assault" (tcB356 g3) and "Crime: Murder" (tcB355 g3) next to "You defeated an
+  enemy": the server books the guest's attacks on the host's quest bandits as crimes (the bandits are enemies for the
+  host's quest, not for the guest's own progress). A guest would become wanted for helping in a fight. Research
+  running (build/decomp/notes_crime_coop.md): where a crime is registered and how to skip it for an NPC that is
+  fighting the other player.
+- tcB355 g3 also shows "Thin Hide x1 acquired" on the guest (its own loot from an animal).
