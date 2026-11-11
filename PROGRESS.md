@@ -4447,3 +4447,7 @@ arriving at Hernand.
   own 3110 goes to the guest) and the held packets are replayed (the plant goes for the guest too). Entries the guest
   never takes are forgotten after 30 min. Not yet: the guest taking first, chests / bodies, keeping the list across
   sessions. Test tcB327: both teleported to the peony spot; the host takes it (E), then the guest (E).
+- tcB327 (Lootr phase 1, host side): "Lootr: pickup by 0xA0100001 kind 0 gimmick 0xB0100156 ... kept for the guest",
+  then "gimmick 0xB0100156 gave the host item 0x50D (key 757006) x2; kept for the guest (3 packet(s) held)". The
+  host side works. The guest's load stalled again (WINDOW_B), so its take was not reached. The stall now blocks
+  every guest-side check: diagnosis running (build/native/notes_guest_load_stall.md).
