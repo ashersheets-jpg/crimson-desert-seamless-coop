@@ -4569,3 +4569,25 @@ arriving at Hernand.
 - Built with it: HandleGuard (native session2/handle_guard, both roles): a mid hook after the virtual +0x460 call in
   exe+0x36E5FC0 (bytes checked); an empty handle leaves through the function's own early-out exe+0x36E619A. For the
   tcB342 guest crash. Counted ("HandleGuard: calls N | empty handles skipped M").
+
+### tcB345-tcB347 (2026-11-10 22:33-23:00): the body loot recorded; the host crashed at the end of tcB347
+
+- tcB345 / tcB346 (clicks only): no hit landed, no kill. In tcB344 the kills had come during the E-hold / W steps,
+  not the clicks. tcB347 repeats that sequence: 15 kills, each looted by the host 3 s later and by the guest 6 s
+  later through LootingDropFromDeadBodyReq 2491 (no UI).
+- What the worker shows (a 0, b 1): the pool is ALREADY rolled when the first player loots ("rolled 1 -> 1"; the
+  death rolled it); the host's take empties the lootable entries ("pool 4 -> 1", "3 -> 0", "5 -> 1"), the body stays,
+  err 0; the guest's take right after gets nothing ("pool 1 -> 1", "0 -> 0", err 0). So in the plain game the second
+  player finds bodies empty: the scarcity to remove. (Two bodies gave the host nothing either: "2 -> 2", "1 -> 1".)
+- The guest was 120 m away: the request is not refused by distance on this path.
+- HandleGuard was ON on both copies in tcB345-347 (no effect seen on play).
+- The HOST crashed at 22:59:48.306, 0.4 s after the 15th dev loot: exception at exe+0x402C250 reading 0x100FEFFFF
+  (thread 43984; stack steamclient64, exe+0x394283C, 0x3942625, 0x445A17). Unknown; the dev path loots bodies the
+  host's client never interacted with, which may be the cause. Watching (tcB348 kills fewer).
+- Built (native, [session2] lootr_bodies=1, off by default): per-player body loot by "re-arm the roll": the first
+  looter's take runs, then the rolled flag comp+0x6C is put back to 0; the second player's take rolls again (the
+  game's own roll for that player) and takes; the entries that roll added for the other kinds are removed again
+  (exe+0x230FDA0 from the end down to the old count) and the list is sent again (exe+0x2E25FC0). The first take's
+  leftover list 2414 is kept from the other player (guest: dropped before its queue; host: body key blanked in its
+  client). A repeat looter is refused (exe+0x714BFA0). A mid hook at exe+0x2E22885 keeps the body for the first
+  looter (the game's own "not removed" branch). Test tcB348.
