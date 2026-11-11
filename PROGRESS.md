@@ -4555,3 +4555,10 @@ arriving at Hernand.
   exe+0x36EAE50 (a state-change handler, flags 0x14) and exe+0x36E4BB0. Not seen before (66 runs with the usercopy
   host). The guest's own stage manager was at 0 then (not the login-guard case). Dump kept locally
   (bin64\cdmp_crash.guest_20261110-220419_36540_1.dmp). tcB343 repeats the run to see if it comes back.
+- tcB343 (the bandit save again): NO crash this time (the exe+0x36E601E crash of tcB342 is a race, 1 of 2 runs with
+  this save, 0 of 66 with the usercopy save); the host walked into the camp, fought ("Defeat the enemies", the bandits
+  attacked) and went down: "Guest can revive you (21 s)" (the bleed-out works). No kill, so no body to loot.
+- For bodies in a test: [session2] lootr_kill_hits=1 (dev, tests only): whatever the HOST hits dies at once
+  (KillCheatReq 2210 on the targets of its own DoFrameEventReq, sniffer tap). tcB344: the camp with it, then E holds.
+- To do on the crash: a guard for the empty handle in exe+0x36E5FC0 (mid hook after the virtual +0x460 call: when
+  the handle is empty, leave the function as its own early-outs do).
