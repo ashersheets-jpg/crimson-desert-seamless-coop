@@ -1,0 +1,10 @@
+**Update: shared world playtest 0.1.0-alpha+21f0f6d0 (removes the "Co-op starts after the prologue" text)**
+Please use this build instead of ed31f10e. You and your co-op partner both need it. It keeps everything from ed31f10e.
+
+Fixed:
+- **A line in the middle of the screen that never went away** ("Co-op starts after the prologue...", thanks Borque): it showed whenever one of you had a save with little story progress, and while it showed, the co-op extras (party frame, reviving each other, challenges, pings) stayed off. Nothing in the menu could remove it. In the shared world you are together from the first second, so that rule is gone.
+
+- `CrimsonDesert-SeamlessCoop-0.1.0-alpha+21f0f6d0-shared-world.zip`: this is the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tested with two copies of the game on one PC. Please tell us in #bug-reports how it goes (and send the report zip if anything goes wrong).

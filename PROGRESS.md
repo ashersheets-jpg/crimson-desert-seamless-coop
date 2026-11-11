@@ -4954,3 +4954,13 @@ arriving at Hernand.
   shots). So NPCs far from the host are frozen for the guest: their control stays with the host's client. A real
   limit of the shared world as built (the guest has to stay near the host for a living world); a controller
   hand-over to the guest's client is the fix, a big piece of B02. Noted, not started.
+
+### 2026-11-11 07:48: build 0.1.0-alpha+21f0f6d0 POSTED (the prologue-text fix)
+
+- Package 21f0f6d0 (= ed31f10e + the prologue hold off in the shared world): install checks all pass. Posted under
+  the user's 12-hour authorization: #download-here 07:48 (both zips, attachments checked; text in
+  docs/release/shared-world-playtest/download-21f0f6d0.txt) and a reply to Borque in #general 07:49 ("If the text in
+  the middle says 'Co-op starts after the prologue...', there was nothing you could select ... removed in 21f0f6d0
+  ... If the text says something else, please tell us what it says or post a screenshot.").
+- Still open with the testers: no Co-op menu at the title for JackyChan004 / D3vils / a friend of WhoAteMyEggo (all
+  with the DLC); no report zip yet.
