@@ -4413,3 +4413,20 @@ arriving at Hernand.
 - Not checked yet: the guest seeing the fish arrive and the guest -> host give (the guest's load stalled again: the
   one-PC memory pressure, WINDOW_B), and the stash (same move, needs an unlocked warehouse). item_sharing stays off
   by default until the guest side is seen.
+
+### tcB322-tcB324 (2026-11-10 18:39-19:03): Discord closed (user's OK); the first recorded pickup
+
+- The user let Claude close Discord (memory). tcB322: the guest's load completed (STABLE); tcB323 and tcB324 stalled
+  again (WINDOW_B) -- memory is not the whole story; the stall stays on the list.
+- The world prompt at the peony reads "[E] Take" (the keyboard's), so the simulated pad X never took anything; E
+  held 2.5 s takes it. tcB323/324: "Lootr probe: pickup by 0xA0100001 kind 0 gimmick 0xB0100146 ... item idx 0xFFFF
+  x0 key E736A735B113..." -> err 0. A plant's item is made inside the pickup (comp+0xC0 is empty before it).
+- What the server sent the picker right after (tcB324, all within 10 ms): 2214 (gimmick, gimmick), 2760
+  SyncFieldGimmickSavedByCoolTime (u32 0 | u32 1 | the 16-byte save key E736A735B113... | u32 0x2D6C3F), 3110
+  AddItemToInventory (u8 4 | u32 picker | u8 3 | u16 0x1C | ... | u32 item key 0x0F4245 at +11 ...), 2096 (248 B
+  about the gimmick), 3067 RemoveActorAck (u8 4 | u32 0 | u8 0x3A | u32 gimmick).
+- Lootr plan for gathering (kind 0), from this: the FIRST taker keeps the game's real pickup (the save's cool time
+  and the regrow stay right); for the OTHER player the gimmick's 2214 / 2760 / 2096 / 3067 are held back (it stays
+  visible for them); when they take it, their interaction is answered by us, the same item is added to their bag
+  and the held-back packets are replayed to them. The item: the picker's bag diff around the pickup (probe built,
+  tcB325). Ground items with comp+0xC0 set and chests / bodies later.
