@@ -5425,3 +5425,29 @@ Run pp1 on package 0.1.0-alpha+0cd46dd8 (layer HEAD 0cd46dd, native 560e3dc; one
 - Frame rate on this PC, two copies, lowest graphics (from the overlay's present counters, last minute of a run):
   host about 42 a second, guest about 60; with XeSS frame generation 77 / 82. Not comparable to one copy on a
   player's PC; kept as a baseline for later runs on the same harness.
+
+### pp4 finished (2026-11-11 17:25): 10 of 12 steps pass on 0.1.0-alpha+09a188c3; the enemy-loot step failed twice
+
+- PASS: static, real, fresh, xess, fsr, display, lowsave, chest, revive (with the downed pose lines), crime,
+  farfight (the guest killed far from the host and lost health; hits counted). 356 checks passed.
+- FAIL, twice in a row: loot ("the host looted a body": no such line). Looked into, in this order:
+  1. The same test with the harness's own settings (hx1, no -Fresh / -PackageIni), same binaries: PASSES (46 kill
+     lines, bodies looted, "0xA0100066 is there and got its own share ... its bag gained 7 piece(s)"). So the product
+     feature works on this build.
+  2. The effective "Config:" lines of both runs are identical, so it is not a setting of the package.
+  3. How the old step worked: a test-only key (lootr_kill_hits=3) kills the target of any hit event the HOST's client
+     reports, then loots that body. It does not need the host's own swings to land: it fires on whatever hit events
+     with an NPC target happen to come (in hx1: 30 such events, bandits hitting each other and events that name the
+     NPC twice). In both failed runs there were none in the 40 s the host stood in the mob (tally "NPC>NPC 0"). A
+     test that passes or fails by what the mob happens to do is not a test.
+  4. Learned on the way: the tally's "host>NPC" is always 0. The host's own blows do not arrive as frame events with
+     the host as the first key (the host's client is the server's own; its hits show up as events naming the NPC).
+     The tally is right for the guest (its blows carry its key) and for blows ON players. Its "kills host" count is
+     also 0 in every run. So nothing in today's data says how many of the HOST's blows landed; that needs its own
+     counter if it is ever wanted.
+- New (layer, dev only): script steps "killnear [radius]" (KillCheatReq on the nearest living person, not an animal,
+  40+ max HP) and "lootlast" (the game's own loot request for that body). The checklist's loot step now uses them:
+  the host waits at its start until the guest stands at the dock, goes there, kills and loots twice.
+- The new-save step now also checks that the guest is moved to the host's side ("Co-op: joined: our save's place
+  was N m from the host: moved to its side") and ends within 30 m.
+- t5 (running): both reworked steps on the current build, before the package is made again.
