@@ -4463,3 +4463,8 @@ arriving at Hernand.
   The race got more frequent as the guest's login of the host's character got slower (0.1 s -> 0.4-1.3 s).
 - Fix (native merchant_unhide.cpp, built): any state of 2 or more the call lowered is put back (was: only 3). A
   player could hit this too (a late login of the host's character on the guest). Test tcB328 (with Lootr).
+- tcB328 (stall fix + Lootr): the guest's load completed (STABLE; "login guard ... put back to state 3 1 time");
+  Lootr: the host took peony 0xB010014D (item 0x50D x1, 3 packets held for the guest), the guest still saw it
+  (shot g0: "Peony [E] Take") and took it: "the guest took gimmick 0xB010014D too ... 3 packet(s) replayed". But the
+  guest's copy was never added: the add request was built with slot byte 0xFF (an Ack's), a client Req has 0x00;
+  fixed (and offered at once). Test tcB329.
