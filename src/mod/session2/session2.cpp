@@ -3,6 +3,7 @@
 #include "mod/session2/fog_share.h"
 #include "mod/session2/anti_grief.h"
 #include "mod/session2/lootr.h"
+#include "mod/session2/handle_guard.h"
 
 #include <windows.h>
 
@@ -1643,6 +1644,13 @@ void tunnel_tick(troc::TrocLink& link, uint32_t now_ms) {
         }
     }
     observer_seq_copy_tick();   // P8 S1 option A: the gate's timeout, refused copies again, its lines (nothing when off)
+    {  // Co-op+ guards (handle_guard.h): their counts once a minute
+        static uint32_t last_guard_ms = 0;
+        if (now_ms - last_guard_ms >= 60000) {
+            last_guard_ms = now_ms;
+            log::info("{}", handle_guard_describe());
+        }
+    }
     {  // Co-op+ Lootr: the guest's copy of an item the host took, added on the server thread as its own request.
         std::vector<std::vector<uint8_t>> reqs;
         lootr_tick(reqs);
