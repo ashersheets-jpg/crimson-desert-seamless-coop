@@ -152,9 +152,25 @@ struct Seen {
     uint16_t idx = 0xFFFF;
     int64_t count = 0;
     uint8_t key16[16] = {};
+    uint16_t row = 0xFFFF;  // the gimmick info row and its name (tcB373: world-placed gear is "concrete" too)
+    char name[48] = {};
+    int has_drop = -1;
+    uint32_t state = 0;
 };
+int drop_handler(uintptr_t base, uintptr_t b, uint8_t& mode) noexcept;
 void read_pickup(Seen& s, uintptr_t comp, uintptr_t picker) noexcept {
     __try {
+        {
+            const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+            s.row = *reinterpret_cast<uint16_t*>(comp + 0x48);
+            s.state = *reinterpret_cast<uint32_t*>(comp + 0x270);
+            uint8_t mode = 0xFF;
+            s.has_drop = drop_handler(base, *reinterpret_cast<uintptr_t*>(comp + 0x40), mode);
+            const uintptr_t row = reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t, uint32_t)>(base + 0x3DE240)(0, s.row);
+            const uintptr_t h = row ? *reinterpret_cast<uintptr_t*>(row + 8) : 0;
+            const char* text = h ? *reinterpret_cast<const char**>(h) : nullptr;
+            for (size_t c = 0; text && c + 1 < sizeof s.name && text[c]; ++c) s.name[c] = text[c];
+        }
         if (picker) s.picker = *reinterpret_cast<uint32_t*>(picker + 0x60);
         const uintptr_t actor = *reinterpret_cast<uintptr_t*>(comp + 8);
         if (actor) s.gimmick = *reinterpret_cast<uint32_t*>(actor + 0x60);
@@ -167,6 +183,8 @@ void read_pickup(Seen& s, uintptr_t comp, uintptr_t picker) noexcept {
     } __except (EXCEPTION_EXECUTE_HANDLER) {
     }
 }
+
+thread_local int t_in_pickup = 0;  // a Drop event inside the pickup worker is the pickup's own business
 
 int* __fastcall pickup_detour(uintptr_t comp, int* err, uintptr_t picker, uint64_t kind) noexcept {
     Seen s;
@@ -195,13 +213,16 @@ int* __fastcall pickup_detour(uintptr_t comp, int* err, uintptr_t picker, uint64
         } catch (...) {
         }
     }
+    ++t_in_pickup;
     int* r = g_pickup.call<int*>(comp, err, picker, kind);
+    --t_in_pickup;
     int e = -1;
     if (err) game::fast_read(reinterpret_cast<uintptr_t>(err), &e, 4);
     if ((g_probe || g_on) && g_logged.fetch_add(1) < 40) {
-        log::info("Lootr: pickup by 0x{:08X} kind {} gimmick 0x{:08X} item idx 0x{:X} x{} key {:02X}{:02X}{:02X}{:02X}"
-                  "{:02X}{:02X}{:02X}{:02X} -> err {}{}",
-                  s.picker, kind & 0xFF, s.gimmick, s.idx, s.count, s.key16[0], s.key16[1], s.key16[2], s.key16[3],
+        log::info("Lootr: pickup by 0x{:08X} kind {} gimmick 0x{:08X} '{}' (row {}, {} Drop event, state 0x{:08X}) item "
+                  "idx 0x{:X} x{} key {:02X}{:02X}{:02X}{:02X}{:02X}{:02X}{:02X}{:02X} -> err {}{}",
+                  s.picker, kind & 0xFF, s.gimmick, s.name, s.row, s.has_drop == 1 ? "has a" : "no", s.state, s.idx,
+                  s.count, s.key16[0], s.key16[1], s.key16[2], s.key16[3],
                   s.key16[4], s.key16[5], s.key16[6], s.key16[7], e,
                   !g_on ? "" : concrete ? " | a concrete item: one for whoever takes it"
                   : s.picker == kHostCharacter ? " | kept for the guest (Lootr)" : " | kept for the host (Lootr)");
@@ -531,7 +552,7 @@ uint32_t* __fastcall drop_detour(uintptr_t comp, uint32_t* err, uintptr_t field,
     t_drop = &s;
     // Chests per player: mode 1 puts the content straight into the opener's bag; what the bag gains is the share.
     static BagSnap before;  // the server thread only
-    const bool share = g_on && g_chests_on && !outer && s.p1 == 1 && target && (s.target >> 28) == 0xA &&
+    const bool share = g_on && g_chests_on && !outer && !t_in_pickup && s.p1 == 1 && target && (s.target >> 28) == 0xA &&
                        snap_bag(target, before);
     uint32_t* const r = g_drop.call<uint32_t*>(comp, err, field, actor, target, targets, params, a8, a9, a10, a11);
     t_drop = outer;
