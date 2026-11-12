@@ -699,15 +699,23 @@ void worlds_lobby_press(bool new_game) {
             }
             return done("");
         }
-        for (int attempt = 0; attempt < 6; ++attempt) {
+        // 45 presses 8 s apart (6 minutes), not 6 (48 s). fs1b (2026-11-12): in a New Co-op Save the host holds the
+        // friend's login until its new game has written its first real save; that took 3 min 40 s, the title only got
+        // its slots then, and the six presses had ended 2 s before: the friend sat at the title for ever.
+        int presses = 0;
+        bool took = false;
+        for (int attempt = 0; attempt < 45; ++attempt) {
             if (!wait_front("Loading " + label)) return done("Press Play (E) to load.");
             // Already loading or in the world (the player pressed Play, or an earlier press took): no stray E (it is
             // "interact" in the world; tcB184 pressed it 2 min after the host was in).
-            if (sniffer_world_loading() || g_in_world.load()) break;
+            if (sniffer_world_loading() || g_in_world.load()) { took = true; break; }
             key('E', 80);
-            if (wait_for([] { return sniffer_world_loading() || g_in_world.load(); }, 8000)) break;
+            ++presses;
+            if (wait_for([] { return sniffer_world_loading() || g_in_world.load(); }, 8000)) { took = true; break; }
         }
-        log::info("Co-op lobby: Play pressed in {}", narrow(save_io::world().empty() ? L"own saves" : save_io::world()));
+        log::info("Co-op lobby: Play pressed in {} ({} press(es), {})",
+                  narrow(save_io::world().empty() ? L"own saves" : save_io::world()), presses,
+                  took ? "in the world" : "the world did NOT come");
         done("");
     }).detach();
 }

@@ -6,6 +6,28 @@ One world for both players, on the native shared-world base. Tested with two cop
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
 Not posted yet (2026-11-12, after 47135b83):
+- **A New Co-op Save is a new save for BOTH players.** The joining friend used to arrive with their own solo
+  character (a tester's 1,858-mission character in a world at mission 0). Now the friend's own save is checked and
+  set aside, and they start as a copy of the host's new game, once its first real save exists (about a minute after
+  the host stands in the world): same place, same first objective. Continue Our Co-op Save brings that character
+  back, whatever save the friend has of their own. Start From My Solo Progress and worlds made before this build
+  are unchanged (the friend brings their own character). `[session2] coop_world_character=0` turns it off.
+- **Two different builds are refused, and both players are told.** Two testers played a whole session with one
+  build each and the mod said nothing: its "same build" check compared a number that had not changed in any
+  package since 10 November. It now compares a hash of the installed mod files, and both title menus say "Can't
+  play together: <name> has another Co-op+ build ... Both install the same zip, the newest one."
+- **Going to your friend is the game's own travel now.** Over 80 m it no longer drags you across the map in 40 m hops
+  (testers: two to three minutes for 3 km, sometimes stopping short): it asks the game for a travel to that spot, as
+  the world map does. 1.3 km took 0.6 to 3 seconds in our runs. The hops remain for short moves and as the way out
+  when the travel does not take. The move to the host's side when you join uses it too.
+- **The host's game could crash when its world reloaded with a friend in it** (a tester: down in a fight, Q, crash).
+  A timer of the game's NPC schedules ran in the moment the world's owner was gone and read through a null pointer.
+  Such a timer is now put off and run when the owner is back. Tested with timers put off on purpose (the schedules
+  go on) and with the host reviving at the checkpoint beside the friend; the rare moment itself did not come up.
+- A crash inside Steam's own library while the mod set the player's status no longer switches Steam invites off for
+  the whole launch: Steam is asked again after 10 seconds (three faults in one launch switch it off, as before one).
+- The report tool removes Steam IDs inside folder names too (the co-op save folder is named after the friend's ID;
+  two testers' reports still had it).
 - **Start Co-op did nothing after a world had been loaded in the same game session** (played solo, went back to the
   title, then invited a friend; or came back from a co-op session): the host's game never restarted and the friend
   waited for ever. In every build up to 47135b83. Tested for a host coming back from its co-op world; the solo case
