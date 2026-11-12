@@ -81,6 +81,7 @@ bool relay_is_reliable(const proto::GameEvent& ev) {
 }  // namespace
 
 void coop_set_ready() { g_ready = true; }
+bool coop_link_ready() { return g_ready.load(std::memory_order_acquire); }
 void coop_set_copy_disabled(bool off) { g_no_copy = off; }
 uint32_t coop_pings_received() { return g_pings; }
 bool coop_outbox_waiting() { return g_outbox_waiting.load(std::memory_order_acquire); }

@@ -9,6 +9,7 @@
 
 #include "mod/log.h"
 #include "mod/native_layer.h"
+#include "mod/net/coop.h"
 #include "mod/net/coop_worlds.h"
 #include "mod/net/native_mode.h"
 #include "mod/net/troc_sniffer.h"
@@ -62,6 +63,7 @@ bool g_ready_sent = false;       // guest after its restart: the host was told
 bool g_nosave_seen = false;      // guest: we have no save of our own; the host was told, this game goes back to solo
 uint64_t g_guest_since = 0;      // guest after its restart: connected to the partner since
 uint64_t g_nosave_next = 0;      // guest: when "no save" goes to the host again (gn4: the first one did not arrive)
+uint64_t g_nosave_since = 0, g_nosave_first_sent = 0;  // guest: since when we know / since when the link carries it
 bool g_partner_nosave = false;   // host: the guest said it has no save (handled once)
 bool g_guest_ready = false;      // host: the guest is in guest mode
 bool g_auto_started = false;     // host: the plan went on after the guest came back
@@ -294,18 +296,27 @@ void lobby_tick(const LobbyInput& in) {
                 g_nosave_seen = true;
                 log::warn("Co-op lobby: this player has no save of their own: co-op cannot start for them yet; the host "
                           "is told and this game restarts into solo with the instruction");
-                send({kMsgGuestNoSave});
                 native_back_to_solo(kNoSaveNote);
                 WritePrivateProfileStringW(kNoteSection, kNoteKey, L"nosave", g_native_ini.c_str());
                 reset_phase();
-                g_solo_restart_at = in.now_ms + 4000;  // after the message is out
-                g_nosave_next = in.now_ms + 500;
+                g_nosave_since = g_nosave_next = in.now_ms;
             }
-            // gn4 (2026-11-12): the one message sent in the instant the link came up did not reach the host (its menu
-            // kept saying "...is restarting into co-op"). It goes out again every half second until the restart.
-            if (g_nosave_seen && g_solo_restart_at && in.connected && g_nosave_next && in.now_ms >= g_nosave_next) {
-                send({kMsgGuestNoSave});
-                g_nosave_next = in.now_ms + 500;
+            // gn4 / gn5 (2026-11-12): the host was not told. The link sends queued messages only once it is "ready"
+            // (about 14 s after the game starts); this game restarted after 4. So: the message goes out (again every
+            // half second) once the link is ready, and the restart follows 2.5 s after the first one that could go
+            // (45 s at most).
+            if (g_nosave_seen && g_nosave_since && !g_solo_restart_at) {
+                if (in.connected && coop_link_ready() && in.now_ms >= g_nosave_next) {
+                    send({kMsgGuestNoSave});
+                    g_nosave_next = in.now_ms + 500;
+                    if (!g_nosave_first_sent) g_nosave_first_sent = in.now_ms;
+                }
+                if ((g_nosave_first_sent && in.now_ms - g_nosave_first_sent > 2500) || in.now_ms - g_nosave_since > 45000) {
+                    g_nosave_since = 0;
+                    g_solo_restart_at = in.now_ms + 300;
+                    log::info("Co-op lobby: the host was sent the reason{}: restarting into solo",
+                              g_nosave_first_sent ? "" : " (NOT: the link never became ready)");
+                }
             }
             if (g_resume.mode == NativeMode::Guest && in.connected && !g_ready_sent && !g_nosave_seen &&
                 (own_save != 0 || in.now_ms - g_guest_since > 10000)) {

@@ -23,6 +23,8 @@ namespace cdmp::net {
 
 // Called once the sniffer (injection) is installed and the puppet is set up.
 void coop_set_ready();
+// The link sends what the layers queue only once this is true (about 14 s after the game starts: gn5).
+bool coop_link_ready();
 // Co-op+ dev ([dev] no_copy=1): the other player's character is never loaded here (bisects).
 void coop_set_copy_disabled(bool off);
 // Co-op+: how many pings (Ctrl+F3) the other player sent us so far (the HUD shows a toast for each).

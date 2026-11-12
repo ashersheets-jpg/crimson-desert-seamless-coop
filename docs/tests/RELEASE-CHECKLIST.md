@@ -23,7 +23,7 @@ starts while Crimson Desert is running):
 bash tools/prepost.sh pp1 dist/CrimsonDesert-SeamlessCoop-<version>-shared-world static
 ```
 
-Steps, in order: `static real fresh xess fsr display lowsave chest revive loot crime farfight farfight2 newsave solostart mounts`, then `summary`. (`fresh` and most other steps take the first card, Continue Our Co-op Save; `newsave` and `solostart` are the other two ways a session begins.)
+Steps, in order: `static real fresh xess fsr display lowsave chest revive loot crime farfight farfight2 newsave solostart mounts mountfight nosave`, then `summary`. (`fresh` and most other steps take the first card, Continue Our Co-op Save; `newsave` and `solostart` are the other two ways a session begins.)
 The report is `build/native/prepost-<tag>.txt`. After each game step, LOOK at the screenshots the report lists
 (`build/native/shots/`): a log line saying "overlay draws" is not the same as the menu being on screen.
 
@@ -47,6 +47,8 @@ The report is `build/native/prepost-<tag>.txt`. After each game step, LOOK at th
 | newsave | the host picks New Co-op Save; in the test copy the harness answers the game's agreement and difficulty; the guest waits on "Waiting for Host" | both reach the new world, the guest's login waited for the host's first save, its own save was moved in, no login refused; the test co-op world is put back | the story's opening minutes after that (cutscenes, the prologue's steps); a real player answering the agreement |
 | solostart | the host picks Start From My Solo Progress: a new co-op world is made from its own save, the guest joins | both reach the world, linked, the guest's own save loaded, no login refused; the test co-op world is put back | a host save from late in the story; two PCs |
 | mounts | each player calls its horse (simulated pad), goes to it, mounts and rides | each player's horse came, each mount was published to the other player; both mounted on the screenshots | a real controller; fighting from horseback; other mounts; swapping horses; a long ride |
+| mountfight | the guest mounts at the dock, the host arrives and wakes its bandits, the guest swings from the saddle | the guest's blows were seen, it lost health; on the screenshots it is in the saddle | the host fighting mounted; being thrown off; a mounted enemy; other mounts |
+| nosave | a guest with no save at all tries to join | its game goes back to solo with the instruction, the host is told and does not load in alone | the same check before either game restarts; a real new character for such a guest |
 
 Every game step also checks what the session leaves behind (added 2026-11-11 after two faults found by reading the
 logs, not by a test): no packets recorded to disk (the base's log must not say "recording through a disk queue"; the

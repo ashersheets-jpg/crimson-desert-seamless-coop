@@ -3,7 +3,7 @@
 # one game session and every step's screenshots can be looked at before the next one starts:
 #
 #   bash tools/prepost.sh TAG "<package folder>" STEP        STEP = static | real | fresh | xess | fsr | display |
-#                                                                   lowsave | chest | revive | loot | crime | farfight | farfight2 | newsave | solostart | mounts |
+#                                                                   lowsave | chest | revive | loot | crime | farfight | farfight2 | newsave | solostart | mounts | mountfight | nosave |
 #                                                                   summary
 #
 # TAG names the run (pp1 ...): the test names are TAG-STEP, the report is build/native/prepost-TAG.txt.
@@ -315,8 +315,39 @@ mounts)
     has "$N/$NAME.coopplus.$r.log" "Dev script: teleport beside actor 0xB[0-9A-F]+: \\(" "$r: its called horse was there (the script went to it)"
     has "$N/$NAME.$r.log" "MountSync summary .* published Begin [1-9][0-9]* Commit [1-9]" "$r: mounted (its mount was published to the other player)"
   done ;;
+mountfight)
+  head_step "a mounted guest fights: it mounts at the dock while the bandits sleep, the host arrives and wakes them"
+  # 2026-11-12 (mc1-mc4). The test's teleport does not move a mounted rider, so the guest mounts where the enemies
+  # are before the host (whose quest they belong to) comes. Screenshots g1 / g2: the guest in the saddle in the fight.
+  { printf 'tp -10243 546 -3955\nwait 2500\npad 0001 700\npad 0401 1300\npad 0400 400\nwait 5000\ntphorse\nwait 2500\nkey 45 200\nwait 5000\nnpcs 30\n'; for i in 1 2 3 4 5 6; do printf 'wait 9000\nnpcs 30\n'; done; } > $N/scan/mc4_guest.txt
+  { printf 'wait 10000\nwait 10000\nwait 10000\nwait 10000\nwait 5000\ntp -10239 546 -3957\nwait 3000\nnpcs 30\n'; for i in 1 2 3 4 5 6; do printf 'wait 9000\nnpcs 30\n'; done; } > $N/scan/mc4_host.txt
+  GA=""; for i in $(seq 1 40); do GA="${GA}click:L:90_w:800_"; done
+  run2 "$BASE -Hold 10 -GuestDev pad_sim=1 -HostScript $SCAN\\mc4_host.txt -GuestScript $SCAN\\mc4_guest.txt -GuestKeys w:19000_shot:$NAME-g0_w:9000_shot:$NAME-g1_${GA}shot:$NAME-g2_w:2000_shot:$NAME-g3 -HostKeys shot:$NAME-h0"; two_player_checks
+  H=$N/$NAME.host.log
+  has "$N/$NAME.coopplus.guest.log" "Dev script: teleport beside actor 0xB[0-9A-F]+: \\(" "guest: its called horse was there"
+  has "$N/$NAME.guest.log" "MountSync summary .* published Begin [1-9][0-9]* Commit [1-9]" "guest: mounted (its mount was published to the host)"
+  has "$H" "blows from the guest's client: guest>NPC [1-9]" "the mounted guest's blows on enemies were seen"
+  hurt=$(grep "Local:.*hp" $N/$NAME.coopplus.guest.log 2>/dev/null | grep -vc "hp 300.0/300.0")
+  [ "${hurt:-0}" -gt 0 ] && ok "the mounted guest lost health ($hurt samples below full)" || bad "the mounted guest never lost health (not exercised: were the enemies there?)"
+  info "LOOK: $NAME-g1 / -g2 must show the guest IN THE SADDLE (prompt Dismount) with enemies around; the logs cannot tell mounted from on foot"
+  ;;
+nosave)
+  head_step "a guest who has never played (no save at all) tries to join"
+  # 2026-11-11/12 (gn1-gn5): such a guest waited on 'Waiting for Host' for ever. Now its game goes back to solo by
+  # itself with the instruction on the title menu, and the host is told. (The harness stops the run there.)
+  run2 "$BASE -GuestVariant none -ExpectNoSave"
+  O=$N/$NAME.out
+  has "$O" "^SAVES OK"                         "the player's saves untouched (SAVES OK)"
+  has "$O" "user install restored: 5/5 OK"     "the player's install put back (5/5)"
+  has "$O" "^lobby flow done \\(the guest has no save\\)" "the harness saw the guest's game say it has no save"
+  has "$N/$NAME.coopplus.guest.before.log" "this player has no save of their own: co-op cannot start for them yet" "guest: its game found it has no save and stopped the join"
+  has "$N/$NAME.coopplus.guest.log" "back in solo after a join without a save of our own: the menu says what to do" "guest: back at the solo title with the instruction"
+  has "$N/$NAME.coopplus.host.log" "has no save of their own: co-op cannot start with them yet" "host: was told why its friend left"
+  hasnot "$N/$NAME.coopplus.host.log" "in the shared world" "host: did not load into its world alone"
+  info "LOOK: $NAME-nosave-guest (the title with 'You have no character yet...') and $NAME-nosave-host (the reason on the host's menu)"
+  ;;
 summary)
-  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c '^== ' "$R") (16 in the list)"; exit 0 ;;
+  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c '^== ' "$R") (18 in the list)"; exit 0 ;;
 *) echo "unknown step $STEP"; exit 2 ;;
 esac
 sed -n "/^== $STEP /,\$p" "$R"
