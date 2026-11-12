@@ -5806,3 +5806,30 @@ Report: build/native/prepost-pp5.txt (every step's switches are in it). 332 chec
 - sp1 (SpawnCharacterCheatReq 2185 standing still at Nas River; three payloads: C = 0, C = own key, B = own key):
   posted three times, no new NPC within 15 m, no error line. Time limit reached: left alone (note in
   notes_spawn_cheat.md); enemies for tests keep coming from the dock quest.
+
+### gn3, op2, mc2, mc3 (2026-11-12 00:16-00:59): what the no-save guest's game does; riding works; decisions
+
+- gn3 (the waiting screen drawn see-through, a screenshot every 4 s): behind "Waiting for Host" the guest's game
+  shows the title's logo and nothing else for the whole run. The lobby's New Game keys do nothing there. Host side:
+  session 2 is built and user 2 "logged in", but the server sent user 2 only 2 packets (1 unreadable); a guest with
+  a save gets about 20 at that point, before Play. So the title never completes for a user 2 without a save, and a
+  new character cannot be started from there. Two runs spent on it: stopped (time limit).
+- DECISION (playtest build): no new character inside the host's world. A guest whose game has no save says so:
+  the host is told ("<name> has no character yet and must start a New Game alone first..."), the guest's game
+  restarts into solo by itself, and its title menu shows "You have no character yet. Start Solo, begin a New Game,
+  and join again once you stand in the world." Decided before the guest reports "ready", so the host does not load
+  into its world alone. Built as package 6b52c35e (layer 6b52c35, native 19be296); run gn4 checks it.
+  Later, if wanted: a real new character for the guest (needs the base to create user 2's lobby without a slot,
+  to save a newborn user 2 to slot204, and a new slot on the guest's PC for the result), and the same check at the
+  title before either game restarts.
+- op2 (talk to a comrade): the "tpnear" helper took a creature with 5 HP (the nearest "person"); the comrades stand
+  beyond the 14 lines the list prints. Helper now takes people with 40+ HP; the script lists from 22 m. Not yet a
+  test of a talk.
+- mc2: the guest mounted at Nas River and swung its sword from the saddle (shot mc2-g2), but the test's teleport
+  does not move a mounted rider, so no enemy was near. The host, standing idle at the dock as the lure, was beaten
+  down by its bandits (the guest's screen: "Host is down: go to them to revive them").
+- mc3: the mounted guest RODE with the harness's walk-to (W + camera) about 50 m toward the dock and got stuck at
+  (-10303.8, 532.9, -3937.6) with 63 m left. So the walk-to drives a horse, and the game's own position global is
+  the rider's world position (the layer's "Local: pos" reads (0, 1.5, 0.5) while mounted: relative to the horse;
+  to fix where it matters). No fight reached.
+- mc4 (running): the guest mounts at the dock while the bandits still sleep, the host arrives 45 s in.
