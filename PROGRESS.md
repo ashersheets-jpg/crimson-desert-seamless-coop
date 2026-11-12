@@ -5858,3 +5858,27 @@ Report: build/native/prepost-pp5.txt (every step's switches are in it). 332 chec
 - Open, small: the world clock differs between the two players in a New Co-op Save (the guest's character takes the
   field's time when it enters, 23:06:21 "takes the field's time (day 0 24:00:00 scale 0)", the story sets 22:30 for
   the host 20 s later); the layer's own position reads (0, 1.5, 0.5) while mounted (relative to the horse).
+
+### Story scenes for two: what the base does today (a research agent's reading, 2026-11-12 02:00; NOT tested here)
+
+Read from the base author's notes (upstream/cdmp-native/docs/research/pendientes/p8-*.md, s25/s44, s45) and the
+shipped switch list (native_mode_text.h). To be checked by a run before anything here is called a fact.
+- What runs in the shipped build: the host's scenes are copied to the guest (observer_seq_copy) and the guest files
+  them under the host character's own scene manager "X" (guest_seq_route). Nothing plays them on the guest:
+  guest_seq_play, guest_seq_foreign*, guest_x_*_veto are off and not ported to 3576 (their install lines refuse).
+  The author's own result on the old game build: 43 scenes created on the guest, none played.
+- Known bad cases on the old build (with guest_seq_play on, which we do not ship): the camp-liberation cutscene
+  reloaded the guest's field and sent the guest to the title (the one resource on guest_seq_route_deny, 8CD771B1,
+  is that scene); the host's dialog menu appeared on the guest; the host's character can freeze in a pose on the
+  guest's screen during a scene.
+- The guest's own scenes: shops work through shop_twin (tested here on 3576: tcB185, tcB216, tcB242/243). A guest's
+  NPC talk gives the greeting only; quest dialogs belong to scenes the host owns (the general fix: not started).
+- No story scene has been run with two players on 3576 in any log of this project.
+- What a two-player scene test must look at: host log "ObserverSeqCopy [copy]" / "summary" (REFUSED / LOST 0);
+  guest log "GuestSeqRoute ... ROUTED to the actor's own manager X" and "[2981 state N into X] ... resource 0x..."
+  (a load or camera change right after one = that resource goes on the deny list); the guest thrown out (a 2437
+  with no 2174 before it, then 2679 and 2001; a loading screen); on screen: the guest's camera, keys or a menu
+  taken over, the host's character frozen, whether the guest can still move.
+- Plan: op3 (the host talks to a comrade at the story's start with the guest beside it), right after the checklist
+  pass. Aim for the playtest build: a host scene must never break the guest (no loading screen, no stolen camera);
+  the guest seeing the scene comes second.
