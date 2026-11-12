@@ -29,11 +29,17 @@ test save Out, shipped cdmp.ini restored.
   .bin (only test copies have a role in the name; your own play writes cdmp_packets_<date> without a role, and
   those 16 files are a few KB each). They are of no use any more. Say "delete the test captures" and I remove
   exactly those role-named files, nothing else.
-- BUILD READY, your OK needed to post (2026-11-11 19:50; the 12-hour posting OK ended about 18:10):
-  0.1.0-alpha+980c5b38 passed the whole release checklist (pp5, 12 steps, 332 checks). The post text is drafted in
-  docs/release/shared-world-playtest/download-980c5b38-draft.txt. In it since 3c46bec5: a guest far from the host can
-  fight; a downed player lies down; the guest starts at the host's side; no more packet files written in solo; the
-  title footer. Say "post it" and I post it to #download-here with a short note in #general.
+- BUILD READY, your OK needed to post (the 12-hour posting OK ended about 18:10 on 2026-11-11):
+  0.1.0-alpha+980c5b38 passed the whole release checklist at 19:48 (pp5, 12 steps). A NEWER candidate,
+  0.1.0-alpha+2ddd622f, adds the New Co-op Save fix (without it a guest can never join a brand-new co-op save) and
+  is in its own full pass now (pp6, 15 steps); when that passes it replaces 980c5b38 as the build to post. Post
+  text: docs/release/shared-world-playtest/download-980c5b38-draft.txt (to be renamed with the final id). In it
+  since the posted 3c46bec5: a guest far from the host can fight; a downed player lies down; the guest starts at
+  the host's side; New Co-op Save works; no packet files written in solo; the title footer. Say "post it" and I
+  post the newest build that has passed, with a short note in #general.
+- DECISION (design): on New Co-op Save a returning guest arrives with ITS OWN newest character and progress (the
+  rule since 2026-11-08: own progress per player); the card says "Both of you begin the story". Keep it, or should a
+  New Co-op Save give the guest a new character too? (Two brand-new players are not affected.)
 - DECISION to confirm: the guest now starts at the HOST'S SIDE (once per start, when it would otherwise be more than
   30 m away). Before, it started wherever its own save was (1.3 km away in the new-save test). The title menu
   already says the friend "joins your story where you are". If you would rather keep the old start: tell me, it is
