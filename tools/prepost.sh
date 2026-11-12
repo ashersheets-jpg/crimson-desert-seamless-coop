@@ -3,7 +3,7 @@
 # one game session and every step's screenshots can be looked at before the next one starts:
 #
 #   bash tools/prepost.sh TAG "<package folder>" STEP        STEP = static | real | fresh | xess | fsr | display |
-#                                                                   lowsave | chest | revive | loot | crime | farfight | newsave | solostart | mounts |
+#                                                                   lowsave | chest | revive | loot | crime | farfight | farfight2 | newsave | solostart | mounts |
 #                                                                   summary
 #
 # TAG names the run (pp1 ...): the test names are TAG-STEP, the report is build/native/prepost-TAG.txt.
@@ -254,6 +254,19 @@ farfight)
   hurt=$(grep "Local:.*hp" $N/$NAME.coopplus.guest.log 2>/dev/null | grep -vc "hp 300.0/300.0")
   [ "${hurt:-0}" -gt 0 ] && ok "the guest lost health far from the host ($hurt samples below full)" || bad "the guest never lost health far from the host"
   ;;
+farfight2)
+  head_step "a guest fights 484 m from the host, in another direction: the host draws its bandits, then goes to Hernand"
+  # 2026-11-12 (of1-of3): the first far-fight fix read two registers of the wrong actor and still passed the 108 m
+  # step, because the host stood 36 m away along one map axis. This placement differs along both axes.
+  printf 'tp -10239 546 -3957\nwait 9000\nnpcs 40\nwait 9000\nnpcs 40\nwait 8000\nnpcs 40\ntp -10665 634.5 -3701\nwait 5000\nnpcs 30\n' > $N/scan/ff_host_lure430.txt
+  GA=""; for i in $(seq 1 50); do GA="${GA}click:L:90_w:800_"; done
+  run2 "$BASE -Hold 10 -HostScript $SCAN\\ff_host_lure430.txt -GuestScript $SCAN\\ff_guest_watch40.txt -GuestKeys w:9000_shot:$NAME-g0_${GA}shot:$NAME-g1_w:20000_shot:$NAME-g2 -HostKeys w:500_shot:$NAME-h0"; two_player_checks
+  H=$N/$NAME.host.log
+  has "$H" "DamageRange: on .* counted because another player was in range [1-9]" "hits 484 m from the host counted because the guest was in range"
+  has "$H" "DamageRange: a hit [34][0-9][0-9] m from the field owner's character counts: another player is [0-9] m from the victim" "the hook's own numbers are right: the hit is 300-499 m from the host and under 10 m from a player"
+  hurt=$(grep "Local:.*hp" $N/$NAME.coopplus.guest.log 2>/dev/null | grep -vc "hp 300.0/300.0")
+  [ "${hurt:-0}" -gt 0 ] && ok "the guest lost health 484 m from the host ($hurt samples below full)" || bad "the guest never lost health 484 m from the host"
+  ;;
 newsave)
   head_step "New Co-op Save: the host starts the story in a brand-new co-op world, the guest joins it"
   # 2026-11-11 (nc5-nc7): never run on the shared world before today, and broken: the guest hung on "Waiting for Host"
@@ -303,7 +316,7 @@ mounts)
     has "$N/$NAME.$r.log" "MountSync summary .* published Begin [1-9][0-9]* Commit [1-9]" "$r: mounted (its mount was published to the other player)"
   done ;;
 summary)
-  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c '^== ' "$R") (15 in the list)"; exit 0 ;;
+  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c '^== ' "$R") (16 in the list)"; exit 0 ;;
 *) echo "unknown step $STEP"; exit 2 ;;
 esac
 sed -n "/^== $STEP /,\$p" "$R"
