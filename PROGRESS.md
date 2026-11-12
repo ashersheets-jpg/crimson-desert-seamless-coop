@@ -57,9 +57,11 @@ test save Out, shipped cdmp.ini restored.
   It looks like Discord in a browser asking to sign in again.
 - POSTING OK of 2026-11-12 ~04:18: USED and ENDED. It covered one post; that post went out at 08:03 (below). The
   next post needs your OK again.
-- DECISION (design): on New Co-op Save a returning guest arrives with ITS OWN newest character and progress (the
-  rule since 2026-11-08: own progress per player); the card says "Both of you begin the story". Keep it, or should a
-  New Co-op Save give the guest a new character too? (Two brand-new players are not affected.)
+- DECIDED 2026-11-12 ~12:25 (the owner): "Yes. The friend needs to have a new save for a new co-op save run. The
+  whole point is that the friends start together at the same point in game." A New Co-op Save gives BOTH players a
+  fresh save; continuing that run brings back that run's characters. To build (not built yet).
+- YOUR WORD NEEDED: the reply to JackyChan004 and D3vils (docs/release/shared-world-playtest/
+  feedback-47135b83-jackychan2-draft.txt): say "post the reply" and it goes to #play-testing-feedback.
 - DECISION to confirm: the guest now starts at the HOST'S SIDE (once per start, when it would otherwise be more than
   30 m away). Before, it started wherever its own save was (1.3 km away in the new-save test). The title menu
   already says the friend "joins your story where you are". If you would rather keep the old start: tell me, it is
@@ -6450,3 +6452,15 @@ leave the joined player stuck in that position. Report zip unpacked in the scrat
   the guest's, 12 in the two report.txt. Both zips were posted in the Discord by the testers themselves; the id is
   the OTHER player's. Fixed (kit/coopplus/diagnose.ps1: no word boundary, digits only as the limit); the test has
   the folder form now and fails on the old rule (run both ways). In the next package.
+
+### Decision 2026-11-12 ~12:25: a New Co-op Save is a fresh save for BOTH players
+
+- The owner, after the two reports: "Yes. The friend needs to have a new save for a new co-op save run. The whole
+  point is that the friends start together at the same point in game."
+- This narrows the rule of 2026-11-08 (own progress per player): it still holds for Continue Our Co-op Save and Start
+  From My Solo Progress; a New Co-op Save run has its own fresh character for each player, and Continue of that run
+  must bring back the run's character for the friend, not the friend's solo one.
+- Work order now (foundational first): 1 the build check at the title (written, to build and test); 2 the host's
+  reload crash (research running); 3 the fresh save for the friend (to design: how the guest's save is chosen and
+  offered today, read first); 4 travel to the friend as a real travel; 5 the guest's mounts in a new world, the
+  Axiom Force grab. The package dc7ade5e is not the one to post: its checklist stops after the steps now running.
