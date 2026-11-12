@@ -119,3 +119,11 @@ topic BEFORE testing or guessing about it.
   it empties the result file. A re-run of single steps goes under a second name (pp8b).
 - 2026-11-12: Look at the WORDS in every screenshot, not only whether something is drawn: the guest's waiting line
   said "Joining the start of the story..." on a Continue start through three checklist passes before it was read.
+
+- 2026-11-12: Reading a tester's report: FIRST the settings block (`[native_resume] plan=` says which start the host
+  picked, `mode=`, `role=`), THEN the base log's packet story (did `out LoginCharacterToFieldServerReq 2733` go out?
+  did "the host says: active" and the packet burst follow?), THEN the layer log. The first reading of JackyChan004's
+  report stopped at the overlay line and left "why did the game stay at the title" open for two hours; plan=1 (New
+  Co-op Save, a bug already fixed here) was in the report all along.
+- 2026-11-12: One failed session usually has more than one cause. Explain EVERY symptom the tester names from the
+  log before calling a report understood; a symptom that the fix in hand does not explain is a second bug.

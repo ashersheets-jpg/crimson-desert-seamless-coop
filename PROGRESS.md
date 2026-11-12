@@ -6101,3 +6101,33 @@ shipped switch list (native_mode_text.h). To be checked by a run before anything
   is right only for New Co-op Save; on Continue / From my progress it should say it joins the host's world
   (coop_lobby.cpp line 468: g_new_started is set for every native start). It has been like this since the native
   lobby flow; nobody reported it.
+
+### The tester's "game never left the title" EXPLAINED from his own report (2026-11-12 06:30, second reading)
+
+Earlier reading (am1): "not a consequence of the missing overlay on this PC; what differs on his: unknown". Now known:
+- His cdmp.log: `out LoginCharacterToFieldServerReq 2733 ... save slot 100` at 17:37:14.689, the same second as the
+  layer's "the host's world is up: Play". So the mod's Play press TOOK on his PC; the game asked the host to let
+  his character in. Then nothing: no "the host says: active", no burst of world packets (a good run gets about 765
+  packets within 2 s; his kept the idle trickle of 2.6 packets/s to the end), `out 3 packets` to the end.
+  The host never answered the character login.
+- His coopplus.ini in the report: `[native_resume] plan=1`, written 17:36:00 (the restart into co-op was 17:36:12).
+  plan 1 = LobbyPlan::NewSave. THE HOST PICKED "NEW CO-OP SAVE", and 3c46bec5 has the bug that is fixed in this
+  batch (nc5 / nc6): in a brand-new co-op world user 2 has no lobby when it logs in, its character login is refused
+  on the host without an answer, and the guest waits for ever.
+- 17:39:29 "the host chose the host's solo progress" (a second try with another choice), 17:40:12 "the host's world
+  is up: Play": no second 2733 ever left his game. After the unanswered login his game's title was waiting for that
+  answer and the mod's E presses did nothing. A SECOND TRY IN THE SAME GAME SESSION CANNOT WORK for the guest today.
+- So his session failed for two reasons that 47135b83 both addresses (no overlay; New Co-op Save), and the second
+  try failed for a third that it does NOT: a failed start leaves the guest's game stuck until it is restarted.
+  The reply to him says so ("both close the game completely before the next try") and asks for the host's report too.
+- NEXT BUILD, foundational ("everyone gets in however they start"), in this order:
+  1. A start that got no answer: the guest's game must not sit there. After Play was pressed and the world has not
+     come for ~90 s: say so on the waiting screen and in the host's menu; when the host starts again (a new plan or
+     a new go) and this game has already pressed Play once, restart this game into the join by itself (the same
+     restart it did at the first start). Test: a dev switch on the host that drops user 2's character login once,
+     then Start Co-op again.
+  2. Keep the previous run's logs: coopplus.log and cdmp.log are created anew at every game start, and the co-op
+     flow restarts the game, so every tester report so far LACKED the title part of the session (the menu, the
+     invite, the host's choice). Rename the old ones to *.prev.log at start, the report tool packs them too.
+  3. The waiting line's wording on Continue / From my progress.
+  4. The base's first-chance logger: no ERR line for the hook library's trapped threads.
