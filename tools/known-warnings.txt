@@ -27,3 +27,4 @@ SessionN save guard REDIRECT: everything under Q goes to Q, ## notice: saves go 
 SessionN: the guest's connection was replaced by a new one b ## steps retry / stuck: the second start
 UserNStages [host cadence] qpc N s (~N:N:N) capture t=- | th ## a diagnostic
 UserNStages: mode N cannot arm until these are in: userN_fun ## far-world hooks not ported to 3576 (every run)
+SessionN child hold: a due release has waited N ms for a thr ## after the HOST's own load (far travel, nb5-farfight2): NPC releases to the guest wait about 2 s for the announcing thread, then run

@@ -6642,3 +6642,32 @@ Design chosen (A, host-authoritative, with a world marker):
   again the timer runs through the detour as it would have. Given up after 120 s (WRN). The summary line counts
   asked / put off / run late / owed / given up / not kept / faulted. Test tg1b: 40 put off must be 40 run late, and
   the timers must keep coming at about 220 a minute.
+
+### tg1b, nb5 (2026-11-12 16:22-16:50): the timer guard holds; far travel over distance works, but NOT at the moment of joining
+
+- tg1b (40 schedule timers put off on purpose): "asked 1760 | put off 40 | run late 40 | owed now 0 | given up 0 |
+  not kept 0 | faulted 0" in eight minutes: about 220 timers a minute, the rate without the test (tg2a). Each one ran
+  at the next outermost Troc ("0 ms late"). So putting a timer off and running it late keeps the schedule alive;
+  skipping it (tg1a) did not. Both alive, SAVES OK, 5/5. The guard's real case (the owner without a manager) has
+  still not come up in a test; the late run for that case is the same code with a longer wait.
+- nb5, two checklist steps on the new travel (the package's settings, build-folder files):
+  - farfight2: the host 496 m to Hernand "the game's own travel ... took 0.8 s; 0 m left", 117 m 0.6 s, the guest
+    112 m 0.4 s. The step's own checks pass (the fight 484 m from the host as before).
+  - lowsave (the guest's save 1321 m from the host: the join's move to the host's side): "1321 m: the game's own
+    travel ... took 3.1 s; 0 m left; arrived (-10348, -3920)", and the step FAILED "guest: 1321 m from the host at
+    the end": on its screenshot the guest stands in Hills of No Return, 1328 m away. The host's base shows the
+    travel done on the server (3074 accepted by F3, its 2294, 2437, "RELOAD ... after 2399 to user 2", 2322
+    emitted). But it was asked 4 s after the guest entered the world, while the login's own move into the host's
+    field was still open (its MoveFieldCompletePostAck 3029 came 0.2 s AFTER our 3074): that move ended last and
+    put the character back at its save's place. The hop teleport never showed this because it keeps sending.
+    Fix (layer, built 16:55): 4 s after a far travel arrived the position is read again; back within 80 m of the
+    start and more than 80 m from the goal = the same travel again, twice at most. Test: lowsave again (nb6).
+  - Two more findings of the same runs:
+    - guest: "first-chance exception at cdmp.asi ... peek<unsigned __int64> [server.cpp:310] (not a known guarded
+      read)": the layer asked the base's new export for the field key on the GUEST, where no server exists; the
+      guarded read faulted (caught) at every call. Fixed: the export answers 0 at once when no server was built.
+    - host: a warning kind never seen: "Session2 child hold: a due release has waited 2000 ms for a thread that may
+      call NotifyAppear", twice, each followed by "the deferred release(s) ran after 2140 ms". It comes after the
+      HOST's own load (the host never reloaded when it moved in hops): NPC releases to the guest wait about 2 s.
+      Added to tools/known-warnings.txt with that reason. What the guest sees in those 2 s: not looked at.
+    The new "warning kind never seen before" check caught both on its first day.

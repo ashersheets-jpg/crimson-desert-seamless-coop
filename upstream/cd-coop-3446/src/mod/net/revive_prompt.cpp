@@ -142,6 +142,17 @@ bool g_far_try = false;     // a newly asked move: far travel is considered once
 uint32_t g_far_ack_at = 0;  // when the 3071 goes to our client (0 = sent / none)
 uint32_t g_far_until = 0;   // far travel in progress until (0 = none)
 uint32_t g_far_since = 0;
+// nb5-lowsave (2026-11-12): the join's move to the host's side (1321 m) was asked 4 s after the guest entered the
+// world; the server did the travel, the guest stood at the host's side for a moment, and was then put back to its
+// save's place: its login's own move into the host's field was still finishing and ended after ours. So a far
+// travel is looked at again a few seconds after it arrived: back near where we started and far from the goal =
+// the same travel again (twice at most; a player cannot get that far by walking in that time).
+constexpr uint32_t kFarConfirmMs = 4000;
+bool g_far_used = false;                 // this move went by far travel
+std::array<float, 3> g_far_from{};       // where we stood when it began
+std::array<float, 3> g_confirm_goal{};
+uint32_t g_confirm_at = 0;               // when to look again (0 = nothing to confirm)
+int g_confirm_tries = 2, g_confirm_waits = 0;
 
 uint32_t own_field_key() {
     using Fn = uint32_t (*)();
@@ -188,10 +199,43 @@ void hop_tick(uint32_t now_ms) {
             g_hop_last = {1e9f, 0.0f, 1e9f};
             g_far_try = true;
             g_far_until = g_far_ack_at = 0;
+            g_far_used = false;
+            g_confirm_at = 0;
+            g_confirm_tries = 2;
+            g_confirm_waits = 0;
         }
     }
-    if (!g_hop_goal) return;
     const uint32_t own = capture_own_player_key();
+    if (!g_hop_goal) {
+        if (!g_confirm_at || static_cast<int32_t>(now_ms - g_confirm_at) < 0) return;
+        const auto here = own ? game::actor_world_position(own) : std::nullopt;
+        if (!here) {  // loading: look again in a moment (not for ever)
+            g_confirm_at = ++g_confirm_waits <= 15 ? (now_ms + 2000) | 1 : 0;
+            return;
+        }
+        g_confirm_at = 0;
+        const auto flat = [&](const std::array<float, 3>& p) {
+            const float x = p[0] - here->x, z = p[2] - here->z;
+            return std::sqrt(x * x + z * z);
+        };
+        const float to_goal = flat(g_confirm_goal), to_start = flat(g_far_from);
+        if (to_goal > kFarM && to_start < kFarM && g_confirm_tries > 0) {
+            --g_confirm_tries;
+            log::warn("Teleport: {} s after the far travel we are back where we started ({:.0f} m from the goal; a load "
+                      "that was still finishing put us back): the same travel again ({} more after this)",
+                      kFarConfirmMs / 1000, to_goal, g_confirm_tries);
+            g_hop_goal = g_confirm_goal;
+            g_hop_fails = 0;
+            g_hop_at = now_ms;
+            g_hop_last = {1e9f, 0.0f, 1e9f};
+            g_far_try = true;
+            g_far_used = false;
+        } else if (to_goal > kFarM) {
+            log::warn("Teleport: {} s after the far travel we are {:.0f} m from the goal and {:.0f} m from where we "
+                      "started: left as it is", kFarConfirmMs / 1000, to_goal, to_start);
+        }
+        return;
+    }
     // Far travel under way: our client's loading starts a moment after the request, and while it loads there may be
     // no position to read.
     if (g_far_until) {
@@ -228,6 +272,8 @@ void hop_tick(uint32_t now_ms) {
         g_far_try = false;
         const uint32_t key = left > kFarM ? own_field_key() : 0;
         if (key && far_travel_start(key, goal)) {
+            g_far_used = true;
+            g_far_from = {at->x, at->y, at->z};
             g_far_since = now_ms;
             g_far_ack_at = (now_ms + kFarAckDelayMs) | 1;
             g_far_until = (now_ms + kFarTimeoutMs) | 1;
@@ -239,6 +285,11 @@ void hop_tick(uint32_t now_ms) {
     }
     if (left <= kArrivedM) {
         log::info("Teleport: arrived ({:.0f}, {:.0f})", at->x, at->z);
+        if (g_far_used) {
+            g_confirm_goal = goal;
+            g_confirm_at = (now_ms + kFarConfirmMs) | 1;
+            g_confirm_waits = 0;
+        }
         g_hop_goal.reset();
         return;
     }
