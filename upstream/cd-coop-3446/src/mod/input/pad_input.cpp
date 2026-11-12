@@ -76,8 +76,17 @@ DWORD sim_feed(DWORD i, XINPUT_STATE* st, DWORD r) {
     static std::atomic<uint16_t> last{0};
     if (r != ERROR_SUCCESS) *st = XINPUT_STATE{};
     const uint16_t sim = now64() < g_sim_until.load() ? static_cast<uint16_t>(g_sim.load() & 0xF3FF) : uint16_t{0};
-    if (last.exchange(sim) != sim) ++packet;
+    const uint16_t all = now64() < g_sim_until.load() ? g_sim.load() : uint16_t{0};  // sticks count as a change too
+    if (last.exchange(all) != all) ++packet;
     st->Gamepad.wButtons |= sim;
+    // 2026-11-11 (mr1: the horse is called with D-pad Up held + the RIGHT STICK pushed DOWN, and the simulated pad had
+    // buttons only): the two bits XInput does not use stand for sticks in a simulated press: 0x0400 = right stick
+    // down, 0x0800 = left stick up (walk / ride forward). "pad 0401 2500" = the horse call.
+    if (now64() < g_sim_until.load()) {
+        const uint16_t raw = g_sim.load();
+        if (raw & 0x0400) st->Gamepad.sThumbRY = -32768;
+        if (raw & 0x0800) st->Gamepad.sThumbLY = 32767;
+    }
     if (r != ERROR_SUCCESS) st->dwPacketNumber = packet.load();
     else st->dwPacketNumber += packet.load();
     return ERROR_SUCCESS;

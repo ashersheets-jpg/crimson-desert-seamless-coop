@@ -5579,3 +5579,33 @@ Report: build/native/prepost-pp5.txt (every step's switches are in it). 332 chec
 - The harness now does for the HOST in the test copy what the mod does for the guest (scroll, hold, then Space), and
   build/native/coopworld.sh backs the test co-op world up and puts it back (checksums) around such runs.
 - nc5 (running): the same with that; then mr1: the first mounts test in the shared world.
+
+### nc5 (2026-11-11 20:50) and mr1 (21:05): New Co-op Save: THE GUEST NEVER GETS IN (found, cause read, fix built)
+
+- nc5 (the harness scrolls and accepts the agreement for the host in the test copy, Space on the difficulty): the
+  HOST starts the story: "Unfamiliar Lands / Return to your comrades", Day 0, Hills of No Return, at night
+  (nc5-h0). The GUEST stays on "Waiting for Host / Joining the start of the story..." until the run ends, 13 minutes.
+- Cause, from the logs and the game's code (read today, exe+0x2EBBAF0 = the user login):
+  - guest log: "out LoginCharacterToFieldServerReq 2733 ... save slot 103"; host log: "C2 identity: refused user 2's
+    Req 2733: user 2's lobby does not hold 0x7FFFFFFFFFFFF002"; the host's status line shows "blocked 1" from then on.
+  - a normal run has, at the guest's login, "LoadSlot ... from exe+0x2EBBE90 ... user 2 | slot 103 -> REMAP 204",
+    "the staged guest slot moved in", "user 2's lobby loads from slot204", "C2 identity: user 2 lobby ... written".
+    nc5 has none of them: "slot 204 staged | LoadSlot calls 0 ... moved in 0" every minute.
+  - the user login re-reads the save folder, takes the save manager's latest slot and loads the lobby from it ONLY
+    if a slot is there. A brand-new co-op world has no slot until the host's new game writes one, and the guest
+    logs in three minutes before that. No lobby load -> the guest's uploaded save is never moved in -> user 2 has
+    no character -> its character login is refused -> the client waits for ever.
+  - So "New Co-op Save" cannot work for any pair on the shared-world base as posted. It was last tested on the old
+    base (2026-11-06); on the shared world the harness always took "Continue Our Co-op Save" (see 19:55).
+- Fix (native, local): when the guest's upload is staged and the co-op world's account folder has no slot folder at
+  all, the staged slot is moved in at once (guest_save_host.cpp), so the login's re-read finds a slot and the usual
+  remap loads user 2's lobby from it. nc6 runs it.
+- Also in nc5's log: the guest's staged save came "from mailbox gen15" (its newer progress kept on the host from
+  earlier sessions) instead of the upload: by design a guest brings its own save into any world, a new one too.
+  For two real new players both saves are new. Whether "New Co-op Save" should give a returning guest a NEW
+  character is a design question for the owner (the card says "Both of you begin the story"): queued.
+- mr1 (mounts, first try): no horse came for either player. The harness called it with the keyboard wheel (hold F1,
+  cursor on a slot), which was written for an older game build; the horse is called with D-pad Up held and the
+  right stick pushed down (memory: horse-call-method), and the simulated pad had no sticks. Added (layer, dev only):
+  in a simulated press 0x0400 = right stick down, 0x0800 = left stick up; "pad 0401 2500" = the horse call.
+  Script scan/mount_call.txt. Next: mr2 with -HostDev pad_sim=1 -GuestDev pad_sim=1.
