@@ -61,6 +61,8 @@ bool g_switch_sent = false;      // host after its restart: the guest was told t
 bool g_ready_sent = false;       // guest after its restart: the host was told
 bool g_nosave_seen = false;      // guest: we have no save of our own; the host was told, this game goes back to solo
 uint64_t g_guest_since = 0;      // guest after its restart: connected to the partner since
+uint64_t g_nosave_next = 0;      // guest: when "no save" goes to the host again (gn4: the first one did not arrive)
+bool g_partner_nosave = false;   // host: the guest said it has no save (handled once)
 bool g_guest_ready = false;      // host: the guest is in guest mode
 bool g_auto_started = false;     // host: the plan went on after the guest came back
 bool g_resume_cleared = false;   // in the world: the next launch was set back to Solo
@@ -296,7 +298,14 @@ void lobby_tick(const LobbyInput& in) {
                 native_back_to_solo(kNoSaveNote);
                 WritePrivateProfileStringW(kNoteSection, kNoteKey, L"nosave", g_native_ini.c_str());
                 reset_phase();
-                g_solo_restart_at = in.now_ms + 3000;  // after the message is out
+                g_solo_restart_at = in.now_ms + 4000;  // after the message is out
+                g_nosave_next = in.now_ms + 500;
+            }
+            // gn4 (2026-11-12): the one message sent in the instant the link came up did not reach the host (its menu
+            // kept saying "...is restarting into co-op"). It goes out again every half second until the restart.
+            if (g_nosave_seen && g_solo_restart_at && in.connected && g_nosave_next && in.now_ms >= g_nosave_next) {
+                send({kMsgGuestNoSave});
+                g_nosave_next = in.now_ms + 500;
             }
             if (g_resume.mode == NativeMode::Guest && in.connected && !g_ready_sent && !g_nosave_seen &&
                 (own_save != 0 || in.now_ms - g_guest_since > 10000)) {
@@ -609,7 +618,8 @@ void lobby_on_message(const std::vector<uint8_t>& b) {
                 }
                 break;
             case kMsgGuestNoSave:
-                if (g_native && g_in.host) {
+                if (g_native && g_in.host && !g_partner_nosave) {
+                    g_partner_nosave = true;
                     const std::string who = g_in.partner_name.empty() ? std::string("Your friend") : g_in.partner_name;
                     log::warn("Co-op lobby: {} has no save of their own: co-op cannot start with them yet; the next "
                               "launch is solo", who);
