@@ -5833,3 +5833,28 @@ Report: build/native/prepost-pp5.txt (every step's switches are in it). 332 chec
   the rider's world position (the layer's "Local: pos" reads (0, 1.5, 0.5) while mounted: relative to the horse;
   to fix where it matters). No fight reached.
 - mc4 (running): the guest mounts at the dock while the bandits still sleep, the host arrives 45 s in.
+
+### mc4, gn4, gn5 (2026-11-12 01:00-01:39): the MOUNTED FIGHT works; the no-save guest's own side works
+
+- mc4 (the guest mounts at the dock while its bandits still sleep, the host arrives 45 s in and wakes them; package
+  6b52c35e): shots mc4-g1 / -g2: the guest IN THE SADDLE (prompts Kick / Stow Weapon / Dismount) in the fight, the
+  host 2 m beside it, the red hurt edge on the guest's screen, bodies on the ground. Logs: "MountSync ... published
+  Begin 1 Commit 1"; "blows from the guest's client: guest>NPC 5 ... NPC>guest 1", "kills host 0 guest 1"; the
+  guest's health down to 271 of 300. So a mounted guest hits and kills enemies and is hit in the saddle.
+  Tested under: one PC, two copies, -Fresh, the package's settings, a simulated pad for the horse call, mouse
+  clicks for the attack. NOT tested: the host fighting mounted, being thrown off, a mounted enemy, other mounts.
+  It took four runs because of the test, not the game: mc1 the script went to a horse 430 m away, mc2 the test's
+  teleport does not move a rider, mc3 the ridden horse got stuck on the way. Checklist step: mountfight.
+- gn4 (package 6b52c35e) and gn5 (13d9e79c, the message repeated): the GUEST's side works: "this player has no save
+  of their own: co-op cannot start for them yet", its game restarts into solo, and the title menu shows "You have
+  no character yet. Start Solo, begin a New Game, and join again once you stand in the world." with the party still
+  listed (shot gn4-Wguest06). The HOST's side did not: its menu kept "Guest's game is restarting into co-op...".
+  Cause (read in the layer): the link sends queued messages only once it is "ready", about 14 s after a game starts
+  (in a normal run the host logs "...is in co-op as our guest" 14 s after "connected"); the guest's game restarted
+  after 4 s, so the reason never left. Fixed (layer 2e81395, package 2e813956): the reason goes out once the link is
+  ready, the restart follows 2.5 s later. Checklist step: nosave (the harness stops the run when the guest's game
+  says it has no save: 3 minutes instead of 20).
+- The checklist is 18 steps now: + farfight2, mountfight, nosave.
+- Open, small: the world clock differs between the two players in a New Co-op Save (the guest's character takes the
+  field's time when it enters, 23:06:21 "takes the field's time (day 0 24:00:00 scale 0)", the story sets 22:30 for
+  the host 20 s later); the layer's own position reads (0, 1.5, 0.5) while mounted (relative to the horse).
