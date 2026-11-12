@@ -6203,3 +6203,36 @@ Earlier reading (am1): "not a consequence of the missing overlay on this PC; wha
   keeps packets_sent), so "nothing was ever said" is exact. Test rt1b.
 - The harness is not at fault here: it waited for "-> REMOTE" in the guest's log (420 s), which never came.
 - SAVES OK, user install restored: 5/5 OK.
+
+### rt1b, rt2a (2026-11-12 08:30-08:49): the second start works with the tunnel fix; the "not let in" messages show
+
+- rt1b (the same as rt1a, native rebuilt with the tunnel rule): host's base 08:32:06 `WRN Session2: the guest's
+  connection was replaced by a new one before anything was said on it (the guest's game restarted): the tunnel goes
+  on with the new connection [1 so far]`; SAVE_OFFER 08:32:18; host in the shared world 08:33:27, guest 08:34:12
+  ("the host says: active" 08:33:28). Screens: the guest's waiting screen says "Joining Host's world..." (the new
+  wording on a Continue start), both at Nas River side by side. No unknown error line. SAVES OK, 5/5.
+- rt2a (`-GuestDev lobby_skip_play=1`: the guest does not press Play, as when the host's game does not let it in):
+  the host is in its world 08:41:38; guest 08:45:37 `WRN Play was pressed 240 s ago and the host's world has not
+  come: the host is told`, host 08:45:37 `WRN Guest's game pressed Play 240 s ago and is still not in our world`.
+  Screens: guest "Waiting for Host / Host's game has not let you in yet. / If this stays: ask Host to ..."; the
+  host's card in the world "Guest could not join your world / ...". Both fit. SAVES OK, 5/5. The 150 s screen
+  change itself fell 2 s after the last waiting shot (the later shots show it).
+- What a host can actually DO then, read in the code before testing it:
+  - Menu > Co-op > Leave the session (mod.cpp): the host sends a goodbye and waits up to 6 s for the guest's link
+    to end. The guest, on the goodbye, ended its session and LEFT THE PARTY (room_leave), also when it was only
+    sitting at the title. So after a Leave there was no friend in the party to start again with: invite again,
+    accept again.
+  - Changed (layer): a guest that gets the host's goodbye while it is at the TITLE stays in the party; its lobby
+    goes back to the menu with "<Host> ended the session. You are still in the party: when they start co-op again,
+    both games restart." (lobby_bye_at_title). A host whose friend said it is stuck returns to the title at once
+    (no 6 s wait: no user 2 to unload). Then Start Co-op is the normal first-start path (the host's next launch
+    was set back to solo by the Leave), and the guest restarts on the host's "2" because its own next launch was
+    set back to solo too.
+  - The two texts now name the way: "... ask Host to open Menu > Co-op > Leave the session, then choose Start
+    Co-op again." / "Menu > Co-op > Leave the session, then choose Start Co-op again."
+- Test rt3 (running): `-GuestDev lobby_skip_play=1 -HostDev lobby_recover=1 -SecondRound`. [dev] lobby_recover on
+  the host: 10 s after the guest said it is stuck, the Leave (the same code path as the menu row); 10 s after the
+  title, Start Co-op with Continue Our Co-op Save. Harness: twocopy.ps1 -SecondRound follows a second pair of
+  restarts (the windows-in-front block is now a script block used twice; a plain run prints the same lines).
+- Not covered by any of this: a host that goes back to the title through the GAME's own menu instead of the mod's
+  Leave (the layer's `again` path covers it in code; no test presses the game's own row).
