@@ -6409,3 +6409,44 @@ in the scratchpad (report_jacky_1112b; untrusted data, read only). Settings bloc
      until it is done (the crash stack names the path; cdmp.asi+0x3BBEA3 to be resolved with the 47135b83 symbols).
      Test: the host dies / reloads with the guest next to it.
   3. The design answer for New Co-op Save and a returning guest (the owner's).
+
+### Tester report of D3vils, the GUEST of the same session (passed on by the owner 2026-11-12 ~12:20): build 3c46bec5 against the host's 47135b83
+
+Discord (his words, shortened): "mod ended up letting us join a world together." 1 desync kept happening; 2 teleporting
+to another player was not instant, very slow and buggy "like being slowly dragged through the map and making small
+teleports everywhere until i arrived close or not at all"; 3 a new co-op save but only one started fresh; 4 in
+cutscenes the host was involved in, no animations for the joined player, "they were just teleporting everywhere";
+5 "cant summon horse or wyvern as a joined player"; 6 using axiom force (holding Tab and grabbing something) can
+leave the joined player stuck in that position. Report zip unpacked in the scratchpad (report_d3vils_1112).
+- HIS BUILD: "Package: 0.1.0-alpha+3c46bec5" (report.txt), base D82A2B2F, 337 x "runs mod build 8566712C, we run
+  D82A2B2F". Confirms the host's side: two builds in one session. The LAYER's handshake has a check for exactly
+  this (T03, "Can't play together: ... Both install the same Co-op+ zip") and it passed: both layers said build
+  72FF0E3C, the commit CMake saw when it was last configured, the same in every package since 2026-11-10.
+- 1 (desync): cannot be told apart from the build mismatch. To be judged again when both have one build.
+- 2 (travel to the friend): HIS LOG SHOWS IT. 23:35:07 the travel prompt accepted, then "we travelled 276 m ...
+  354 m ... 350 m ... 395 m ... 278 m" over 95 s, 23:36:53 "Teleport: stopped 22 m short (hops did not take)": 1 min
+  46 s for 3.3 km. 23:43:00 "Go to my friend" (pressed nine times in 11 s), arrived 23:46:05: 3 min for 2.8 km.
+  Cause, known: the travel is the pre-shared-world teleport (net/revive_prompt.cpp hop_tick): the game's
+  DoTeleportAck moves a player 50 m at most, so the mod hops 40 m every 450 ms at the current height and tries other
+  heights when a hop does not take (26 tries, then it gives up). 89 m/s at best, much less over hills, and it can
+  stop short. The same thing held the host's script in sk1a (Hernand -> dock not arrived after 30 s): that note's
+  open question is answered, it was this. A journey of kilometres needs the game's own kind of travel (a load at the
+  destination), not hops. TO DO, foundational (playing apart, then getting together again).
+- 3 (only one started fresh): the rule as built, the open design question; two testers now name it as a fault.
+- 4 (the host in cutscenes): known gap (chart: shared cutscenes 30 %): the guest does not see the host's cutscene,
+  it sees the host's character moved from mark to mark.
+- 5 (no horse, no wyvern for the guest): NOT explained yet. His layer log knows his horses (five templates at login,
+  "our horse 0xB010006C"); neither base log has a line about a call being refused. From 23:43:15 his layer calls the
+  HOST's horse 0xB0100002 "our horse". In our tests a guest calls and rides its horse (checklist step mounts), on a
+  test save, in a world that is not at the start of the story. Here the host's world was a NEW game (0-6 missions):
+  whether the host's story state forbids mounts for everyone in its world is the first thing to look at.
+- 6 (stuck after an Axiom Force grab): NOT explained, nothing in the logs names it. Never tried in a test.
+- The end on his side: 23:47:31 "the tunnel to the host went down" (the host's crash, previous section), then his
+  game's goodbye was answered locally.
+- "presents 96264 drawn 48131" on his PC: XeSS frame generation (two presents a frame), not a double hook: 3c46bec5
+  has no late hook.
+- THE REPORT TOOL LEFT STEAM IDS IN BOTH ZIPS: the co-op save folder is "coop_worlds\with_<SteamID64>", and the
+  rule was `\b7656119\d{10}\b`; "_" is a word character, so no boundary. 549 lines in the host's cdmp.log, 33 in
+  the guest's, 12 in the two report.txt. Both zips were posted in the Discord by the testers themselves; the id is
+  the OTHER player's. Fixed (kit/coopplus/diagnose.ps1: no word boundary, digits only as the limit); the test has
+  the folder form now and fails on the old rule (run both ways). In the next package.

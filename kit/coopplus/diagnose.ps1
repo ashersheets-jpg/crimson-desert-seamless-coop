@@ -41,7 +41,9 @@ function Redact([string]$t) {
     $t = [regex]::Replace($t, '(?i)([A-Z]:\\(Users|Documents and Settings)\\)[^\\/:*?"<>|]+', '$1<user>')
     if ($env:USERNAME -and $env:USERNAME.Length -ge 3) { $t = [regex]::Replace($t, '(?i)' + [regex]::Escape($env:USERNAME), '<user>') }
     if ($env:COMPUTERNAME) { $t = [regex]::Replace($t, '(?i)' + [regex]::Escape($env:COMPUTERNAME), '<pc>') }
-    $t = [regex]::Replace($t, '\b7656119\d{10}\b', '<steamid>')
+    # No \b: the co-op save folder is "with_<SteamID64>", and "_" is a word character, so a word boundary let 549 of
+    # them through in a tester's report (2026-11-12).
+    $t = [regex]::Replace($t, '(?<!\d)7656119\d{10}(?!\d)', '<steamid>')
     $t = [regex]::Replace($t, '(?i)(lobby\s+)\d{6,}', '$1<lobby>')
     $t = [regex]::Replace($t, '((?i:room|code)[ =:]+''?)[A-Z0-9]{7}\b', '$1<code>')
     $t = [regex]::Replace($t, '\b(?!127\.)(?!0\.0\.0\.0\b)(\d{1,3}\.){3}\d{1,3}\b', '<ip>')

@@ -15,7 +15,8 @@ $secrets = @('Kliffhanger_77', 'Oongka Fan', '76561198012345678', '1097752412345
     "[16:00:02.000] INF [T1] Co-op: connected to 'Oongka Fan'",
     "[16:00:03.000] INF [T1] Local: our horse at (-10300.12, 535.40, -3915.00) on $env:COMPUTERNAME",
     "[16:00:04.000] INF [T1] Network: udp 192.168.1.44:37015 and 127.0.0.1:37015; mail someone@example.com",
-    "[16:00:05.000] WRN [T1] Save guard: the game saved (slot 2) while 'Oongka Fan' is in the session [1 so far]"
+    "[16:00:05.000] WRN [T1] Save guard: the game saved (slot 2) while 'Oongka Fan' is in the session [1 so far]",
+    "[16:00:06.000] INF [T1] Session2: save guard REDIRECT (to 'D:\Saves\CD\coop_worlds\with_76561198012345678', writes 0)"
 ) | Set-Content (Join-Path $bin 'cdmp.log') -Encoding UTF8
 # Earlier runs' logs (the title part of a session is in them): the two newest of each kind go in the zip, redacted
 # with the names learned from ALL logs ('Title Tester' appears only in an earlier run's log).

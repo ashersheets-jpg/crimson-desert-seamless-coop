@@ -150,3 +150,14 @@ topic BEFORE testing or guessing about it.
   log (a passing checklist step of the posted package) and was only noticed three hours later in another test's
   log. A new WRN in a run that passed is a finding. To do: the checklist lists every WRN kind it has not seen.
 - 2026-11-12 (third time today): no Python through a heredoc. Edit tool for a string, Write tool for a script.
+- 2026-11-12: A check that compares two numbers is only as good as the number. The "same build" handshake compared a
+  commit id frozen at CMake's last configure; it was the same in every package for two days and the check passed
+  for two different builds. For anything "both sides must match": derive it from what is INSTALLED (a hash of the
+  files), and have a test where the two sides differ ([dev] build_id).
+- 2026-11-12: A redaction rule needs the real shapes of the secret in the test data, not only the plain one. The
+  Steam id was tested as a bare number and leaked inside "with_<id>". For every secret, list where the program
+  itself writes it (paths, folder names, URLs) and put each form in tools/test-diagnose-redact.ps1.
+- 2026-11-12: When my own test script meets something odd (sk1a: a scripted move that did not arrive), a player
+  will meet it too. I wrote "a player never moves like that" and fixed the script; two hours later a tester
+  described the same thing in "Go to my friend". An oddity in a test tool that uses the mod's own code is a finding
+  about the mod until shown otherwise.

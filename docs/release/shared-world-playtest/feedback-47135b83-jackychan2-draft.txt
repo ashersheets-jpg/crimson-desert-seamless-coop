@@ -1,0 +1,6 @@
+@JackyChan004 @D3vils thank you both, that report told us a lot.
+1) The menu showing on your AMD card confirms that fix on real hardware. Thank you for trying it.
+2) Your log says the two of you were on different builds: you had 47135b83, Devils had one of the builds from 11 Nov. Both players need the same build, and the mod did not tell either of you (the next build will, on the title menu). That is the most likely reason it was so desynced. Please both install 0.1.0-alpha+47135b83 from #download-here and try again.
+3) Devils' main character coming into a New Co-op Save: that is how it is built today (each player keeps their own character and progress). We are looking at whether a New Co-op Save should give both players a new character.
+4) Your game closed when you pressed Q after going down. We found where; it is being fixed. It can happen when the host is taken down during a story mission and revives.
+If you play again, the report zip from BOTH of you helps most.
