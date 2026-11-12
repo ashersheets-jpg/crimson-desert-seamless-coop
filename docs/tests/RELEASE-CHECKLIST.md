@@ -9,6 +9,7 @@ missed, because the tests did not look like a player's PC:
 | lowest graphics, no frame generation | XeSS / FSR / DLSS frame generation | no Co-op menu at all (overlay never drawn) |
 | saves with 490+ missions done | a new or early save | a solo-prologue hold in the shared world |
 | the build folder's files, test roles | the zip's five files, started by Steam | (the package as installed was never run) |
+| every start from a fresh game process at the title | a second try in the same game; a world loaded before | Start Co-op that did nothing; a host that refused the restarted guest |
 
 Rule: a build is posted only after every step below has been run on **that package** and its result is written in
 PROGRESS.md. A feature is called "works" only together with what it was tested under.
@@ -23,7 +24,7 @@ starts while Crimson Desert is running):
 bash tools/prepost.sh pp1 dist/CrimsonDesert-SeamlessCoop-<version>-shared-world static
 ```
 
-Steps, in order: `static real fresh xess fsr latehook display lowsave chest revive loot crime farfight farfight2 newsave solostart mounts mountfight nosave`, then `summary`. (`fresh` and most other steps take the first card, Continue Our Co-op Save; `newsave` and `solostart` are the other two ways a session begins.)
+Steps, in order: `static real fresh xess fsr latehook display lowsave chest revive loot crime farfight farfight2 newsave solostart mounts mountfight nosave retry stuck`, then `summary`. (`fresh` and most other steps take the first card, Continue Our Co-op Save; `newsave` and `solostart` are the other two ways a session begins.)
 The report is `build/native/prepost-<tag>.txt`. After each game step, LOOK at the screenshots the report lists
 (`build/native/shots/`): a log line saying "overlay draws" is not the same as the menu being on screen.
 
@@ -50,6 +51,8 @@ The report is `build/native/prepost-<tag>.txt`. After each game step, LOOK at th
 | mounts | each player calls its horse (simulated pad), goes to it, mounts and rides | each player's horse came, each mount was published to the other player; both mounted on the screenshots | a real controller; fighting from horseback; other mounts; swapping horses; a long ride |
 | mountfight | the guest mounts at the dock, the host arrives and wakes its bandits, the guest swings from the saddle | the guest's blows were seen, it lost health; on the screenshots it is in the saddle | the host fighting mounted; being thrown off; a mounted enemy; other mounts |
 | nosave | a guest with no save at all tries to join | its game goes back to solo with the instruction, the host is told and does not load in alone | the same check before either game restarts; a real new character for such a guest |
+| retry | the host's first automatic start is a second Start Co-op instead (dev switch) | both games restart AGAIN (the guest although it already is a guest), the host's base replaces the guest's old connection instead of stopping its tunnel, both reach the world | a second start after the host has been in the world (that is `stuck`) |
+| stuck | the guest does not press Play (dev switch: as when the host's game never answers); the host answers with Leave the session and a new Start Co-op (dev switch, the menu row's own code) | the guest says it is stuck, the host is told, the Leave goes to the title at once, the guest stays in the party at its menu, the host's second start restarts the game although it had been in a world, both reach the world in the second round | the host going back through the game's own menu; a real unanswered login (the host's side of it); a host that loaded a SOLO world first (a solo test copy would load the real save) |
 
 Every game step also checks what the session leaves behind (added 2026-11-11 after two faults found by reading the
 logs, not by a test): no packets recorded to disk (the base's log must not say "recording through a disk queue"; the

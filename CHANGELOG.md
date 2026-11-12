@@ -5,7 +5,30 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-Not posted yet (2026-11-11, after 3c46bec5):
+Not posted yet (2026-11-12, after 47135b83):
+- **Start Co-op did nothing after a world had been loaded in the same game session** (played solo, went back to the
+  title, then invited a friend; or came back from a co-op session): the host's game never restarted and the friend
+  waited for ever. In every build up to 47135b83. Tested for a host coming back from its co-op world; the solo case
+  is the same code and was not run (a solo test copy would load the developer's real save).
+- **A start that does not work no longer needs both games closed.** A friend who is not let into the host's world is
+  told so on its waiting screen after two and a half minutes, and the host gets a card in the world after four. The
+  host uses Menu > Co-op > Leave the session and chooses Start Co-op again; the friend stays in the party at its
+  menu meanwhile ("<host> ended the session. You are still in the party ..."), and both games restart.
+- A second Start Co-op in the same launch restarts both games again (the friend's game too, although it already is
+  a guest). Before, the host's game refused the friend's restarted game for the rest of the launch (base: a
+  connection on which nothing was said is now simply replaced by the new one).
+- The waiting screen said "Joining the start of the story..." on Continue and From My Solo Progress. It now says
+  "Joining <host>'s world...".
+- The "no Co-op menu" fix of 47135b83 could set itself off on a PC that did not need it, when the game's window was
+  behind another window in the seconds after start-up: it then hooked the same drawing function twice (every frame
+  passed the mod twice; nothing visible). It now never hooks a function twice, and where DLSS frame generation's
+  plugin is loaded it only looks while the game's window can be seen.
+- The report tool ("Diagnose Co-op+") also packs the two runs before the current one (the co-op start restarts the
+  game, so the title part of a session was missing from every report so far).
+- The base's log no longer shows an error line for a thread that ran into a page while a hook was being written
+  (the hook library retries it; it was never an error).
+
+Posted 2026-11-12 as 0.1.0-alpha+47135b83:
 - **No Co-op menu at all on some PCs (reported on an AMD Radeon RX 7900 XTX, frame generation off)**: on those PCs
   the game draws its frames through a different path than on ours, and nothing of the mod was ever drawn (no menu, no
   waiting screen). The mod now notices within a few seconds that no frame reaches it and hooks the other path too.
