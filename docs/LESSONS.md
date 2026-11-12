@@ -127,3 +127,15 @@ topic BEFORE testing or guessing about it.
   Co-op Save, a bug already fixed here) was in the report all along.
 - 2026-11-12: One failed session usually has more than one cause. Explain EVERY symptom the tester names from the
   log before calling a report understood; a symptom that the fix in hand does not explain is a second bug.
+- 2026-11-12: Widening a known-error pattern: classify EVERY line of that kind in ALL kept logs first
+  (`grep -h "kind 0x8" build/native/*.log | <normalise the address> | sort | uniq -c`), then write the rule for the
+  whole set. The trapped-thread fault cost two failed steps in one pass because the pattern was widened for the one
+  new form that had just shown up (trampoline page) while a third form (the game's own patched page) sat in 13 logs.
+- 2026-11-12: A check's NAME and its PATTERN must say the same thing. "no guest HIT ... booked as a crime" matched
+  every crime type and failed on the game's own Vandalism rule. When a check fails, read what the matched line IS
+  (type, path, victim) before calling it the build's fault or the test's.
+- 2026-11-12: A check on the outcome of a live fight varies with the scene (who is still alive, where a swing
+  carries the character). Such a check needs a second number that tells "nothing happened because nobody was
+  there" from "it did not work" (here: NPC>guest blows and the guest's path), and the note says which it was.
+- 2026-11-12: Edit scripts with backslashes: ALSO not through `cat > file <<'EOF'` in this shell (the quoted
+  heredoc still lost them). Write tool, and Python raw strings (r'''...''') so the text lands as written.

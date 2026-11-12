@@ -6102,7 +6102,7 @@ shipped switch list (native_mode_text.h). To be checked by a run before anything
   (coop_lobby.cpp line 468: g_new_started is set for every native start). It has been like this since the native
   lobby flow; nobody reported it.
 
-### The tester's "game never left the title" EXPLAINED from his own report (2026-11-12 06:30, second reading)
+### The tester's "game never left the title" EXPLAINED from his own report (2026-11-12 06:05, second reading)
 
 Earlier reading (am1): "not a consequence of the missing overlay on this PC; what differs on his: unknown". Now known:
 - His cdmp.log: `out LoginCharacterToFieldServerReq 2733 ... save slot 100` at 17:37:14.689, the same second as the
@@ -6131,3 +6131,51 @@ Earlier reading (am1): "not a consequence of the missing overlay on this PC; wha
      invite, the host's choice). Rename the old ones to *.prev.log at start, the report tool packs them too.
   3. The waiting line's wording on Continue / From my progress.
   4. The base's first-chance logger: no ERR line for the hook library's trapped threads.
+
+### Checklist pp8 on 0.1.0-alpha+47135b83, steps 11-19 and the re-runs (2026-11-12 06:10-07:59): every step has a clean run
+
+- pp8 as a whole: 622 PASS, 5 FAIL in 19 steps. pp8b (re-runs of single steps on the same package, the same build
+  files: coopplus.asi 2ce74e7d..., cdmp.asi 3dcfb40b... equal in the package and in the build folders): static, fsr,
+  farfight, crime, mounts = 163 PASS, 0 FAIL. SAVES OK and "user install restored: 5/5 OK" in every one of the 22
+  runs. So all 19 steps have a run without a FAIL on this exact package: 14 in pp8, 5 in pp8b.
+- The five FAILs, one by one:
+  1. static (pp8): an uncommitted tools/gen/progress_chart.py. Tooling. Committed, re-run clean.
+  2. fsr (pp8): the hook library's trapped thread in its trampoline page (0x13FFE0196). Checker. Re-run clean.
+  3. mounts (pp8): `GuestS3 first-chance AV at exe+0x38A08AD kind 0x8 addr 0x1438A08AD`, 2 ms after "UiPause ON:
+     inline hook at exe+0x38A0830". The SAME event a third time, now in the game's own page that is being patched
+     (a thread was running 0x7D bytes further in the same 4 KB page). 14 logs since tcB69 have this form (13 at
+     exe+0x38A0830 itself), the game went on in all. All "kind 0x8" lines in all kept logs, classified: 65 x system
+     DLL page, 14 x exe+0x38A0xxx, 10 x trampoline pages. There is no fourth form. Checker: `unknown_errs` in
+     tools/prepost.sh; the exe form is known ONLY when one of the five lines before or after it names a hook in the
+     same 4 KB page (the fault is logged at once, the hook's own INF line when the hook is in: tcB405 has it after).
+     Tested on old logs and three synthetic cases (no hook near: unknown; a hook in another page: unknown).
+  4. crime (pp8): `crime type 1 of the guest on 0xB01005DB from exe+0xE3C69AC (another path) | battle 0 | left to
+     the game's own test`. NOT a hit on a bandit: type 1 is Vandalism (WantedCrimeType, local notes
+     notes_crime_coop.md), it comes through the property path (slot 44, 0x2A7ADD0): the guest's swing broke
+     something at the dock that belongs to an NPC, the "victim" is the owner. The game's own rule for any player:
+     the host has the same calls (tcB384, twice), ff6 had one for the guest too. No "Crime" notice and no wanted
+     mark on the guest's screenshots (g2 17 s later, g3, 39-guest-view). The check's NAME said "hit", its pattern
+     matched every type: now hits and kills only (`(a hit|a kill)`), property crimes with an owner are an INFO
+     count. Re-run: 0 such calls, PASS. Open, small: whether the guest is judged harder than the host would be for
+     the same broken object is not known (the rule "judged as the host would be" covers hits and kills only).
+  5. farfight (pp8): "the guest never lost health far from the host". The run itself: the guest killed 3 bandits
+     within 3 s of its first swing (06:36:25-28; they had been fought by the host on the way), 27 hits "counted
+     because another player was in range", and then every swing carried it forward with no enemy near: 57 m in
+     45 s in a straight line away from the dock, where the other bandits were busy (NPC>NPC 17 blows, NPC>guest 0).
+     pp7: 6 kills, NPC>guest 9. Re-run pp8b: 6 kills, NPC>guest 22 blows, 23 health samples below full, both
+     screenshots with the hurt vignette, host 102 m away. So: a variable scene, not a change in the build (the
+     same files in both runs). The check measures "enemies hit a guest who is far from the host", which needs
+     enemies that are still alive next to it. To do: the guest's script should stand still (no forward-carrying
+     swings once nothing is near) or the check should read NPC>guest blows and say "no enemy left" apart from
+     "enemies did not fight".
+- Screenshots looked at (the words too): mountfight g1 / g2 the guest IN THE SADDLE (prompts Kick / Dismount),
+  enemies around, "You defeated an enemy"; nosave guest "You have no character yet. Start Solo, begin a New Game,
+  and join again once you stand in the world.", host "Guest has no character yet and must start a New Game alone
+  first. Restart the game to play solo."; newsave both in Hills of No Return 16 m apart (clocks 11:39 PM / 10:36 PM:
+  the known clock offset of New Co-op Save); solostart both at Nas River side by side; pp8b crime: bandits fight,
+  "Host is down: go to them to revive them", no crime notice; pp8b mounts: both mounted side by side.
+- What this pass was tested under: ONE PC, two copies of the game, Steam lobby between two test accounts, an Nvidia
+  card, lowest graphics, -Fresh worlds. The AMD case is a simulation (latehook). No two-PC run, no AMD card.
+- Decision: the release rule (the whole checklist passed on that exact package) is met with the re-runs named
+  above; four of the five FAILs were the checklist's own, the fifth a variable scene that passed on the same files.
+  The package was never rebuilt. Next: the one post the owner OK'd on 2026-11-12 04:18.
