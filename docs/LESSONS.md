@@ -103,3 +103,8 @@ topic BEFORE testing or guessing about it.
   tools/prepost.sh). One post per batch. After a tester report: reproduce it as a real player first.
 - Posting needs the owner's OK, or a standing OK with an end time written in PROGRESS.md.
 - The post says what was tested and what was not.
+- 2026-11-12: read an exploration run with the checklist's generic checks too (log line repeat, log growth,
+  exceptions), not only for the question it was run for. The far-fight exploration runs already had 250-330
+  `User2Stages [create]` lines; the checklist found it two builds later and cost a whole pass.
+- 2026-11-12: a diagnostic line that scales with what the player does (one per stage, per NPC, per hit) needs a
+  per-session cap from the day it is written.

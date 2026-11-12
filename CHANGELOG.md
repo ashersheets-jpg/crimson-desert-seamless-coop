@@ -6,6 +6,14 @@ One world for both players, on the native shared-world base. Tested with two cop
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
 Not posted yet (2026-11-11, after 3c46bec5):
+- **No Co-op menu at all on some PCs (reported on an AMD Radeon RX 7900 XTX, frame generation off)**: on those PCs
+  the game draws its frames through a different path than on ours, and nothing of the mod was ever drawn (no menu, no
+  waiting screen). The mod now notices within a few seconds that no frame reaches it and hooks the other path too.
+  Tested here only by simulating it on an Nvidia card; not on AMD hardware.
+- The base no longer writes a line to its log for every NPC schedule group the game loads for the whole session
+  (the first 300 only).
+- After "your friend has no character yet", Start Co-op does nothing more until the game is restarted (it only
+  repeated the same refusal).
 - A downed player now lies on the ground, on their own screen and on their friend's (before, the character stood
   upright at 0 health on its own screen). The death screen, the HUD and both revive choices are as before; the
   friend's hold-Interact revive and the Q / U choices stand the character up again. `[coop] downed_pose=0` turns it

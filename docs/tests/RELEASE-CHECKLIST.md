@@ -23,7 +23,7 @@ starts while Crimson Desert is running):
 bash tools/prepost.sh pp1 dist/CrimsonDesert-SeamlessCoop-<version>-shared-world static
 ```
 
-Steps, in order: `static real fresh xess fsr display lowsave chest revive loot crime farfight farfight2 newsave solostart mounts mountfight nosave`, then `summary`. (`fresh` and most other steps take the first card, Continue Our Co-op Save; `newsave` and `solostart` are the other two ways a session begins.)
+Steps, in order: `static real fresh xess fsr latehook display lowsave chest revive loot crime farfight farfight2 newsave solostart mounts mountfight nosave`, then `summary`. (`fresh` and most other steps take the first card, Continue Our Co-op Save; `newsave` and `solostart` are the other two ways a session begins.)
 The report is `build/native/prepost-<tag>.txt`. After each game step, LOOK at the screenshots the report lists
 (`build/native/shots/`): a log line saying "overlay draws" is not the same as the menu being on screen.
 
@@ -35,6 +35,7 @@ The report is `build/native/prepost-<tag>.txt`. After each game step, LOOK at th
 | real | the package's five files in the real game folder, started as Steam starts it, held at the title, then the player's files put back | overlay ready and drawing, Steam room open, title Co-op menu on the screenshots, real saves unchanged | anything past the title; another PC |
 | fresh | two copies, first-time settings from the package, title -> Start Co-op -> shared world | both reach the world, linked, overlay drawn on both, no hold, no error lines | two PCs, the internet, Steam invites between two accounts |
 | xess | the same with Intel XeSS frame generation | the same + the XeSS-FG class hooked | Intel hardware |
+| latehook | both copies with Streamline's swap chain class left unhooked (dev switch): no frame reaches the mod, as on a tester's AMD card | the watcher sees drawing without frames, hooks the class a new swap chain gets, the overlay draws, the whole flow into the world | a real AMD / Intel card: there the class is DXGI's own, here it is Streamline's again (only the mechanism is tested) |
 | fsr | the same with AMD FSR frame generation | the same + the FSR-FG class hooked | AMD hardware (this PC has an Nvidia card; FSR runs, but its driver path differs) |
 | display | the player's own display mode and graphics settings, frame generation on, real Steam lobby, title only | overlay ready and drawing, title menu on the screenshots | exclusive fullscreen on other monitors |
 | lowsave | a guest on a save with 1 mission done, saved 1.3 km from the host, joins a host on its usual save (the host's co-op world persists between runs) | both reach the world, linked, no solo-prologue hold, the guest is moved to the host's side and ends within 30 m | both players new (needs an empty co-op world); every early story state |

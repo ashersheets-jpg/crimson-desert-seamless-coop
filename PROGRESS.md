@@ -45,7 +45,14 @@ test save Out, shipped cdmp.ini restored.
   Android device / Security key / Cancel) was open on the desktop (seen in the checklist's full-screen title
   screenshot pp7-display-02). It is not from the mod or my tests and I did not touch it (I never handle sign-ins).
   It looks like Discord in a browser asking to sign in again.
-- CANDIDATE 2026-11-12: build 0.1.0-alpha+2e813956 (layer 2e81395, native 19be296) is in its full 18-step checklist
+- POSTING OK 2026-11-12 ~04:18 (the owner, away for 12 h or more): "Hopefully discord is still open for you to be
+  able to upload a patch to the game whenever you get it all sorted out." Read as: ONE post of the patched build
+  (the download post, and a line to JackyChan004 in #play-testing-feedback that it is meant to fix his missing
+  menu), once that exact package has passed the whole checklist. Not a general posting OK; it ends with that post
+  or when the owner is back, whichever comes first. If Discord asks to sign in: stop, I do not sign in.
+- NOT THE CANDIDATE ANY MORE (2026-11-12 04:00): 2e813956 failed two checklist steps on a log check (pp7 batch B)
+  and does not have the fix for the AMD tester's missing menu. The next candidate gets the whole checklist (pp8).
+- (old entry) CANDIDATE 2026-11-12: build 0.1.0-alpha+2e813956 (layer 2e81395, native 19be296) is in its full 18-step checklist
   (pp7; the first 6 steps and the no-save step pass). Post draft: docs/release/shared-world-playtest/
   download-2e813956-draft.txt. When the pass is complete, "post it" posts this build.
 - CORRECTION 2026-11-11 23:50: builds 980c5b38 and 2ddd622f are NOT to be posted as they are. Their "a guest far
@@ -5947,3 +5954,110 @@ shipped switch list (native_mode_text.h). To be checked by a run before anything
   talk).
 - Slip: I edited the runner through a shell heredoc again (it turned the printf's line-break marks into real line
   breaks; the result happens to be the same text). Edits with backslashes go through a file. No exceptions.
+
+### pp7 batch B (2026-11-12 02:47-03:50) on 0.1.0-alpha+2e813956: 7 steps, 2 FAIL (the same check), so NOT a pass
+
+- lowsave, chest, revive, loot, farfight: pass. crime and farfight2: every functional check passes (hits count, no
+  false crime, 484 m fight counted, guest lost health), but the log check "no line repeats more than 30 times a
+  minute" FAILS on the host's base log: `User2Stages [create]` 264 lines (35 a minute) and 290 lines (40 a minute).
+- WHAT THE LINE IS: the base's diagnostic, one line for every schedule stage (a group of NPC schedules at a place)
+  the host's game creates. 32 at the start of every session. More whenever the host's surroundings load:
+  - farfight2 (and of1-of3 before it): the test teleports the host twice, the second time 484 m away to Hernand:
+    32 + 16 + 64 + 146 lines in 40 s, then none for the last 100 s. No repeating: just two big loads in a 7-minute
+    session.
+  - crime: after the host's and the guest's teleports to the dock the SAME ~50 stages were created again three
+    times, 20 s apart (03:29:44, 03:30:04, 03:30:24), then it stopped (65 s quiet to the end). The base logged
+    "[host cadence] the host's manager got 23 2043s in the last minute, baseline 12 | host chains 2": a second
+    evaluation timer on the host's manager. The base's research (u0-resultados-s28.md 8.16, build 2976) says a
+    second chain is the game's own behaviour after a short load and dies by itself; it says "no stage churn",
+    which is NOT what this run shows. Seen before in mc1 (17 stages every 15-20 s for 90 s), t7. Not seen in
+    pp5-crime (the same script: 83 lines).
+  - OPEN (to watch, not understood): does the game re-create nearby stages for a minute after a short teleport in
+    plain solo play too, and does a player see anything (NPCs snapping back to their posts)? The functional
+    checks of both runs passed and the screenshots show the fights as usual. The dev teleport is a test tool: a
+    player's short loads are a revive, a story scene, a fast travel. To check in the long-session test (real
+    riding and fast travel, no dev teleports): count [create] bursts and "[host cadence]" lines there.
+- WHY IT IS A REAL FAIL OF THE BUILD AND NOT OF THE CHECK: a diagnostic without a limit in a player's log. A
+  player who rides for an evening loads stages all the time; the line is 330 bytes.
+- FIX (native, source only, not built while the tests run): the first 300 [create] lines of a session are written
+  (a duplicate, the abort criterion, always), then one line says the rest are only counted. The check then
+  exempts this line by name like the base's capped horse diagnostics. A native change = a new package = the whole
+  checklist again on it (the rule): that pass is pp8, on the next candidate.
+- So 2e813956 is NOT the build to post. Batch C still runs on it (newsave solostart mounts mountfight nosave): the
+  mountfight and nosave steps have never run inside the checklist, and a failure found now saves a third pass.
+- LESSON (also in docs/LESSONS.md): the checklist's log check found this only now because the earlier far-fight
+  runs (of1-of3, mc1) were exploration runs outside the checklist: 248-334 lines were already there. An
+  exploration run that will become a checklist step should be read with the checklist's generic checks (log
+  repeat, growth, exceptions) the first time, not only for its own question.
+
+### op7 / op6 (2026-11-12 03:56-04:16, package 2e813956): the GUEST advances the story's first steps by itself
+
+- op7 (defaults; New Co-op Save; the guest on the 1-mission 'newgame' save is put beside Joan at the cabin):
+  - op7-g0, before any key: the guest's own objective banner already says "Speak with your comrades standing in
+    front of the grave." So ARRIVING at the cabin completed the guest's "Return to your comrades" step on the
+    guest's own quest manager (QuestRoute: "own manager given (not the field's) 156").
+  - op7-g01..g13: the guest presses E: "Joan: Too many underestimate me for being a woman.", then the card "Joan,
+    Trust +5, Your actions are appreciated."; later "Greymane: The drawing on the floor, on the other hand...".
+    The guest's own talks with the comrades work and pay out.
+  - SAVES OK, 5/5, the test world put back identical.
+- op6 (shared credit on; the guest 2 m from the host while the host talks to Joan): the host gets its talk (Trust
+  +5 twice); the guest's screen shows the same objective banner, but op6-g0 shows it BEFORE the host's talk: it comes
+  from arriving, not from the host's credit. "shared passes 592" says events were offered to the other manager;
+  whether one of them credited the guest is NOT visible in this step (a talk is not a counted objective). So:
+  shared credit still unproven. It needs a counted objective both players hold ("defeat N", "collect N"): later.
+- WHAT THIS SETTLES for a story playtest: in a New Co-op Save both players hold the first quest, and each can do
+  its steps themselves (go there, talk); neither disturbs the other. Not yet tried: the grave step, the first
+  fight, the first boss, and what a guest whose own save is further along sees.
+
+### Tester report 2026-11-12 (JackyChan004, AMD Radeon RX 7900 XTX, 3440x1440, build 3c46bec5): no Co-op menu, frame generation off
+
+- His words (the owner passed the screenshot and the report zip on, 04:10): "i have downloaded the latest patch and
+  it hasn't shown up at the menu and i have tried turning off frame generation still not working for me"; "co op
+  menu isn't showing on my menu on latest patch with AMD Frame gen off". Report unpacked (as untrusted data, its own
+  folder): CoopPlus-report-2026-11-12_17-43-02 (report.txt, cdmp.log, coopplus.log).
+- WHAT THE LOGS SAY:
+  - `Overlay: installed true disabled false | presents 0 drawn 0 | queue -` every 5 s for the whole 5-minute
+    session. Streamline's class hooked, XeSS-FG's and FSR-FG's classes hooked: NOT ONE Present through any of them.
+    So on that PC the game presents through a class we do not hook. The 3c46bec5 fix (frame generation classes)
+    could not help him: his problem was never frame generation.
+  - He was a guest (joined through Steam, his game restarted into co-op). "the host's world is up: Play (our
+    character joins it)" at 17:37:14, "Play pressed in own saves" 77 s later, the base's "still waiting for the
+    world after 240 s": his game never left the title. The host chose again at 17:39:29, the same; he quit at
+    17:41. With nothing of ours on screen he saw the game's own title and no waiting screen.
+- WHY (the reading that fits): Streamline (NVIDIA's library, shipped with the game, loaded on every PC) wraps the
+  swap chain in its own class only when one of its plugins needs it; on this Nvidia PC it always does, so the hook
+  on its class has always worked here. On his AMD card it evidently does not, and the game presents through
+  DXGI's own class. Our "no Streamline" path would have hooked that one, but Streamline IS loaded there. NOT
+  VERIFIED on AMD hardware (there is none here).
+- am1 (2026-11-12 04:17, new dev switch [dev] overlay_no_streamline=2 on the guest: Streamline's class left
+  unhooked, no fallback = his state): "presents 0 drawn 0" all session, and the guest STILL got into the world
+  here (the mod's E press took, in the world 44 s later). So "never left the title" is not a consequence of the
+  missing overlay on this PC. What differs on his: unknown. Candidates: his game was not the window in front (the
+  mod waits up to 3 min for that, and says so only on the screen he could not see), or he had opened one of the
+  title's own menus. With the waiting screen drawn the flow is the tested one. To ask him after the fix.
+- FIX (layer, render/dx12_hook.cpp):
+  - A watcher thread from the moment the hooks go in: the game sends drawing commands (ExecuteCommandLists on a
+    direct queue, hooked at install now) and for 4 s no Present comes through a hooked class -> the class a NEW
+    swap chain gets on this PC is hooked too (found with a throwaway 64x64 swap chain, the old "no Streamline"
+    way). On a PC where frames do come through a hooked class this never runs, so the old crash (DLSS frame
+    generation picking the throwaway up, 1 launch in 5) is not brought back for those PCs.
+  - A second trigger with the 5 s status line (8 s without a frame, 20 s where DLSS-G's plugin is loaded, the game's
+    window in front) for a PC where the command queue hook sees nothing.
+  - "No frame" means none for that long, not none ever: switching frame generation off in the settings mid-session
+    (from the library's class to DXGI's own) is covered. The late hook stays out of the way when a class above it
+    presents (2 s rule, and the existing same-thread rule).
+- am2 (first version, only the "in front" trigger): worked but took 76 s (host) and 830 s (guest) with two copies
+  (the window is rarely in front at the 5 s check). It also showed: on THIS PC the throwaway's class is
+  Streamline's again ("Present at sl.interposer.dll+0x2A830"): Streamline wraps our own swap chain too. So the
+  throwaway gives "the class a swap chain gets on this PC", which is what the game got; and this PC can only test
+  the mechanism, not DXGI's own class.
+- am3 (the watcher): 4.2 s after the hooks on all four launches (both copies, solo title and co-op launch):
+  "573 batches of drawing commands in 4.0 s and no frame through a hooked swap chain class" -> hooked -> "Overlay
+  ready" -> the whole lobby flow -> both in the shared world, presents = drawn. SAVES OK, 5/5. No crash in the six
+  throwaway swap chains of am2 + am3 (with DLSS-G's plugin loaded).
+- New checklist step `latehook` (after fsr; 19 steps now). The checklist's log check knows the stage diagnostic is
+  capped (at most 301 lines) instead of counting it as a repeating line.
+- NOT KNOWN until he retests: that the class is DXGI's own on his PC and that drawing through it works with his
+  card and 3440x1440; whether his game then leaves the title. The post must say so and ask for his report zip.
+- Also in this batch (layer): after "your friend has no character yet" the host's Start Co-op card does nothing
+  more (it only repeated the round trip).

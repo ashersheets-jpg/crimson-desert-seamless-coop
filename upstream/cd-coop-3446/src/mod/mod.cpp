@@ -2306,6 +2306,7 @@ DWORD WINAPI worker(LPVOID) {
         net::loot_set_test_original(cfg.dev_loot_test_original);
         net::coop_set_copy_disabled(cfg.dev_no_copy);
         render::coop_page_dev_see_through(cfg.dev_wait_see_through);
+        render::dev_no_streamline(cfg.dev_overlay_no_streamline);
         net::revive_set_boss_wait(cfg.coop_boss_death_wait);
         net::activity_set_skip_test(cfg.dev_skip_test);
         if (cfg.dev_trace_op) net::sniffer_set_trace_op(static_cast<uint16_t>(cfg.dev_trace_op));

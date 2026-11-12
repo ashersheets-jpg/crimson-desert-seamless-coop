@@ -17,6 +17,9 @@ namespace cdmp::render {
 using DrawFn = void (*)(float width, float height);
 
 bool install(DrawFn draw);
+// [dev] overlay_no_streamline=1 (before install): Streamline's swap chain class is left unhooked, as if the game did
+// not present through it (a PC without DLSS frame generation): a test of the DXGI fallback on an Nvidia card.
+void dev_no_streamline(int mode);  // 2: and no fallback either (the tester's state, to see what else needs frames)
 
 struct Status {
     bool installed = false;

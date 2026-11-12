@@ -498,6 +498,9 @@ LobbyView lobby_view() {
 void lobby_start_coop() {
     std::lock_guard lock(g_m);
     if (!g_in.host || !g_in.connected || g_phase != Phase::Menu) return;
+    // x1-nosave (2026-11-12): after "your friend has no character yet" the card only repeated the round trip (both
+    // games restart, the same refusal). The note under the menu stays; this game must restart into solo first.
+    if (g_partner_nosave) return;
     g_choosing = true;
 }
 

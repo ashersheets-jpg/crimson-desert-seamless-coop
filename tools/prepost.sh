@@ -42,11 +42,14 @@ growth() {  # log, who, limit per minute
   # the single most repeated line (numbers and addresses blanked): more than 30 a minute = something logs every
   # second or two for the whole session
   local top cnt
-  # (not the base's horse diagnostics: capped at 400 lines a session by its own counter, horse_diag.cpp kMaxLines)
-  top=$(grep -v "HorseDiag " "$f" | cut -c29- | sed -E 's/0x[0-9A-Fa-f]+/N/g; s/[0-9]+/N/g' | cut -c1-60 | sort | uniq -c | sort -rn | head -1)
+  # (not the base's horse diagnostics: capped at 400 lines a session by its own counter, horse_diag.cpp kMaxLines;
+  # not its stage-creation lines: capped at 300 a session since pp7, user2_stages.cpp kMaxCreateLines, checked below)
+  top=$(grep -v "HorseDiag \|User2Stages \[create\]" "$f" | cut -c29- | sed -E 's/0x[0-9A-Fa-f]+/N/g; s/[0-9]+/N/g' | cut -c1-60 | sort | uniq -c | sort -rn | head -1)
   cnt=$(echo "$top" | awk '{print $1}')
   local tper=$(( ${cnt:-0} * 60 / secs ))
   [ $tper -le 30 ] && ok "$2: no line repeats more than 30 times a minute (the most repeated: $tper a minute)" || bad "$2: one line repeats $tper times a minute: $(echo "$top" | cut -c1-90)"
+  local cr=$(grep -c "User2Stages \[create\]" "$f")
+  [ $cr -le 301 ] && ok "$2: the stage-creation diagnostic is capped ($cr lines, at most 301)" || bad "$2: $cr stage-creation diagnostic lines (the cap is 300)"
   [ $per -le $3 ] && ok "$2: log growth $per lines a minute ($n lines in $((secs / 60)) min, limit $3)" || bad "$2: log growth $per lines a minute ($n lines in $((secs / 60)) min, limit $3)"
 }
 # Nothing may record packets to disk in a player's game: the base's log must say so, and no capture of this run may
@@ -170,6 +173,19 @@ fsr)
   head_step "the same with AMD FSR frame generation (on this Nvidia card)"
   run2 "$BASE -FrameGen -FrameGenMode AMD_FSR_Frame_Generation -Hold 15 -GuestKeys $FLOW_G -HostKeys $FLOW_H"; two_player_checks
   has $N/$NAME.coopplus.host.log "frame generation \(FSR-FG\): its swap chain class is hooked" "host: the FSR-FG class is hooked" ;;
+latehook)
+  head_step "no frame through Streamline's class (as on a tester's AMD card): the watcher hooks the class a new swap chain gets, the menu draws"
+  run2 "$BASE -HostDev overlay_no_streamline=1 -GuestDev overlay_no_streamline=1 -WaitShots -Hold 15 -GuestKeys $FLOW_G -HostKeys $FLOW_H"; two_player_checks
+  for r in host guest; do
+    for f in $N/$NAME.coopplus.$r.before.log $N/$NAME.coopplus.$r.log; do
+      has $f "overlay_no_streamline=1: Streamline's swap chain class is NOT hooked" "$r ($(basename $f | sed 's/.*coopplus.//')): Streamline's class was left unhooked (the test's premise)"
+      has $f "batches of drawing commands in [0-9.]+ s and no frame through a hooked swap chain class" "$r: the watcher saw drawing without frames"
+      has $f "that swap chain class is hooked: the overlay draws through it" "$r: the class a new swap chain gets was hooked"
+      has $f "Overlay ready:" "$r: the overlay drew after that"
+    done
+  done
+  info "seconds from the hooks to the late hook (host, co-op launch): $(grep -h 'Late init: game is up\|batches of drawing' $N/$NAME.coopplus.host.log | cut -c2-13 | tr '\n' ' ')"
+  info "LOOK AT: $NAME-Wguest* (the waiting screen must be drawn on the guest), $NAME-L1-host-start-coop (the menu)" ;;
 display)
   head_step "the player's own display mode and graphics, frame generation on, Steam lobby, title only"
   run2 "-CoopPlus -Lobby -Fresh -KeepDisplay -FrameGen -HostTransport steam -TitleHold 45"
@@ -347,7 +363,7 @@ nosave)
   info "LOOK: $NAME-nosave-guest (the title with 'You have no character yet...') and $NAME-nosave-host (the reason on the host's menu)"
   ;;
 summary)
-  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c '^== ' "$R") (18 in the list)"; exit 0 ;;
+  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c '^== ' "$R") (19 in the list)"; exit 0 ;;
 *) echo "unknown step $STEP"; exit 2 ;;
 esac
 sed -n "/^== $STEP /,\$p" "$R"

@@ -11,10 +11,13 @@
 
 #include <safetyhook.hpp>
 
+#include <algorithm>
 #include <atomic>
 #include <cstdio>
 #include <cstring>
+#include <format>
 #include <mutex>
+#include <thread>
 #include <string>
 #include <vector>
 
@@ -65,6 +68,13 @@ CRITICAL_SECTION g_render_cs;
 std::atomic<bool> g_disabled{false};
 std::atomic<uint64_t> g_presents{0};
 std::atomic<uint64_t> g_frames{0};
+// The plain DXGI class as a fallback (2026-11-12, see native_fallback_check).
+std::atomic<uint64_t> g_installed_ms{0};          // when install() finished
+std::atomic<uint64_t> g_last_upper_present_ms{0};  // the last Present of a class above DXGI's (Streamline, frame gen)
+std::atomic<uint64_t> g_last_any_present_ms{0};    // the last Present through any hooked class
+std::atomic<bool> g_native_tried{false};
+std::atomic<bool> g_streamline_class{false};       // install() hooked Streamline's class (not DXGI's own)
+std::atomic<int> g_dev_no_streamline{0};  // [dev] overlay_no_streamline: 1 Streamline's class is left unhooked, 2 and no fallback
 
 std::mutex g_status_mutex;
 Status g_status;
@@ -122,8 +132,12 @@ SafetyHookInline g_resize_hook;
 SafetyHookInline g_resize1_hook;
 SafetyHookInline g_execute_hook;
 
+std::atomic<uint64_t> g_execs{0};  // batches of drawing commands sent on a direct queue (the game is rendering)
 void STDMETHODCALLTYPE hk_execute(ID3D12CommandQueue* q, UINT n, ID3D12CommandList* const* lists) {
-    if (q->GetDesc().Type == D3D12_COMMAND_LIST_TYPE_DIRECT) t_last_direct_queue = q;
+    if (q->GetDesc().Type == D3D12_COMMAND_LIST_TYPE_DIRECT) {
+        t_last_direct_queue = q;
+        g_execs.fetch_add(1, std::memory_order_relaxed);
+    }
     o_execute(q, n, lists);
 }
 
@@ -442,8 +456,16 @@ void before_resize(IDXGISwapChain* sc) {
 // True = this call took the "in present" mark (and drew): the caller clears it after the original returns. A hook
 // nested inside another one's Present (Present -> Present1, a frame generation proxy -> the class under it) draws
 // nothing and leaves the outer mark alone.
-bool present_common(IDXGISwapChain* sc, UINT flags) {
+bool present_common(IDXGISwapChain* sc, UINT flags, bool native = false) {
     g_presents.fetch_add(1, std::memory_order_relaxed);
+    g_last_any_present_ms.store(GetTickCount64(), std::memory_order_relaxed);
+    // DXGI's own class under a class that presents too (frame generation presents the real swap chain from its own
+    // thread): the class above draws, this one stays out of it.
+    if (native) {
+        if (GetTickCount64() - g_last_upper_present_ms.load(std::memory_order_relaxed) < 2000) return false;
+    } else {
+        g_last_upper_present_ms.store(GetTickCount64(), std::memory_order_relaxed);
+    }
     if (g_disabled || (flags & DXGI_PRESENT_TEST) || t_in_present) return false;
     t_in_present = true;  // Present may call Present1 internally; draw once
     guarded_present(sc);
@@ -470,6 +492,7 @@ HRESULT STDMETHODCALLTYPE hk_present1(IDXGISwapChain1* sc, UINT sync, UINT flags
 // swap chain class, not through Streamline's, so the hooks above never ran and nothing of ours was drawn. Each
 // such class gets the same hooks (its own originals); the overlay is drawn into the game's frame before the
 // library takes it. The libraries are loaded when the option is on, possibly after us: looked for again later.
+constexpr int kNativeHooks = 3;
 template <int N>
 struct ProxyHooks {
     static inline SafetyHookInline present, present1, resize, resize1;
@@ -477,15 +500,16 @@ struct ProxyHooks {
     static inline Present1Fn o_present1 = nullptr;
     static inline ResizeBuffersFn o_resize = nullptr;
     static inline ResizeBuffers1Fn o_resize1 = nullptr;
+    static constexpr bool kNative = N == kNativeHooks;  // DXGI's own class (native_fallback_check)
     static HRESULT STDMETHODCALLTYPE hk_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
-        const bool mine = present_common(sc, flags);
+        const bool mine = present_common(sc, flags, kNative);
         HRESULT hr = o_present(sc, sync, flags);
         if (mine) t_in_present = false;
         return hr;
     }
     static HRESULT STDMETHODCALLTYPE hk_present1(IDXGISwapChain1* sc, UINT sync, UINT flags,
                                                  const DXGI_PRESENT_PARAMETERS* params) {
-        const bool mine = present_common(sc, flags);
+        const bool mine = present_common(sc, flags, kNative);
         HRESULT hr = o_present1(sc, sync, flags, params);
         if (mine) t_in_present = false;
         return hr;
@@ -632,6 +656,7 @@ void hook_frame_generation_proxies() {
 // loaded, the proxy's vtable is read from its RTTI instead and no swap chain is created. Without
 // Streamline, the throwaway D3D12 swap chain as before. The command queue vtable still needs a
 // D3D12 device and queue, but no swap chain.
+void** throwaway_swap_chain_vtable(IDXGIFactory4* factory, ID3D12CommandQueue* queue);
 bool find_vtables(void**& swapchain_vtable, void**& queue_vtable) {
     if (HMODULE sl = GetModuleHandleW(L"sl.interposer.dll")) {
         swapchain_vtable = find_rtti_vtable(sl, ".?AUDXGISwapChain@interposer@sl@@");
@@ -640,6 +665,7 @@ bool find_vtables(void**& swapchain_vtable, void**& queue_vtable) {
             return false;
         }
         log::info("Overlay: using Streamline's swap chain class (no throwaway swap chain)");
+        g_streamline_class = true;
     }
 
     ComPtr<IDXGIFactory4> factory;
@@ -656,7 +682,13 @@ bool find_vtables(void**& swapchain_vtable, void**& queue_vtable) {
     if (!device || FAILED(device->CreateCommandQueue(&qd, IID_PPV_ARGS(&queue)))) return false;
     queue_vtable = *reinterpret_cast<void***>(queue.Get());
     if (swapchain_vtable) return true;
+    swapchain_vtable = throwaway_swap_chain_vtable(factory.Get(), queue.Get());
+    return swapchain_vtable != nullptr;
+}
 
+// The vtable of the class DXGI itself gives for a swap chain (a 64x64 one on a hidden window, released at once).
+void** throwaway_swap_chain_vtable(IDXGIFactory4* factory, ID3D12CommandQueue* queue) {
+    void** swapchain_vtable = nullptr;
     HINSTANCE inst = GetModuleHandleW(nullptr);
     WNDCLASSEXW wc{};
     wc.cbSize = sizeof wc;
@@ -676,13 +708,123 @@ bool find_vtables(void**& swapchain_vtable, void**& queue_vtable) {
         sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
         sd.BufferCount = 2;
         sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-        if (SUCCEEDED(factory->CreateSwapChainForHwnd(queue.Get(), hwnd, &sd, nullptr, nullptr, &swapchain))) {
+        if (SUCCEEDED(factory->CreateSwapChainForHwnd(queue, hwnd, &sd, nullptr, nullptr, &swapchain))) {
             swapchain_vtable = *reinterpret_cast<void***>(swapchain.Get());
         }
         DestroyWindow(hwnd);
     }
     UnregisterClassW(wc.lpszClassName, inst);
-    return swapchain_vtable != nullptr;
+    return swapchain_vtable;
+}
+
+// This process's own window in front, shown and of a game's size: a player is looking at the game.
+bool game_window_in_front() {
+    const HWND w = GetForegroundWindow();
+    DWORD pid = 0;
+    if (!w || !GetWindowThreadProcessId(w, &pid) || pid != GetCurrentProcessId()) return false;
+    RECT rc{};
+    return IsWindowVisible(w) && !IsIconic(w) && GetClientRect(w, &rc) && rc.right >= 640 && rc.bottom >= 360;
+}
+
+std::string module_of(void* f) {
+    HMODULE m = nullptr;
+    wchar_t path[MAX_PATH]{};
+    if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                            static_cast<LPCWSTR>(f), &m) ||
+        !GetModuleFileNameW(m, path, MAX_PATH))
+        return "?";
+    std::wstring p = path;
+    const size_t slash = p.find_last_of(L"/\\");
+    if (slash != std::wstring::npos) p = p.substr(slash + 1);
+    std::string out;
+    for (const wchar_t c : p) out += c < 128 ? static_cast<char>(c) : '?';
+    return std::format("{}+0x{:X}", out, reinterpret_cast<uintptr_t>(f) - reinterpret_cast<uintptr_t>(m));
+}
+
+// 2026-11-12, a tester with an AMD Radeon RX 7900 XTX (frame generation off, builds up to 3c46bec5): "Overlay:
+// installed true | presents 0 drawn 0" for a whole session: no Co-op menu, no waiting screen. Streamline is loaded
+// on every PC (the game ships it) and its swap chain class was hooked, but on that PC the game does not present
+// through it (Streamline wraps the swap chain only when one of its plugins needs to, and DLSS frame generation is
+// not available there), nor through a frame generation class: it presents through DXGI's own class, which only the
+// "no Streamline" path hooked.
+// So: when Streamline's class was hooked and NO Present at all has come through any hooked class some seconds
+// after the hooks went in, with the game's window in front, DXGI's own class gets the hooks too. Its vtable comes
+// from a throwaway swap chain; that crashed about one launch in five when DLSS frame generation picked it up
+// (find_vtables), which is the case where presents come through Streamline's class and this never runs. Should a
+// class above start presenting later (frame generation switched on), the DXGI hook stays out of its way
+// (present_common).
+// am2 (2026-11-12, this PC, Streamline's class left unhooked by the dev switch): the throwaway swap chain's class
+// IS Streamline's here (it wraps what our own CreateSwapChainForHwnd makes too), so the throwaway gives the class a
+// swap chain gets on this PC, which is what the game got. The trigger "8 s / 20 s without a frame, the game's window
+// in front, asked every 5 s" took 76 s and 830 s with two copies; the watcher below does not need the window.
+void hook_dxgi_class(const std::string& why) {
+    log::warn("Overlay: {}: the game presents through a swap chain class that is not hooked (DXGI's own, on a PC "
+              "where Streamline does not wrap it); hooking the class a new swap chain gets here",
+              why);
+    ComPtr<IDXGIFactory4> factory;
+    ComPtr<ID3D12Device> device;
+    ComPtr<ID3D12CommandQueue> queue;
+    D3D12_COMMAND_QUEUE_DESC qd{};
+    qd.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+    if (FAILED(CreateDXGIFactory1(IID_PPV_ARGS(&factory))) ||
+        FAILED(D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&device))) ||
+        FAILED(device->CreateCommandQueue(&qd, IID_PPV_ARGS(&queue)))) {
+        log::error("Overlay: no D3D12 device / queue for the throwaway swap chain");
+        return;
+    }
+    void** vt = throwaway_swap_chain_vtable(factory.Get(), queue.Get());
+    if (!vt) {
+        log::error("Overlay: the throwaway swap chain could not be created");
+        return;
+    }
+    log::info("Overlay: a new swap chain's class here: Present at {}, Present1 at {}", module_of(vt[kSlotPresent]),
+              module_of(vt[kSlotPresent1]));
+    const bool ok = ProxyHooks<kNativeHooks>::install(vt, "DXGI");
+    log::info("Overlay: that swap chain class {}", ok ? "is hooked: the overlay draws through it"
+                                                       : "could NOT be hooked");
+}
+
+// Trigger 1 (the watcher thread, from install() on): the game sends drawing commands (ExecuteCommandLists on a direct
+// queue, hooked at install for this) and for 4 s not one Present comes through a hooked class.
+void native_fallback_watch() {
+    uint64_t p0 = g_presents.load(), e0 = g_execs.load(), t0 = GetTickCount64();
+    for (;;) {
+        Sleep(500);
+        if (g_native_tried.load() || g_dev_no_streamline.load() == 2) return;
+        const uint64_t p = g_presents.load(), e = g_execs.load(), now = GetTickCount64();
+        if (p != p0) {  // frames come through a hooked class
+            p0 = p;
+            e0 = e;
+            t0 = now;
+            continue;
+        }
+        if (now - t0 < 4000) continue;
+        if (e - e0 >= 80) {
+            if (!g_native_tried.exchange(true))
+                hook_dxgi_class(std::format("{} batches of drawing commands in {:.1f} s and no frame through a hooked "
+                                            "swap chain class ({} frames before that)",
+                                            e - e0, (now - t0) / 1000.0, p));
+            return;
+        }
+        e0 = e;  // not rendering either: look again
+        t0 = now;
+    }
+}
+
+// Trigger 2 (asked with the overlay's status, every 5 s; for a PC where the command queue hook sees nothing): no
+// frame for 8 s (20 s where DLSS frame generation's plugin is loaded: a throwaway swap chain it picks up crashed
+// one launch in five) with the game's window in front.
+void native_fallback_check() {
+    if (!g_proxy_ready.load() || !g_streamline_class.load() || g_native_tried.load()) return;
+    if (g_dev_no_streamline.load() == 2) return;  // dev: the tester's state, kept (no frame through any hook)
+    const uint64_t since = (std::max)(g_installed_ms.load(), g_last_any_present_ms.load(std::memory_order_relaxed));
+    const uint64_t waited = GetTickCount64() - since;
+    const bool dlss_g = GetModuleHandleW(L"sl.dlss_g.dll") != nullptr;
+    if (waited < (dlss_g ? 20000u : 8000u) || !game_window_in_front()) return;
+    if (g_native_tried.exchange(true)) return;
+    std::thread([waited] {
+        hook_dxgi_class(std::format("no frame through a hooked swap chain class for {} s with the game in front", waited / 1000));
+    }).detach();
 }
 
 }  // namespace
@@ -699,7 +841,9 @@ bool install(DrawFn draw) {
     }
     // Resize hooks first: once Present is hooked we may start holding GPU
     // work that a resize has to wait for.
-    const bool ok =
+    const bool skip = g_dev_no_streamline.load() != 0 && g_streamline_class.load();
+    if (skip) log::warn("Overlay: [dev] overlay_no_streamline={}: Streamline's swap chain class is NOT hooked (1: a test of the DXGI fallback; 2: no fallback either)", g_dev_no_streamline.load());
+    const bool ok = skip ||
         hook_function(sc_vtable[kSlotResizeBuffers], reinterpret_cast<void*>(&hk_resize),
                       g_resize_hook, o_resize, "ResizeBuffers") &&
         hook_function(sc_vtable[kSlotResizeBuffers1], reinterpret_cast<void*>(&hk_resize1),
@@ -720,13 +864,26 @@ bool install(DrawFn draw) {
     }
     log::info("Overlay hooks installed (swap chain vtable 0x{:X})",
               reinterpret_cast<uintptr_t>(sc_vtable));
+    g_installed_ms = GetTickCount64();
     g_proxy_ready = true;
     hook_frame_generation_proxies();
+    if (g_streamline_class.load()) {
+        // The watcher's evidence that the game renders (on this PC the hook went in at the first frame anyway: the
+        // queue is always learnt this way with Streamline).
+        if (!g_execute_hooked.exchange(true)) {
+            hook_function(g_queue_vtable[kSlotExecuteCommandLists], reinterpret_cast<void*>(&hk_execute),
+                          g_execute_hook, o_execute, "ExecuteCommandLists");
+        }
+        std::thread(native_fallback_watch).detach();
+    }
     return true;
 }
 
+void dev_no_streamline(int mode) { g_dev_no_streamline = mode; }
+
 Status status() {
     hook_frame_generation_proxies();  // a library loaded since (frame generation switched on in the settings)
+    native_fallback_check();          // no frame through any hooked class: DXGI's own class (AMD cards)
     std::lock_guard lock(g_status_mutex);
     Status s = g_status;
     s.disabled = g_disabled;
