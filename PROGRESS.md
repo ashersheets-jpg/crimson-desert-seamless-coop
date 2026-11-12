@@ -13,12 +13,12 @@ test save Out, shipped cdmp.ini restored.
   updates if you feel like it is worth it to do so. Please continue working." So until about 2026-11-11 18:10 a
   build / update post in the Discord (#download-here, #general) may go out without asking, when it is worth it
   (tested, install checks pass, a real improvement). After that: ask again. Never delete messages; never the decomp.
-- Discord, #general, 2026-11-11 12:50 (squidbots32, new member), NOT answered (a reply needs your OK): "how does
+- Discord, #general, 2026-11-11 12:50 (squidbots32, new member), CLOSED, no reply (the owner's decision): "how does
   syncing character looks work? I know the CC mod isnt supported, but what about Heroine of Pywell that doesnt store
   model xml info seperately? or is it just the fact they are relying on asi files to run that makes it hard to
   sync?" The owner, 2026-11-11 22:52: "CC mod" = the character customization mod (Character Creator Enhanced -
   Barber, Khione95, Nexus 837; its author allows compatibility, not bundling). "Heroine of Pywell": not found by a
-  web search, never looked at here. Draft answer v2 (shown to the owner 2026-11-11; posting needs the OK):
+  web search, never looked at here. DECIDED by the owner 2026-11-11 23:00: "Do not bother to respond": NO reply is posted. Draft v2, kept for reference:
   "Short version: we don't sync looks ourselves, the game does. In the shared-world builds both players are in the
   host's game world, and each player's character is the game's own player character, loaded from that player's own
   save. The game tells the other PC what you wear and what your save says about your look, and the other PC draws it
