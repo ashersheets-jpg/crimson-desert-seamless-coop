@@ -6061,3 +6061,43 @@ shipped switch list (native_mode_text.h). To be checked by a run before anything
   card and 3440x1440; whether his game then leaves the title. The post must say so and ask for his report zip.
 - Also in this batch (layer): after "your friend has no character yet" the host's Start Co-op card does nothing
   more (it only repeated the round trip).
+
+### Checklist pp8 on 0.1.0-alpha+47135b83, steps 1-10 (2026-11-12 04:58-06:00): 304 PASS, 2 FAIL, neither in the package
+
+- static FAIL "layer / kit / tools have uncommitted changes": tools/gen/progress_chart.py (the chart script, edited
+  for the next chart, not part of the package). Committed (5452cee). The package is unchanged: it is still built
+  from 47135b8 / native 6f0c5ef, and static compares the package's two .asi with the build output by hash.
+- fsr FAIL "guest: native log: 1 unknown error line": `GuestS3 first-chance AV at 0x13FFE0196 kind 0x8 addr
+  0x13FFE0196` at 05:20:10.946, 2 ms after RemoteMotion wrote its inline hook (05:20:10.944), on another thread.
+  The game went on (the guest played to the end of the step, every other check passed).
+  WHAT IT IS (read in the hook library's source, safetyhook os.windows.cpp trap_threads / trap_handler): while a
+  hook is written, the library makes the page it patches AND the page of the trampoline ('to') read/write, i.e.
+  not executable, and its exception handler lets a thread that faults in either page retry until the protection
+  is back (find_trap_page -> EXCEPTION_CONTINUE_EXECUTION). 0x13FFE0000 / 0x13FFF0000 are the two 64 KB regions
+  right below the exe where the trampolines live (the base's HookPrepare line lists them). So a thread that was
+  running an EARLIER hook's trampoline at that instant faults once, is retried, and the base's first-chance
+  logger writes an ERR line before the library's handler takes it. The same event as the long-known
+  "AV at 0x7FF... kind 0x8" (a system DLL's page), only in the trampoline page.
+  HOW OFTEN: 10 logs since tc29 (2026-11-06): tc29, tcB107, tcB117, tcB148, tcB162, tcB220, tcB303, tcB309, tcB331,
+  pp8-fsr; the 0x7FF form in 66 logs. The game went on in all of them.
+  The checklist knew only the 0x7FF form. FIX IN THE CHECKER (tools/prepost.sh, 5452cee): the known pattern is now
+  `AV at 0x(7FF|13FF[EF])... kind 0x8`. Not a change to the package.
+  LATER (base, next build): the first-chance logger should not write these as ERR at all (ask the hook library
+  whether the address is in a page it is patching); a tester's report then has no false alarm in it either.
+- Both steps are run again as "pp8b" (static, fsr) before steps 11-19, the other eight steps of the first half stand:
+  the checker change can only turn that one line from FAIL to PASS. Re-running `static` under pp8 would have
+  emptied the result file (it starts it).
+- Looked at: pp8-latehook-Wguest05 / Wguest10 (the waiting screen IS drawn on the guest with Streamline's class
+  unhooked), -L1-host-start-coop (the menu, the party list, Start Co-op lit), -39-guest-view (both in the world);
+  pp8-display-01 (the title menu on the real display mode); pp8-real-02; revive g1/g2 (the death screen with Q / U),
+  g4 (up again); chest (both at the shrine); fsr / xess 39 views. SAVES OK and "user install restored: 5/5 OK" in
+  all nine game steps (real: REAL SAVES UNCHANGED).
+- latehook numbers: 4.35 s from "game is up" to the late hook on the host's co-op launch.
+- The Windows Security passkey box for discord.com is still on the desktop (in the pp8-display-01 screenshot, over
+  the game's window; it did not stop a step). Not touched. If Discord is signed out when the post is due, the post
+  waits for the owner.
+- FOUND WHILE LOOKING (wording, not a blocker for this patch, for the next layer build): the guest's waiting
+  screen says "Joining the start of the story..." once the host's world is up, whatever the host chose. That line
+  is right only for New Co-op Save; on Continue / From my progress it should say it joins the host's world
+  (coop_lobby.cpp line 468: g_new_started is set for every native start). It has been like this since the native
+  lobby flow; nobody reported it.

@@ -108,3 +108,14 @@ topic BEFORE testing or guessing about it.
   `User2Stages [create]` lines; the checklist found it two builds later and cost a whole pass.
 - 2026-11-12: a diagnostic line that scales with what the player does (one per stage, per NPC, per hit) needs a
   per-session cap from the day it is written.
+
+- 2026-11-12: A "known harmless" log pattern in the checklist must describe the EVENT, not the one address form it
+  was first seen at. The hook library's trapped-thread fault was known as "AV at 0x7FF... kind 0x8" (system DLL
+  pages); the same fault in the library's trampoline pages (0x13FFE.... below the exe) had been in 9 older logs and
+  failed a checklist step the first time it fell into one. Before adding a pattern, grep all old logs for the
+  neighbours of it (same kind, other addresses) and read the library's code to know the whole set.
+- 2026-11-12: Commit everything under tools/ BEFORE starting a checklist pass (the static step fails on any
+  uncommitted file there, also one that is not in the package), and never re-run `static` under the same pass name:
+  it empties the result file. A re-run of single steps goes under a second name (pp8b).
+- 2026-11-12: Look at the WORDS in every screenshot, not only whether something is drawn: the guest's waiting line
+  said "Joining the start of the story..." on a Continue start through three checklist passes before it was read.
