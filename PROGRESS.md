@@ -6175,3 +6175,31 @@ Earlier reading (am1): "not a consequence of the missing overlay on this PC; wha
   the composer before sending. The Windows passkey box on the desktop was not in the way and was not touched.
 - What "tested" means for this build: checklist pp8 / pp8b, ONE PC, two copies, Nvidia (the section above).
 - The posting OK is used up. The next post needs the owner's OK.
+
+### rt1a (2026-11-12 08:07-08:26): a second Start Co-op restarts both games, and then the HOST'S TUNNEL IS DEAD
+
+- Next-build code (layer: a second Start Co-op in a launch that already ran one restarts both games; a guest that is
+  not let in says so; native: the trapped-thread line as INF) built at 08:05. Test rt1a (scratchpad explore7.sh rt1:
+  `-HostDev lobby_retry=1`, the host's first automatic start is a second Start Co-op instead).
+- The layer part works as written: host 08:08:26 "[dev] lobby_retry: instead of starting, a second Start Co-op:
+  both games restart again"; the guest (already a guest) 08:08:26 "the host restarts into co-op; we follow when it
+  is back", 08:08:47 "the host is back in co-op: this game restarts as its guest"; 08:09:07 host "both games are in
+  co-op: starting your co-op save".
+- Then nobody got into the world (240 s each). Host's base, 08:08:54.710: `ERR Session2: the Troc tunnel stops: the
+  link broke (reconnection or overflow); session 2's conversation is lost until the game restarts`. Guest's base to
+  the end: "host ready no", tunnel "out 0 packets, in 0 packets".
+- Cause: common/troc_link.cpp marks the link broken on ANY second connection (`epoch_ != 0 || ...`), and the host's
+  tunnel_tick (session2.cpp) kills the tunnel for the whole launch when the link is broken. At a FIRST start the
+  guest's old process is in solo mode and never is on the host's tunnel. At a SECOND start the guest's old process is
+  already in guest mode: it is on the new host's tunnel for the 2 s before it restarts (the host's tunnel opened
+  08:08:46.8, the old guest left 08:08:49, the new one connected 08:08:54) and its successor counts as a
+  reconnection. Nothing had gone either way on that first connection (out 0, in 0).
+- So "a second Start Co-op restarts both games" could NEVER have worked without a change in the base. The same holds
+  for any guest that restarts its game while the host waits at the title in co-op mode (a crash of the guest's game
+  before the start, for one): the host's tunnel was dead until the host restarted too.
+- Fix (native, session2.cpp tunnel_tick, not the reconnect mode): a broken link with packets_in 0, packets_out 0, no
+  held Req and no user 2 is reset (WRN "the guest's connection was replaced by a new one before anything was said on
+  it"); anything else kills the tunnel as before. The counters are cumulative for the process (TunnelSender::reset
+  keeps packets_sent), so "nothing was ever said" is exact. Test rt1b.
+- The harness is not at fault here: it waited for "-> REMOTE" in the guest's log (420 s), which never came.
+- SAVES OK, user install restored: 5/5 OK.
