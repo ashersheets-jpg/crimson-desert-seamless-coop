@@ -85,6 +85,33 @@ overlay_checks() {  # layer log, who
   [ "${w:-0}" -gt 0 ] && { info "$2: $w other warning line(s) in the layer log:"; grep "\] WRN " "$1" | grep -v "Crash log: exception" | cut -d']' -f3- | cut -c1-150 | sort | uniq -c | sort -rn | head -6 | sed 's/^/          /' >> "$R"; }
 }
 
+# The native log's ERR lines outside the known set, one per line (nothing = clean). Known: the harness's own sandbox
+# copy, three far-world hooks not ported to this game build, the guest's guarded reads, and the hook library's
+# trapped thread. That last one is ONE event with three address forms: while a hook is written, the page of the
+# patched bytes and the page of its trampoline are read/write for an instant; a thread running there gets an execute
+# fault (kind 0x8) and is retried by the library. Forms: a system DLL's page (at 0x7FF...), the trampoline pages
+# right below the exe (at 0x13FFE.... / 0x13FFF....), and the game's own page that is being patched (at exe+0x...;
+# 13 logs since tcB69, always the UI time scale hook's page). The exe form is only known when one of the five lines
+# before or after it (the fault is logged at once, the hook's own line when it is in) names a hook in the same
+# 4 KB page: an execute fault in game code with no hook being written is real.
+unknown_errs() {  # native log
+  awk -v KNOWN='Session2 save redirect: (cannot copy|CDMP_SANDBOX_ADD)|User2Stages: [DSF], .* REFUSED, not hooked|GuestXVeto: unsupported game build|GuestS3 first-chance AV at cdmp.asi|GuestS3 first-chance AV at 0x(7FF|13FF[EF])[0-9A-F]+ kind 0x8' '
+    { L[NR] = $0 }
+    END {
+      for (n = 1; n <= NR; n++) {
+        line = L[n]
+        if (line !~ /\] ERR /) continue
+        known = (line ~ KNOWN)
+        if (!known && match(line, /GuestS3 first-chance AV at exe\+0x([0-9A-F]+) kind 0x8/, m) && length(m[1]) > 3) {
+          page = "exe\\+0x" substr(m[1], 1, length(m[1]) - 3) "[0-9A-F][0-9A-F][0-9A-F]([^0-9A-F]|$)"
+          for (k = n - 5; k <= n + 5; k++)
+            if (k >= 1 && k <= NR && k != n && L[k] !~ /\] ERR / && L[k] ~ /hook/ && L[k] ~ page) known = 1
+        }
+        if (!known) print line
+      }
+    }
+  ' "$1" 2>/dev/null
+}
 two_player_checks() {
   local O=$N/$NAME.out
   has "$O" "^host in the shared world: True"   "host reached the shared world"
@@ -108,8 +135,8 @@ two_player_checks() {
     no_recording $N/$NAME.$r.log "$r"
     growth $N/$NAME.$r.log "$r native" 420
     growth "$L" "$r layer" 240
-    local e; e=$(grep "\] ERR " $N/$NAME.$r.log 2>/dev/null | grep -vcE "Session2 save redirect: (cannot copy|CDMP_SANDBOX_ADD)|User2Stages: [DSF], .* REFUSED, not hooked|GuestXVeto: unsupported game build|GuestS3 first-chance AV at cdmp.asi|GuestS3 first-chance AV at 0x(7FF|13FF[EF])[0-9A-F]+ kind 0x8")
-    [ "${e:-0}" -eq 0 ] && ok "$r: native log: no error line outside the known set" || { bad "$r: native log: $e unknown error line(s):"; grep "\] ERR " $N/$NAME.$r.log | grep -vE "Session2 save redirect: (cannot copy|CDMP_SANDBOX_ADD)|User2Stages: [DSF], .* REFUSED, not hooked|GuestXVeto: unsupported game build|GuestS3 first-chance AV at cdmp.asi|GuestS3 first-chance AV at 0x(7FF|13FF[EF])[0-9A-F]+ kind 0x8" | cut -d']' -f3- | cut -c1-170 | sort | uniq -c | head -5 | sed 's/^/          /' >> "$R"; }
+    local e; e=$(unknown_errs $N/$NAME.$r.log | grep -c .)
+    [ "${e:-0}" -eq 0 ] && ok "$r: native log: no error line outside the known set" || { bad "$r: native log: $e unknown error line(s):"; unknown_errs $N/$NAME.$r.log | cut -d']' -f3- | cut -c1-170 | sort | uniq -c | head -5 | sed 's/^/          /' >> "$R"; }
   done
   info "screenshots to LOOK AT: $(cd $N/shots && ls $NAME-*.png 2>/dev/null | tr '\n' ' ')"
 }
@@ -260,7 +287,11 @@ crime)
   run2 "$BASE -Hold 10 -HostScript $SCAN\\tp_dock_host.txt -GuestScript $SCAN\\tp_dock_guest.txt -GuestKeys w:2000_shot:$NAME-g0_${GA}shot:$NAME-g1 -HostKeys w:1000_shot:$NAME-h0_${HA}shot:$NAME-h1 -GuestAfterWalkKeys w:1000_shot:$NAME-g2_${GA}shot:$NAME-g3"; two_player_checks
   H=$N/$NAME.host.log
   has "$H" "AntiGrief: crime type [0-9]+ of the guest .* skipped" "a guest's hit on a bandit was not booked as a crime"
-  hasnot "$H" "AntiGrief: crime type [0-9]+ of the guest .* on 0xB.*(left to the game|punished too)" "no guest hit on an NPC at the bandit camp was booked as a crime"
+  # Only the hit and kill paths: the same function also gets the game's property crimes (type 1 Vandalism: a swing
+  # broke something that belongs to an NPC; the "victim" is the owner). Those are the game's own rule for any player
+  # (the host gets them too, tcB384) and are left alone on purpose; they are listed, not failed.
+  hasnot "$H" "AntiGrief: crime type [0-9]+ of the guest .* on 0xB[0-9A-F]+ from exe\\+0x[0-9A-F]+ \\(a (hit|kill)\\).*(left to the game|punished too)" "no guest hit on an NPC at the bandit camp was booked as a crime"
+  info "property crimes of the guest with an owner (the game's own rule, not a hit): $(grep -cE 'AntiGrief: crime type [0-9]+ of the guest .* on 0xB[0-9A-F]+ from exe\+0x[0-9A-F]+ \(another path\)' "$H")"
   info "AntiGrief last summary: $(grep -h 'AntiGrief' "$H" | grep -v 'crime type' | tail -1 | cut -d']' -f3- | cut -c1-260)" ;;
 farfight)
   head_step "a guest fights 108 m from the host: the host draws its bandits to the dock and leaves, the guest stays and swings"
