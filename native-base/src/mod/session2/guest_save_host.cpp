@@ -16,6 +16,7 @@
 #include <string>
 #include <vector>
 
+#include "mod/config.h"
 #include "mod/game/game_fault.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
@@ -117,6 +118,11 @@ std::atomic<GuestSaveResultFn> g_result_fn{nullptr};
 // folder and of the sandbox (same volume: the moves are renames), outside every folder the game lists (it lists the
 // account folder at each load and save: review item 5); the mailbox.
 std::wstring g_account_dir, g_slot_dir, g_staging_dir, g_incoming, g_old_dir, g_mailbox_root;
+// Co-op+ 2026-11-12 (coop_world_logic.h): the world's folder (the sandbox root) and last session's guest slot,
+// <world>_guest_prev\<account>\slot204 (save_hooks.cpp set_guest_slot_aside); set at install, then read only. The
+// switch [session2] coop_world_character, as the config had it at install.
+std::wstring g_world_dir, g_prev_slot_dir;
+std::atomic<bool> g_coop_world{false};
 std::atomic<uintptr_t> g_verified_user{0};  // the user actor whose lobby was verified (its login's save is user 2's)
 char g_slot_name[16] = {};  // "slot204"
 
@@ -1123,6 +1129,9 @@ bool guest_save_install(const GuestSaveOptions& opt) {
     std::memcpy(g_slot_name, name.c_str(), name.size() + 1);
     g_account_dir = sandbox + L"\\" + account;
     g_slot_dir = g_account_dir + L"\\" + widen(name);
+    g_world_dir = sandbox;
+    g_prev_slot_dir = sandbox + L"_guest_prev\\" + account + L"\\" + widen(name);
+    g_coop_world.store(loaded_config().s2_coop_world_character);
     // A fresh copy of the real folder: a slot204 there would have come from it (the game built it into its store at
     // start-up), and nothing of the guest's may be loaded over it.
     if (exists(g_slot_dir)) return forced_off(opt.mode, std::format("'{}' already exists in the sandbox", narrow(g_slot_dir)));
@@ -1377,6 +1386,21 @@ uint32_t guest_save_last_generation() { return g_last_gen.load(); }
 void guest_save_set_result_handler(GuestSaveResultFn fn) { g_result_fn.store(fn, std::memory_order_release); }
 
 gsv::SlotState guest_save_state() { return state_now(); }
+
+CoopWorldPaths guest_save_coop_world_paths() {
+    CoopWorldPaths p;
+    if (!g_coop_world.load(std::memory_order_relaxed) || g_mode.load() != Mode::On || g_world_dir.empty()) return p;
+    p.world = g_world_dir;
+    p.account = g_account_dir;
+    p.prev_slot = g_prev_slot_dir;
+    return p;
+}
+
+void guest_save_labels(GuestSaveLabel& staged, GuestSaveLabel& live) {
+    std::lock_guard lock(g_mu);
+    staged = g_staged_label;
+    live = g_live_label;
+}
 
 std::string guest_save_describe() {
     const Mode mode = g_mode.load();

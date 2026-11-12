@@ -7,12 +7,16 @@
 #include <deque>
 #include <format>
 #include <mutex>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
+#include "common/sha256.h"
 #include "common/troc_frame.h"
 #include "common/troc_link.h"
 #include "mod/log.h"
+#include "mod/session2/coop_world_logic.h"
 #include "mod/session2/guest_save_host.h"
 
 namespace cdmp::session2 {
@@ -41,6 +45,34 @@ uint64_t g_status_ms = 0;
 uint8_t g_status_mode_logged = 0xFF;
 bool g_speaks_logged = false;
 
+// Co-op+ 2026-11-12, the co-op world's character (coop_world_logic.h). Network thread only, as everything above: the
+// upload is finished in guest_save_tunnel_on_frame and the gate is asked from server.cpp's inject() for user 2's
+// LoginUserToFieldServerReq 2535, which session2.cpp's offer() calls on the same thread (the mirror thread only
+// injects the host's movement Req, never a 2535).
+// In a world with a marker: the checked upload, kept (never staged) for the gate's fallback only.
+struct KeptUpload {
+    bool have = false;
+    uint32_t xfer = 0;
+    gsw::Offer offer{};
+    std::string guest;
+    std::vector<uint8_t> lobby, save;
+};
+KeptUpload g_cw_upload;
+struct CoopWorldGate {
+    uint64_t open_until_ms = 0;  // the gate is open without a look until then (a decision just made, or a failure)
+    uint64_t wait_since_ms = 0;  // user 2's login waits since then (0 = it does not)
+    uint64_t next_look_ms = 0;   // while it waits: the next look at the disk
+    uint64_t waits = 0;          // looks that ended in a wait (the wait line's pace)
+    std::optional<cwl::SlotSample> sample;  // the host's slot as it was read last
+    uint64_t sample_ms = 0;
+    bool logged = false;         // the last "stays" line: its stage and line (one line per change, not per look)
+    cwl::Stage logged_stage = cwl::Stage::Today;
+    std::string logged_root;
+};
+CoopWorldGate g_cw;
+constexpr uint64_t kCoopWorldOpenMs = 1000;    // after a decision: a Req offered again does not ask again at once
+constexpr uint64_t kCoopWorldStaleMs = 5000;   // a wait nobody came back to (the held Req is gone): forgotten
+
 // Server thread -> network thread.
 std::mutex g_exp_mu;
 std::deque<GuestSaveExport> g_exports;  // under g_exp_mu
@@ -49,6 +81,8 @@ std::atomic<uint64_t> g_guest_final_ms{0}, g_host_final_ms{0};
 std::atomic<uint64_t> c_offers{0}, c_offers_ok{0}, c_offers_refused{0}, c_chunks_in{0}, c_bytes_in{0}, c_malformed{0},
     c_stale{0}, c_cancels{0}, c_mailbox_staged{0}, c_results_started{0}, c_results_delivered{0}, c_results_failed{0},
     c_chunks_out{0}, c_bytes_out{0}, c_status_out{0}, c_exports_in{0}, c_exports_old{0};
+// The co-op world's character: uploads kept aside, and what the gate staged.
+std::atomic<uint64_t> c_cw_kept{0}, c_cw_seeded{0}, c_cw_reseeded{0}, c_cw_mailbox{0}, c_cw_prev{0}, c_cw_fallback{0};
 
 std::string narrow(const std::wstring& w) {
     if (w.empty()) return {};
@@ -185,6 +219,101 @@ bool read_line(const std::wstring& mailbox, uint32_t gen, gsw::LineGen& out) {
     return true;
 }
 
+// ---------------------------------------------------------------- the co-op world's character: its files
+// (coop_world_logic.h.) The mod's own reads and writes in the world's folder, the save folder's stand-in: none of
+// these paths is under the real save folder, so the save redirect's hooks pass them through unchanged.
+
+// Off = coop_world_character=0 or own-save mode is not 1 (nothing is read); Absent = a world without a marker (the
+// behaviour before); Invalid = a marker that cannot be read or that this build does not understand.
+enum class MarkerRead : uint8_t { Off, Absent, Invalid, Ok };
+
+MarkerRead read_marker(cwl::Marker& out, std::wstring* path_out = nullptr) {
+    out = cwl::Marker{};
+    const CoopWorldPaths paths = guest_save_coop_world_paths();
+    if (paths.world.empty()) return MarkerRead::Off;
+    const std::wstring path = paths.world + L"\\" + cwl::kMarkerFile;
+    if (path_out) *path_out = path;
+    if (GetFileAttributesW(path.c_str()) == INVALID_FILE_ATTRIBUTES) {
+        const DWORD e = GetLastError();
+        return e == ERROR_FILE_NOT_FOUND || e == ERROR_PATH_NOT_FOUND ? MarkerRead::Absent : MarkerRead::Invalid;
+    }
+    std::vector<uint8_t> bytes;
+    std::string why;
+    if (!read_all(path, bytes, 64 * 1024, why)) return MarkerRead::Invalid;
+    const auto m = cwl::parse_marker(std::string_view(reinterpret_cast<const char*>(bytes.data()), bytes.size()));
+    if (!m) return MarkerRead::Invalid;
+    out = *m;
+    return MarkerRead::Ok;
+}
+
+// The marker rewritten: a temporary file renamed over it (a reader never sees half of it).
+bool write_marker(const cwl::Marker& m, std::string& why) {
+    const CoopWorldPaths paths = guest_save_coop_world_paths();
+    if (paths.world.empty()) {
+        why = "the co-op world's character is off";
+        return false;
+    }
+    const std::wstring path = paths.world + L"\\" + cwl::kMarkerFile, tmp = path + L".tmp";
+    const std::string text = cwl::marker_text(m);
+    if (!write_all(tmp, text) || !MoveFileExW(tmp.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING)) {
+        why = std::format("cannot write '{}' (error {})", narrow(path), GetLastError());
+        DeleteFileW(tmp.c_str());
+        return false;
+    }
+    return true;
+}
+
+bool file_there(const std::wstring& path) {
+    const DWORD a = GetFileAttributesW(path.c_str());
+    return a != INVALID_FILE_ATTRIBUTES && !(a & FILE_ATTRIBUTE_DIRECTORY);
+}
+
+// The slot folders of the world's account folder (the host's saves; the guest's 204 too), for cwl::pick_host_slot:
+// per slot number its two files, save.save's last write, and whether a slot<N>_new / slot<N>_backup folder is there.
+std::vector<gsw::SlotSeen> list_host_slots(const std::wstring& account_dir) {
+    std::vector<gsw::SlotSeen> list;
+    WIN32_FIND_DATAW fd;
+    HANDLE f = FindFirstFileExW((account_dir + L"\\slot*").c_str(), FindExInfoBasic, &fd, FindExSearchNameMatch, nullptr,
+                                0);
+    if (f == INVALID_HANDLE_VALUE) return list;
+    do {
+        if (!(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) || (fd.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)) {
+            continue;
+        }
+        const auto d = gsw::parse_slot_dir(fd.cFileName);
+        if (!d) continue;
+        size_t at = 0;
+        while (at < list.size() && list[at].slot != d->slot) ++at;
+        if (at == list.size()) {
+            list.push_back(gsw::SlotSeen{});
+            list[at].slot = d->slot;
+        }
+        gsw::SlotSeen& s = list[at];
+        if (d->kind == gsw::DirKind::New) s.has_new = true;
+        if (d->kind == gsw::DirKind::Backup) s.has_backup = true;
+        if (d->kind != gsw::DirKind::Plain) continue;
+        const std::wstring dir = account_dir + L"\\" + fd.cFileName;
+        s.has_lobby = file_there(dir + L"\\lobby.save");
+        WIN32_FILE_ATTRIBUTE_DATA a{};
+        if (GetFileAttributesExW((dir + L"\\save.save").c_str(), GetFileExInfoStandard, &a) &&
+            !(a.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+            s.has_save = true;
+            s.save_time = (static_cast<uint64_t>(a.ftLastWriteTime.dwHighDateTime) << 32) | a.ftLastWriteTime.dwLowDateTime;
+        }
+    } while (FindNextFileW(f, &fd));
+    FindClose(f);
+    return list;
+}
+
+// Both files of a slot folder, whole and checked as the game would load them (header, sizes).
+bool read_pair(const std::wstring& dir, std::vector<uint8_t>& lobby, std::vector<uint8_t>& save, std::string& why) {
+    if (!read_all(dir + L"\\lobby.save", lobby, gsv::kMaxFileSize, why) ||
+        !read_all(dir + L"\\save.save", save, gsv::kMaxFileSize, why)) {
+        return false;
+    }
+    return gsw::check_pair(lobby, save, why) == AckResult::Ok;
+}
+
 // ---------------------------------------------------------------- the upload
 
 void reply(uint32_t xfer, AckResult r, uint32_t gen) {
@@ -254,20 +383,21 @@ void resume_undelivered(const std::wstring& mailbox, uint32_t base_gen) {
     }
 }
 
-void finish_upload() {
-    const uint32_t xfer = g_up.xfer();
-    std::string why;
-    if (const AckResult v = g_up.verify(why); v != AckResult::Ok) return refuse(xfer, v, why);
-    std::vector<uint8_t> lobby = g_up.file(Kind::Lobby), save = g_up.file(Kind::Save);
-    std::string source = std::format("the guest's upload (xfer {}, its slot{}, guest {})", xfer, g_offer.slot, g_offer_guest);
-    uint32_t staged_gen = 0;
+// The staging of a checked upload, as it was before the co-op world's character: a mailbox generation that continues
+// the same save replaces it, then begin / write / ready. Ok = staged (staged_gen: the mailbox generation staged
+// instead, 0 = the upload itself); anything else is the SAVE_ACK result and `why`. Used by finish_upload (a world
+// without a marker) and by the co-op world gate's fallback.
+AckResult stage_upload(uint32_t xfer, const gsw::Offer& offer, const std::string& guest, std::vector<uint8_t> lobby,
+                       std::vector<uint8_t> save, uint32_t& staged_gen, std::string& why) {
+    std::string source = std::format("the guest's upload (xfer {}, its slot{}, guest {})", xfer, offer.slot, guest);
+    staged_gen = 0;
     // §3.5.6 as fixed in session 25 (gsw::find_continuation): a mailbox generation replaces the upload only when it
     // continues THE SAME save (the upload is its line's root or one of its generations) and is newer: the guest's
     // progress never goes back, and a guest that comes with another save plays that save.
-    const sha256::Digest& offered = g_offer.files[1].sha;
+    const sha256::Digest& offered = offer.files[1].sha;
     gsw::Continuation line;
     line.root = offered;
-    const std::wstring mailbox = guest_save_mailbox_folder(g_offer_guest);
+    const std::wstring mailbox = guest_save_mailbox_folder(guest);
     if (!mailbox.empty()) {
         std::vector<gsw::LineGen> lines;
         std::string without;
@@ -293,7 +423,7 @@ void finish_upload() {
                 staged_gen = *line.newer;
                 c_mailbox_staged.fetch_add(1);
                 source = std::format("mailbox gen{} of guest {} (the same save as its upload xfer {}, newer: line {}...)",
-                                     *line.newer, g_offer_guest, xfer, short_sha(line.root));
+                                     *line.newer, guest, xfer, short_sha(line.root));
                 log::warn("Session2 guest save link: the upload is {} of line {}... and the mailbox '{}' has its gen{}: "
                           "that one is staged INSTEAD of the upload (§3.5.6: the same save never goes back)",
                           line.at ? std::format("gen{}", line.at) : std::string("the root"), short_sha(line.root),
@@ -310,22 +440,65 @@ void finish_upload() {
         } else {
             log::info("Session2 guest save link: no mailbox generation continues the upload's save ({} B sha256 "
                       "{}...; {} generation(s) of other saves): it is staged as a new line",
-                      g_offer.files[1].size, short_sha(offered), lines.size());
+                      offer.files[1].size, short_sha(offered), lines.size());
         }
     }
     const std::string root_hex = sha256::hex(line.root);
     if (!guest_save_incoming_begin(why)) {
         const gsv::SlotState s = guest_save_state();
-        return refuse(xfer, s.disabled || s.poisoned || guest_save_mode() == gsv::Mode::Off ? AckResult::Off : AckResult::Io, why);
+        return s.disabled || s.poisoned || guest_save_mode() == gsv::Mode::Off ? AckResult::Off : AckResult::Io;
     }
     if (!guest_save_incoming_write(gsv::FileKind::Lobby, lobby, why) ||
         !guest_save_incoming_write(gsv::FileKind::Save, save, why)) {
-        return refuse(xfer, AckResult::Io, why);
+        return AckResult::Io;
     }
     // The base: the file the guest offered (a member of the line: the apply script needs it once the generation it
     // came from is gone from the guest's incoming folder, review of 12f8dfb item 1).
-    const GuestSaveLabel label{g_offer_guest, g_offer.slot, root_hex, sha256::hex(offered)};
-    if (!guest_save_incoming_ready(source, label, why)) return refuse(xfer, AckResult::Header, why);
+    const GuestSaveLabel label{guest, offer.slot, root_hex, sha256::hex(offered)};
+    if (!guest_save_incoming_ready(source, label, why)) return AckResult::Header;
+    return AckResult::Ok;
+}
+
+void finish_upload() {
+    const uint32_t xfer = g_up.xfer();
+    std::string why;
+    if (const AckResult v = g_up.verify(why); v != AckResult::Ok) return refuse(xfer, v, why);
+    std::vector<uint8_t> lobby = g_up.file(Kind::Lobby), save = g_up.file(Kind::Save);
+    uint32_t staged_gen = 0;
+    // Co-op+ 2026-11-12 (coop_world_logic.h): in a world with a marker the friend never plays the save it uploads.
+    // The upload is still checked and acknowledged (the guest's client goes on as before) and its guest id and slot
+    // are adopted, but nothing is staged here: user 2's login gate (guest_save_coop_world_gate) stages this world's
+    // own character. The checked files are kept in memory only for that gate's fallback.
+    cwl::Marker marker;
+    std::wstring marker_path;
+    const MarkerRead world = guest_save_mode() == gsv::Mode::On ? read_marker(marker, &marker_path) : MarkerRead::Off;
+    if (world == MarkerRead::Invalid) {
+        log::error("Session2 guest save (co-op world): the world's marker '{}' cannot be read or is not one this "
+                   "build understands: the upload xfer {} is staged as before (the friend brings its own character)",
+                   narrow(marker_path), xfer);
+    }
+    const bool kept = world == MarkerRead::Ok;
+    if (kept) {
+        if (const gsv::SlotState s = guest_save_state(); s.disabled || s.poisoned) {
+            return refuse(xfer, AckResult::Off,
+                          s.poisoned ? "the guest's save is POISONED in this run" : "own-save mode failed in this run");
+        }
+        c_cw_kept.fetch_add(1);
+        log::info("Session2 guest save (co-op world): marker {}{}: the upload xfer {} of guest {} (its slot{}; lobby {} "
+                  "B sha256 {}..., save {} B sha256 {}...) is checked and kept aside, NOT staged: user 2 plays this "
+                  "world's own character, staged at its login",
+                  cwl::character_name(marker.character),
+                  marker.character == cwl::Character::World
+                      ? std::format(" (line {}...)", marker.lineage_root.substr(0, 16))
+                      : std::string(),
+                  xfer, g_offer_guest, g_offer.slot, lobby.size(), short_sha(g_offer.files[0].sha), save.size(),
+                  short_sha(g_offer.files[1].sha));
+        g_cw_upload = KeptUpload{true, xfer, g_offer, g_offer_guest, std::move(lobby), std::move(save)};
+    } else {
+        g_cw_upload = KeptUpload{};
+        const AckResult r = stage_upload(xfer, g_offer, g_offer_guest, std::move(lobby), std::move(save), staged_gen, why);
+        if (r != AckResult::Ok) return refuse(xfer, r, why);
+    }
     if (g_guest != g_offer_guest) {
         if (!g_guest.empty()) log::warn("Session2 guest save link: the guest changed ({} -> {})", g_guest, g_offer_guest);
         g_sender = gsw::ResultSender{};
@@ -336,12 +509,19 @@ void finish_upload() {
     guest_save_set_guest_id(g_guest);
     reply(xfer, AckResult::Ok, staged_gen);
     c_offers_ok.fetch_add(1);
-    log::info("Session2 guest save link: upload xfer {} VERIFIED and STAGED for guest {} (its slot{}){}; SAVE_ACK ok | {}",
-              xfer, g_guest, g_guest_slot,
-              staged_gen ? std::format(" from mailbox gen{}", staged_gen) : std::string(),
-              guest_save_mode() == gsv::Mode::On ? "user 2's next lobby load moves it in as slot204"
-                                                 : "probe: nothing moves in (user 2 plays a clone)");
+    if (kept) {
+        log::info("Session2 guest save link: upload xfer {} VERIFIED and KEPT ASIDE (co-op world) for guest {} (its "
+                  "slot{}); SAVE_ACK ok | user 2's login stages this world's own character",
+                  xfer, g_guest, g_guest_slot);
+    } else {
+        log::info("Session2 guest save link: upload xfer {} VERIFIED and STAGED for guest {} (its slot{}){}; SAVE_ACK ok | {}",
+                  xfer, g_guest, g_guest_slot,
+                  staged_gen ? std::format(" from mailbox gen{}", staged_gen) : std::string(),
+                  guest_save_mode() == gsv::Mode::On ? "user 2's next lobby load moves it in as slot204"
+                                                     : "probe: nothing moves in (user 2 plays a clone)");
+    }
     g_up.reset();
+    const std::wstring mailbox = guest_save_mailbox_folder(g_offer_guest);
     if (!mailbox.empty()) resume_undelivered(mailbox, g_offer.base_gen);
 }
 
@@ -542,6 +722,353 @@ void on_export(const GuestSaveExport& e) noexcept {
     }
 }
 
+// ---------------------------------------------------------------- the co-op world's character: the gate
+// (coop_world_logic.h.) What user 2 loads in a world with a marker, decided when its LoginUserToFieldServerReq 2535
+// is about to be handed to the server. Network thread.
+
+// The guest the staged pair is for: the one whose upload was accepted on this connection, else the Steam peer, else
+// the configured id.
+std::string coop_world_guest() {
+    if (!g_guest.empty()) return g_guest;
+    const uint64_t peer = g_peer_id.load();
+    return peer ? std::to_string(peer) : guest_save_guest_id();
+}
+
+std::string pair_text(const std::vector<uint8_t>& lobby, const std::vector<uint8_t>& save) {
+    return std::format("lobby {} B sha256 {}..., save {} B sha256 {}...", lobby.size(), short_sha(sha256::of(lobby)),
+                       save.size(), short_sha(sha256::of(save)));
+}
+
+// A pair of the world's line into the staging folder (begin / write / ready). Its line and its base are both
+// `root_hex`, never the friend's own save: the apply script on its PC never puts this character into a solo slot.
+// False (why) = the staging itself failed (the mode is off or failed in this run, or the folder cannot be written).
+bool stage_world_pair(const std::string& source, const std::vector<uint8_t>& lobby, const std::vector<uint8_t>& save,
+                      const std::string& root_hex, std::string& why) {
+    if (!guest_save_incoming_begin(why)) return false;
+    if (!guest_save_incoming_write(gsv::FileKind::Lobby, lobby, why) ||
+        !guest_save_incoming_write(gsv::FileKind::Save, save, why)) {
+        return false;
+    }
+    GuestSaveLabel label;
+    label.guest = coop_world_guest();
+    if (!g_guest.empty()) label.guest_slot = g_guest_slot;
+    label.lineage_root = root_hex;
+    label.lineage_base = root_hex;
+    return guest_save_incoming_ready(source, label, why);
+}
+
+// The newest generation of the line `root` in one mailbox, by the manifests (gsw::find_continuation with the line's
+// root as the offered save: `newer` is the line's newest generation; `at` only when a generation is the root itself).
+std::optional<uint32_t> newest_of_line(const std::wstring& mailbox, const sha256::Digest& root) {
+    std::vector<gsw::LineGen> lines;
+    for (const uint32_t gen : list_generations(mailbox)) {
+        gsw::LineGen lg;
+        if (read_line(mailbox, gen, lg)) lines.push_back(lg);
+    }
+    const gsw::Continuation c = gsw::find_continuation(lines, root);
+    if (!c.found || c.root != root) return std::nullopt;
+    if (c.newer) return c.newer;
+    if (c.at) return c.at;
+    return std::nullopt;
+}
+
+struct WorldGen {
+    std::string guest;     // whose mailbox it is in
+    std::wstring mailbox;
+    gsw::Generation info{};
+    std::vector<uint8_t> lobby, save;
+};
+
+// The world's character in the mailbox of the guest the marker names and, when another guest is connected, in that
+// one's too (its sessions exported there): the newest generation of the line, loaded whole and checked
+// (load_generation); of two, the later one by its manifest's time. `notes` = what could not be used.
+std::optional<WorldGen> find_world_generation(const cwl::Marker& marker, const sha256::Digest& root, std::string& notes) {
+    std::vector<std::string> ids;
+    if (!marker.guest.empty()) ids.push_back(marker.guest);
+    const std::string connected = coop_world_guest();
+    if (!connected.empty() && connected != marker.guest) ids.push_back(connected);
+    std::optional<WorldGen> best;
+    for (const std::string& id : ids) {
+        const std::wstring mailbox = guest_save_mailbox_folder(id);
+        if (mailbox.empty()) continue;
+        const std::optional<uint32_t> gen = newest_of_line(mailbox, root);
+        if (!gen) continue;
+        WorldGen w;
+        std::string why;
+        if (!load_generation(mailbox, *gen, w.lobby, w.save, w.info, why) || w.info.root != root) {
+            notes += std::format(" [mailbox gen{} of guest {} is of this line but cannot be used: {}]", *gen, id,
+                                 why.empty() ? std::string("its line changed on disk") : why);
+            continue;
+        }
+        w.guest = id;
+        w.mailbox = mailbox;
+        if (!best || w.info.time_unix > best->info.time_unix) best = std::move(w);
+    }
+    return best;
+}
+
+struct HostSeed {
+    uint32_t slot = 0;
+    std::vector<uint8_t> lobby, save;
+    cwl::SlotSample sample;
+};
+
+// True = the host's slot (cwl::pick_host_slot) was read twice, at least cwl::kStableMs apart, and gave the same
+// sizes and SHA-256 both times: `seed` holds the second read's bytes. False: `why` says what is still missing.
+bool host_slot_stable(const std::wstring& account_dir, uint64_t now, HostSeed& seed, std::string& why) {
+    CoopWorldGate& g = g_cw;
+    if (g.sample && now - g.sample_ms < cwl::kStableMs) {
+        why = std::format("the host's slot{} was read once; it is read again {} ms after that", g.sample->slot,
+                          cwl::kStableMs);
+        return false;
+    }
+    const std::vector<gsw::SlotSeen> seen = list_host_slots(account_dir);
+    const std::optional<uint32_t> slot = cwl::pick_host_slot(seen);
+    if (!slot) {
+        g.sample.reset();
+        why = std::format("the host has no complete save slot in this world yet ({} slot number(s) in '{}'; a slot "
+                          "that is being written is skipped)",
+                          seen.size(), narrow(account_dir));
+        return false;
+    }
+    if (!read_pair(account_dir + std::format(L"\\slot{}", *slot), seed.lobby, seed.save, why)) {
+        g.sample.reset();
+        return false;
+    }
+    if (seed.save.size() < cwl::kMinSeedSaveBytes) {
+        // fs1a (2026-11-12): a new game's first save is a 5180-byte stub written at world entry, before the story's
+        // first quest exists; the friend seeded from it had no quest at all. The first real save (565 KB) came 63 s
+        // later, in another slot.
+        g.sample.reset();
+        why = std::format("the host's newest slot{} is only the new game's first stub ({} B, a real save is over {} "
+                          "KB): its first real save is waited for",
+                          *slot, seed.save.size(), cwl::kMinSeedSaveBytes / 1024);
+        return false;
+    }
+    seed.slot = *slot;
+    seed.sample = cwl::SlotSample{*slot, seed.lobby.size(), seed.save.size(), sha256::of(seed.lobby),
+                                  sha256::of(seed.save)};
+    const cwl::Stable stable = cwl::judge_stable(g.sample, g.sample_ms, seed.sample, now);
+    if (stable == cwl::Stable::Yes) return true;
+    why = stable == cwl::Stable::Changed
+              ? std::format("the host's slot{} changed between two reads (a save in progress): read again", *slot)
+              : std::format("the host's slot{} was read once (lobby {} B, save {} B); it must read the same again", *slot,
+                            seed.lobby.size(), seed.save.size());
+    if (stable != cwl::Stable::TooSoon) {
+        g.sample = seed.sample;
+        g.sample_ms = now;
+    }
+    return false;
+}
+
+bool gate_open(uint64_t now, uint64_t for_ms) {
+    g_cw.wait_since_ms = 0;
+    g_cw.waits = 0;
+    g_cw.open_until_ms = now + for_ms;
+    return true;
+}
+
+// A hard failure: the gate opens and user 2's login goes on with the behaviour before the co-op world's character
+// (the friend's own upload, staged now if one was kept). Never a wait without an end.
+bool gate_fallback(uint64_t now, const std::string& reason) {
+    g_cw.sample.reset();
+    g_cw.logged = false;
+    c_cw_fallback.fetch_add(1);
+    std::string what;
+    if (g_cw_upload.have) {
+        uint32_t staged_gen = 0;
+        std::string why;
+        const AckResult r = stage_upload(g_cw_upload.xfer, g_cw_upload.offer, g_cw_upload.guest, g_cw_upload.lobby,
+                                         g_cw_upload.save, staged_gen, why);
+        what = r == AckResult::Ok
+                   ? std::format("the friend's own upload (xfer {}, guest {}) is staged instead{}", g_cw_upload.xfer,
+                                 g_cw_upload.guest,
+                                 staged_gen ? std::format(", from its mailbox gen{}", staged_gen) : std::string())
+                   : std::format("the friend's own upload (xfer {}) could not be staged either: {}", g_cw_upload.xfer,
+                                 why);
+    } else {
+        what = "no upload of the friend is kept, so nothing is staged (its login may fail on the game's side)";
+    }
+    log::error("Session2 guest save (co-op world): FAILED: {} | user 2's login goes on as before the co-op world's "
+               "character: {} | the gate stays open for {} s",
+               reason, what, cwl::kGaveUpMs / 1000);
+    return gate_open(now, cwl::kGaveUpMs);
+}
+
+// True = user 2's 2535 may go to the server now (what it loads is staged or live, or this is not a marker world);
+// false = not yet (asked again at the Req's next offer; the disk is looked at every cwl::kGateLookMs).
+bool coop_world_gate(uint64_t now) {
+    if (guest_save_mode() != gsv::Mode::On) return true;
+    CoopWorldGate& g = g_cw;
+    if (now < g.open_until_ms) return true;
+    if (g.wait_since_ms && now > g.next_look_ms + kCoopWorldStaleMs) {
+        // The Req that waited never came back (its conversation ended): the next login starts its own wait.
+        g.wait_since_ms = 0;
+        g.waits = 0;
+        g.sample.reset();
+    }
+    if (g.wait_since_ms && now < g.next_look_ms) return false;
+    cwl::Marker marker;
+    std::wstring marker_path;
+    const MarkerRead found = read_marker(marker, &marker_path);
+    if (found == MarkerRead::Off || found == MarkerRead::Absent) return gate_open(now, kCoopWorldOpenMs);
+    if (found == MarkerRead::Invalid) {
+        return gate_fallback(now, std::format("the world's marker '{}' cannot be read or is not one this build "
+                                              "understands",
+                                              narrow(marker_path)));
+    }
+    const CoopWorldPaths paths = guest_save_coop_world_paths();
+    const bool world = marker.character == cwl::Character::World;
+    const std::string marker_says = world ? std::format("world (line {}..., made for guest {})",
+                                                        marker.lineage_root.substr(0, 16),
+                                                        marker.guest.empty() ? std::string("?") : marker.guest)
+                                          : std::string("pending");
+    cwl::StageInputs in;
+    in.enabled = true;
+    in.marker = marker.character;
+    const gsv::SlotState state = guest_save_state();
+    GuestSaveLabel staged, live;
+    guest_save_labels(staged, live);
+    in.staged_world = world && state.staged && staged.lineage_root == marker.lineage_root;
+    in.live_world = world && state.live && live.lineage_root == marker.lineage_root;
+    in.timed_out = g.wait_since_ms && now - g.wait_since_ms >= cwl::kHostSlotWaitMs;
+    std::optional<WorldGen> gen;
+    std::string notes;
+    if (world && !in.staged_world && !in.live_world) {
+        if (const auto root = sha256::parse_hex(marker.lineage_root)) gen = find_world_generation(marker, *root, notes);
+        in.mailbox = gen.has_value();
+        in.prev = !paths.prev_slot.empty() && file_there(paths.prev_slot + L"\\lobby.save") &&
+                  file_there(paths.prev_slot + L"\\save.save");
+    }
+    HostSeed seed;
+    std::string host_why;
+    bool host_asked = false;
+    for (int step = 0; step < 4; ++step) {
+        cwl::Stage stage = cwl::decide_stage(in);
+        if ((stage == cwl::Stage::Wait || stage == cwl::Stage::Fallback) && !host_asked) {
+            // Only now: the host's slot is read only when nothing else is there to stage.
+            host_asked = true;
+            in.host_stable = host_slot_stable(paths.account, now, seed, host_why);
+            stage = cwl::decide_stage(in);
+        }
+        switch (stage) {
+            case cwl::Stage::Today: return gate_open(now, kCoopWorldOpenMs);
+            case cwl::Stage::KeepStaged:
+            case cwl::Stage::KeepLive:
+                if (!g.logged || g.logged_stage != stage || g.logged_root != marker.lineage_root) {
+                    g.logged = true;
+                    g.logged_stage = stage;
+                    g.logged_root = marker.lineage_root;
+                    log::info("Session2 guest save (co-op world): marker {}: {}: nothing new is staged, user 2's login "
+                              "goes on",
+                              marker_says,
+                              stage == cwl::Stage::KeepStaged
+                                  ? "a pair of this line is staged already (user 2's next lobby load moves it in)"
+                                  : "this line is live in the guest slot in this run (user 2 loads it again)");
+                }
+                return gate_open(now, kCoopWorldOpenMs);
+            case cwl::Stage::Wait: {
+                if (!g.wait_since_ms) g.wait_since_ms = now;
+                g.next_look_ms = now + cwl::kGateLookMs;
+                if (g.waits++ % 20 == 0) {
+                    log::info("Session2 guest save (co-op world): marker {}: user 2's login waits: {}{} ({} s so far, "
+                              "{} s at most)",
+                              marker_says, host_why, notes, (now - g.wait_since_ms) / 1000,
+                              cwl::kHostSlotWaitMs / 1000);
+                }
+                return false;
+            }
+            case cwl::Stage::Fallback:
+                return gate_fallback(now, std::format("marker {}: no complete save slot of the host's that reads the "
+                                                      "same twice in {} s (last: {}){}",
+                                                      marker_says, cwl::kHostSlotWaitMs / 1000, host_why, notes));
+            case cwl::Stage::SeedFromHost:
+            case cwl::Stage::ReseedFromHost: {
+                const bool again = stage == cwl::Stage::ReseedFromHost;
+                const std::string root = sha256::hex(seed.sample.save);
+                const std::string from = std::format("the host's own slot{} in '{}'", seed.slot, narrow(paths.account));
+                std::string why;
+                if (!stage_world_pair(std::format("{} (a copy; the co-op world's new line {}...)", from, root.substr(0, 16)),
+                                      seed.lobby, seed.save, root, why)) {
+                    return gate_fallback(now, std::format("marker {}: the copy of {} could not be staged: {}", marker_says,
+                                                          from, why));
+                }
+                cwl::Marker next;
+                next.character = cwl::Character::World;
+                next.guest = coop_world_guest();
+                next.lineage_root = root;
+                std::string marker_why;
+                const bool written = write_marker(next, marker_why);
+                g.sample.reset();
+                g.logged = false;
+                (again ? c_cw_reseeded : c_cw_seeded).fetch_add(1);
+                const std::string text =
+                    std::format("staged a copy of {} ({}), read the same twice, as a NEW line {}... (root and base) for "
+                                "guest {}; marker {}",
+                                from, pair_text(seed.lobby, seed.save), root.substr(0, 16), next.guest,
+                                written ? "rewritten: user2_character=world" : "NOT rewritten");
+                if (again) {
+                    log::warn("Session2 guest save (co-op world): marker {}: neither a mailbox generation of that line "
+                              "nor last session's guest slot ('{}') is there{}: the friend's character of this world is "
+                              "LOST and made anew: {}",
+                              marker_says, narrow(paths.prev_slot), notes, text);
+                } else {
+                    log::info("Session2 guest save (co-op world): marker {}: the friend gets a new character, the "
+                              "host's save: {}",
+                              marker_says, text);
+                }
+                if (!written) {
+                    log::error("Session2 guest save (co-op world): the marker could not be rewritten ({}): the staged "
+                               "pair is played now, but the next session will not find this line under the marker "
+                               "(its saves stay in the mailbox as line {}...)",
+                               marker_why, root.substr(0, 16));
+                    return gate_open(now, cwl::kGaveUpMs);
+                }
+                return gate_open(now, kCoopWorldOpenMs);
+            }
+            case cwl::Stage::Mailbox: {
+                std::string why;
+                const std::string from = std::format("mailbox gen{} of guest {} ('{}')", gen->info.gen, gen->guest,
+                                                     narrow(gen->mailbox));
+                if (!stage_world_pair(std::format("{} (the co-op world's character, line {}...)", from,
+                                                  marker.lineage_root.substr(0, 16)),
+                                      gen->lobby, gen->save, marker.lineage_root, why)) {
+                    return gate_fallback(now, std::format("marker {}: {} could not be staged: {}", marker_says, from, why));
+                }
+                g.logged = false;
+                c_cw_mailbox.fetch_add(1);
+                log::info("Session2 guest save (co-op world): marker {}: staged the newest generation of that line, {} "
+                          "({}){}: user 2 comes back as this world's character",
+                          marker_says, from, pair_text(gen->lobby, gen->save), notes);
+                return gate_open(now, kCoopWorldOpenMs);
+            }
+            case cwl::Stage::Prev: {
+                std::vector<uint8_t> lobby, save;
+                std::string why;
+                if (!read_pair(paths.prev_slot, lobby, save, why)) {
+                    notes += std::format(" [last session's guest slot '{}' cannot be used: {}]", narrow(paths.prev_slot),
+                                         why);
+                    in.prev = false;
+                    continue;
+                }
+                const std::string from = std::format("last session's guest slot '{}'", narrow(paths.prev_slot));
+                if (!stage_world_pair(std::format("{} (the co-op world's character, line {}...)", from,
+                                                  marker.lineage_root.substr(0, 16)),
+                                      lobby, save, marker.lineage_root, why)) {
+                    return gate_fallback(now, std::format("marker {}: {} could not be staged: {}", marker_says, from, why));
+                }
+                g.logged = false;
+                c_cw_prev.fetch_add(1);
+                log::info("Session2 guest save (co-op world): marker {}: no mailbox generation of that line{}: staged {} "
+                          "({}): user 2 comes back as this world's character",
+                          marker_says, notes, from, pair_text(lobby, save));
+                return gate_open(now, kCoopWorldOpenMs);
+            }
+        }
+    }
+    return gate_fallback(now, std::format("marker {}: no decision could be made{}", marker_says, notes));
+}
+
 }  // namespace
 
 void guest_save_set_net_ids(uint64_t own, uint64_t peer) {
@@ -564,6 +1091,49 @@ void guest_save_tunnel_install() {
               guest_save_mode() == gsv::Mode::On ? "blocked" : "as before (probe)",
               guest_save_mode() == gsv::Mode::On ? "one SaveToFileCurrentPlayerReq 2910 (slot 100, 'Co-op') before user 2's 2001 (15 s at most)"
                                                  : "nothing (probe)");
+    // Co-op+ 2026-11-12 (coop_world_logic.h): what this world's marker says at the start (a read only; this is the
+    // late-init thread, before the tunnel carries anything).
+    cwl::Marker marker;
+    std::wstring marker_path;
+    switch (read_marker(marker, &marker_path)) {
+        case MarkerRead::Off:
+            log::info("Session2 guest save (co-op world): off ([session2] coop_world_character=0, or own-save mode is "
+                      "not 1): no marker is read; the friend brings its own character, as before");
+            break;
+        case MarkerRead::Absent:
+            log::info("Session2 guest save (co-op world): coop_world_character=1 | no marker '{}': this world is not a "
+                      "new co-op save of this build (a copy of the solo progress, or an older world): the friend "
+                      "brings its own character, as before",
+                      narrow(marker_path));
+            break;
+        case MarkerRead::Invalid:
+            log::error("Session2 guest save (co-op world): coop_world_character=1 | the marker '{}' cannot be read or "
+                       "is not one this build understands: the friend brings its own character, as before",
+                       narrow(marker_path));
+            break;
+        case MarkerRead::Ok:
+            log::info("Session2 guest save (co-op world): coop_world_character=1 | marker '{}': user2_character={}{} | "
+                      "the friend's upload is checked but not staged; its login stages {}",
+                      narrow(marker_path), cwl::character_name(marker.character),
+                      marker.character == cwl::Character::World
+                          ? std::format(", line {}..., made for guest {}", marker.lineage_root.substr(0, 16),
+                                        marker.guest.empty() ? std::string("?") : marker.guest)
+                          : std::string(),
+                      marker.character == cwl::Character::World
+                          ? "the newest mailbox generation of that line (else last session's guest slot, else a copy "
+                            "of the host's slot again)"
+                          : "a copy of the host's own complete save slot, read the same twice (a new line)");
+            break;
+    }
+}
+
+bool guest_save_coop_world_gate() {
+    try {
+        return coop_world_gate(now64());
+    } catch (...) {
+        // Only the mod's own steps throw (no memory): the login goes on, never a wait without an end.
+        return true;
+    }
 }
 
 bool guest_save_tunnel_on_frame(const std::vector<uint8_t>& packet, uint32_t now_ms) {
@@ -670,6 +1240,14 @@ void guest_save_tunnel_note_final_injected() { g_host_final_ms.store(now64()); }
 
 std::string guest_save_tunnel_describe() {
     if (!g_installed.load()) return {};
+    const uint64_t cw_staged = c_cw_seeded.load() + c_cw_reseeded.load() + c_cw_mailbox.load() + c_cw_prev.load();
+    const std::string cw = c_cw_kept.load() || cw_staged || c_cw_fallback.load()
+                               ? std::format(" | co-op world character: uploads kept aside {}, staged from the host's "
+                                             "slot {} (again {}), from the mailbox {}, from last session's slot {}, "
+                                             "fallbacks {}",
+                                             c_cw_kept.load(), c_cw_seeded.load(), c_cw_reseeded.load(),
+                                             c_cw_mailbox.load(), c_cw_prev.load(), c_cw_fallback.load())
+                               : std::string();
     return std::format("guest save link: offers {} (ok {}, refused {}, from the mailbox {}), chunks in {} ({} KB), "
                        "malformed {}, stale {}, guest gave up {} | results started {}, delivered {}, failed {}, chunks "
                        "out {} ({} KB), status {} | exports seen {} (not sent: older than the guest's {})",
@@ -677,7 +1255,8 @@ std::string guest_save_tunnel_describe() {
                        c_chunks_in.load(), c_bytes_in.load() / 1024, c_malformed.load(), c_stale.load(), c_cancels.load(),
                        c_results_started.load(), c_results_delivered.load(), c_results_failed.load(),
                        c_chunks_out.load(), c_bytes_out.load() / 1024, c_status_out.load(), c_exports_in.load(),
-                       c_exports_old.load());
+                       c_exports_old.load()) +
+           cw;
 }
 
 }  // namespace cdmp::session2

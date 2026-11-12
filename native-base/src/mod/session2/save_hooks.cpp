@@ -18,6 +18,7 @@
 #include "common/save_guard.h"
 #include "mod/log.h"
 #include "mod/role_logic.h"
+#include "mod/session2/coop_world_logic.h"
 #include "mod/session2/guest_save_logic.h"
 #include "mod/session2/host_save_export.h"
 
@@ -576,6 +577,51 @@ bool copy_tree(const std::wstring& from, const std::wstring& to, CopyStats& st) 
 std::wstring g_coop_dir;
 std::string g_coop_seed = "keep";
 bool g_coop_first = true;
+// Co-op+ 2026-11-12 (coop_world_logic.h, save_hooks_set_coop_world_marker): set before either install.
+bool g_coop_world_marker = false;
+
+// A world that is replaced, or made where none was, never keeps the spare guest slot of the world before it:
+// <world>_guest_prev (set_guest_slot_aside below) goes aside as `aside`, so a marker world's gate can never stage a
+// character of another world from it. Never deleted. Before any hook exists.
+void set_guest_prev_aside(const std::wstring& target, const std::wstring& aside, const std::wstring& save_dir) {
+    const std::wstring prev = target + cwl::kGuestPrevSuffix;
+    if (saveguard::is_under(prev, save_dir) || saveguard::is_under(save_dir, prev)) return;
+    if (GetFileAttributesW(prev.c_str()) == INVALID_FILE_ATTRIBUTES) return;
+    if (MoveFileExW(prev.c_str(), aside.c_str(), 0)) {
+        log::info("Co-op save (co-op world): the earlier world's spare guest slot folder '{}' set aside as '{}' "
+                  "(kept; the new world never reads it)",
+                  narrow(prev), narrow(aside));
+    } else {
+        log::error("Co-op save (co-op world): the earlier world's spare guest slot folder '{}' could NOT be set aside "
+                   "as '{}' (error {}): a new world's friend could get that earlier character from it; move it away "
+                   "by hand",
+                   narrow(prev), narrow(aside), GetLastError());
+    }
+}
+
+// The marker of a world just made with seed "new" (the host's install only): the friend has no character in it yet.
+// A failure is logged and the world behaves as one without a marker (the friend brings its own character).
+void write_world_marker(const std::wstring& world) {
+    const std::wstring path = world + L"\\" + cwl::kMarkerFile;
+    cwl::Marker m;
+    m.character = cwl::Character::Pending;
+    const std::string text = cwl::marker_text(m);
+    HANDLE h = CreateFileW(path.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    DWORD put = 0;
+    bool ok = h != INVALID_HANDLE_VALUE &&
+              WriteFile(h, text.data(), static_cast<DWORD>(text.size()), &put, nullptr) && put == text.size();
+    const DWORD error = ok ? 0 : GetLastError();
+    if (h != INVALID_HANDLE_VALUE) ok = CloseHandle(h) != FALSE && ok;
+    if (ok) {
+        log::info("Co-op save (co-op world): new co-op save: marker '{}' written (user2_character=pending: the friend "
+                  "gets a new character seeded from the host's first save, not its own save)",
+                  narrow(path));
+    } else {
+        log::error("Co-op save (co-op world): the marker '{}' could NOT be written (error {}): this world behaves as "
+                   "before (the friend brings its own character)",
+                   narrow(path), error);
+    }
+}
 
 bool is_slot_dir(const wchar_t* name) { return _wcsnicmp(name, L"slot", 4) == 0; }
 
@@ -660,11 +706,11 @@ bool prepare_coop_folder(const std::wstring& save_dir, const std::wstring& targe
         log::info("Co-op save: '{}' kept as it was left", narrow(target));
         return true;
     }
+    SYSTEMTIME t{};
+    GetLocalTime(&t);
+    const std::wstring aside = target + std::format(L"_old_{:04}{:02}{:02}-{:02}{:02}{:02}", t.wYear, t.wMonth,
+                                                    t.wDay, t.wHour, t.wMinute, t.wSecond);
     if (exists) {
-        SYSTEMTIME t{};
-        GetLocalTime(&t);
-        const std::wstring aside = target + std::format(L"_old_{:04}{:02}{:02}-{:02}{:02}{:02}", t.wYear, t.wMonth,
-                                                        t.wDay, t.wHour, t.wMinute, t.wSecond);
         if (!MoveFileExW(target.c_str(), aside.c_str(), 0)) {
             log::error("Co-op save: cannot set '{}' aside as '{}' (error {})", narrow(target), narrow(aside),
                        GetLastError());
@@ -672,6 +718,9 @@ bool prepare_coop_folder(const std::wstring& save_dir, const std::wstring& targe
         }
         log::warn("Co-op save: the earlier co-op save '{}' set aside as '{}' (kept)", narrow(target), narrow(aside));
     }
+    // Co-op+ 2026-11-12 (coop_world_logic.h): the world before this one takes its spare guest slot with it
+    // (<aside>_guest_prev), also when only that folder was left of it.
+    if (g_coop_world_marker) set_guest_prev_aside(target, aside + cwl::kGuestPrevSuffix, save_dir);
     for (size_t at = target.find(L'\\', 3); at != std::wstring::npos; at = target.find(L'\\', at + 1)) {
         CreateDirectoryW(target.substr(0, at).c_str(), nullptr);
     }
@@ -1251,6 +1300,11 @@ void save_hooks_set_coop_folder(const std::wstring& dir, const std::string& seed
     g_coop_seed = seed == "copy" || seed == "new" ? seed : "keep";
 }
 
+void save_hooks_set_coop_world_marker(bool on) {
+    if (g_guard) return;  // only before either install
+    g_coop_world_marker = on;
+}
+
 bool save_hooks_install(saveguard::Mode mode) {
     if (g_guest_role.load()) {
         // A guest-role process with the host's stages in its ini: they would save into the guest's folder.
@@ -1295,6 +1349,10 @@ bool save_hooks_install(saveguard::Mode mode) {
             mode = saveguard::Mode::Block;
         } else {
             if (coop && coop_kept && g_coop_first) set_guest_slot_aside(sandbox, dir);
+            // Co-op+ 2026-11-12 (coop_world_logic.h): a world made now for a new game says that the friend has no
+            // character in it yet. Never a kept world, a copy ("from my solo progress") or a later process of the run
+            // (its seed is "keep").
+            if (coop && !coop_kept && g_coop_seed == "new" && g_coop_world_marker) write_world_marker(sandbox);
             // Co-op+ port (tests): CDMP_SANDBOX_ADD="<source>|<path under the save folder>[;...]" copies a test slot
             // folder (e.g. slot103, its files dated now so that the title's Continue picks it) or a single file (e.g.
             // a windowed user_engine_option_save.xml) into the sandbox only: a test never adds anything to the real

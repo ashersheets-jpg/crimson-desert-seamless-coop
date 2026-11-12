@@ -614,7 +614,236 @@ void before_2437(const Frame& now) noexcept {
     observer_milestone_reload_before(now.opcode, tpl::pack(ts_snap(now.actor)));
 }
 
+// Co-op+ (a tester's host crash on its revive, 2026-11-12, at exe+0xE6911E5 reading 0x170; the same on 2026-11-10 at
+// a Return to Title with a guest attached; local notes build/decomp/notes_host_reload_crash.md, game build 3576).
+// The server's schedule timers 2047 / 2049 / 2050 take their subject's field, ask it for the field OWNER's sequencer
+// stage manager (ServerField vtable +0x48) and read [manager+0x170] / [manager+0x10] with no null test. The answer is
+// 0 while the owner cannot be resolved (it is not "valid logined": its world reloads, or it left). In a solo game
+// the owner's unload takes the field away from every timer subject first and the handler's own "field not attached"
+// exit catches it; with a guest the field stays attached, and the timer of whoever is still in it takes the host's
+// game down. 313 reloads of the host passed in that session before one timer fell into the gap.
+// So: before such a timer runs, the field is asked the same question. No manager = the timer is answered as the game
+// answers "field not attached" (*res = 0, not run). Any subject. The unload ran on this same thread in the report,
+// so nothing changes between this question and the handler's own.
+constexpr uintptr_t kTimerActorComponents = 0x68, kTsField = 0x518,
+                    kFieldVfOwnerManager = 0x48;
+std::atomic<uint64_t> c_timer_asked{0}, c_timer_skipped{0}, c_timer_faulted{0};
+std::atomic<int> g_timer_guard_test{0};  // dev: this many timers are skipped although their owner is there
+
+uintptr_t field_owner_manager(uintptr_t field, bool& ok) noexcept {
+    ok = false;
+    __try {
+        const uintptr_t vt = *reinterpret_cast<uintptr_t*>(field);
+        const auto fn = *reinterpret_cast<uintptr_t(__fastcall**)(uintptr_t)>(vt + kFieldVfOwnerManager);
+        const uintptr_t m = fn(field);
+        ok = true;
+        return m;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return 0;
+    }
+}
+
+void zero_result(uintptr_t res) noexcept {
+    __try {
+        if (res) *reinterpret_cast<uint32_t*>(res) = 0;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    }
+}
+
+// A timer that was not run is OWED, not dropped. tg1a (2026-11-12): with 15 timers skipped on purpose not one more
+// came in eight minutes (2361 in ten minutes without the skips): each of these timers arms its successor when it
+// runs, so a dropped one ends the schedule updates around that character for good. The Troc, the subject's key, the
+// session and the packet's bytes are kept; from the next outermost Troc on this thread on (at most every 250 ms) the
+// subject is looked up again by its key (the server's scoped lookup, as the game's dispatcher does) and, when its
+// field's owner has a manager again, the timer runs through this detour as it would have. Given up after 120 s.
+struct OwedTimer {
+    uintptr_t troc = 0, session = 0, r9 = 0;
+    uint32_t actor_key = 0, thread = 0;
+    uint16_t op = 0, size = 0;
+    uint8_t packet[96]{};
+    uint64_t since = 0;
+};
+constexpr size_t kOwedMax = 64;
+constexpr uint64_t kOwedRetryMs = 250, kOwedGiveUpMs = 120000;
+constexpr uintptr_t kParamsSession = 0x08, kParamsSize = 0x10, kParamsPacket = 0x18;
+constexpr uintptr_t kActorManagerGlobal = 0x71C0610, kActorLookup = 0x2D11880, kScopeRelease = 0x1618660;
+std::mutex g_owed_mu;
+OwedTimer g_owed[kOwedMax];
+size_t g_owed_n = 0;
+std::atomic<size_t> g_owed_count{0};
+std::atomic<uint64_t> c_timer_replayed{0}, c_timer_given_up{0}, c_timer_not_kept{0}, g_owed_next_ms{0};
+thread_local bool t_replaying = false;
+
+bool owe_timer(uintptr_t troc, uintptr_t params, uintptr_t r9, uint16_t op, uint32_t actor_key) noexcept {
+    OwedTimer o;
+    uintptr_t packet = 0;
+    o.troc = troc;
+    o.r9 = r9;
+    o.op = op;
+    o.actor_key = actor_key;
+    o.thread = GetCurrentThreadId();
+    o.since = GetTickCount64();
+    const bool read = (actor_key >> 28) == 0xA && game::fast_read(params + kParamsSession, &o.session, sizeof o.session) &&
+                      game::fast_read(params + kParamsSize, &o.size, sizeof o.size) && o.size <= sizeof o.packet &&
+                      game::fast_read(params + kParamsPacket, &packet, sizeof packet) &&
+                      (o.size == 0 || (packet && game::fast_read(packet, o.packet, o.size)));
+    if (read) {
+        try {
+            std::lock_guard lock(g_owed_mu);
+            if (g_owed_n < kOwedMax) {
+                g_owed[g_owed_n++] = o;
+                g_owed_count.store(g_owed_n, std::memory_order_relaxed);
+                return true;
+            }
+        } catch (...) {
+        }
+    }
+    c_timer_not_kept.fetch_add(1, std::memory_order_relaxed);
+    return false;
+}
+
+uintptr_t troc_detour(uintptr_t res, uintptr_t troc, uintptr_t params, uintptr_t r9);
+uintptr_t field_owner_manager(uintptr_t field, bool& ok) noexcept;
+
+// 1 = run, 0 = not yet (the owner still has no manager, or the subject is not attached), -1 = it faulted (given up).
+int replay_owed(const OwedTimer& o) noexcept {
+    int out = 0;
+    __try {
+        const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+        const uintptr_t actors = *reinterpret_cast<uintptr_t*>(*reinterpret_cast<uintptr_t*>(base + kActorManagerGlobal) + 0x50);
+        uint64_t scope[8] = {};
+        reinterpret_cast<void* (__fastcall*)(uintptr_t, uint64_t*, uint64_t)>(base + kActorLookup)(actors, scope, o.actor_key);
+        const uintptr_t actor = scope[1];
+        if ((scope[2] & 0xFF) != 0 && actor) {
+            const uintptr_t comps = *reinterpret_cast<uintptr_t*>(actor + kTimerActorComponents);
+            const uintptr_t ts = comps ? *reinterpret_cast<uintptr_t*>(comps + kComponentsTransformSync) : 0;
+            const uintptr_t field = ts ? *reinterpret_cast<uintptr_t*>(ts + kTsField) : 0;
+            bool ok = false;
+            if (field && field_owner_manager(field, ok) && ok) {
+                struct Params {
+                    uintptr_t actor, session;
+                    uint16_t size;
+                    uint8_t pad[6];
+                    const uint8_t* packet;
+                } params{actor, o.session, o.size, {}, o.packet};
+                uint64_t result[4] = {};
+                t_replaying = true;
+                troc_detour(reinterpret_cast<uintptr_t>(result), o.troc, reinterpret_cast<uintptr_t>(&params), o.r9);
+                t_replaying = false;
+                out = 1;
+            }
+        }
+        reinterpret_cast<void(__fastcall*)(uint64_t*)>(base + kScopeRelease)(scope);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        t_replaying = false;
+        out = -1;
+    }
+    return out;
+}
+
+// The thread's outermost Troc begins: the timers owed on THIS thread are tried.
+void owed_tick() noexcept {
+    if (t_replaying || g_owed_count.load(std::memory_order_relaxed) == 0) return;
+    const uint64_t now = GetTickCount64();
+    if (now < g_owed_next_ms.load(std::memory_order_relaxed)) return;
+    g_owed_next_ms.store(now + kOwedRetryMs, std::memory_order_relaxed);
+    const uint32_t thread = GetCurrentThreadId();
+    for (size_t guard = 0; guard < kOwedMax; ++guard) {
+        OwedTimer o;
+        size_t at = kOwedMax;
+        try {
+            std::lock_guard lock(g_owed_mu);
+            for (size_t i = guard; i < g_owed_n; ++i) {
+                if (g_owed[i].thread == thread) {
+                    at = i;
+                    o = g_owed[i];
+                    break;
+                }
+            }
+        } catch (...) {
+            return;
+        }
+        if (at == kOwedMax) return;
+        const int r = replay_owed(o);
+        const bool give_up = r == 0 && now - o.since >= kOwedGiveUpMs;
+        if (r == 0 && !give_up) {
+            guard = at;  // still owed: the next one after it
+            continue;
+        }
+        try {
+            std::lock_guard lock(g_owed_mu);
+            for (size_t i = 0; i < g_owed_n; ++i) {
+                if (g_owed[i].since == o.since && g_owed[i].troc == o.troc && g_owed[i].actor_key == o.actor_key) {
+                    g_owed[i] = g_owed[--g_owed_n];
+                    break;
+                }
+            }
+            g_owed_count.store(g_owed_n, std::memory_order_relaxed);
+        } catch (...) {
+        }
+        if (r == 1) {
+            const uint64_t n = c_timer_replayed.fetch_add(1, std::memory_order_relaxed) + 1;
+            if (n <= 20 || n % 500 == 0) {
+                log::info("User2Funnels timer guard: schedule timer {} of actor 0x{:08X} run now, {} ms late: its field's "
+                          "owner has its manager again [{} so far]",
+                          o.op, o.actor_key, now - o.since, n);
+            }
+        } else {
+            c_timer_given_up.fetch_add(1, std::memory_order_relaxed);
+            log::warn("User2Funnels timer guard: schedule timer {} of actor 0x{:08X} given up after {} ms ({}): the "
+                      "schedule updates around that character may stand still until it loads again",
+                      o.op, o.actor_key, now - o.since, r < 0 ? "its late run faulted" : "the owner never came back");
+        }
+        guard = at > 0 ? at - 1 : static_cast<size_t>(-1);  // the list moved: look at this place again
+    }
+}
+
+bool schedule_timer_without_owner(uintptr_t troc, uintptr_t params, uintptr_t r9) noexcept {
+    uint16_t op = 0;
+    if (!game::fast_read(troc + kTrocOpcode, &op, sizeof op) || (op != 2047 && op != 2049 && op != 2050)) return false;
+    uintptr_t actor = 0, comps = 0, ts = 0, field = 0;
+    if (!game::fast_read(params, &actor, sizeof actor) || !actor ||
+        !game::fast_read(actor + kTimerActorComponents, &comps, sizeof comps) || !comps ||
+        !game::fast_read(comps + kComponentsTransformSync, &ts, sizeof ts) || !ts ||
+        !game::fast_read(ts + kTsField, &field, sizeof field) || !field)
+        return false;  // no field: the handler's own exit
+    c_timer_asked.fetch_add(1, std::memory_order_relaxed);
+    bool ok = false;
+    const uintptr_t mgr = field_owner_manager(field, ok);
+    if (!ok) {
+        c_timer_faulted.fetch_add(1, std::memory_order_relaxed);
+        return false;  // the question itself faulted: the game is left as it was
+    }
+    bool test = false;
+    if (mgr) {
+        if (t_replaying) return false;  // a timer owed from before, run now: never put off again for the test
+        int left = g_timer_guard_test.load(std::memory_order_relaxed);
+        while (left > 0 && !g_timer_guard_test.compare_exchange_weak(left, left - 1)) {}
+        if (left <= 0) return false;
+        test = true;
+    }
+    const uint64_t n = c_timer_skipped.fetch_add(1, std::memory_order_relaxed) + 1;
+    const bool kept = owe_timer(troc, params, r9, op, key_at(actor));
+    if (n <= 20 || n % 500 == 0) {
+        uint32_t owner = 0;
+        game::fast_read(field + 0x180, &owner, sizeof owner);
+        log::warn("User2Funnels timer guard: schedule timer {} of actor 0x{:08X} NOT run now: its field's owner 0x{:08X} "
+                  "has no sequencer manager ({}); the game would have read [0+0x170] here | {} [{} so far]",
+                  op, key_at(actor), owner,
+                  test ? "[dev] schedule_timer_guard_test: it has one, put off for the test" : "the owner's world is "
+                                                                                              "reloading or it left",
+                  kept ? "kept: it runs when the owner is back" : "NOT kept (no room, or its packet could not be copied)",
+                  n);
+    }
+    return true;
+}
+
 uintptr_t troc_detour(uintptr_t res, uintptr_t troc, uintptr_t params, uintptr_t r9) {
+    if (t_troc_depth == 0) owed_tick();
+    if (schedule_timer_without_owner(troc, params, r9)) {
+        zero_result(res);  // what ExecuteTroc leaves for "field not attached"
+        return res;
+    }
     struct Restore {
         Frame f;
         ~Restore() {
@@ -1578,6 +1807,10 @@ void policy_summary() {
 
 void summary() {
     log::info("User2Funnels summary: {}", user2_funnels_describe());
+    log::info("User2Funnels timer guard: schedule timers 2047 / 2049 / 2050 asked {} | put off (their field's owner had "
+              "no manager) {} | run late {} | owed now {} | given up {} | not kept {} | the question faulted {}",
+              c_timer_asked.load(), c_timer_skipped.load(), c_timer_replayed.load(), g_owed_count.load(),
+              c_timer_given_up.load(), c_timer_not_kept.load(), c_timer_faulted.load());
     policy_summary();
     if (g_ft_mode.load() != 0) {
         std::string outs, fails;
@@ -1842,6 +2075,10 @@ DWORD WINAPI funnels_thread(LPVOID) {
 }  // namespace
 
 void user2_funnels_start(const User2FunnelOptions& opt) {
+    g_timer_guard_test.store(opt.timer_guard_test);
+    if (opt.timer_guard_test)
+        log::warn("User2Funnels timer guard: [dev] schedule_timer_guard_test={}: that many schedule timers are not run "
+                  "although their field's owner is there", opt.timer_guard_test);
     const u2f::ParsedMode r = u2f::parse_mode(opt.rank_permit), q = u2f::parse_mode(opt.quest_per_user),
                           k = u2f::parse_mode(opt.kill_loot_per_user);
     if (!r.known) log::warn("User2Funnels: rank_permit='{}' is not 0, probe or 1; it stays off", opt.rank_permit);

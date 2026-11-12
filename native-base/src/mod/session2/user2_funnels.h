@@ -74,6 +74,7 @@ struct User2FunnelOptions {
     // host's +0x6A0 is never reset by user 2's revive. 0 | probe | 1.
     std::string user2_revive_manager = "0";
     bool create_session = false;  // the host's session 2 is built (option D's host)
+    int timer_guard_test = 0;     // dev: [session2] schedule_timer_guard_test (see schedule_timer_without_owner)
     // quest_policy (docs/research/s25/politica-misiones.md, user2_funnels_logic.h): the rule of 2026-10-13, the guest
     // follows the host's progress. 0 | probe | 1, independent of quest_per_user. S34 (2026-10-14): the guest's actions
     // count for the host's quests as a companion's (the native event path 0x290DC0B, the 2112, challenges: the host's

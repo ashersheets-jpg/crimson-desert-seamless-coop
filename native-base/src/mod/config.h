@@ -301,6 +301,7 @@ struct Config {
     // guest_fast_travel_veto, GUEST: "0" (default) | "probe" | "1" (F1: the client's fast-travel entry 0x655110
     // returns 0 without effect while this game plays on the host, with a HUD notice).
     std::string s2_user2_fast_travel = "0";
+    int s2_schedule_timer_guard_test = 0;  // dev: user2_funnels' timer guard skips this many timers for the test
     // user2_revive_manager, HOST (P8 S28, F4; session2/fast_travel_logic.h, research/s25/u0-resultados-s28.md): "0"
     // (default) | "probe" | "1". Inside user 2's ReviveLoadingReq 2362 the reload setter 0x2BC4950's vf48 answers user
     // 2's own sequencer manager, so user 2's revive never resets the host's manager +0x6A0. Needs create_session=1.
@@ -767,6 +768,12 @@ struct Config {
     // deleted. Host: needs save_guard=redirect. Guest (guest=1 guest_mode=remote): the redirect is installed from it.
     std::wstring s2_coop_save_dir;
     std::string s2_coop_save_seed = "keep";
+    // coop_world_character, HOST (session2/coop_world_logic.h; Co-op+ 2026-11-12): 1 (default) = a world made with
+    // seed "new" gets the marker <world>\cdmp_coop_world.txt and the friend (user 2) plays that world's own character
+    // (seeded from the host's first save, then continued from the mailbox), never its uploaded solo save; worlds
+    // without the marker are as before. 0 = no marker written or read: the behaviour before this everywhere. (The
+    // marker itself is written before the config is loaded: mod.cpp reads this key from the ini for save_hooks.)
+    bool s2_coop_world_character = true;
 };
 
 Config load_config(const std::wstring& ini_path);

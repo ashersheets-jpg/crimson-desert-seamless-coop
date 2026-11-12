@@ -47,6 +47,11 @@ bool save_hooks_guest_role();
 // folder as the save folder's stand-in, kept between runs. Call before either install; ignored after.
 // first_process = false for a later process of the same run (it never moves anything in the folder).
 void save_hooks_set_coop_folder(const std::wstring& dir, const std::string& seed, bool first_process = true);
+// Co-op+ 2026-11-12 (coop_world_logic.h, [session2] coop_world_character): on = a co-op folder the HOST's install
+// makes with seed "new" gets the marker <dir>\cdmp_coop_world.txt ("user2_character=pending"), and a folder that is
+// replaced or made anew has its <dir>_guest_prev (last session's guest slot) set aside with it. Off (the default
+// here: the tests and every caller that never asks) = nothing of that. Call before either install; ignored after.
+void save_hooks_set_coop_world_marker(bool on);
 bool save_hooks_active();       // Block mode on: writes are refused
 bool save_hooks_tracing();      // Trace mode on: nothing refused, operations logged
 bool save_hooks_redirecting();  // Redirect mode on: everything goes to the sandbox

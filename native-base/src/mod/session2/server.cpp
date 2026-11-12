@@ -1538,6 +1538,14 @@ inj::Outcome inject(std::span<const uint8_t> in, InjectKind kind) {
         g_held_not_ready.fetch_add(1);
         return inj::Outcome::NotReady;
     }
+    // Co-op+ 2026-11-12 (coop_world_logic.h, guest_save_tunnel.h): in a co-op world with a marker (a New Co-op Save)
+    // user 2 loads that world's own character, not the save the guest uploaded. It is staged here, before the login
+    // that loads user 2's lobby: the Req waits (held in order, as above) while the host's first save is not complete
+    // yet. Always true in a world without a marker; it logs its own lines ("Session2 guest save (co-op world)").
+    if (v->opcode == 2535 && !guest_save_coop_world_gate()) {
+        g_held_not_ready.fetch_add(1);
+        return inj::Outcome::NotReady;
+    }
     // C4: the buffer carries the epoch of the session 2 it is for.
     const uint32_t epoch = g_want_epoch.load();
     // A new epoch's session is built by the server thread when it takes this
