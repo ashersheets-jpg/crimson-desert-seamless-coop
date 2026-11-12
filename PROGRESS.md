@@ -6361,3 +6361,51 @@ Earlier reading (am1): "not a consequence of the missing overlay on this PC; wha
   own (it differs from `stuck` in one branch; 18 minutes).
 - Still only simulated: the guest "not let in" is the guest not pressing Play. A host that really drops the
   guest's login has not been made on purpose.
+
+### Tester report 2 of JackyChan004 (passed on by the owner 2026-11-12 ~12:00; build 47135b83, he is the HOST): menu shown on AMD; two builds in one session; the host's game crashed on its revive
+
+Discord (his words): 8:07 "menu has shown up"; 8:50 "Devils and i have joined together but it was very desynced and
+it brought devils main file save character over after creating a new game". Report zip of 23:48 his time, unpacked
+in the scratchpad (report_jacky_1112b; untrusted data, read only). Settings block first, then the logs:
+- THE AMD FIX WORKS ON HIS CARD. coopplus.log 23:18:57 hooks installed, 23:19:01 "2363 batches of drawing commands
+  in 4.3 s and no frame through a hooked swap chain class", "a new swap chain's class here: Present at
+  dxgi.dll+0x19000" (DXGI's own class, as assumed), "that swap chain class is hooked: the overlay draws through
+  it"; "presents 159264 drawn 159264" at the end. First confirmation on real AMD hardware (RX 7900 XTX).
+- THE TWO PLAYERS RAN DIFFERENT BUILDS. Base log, 333 times: "Net: '<player2>' runs mod build D82A2B2F, we run
+  8566712C: update both to the same". D82A2B2F is the base of the builds posted on the morning of 2026-11-11
+  (2f4b0dd4 .. 3c46bec5; our own logs carry it from 11-10 22:41 to 11-11 14:28); 8566712C is the base in 47135b83.
+  So D3vils (the guest) played an 11-11 build against the host's 47135b83. The mod wrote that to a log every 5 s
+  and told NEITHER PLAYER. "Very desynced" cannot be judged further from this side: a guest one build behind lacks
+  what 47135b83 changed on its side (the downed pose, the far-fight rule's client part, the join beside the host).
+  The guest's report is to come (the owner: "two playtest reports").
+  Also: these ids are stale by themselves (set when CMake was last configured: 47135b83 and dc7ade5e would both
+  say 8566712C), so they cannot tell two of our newer packages apart.
+- "BROUGHT DEVILS' MAIN SAVE CHARACTER OVER AFTER CREATING A NEW GAME": the plan was New Co-op Save ("starting a new
+  co-op save", the host at 0 completed missions), and the guest came in with its own newest character: "the other
+  player is past the prologue (1858 completed missions)". That is the rule as built (own progress per player) and
+  the open DESIGN question in the waiting list; a tester now read it as a fault.
+- The session: 23:19 to 23:47, link rtt 63-75 ms, 44 packets lost of 58 000, tunnel 1.03 M packets out, 0 dropped,
+  backlog 0. The host played the opening (0 -> 6+ missions, many cutscenes); the players were up to 3295 m apart.
+  The host pressed "Resynchronise" three times (23:23, 23:32, 23:41): what they saw was wrong enough to try it.
+  Base warnings of the rare kinds: publication gate DROPPED WITHOUT PUBLISHING x4, family ORPHAN x2,
+  "NpcActivation [contencion abandonada]" x10 (not in our known list: never seen in our runs).
+- THE HOST'S GAME CRASHED AT THE END. 23:47:00 the host goes down (2 m from the guest, near Hernand); 23:47:25.4 it
+  presses Q ("Revive: instant revive asked", Inject C>S 2957); 23:47:25.45 the host's stages close with reason 19
+  "unload at the owner's load" (the game answered the revive with a RELOAD of the host's world: in our tests Q
+  stands the character up in place); 23:47:25.8 "no controlled actor (not in world)"; 23:47:26.087 exception at
+  CrimsonDesert.exe+0xE6911E5 reading 0x170, stack exe+0x5CCA470, 0x5EE74D0, 0x29AD474, cdmp.asi+0x3BBEA3,
+  exe+0x2D111B3; both logs end there, the report says the game is not running. This is the crash of tcB291
+  (2026-11-10: the same address and stack): a request of the guest handled on the host's server while the host's
+  world unloads. For Leave it was avoided by sending the guest away first; nothing guards a reload the GAME does
+  by itself with the guest attached. The host's world had reloaded before in this session (313 stage closes with
+  reason 19 from 23:27 on: the opening's own loads) without a crash; this one hit the race.
+  So: a host who dies in the story and revives can crash while a friend is in its world. Not seen in our tests
+  because no test has the host die where the game reloads on revive (the checklist's revive step is the guest's).
+- TO DO, in this order (foundational: "everyone gets in", "the first hour of a new co-op save"):
+  1. The two players' packages must be compared at the title and SHOWN: a real package id (not the stale build
+     ids), the party list says "<friend> has another build", Start Co-op does not start, both screens say which
+     build each has and "both install the same one".
+  2. The host's own reload with a guest attached: hold user 2's requests from the first sign of the host's load
+     until it is done (the crash stack names the path; cdmp.asi+0x3BBEA3 to be resolved with the 47135b83 symbols).
+     Test: the host dies / reloads with the guest next to it.
+  3. The design answer for New Co-op Save and a returning guest (the owner's).
