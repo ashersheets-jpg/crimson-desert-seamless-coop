@@ -148,6 +148,12 @@ uint32_t g_far_since = 0;
 // travel is looked at again a few seconds after it arrived: back near where we started and far from the goal =
 // the same travel again (twice at most; a player cannot get that far by walking in that time).
 constexpr uint32_t kFarConfirmMs = 4000;
+// nb6-lowsave: the server did the travel and our client never moved (45 s of waiting, then 1.3 km of hops). When we
+// still stand where we started 8 s after asking, the two packets go out once more; the hops only after that.
+constexpr uint32_t kFarStuckMs = 8000;
+constexpr float kFarMovedM = 20.0f;
+bool g_far_again = false;       // the request was sent a second time for this move
+uint32_t g_far_key = 0;
 bool g_far_used = false;                 // this move went by far travel
 std::array<float, 3> g_far_from{};       // where we stood when it began
 std::array<float, 3> g_confirm_goal{};
@@ -262,7 +268,16 @@ void hop_tick(uint32_t now_ms) {
     const float dx = goal[0] - at->x, dz = goal[2] - at->z;
     const float left = std::sqrt(dx * dx + dz * dz);
     if (g_far_until) {
-        if (left > kFarLandedM) return;  // still on the way (the loading screen)
+        if (left > kFarLandedM) {  // still on the way (the loading screen), or it did not start
+            const float sx = at->x - g_far_from[0], sz = at->z - g_far_from[2];
+            if (!g_far_again && now_ms - g_far_since >= kFarStuckMs && sx * sx + sz * sz < kFarMovedM * kFarMovedM) {
+                g_far_again = true;
+                if (far_travel_start(g_far_key, goal)) g_far_ack_at = (now_ms + kFarAckDelayMs) | 1;
+                log::warn("Teleport: {} s after asking we still stand where we started: the game's travel is asked "
+                          "for once more", (now_ms - g_far_since) / 1000);
+            }
+            return;
+        }
         log::info("Teleport: far travel took {:.1f} s; {:.0f} m left for the hops", (now_ms - g_far_since) / 1000.0, left);
         g_far_until = 0;
         g_hop_fails = 0;
@@ -273,6 +288,8 @@ void hop_tick(uint32_t now_ms) {
         const uint32_t key = left > kFarM ? own_field_key() : 0;
         if (key && far_travel_start(key, goal)) {
             g_far_used = true;
+            g_far_again = false;
+            g_far_key = key;
             g_far_from = {at->x, at->y, at->z};
             g_far_since = now_ms;
             g_far_ack_at = (now_ms + kFarAckDelayMs) | 1;

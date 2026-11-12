@@ -1119,7 +1119,10 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
                             both_since = 0;
                         } else if (!both_since) {
                             both_since = GetTickCount64();
-                        } else if (GetTickCount64() - both_since >= 4000) {
+                        } else if (GetTickCount64() - both_since >= 12000) {
+                            // 12 s, not 4 (nb5 / nb6-lowsave, 2026-11-12): the login's own move into the host's field
+                            // ends about 5 s after we stand in the world; a far travel asked before that is undone
+                            // or never shown by our client.
                             join_done = true;
                             const float dx = rs->pos.x - s.position.x, dz = rs->pos.z - s.position.z;
                             const float d = std::sqrt(dx * dx + dz * dz);

@@ -6671,3 +6671,24 @@ Design chosen (A, host-authoritative, with a world marker):
       HOST's own load (the host never reloaded when it moved in hops): NPC releases to the guest wait about 2 s.
       Added to tools/known-warnings.txt with that reason. What the guest sees in those 2 s: not looked at.
     The new "warning kind never seen before" check caught both on its first day.
+
+### nb6 (2026-11-12 16:52-17:08): the join's travel still not; the fresh-save runs did not start (a test-world check); fixes
+
+- nb6-lowsave (with the "look again 4 s after arriving" check): this time the guest's client never moved at all:
+  "1321 m: the game's own travel", "our loading screen is started", then 45 s later "far travel did not take us
+  there in 45 s: hops from where we are", and the hops arrived 24 s after that. The server did the travel both times
+  (3074 accepted, 2294, 2437, RELOAD after 2399). So a travel asked while the join's own field move is open is
+  either undone (nb5) or never shown by the client (nb6). Not a case for a retry after the fact alone.
+  Changed (layer, built 17:12): the join's move waits 12 s after both stand in the world (was 4); and a travel whose
+  player still stands within 20 m of the start 8 s after asking is asked for once more before the 45 s give-up.
+  The step also failed "host native: log growth 457 lines a minute": 1.3 km of hops made 168 stage [create] and 152
+  [element] lines. One more cost of the hops.
+- fs1 did not run: coopworld.sh refused its backup ("a different backup exists"). The test world's guest slot (slot204
+  in the world and in _guest_prev) is whatever the last two runs' guests were (lowsave's and fs2's were not the
+  usual one). The check now leaves the guest's slot out of the comparison (it is not part of what a restore must
+  give back identical: the host's world is). coopworld.sh restore also brings back a _guest_prev that the new base
+  set aside with its world.
+- fs2a therefore ran on the OLD test world: "no marker ...: this world is not a new co-op save of this build ...:
+  the friend brings its own character", the upload staged and moved in as before, both in the world. So the
+  no-marker path (Continue of an older world) behaves as before the change. SAVES OK, 5/5.
+- Running: lowsave again (nb7), then fs1 (New Co-op Save, the guest's own save far along), fs2 (Continue on it).
