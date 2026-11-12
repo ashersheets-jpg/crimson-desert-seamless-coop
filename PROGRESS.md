@@ -5,6 +5,12 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- NEXT BUILD, your OK needed to post (2026-11-12 11:45): 0.1.0-alpha+dc7ade5e is packaged and in its whole
+  21-step checklist (pp9). It fixes the three things found after this morning's post: Start Co-op doing nothing
+  after a save was loaded in the same game session; a failed start needing both games closed (now: Menu > Co-op >
+  Leave the session, Start Co-op again, both restart); the "no menu" fix setting itself off by mistake. Post text:
+  docs/release/shared-world-playtest/download-dc7ade5e-draft.txt. I post nothing without your word; say "post
+  it" once the notes below say the checklist has passed.
 - FOUND AFTER THE POST (2026-11-12 09:30), your call whether to tell testers now or with the next build: in
   47135b83 (and every earlier build) Start Co-op does NOTHING if the host has already loaded a world in the same
   game session (played solo, went back to the title, then invited): the friend waits for ever. Workaround: restart

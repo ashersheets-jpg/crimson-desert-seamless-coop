@@ -1,0 +1,16 @@
+**Update: shared world playtest 0.1.0-alpha+dc7ade5e**
+Please use this build instead of every earlier one. You and your co-op partner both need it.
+
+Fixed:
+- **Start Co-op did nothing if you had already loaded a save in the same game session** (played solo, went back to the title, then invited a friend): your game never restarted and your friend waited for ever. This was in every build so far.
+- **A start that does not work no longer needs both games closed.** If your friend is not let into your world, their screen says so after about two minutes and you get a card after four. Open Menu > Co-op > Leave the session, then choose Start Co-op again: your friend stays in the party and both games restart by themselves.
+- **The "no Co-op menu" fix of the last build could set itself off on a PC that did not need it**, when the game was behind another window right after start-up. Nothing visible came of it here, but it is put right.
+- The waiting screen said "Joining the start of the story" when you were joining a running world.
+- The report tool ("Diagnose Co-op+") now also packs the two runs before the current one. Reports so far missed everything that happened at the title.
+
+AMD testers: the "no Co-op menu" fix itself is unchanged for your cards. We still could only simulate it; please tell us whether the menu shows.
+
+- `...dc7ade5e-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tested with two copies of the game on one PC (Nvidia): everything the last build was tested with, plus a second Start Co-op, a friend who is not let in and the way back from it, and a 34-minute session moving between three places (no fighting in that one). Not tested: two PCs over the internet, AMD and Intel cards, an evening-long session, story scenes and bosses. Please tell us in #bug-reports how it goes, with the report zip if anything goes wrong.
