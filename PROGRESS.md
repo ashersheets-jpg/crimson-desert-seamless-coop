@@ -5,14 +5,13 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
-- Testers (2026-11-11): the three blockers found this morning are fixed in 0.1.0-alpha+3c46bec5 (posted 08:44): the
-  unanswerable first-launch box, the title menu closing on the first key, and no overlay with XeSS / FSR frame
-  generation. Waiting for their word that it works on their PCs (AMD FSR frame generation could not be run here
-  for real: its class is hooked the same way as XeSS's).
-- POSTING, 2026-11-11 ~06:10 (the user, going to sleep for at least 12 hours): "I am giving you authorization to post
-  updates if you feel like it is worth it to do so. Please continue working." So until about 2026-11-11 18:10 a
-  build / update post in the Discord (#download-here, #general) may go out without asking, when it is worth it
-  (tested, install checks pass, a real improvement). After that: ask again. Never delete messages; never the decomp.
+- POSTED 2026-11-12 08:03: build 0.1.0-alpha+47135b83 in #download-here (both zips), and at 08:04 a line to
+  JackyChan004 in #play-testing-feedback. Tested on ONE PC with two copies of the game (Nvidia); the fix for his
+  missing menu was tested only by simulating his situation, we have no AMD card. Waiting for: his retest, and his
+  host's report zip if a start fails again. Known and said in the post: after a start that does not work, both
+  players must close the game before trying again (the fix is written, in the next build, not tested yet).
+- Testers (2026-11-11): D3vils confirmed the XeSS frame generation cause; no word yet from any tester that
+  3c46bec5 or later works on their PC.
 - Discord, #general, 2026-11-11 12:50 (squidbots32, new member), CLOSED, no reply (the owner's decision): "how does
   syncing character looks work? I know the CC mod isnt supported, but what about Heroine of Pywell that doesnt store
   model xml info seperately? or is it just the fact they are relying on asi files to run that makes it hard to
@@ -34,8 +33,6 @@ test save Out, shipped cdmp.ini restored.
   both sides in #play-testing-feedback would help a lot."
   NOT verified by a test: that barber choices (hair, beard, face) show right for the other player; only different
   outfits were seen (t5-lowsave). To do: a two-copy run where the guest's save has another hair / beard.
-- Checked 2026-11-11 15:00: no tester has written since D3vils at 08:46 (JackyChan retests "tomorrow"); nothing new
-  in #bug-reports or #play-testing-feedback.
 - DISK, your OK needed (2026-11-11 16:00): the game folder (bin64) holds about 45 GB of packet captures from MY test
   runs of 7 to 9 November: 1652 files named cdmp_packets.host_<date>.log / .bin and cdmp_packets.guest_<date>.log /
   .bin (only test copies have a role in the name; your own play writes cdmp_packets_<date> without a role, and
@@ -45,29 +42,8 @@ test save Out, shipped cdmp.ini restored.
   Android device / Security key / Cancel) was open on the desktop (seen in the checklist's full-screen title
   screenshot pp7-display-02). It is not from the mod or my tests and I did not touch it (I never handle sign-ins).
   It looks like Discord in a browser asking to sign in again.
-- POSTING OK 2026-11-12 ~04:18 (the owner, away for 12 h or more): "Hopefully discord is still open for you to be
-  able to upload a patch to the game whenever you get it all sorted out." Read as: ONE post of the patched build
-  (the download post, and a line to JackyChan004 in #play-testing-feedback that it is meant to fix his missing
-  menu), once that exact package has passed the whole checklist. Not a general posting OK; it ends with that post
-  or when the owner is back, whichever comes first. If Discord asks to sign in: stop, I do not sign in.
-- NOT THE CANDIDATE ANY MORE (2026-11-12 04:00): 2e813956 failed two checklist steps on a log check (pp7 batch B)
-  and does not have the fix for the AMD tester's missing menu. The next candidate gets the whole checklist (pp8).
-- (old entry) CANDIDATE 2026-11-12: build 0.1.0-alpha+2e813956 (layer 2e81395, native 19be296) is in its full 18-step checklist
-  (pp7; the first 6 steps and the no-save step pass). Post draft: docs/release/shared-world-playtest/
-  download-2e813956-draft.txt. When the pass is complete, "post it" posts this build.
-- CORRECTION 2026-11-11 23:50: builds 980c5b38 and 2ddd622f are NOT to be posted as they are. Their "a guest far
-  from the host can fight" fix is half wrong (found by the 484 m runs of1 / of2): it only works while the guest's
-  enemies are within 80 m of the host along ONE map axis (north-south), whatever the east-west distance. The test
-  that passed (108 m) had the host 36 m away along that axis. Fixed in the next build (d5c06748 and later), which
-  also lets a guest with no save in; that build gets the full checklist before it is offered to you.
-- (superseded by the line above) BUILD READY, your OK needed to post (the 12-hour posting OK ended about 18:10 on 2026-11-11):
-  0.1.0-alpha+980c5b38 passed the whole release checklist at 19:48 (pp5, 12 steps). A NEWER candidate,
-  0.1.0-alpha+2ddd622f, adds the New Co-op Save fix (without it a guest can never join a brand-new co-op save) and
-  is in its own full pass now (pp6, 15 steps); when that passes it replaces 980c5b38 as the build to post. Post
-  text: docs/release/shared-world-playtest/download-980c5b38-draft.txt (to be renamed with the final id). In it
-  since the posted 3c46bec5: a guest far from the host can fight; a downed player lies down; the guest starts at
-  the host's side; New Co-op Save works; no packet files written in solo; the title footer. Say "post it" and I
-  post the newest build that has passed, with a short note in #general.
+- POSTING OK of 2026-11-12 ~04:18: USED and ENDED. It covered one post; that post went out at 08:03 (below). The
+  next post needs your OK again.
 - DECISION (design): on New Co-op Save a returning guest arrives with ITS OWN newest character and progress (the
   rule since 2026-11-08: own progress per player); the card says "Both of you begin the story". Keep it, or should a
   New Co-op Save give the guest a new character too? (Two brand-new players are not affected.)
@@ -6179,3 +6155,23 @@ Earlier reading (am1): "not a consequence of the missing overlay on this PC; wha
 - Decision: the release rule (the whole checklist passed on that exact package) is met with the re-runs named
   above; four of the five FAILs were the checklist's own, the fifth a variable scene that passed on the same files.
   The package was never rebuilt. Next: the one post the owner OK'd on 2026-11-12 04:18.
+
+### 2026-11-12 08:03: build 0.1.0-alpha+47135b83 POSTED (the owner's OK of 04:18, one post)
+
+- #download-here 08:03 (message 1570423736736292924): the update text (docs/release/shared-world-playtest/
+  download-47135b83.txt, cut to 1959 characters for Discord's 2000) with ...-shared-world.zip (12.46 MB, sha256
+  b00c83ff...) and ...-shared-world-mod-manager.zip (6.80 MB, 18d4f23a...); both attachments seen on the sent
+  message. Added to the draft before sending: the "Known" line (after a start that does not work, both close the
+  game completely before trying again).
+- #play-testing-feedback 08:04 (message 1570423977627623547): the line to JackyChan004 with a real mention
+  (feedback-47135b83-jackychan.txt): what his report showed (nothing drawn; his friend picked New Co-op Save), that
+  the build is meant to fix both, that the AMD case was only simulated, close both games before a second try, send
+  the report again and the friend's too.
+- Before posting: #play-testing-feedback, #bug-reports and #general read; nothing new from a tester since his
+  report (07:44 / 07:54 UTC).
+- How: the app's browser pane (signed in; no sign-in asked). The zips were read on a loopback page into window.name,
+  the channel loaded in the same tab, File objects set on the composer's file input, the text by a synthetic paste,
+  Enter. The mention as `<@user id>` (the id from his avatar URL), the channel as `<#channel id>`: both resolved in
+  the composer before sending. The Windows passkey box on the desktop was not in the way and was not touched.
+- What "tested" means for this build: checklist pp8 / pp8b, ONE PC, two copies, Nvidia (the section above).
+- The posting OK is used up. The next post needs the owner's OK.

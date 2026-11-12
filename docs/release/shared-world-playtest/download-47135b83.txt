@@ -1,0 +1,21 @@
+**Update: shared world playtest 0.1.0-alpha+47135b83**
+Please use this build instead of every earlier one. You and your co-op partner both need it.
+
+Fixed:
+- **No Co-op menu at all on some PCs** (reported on an AMD Radeon card): nothing of the mod was drawn there. The mod now notices and switches to another way of drawing. **We have no AMD card**: tested only by simulating it on an Nvidia card. If you had this, please try it and tell us either way.
+- **New Co-op Save**: the guest stayed on "Waiting for Host" for ever. It now joins the host's new story.
+- **A guest far from the host could not fight** (beyond 80 m it took no damage and its hits did nothing). Both count now.
+- **A friend who has never played** waited for ever. Their game now says they need a character of their own first; the host is told why.
+- **Big files in the game folder**: solo play with the mod wrote `bin64\cdmp_packets_...` files without limit. No longer; you can delete them.
+- The line at the bottom of the title menu was cut off.
+
+New:
+- **The guest starts at the host's side**, not where its own save was.
+- **A downed player lies on the ground.** Your friend can hold Interact next to you to get you up; Q and U work as before.
+
+Known: if a start does not work (someone stays at the title), **both close the game completely** before trying again.
+
+- `...47135b83-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tested with two copies of the game on one PC (Nvidia): first launch, a real install, XeSS and FSR frame generation, all three ways to start, a guest on a new save and one with none, chests, enemy loot, going down and getting up, fights far from the host, horses. Not tested: two PCs over the internet, AMD and Intel cards, long sessions, story scenes and bosses. Please tell us in #bug-reports how it goes, with the report zip if anything goes wrong.

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import FancyBboxPatch
 G = [
 ("FOUNDATION", [
- ("Shared world (join from title, co-op saves)", 92, "New Co-op Save fixed; a friend with no character is told what to do. Build 47135b83 is in its checklist."),
+ ("Shared world (join from title, co-op saves)", 92, "New Co-op Save fixed; a friend with no character is told what to do. Build 47135b83 is out."),
  ("Same NPCs and townsfolk for both players", 85, "A tester lost all NPCs when the link overflowed in a town. Fix is out, not confirmed yet."),
  ("Guest talks to NPCs on its own progress", 65, "Greetings and shops work. Longer conversations not checked yet."),
  ("Merchants for the guest (buy / sell)", 90, "Works in tests. A tester's blacksmith loop was most likely the town lag; watching."),
@@ -37,7 +37,7 @@ G = [
 ]),
 ("LAST", [
  ("3-4 player co-op", 0, "Only after two-player play is stable."),
- ("Release (package, installer, save protection)", 80, "A 19-step checklist now runs before every post. Build 47135b83 is in it."),
+ ("Release (package, installer, save protection)", 80, "A 19-step checklist runs before every post. Build 47135b83 passed it and is out."),
 ]),
 ]
 BG="#1e1f24"; TRACK="#2e3038"; BAR="#5b9bd5"; INK="#f2f2f2"; MUT="#a6a8ad"
@@ -46,7 +46,7 @@ H = 1.9 + rows*ROW + len(G)*GH + 0.9
 fig = plt.figure(figsize=(21.5, H), dpi=100, facecolor=BG)
 ax = fig.add_axes([0,0,1,1]); ax.set_xlim(0,21.5); ax.set_ylim(H,0); ax.axis('off')
 ax.text(0.26,0.52,"Co-op+ big update: progress by task",color=INK,fontsize=26,fontweight='bold',va='center')
-ax.text(0.26,1.08,"12 Nov 2026, 06:00.  Percentages are the developer's estimates, not measurements.  Playtest build 0.1.0-alpha+3c46bec5 is out; 47135b83 is in its release checklist.",color=MUT,fontsize=14,va='center')
+ax.text(0.26,1.08,"12 Nov 2026, 08:10.  Percentages are the developer's estimates, not measurements.  Playtest build 0.1.0-alpha+47135b83 is out (tested on one PC, two copies of the game).",color=MUT,fontsize=14,va='center')
 y=1.9
 for name, items in G:
     ax.text(0.26,y,name,color=MUT,fontsize=12.5,fontweight='bold',va='center'); y+=GH*0.95
@@ -59,4 +59,4 @@ for name, items in G:
         y+=ROW
     y+=GH*0.05
 ax.text(0.26,y+0.1,"Dropped by request: joining mid-fight or mid-game (joining is from the title screen).",color=MUT,fontsize=12,va='center')
-fig.savefig("docs/drafts/progress-2026-11-12-a.png",facecolor=BG)
+fig.savefig("docs/drafts/progress-2026-11-12-b.png",facecolor=BG)
