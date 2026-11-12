@@ -154,8 +154,28 @@ bool call_void(void (*fn)(P...), A... args) {
     }
 }
 
+// A fault inside a Steam call. It used to switch Steam join and invites off for the whole launch at the first one.
+// pp9-display (2026-11-12): an access violation inside steamclient64.dll at SetRichPresence two seconds after the
+// game started (Steam's user handle was already there, so the interface had been taken): once in about sixty
+// launches on Steam here, and that player would have had no invites until a restart. Now the interface is dropped
+// and asked for again after 10 s; only the third fault in one launch switches it off.
+constexpr int kFaultLimit = 3;
+constexpr uint64_t kFaultRetryMs = 10000;
+int g_faults = 0;
+uint64_t g_retry_at = 0;
+
 void fail(const char* what) {
-    if (!g_disabled) log::error("Join: exception in {}; Steam join and invites disabled", what);
+    if (g_disabled) return;
+    if (++g_faults < kFaultLimit) {
+        log::warn("Join: exception in {} ({} of {}): Steam is asked again in {} s", what, g_faults, kFaultLimit,
+                  kFaultRetryMs / 1000);
+        g_resolved = false;
+        g_api.frn = nullptr;
+        g_retry_at = GetTickCount64() + kFaultRetryMs;
+        g_status = "join: Steam did not answer, trying again";
+        return;
+    }
+    log::error("Join: exception in {} ({} in this launch); Steam join and invites disabled", what, g_faults);
     g_disabled = true;
     g_status = "join: disabled after an error";
 }
@@ -163,6 +183,7 @@ void fail(const char* what) {
 // Called with g_mutex held.
 void resolve_locked() {
     if (g_resolved || g_disabled) return;
+    if (g_retry_at && GetTickCount64() < g_retry_at) return;
     HMODULE dll = GetModuleHandleW(L"steam_api64.dll");
     if (!dll) return;  // transient: the game loads Steam later
     Api& a = g_api;
@@ -291,6 +312,17 @@ void join_presence_guest(uint64_t lobby, const std::string& host_name) {
         set_presence_locked("steam_player_group", group);
         set_presence_locked("steam_player_group_size", "2");
     }
+}
+
+// True once after Steam has been asked again following a fault and answers: what we said about ourselves may not
+// have arrived, the caller says it again.
+bool join_presence_lost() {
+    std::lock_guard lock(g_mutex);
+    resolve_locked();
+    if (!g_retry_at || !g_resolved || g_disabled) return false;
+    g_retry_at = 0;
+    log::info("Join: Steam answers again after a fault: our status is set again");
+    return true;
 }
 
 void join_presence_clear() {

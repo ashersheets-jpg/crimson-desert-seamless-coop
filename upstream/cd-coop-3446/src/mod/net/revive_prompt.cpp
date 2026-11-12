@@ -122,6 +122,51 @@ void request_move(float x, float y, float z) {
     g_hop_target = std::array<float, 3>{x, y, z};
 }
 
+// FAR TRAVEL (2026-11-12). Two testers: going to the friend over 3 km took 2 and 3 minutes of being dragged across
+// the map in hops and once stopped short. The game's own far move is a pending reload (local notes
+// build/decomp/notes_far_teleport.md, game build 3576): our client sends ReloadStageStartReq 3074 with the position
+// (u32 0 | u32 FieldInfoKey | u32 0 | vec3 pos | quat | vec3 scale | u8 1; with actor 0 the server takes the position
+// as it is), the server keeps it as our destination, and TeleportRevivePointAck 3071 (u32 our key | u32 0) starts our
+// client's loading screen, which asks the server for the load by itself. A short loading screen, then we stand there.
+// The hops stay for short moves, for the last metres, and as the way out when this does not take.
+// The FieldInfoKey of the field we are in: on the host from the native base (cdmp_field_info_key), on the guest from
+// the host (coop_lobby's kMsgFieldKey: both are in the host's field). 0 = not known: hops as before.
+constexpr uint16_t kOpReloadStageStartReq = 3074;
+constexpr uint16_t kOpTeleportRevivePointAck = 3071;
+constexpr float kFarM = 80.0f;            // farther than this: the game's travel
+constexpr float kFarLandedM = 40.0f;      // this close after the load: it took us there
+constexpr uint32_t kFarAckDelayMs = 300;  // the server has our destination before our client starts loading
+constexpr uint32_t kFarTimeoutMs = 45000;
+std::atomic<uint32_t> g_field_key_from_host{0};
+bool g_far_try = false;     // a newly asked move: far travel is considered once
+uint32_t g_far_ack_at = 0;  // when the 3071 goes to our client (0 = sent / none)
+uint32_t g_far_until = 0;   // far travel in progress until (0 = none)
+uint32_t g_far_since = 0;
+
+uint32_t own_field_key() {
+    using Fn = uint32_t (*)();
+    static Fn fn = [] {
+        Fn f = nullptr;
+        if (HMODULE m = GetModuleHandleW(L"cdmp.asi")) f = reinterpret_cast<Fn>(GetProcAddress(m, "cdmp_field_info_key"));
+        return f;
+    }();
+    const uint32_t k = fn ? fn() : 0;
+    return k ? k : g_field_key_from_host.load();
+}
+
+bool send(uint16_t op, const std::vector<uint8_t>& body);
+
+bool far_travel_start(uint32_t key, const std::array<float, 3>& p) {
+    std::vector<uint8_t> b(53, 0);
+    const float quat[4] = {0.0f, 0.0f, 0.0f, 1.0f}, scale[3] = {1.0f, 1.0f, 1.0f};
+    std::memcpy(b.data() + 4, &key, 4);
+    std::memcpy(b.data() + 12, p.data(), 12);
+    std::memcpy(b.data() + 24, quat, 16);
+    std::memcpy(b.data() + 40, scale, 12);
+    b[52] = 1;
+    return send(kOpReloadStageStartReq, b);
+}
+
 void teleport(uint32_t /*own*/) { request_move(g_checkpoint[0], g_checkpoint[1], g_checkpoint[2]); }
 
 void send_hop(uint32_t own, const std::array<float, 3>& p) {
@@ -141,15 +186,57 @@ void hop_tick(uint32_t now_ms) {
             g_hop_fails = 0;
             g_hop_at = now_ms;
             g_hop_last = {1e9f, 0.0f, 1e9f};
+            g_far_try = true;
+            g_far_until = g_far_ack_at = 0;
         }
     }
-    if (!g_hop_goal || static_cast<int32_t>(now_ms - g_hop_at) < 0) return;
+    if (!g_hop_goal) return;
     const uint32_t own = capture_own_player_key();
+    // Far travel under way: our client's loading starts a moment after the request, and while it loads there may be
+    // no position to read.
+    if (g_far_until) {
+        if (g_far_ack_at && static_cast<int32_t>(now_ms - g_far_ack_at) >= 0) {
+            g_far_ack_at = 0;
+            std::vector<uint8_t> b(8, 0);
+            std::memcpy(b.data(), &own, 4);
+            puppet_inject_s2c_batch({{kOpTeleportRevivePointAck, b}});
+            log::info("Teleport: far travel: our loading screen is started (3071)");
+        }
+        if (static_cast<int32_t>(now_ms - g_far_until) >= 0) {
+            log::warn("Teleport: far travel did not take us there in {} s: hops from where we are",
+                      kFarTimeoutMs / 1000);
+            g_far_until = 0;
+            g_hop_fails = 0;
+            g_hop_last = {1e9f, 0.0f, 1e9f};
+            g_hop_at = now_ms;
+        }
+    }
+    if (static_cast<int32_t>(now_ms - g_hop_at) < 0) return;
     const auto at = own ? game::actor_world_position(own) : std::nullopt;
     if (!at) return;
     const auto& goal = *g_hop_goal;
     const float dx = goal[0] - at->x, dz = goal[2] - at->z;
     const float left = std::sqrt(dx * dx + dz * dz);
+    if (g_far_until) {
+        if (left > kFarLandedM) return;  // still on the way (the loading screen)
+        log::info("Teleport: far travel took {:.1f} s; {:.0f} m left for the hops", (now_ms - g_far_since) / 1000.0, left);
+        g_far_until = 0;
+        g_hop_fails = 0;
+        g_hop_last = {1e9f, 0.0f, 1e9f};
+    }
+    if (g_far_try) {
+        g_far_try = false;
+        const uint32_t key = left > kFarM ? own_field_key() : 0;
+        if (key && far_travel_start(key, goal)) {
+            g_far_since = now_ms;
+            g_far_ack_at = (now_ms + kFarAckDelayMs) | 1;
+            g_far_until = (now_ms + kFarTimeoutMs) | 1;
+            log::info("Teleport: {:.0f} m: the game's own travel (field 0x{:08X}, to ({:.0f}, {:.0f}, {:.0f}))", left, key,
+                      goal[0], goal[1], goal[2]);
+            return;
+        }
+        if (left > kFarM) log::info("Teleport: {:.0f} m in hops (the field is not known{})", left, key ? ", or the request was not sent" : "");
+    }
     if (left <= kArrivedM) {
         log::info("Teleport: arrived ({:.0f}, {:.0f})", at->x, at->z);
         g_hop_goal.reset();
@@ -374,6 +461,11 @@ RevivePrompt revive_prompt_tick(bool connected, float hp, float hp_max, std::opt
     }
     return checkpoint_only ? RevivePrompt::CheckpointOnly : RevivePrompt::Choice;
 }
+
+void revive_set_field_key(uint32_t key) {
+    if (g_field_key_from_host.exchange(key) != key) log::info("Teleport: the host's field is 0x{:08X} (for far travel)", key);
+}
+uint32_t revive_own_field_key() { return own_field_key(); }
 
 bool revive_teleport_to(float x, float y, float z) {
     if (!capture_own_player_key()) return false;

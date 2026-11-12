@@ -588,7 +588,7 @@ void test_versions() {
     b.deliver(proto::Welcome{"Friend", 5, 0xABCDEF01}, 10);
     CHECK(b.session.state() == ClientSession::State::Connecting);
     CHECK(b.session.peer_problem().find("ABCDEF01") != std::string::npos);
-    CHECK(b.session.peer_problem().find("same Co-op+ zip") != std::string::npos);
+    CHECK(b.session.peer_problem().find("the same zip") != std::string::npos);
     // Same build, another game version: refused, the message says to update the game.
     Harness g;
     g.session.set_game_version("1.0.0.3479");

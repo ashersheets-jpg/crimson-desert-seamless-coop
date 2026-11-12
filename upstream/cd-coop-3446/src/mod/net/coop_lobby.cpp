@@ -12,6 +12,7 @@
 #include "mod/net/coop.h"
 #include "mod/net/coop_worlds.h"
 #include "mod/net/native_mode.h"
+#include "mod/net/revive_prompt.h"
 #include "mod/net/troc_sniffer.h"
 
 namespace cdmp::net {
@@ -33,6 +34,8 @@ constexpr uint8_t kMsgGuestStuck = 24;
 // The host ended the session (a Leave). On this channel because it must reach a guest that is still at the title:
 // the activity goodbye (kBye) did not get there in rt3a (2026-11-12).   host -> guest
 constexpr uint8_t kMsgSessionEnded = 25;
+// u8 | u32: the FieldInfoKey of the host's field, for the guest's far travel (revive_prompt.cpp)   host -> guest
+constexpr uint8_t kMsgFieldKey = 26;
 constexpr uint64_t kRestartDelayMs = 1500;  // the message goes out before this game closes
 constexpr uint64_t kStuckLineMs = 150000;   // guest: Play pressed this long ago, no world: the waiting screen says what to do
 constexpr uint64_t kStuckTellMs = 240000;   // guest: ... the host is told (its card in the world)
@@ -77,6 +80,9 @@ bool g_auto_started = false;     // host: the plan went on after the guest came 
 bool g_resume_cleared = false;   // in the world: the next launch was set back to Solo
 uint64_t g_resume_since = 0;     // a resumed start waiting for its partner since
 std::string g_native_note;       // a line for the menu (e.g. the friend did not come back)
+std::string g_peer_problem;      // the handshake's refusal (another build / game version): the menu's line while it holds
+uint32_t g_field_key_sent = 0;   // host: the field key the guest was told (0 = none since the link came up)
+uint64_t g_field_key_at = 0;     // host: when the base was last asked
 bool g_refused_seen = false;     // B22a: the native base refused co-op for this launch (its save redirect failed)
 // A start that did not work (a tester's session, 2026-11-12: the host's game never answered the guest's Play, and the
 // second Start Co-op ran in the same two games: the guest's title was still waiting for the first answer, nothing
@@ -315,6 +321,20 @@ void lobby_tick(const LobbyInput& in) {
             }
         }
         g_was_at_title = in.at_title;
+        // The host's field for the guest's far travel: said when it changes, again after a reconnect, looked at
+        // every 3 s while both are in the world.
+        if (g_native && in.host && in.connected && in.in_world && in.now_ms - g_field_key_at >= 3000) {
+            g_field_key_at = in.now_ms;
+            const uint32_t key = revive_own_field_key();
+            if (key && key != g_field_key_sent) {
+                g_field_key_sent = key;
+                std::vector<uint8_t> m(5);
+                m[0] = kMsgFieldKey;
+                std::memcpy(m.data() + 1, &key, 4);
+                send(std::move(m));
+            }
+        }
+        if (!in.connected) g_field_key_sent = 0;
         if (g_native && g_phase == Phase::GuestWait && g_play_since && in.connected && !in.in_world && !g_stuck_told &&
             in.now_ms - g_play_since > kStuckTellMs) {
             g_stuck_told = true;
@@ -571,6 +591,7 @@ LobbyView lobby_view() {
     if (v.status.empty() && g_native && g_resume.mode == NativeMode::Host && !g_guest_ready && !g_auto_started) {
         v.status = v.connected ? f + "'s game is restarting into co-op..." : "In co-op mode: waiting for " + f + "...";
     }
+    if (!g_peer_problem.empty()) v.status = g_peer_problem;  // the friend cannot be played with: before anything else
     if (!v.status.empty()) {
     } else if (!g_native_note.empty()) {
         v.status = g_native_note;
@@ -724,6 +745,14 @@ bool lobby_dev_take_title() {
     return dev_recover_due(2);
 }
 
+// The handshake refused the friend (ClientSession::peer_problem; "" = fine again): the title menu says so.
+void lobby_set_peer_problem(const std::string& problem) {
+    std::lock_guard lock(g_m);
+    if (problem == g_peer_problem) return;
+    g_peer_problem = problem;
+    if (!problem.empty()) log::warn("Co-op lobby: {}", problem);
+}
+
 void lobby_reopen() {
     std::lock_guard lock(g_m);
     g_dismissed = false;
@@ -819,6 +848,13 @@ void lobby_on_message(const std::vector<uint8_t>& b) {
                 if (g_in.host && g_native) {
                     g_guest_ready = true;
                     log::info("Co-op lobby: {}'s game is in co-op as our guest", g_in.partner_name);
+                }
+                break;
+            case kMsgFieldKey:
+                if (b.size() >= 5 && !g_in.host) {
+                    uint32_t key = 0;
+                    std::memcpy(&key, b.data() + 1, 4);
+                    revive_set_field_key(key);
                 }
                 break;
             case kMsgSessionEnded:

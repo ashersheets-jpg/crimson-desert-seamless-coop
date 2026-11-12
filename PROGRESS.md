@@ -6584,3 +6584,31 @@ Design chosen (A, host-authoritative, with a world marker):
   a fault drops the interface and Steam is asked again after 10 s; the third fault in a launch switches it off; the
   status ("Join Game" for friends) is said again when Steam answers. The cause inside Steam is not known (the user
   handle was valid, so the interface had been taken after Steam's init).
+
+### 2026-11-12 12:44-12:50: pp9 steps 1-10 done; everything of today BUILT; the build check passes its test (mm1a). STOPPED HERE (usage limit): what is tested and what is not
+
+- pp9 on dc7ade5e, steps 1-10: 319 PASS, 2 FAIL (both the Steam fault in `display`, previous section). SAVES OK and
+  5/5 in all. The checklist of dc7ade5e stops here: that package is NOT the one to post (it lacks all of the below).
+- Built at 12:46 (layer and base, unit tests pass; the base's one failing check is in the old-fixture baseline):
+  - TESTED, mm1a (`-GuestDev build_id=11112222 -ExpectMismatch`, new harness switch): the handshake's build is now a
+    hash of the installed files ("Build for the handshake: 9A0B3DAE"); with another build on the guest BOTH title
+    menus show, as their bottom line, "Can't play together: Guest has another Co-op+ build (11112222, yours
+    9A0B3DAE). Both install the same zip, the newest one." (the guest's names Host); the host's Start Co-op is
+    greyed ("Invite a friend first."), the guest's party says "Looking for the host". SAVES OK, 5/5.
+    Note: any build up to 47135b83 says 72FF0E3C, so against the next build it is refused too (as it should be).
+  - NOT TESTED YET (built, in the working trees):
+    - the host's reload crash guard (base, user2_funnels.cpp): scratchpad explore8.sh tg1 / tg2.
+    - the Steam fault retry (layer, net/steam_join.cpp): no way to provoke it on purpose yet.
+    - far travel (layer revive_prompt.cpp + coop_lobby kMsgFieldKey 26; base far_travel.cpp, export
+      cdmp_field_info_key): over 80 m the game's own travel (Req 3074 + Ack 3071), hops for the rest. First test:
+      checklist step lowsave (the guest 1.3 km away) and farfight2 (the host goes 484 m). The test scripts' "tp"
+      uses it too now.
+    - the fresh save on a New Co-op Save (base, about 900 lines by an implementation pass, compiles, its unit tests
+      pass): NOT reviewed line by line, NOT run. First test: newsave with another guest save; then Continue.
+- Uncommitted on purpose: the base's working tree (upstream/cdmp-native: timer guard, fresh save, far_travel.cpp,
+  CMakeLists) because none of it has run; nothing of it is in native-base/ yet. The layer is committed with this
+  note (its message says what is untested).
+- NEXT, in this order: tg1, tg2; lowsave + farfight2 (travel); newsave with a different guest save, then Continue
+  (fresh save); a guest calling its horse in a New Co-op Save world (D3vils' point 5); then commit the base, run
+  tools/sync-native-base.sh, package, the whole checklist (add steps: mismatch, the host's revive reload, travel).
+- Waiting on the owner: "post the reply" for the two testers (draft file); the next build's post when it has passed.

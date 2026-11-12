@@ -73,5 +73,9 @@ void revive_dev_teleport(float x, float y, float z);
 // Co-op+ (Ctrl+F4): our player to (x, y, z) -- the other player's position -- with DoTeleportAck (works standing
 // and walking, live test 2026-11-02). Returns false when we have no key yet.
 bool revive_teleport_to(float x, float y, float z);
+// Far travel (revive_prompt.cpp): the FieldInfoKey of the field we are in. The host has it from the native base and
+// tells the guest (coop_lobby's kMsgFieldKey); 0 = not known.
+uint32_t revive_own_field_key();
+void revive_set_field_key(uint32_t key);
 
 }  // namespace cdmp::net

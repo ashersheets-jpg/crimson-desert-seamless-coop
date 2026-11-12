@@ -233,6 +233,7 @@ Config load_config(const std::wstring& ini_path) {
     c.dev_lobby_skip_play = static_cast<int>(read_uint(ini_path, L"dev", L"lobby_skip_play", 0));
     c.dev_lobby_retry = static_cast<int>(read_uint(ini_path, L"dev", L"lobby_retry", 0));
     c.dev_lobby_recover = static_cast<int>(read_uint(ini_path, L"dev", L"lobby_recover", 0));
+    c.dev_build_id = static_cast<uint32_t>(std::strtoul(narrow(read_string(ini_path, L"dev", L"build_id", "0")).c_str(), nullptr, 16));
     c.dev_tp_to = narrow(read_string(ini_path, L"dev", L"tp_to", ""));
     c.dev_script = narrow(read_string(ini_path, L"dev", L"script", ""));
     c.dev_tp_offset_m = static_cast<int32_t>(std::min(read_uint(ini_path, L"dev", L"tp_offset_m", 30), 5000u));

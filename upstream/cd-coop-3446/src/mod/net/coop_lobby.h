@@ -91,6 +91,7 @@ void lobby_start_solo();          // the Start Solo card (restarts when the game
 void lobby_dismiss();             // Start Solo / Esc: the game's own title until the next time we are at the title
 void lobby_session_ended();    // a deliberate Leave: the next launch is solo, the title says so (tcB293)
 void lobby_reopen();              // F8 at the title
+void lobby_set_peer_problem(const std::string& problem);  // the handshake's refusal, shown as the menu's line
 
 // Network loop.
 std::vector<std::vector<uint8_t>> lobby_take_outgoing();  // RelKind::World messages

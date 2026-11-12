@@ -97,10 +97,12 @@ bool ClientSession::versions_match(const std::string& name, uint32_t build, cons
     std::snprintf(ours, sizeof ours, "%08X", mod_build_);
     std::snprintf(theirs, sizeof theirs, "%08X", build);
     const std::string their_game = game.empty() ? "?" : game, our_game = game_version_.empty() ? "?" : game_version_;
-    peer_problem_ = "Can't play together: " + name + " has Co-op+ build " + theirs + " on game " + their_game +
-                    ", you have build " + ours + " on game " + our_game + ". " +
-                    (game_ok ? "Both install the same Co-op+ zip."
-                             : "Both update the game in Steam, then install the Co-op+ zip made for that version.");
+    // 2026-11-12: the build-only case is short enough for the title menu's one line.
+    peer_problem_ = game_ok ? "Can't play together: " + name + " has another Co-op+ build (" + theirs + ", yours " + ours +
+                                  "). Both install the same zip, the newest one."
+                            : "Can't play together: " + name + " has Co-op+ build " + theirs + " on game " + their_game +
+                                  ", you have build " + ours + " on game " + our_game +
+                                  ". Both update the game in Steam, then install the Co-op+ zip made for that version.";
     if (last_problem_event_ms_ == 0 || now_ms - last_problem_event_ms_ >= 10000) {
         last_problem_event_ms_ = now_ms;
         event("cannot connect: " + peer_problem_);

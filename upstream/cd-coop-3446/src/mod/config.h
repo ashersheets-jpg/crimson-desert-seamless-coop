@@ -85,6 +85,7 @@ struct Config {
     int dev_lobby_skip_play = 0;  // dev: net/coop_lobby.h lobby_dev
     int dev_lobby_retry = 0;
     int dev_lobby_recover = 0;
+    uint32_t dev_build_id = 0;  // [dev] build_id (hex): this copy says it is another build (the mismatch test)
     int dev_overlay_no_streamline = 0;  // dev: see render/dx12_hook.h ([dev] overlay_no_streamline)
     bool dev_wait_see_through = false;  // dev: the guest's waiting screen is see-through ([dev] wait_see_through)
     std::string dev_script;  // Co-op+ dev: packet script for Ctrl+Shift+F6 ([dev] script, net/dev_script.h)

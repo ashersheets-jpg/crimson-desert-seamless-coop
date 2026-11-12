@@ -47,6 +47,7 @@ bool join_overlay_active();
 void join_presence_hosting(uint64_t lobby, int members, int max_members, bool joinable = true);
 void join_presence_guest(uint64_t lobby, const std::string& host_name);
 void join_presence_clear();
+bool join_presence_lost();  // true once when Steam answers again after a fault: say the status again
 
 // Name of a Steam user as the local player knows them ("" if unknown).
 std::string join_persona_name(uint64_t steam_id);

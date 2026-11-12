@@ -13,6 +13,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <cwctype>
 
 #include "build_id.h"
 #include "common/client_session.h"
@@ -103,10 +104,13 @@
 namespace cdmp {
 namespace {
 
-// The commit this build comes from (build_id.h): both players must match.
-constexpr uint32_t kModBuild = CDMP_BUILD_ID;
+// The commit CMake saw when it was last CONFIGURED (build_id.h). Only for the log's first line: it does not move
+// with the code (every package from 2026-11-10 to dc7ade5e said 72FF0E3C), so two different packages passed the
+// handshake's "same build" test, and two testers played a whole session with one build each (2026-11-12).
+constexpr uint32_t kCommitAtConfigure = CDMP_BUILD_ID;
 
 HMODULE g_self = nullptr;
+uint32_t g_build_override = 0;  // [dev] build_id: another build for the handshake (the mismatch test)
 HANDLE g_thread = nullptr;
 HANDLE g_stop = nullptr;
 HANDLE g_late_thread = nullptr;
@@ -131,6 +135,33 @@ std::wstring module_path(HMODULE module) {
 std::wstring dir_of(const std::wstring& path) {
     const auto slash = path.find_last_of(L"\\/");
     return slash == std::wstring::npos ? std::wstring{} : path.substr(0, slash + 1);
+}
+
+// The build both players must have: a hash of this mod's files AS INSTALLED (this file, and the native base cdmp.asi
+// next to it when this is the layer coopplus.asi). The same package gives the same number on every PC; any other
+// package, or half an update (one file old), gives another. Never 0 (0 = "not a mod" in the handshake).
+uint32_t file_fnv(const std::wstring& path, uint32_t h) {
+    const HANDLE f = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
+                                 OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (f == INVALID_HANDLE_VALUE) return h;
+    std::vector<uint8_t> buf(1 << 16);
+    DWORD n = 0;
+    while (ReadFile(f, buf.data(), static_cast<DWORD>(buf.size()), &n, nullptr) && n) {
+        for (DWORD k = 0; k < n; ++k) h = (h ^ buf[k]) * 16777619u;
+    }
+    CloseHandle(f);
+    return h;
+}
+uint32_t mod_build() {
+    static const uint32_t files = [] {
+        const std::wstring self = module_path(g_self);
+        uint32_t h = file_fnv(self, 2166136261u);
+        std::wstring name = self.substr(self.find_last_of(L"/\\") + 1);
+        for (auto& c : name) c = static_cast<wchar_t>(towlower(c));
+        if (name == L"coopplus.asi") h = file_fnv(dir_of(self) + L"cdmp.asi", h);  // dir_of keeps the trailing separator
+        return h ? h : 1u;
+    }();
+    return g_build_override ? g_build_override : files;
 }
 
 std::string narrow(const std::wstring& w) {
@@ -510,7 +541,7 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
     // peer, which this loop keeps current (fast_lane_set_peer), while this loop uses `peer` itself.
     const auto loop_thread = std::this_thread::get_id();
     ClientSession session(
-        cfg.player_name, kModBuild,
+        cfg.player_name, mod_build(),
         [&](const std::vector<uint8_t>& bytes) {
             if (std::this_thread::get_id() == loop_thread) {
                 if (peer) transport->send(*peer, bytes);
@@ -723,6 +754,7 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
                 } else if (!host && linked) {
                     want = std::format("g{}:{}", net::room_lobby_id(), session.peer_name());
                 }
+                if (net::join_presence_lost()) presence_said = "\x01";  // a Steam fault: say it again (never equal)
                 if (want != presence_said) {
                     presence_said = want;
                     if (want.empty()) {
@@ -914,6 +946,7 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
         // Co-op+ (T03): a refused handshake (versions) as a notice too, once per new reason.
         if (const std::string& problem = session.peer_problem(); problem != shown_problem) {
             shown_problem = problem;
+            net::lobby_set_peer_problem(problem);
             if (!problem.empty()) {
                 toast = "Co-op\n" + problem;
                 toast_until = now + 12000;
@@ -2149,7 +2182,7 @@ DWORD WINAPI worker(LPVOID) {
     if (!role.empty() && two_copy::extra_process(role, kNativeLayer)) return 0;
     log::open(own_file(dir, L".log"));
     crash_log::install();
-    log::info("=== Crimson Desert Multiplayer {} (build {:08X}{}, protocol {}) ===", CDMP_VERSION, kModBuild,
+    log::info("=== Crimson Desert Multiplayer {} (build {:08X}{}, protocol {}) ===", CDMP_VERSION, kCommitAtConfigure,
               CDMP_BUILD_DIRTY ? " + local changes" : "", proto::kVersion);
     log::info("Mod file: {}", narrow(module_path(g_self)));
 
@@ -2355,6 +2388,9 @@ DWORD WINAPI worker(LPVOID) {
             log::info("Config: [dev] boss_hp={}: enemies with that much health count as bosses", cfg.dev_boss_hp);
         }
         if (cfg.dev_no_copy) log::info("Config: [dev] no_copy=1: the other player's character is never loaded");
+        g_build_override = cfg.dev_build_id;
+        log::info("Build for the handshake: {:08X}{} (a hash of this mod's installed files; both players need the same)",
+                  mod_build(), g_build_override ? " ([dev] build_id: NOT this install's own)" : "");
         log::info("Config: who can join: {}", cfg.net_join_invite_only
                                                   ? "invited friends only ([net] join=invite)"
                                                   : "any Steam friend playing (\"Join Game\")");
