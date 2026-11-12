@@ -60,8 +60,8 @@ test save Out, shipped cdmp.ini restored.
 - DECIDED 2026-11-12 ~12:25 (the owner): "Yes. The friend needs to have a new save for a new co-op save run. The
   whole point is that the friends start together at the same point in game." A New Co-op Save gives BOTH players a
   fresh save; continuing that run brings back that run's characters. To build (not built yet).
-- YOUR WORD NEEDED: the reply to JackyChan004 and D3vils (docs/release/shared-world-playtest/
-  feedback-47135b83-jackychan2-draft.txt): say "post the reply" and it goes to #play-testing-feedback.
+- CLOSED 2026-11-12 ~15:50 (the owner: "You do not need to reply to jackychan and devils"): no reply is posted; the
+  draft stays in docs/release/shared-world-playtest/feedback-47135b83-jackychan2-draft.txt for reference.
 - DECISION to confirm: the guest now starts at the HOST'S SIDE (once per start, when it would otherwise be more than
   30 m away). Before, it started wherever its own save was (1.3 km away in the new-save test). The title menu
   already says the friend "joins your story where you are". If you would rather keep the old start: tell me, it is
