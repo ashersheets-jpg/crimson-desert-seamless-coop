@@ -76,6 +76,17 @@ const char* native_refused_reason() {
     return fn ? fn() : nullptr;
 }
 
+// gn1 (2026-11-11): what the native base found as this player's own save (cdmp_guest_own_save_state in cdmp.asi):
+// 0 not known yet / no export, 1 a save, 2 no save at all, 3 a save that cannot be offered.
+int native_own_save_state() {
+    using Fn = int (*)();
+    static Fn fn = nullptr;
+    if (!fn) {
+        if (HMODULE m = GetModuleHandleW(L"cdmp.asi")) fn = reinterpret_cast<Fn>(GetProcAddress(m, "cdmp_guest_own_save_state"));
+    }
+    return fn ? fn() : 0;
+}
+
 bool native_write_ok(const NativeModeSpec& spec);
 
 // Co-op stops for this launch (ours refused, or the partner's): the next launch is solo, nothing more is sent.
@@ -342,6 +353,15 @@ void lobby_tick(const LobbyInput& in) {
                 if (g_go_at && in.now_ms >= g_go_at) {
                     g_go_at = 0;
                     todo = PressPlay;
+                } else if (g_native && g_new_go_since && !g_new_started && in.at_title && native_own_save_state() == 2) {
+                    // A guest who has never played has no save: the title has no Continue, Play does nothing, and
+                    // the guest waited for ever (gn1). It begins as a NEW character in the host's world: New Game,
+                    // the agreement, the host's difficulty (worlds_lobby_guest_new, as the old co-op saves did).
+                    g_new_started = true;
+                    guest_diff = g_partner_diff != kUnknown && g_partner_diff <= 2 ? g_partner_diff : kNormal;
+                    todo = GuestNew;
+                    log::info("Co-op lobby: the host's world is up and this player has no save of their own: New Game "
+                              "(a new character joins the host's world), difficulty {}", guest_diff);
                 } else if (g_native && g_new_go_since && !g_new_started && in.at_title) {
                     g_new_started = true;
                     todo = PressPlay;

@@ -5741,3 +5741,22 @@ Report: build/native/prepost-pp5.txt (every step's switches are in it). 332 chec
   (the opening may hold the host's own clock). Cosmetic so far: different light for the two players.
 - Next for the opening: go to a comrade and talk (new dev step "tpnear [radius] [n]": beside the n-th nearest
   living person), with the guest beside the host, and see what the guest gets when the host's talk starts a scene.
+
+### gn1 (2026-11-11 23:12-23:23): A GUEST WITH NO SAVE NEVER GETS IN (found by reading, confirmed by the run)
+
+- Run: -GuestVariant none (the guest's save folder has no slot at all), everything else as the "fresh" step.
+- The guest stays on "Waiting for Host / Joining the start of the story..." (shots gn1-g0..g5, 10 minutes). Guest
+  base: "NOTHING is offered to the host: no slot 0-2 / 100-108 with lobby.save and save.save | this session does NOT
+  keep your progress". Guest layer: "the host's world is up: Play", "Play pressed in own saves" after six presses;
+  a title without a save has no Continue. A held New Game (Z), the agreement scroll and Space from the harness did
+  nothing either: the waiting screen keeps the player's keys from the game. The host was in the world alone.
+- Who this is: a friend who bought the game to play co-op and never started it alone. Every tester so far had a save.
+- Read in the base (host side, guest_save_logic.h decide_save_on): for a user 2 whose own save is not loaded every
+  save is refused ("user 2 plays a clone ... nothing is written"). So even a new character made in the host's world
+  would not be kept; keeping it needs a new path (a newborn user 2 saved to slot204, and a new slot on the guest's
+  PC to store the result in).
+- Written in source (not built yet): base export cdmp_guest_own_save_state (0 unknown, 1 a save, 2 none, 3 not
+  offerable); the lobby starts New Game for a guest in state 2 (worlds_lobby_guest_new: the agreement, the host's
+  difficulty) instead of pressing Play. Next run (gn2) shows what the host's server does with user 2's New Game.
+  If that cannot be made to keep progress in reasonable time, the fallback is a plain message before joining:
+  "start a new game on your own once (about two minutes, until you are in the world), then join".
