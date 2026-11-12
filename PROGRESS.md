@@ -6491,3 +6491,41 @@ leave the joined player stuck in that position. Report zip unpacked in the scrat
 - To test: (1) schedule_timer_guard_test with two players: schedules go on; (2) the host reloads its world with the
   guest next to it, many times (the checkpoint revive U moves and reloads): no crash, and whether the guard's count
   ever rises on this PC.
+
+### The fresh save for the friend on a New Co-op Save: how the guest's save works today, and the design (read of the base's code, 2026-11-12 ~12:30; nothing built)
+
+How it works today (file references in the research's report; S2 = cdmp-native/src/mod/session2):
+- The guest offers the newest save.save under ITS redirected save root. On a real install that root is
+  `coop_worlds\guest_of_<host>`, seeded "keep": a ONE-TIME copy of the guest's real saves made at the first join with
+  that host. So the offer is a frozen solo snapshot (D3vils' 1,858-mission character).
+- The host stages the upload as its world's slot 204 and user 2 plays it. If the upload is the root of a "line" in
+  the host's mailbox (%LOCALAPPDATA%\cdmp\guest_saves\<guest id>\gen<n>, 5 kept) and a newer generation exists, the
+  host stages THAT instead: the only way co-op progress comes back today. The guest's co-op character therefore
+  already lives on the HOST's PC, keyed by guest id and line root, NOT by world: that is why a returning guest
+  arrives in a brand-new world with the old character.
+- Results sent back to the guest land in %LOCALAPPDATA%\cdmp\guest_progress\<host>\incoming and nothing applies
+  them.
+- No code makes or recognises an empty save. A new co-op world is the real save folder copied without its slot
+  folders; the host's New Game then autosaves slot0 at world entry (nc7: "slot 0 -> REMAP 204", Day 0).
+Design chosen (A, host-authoritative, with a world marker):
+- `<world>\cdmp_coop_world.txt` written as `user2_character=pending` when a world is made with seed "new". Worlds
+  made by copy (Start From My Solo Progress) and old worlds have none and behave as today.
+- In a marker world the guest's upload is verified and acknowledged but never staged. At user 2's login gate (the
+  2535 hold of e3583a7) the host stages, in this order: pending -> a copy of the host's own first complete slot
+  (both at mission 0), marker rewritten with the guest id and the line root; later sessions -> the newest mailbox
+  generation of that root; else `<world>_guest_prev\...\slot204`; else re-seed from the host's newest slot (WRN).
+- So the run's character for the friend is named by the line root in the world's marker and lives on the host's PC.
+  The friend's solo saves are never used for that world; a different partner's world has its own marker.
+- Rejected: B (the guest's game makes its own new game first: agreement, difficulty, opening, a restart, all by
+  keys); C (ship a template save: none exists).
+- Files: S2/save_hooks.cpp (marker at a "new" seed; `_guest_prev` moved with a world set aside), a new pure
+  S2/coop_world_logic.h (marker text, slot picker, staging order), S2/guest_save_host.cpp/.h, S2/guest_save_tunnel.cpp
+  (finish_upload; the gate's staging), S2/server.cpp (the gate), config ([session2] coop_world_character=1|0), unit
+  tests; layer: card wording only; harness: back up the marker and `_guest_prev` with the test world.
+- Risks named by the research, to be settled by tests: does the host's first autosave replay the opening for user 2;
+  identical item numbers on both (as the old clone mode, which ran for hours); the first slot may still be
+  `slot0_new` when the gate looks; the mailbox keeps 5 generations across all lines; a guest with no local save
+  still cannot press Play; the label's base must be the root.
+- Tests planned: newsave with another guest save (the guest at mission 0 on its screen, "seeded from the host's
+  slot"), Continue of that world (the guest where it left), the same with the mailbox emptied, the old world on
+  Continue (unchanged), solostart after a marker world, a guest with no save.
