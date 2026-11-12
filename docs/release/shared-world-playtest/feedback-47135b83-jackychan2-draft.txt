@@ -3,7 +3,7 @@
 What we found for each point:
 - **Menu on AMD**: confirmed working on JackyChan's card. Thank you for trying it.
 - **Teleporting to your friend is slow and can stop short**: confirmed in Devils' log (almost 2 and 3 minutes for about 3 km). It moves you in small hops today. It is being rebuilt as a proper travel.
-- **New Co-op Save, only one started fresh**: that is how it is built today (each player keeps their own character). We are deciding whether both should start fresh there.
+- **New Co-op Save, only one started fresh**: you are right, both should start fresh. Today the joining player keeps their own character; a coming build gives both a new save there.
 - **JackyChan's game closing after Q when downed**: found where it happens (the host's world reloading with a friend in it); being fixed.
 - **The host's cutscenes look like teleporting to the friend**: known, the friend does not see the host's cutscenes yet.
 - **No horse or wyvern for the joined player, and getting stuck after an Axiom Force grab**: not explained yet, we are looking. If you can say where you were when the horse would not come, that helps.
