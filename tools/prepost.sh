@@ -99,14 +99,17 @@ two_player_checks() {
     hasnot "$L" "Prologue: we are in the prologue" "$r: no solo-prologue hold"
     hasnot "$L" "shared loot is ON but"            "$r: no misleading loot warning"
     # ("first-chance AV at 0x7FF... kind 0x8" = a thread ran into a system DLL's page in the instant a hook was being
-    # written into it; the hook library traps such threads on purpose and lets them go on. Seen since tc51.)
+    # written into it; the hook library traps such threads on purpose and lets them go on. Seen since tc51.
+    # "at 0x13FFE.... / 0x13FFF.... kind 0x8" is the same event in the hook library's own trampoline pages right
+    # below the exe: safetyhook's trap_threads makes the 'to' page read/write too while it writes a hook, a thread
+    # running an earlier hook's trampoline there faults and is retried. 10 logs since tc29, the game went on in all.)
     # native log errors: the known ones (the harness's own sandbox copy, three far-world hooks not ported to this
     # game build, the guest's guarded reads) are counted; any other is a FAIL.
     no_recording $N/$NAME.$r.log "$r"
     growth $N/$NAME.$r.log "$r native" 420
     growth "$L" "$r layer" 240
-    local e; e=$(grep "\] ERR " $N/$NAME.$r.log 2>/dev/null | grep -vcE "Session2 save redirect: (cannot copy|CDMP_SANDBOX_ADD)|User2Stages: [DSF], .* REFUSED, not hooked|GuestXVeto: unsupported game build|GuestS3 first-chance AV at cdmp.asi|GuestS3 first-chance AV at 0x7FF[0-9A-F]+ kind 0x8")
-    [ "${e:-0}" -eq 0 ] && ok "$r: native log: no error line outside the known set" || { bad "$r: native log: $e unknown error line(s):"; grep "\] ERR " $N/$NAME.$r.log | grep -vE "Session2 save redirect: (cannot copy|CDMP_SANDBOX_ADD)|User2Stages: [DSF], .* REFUSED, not hooked|GuestXVeto: unsupported game build|GuestS3 first-chance AV at cdmp.asi|GuestS3 first-chance AV at 0x7FF[0-9A-F]+ kind 0x8" | cut -d']' -f3- | cut -c1-170 | sort | uniq -c | head -5 | sed 's/^/          /' >> "$R"; }
+    local e; e=$(grep "\] ERR " $N/$NAME.$r.log 2>/dev/null | grep -vcE "Session2 save redirect: (cannot copy|CDMP_SANDBOX_ADD)|User2Stages: [DSF], .* REFUSED, not hooked|GuestXVeto: unsupported game build|GuestS3 first-chance AV at cdmp.asi|GuestS3 first-chance AV at 0x(7FF|13FF[EF])[0-9A-F]+ kind 0x8")
+    [ "${e:-0}" -eq 0 ] && ok "$r: native log: no error line outside the known set" || { bad "$r: native log: $e unknown error line(s):"; grep "\] ERR " $N/$NAME.$r.log | grep -vE "Session2 save redirect: (cannot copy|CDMP_SANDBOX_ADD)|User2Stages: [DSF], .* REFUSED, not hooked|GuestXVeto: unsupported game build|GuestS3 first-chance AV at cdmp.asi|GuestS3 first-chance AV at 0x(7FF|13FF[EF])[0-9A-F]+ kind 0x8" | cut -d']' -f3- | cut -c1-170 | sort | uniq -c | head -5 | sed 's/^/          /' >> "$R"; }
   done
   info "screenshots to LOOK AT: $(cd $N/shots && ls $NAME-*.png 2>/dev/null | tr '\n' ' ')"
 }
