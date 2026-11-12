@@ -30,7 +30,11 @@ Not posted yet (2026-11-11, after 3c46bec5):
   host along the map's north-south axis (the test spot happened to be). From d5c06748 on it is by real distance to
   the nearest player; tested 484 m from the host (see PROGRESS, of1-of3).
 - A friend who has never played (no save at all) could not join: their game waited on "Waiting for Host" for ever.
-  Their game now starts a new character in the host's world by itself (state: see PROGRESS, gn2).
+  Now their game says so, goes back to its normal title by itself and shows what to do ("You have no character yet.
+  Start Solo, begin a New Game, and join again once you stand in the world."), and the host is told why. A new
+  character made inside the host's world is not possible yet.
+- Checked, no change needed: a player on horseback can fight (the guest's blows count and it can be hurt in the
+  saddle).
 - Known: enemies that came for the host do not go after a guest far from the host until the guest attacks them.
 
 0.1.0-alpha+3c46bec5 (2026-11-11):
