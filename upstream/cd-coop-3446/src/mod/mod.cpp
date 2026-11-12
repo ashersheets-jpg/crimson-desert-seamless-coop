@@ -91,6 +91,7 @@
 #include "mod/net/time_sync.h"
 #include "mod/net/troc_sniffer.h"
 #include "mod/render/dx12_hook.h"
+#include "mod/render/coop_page.h"
 #include "mod/render/hud.h"
 #include "mod/settings_menu.h"
 #ifdef CDMP_COOPPLUS_SIM
@@ -2304,6 +2305,7 @@ DWORD WINAPI worker(LPVOID) {
         net::enemy_set_keep_origin(cfg.dev_enemy_keep_origin);
         net::loot_set_test_original(cfg.dev_loot_test_original);
         net::coop_set_copy_disabled(cfg.dev_no_copy);
+        render::coop_page_dev_see_through(cfg.dev_wait_see_through);
         net::revive_set_boss_wait(cfg.coop_boss_death_wait);
         net::activity_set_skip_test(cfg.dev_skip_test);
         if (cfg.dev_trace_op) net::sniffer_set_trace_op(static_cast<uint16_t>(cfg.dev_trace_op));

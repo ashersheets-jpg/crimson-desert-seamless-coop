@@ -5789,3 +5789,20 @@ Report: build/native/prepost-pp5.txt (every step's switches are in it). 332 chec
   host far along the other axis) so the same mistake cannot pass again.
 - ai_handoff: of2 handed 64 NPCs to the guest's user ("handed over 64 ... noted 64") and nothing broke, but
   of1 shows the enemies act without it. Still no evidence that it is needed; stays off.
+
+### of3, gn2, sp1 (2026-11-11 23:47 - 2026-11-12 00:15) on package d5c06748 (layer d5c0674, native 19be296)
+
+- of3 (the 484 m fight again, release defaults, the corrected hook): "range checks 64 | field owner out of range
+  59 | counted because another player was in range 59" (59 of 59; of1: 0 of 103). "kills host 0 guest 9"; the
+  guest's health went down to 0 (it was beaten 484 m from the host: a real fight in both directions). SAVES OK,
+  install 5/5. So the far fight now works by real distance. Still to do: the checklist's second geometry.
+- gn2 (the guest with no save, the lobby's New Game path): the lobby took the new branch ("this player has no save
+  of their own: New Game ..., difficulty 1") and 40 s later "the guest's New Game did not start (the player can
+  finish it)". The guest's client sent nothing more to the host (2 packets in the whole run) and the waiting screen
+  stayed. What the game shows behind the waiting screen is not known: a dev switch ([dev] wait_see_through=1, the
+  screen drawn see-through) and a harness switch (-WaitShots: a screenshot every 4 s while a copy is waited in)
+  are written for the next run. Note: the test co-op world still holds the slot204 of earlier guests, which a real
+  first-time pair would not have.
+- sp1 (SpawnCharacterCheatReq 2185 standing still at Nas River; three payloads: C = 0, C = own key, B = own key):
+  posted three times, no new NPC within 15 m, no error line. Time limit reached: left alone (note in
+  notes_spawn_cheat.md); enemies for tests keep coming from the dock quest.

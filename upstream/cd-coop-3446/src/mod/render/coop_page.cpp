@@ -542,6 +542,8 @@ void draw_party(ImDrawList* dl, float width, float height, const net::LobbyView&
     }
 }
 
+std::atomic<bool> g_dev_see_through{false};
+
 // Draws the lobby (or the guest's waiting screen) and takes its input; false when neither is on screen.
 bool draw_lobby(float width, float height, ImDrawList* dl, ImVec2 mouse, const std::vector<ImVec2>& clicks,
                 const std::vector<unsigned>& keys) {
@@ -550,7 +552,7 @@ bool draw_lobby(float width, float height, ImDrawList* dl, ImVec2 mouse, const s
     if (v.guest_wait && !g_open.load()) {
         // The guest's game is driven behind this (New Game, the difficulty): it covers everything.
         g_lobby_shown = true;
-        dl->AddRectFilled(ImVec2(0, 0), ImVec2(width, height), IM_COL32(6, 5, 4, 255));
+        dl->AddRectFilled(ImVec2(0, 0), ImVec2(width, height), IM_COL32(6, 5, 4, g_dev_see_through.load() ? 70 : 255));
         const float cx = width * 0.5f, cy = height * 0.45f;
         const double t = ImGui::GetTime();
         for (int i = 0; i < 12; ++i) {
@@ -817,6 +819,8 @@ bool draw_lobby(float width, float height, ImDrawList* dl, ImVec2 mouse, const s
 }
 
 }  // namespace
+
+void coop_page_dev_see_through(bool on) { g_dev_see_through = on; }
 
 bool coop_page_open() { return g_open.load(); }
 bool coop_page_details() { return g_details.load(); }
