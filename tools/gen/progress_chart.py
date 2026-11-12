@@ -37,7 +37,7 @@ G = [
 ]),
 ("LAST", [
  ("3-4 player co-op", 0, "Only after two-player play is stable."),
- ("Release (package, installer, save protection)", 76, "A 12-step checklist now runs before every post. Build 09a188c3 waits for your OK."),
+ ("Release (package, installer, save protection)", 76, "A 12-step checklist now runs before every post. Build 980c5b38 waits for your OK."),
 ]),
 ]
 BG="#1e1f24"; TRACK="#2e3038"; BAR="#5b9bd5"; INK="#f2f2f2"; MUT="#a6a8ad"
@@ -46,7 +46,7 @@ H = 1.9 + rows*ROW + len(G)*GH + 0.9
 fig = plt.figure(figsize=(21.5, H), dpi=100, facecolor=BG)
 ax = fig.add_axes([0,0,1,1]); ax.set_xlim(0,21.5); ax.set_ylim(H,0); ax.axis('off')
 ax.text(0.26,0.52,"Co-op+ big update: progress by task",color=INK,fontsize=26,fontweight='bold',va='center')
-ax.text(0.26,1.08,"11 Nov 2026, 17:30.  Percentages are the developer's estimates, not measurements.  Playtest build 0.1.0-alpha+3c46bec5 is out, 09a188c3 is ready; the full update ships when every task works.",color=MUT,fontsize=14,va='center')
+ax.text(0.26,1.08,"11 Nov 2026, 19:50.  Percentages are the developer's estimates, not measurements.  Playtest build 0.1.0-alpha+3c46bec5 is out, 980c5b38 is ready; the full update ships when every task works.",color=MUT,fontsize=14,va='center')
 y=1.9
 for name, items in G:
     ax.text(0.26,y,name,color=MUT,fontsize=12.5,fontweight='bold',va='center'); y+=GH*0.95

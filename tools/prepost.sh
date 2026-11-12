@@ -35,7 +35,7 @@ growth() {  # log, who, limit per minute
   local f=$1 a b n
   [ -s "$f" ] || return
   a=$(grep -m1 -oE "^\[[0-9]{2}:[0-9]{2}:[0-9]{2}" "$f" | tr -d '['); b=$(grep -oE "^\[[0-9]{2}:[0-9]{2}:[0-9]{2}" "$f" | tail -1 | tr -d '[')
-  n=$(grep -c "" "$f")
+  n=$(grep -vc "Lootr probe" "$f")  # not the loot probe's own lines (a dev key the loot step switches on)
   local sa=$((10#${a:0:2}*3600 + 10#${a:3:2}*60 + 10#${a:6:2})) sb=$((10#${b:0:2}*3600 + 10#${b:3:2}*60 + 10#${b:6:2}))
   local secs=$((sb - sa)); [ $secs -lt 60 ] && secs=60
   local per=$((n * 60 / secs))

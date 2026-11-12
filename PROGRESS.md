@@ -29,6 +29,15 @@ test save Out, shipped cdmp.ini restored.
   .bin (only test copies have a role in the name; your own play writes cdmp_packets_<date> without a role, and
   those 16 files are a few KB each). They are of no use any more. Say "delete the test captures" and I remove
   exactly those role-named files, nothing else.
+- BUILD READY, your OK needed to post (2026-11-11 19:50; the 12-hour posting OK ended about 18:10):
+  0.1.0-alpha+980c5b38 passed the whole release checklist (pp5, 12 steps, 332 checks). The post text is drafted in
+  docs/release/shared-world-playtest/download-980c5b38-draft.txt. In it since 3c46bec5: a guest far from the host can
+  fight; a downed player lies down; the guest starts at the host's side; no more packet files written in solo; the
+  title footer. Say "post it" and I post it to #download-here with a short note in #general.
+- DECISION to confirm: the guest now starts at the HOST'S SIDE (once per start, when it would otherwise be more than
+  30 m away). Before, it started wherever its own save was (1.3 km away in the new-save test). The title menu
+  already says the friend "joins your story where you are". If you would rather keep the old start: tell me, it is
+  one setting ([coop] join_beside_host).
 - Playtest results from the testers (the two-PC test).
 - Release / Discord posts / sending a build: each needs the user's OK first.
 - Controller feel checks (hands on a pad).
@@ -5486,3 +5495,34 @@ Run pp1 on package 0.1.0-alpha+0cd46dd8 (layer HEAD 0cd46dd, native 560e3dc; one
   and 1.5 s is not a race. "pool 4 -> 4" means the body had no kind-0 entry: its drops were of the other kinds (kind
   3 = thrown on the ground by the death event, kinds 6 / 9 special), which never go through the worker. tcB387's big
   takes were bodies with kind-0 entries. What stays unverified is only what a second player sees on screen.
+
+### pp5 (2026-11-11 18:30-19:48): THE FULL CHECKLIST PASSES on 0.1.0-alpha+980c5b38
+
+Package 980c5b38 = layer 980c5b3 (outer HEAD at packaging), native 48cce24 (local). One PC, two copies, NVIDIA card.
+Report: build/native/prepost-pp5.txt (every step's switches are in it). 332 checks passed.
+
+| step | result | what it ran under |
+| --- | --- | --- |
+| static | PASS | no game: zip = tested files, first-time settings, unit tests, install script on a fake folder |
+| real | PASS, title menu complete on the screenshot | the zip's 5 files in the real game folder, started as Steam does, title only; "not recording packets to disk" |
+| fresh | PASS | two first-time players, the package's settings, lowest graphics, title -> world |
+| xess | PASS | the same + Intel XeSS frame generation |
+| fsr | PASS | the same + AMD FSR frame generation (on an NVIDIA card) |
+| display | PASS | my own display mode and graphics, frame generation on, real Steam lobby, title only |
+| lowsave | PASS: "our save's place was 1321 m from the host: moved to its side", 1 m at the end | a guest on a 1-mission save joins the host on its usual save |
+| chest | PASS | host opens the shrine chest, guest away, returns, gets its share |
+| revive | PASS, the body lies in the flowers under the death screen | guest taken down by KillCheat, Q revive |
+| loot | PASS: 4 of 20 loot requests gave an item, the guest got each share | host's script kills ten bandits and asks for each body's loot twice |
+| crime | PASS | both fight at the dock; no guest hit booked as a crime |
+| farfight | PASS: hits counted, the guest killed and lost health | guest fights the host's bandits 108 m from the host |
+
+- One FAIL line in the first pass was my own check again: the loot step switches the loot probe on, and its lines
+  pushed the host log over the growth limit (480 a minute). The growth count now leaves "Lootr probe" lines out
+  (309 a minute); re-checked with JUDGE_ONLY.
+- NOT covered by any of this (to say in the post): two PCs over the internet, Steam invites between two accounts,
+  AMD and Intel cards, a controller in hands, sessions longer than ten minutes, both players on a new co-op save
+  from the very start of the story, bosses, mounts, towns.
+- Since the posted 3c46bec5 this batch holds: the 80 m damage rule fix (a far guest can fight), the downed pose,
+  the guest starting at the host's side, no packet recording in solo (and off by default in the base), no
+  per-second log lines, the title footer, the downed friend's name plate, no Interact prompt over the death screen,
+  the misleading loot log line, dev steps (npcs, killnear, lootlast), ai_handoff (off by default).
