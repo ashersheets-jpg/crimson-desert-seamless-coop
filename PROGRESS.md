@@ -5908,3 +5908,23 @@ shipped switch list (native_mode_text.h). To be checked by a run before anything
   their own (quest_own_progress, on since 2026-11-09: "a quest STEP of the guest advancing on its own is still to be
   shown") nor with shared credit (built, off). For a story playtest that is the core. The New Co-op Save start is
   the test bed: host and guest (on the 1-mission 'newgame' save) hold the same first quest in the same world.
+
+### op3 (2026-11-12 02:14-02:24): the HOST's quest step advances by its own talk, the guest is not disturbed
+
+- Setup: New Co-op Save, the guest on the 'newgame' save (its tracker: "Unfamiliar Lands / Return to your comrades"),
+  package 2e813956 with release defaults. The host's script went to the nearest comrade (0xB010011E, variant
+  0x0000C86C, 47 m away, at the cabin), then E and a 30-degree turn, twelve times.
+- Host (shots op3-h01..h13): the talk works: "Joan: I'll take down every Black Bear I see.", then the note "Joan /
+  Trust +5 / Your actions are appreciated." (twice: +5, +10), and the objective under the screen changed from "Speak
+  with your comrades around the cabin to assess the situation." to "Speak with your comrades standing in front of
+  the grave." So a host's quest step advances in the shared world with a guest in it. The prompt on the next
+  comrade reads "Greymane / [E] Talk".
+- Guest (shots op3-g0..g2), 37 m away, doing nothing: its own tracker unchanged ("Return to your comrades", marker
+  48 m), camera and character untouched, no loading screen. Host log "ObserverSeqCopy ... copied 41", guest log
+  "GuestSeqRoute ... ROUTED to the actor's own manager X x41 ... foreign delivered 41": the host's 41 scenes (the
+  comrades' talks and idle scenes) reached the guest's game and did no harm.
+- "QuestRoute: on | events 4200 | own manager given (not the field's) 34 | same as the field's 4165 | shared passes
+  0": the guest's 34 game events went to its own quests.
+- The clock difference again: guest "Day 1 Mon 0:00 AM" while the host shows "Day 0 Sun 10:58 PM".
+- Next (running): op5, the GUEST walks its own first quest (goes to a comrade and talks); op4, the host's talk with
+  quest_shared_credit=1.
