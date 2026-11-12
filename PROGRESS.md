@@ -5928,3 +5928,22 @@ shipped switch list (native_mode_text.h). To be checked by a run before anything
 - The clock difference again: guest "Day 1 Mon 0:00 AM" while the host shows "Day 0 Sun 10:58 PM".
 - Next (running): op5, the GUEST walks its own first quest (goes to a comrade and talks); op4, the host's talk with
   quest_shared_credit=1.
+
+### op5, op4 (2026-11-12 02:26-02:47): shared credit runs without harm; the guest's own talk NOT tested yet
+
+- op4 (as op3 with [session2] quest_shared_credit=1 on the host; the guest 37 m away on its earlier step): the
+  host's talk and step change as in op3; "QuestRoute: on | events 3800 | own manager given 33 | ... | shared passes
+  192 (no other manager 3605)", no error, the guest's tracker unchanged (right: it is not on that step). So the
+  switch does no harm; whether it credits a guest ON the same step is still not shown.
+- op5 (the guest's script went "to the nearest person" and pressed E twelve times): the helper picked 0xB0100177
+  (variant 0x000F46FF, 108 HP) at the grave, where no comrade stands within reach: no Talk prompt in any shot, so
+  the guest talked to nobody. NOT a test of the guest's talk. What it shows: at the cabin the guest's own objective
+  line reads "Speak with your comrades standing in front of the grave." (the host's own line at that moment is the
+  earlier "...around the cabin..."): each player has its own objective in the same place. Whether that line came
+  from a step the guest completed by arriving is not proven by this run.
+- Both runs: the host's scenes copied to the guest (23 / 40), nothing taken over on the guest's screen.
+- Next, after checklist batch B: op7 (the guest goes beside the comrade the host talked to, "Joan", 0xB010011E at
+  (-9855.9, 614.4, -2806.8) in op3 and op4, and presses E), op6 (shared credit on, the guest 3 m from the host's
+  talk).
+- Slip: I edited the runner through a shell heredoc again (it turned the printf's line-break marks into real line
+  breaks; the result happens to be the same text). Edits with backslashes go through a file. No exceptions.
