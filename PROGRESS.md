@@ -6464,3 +6464,30 @@ leave the joined player stuck in that position. Report zip unpacked in the scrat
   reload crash (research running); 3 the fresh save for the friend (to design: how the guest's save is chosen and
   offered today, read first); 4 travel to the friend as a real travel; 5 the guest's mounts in a new world, the
   Axiom Force grab. The package dc7ade5e is not the one to post: its checklist stops after the steps now running.
+
+### The host's reload crash explained (research 2026-11-12 ~12:15; local notes build/decomp/notes_host_reload_crash.md)
+
+- CORRECTION of two earlier notes (tcB291 on 2026-11-10 and the tester report above): it is NOT "a request of the
+  guest handled while the host's world unloads". With the posted build's symbols the base's frame is troc_detour's
+  branch for a subject that is not user 2, and the "stack" of our crash line is a scan of the stack, not a call
+  chain (two of its entries are vtables, one is the Troc object itself).
+- What runs: ExecuteTroc (exe+0x29AD450) of opcode 2049, TrUpdateScheduleStageOnceTimer: a SERVER TIMER, not a
+  request of either client. Its handler (exe+0xE691180) takes its subject's field, calls the field's vtable +0x48
+  (ServerField 0x2D984B0: the field OWNER's sequencer stage manager) and reads [manager+0x170] with no null test:
+  the crash at 0xE6911E5. The answer is 0 when the owner cannot be resolved ("valid logined" lookup fails) or has
+  no manager. Which of the two at a reload: not determined.
+- Why only with a guest (inferred): alone, the owner's unload detaches the field from every timer subject first and
+  the handler's own "field not attached" exit catches it; with a guest the field stays attached while its owner is
+  gone for a moment. 313 host reloads passed in the tester's session before one timer fell into the gap. The
+  sibling timers 2047 and 2050 have the same unguarded read.
+- Fix written (native, session2/user2_funnels.cpp, NOT built yet): before a 2047 / 2049 / 2050 runs, for any
+  subject, the field is asked the same question (its vtable +0x48, under SEH); no manager = the timer is answered
+  as the game answers "field not attached" (*res = 0) and not run. WRN line for the first 20, a count in the
+  summary. Dev switch [session2] schedule_timer_guard_test=N: N timers are skipped although the owner is there
+  (does a skipped tick break the NPC schedules? the research could not say; a skipped call would have decremented
+  a counter in the schedule object).
+- Not covered by the fix: an owner torn down on ANOTHER thread between our question and the handler's (in the
+  report the unload ran on the same thread as the crash, so not expected).
+- To test: (1) schedule_timer_guard_test with two players: schedules go on; (2) the host reloads its world with the
+  guest next to it, many times (the checkpoint revive U moves and reloads): no crash, and whether the guard's count
+  ever rises on this PC.
