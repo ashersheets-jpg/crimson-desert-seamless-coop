@@ -6549,3 +6549,38 @@ Design chosen (A, host-authoritative, with a world marker):
   remote. The decompilation notes (build/decomp) stay private.
 - README.md and CREDITS.md say what is where (the status line was a month old: "not yet tested in the game").
 - Not published by this: the timer guard and the fresh-save work (uncommitted in upstream/cdmp-native).
+
+### 2026-11-12 12:15-12:30, while pp9's first ten steps run (no builds): travel research, the fresh save written, a Steam fault in pp9-display
+
+- TRAVEL (research, local notes build/decomp/notes_far_teleport.md; nothing run):
+  - Why DoTeleportAck 3052 stops at about 50 m: the client's handler asks its navigation data for a standable cell at
+    the target, and the target's 32 m nav chunk must be within 2 chunks of the client's nav window. Far targets have
+    no nav data on the client. Not a constant to change. 3052 is the game's blink for AI companions, not a player
+    move; its 8 trailing bytes are a session id that is echoed back, no flag.
+  - How the game moves a player far: a PENDING RELOAD. The server stores a destination on the character's transform
+    component and the client's loading machine sends GameLoadingStartReq 2294 by itself; the server then applies it.
+    Fast travel is ReloadStageStartReq 3074 (53 bytes: u32 0 | u32 FieldInfoKey | u32 actor | vec3 pos | quat | vec3
+    scale | u8 flag); with actor = 0 the packet's position is taken with NO waypoint, unlock, distance or cheat
+    test. TeleportRevivePointAck 3071 (u32 actor | u32 art) only starts the client's loading screen. The teleport
+    item does exactly "destination + 3071".
+  - Recommended (confirmed statically, never run): as player X inject Req 3074 `0 | X's FieldInfoKey | 0 | P | quat |
+    (1,1,1) | 1`, at once send Ack 3071 `K | 0` to X's client; the client loads and sends 2294 itself. For user 2
+    the base's fast-travel funnel must be live (it is in the package: user2_fast_travel=1). The tcB16 trial of
+    2026-11-07 sent actor = the host's key, which the worker refuses for a remote player: it most likely never set
+    a destination. The cheat teleports (2917, 2126) are stripped in the retail exe.
+  - To build: "Go to my friend" and the join beside the host through this (a loading screen, then there), hops only
+    for the last metres or as the fallback.
+- THE FRESH SAVE: written in the base by an implementation pass, NOT compiled (uncommitted in upstream/cdmp-native:
+  session2/coop_world_logic.h new; save_hooks, guest_save_host, guest_save_tunnel, server.cpp, config, mod.cpp,
+  tests). Its own list of doubts: the pending seed takes the host's most recent complete slot; reading the host's
+  slot can collide with a host save for a few ms; after a fallback `_guest_prev` could hold the friend's solo
+  character and be adopted; no lock on the gate's state (it assumes the gate and the tunnel run on the network
+  thread). To compile, review and test (ten scenarios listed in its report).
+- pp9-display FAILED two checks (the package dc7ade5e, a REAL Steam launch): `Crash log: exception 0xC0000005 at
+  steamclient64.dll+0x723127 reading 0xFFFFFFFFFFFFFFFF` inside SetRichPresence, 2 s after the game started, then
+  `ERR Join: exception in SetRichPresence; Steam join and invites disabled`. First time in any kept log. Steam was
+  running. The layer's guard caught it, as built, and then switched Steam join and invites OFF FOR THE WHOLE
+  LAUNCH: a player hit by this once has no invites until a restart. Changed (layer, net/steam_join.cpp, not built):
+  a fault drops the interface and Steam is asked again after 10 s; the third fault in a launch switches it off; the
+  status ("Join Game" for friends) is said again when Steam answers. The cause inside Steam is not known (the user
+  handle was valid, so the interface had been taken after Steam's init).
