@@ -6341,3 +6341,17 @@ Earlier reading (am1): "not a consequence of the missing overlay on this PC; wha
   holds, with flat memory. What it does not show: half an hour of fighting and looting, a town, an evening.
 - Both screens at the end: the two characters side by side at Nas River; the game clock had run from 11:57 AM to
   4:30 PM on both (guest 4:29, host 4:33, shots a few seconds apart).
+
+### rt4a (2026-11-12 11:26-11:40): the same recovery through the GAME'S OWN Return to Title works too
+
+- `-GuestDev lobby_skip_play=1 -HostDev lobby_recover=2 -SecondRound`: instead of our Leave the host's game runs
+  only the game's Return to Title routine (what its own menu row ends in): no goodbye, the lobby is not told.
+- Host 11:34:35 Return to Title, 11:35:06 "the host chose your co-op save (a second start in this launch: both games
+  restart again)" (the `again` branch: this launch is still a co-op host), restart 11:35:07; the guest, still on
+  its "has not let you in" screen, followed on the host's "2" (11:35:26); base 11:35:32 "the guest's connection was
+  replaced ..."; host in the shared world 11:36:28, guest 11:37:12. SAVES OK, 5/5.
+- With this every way back into co-op after a start that did not work has one passing test: a second Start Co-op
+  at the title (retry / rt1b), our Leave (stuck / rt3b), the game's own menu (rt4a). Not a checklist step of its
+  own (it differs from `stuck` in one branch; 18 minutes).
+- Still only simulated: the guest "not let in" is the guest not pressing Play. A host that really drops the
+  guest's login has not been made on purpose.
