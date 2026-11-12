@@ -5526,3 +5526,16 @@ Report: build/native/prepost-pp5.txt (every step's switches are in it). 332 chec
   the guest starting at the host's side, no packet recording in solo (and off by default in the base), no
   per-second log lines, the title footer, the downed friend's name plate, no Interact prompt over the death screen,
   the misleading loot log line, dev steps (npcs, killnear, lootlast), ai_handoff (off by default).
+
+### 2026-11-11 19:55: what the harness's lobby flow really chooses; a New Co-op Save test (nc1)
+
+- Screenshot pp5-fresh-L2-host-question: the host's question "How does your co-op journey begin?" has three cards
+  (Continue Our Co-op Save / Start From My Solo Progress / New Co-op Save) and the harness presses Space on the
+  FIRST: "Continue Our Co-op Save". Its log line said "the first enabled choice (Start From My Solo Progress)" since
+  2026-11-09, which was true only until the first co-op save existed. So every lobby run since then continued the
+  same test co-op world (coop_worlds\with_127_0_0_1, slot103 = the host at Nas River, slot204 = the guest), and
+  NEITHER "Start From My Solo Progress" NOR "New Co-op Save" has been run since. The log line is corrected.
+- New harness switch -HostChoice 1|2|3 (twocopy.ps1). 3 replaces the test co-op world, so it is backed up first
+  (build/native/keep-coop-world + keep-coop-world.sums) and put back after.
+- nc1 (running): -HostChoice 3, both first-time players on the package's settings: what do two new players get in
+  the first minutes of a New Co-op Save (the story's opening, cutscenes, where each one stands).
