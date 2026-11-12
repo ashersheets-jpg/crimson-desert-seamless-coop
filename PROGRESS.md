@@ -5559,3 +5559,23 @@ Report: build/native/prepost-pp5.txt (every step's switches are in it). 332 chec
   only has initialize_input.save and user_engine_option_save.xml, like the real one).
 - nc3 (running): in the test copy the harness presses Space every 4 s on the host (agreement, New Game steps) with a
   screenshot before each press, to see the first minutes of a new co-op story for both players.
+
+### nc3-nc4 (2026-11-11 20:14-20:45): New Co-op Save stops at the game's agreement in my test; the mod's own flow
+
+- Two runs lost (35 minutes) to one thing I could have read first: the agreement's Accept only works after the text
+  has been scrolled to its END. nc3 tapped Space 57 times, nc4 held it 47 times: nothing. The mod's own code for the
+  GUEST already does it right (net/coop_worlds.cpp worlds_lobby_guest_new: mouse over the text, wheel down 200
+  notches, hold Space 1.6 s, then the difficulty: W to the top, S down, Space). Lesson added to docs/LESSONS.md:
+  before automating a game screen, grep the mod for how that screen is already handled.
+- What a real pair gets on New Co-op Save (read from the code and seen in nc2-nc4, one PC):
+  - the old co-op world is renamed to ..._old_<date-time>, not deleted;
+  - the host's game restarts into co-op, the mod holds Z for it (New Game, up to three tries), then the HOST sees the
+    game's agreement (a new co-op world is a fresh save folder) and the difficulty, and answers them itself
+    (status: "New Game (the host picks the difficulty)");
+  - the guest sees only "Waiting for Host / Host is setting up the game. You join at the start of the story." while
+    the mod drives its game: New Game, the agreement (scrolled and accepted for the guest: the owner's decision of
+    2026-11-06, NOTES/FLAGS.md F25), the host's difficulty.
+  - Wart: the host has to scroll and accept the agreement again for every new co-op save. Not changed.
+- The harness now does for the HOST in the test copy what the mod does for the guest (scroll, hold, then Space), and
+  build/native/coopworld.sh backs the test co-op world up and puts it back (checksums) around such runs.
+- nc5 (running): the same with that; then mr1: the first mounts test in the shared world.

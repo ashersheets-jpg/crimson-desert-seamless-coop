@@ -42,6 +42,13 @@ topic BEFORE testing or guessing about it.
 
 ## Test design
 
+- Before automating a game screen, grep the mod for how that screen is already handled. Two runs (35 minutes) went
+  into pressing Space on the game's agreement, which only accepts after its text is scrolled to the end; the mod's
+  own guest flow (net/coop_worlds.cpp) has done exactly that since 2026-11-06.
+- A run that replaces the test co-op world (-HostChoice 2 or 3) goes between `coopworld.sh backup` and
+  `coopworld.sh restore NAME`. Decisions the owner already made are in NOTES/FLAGS.md: read the flag before
+  questioning a behaviour (the agreement accepted for the guest is F25).
+
 - Know what is at the test spot without the host. The "bandit camp" at the dock is the HOST's quest: with the host
   away there is nobody to fight. Five runs tested a fight that could not happen. Use the `npcs` dev step first.
 - A scripted player who only clicks attack walks forward with every swing: 150 clicks = 280 m away. A fight test
