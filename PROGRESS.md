@@ -41,6 +41,13 @@ test save Out, shipped cdmp.ini restored.
   .bin (only test copies have a role in the name; your own play writes cdmp_packets_<date> without a role, and
   those 16 files are a few KB each). They are of no use any more. Say "delete the test captures" and I remove
   exactly those role-named files, nothing else.
+- YOUR SCREEN, 2026-11-12 02:12: a Windows Security box "Choose a passkey / Passkey for discord.com" (iPhone, iPad or
+  Android device / Security key / Cancel) was open on the desktop (seen in the checklist's full-screen title
+  screenshot pp7-display-02). It is not from the mod or my tests and I did not touch it (I never handle sign-ins).
+  It looks like Discord in a browser asking to sign in again.
+- CANDIDATE 2026-11-12: build 0.1.0-alpha+2e813956 (layer 2e81395, native 19be296) is in its full 18-step checklist
+  (pp7; the first 6 steps and the no-save step pass). Post draft: docs/release/shared-world-playtest/
+  download-2e813956-draft.txt. When the pass is complete, "post it" posts this build.
 - CORRECTION 2026-11-11 23:50: builds 980c5b38 and 2ddd622f are NOT to be posted as they are. Their "a guest far
   from the host can fight" fix is half wrong (found by the 484 m runs of1 / of2): it only works while the guest's
   enemies are within 80 m of the host along ONE map axis (north-south), whatever the east-west distance. The test
@@ -5882,3 +5889,22 @@ shipped switch list (native_mode_text.h). To be checked by a run before anything
 - Plan: op3 (the host talks to a comrade at the story's start with the guest beside it), right after the checklist
   pass. Aim for the playtest build: a host scene must never break the guest (no loading screen, no stolen camera);
   the guest seeing the scene comes second.
+
+### pp7 batch A (2026-11-12 01:45-02:13) on 0.1.0-alpha+2e813956: 6 of 18 steps, 124 checks PASS, 0 FAIL
+
+- static, real, fresh, xess, fsr, display: all pass; x1-nosave (the no-save step, run alone before the pass on the
+  same package): 7 of 7 pass, shots x1-nosave-nosave-guest ("You have no character yet. Start Solo, begin a New
+  Game, and join again once you stand in the world.") and -host ("Guest has no character yet and must start a New
+  Game alone first. Restart the game to play solo."). Wart: the host's Start Co-op card stays usable there (pressing
+  it only repeats the round trip).
+- Screenshots looked at: xess host view (the guest 1 m away, Interact prompt), the display step's title (complete;
+  a Windows passkey box of the owner's desktop lies over it: noted in the waiting list).
+- Interleaved between batches (no shipped file changes): op3, the first run of a QUEST STEP with two players (see
+  below). coopworld.sh no longer counts the graphics settings file as part of the test world (after a frame-
+  generation step it differs and the backup check refused to run).
+- The agreement the host sees again on New Co-op Save is the game's own New Game step (FLAGS F25: every New Game
+  shows it), not a wart of the mod: dropped from the open list.
+- WHY op3 NOW: nothing in this project's logs shows a quest step advancing with two players, neither each on
+  their own (quest_own_progress, on since 2026-11-09: "a quest STEP of the guest advancing on its own is still to be
+  shown") nor with shared credit (built, off). For a story playtest that is the core. The New Co-op Save start is
+  the test bed: host and guest (on the 1-mission 'newgame' save) hold the same first quest in the same world.
