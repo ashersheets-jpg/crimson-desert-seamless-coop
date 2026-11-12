@@ -5539,3 +5539,23 @@ Report: build/native/prepost-pp5.txt (every step's switches are in it). 332 chec
   (build/native/keep-coop-world + keep-coop-world.sums) and put back after.
 - nc1 (running): -HostChoice 3, both first-time players on the package's settings: what do two new players get in
   the first minutes of a New Co-op Save (the story's opening, cutscenes, where each one stands).
+
+### nc1-nc2 (2026-11-11 19:50-20:12): New Co-op Save, first tries; a harness accident and its fix
+
+- nc1: after the host chose New Co-op Save its game restarted at once; my new harness step wanted a screenshot at
+  that moment, the window was gone, the harness script stopped, and its cleanup ran BEFORE the restarted copy came
+  up. That copy (pid 31232) then ran for 17 minutes in the game folder with the test files; "user install restored:
+  4 / 5" (cdmp.asi was locked). Put right by hand: the copy closed, the five files put back (5 / 5 by checksum),
+  SAVES OK, the test co-op world restored from the backup (identical by checksum). Harness fixed: twocopy.sh now
+  watches 20 s longer for copies of ours that start late; the step after the choice no longer stops the test.
+- What the mod does on New Co-op Save (good): the old co-op world is NOT deleted, it is renamed to
+  with_127_0_0_1_old_<date-time> and a new empty one is made.
+- nc2 (the host without a test slot, so the new world is really empty): the guest shows "Waiting for Host / Host is
+  setting up the game. You join at the start of the story. / Please wait. Your game follows the host's on its own."
+  The host's game shows the game's END USER LICENSE AGREEMENT again (a new co-op world is a fresh save folder), and
+  the run ended there after 4 minutes: nothing presses it, rightly. For a real player this means: New Co-op Save
+  asks them to accept the agreement once more. Noted as a wart, not changed (the mod must not accept it for anyone;
+  whether the player's own earlier acceptance can be carried into the new folder is not known: the folder's root
+  only has initialize_input.save and user_engine_option_save.xml, like the real one).
+- nc3 (running): in the test copy the harness presses Space every 4 s on the host (agreement, New Game steps) with a
+  screenshot before each press, to see the first minutes of a new co-op story for both players.
