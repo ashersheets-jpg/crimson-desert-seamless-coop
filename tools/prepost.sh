@@ -4,7 +4,7 @@
 #
 #   bash tools/prepost.sh TAG "<package folder>" STEP        STEP = static | real | fresh | xess | fsr | display |
 #                                                                   lowsave | chest | revive | loot | crime | farfight | farfight2 | newsave | solostart | mounts | mountfight | nosave |
-#                                                                   retry | stuck |
+#                                                                   retry | stuck | mismatch | hostrevive |
 #                                                                   summary
 #
 # TAG names the run (pp1 ...): the test names are TAG-STEP, the report is build/native/prepost-TAG.txt.
@@ -249,7 +249,9 @@ lowsave)
   near=$(grep "Net: connected" "$L" | tail -1 | sed -n 's/.*last remote (\([-0-9.]*\), [-0-9.]*, \([-0-9.]*\)).*/\1 \2/p')
   mine=$(grep "Local: pos" "$L" | tail -1 | sed -n 's/.*pos (\([-0-9.]*\), [-0-9.]*, \([-0-9.]*\)).*/\1 \2/p')
   d=$(echo "$near $mine" | awk 'NF==4{printf "%d", sqrt(($1-$3)^2 + ($2-$4)^2)}')
-  [ -n "$d" ] && [ "$d" -le 30 ] && ok "guest: $d m from the host at the end" || bad "guest: ${d:-?} m from the host at the end (wanted within 30 m)" ;;
+  [ -n "$d" ] && [ "$d" -le 30 ] && ok "guest: $d m from the host at the end" || bad "guest: ${d:-?} m from the host at the end (wanted within 30 m)"
+  has "$N/$NAME.coopplus.guest.log" "Teleport: [0-9]+ m: the game's own travel" "guest: the join's move was the game's own travel (not hops)"
+  hasnot "$N/$NAME.coopplus.guest.log" "far travel did not take us there|back where we started" "guest: the travel took at the first try" ;;
 chest)
   head_step "chest: the host opens it, the guest is away, comes back and gets its own share"
   A="w:800_shot:$NAME-h0_kd:E_w:2800_ku:E_w:3600_shot:$NAME-h1_w:10500"
@@ -340,6 +342,14 @@ newsave)
   bk=$(cd $N && bash coopworld.sh backup 2>&1 | tail -1); say "  test co-op world: $bk"
   case "$bk" in *"backed up"*|*"backup is current"*) ;; *) bad "the test co-op world could not be backed up: step not run"; sed -n "/^== $STEP /,\$p" "$R"; exit 1 ;; esac
   run2 "-CoopPlus -Lobby -Fresh -PackageIni $MODW -HostChoice 3 -Hold 30 -GuestKeys w:3000_shot:$NAME-g0_w:15000_shot:$NAME-g1 -HostKeys w:500_shot:$NAME-h0"
+  # 2026-11-12 (the owner's rule, fs1 / fs2): a New Co-op Save gives the friend a new save too, a copy of the host's
+  # first REAL save (not the 5 KB stub written at world entry), and Continue of that world brings that character
+  # back, whatever save the friend has of its own. So a second run continues the world this one made, the guest with
+  # ANOTHER save of its own; only then the test world is put back.
+  FIRST=$NAME
+  NAME=${FIRST}c
+  run2 "-CoopPlus -Lobby -Fresh -PackageIni $MODW -HostVariant keep -KeepSlots -GuestVariant coop-test-bandits -Hold 30 -GuestKeys w:3000_shot:$NAME-g0_w:15000_shot:$NAME-g1 -HostKeys w:500_shot:$NAME-h0"
+  NAME=$FIRST
   if [ -z "$JUDGE_ONLY" ]; then
     rs=$(cd $N && bash coopworld.sh restore $NAME 2>&1 | tail -1)
     case "$rs" in *"identical to the backup"*|*"is the backup's"*) ok "the test co-op world is back ($rs)" ;; *) bad "the test co-op world: $rs" ;; esac
@@ -348,9 +358,22 @@ newsave)
   H=$N/$NAME.host.log
   has "$H" "user 2's LoginUserToFieldServerReq waits" "the guest's login waited for the host's new game"
   has "$H" "this co-op world has a save of the host's now" "the wait ended when the host's first save was there"
-  has "$H" "LoadSlot .* = user 2 \\| slot [0-9]+ -> REMAP 204" "the guest's lobby was loaded from its own slot"
-  has "$H" "the staged guest slot moved in" "the guest's uploaded save moved into the new world"
-  hasnot "$H" "C2 identity: refused user 2" "the guest's character login was not refused" ;;
+  has "$H" "new co-op save: marker .* written \\(user2_character=pending" "new world: marked as one whose friend gets a new character"
+  has "$H" "is checked and kept aside, NOT staged" "the friend's own save was checked and NOT used"
+  has "$H" "only the new game's first stub" "the host's 5 KB first save was not taken"
+  has "$H" "the friend gets a new character, the host's save: staged a copy of the host's own slot" "the friend's character is a copy of the host's first real save"
+  hasnot "$H" "co-op world\\): FAILED" "no fall-back to the friend's own save"
+  has "$H" "the staged guest slot moved in" "the friend's new save moved into the new world"
+  hasnot "$H" "C2 identity: refused user 2" "the guest's character login was not refused"
+  info "the seeded save: $(grep -h 'the friend gets a new character' "$H" | sed -n 's/.*\(save [0-9]* B\).*/\1/p' | head -1)"
+  say "  -- Continue of that world (${NAME}c), the guest with another save of its own:"
+  NAME=${FIRST}c; two_player_checks; NAME=$FIRST
+  C=$N/${NAME}c.host.log
+  has "$C" "marker .*user2_character=world" "Continue: the world knows its friend's character"
+  has "$C" "is checked and kept aside, NOT staged" "Continue: the friend's own save was NOT used"
+  has "$C" "marker world .*: (staged the newest generation of that line|no mailbox generation of that line.*: staged last session's guest slot)" "Continue: the friend came back as this world's character"
+  hasnot "$C" "LOST and made anew|co-op world\\): FAILED" "Continue: the character was neither lost nor replaced"
+  info "LOOK: $NAME-g1 and ${NAME}c-g1: the guest in the new game's clothes at the host's side, with the story's first objective on ITS screen" ;;
 solostart)
   head_step "Start From My Solo Progress: a new co-op world is made from the host's own save, the guest joins it"
   # 2026-11-11: the second way a session begins; the harness had not taken it since 2026-11-09 (it always pressed
@@ -436,8 +459,43 @@ stuck)
   hasnot "$N/$NAME.host.log" "the Troc tunnel stops" "host: the tunnel was never stopped"
   info "LOOK: $NAME-g* / $NAME-Wguest4* (the guest's 'has not let you in yet' screen), $NAME-R0-guest-after-leave and $NAME-R0-host-after-leave (both menus after the Leave, the notes readable), $NAME-L3-*2* / L5 (both in the world)"
   ;;
+mismatch)
+  head_step "two different builds: both title menus say so and nothing starts"
+  # mm1a (2026-11-12). Two testers played a whole session with one build each and were told nothing: the handshake
+  # compared a number frozen at CMake's last configure. Now a hash of the installed files; [dev] build_id gives the
+  # guest another one.
+  run2 "$BASE -GuestDev build_id=11112222 -ExpectMismatch"
+  O=$N/$NAME.out
+  has "$O" "^SAVES OK"                         "the player's saves untouched (SAVES OK)"
+  has "$O" "user install restored: 5/5 OK"     "the player's install put back (5/5)"
+  has "$O" "^lobby flow done \\(two builds" "the harness ended at the title (no start)"
+  for r in host guest; do
+    has "$N/$NAME.coopplus.$r.log" "Build for the handshake: [0-9A-F]{8}" "$r: its build is a hash of its installed files"
+    has "$N/$NAME.coopplus.$r.log" "Co-op lobby: Can't play together: .* has another Co-op\\+ build" "$r: its title menu's line says the friend has another build"
+    hasnot "$N/$NAME.coopplus.$r.log" "in the shared world" "$r: nothing started"
+  done
+  info "LOOK: $NAME-mismatch-host and $NAME-mismatch-guest: the bottom line of both menus, Start Co-op greyed on the host" ;;
+hostrevive)
+  head_step "the host goes down beside the guest and revives at the checkpoint (its world reloads with the guest in it)"
+  # tg2a (2026-11-12). A tester's host crashed here: a schedule timer ran while the reloading owner had no manager.
+  # The guard puts such a timer off and runs it when the owner is back. The race itself is rare (313 reloads before it
+  # hit); this step proves the reload with a guest attached and that the timers go on afterwards.
+  printf 'wait 3000\ntp -10239 546 -3957\nwait 2000\n' > $N/scan/tg_host_dock.txt
+  run2 "$BASE -Hold 20 -HostScript $SCAN\\tg_host_dock.txt -GuestScript $SCAN\\tp_dock_guest.txt -HostKeys w:100000_shot:$NAME-h0_k:U:300_w:12000_shot:$NAME-h1_w:25000_shot:$NAME-h2 -GuestKeys w:3000_shot:$NAME-g0_w:120000_shot:$NAME-g1"; two_player_checks
+  L=$N/$NAME.coopplus.host.log; H=$N/$NAME.host.log
+  has "$L" "our death notice goes to the client" "host: went down"
+  has "$L" "Revive: checkpoint revive, step 3" "host: asked for the checkpoint revive"
+  has "$L" "Revive: at the checkpoint" "host: stands at the checkpoint again"
+  has "$L" "Teleport: [0-9]+ m: the game's own travel" "host: moved by the game's own travel"
+  has "$H" "reason 19" "host: its stages closed 'at the owner's load' (the reload happened with the guest in the world)"
+  hasnot "$H" "the Troc tunnel stops" "host: the tunnel was never stopped"
+  asked=$(grep -h 'timer guard: schedule timers' "$H" | tail -1 | sed -n 's/.*asked \([0-9]*\).*/\1/p')
+  [ "${asked:-0}" -ge 500 ] && ok "host: schedule timers went on to the end (asked $asked)" || bad "host: schedule timers asked ${asked:-none} (wanted >= 500: about 220 a minute)"
+  hasnot "$H" "timer guard: schedule timer .* given up" "host: no timer was given up"
+  info "timer guard: $(grep -h 'timer guard: schedule timers' "$H" | tail -1 | sed 's/.*timer guard: //' | cut -c1-200)"
+  info "LOOK: $NAME-h0 (the death screen with both choices), $NAME-h1 (the game's own warp), $NAME-h2 (at the checkpoint)" ;;
 summary)
-  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c '^== ' "$R") (21 in the list)"; exit 0 ;;
+  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c '^== ' "$R") (23 in the list)"; exit 0 ;;
 *) echo "unknown step $STEP"; exit 2 ;;
 esac
 sed -n "/^== $STEP /,\$p" "$R"

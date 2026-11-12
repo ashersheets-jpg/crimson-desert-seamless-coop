@@ -6692,3 +6692,31 @@ Design chosen (A, host-authoritative, with a world marker):
   the friend brings its own character", the upload staged and moved in as before, both in the world. So the
   no-marker path (Continue of an older world) behaves as before the change. SAVES OK, 5/5.
 - Running: lowsave again (nb7), then fs1 (New Co-op Save, the guest's own save far along), fs2 (Continue on it).
+
+### nb7, fs1a, fs2b (2026-11-12 17:13-17:35): the join's travel works; the friend's fresh save works, seeded one minute too early
+
+- nb7-lowsave: 40 PASS, 0 FAIL. With the join's move 12 s after both stand in the world: "1321 m: the game's own
+  travel ... took 0.6 s; arrived". No hops, no retry, the log growth back under its limit.
+- fs1a (New Co-op Save; the guest's own save is the far-along test save), first run of the new save code:
+  - host's base: "new co-op save: marker ... written (user2_character=pending ...)"; the earlier world's
+    `_guest_prev` set aside with it; "the upload xfer ... is checked and kept aside, NOT staged"; at the login gate
+    "the host's slot0 was read once (lobby 541 B, save 5180 B); it must read the same again", 1.5 s later "the friend
+    gets a new character, the host's save: staged a copy of the host's own slot0 ... as a NEW line 58304d3a...; marker
+    rewritten: user2_character=world". Both in the world 9 s apart, 16 m from each other in Hills of No Return.
+  - Screens: the guest is Kliff in the new game's clothes. BUT the host's screen has the story's first objective
+    ("Unfamiliar Lands / Return to your comrades") and the guest's has NONE.
+  - Why: the host's slot0 at world entry is a 5180-byte STUB. Its first real save (565 KB, the size of our
+    one-mission test save) came 63 s later in another slot. The friend seeded from the stub has no quest state.
+- fs2b (Continue Our Co-op Save on that world, the guest now with ANOTHER save of its own, harness -HostVariant
+  keep): marker "world, line 58304d3a..., made for guest local-peer"; the upload "kept aside, NOT staged"; "no
+  mailbox generation of that line: staged last session's guest slot ..._guest_prev...slot204". The two stand side by
+  side, both in the new game's clothes. So Continue brings the world's character back, here through the
+  set-aside slot because no save of the guest's slot had been written in the first run's four minutes.
+- Changed (base, built 17:45): a host slot whose save.save is under 64 KB is not taken ("only the new game's first
+  stub ...: its first real save is waited for"); the wait for the host's save is 5 minutes now (was 2), because
+  giving up means the friend's solo character in a new co-op save. Re-test running: fs1b, fs2c.
+- Not looked at yet: a guest that walks away and saves in a marker world (the mailbox path), a second partner, the
+  host's first real save arriving later than five minutes (a long opening?).
+- Checklist (tools/prepost.sh): `newsave` now runs the new save AND Continue of it and checks the lines above;
+  `lowsave` checks the join's move was the game's own travel at the first try; new steps `mismatch` and
+  `hostrevive`. 23 steps.
