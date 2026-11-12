@@ -5,12 +5,12 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
-- NEXT BUILD, your OK needed to post (2026-11-12 11:45): 0.1.0-alpha+dc7ade5e is packaged and in its whole
-  21-step checklist (pp9). It fixes the three things found after this morning's post: Start Co-op doing nothing
-  after a save was loaded in the same game session; a failed start needing both games closed (now: Menu > Co-op >
-  Leave the session, Start Co-op again, both restart); the "no menu" fix setting itself off by mistake. Post text:
-  docs/release/shared-world-playtest/download-dc7ade5e-draft.txt. I post nothing without your word; say "post
-  it" once the notes below say the checklist has passed.
+- NEXT BUILD, your OK needed to post: being packaged and put through the whole 23-step checklist (2026-11-12
+  evening; dc7ade5e was dropped). In it since 47135b83: a New Co-op Save is a new save for both players; two
+  different builds are refused and both are told; going to your friend is the game's own travel; the host's crash
+  at a reload with a friend in its world; Start Co-op doing nothing after a save was loaded; a failed start no
+  longer needs both games closed; the "no menu" fix's false trigger; the report tool's Steam IDs. I post nothing
+  without your word; the notes at the end of this file say when the checklist has passed.
 - FOUND AFTER THE POST (2026-11-12 09:30), your call whether to tell testers now or with the next build: in
   47135b83 (and every earlier build) Start Co-op does NOTHING if the host has already loaded a world in the same
   game session (played solo, went back to the title, then invited): the friend waits for ever. Workaround: restart
@@ -6720,3 +6720,23 @@ Design chosen (A, host-authoritative, with a world marker):
 - Checklist (tools/prepost.sh): `newsave` now runs the new save AND Continue of it and checks the lines above;
   `lowsave` checks the join's move was the game's own travel at the first try; new steps `mismatch` and
   `hostrevive`. 23 steps.
+
+### fs1b / fs2c, nb8 (2026-11-12 17:38-18:19): the friend's fresh save PASSES as a checklist step; the base committed and published
+
+- fs1b (the seed waits for the host's first real save): the host held the guest's login 3 min 40 s in all (first "no
+  save of the host's yet", then 65 s of "only the new game's first stub (5180 B ...)"), then "staged a copy of the
+  host's own slot1 ... save 564973 B". But the guest never got in: its title only had its slots after the login was
+  answered, and the mod's six Play presses (48 s) had ended 2 s before. Fixed (layer): up to 45 presses, six
+  minutes; the line now says how many it took ("Play pressed in own saves (11 press(es), in the world)").
+- fs2c (Continue on that world, the guest with another save of its own): the world's character came back (from the
+  set-aside slot), and now BOTH screens show the story's first objective "Unfamiliar Lands / Return to your
+  comrades", both characters in the new game's clothes, side by side.
+- nb8, the checklist's `newsave` step in its new form (New Co-op Save, then Continue of it with another guest save,
+  then the test world put back): 88 PASS, 0 FAIL. "the seeded save: save 564875 B"; "TEST CO-OP WORLD BACK,
+  identical to the backup"; SAVES OK and 5/5 in both runs.
+- Committed: native c212b93 (the co-op world's character, the timer guard that puts off and runs late, the field key
+  export), published as native-base/ in the outer repository (4ae849a, tools/sync-native-base.sh). Layer cc1a5b6.
+- Still open from the two testers' lists: no horse / wyvern for the joined player (with a fresh save in a New Co-op
+  Save the friend has no horse yet by the story; in other worlds our mounts step passes: to be asked again when they
+  play on one build), stuck after an Axiom Force grab (not tried), the host's cutscenes for the friend (known gap).
+- Not tested and not testable here on purpose: the Steam fault retry (nothing provokes the fault).
