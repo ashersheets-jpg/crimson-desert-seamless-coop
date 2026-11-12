@@ -6529,3 +6529,23 @@ Design chosen (A, host-authoritative, with a world marker):
 - Tests planned: newsave with another guest save (the guest at mission 0 on its screen, "seeded from the host's
   slot"), Continue of that world (the guest where it left), the same with the mailbox emptied, the old world on
   Continue (unchanged), solostart after a marker world, a guest with no save.
+
+### 2026-11-12 ~12:20: the native base is PUBLIC in our repository (the owner: "Include ByJunter's work in our GitHub repository"); the default branch stays main ("you can leave it")
+
+- The owner asked for the open-source link to share. Found: four repositories on the account. The source is
+  crimson-desert-seamless-coop; its `main` stopped on 2026-10-31, the work is on `phase-a/local-pc-setup` (672
+  commits ahead). crimson-desert-coop-playtest holds releases up to 22e8f365 (2026-11-10); `to` and
+  `now.-Change-it-any-time-in-F8-Settings-EXPERIMENTAL-` look like accidents (two readme files / empty) and were
+  NOT deleted (not asked).
+- Link to share: https://github.com/ashersheets-jpg/crimson-desert-seamless-coop/tree/phase-a/local-pc-setup
+- Published, commit 58d17ab: `native-base/` = the local repository upstream/cdmp-native at 24f89cb (branch
+  coopplus-3549): ByJunter's commit 3cbb03c (his whole public repository, GPL-3.0) and our 145 commits, brought in
+  as a subtree merge so the history is in ours. Checked before pushing: his licence is GPL-3.0 as ours; our commits
+  touch only src, tests and CMakeLists (no documents); no personal data of ours in the tree (the Steam ids in the
+  tests are his test constants, already public in his repository); the commit author is the same as in our public
+  history.
+- This REPLACES the rule "native commits stay local, never pushed". New rule: commit in upstream/cdmp-native as
+  before, then `bash tools/sync-native-base.sh` in the outer repository and push. Never push to ByJunter's own
+  remote. The decompilation notes (build/decomp) stay private.
+- README.md and CREDITS.md say what is where (the status line was a month old: "not yet tested in the game").
+- Not published by this: the timer guard and the fresh-save work (uncommitted in upstream/cdmp-native).
