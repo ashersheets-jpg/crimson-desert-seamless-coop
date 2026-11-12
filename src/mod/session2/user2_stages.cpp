@@ -1292,6 +1292,7 @@ uintptr_t stage_at(uintptr_t sm, const float (&p)[3], uint32_t data) noexcept {
 // N 0x28078E0(sm rcx, &res, playData r8, file r9, ...): whether the OTHER player's schedule spawn manager already has
 // this very stage alive: the same data at the same position (playData +0x38, U-f2). U-f2 skips those before this
 // point; one reaching here while armed (players >= 8 cells apart) is the abort criterion.
+constexpr uint32_t kMaxCreateLines = 300;
 void on_create(safetyhook::Context& ctx) noexcept {
     const uintptr_t sm = ctx.rcx;
     const uint32_t owner = owner_key(sm, u2s::kSm_Actor);
@@ -1316,6 +1317,15 @@ void on_create(safetyhook::Context& ctx) noexcept {
                 g_dup_far.fetch_add(1, std::memory_order_relaxed);
             }
         }
+    }
+    // Checklist pp7 (2026-11-12): one [create] line per stage is 250-330 lines in a 7-minute session that teleports
+    // twice, and without end in a long one. The first 300 of a session are written (a duplicate always is); the
+    // summary's counters go on counting.
+    static std::atomic<uint32_t> s_lines{0};
+    if (same != 1) {
+        const uint32_t n = s_lines.fetch_add(1, std::memory_order_relaxed);
+        if (n == kMaxCreateLines) log::info("User2Stages [create] {} lines written: the rest of this session's are only counted (the summary has the totals)", kMaxCreateLines);
+        if (n >= kMaxCreateLines) return;
     }
     p::Event e;
     e.v[0] = owner;
