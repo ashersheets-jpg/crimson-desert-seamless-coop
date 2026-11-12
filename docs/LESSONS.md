@@ -17,6 +17,14 @@ topic BEFORE testing or guessing about it.
 
 ## Saying "works"
 
+- One passing geometry is not a test of a rule about distance. The far-fight fix read two registers of the wrong
+  actor and still passed at 108 m, because the host stood 36 m away along one axis; it was posted to the changelog
+  as working and reached two release candidates before a run at 484 m (in another direction) showed it counted
+  nothing. For anything about positions: test two placements that differ along BOTH map axes, and read the
+  numbers the fix itself logs (it said "another player is 37 m from the victim" for a guest 2 m from its victim:
+  that line was wrong on its face and I did not question it).
+- When a hook reads registers, write down which instruction loads each one, per actor, before using them.
+
 - "Works" always comes with what it was tested under (one PC, two copies, which save, which settings) and what it
   was not. "Confirmed" in the test harness is not "confirmed for a player".
 - A test must look like a player's PC or say that it does not: first-time settings (-Fresh), the package's own

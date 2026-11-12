@@ -26,6 +26,11 @@ Not posted yet (2026-11-11, after 3c46bec5):
   folder (`bin64\cdmp_packets_<date>.log` / `.bin`) with no size limit. It no longer records. You can delete those
   files; they are not needed.
 - The host's log no longer gets two lines every second during co-op.
+- Correction to the far-fight line above: until build d5c06748 it only worked while the fight was within 80 m of the
+  host along the map's north-south axis (the test spot happened to be). From d5c06748 on it is by real distance to
+  the nearest player; tested 484 m from the host (see PROGRESS, of1-of3).
+- A friend who has never played (no save at all) could not join: their game waited on "Waiting for Host" for ever.
+  Their game now starts a new character in the host's world by itself (state: see PROGRESS, gn2).
 - Known: enemies that came for the host do not go after a guest far from the host until the guest attacks them.
 
 0.1.0-alpha+3c46bec5 (2026-11-11):

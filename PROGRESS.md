@@ -41,7 +41,12 @@ test save Out, shipped cdmp.ini restored.
   .bin (only test copies have a role in the name; your own play writes cdmp_packets_<date> without a role, and
   those 16 files are a few KB each). They are of no use any more. Say "delete the test captures" and I remove
   exactly those role-named files, nothing else.
-- BUILD READY, your OK needed to post (the 12-hour posting OK ended about 18:10 on 2026-11-11):
+- CORRECTION 2026-11-11 23:50: builds 980c5b38 and 2ddd622f are NOT to be posted as they are. Their "a guest far
+  from the host can fight" fix is half wrong (found by the 484 m runs of1 / of2): it only works while the guest's
+  enemies are within 80 m of the host along ONE map axis (north-south), whatever the east-west distance. The test
+  that passed (108 m) had the host 36 m away along that axis. Fixed in the next build (d5c06748 and later), which
+  also lets a guest with no save in; that build gets the full checklist before it is offered to you.
+- (superseded by the line above) BUILD READY, your OK needed to post (the 12-hour posting OK ended about 18:10 on 2026-11-11):
   0.1.0-alpha+980c5b38 passed the whole release checklist at 19:48 (pp5, 12 steps). A NEWER candidate,
   0.1.0-alpha+2ddd622f, adds the New Co-op Save fix (without it a guest can never join a brand-new co-op save) and
   is in its own full pass now (pp6, 15 steps); when that passes it replaces 980c5b38 as the build to post. Post
@@ -5760,3 +5765,27 @@ Report: build/native/prepost-pp5.txt (every step's switches are in it). 332 chec
   difficulty) instead of pressing Play. Next run (gn2) shows what the host's server does with user 2's New Game.
   If that cannot be made to keep progress in reasonable time, the fallback is a plain message before joining:
   "start a new game on your own once (about two minutes, until you are in the world), then join".
+
+### of1 / of2 (2026-11-11 23:24-23:42): the far-fight fix was HALF WRONG; corrected (native 19be296)
+
+- Runs: the host draws its dock bandits for 26 s, then goes 484 m away (Hernand); the guest stays and swings for a
+  minute. of1 release defaults, of2 with [session2] ai_handoff=1. Package 2ddd622f.
+- Both runs: the bandits DO attack the guest that far from the host (blows reported by the guest's client:
+  of1 "guest>NPC 61 ... NPC>guest 53", of2 "guest>NPC 67 ... NPC>guest 37"), so nobody is frozen at 484 m, with or
+  without the hand-off. But the guest's health never left 300/300, and the host's hook line said "field owner out
+  of range 103 | counted because another player was in range 0" (of2: 129 / 0). In the farfight step (108 m) the
+  same line reads 28 / 28. (The four "kills" the tally shows are from before the host left.)
+- Cause, from the game's code again (asm exe+0x225CE7A..0x225CF30): at the hook the VICTIM is x xmm11, z xmm9,
+  y xmm10 and the field owner's character is x xmm6, z xmm12, y xmm13. My hook paired (6, 9, 10) as the victim and
+  (11, 12, 13) as the owner: a point made of the owner's x and the victim's z. With that, "is a player near the
+  victim" was in effect "is the victim within 80 m of the HOST along z", and the replacement left the game
+  comparing only that z difference. At the dock / shrine pair the host stood 36 m away along z (the old log even
+  said so: "another player is 37 m from the victim", for a guest standing 2 m from its victim), so ff7, pp5 and
+  pp6's farfight passed. 256 m away along z nothing counted.
+- Fixed: the right registers for both the test and the replacement. Built with the no-save-guest change as package
+  d5c06748; of3 (the same run as of1) is the check: the hook line must count hits and the guest must lose health.
+- What this changes: the changelog's far-fight line was true only for that geometry. Builds 980c5b38 and 2ddd622f
+  are not candidates any more (waiting list corrected). The farfight checklist step gets a second geometry (the
+  host far along the other axis) so the same mistake cannot pass again.
+- ai_handoff: of2 handed 64 NPCs to the guest's user ("handed over 64 ... noted 64") and nothing broke, but
+  of1 shows the enemies act without it. Still no evidence that it is needed; stays off.
