@@ -5685,3 +5685,20 @@ Report: build/native/prepost-pp5.txt (every step's switches are in it). 332 chec
   three ways a session begins are all in it.
 - Batch for the next package (after the checked 980c5b38): the New Co-op Save login gate (native e3583a7), own-horse
   rule, dev-only steps (tphorse, simulated sticks). One package, then one full pass (pp6).
+
+### pp6, batch 1 (2026-11-11 22:25-22:51) on 0.1.0-alpha+2ddd622f: 5 of 15 steps, 118 checks PASS, 0 FAIL
+
+- static, real (a real install held at the title), fresh, xess, fsr: all pass. Screenshots looked at: the real title
+  (menu and footer complete), the guest's and the host's view in fresh / xess / fsr (each sees the other 1 m away,
+  party frame, Interact prompt). SAVES OK and "user install restored: 5/5 OK" after each two-copy step.
+- Decision on order (efficiency): before the remaining 10 steps, four exploratory runs on the same package (mc1 a
+  fight from horseback, op1 the story's first scene in a New Co-op Save, gn1 a guest with NO save at all, dr1 a dragon
+  mount). If they call for fixes, the fixes go into one batch and that batch gets one full pass; if not, pp6 goes on
+  where it stopped. Nothing shipped is changed between pp6's steps.
+- Found by reading (not tested yet): a guest who has never played (no save slot) is an untested case. The lobby
+  presses Play (E) for the guest up to six times; a title with no save has no Continue. The native guest side logs
+  "NOTHING is offered to the host ... user 2 plays without your save", the host side refuses user 2's slot load
+  ("nothing staged or live"). Harness switch for it: -GuestVariant none (no slot copied into the guest's folder).
+- The game has a test request that spawns a character (SpawnCharacterCheatReq 2185); its packet layout is in the
+  local note notes_spawn_cheat.md. A first trial rides at the end of mc1's host script. If it works, enemies (and
+  perhaps a boss) can be put beside both players without depending on the host's quest.
