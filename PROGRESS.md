@@ -5626,3 +5626,21 @@ Report: build/native/prepost-pp5.txt (every step's switches are in it). 332 chec
   login goes on"). Then the login finds the host's slot, asks for it, and the usual remap loads user 2's lobby from
   its own slot.
 - nc7 (running) tests it; mr2 after it: mounts with the simulated horse call.
+
+### nc7 (2026-11-11 21:35): NEW CO-OP SAVE WORKS for both players (the login gate)
+
+- Host log: "user 2's LoginUserToFieldServerReq waits: this co-op world has no save of the host's yet" from 21:37:47
+  (about 4000 retries, one directory look-up per 500 ms), 21:40:22 "this co-op world has a save of the host's now:
+  user 2's login goes on", the same second "LoadSlot ... from exe+0x2EBBE90 ... user 2 | slot 0 -> REMAP 204", "the
+  staged guest slot moved in", "C2 identity: user 2 lobby ... written". Host in the world 21:40:42, guest 21:41:27.
+- Screens: the host at the story's start ("Unfamiliar Lands / Return to your comrades", Day 0, Hills of No Return,
+  night) with "Guest 16 m" in its party frame and the guest's name plate in view; the guest in the same place with
+  "Host 16 m". The guest waited 2.5 minutes on "Waiting for Host" while the host's game went through the agreement,
+  the difficulty and the opening.
+- Tested under: one PC, two copies, -Fresh, the package's settings, lowest graphics; the harness answered the
+  agreement and difficulty for the host in the test copy; the guest used its usual test save (so it arrived with
+  its old character). NOT tested: two brand-new players, the story steps after the start, cutscenes, two PCs.
+- The checklist has a 13th step, "newsave", for this (backs the test co-op world up and puts it back).
+- Queued for the owner (design): on New Co-op Save a returning guest brings its own newest save (its own progress
+  is the rule since 2026-11-08); the card says "Both of you begin the story". Keep, or give the guest a new
+  character in a new co-op save?

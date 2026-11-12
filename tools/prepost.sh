@@ -3,7 +3,7 @@
 # one game session and every step's screenshots can be looked at before the next one starts:
 #
 #   bash tools/prepost.sh TAG "<package folder>" STEP        STEP = static | real | fresh | xess | fsr | display |
-#                                                                   lowsave | chest | revive | loot | crime | farfight |
+#                                                                   lowsave | chest | revive | loot | crime | farfight | newsave |
 #                                                                   summary
 #
 # TAG names the run (pp1 ...): the test names are TAG-STEP, the report is build/native/prepost-TAG.txt.
@@ -179,7 +179,9 @@ display)
   info "screenshots to LOOK AT: $(cd $N/shots && ls $NAME-*.png 2>/dev/null | tr '\n' ' ')" ;;
 lowsave)
   head_step "a guest on a new save (1 mission done, its save 1.3 km away) joins the host"
-  run2 "-CoopPlus -Lobby -Fresh -PackageIni $MODW -HostVariant newgame -GuestVariant newgame -Hold 15 -GuestKeys $FLOW_G -HostKeys $FLOW_H"; two_player_checks
+  # the guest also opens its map (M): the new save's map must show what the HOST has explored (fog share)
+  run2 "-CoopPlus -Lobby -Fresh -PackageIni $MODW -HostVariant newgame -GuestVariant newgame -Hold 15 -GuestKeys ${FLOW_G}_w:1500_k:M:120_w:4000_shot:$NAME-g2-map_k:ESC:120_w:1500 -HostKeys $FLOW_H"; two_player_checks
+  has "$N/$NAME.host.log" "FogShare: the guest's map chunk [0-9]+ sent with the host's explored cells added \\([1-9][0-9]* bytes changed" "the new guest's map got the host's explored cells (fog share)"
   # What this step really is (pp4): the host's co-op world persists, so only the GUEST is on the new save, and that
   # save's place is 1.3 km from the host. The guest must be brought to the host's side by itself.
   L=$N/$NAME.coopplus.guest.log
@@ -252,8 +254,28 @@ farfight)
   hurt=$(grep "Local:.*hp" $N/$NAME.coopplus.guest.log 2>/dev/null | grep -vc "hp 300.0/300.0")
   [ "${hurt:-0}" -gt 0 ] && ok "the guest lost health far from the host ($hurt samples below full)" || bad "the guest never lost health far from the host"
   ;;
+newsave)
+  head_step "New Co-op Save: the host starts the story in a brand-new co-op world, the guest joins it"
+  # 2026-11-11 (nc5-nc7): never run on the shared world before today, and broken: the guest hung on "Waiting for Host"
+  # because its login came before the new world had a save of the host's. The test co-op world is backed up and put
+  # back around the run (build/native/coopworld.sh); in the TEST copy the harness answers the game's own agreement
+  # and difficulty for the host.
+  bk=$(cd $N && bash coopworld.sh backup 2>&1 | tail -1); say "  test co-op world: $bk"
+  case "$bk" in *"backed up"*|*"backup is current"*) ;; *) bad "the test co-op world could not be backed up: step not run"; sed -n "/^== $STEP /,\$p" "$R"; exit 1 ;; esac
+  run2 "-CoopPlus -Lobby -Fresh -PackageIni $MODW -HostChoice 3 -Hold 30 -GuestKeys w:3000_shot:$NAME-g0_w:15000_shot:$NAME-g1 -HostKeys w:500_shot:$NAME-h0"
+  if [ -z "$JUDGE_ONLY" ]; then
+    rs=$(cd $N && bash coopworld.sh restore $NAME 2>&1 | tail -1)
+    case "$rs" in *"identical to the backup"*|*"is the backup's"*) ok "the test co-op world is back ($rs)" ;; *) bad "the test co-op world: $rs" ;; esac
+  fi
+  two_player_checks
+  H=$N/$NAME.host.log
+  has "$H" "user 2's LoginUserToFieldServerReq waits" "the guest's login waited for the host's new game"
+  has "$H" "this co-op world has a save of the host's now" "the wait ended when the host's first save was there"
+  has "$H" "LoadSlot .* = user 2 \\| slot [0-9]+ -> REMAP 204" "the guest's lobby was loaded from its own slot"
+  has "$H" "the staged guest slot moved in" "the guest's uploaded save moved into the new world"
+  hasnot "$H" "C2 identity: refused user 2" "the guest's character login was not refused" ;;
 summary)
-  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c '^== ' "$R") (12 in the list)"; exit 0 ;;
+  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c '^== ' "$R") (13 in the list)"; exit 0 ;;
 *) echo "unknown step $STEP"; exit 2 ;;
 esac
 sed -n "/^== $STEP /,\$p" "$R"

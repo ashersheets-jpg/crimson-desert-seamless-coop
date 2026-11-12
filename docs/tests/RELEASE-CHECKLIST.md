@@ -23,7 +23,7 @@ starts while Crimson Desert is running):
 bash tools/prepost.sh pp1 dist/CrimsonDesert-SeamlessCoop-<version>-shared-world static
 ```
 
-Steps, in order: `static real fresh xess fsr display lowsave chest revive loot crime farfight`, then `summary`.
+Steps, in order: `static real fresh xess fsr display lowsave chest revive loot crime farfight newsave`, then `summary`.
 The report is `build/native/prepost-<tag>.txt`. After each game step, LOOK at the screenshots the report lists
 (`build/native/shots/`): a log line saying "overlay draws" is not the same as the menu being on screen.
 
@@ -43,6 +43,7 @@ The report is `build/native/prepost-<tag>.txt`. After each game step, LOOK at th
 | loot | the host's script kills two bandits and loots the bodies with the guest nearby | the bodies are looted, the guest gets its own share, its bag grows | what each player sees on screen at the body; a kill by weapon |
 | crime | both fight at the bandit camp | guest's hits are seen and none is booked as a crime | town NPCs, guards, a real wanted level |
 | farfight | the host draws its quest bandits to the dock and leaves for a spot 108 m away; the guest stays and swings 50 times | the damage range hook is in, hits far from the host are counted, the guest kills at least one enemy and loses health | ordinary camps (only the host's quest bandits are known by coordinates); more than ~130 m from the host |
+| newsave | the host picks New Co-op Save; in the test copy the harness answers the game's agreement and difficulty; the guest waits on "Waiting for Host" | both reach the new world, the guest's login waited for the host's first save, its own save was moved in, no login refused; the test co-op world is put back | the story's opening minutes after that (cutscenes, the prologue's steps); a real player answering the agreement |
 
 Every game step also checks what the session leaves behind (added 2026-11-11 after two faults found by reading the
 logs, not by a test): no packets recorded to disk (the base's log must not say "recording through a disk queue"; the
