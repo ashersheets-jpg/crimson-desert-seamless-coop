@@ -5,6 +5,13 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- FOUND AFTER THE POST (2026-11-12 09:30), your call whether to tell testers now or with the next build: in
+  47135b83 (and every earlier build) Start Co-op does NOTHING if the host has already loaded a world in the same
+  game session (played solo, went back to the title, then invited): the friend waits for ever. Workaround: restart
+  the game, then invite and Start Co-op without loading a save first. Fixed in the next build (tested for a host
+  coming back from its co-op world; the solo case is read from the code, not tested: a solo test copy would load
+  your real save). Suggested line for #download-here: "Known: if you played solo first, close and restart the game
+  before Start Co-op, or nothing happens." Say "post the known issue" and I post that line.
 - POSTED 2026-11-12 08:03: build 0.1.0-alpha+47135b83 in #download-here (both zips), and at 08:04 a line to
   JackyChan004 in #play-testing-feedback. Tested on ONE PC with two copies of the game (Nvidia); the fix for his
   missing menu was tested only by simulating his situation, we have no AMD card. Waiting for: his retest, and his
@@ -6236,3 +6243,43 @@ Earlier reading (am1): "not a consequence of the missing overlay on this PC; wha
   restarts (the windows-in-front block is now a script block used twice; a plain run prints the same lines).
 - Not covered by any of this: a host that goes back to the title through the GAME's own menu instead of the mod's
   Leave (the layer's `again` path covers it in code; no test presses the game's own row).
+
+### rt3a / rt3b (2026-11-12 08:52-09:28): the whole recovery works; TWO MORE FAULTS on the way, both in the posted build
+
+- rt3a FAILED. The host left (dev switch, the same code as Menu > Co-op > Leave the session), came to the title,
+  chose Start Co-op: "the host chose your co-op save: this game restarts into co-op first" 09:00:14, and then
+  NOTHING for 12 minutes: no restart. The guest sat on "the host restarts into co-op; we follow when it is back".
+  Two faults:
+  1. THE RESTART WAS CANCELLED. lobby_tick drops any phase other than Menu / HostSetup when run_generation is
+     above g_gen_mark ("our run entered the world: the lobby's work is done"). The host's restart branch never set
+     the mark, so for a host that had loaded ANY world in this launch the NativeRestart phase was reset one tick
+     after it began. Fixed: host_restart_into sets g_gen_mark.
+     THIS IS IN EVERY POSTED BUILD including 47135b83 (the branch is unchanged since the join from the title was
+     written): a host who has loaded a world in this game session (played solo, went back to the title, then
+     invited a friend) presses Start Co-op, picks a save, and nothing happens; the friend's game says "Waiting
+     for Host" for ever. Shown by rt3a for a host that came back from its CO-OP world; for the solo case it is
+     read from the code only (the counter is the layer's character capture, the same in solo). NOT tested with a
+     solo load: in the harness a solo-mode copy would load the owner's REAL save (no redirect in solo mode), so
+     that test is not run. Workaround for players: restart the game before Start Co-op.
+  2. The goodbye did not reach the guest at the title (the activity channel; no "the host is ending the session"
+     in its log). Now the lobby channel carries it: kMsgSessionEnded (25), sent by lobby_session_ended on the
+     host; a guest at the title goes back to its menu and STAYS IN THE PARTY; a guest in the world ignores it (the
+     activity goodbye does the full Leave there, as before).
+- rt3b PASSED (both fixes, the tunnel rule): guest stuck 09:21:53 -> host told -> 09:22:03 Leave ("the friend never
+  got into our world: goodbye sent, back to the title now") -> guest 09:22:03 "the host ended the session while we
+  were at the title: back to the menu, still in the party" -> 09:22:19 Start Co-op again -> host restarts 09:22:20,
+  guest 09:22:39 -> base 09:22:46 "the guest's connection was replaced by a new one before anything was said on
+  it" -> host in the shared world 09:23:45, guest 09:24:30. No unknown error line. SAVES OK, 5/5.
+- Found in rt3b's guest log, and the same in pp8-loot's (the posted package's own checklist): the "no menu" watcher
+  fired on THIS Nvidia PC: "201 batches of drawing commands in 4.0 s and no frame through a hooked swap chain
+  class", then it made its throwaway swap chain and hooked Streamline's Present A SECOND TIME (the class a new swap
+  chain gets here is the one already hooked). Both times the copy's window had just gone behind the other copy's
+  at the moment its hooks went in: a window in the background draws and presents nothing. Effect seen: every frame
+  passes our Present twice ("presents 41250 drawn 20625"); the overlay still draws, the steps passed. Risk not
+  seen but real: for a player this is alt-tab during start-up, and the throwaway swap chain is the thing that
+  crashed one launch in five with DLSS frame generation (the reason the older trigger wanted the window in front).
+  Fixed in the next build (render/dx12_hook.cpp): the watcher only counts while the game's window is in front, and
+  a class whose Present is already hooked is never hooked again. Re-test: checklist step latehook (nb1).
+- So the posted 47135b83 has, known now: (a) Start Co-op does nothing after a world was loaded in the same game
+  session; (b) a failed start needs both games closed (said in the post); (c) the watcher's false trigger when the
+  window is in the background at start-up (a double hook; a crash risk with DLSS frame generation, not seen).

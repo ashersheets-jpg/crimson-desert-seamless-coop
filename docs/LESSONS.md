@@ -139,3 +139,14 @@ topic BEFORE testing or guessing about it.
   there" from "it did not work" (here: NPC>guest blows and the guest's path), and the note says which it was.
 - 2026-11-12: Edit scripts with backslashes: ALSO not through `cat > file <<'EOF'` in this shell (the quoted
   heredoc still lost them). Write tool, and Python raw strings (r'''...''') so the text lands as written.
+- 2026-11-12: Every lobby test started from a FRESH game process at the title. Three faults only show when the
+  process has a history: a world was loaded before (the run-generation mark), the guest's old process is already
+  in guest mode (the tunnel's reconnection rule), the guest sits at the title when the host leaves (the goodbye's
+  channel). A flow that players can reach "again" needs a test that reaches it again in the SAME processes
+  (twocopy.ps1 -SecondRound; [dev] lobby_recover / lobby_retry / lobby_skip_play).
+- 2026-11-12: A phase that is entered from more than one place must set its own marks where it is entered
+  (g_gen_mark in host_restart_into), not rely on the caller having been somewhere that set them.
+- 2026-11-12: Read the WRN lines of PASSING runs too. The overlay watcher's false trigger was in pp8-loot's guest
+  log (a passing checklist step of the posted package) and was only noticed three hours later in another test's
+  log. A new WRN in a run that passed is a finding. To do: the checklist lists every WRN kind it has not seen.
+- 2026-11-12 (third time today): no Python through a heredoc. Edit tool for a string, Write tool for a script.
