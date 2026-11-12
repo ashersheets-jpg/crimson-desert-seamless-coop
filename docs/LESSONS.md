@@ -42,6 +42,12 @@ topic BEFORE testing or guessing about it.
 
 ## Test design
 
+- A scripted step that goes "to our horse" must check the horse came. mc1 (2026-11-11): the host's script went to a
+  horse 430 m away in a town and the whole run tested something else. `tphorse` now refuses a horse over 60 m away.
+  After every scripted move, the first screenshot is there to confirm WHERE the player is and WHAT it is doing
+  (mounted or not) before anything else is read from the run.
+- An accident is still data: read what the run did show (mc1: a guest alone 490 m from the host).
+
 - Before automating a game screen, grep the mod for how that screen is already handled. Two runs (35 minutes) went
   into pressing Space on the game's agreement, which only accepts after its text is scrolled to the end; the mod's
   own guest flow (net/coop_worlds.cpp) has done exactly that since 2026-11-06.

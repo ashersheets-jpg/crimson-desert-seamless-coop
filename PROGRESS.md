@@ -5714,3 +5714,30 @@ Report: build/native/prepost-pp5.txt (every step's switches are in it). 332 chec
 - The game has a test request that spawns a character (SpawnCharacterCheatReq 2185); its packet layout is in the
   local note notes_spawn_cheat.md. A first trial rides at the end of mc1's host script. If it works, enemies (and
   perhaps a boss) can be put beside both players without depending on the host's quest.
+
+### mc1 and op1 (2026-11-11 22:52-23:11), exploratory, package 2ddd622f
+
+- mc1 (meant: both mount at the dock and fight from horseback). NOT a test of mounted combat: the guest's horse
+  came and the script went to it, but the guest was never in the saddle (g0, g1: on foot beside its horse
+  "Herspia", prompt "Ride"); the host's "tphorse" took it to a horse 430 m away in Hernand Town (the layer's "our
+  horse" was a horse that had not come). Dev step fixed in source: tphorse refuses a horse more than 60 m away.
+  The camera of a player with the simulated pad looks straight down after the call (the stick step); to check.
+- What mc1 showed by accident: the GUEST ALONE AT THE DOCK, 490 m FROM THE HOST. The bandits were there and hostile
+  (red dots on the guest's minimap; the host had stood there 10 s before). The guest swung for a minute: host log
+  "the guest's hits seen 105", "kills host 0 guest 4", "NPC>guest 0"; the guest's health never left 300/300. So
+  at about 490 m a guest can kill, and the enemies did NOT fight back (at 108 m they do: ff6 / ff7, farfight step).
+  Not separated yet: "nobody runs their AI that far from the host" (what ai_handoff was built for) from "these
+  bandits were not yet in the fight". Next: the same with the host leaving for 400 m after the bandits have engaged,
+  once with [session2] ai_handoff=1.
+- Spawn request trial (2185) at the end of mc1's host script: posted twice, no error line seen, nothing to see (the
+  host stood in a town 430 m from the position in the request). Inconclusive; to repeat standing still.
+- op1 (New Co-op Save, then the host walks forward 15 s): the opening has NO scene at the marker; the step is
+  "Speak with your comrades around the cabin to assess the situation" (comrades as blue dots on the host's minimap,
+  the cabin 27 m ahead). Both players are there: the guest sees the host 23 m away, the cabin, the fire and the
+  comrades. The test world was put back identical; SAVES OK; install 5/5.
+- FOUND in op1: the two clocks differ in a New Co-op Save. Host HUD "Day 0 Sun 10:36 PM" and seconds later the
+  guest's HUD "Day 0 Sun 11:39 PM" (host 10:57 PM when the guest shows 11:46 PM); the weather icons differ too. In
+  the established test world the two HUDs agree to the minute (fresh, xess, fsr steps tonight). Cause not known
+  (the opening may hold the host's own clock). Cosmetic so far: different light for the two players.
+- Next for the opening: go to a comrade and talk (new dev step "tpnear [radius] [n]": beside the n-th nearest
+  living person), with the guest beside the host, and see what the guest gets when the host's talk starts a scene.

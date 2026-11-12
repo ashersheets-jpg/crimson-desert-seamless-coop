@@ -545,6 +545,16 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
             steps.push_back(std::move(st));
             continue;
         }
+        if (kind == "tpnear") {  // tpnear [radius] [n]: 1 m beside the n-th nearest living person (0 = nearest)
+            st.kind = Step::TpActor;
+            st.addr = 0xFFFFFFFEu;
+            float r = 40.0f, n = 0.0f;
+            in >> r >> n;
+            st.to[0] = r > 0 ? r : 40.0f;
+            st.to[1] = n > 0 ? n : 0.0f;
+            steps.push_back(std::move(st));
+            continue;
+        }
         if (kind == "tphorse") {  // tphorse: 1 m beside the horse the layer counts as ours (after a horse call)
             st.kind = Step::TpActor;
             st.addr = 0xFFFFFFFFu;
@@ -693,10 +703,34 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
             } else if (st.kind == Step::Npcs) {
                 log_npcs_near(st.to[0], st.to[1]);
             } else if (st.kind == Step::TpActor) {
-                const uint32_t key = st.addr == 0xFFFFFFFFu ? capture_horse_present()
-                                     : st.addr           ? static_cast<uint32_t>(st.addr)
-                                                         : hunt_dev_last_kill();
-                const auto at = key ? game::actor_world_position(key) : std::nullopt;
+                uint32_t key = st.addr == 0xFFFFFFFFu ? capture_horse_present()
+                               : st.addr == 0xFFFFFFFEu ? 0
+                               : st.addr                ? static_cast<uint32_t>(st.addr)
+                                                        : hunt_dev_last_kill();
+                if (st.addr == 0xFFFFFFFEu) {  // tpnear: the n-th nearest living person
+                    std::optional<proto::Vec3> me;
+                    int loaded = 0, n = static_cast<int>(st.to[1]);
+                    for (const NpcRow& r : npcs_near(st.to[0], 1.5f, me, loaded)) {
+                        if (hunt_animal_name(r.variant) || r.hp_max < 1.0f || r.hp <= 0.0f) continue;
+                        if (n-- > 0) continue;
+                        key = r.key;
+                        log::info("Dev script: tpnear: 0x{:08X} variant 0x{:08X}, {:.1f} m, hp {:.0f}/{:.0f}", r.key,
+                                  r.variant, r.d, r.hp, r.hp_max);
+                        break;
+                    }
+                    if (!key) log::info("Dev script: tpnear: no living person within {:.0f} m", st.to[0]);
+                }
+                auto at = key ? game::actor_world_position(key) : std::nullopt;
+                // mc1 (2026-11-11): "our horse" can be a horse that never came (the host's stood 430 m away in a
+                // town and the script went there). A called horse is near: farther than 60 m is not a hop.
+                if (at && st.addr == 0xFFFFFFFFu) {
+                    const auto me = game::actor_world_position(capture_own_player_key());
+                    const float d = me ? std::sqrt((at->x - me->x) * (at->x - me->x) + (at->z - me->z) * (at->z - me->z)) : 0.0f;
+                    if (d > 60.0f) {
+                        log::info("Dev script: tphorse: our horse 0x{:08X} is {:.0f} m away (it did not come): not teleported", key, d);
+                        continue;
+                    }
+                }
                 if (at) revive_teleport_to(at->x + 1.0f, at->y + 0.5f, at->z);
                 log::info("Dev script: teleport beside actor 0x{:08X}: {}", key,
                           at ? std::format("({:.1f}, {:.1f}, {:.1f})", at->x, at->y, at->z) : std::string("NOT loaded"));
