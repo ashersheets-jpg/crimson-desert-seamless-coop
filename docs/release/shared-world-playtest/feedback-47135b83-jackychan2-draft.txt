@@ -1,6 +1,10 @@
-@JackyChan004 @D3vils thank you both, that report told us a lot.
-1) The menu showing on your AMD card confirms that fix on real hardware. Thank you for trying it.
-2) Your log says the two of you were on different builds: you had 47135b83, Devils had one of the builds from 11 Nov. Both players need the same build, and the mod did not tell either of you (the next build will, on the title menu). That is the most likely reason it was so desynced. Please both install 0.1.0-alpha+47135b83 from #download-here and try again.
-3) Devils' main character coming into a New Co-op Save: that is how it is built today (each player keeps their own character and progress). We are looking at whether a New Co-op Save should give both players a new character.
-4) Your game closed when you pressed Q after going down. We found where; it is being fixed. It can happen when the host is taken down during a story mission and revives.
-If you play again, the report zip from BOTH of you helps most.
+@JackyChan004 @D3vils thank you both, the two reports together told us a lot.
+**First: you were on two different builds.** JackyChan had 47135b83, Devils had 3c46bec5 (from 11 Nov). Both players need the same build, and the mod did not tell you (the next build says so on the title menu). Please both install 0.1.0-alpha+47135b83 from #download-here before the next try; a good part of the desync may come from that alone.
+What we found for each point:
+- **Menu on AMD**: confirmed working on JackyChan's card. Thank you for trying it.
+- **Teleporting to your friend is slow and can stop short**: confirmed in Devils' log (almost 2 and 3 minutes for about 3 km). It moves you in small hops today. It is being rebuilt as a proper travel.
+- **New Co-op Save, only one started fresh**: that is how it is built today (each player keeps their own character). We are deciding whether both should start fresh there.
+- **JackyChan's game closing after Q when downed**: found where it happens (the host's world reloading with a friend in it); being fixed.
+- **The host's cutscenes look like teleporting to the friend**: known, the friend does not see the host's cutscenes yet.
+- **No horse or wyvern for the joined player, and getting stuck after an Axiom Force grab**: not explained yet, we are looking. If you can say where you were when the horse would not come, that helps.
+One more thing: the report zips you posted still contain the other player's Steam ID inside a folder name. That was our tool's fault and is fixed for the next build; you may want to delete those two attachments.
