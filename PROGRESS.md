@@ -5609,3 +5609,20 @@ Report: build/native/prepost-pp5.txt (every step's switches are in it). 332 chec
   right stick pushed down (memory: horse-call-method), and the simulated pad had no sticks. Added (layer, dev only):
   in a simulated press 0x0400 = right stick down, 0x0800 = left stick up; "pad 0401 2500" = the horse call.
   Script scan/mount_call.txt. Next: mr2 with -HostDev pad_sim=1 -GuestDev pad_sim=1.
+
+### nc6 (2026-11-11 21:17): the first fix for New Co-op Save did NOT work; second fix built
+
+- The eager move-in ran ("a new co-op world ... the staged guest slot moved in at once", slot 204 live, moved in 1),
+  but the guest's login still made no lobby load ("LoadSlot calls 0" at its login) and it stayed on "Waiting for
+  Host". So the user login does not take the guest's slot 204 as "the latest slot" (the game's save manager most
+  likely lists only its own slot range; not read further). Wrong assumption of mine: "any slot folder is enough".
+- What the normal run really has is a slot OF THE HOST (slot 103) in the folder at the guest's login. In a new
+  world the host's first slot appears when its new game is in the world (nc5 / nc6: "saves 3" within two minutes of
+  the host entering).
+- Second fix (native, local; the eager move-in is removed again): the host holds user 2's LoginUserToFieldServerReq
+  (2535) back, "not ready, tried again in order" like a request that comes before the session exists, until the
+  co-op world's account folder has a slot folder other than the guest's (checked at most every 500 ms; log:
+  "user 2's LoginUserToFieldServerReq waits ...", then "this co-op world has a save of the host's now: user 2's
+  login goes on"). Then the login finds the host's slot, asks for it, and the usual remap loads user 2's lobby from
+  its own slot.
+- nc7 (running) tests it; mr2 after it: mounts with the simulated horse call.
