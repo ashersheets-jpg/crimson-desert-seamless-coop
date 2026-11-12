@@ -16,12 +16,24 @@ test save Out, shipped cdmp.ini restored.
 - Discord, #general, 2026-11-11 12:50 (squidbots32, new member), NOT answered (a reply needs your OK): "how does
   syncing character looks work? I know the CC mod isnt supported, but what about Heroine of Pywell that doesnt store
   model xml info seperately? or is it just the fact they are relying on asi files to run that makes it hard to
-  sync?" Draft answer: "In the shared-world builds each player's character is created by the game itself from that
-  player's own save, so the look you made in the game's own character and outfit screens is what your friend sees.
-  A mod that swaps models or textures only on your PC shows on your PC only; your friend sees it if they install the
-  same mod. We have not tested Heroine of Pywell: if it replaces game files it should behave like that; if it
-  changes the character through its own .asi at run time, the other player will not see it unless both run it.
-  Reports with it are welcome in #play-testing-feedback."
+  sync?" The owner, 2026-11-11 22:52: "CC mod" = the character customization mod (Character Creator Enhanced -
+  Barber, Khione95, Nexus 837; its author allows compatibility, not bundling). "Heroine of Pywell": not found by a
+  web search, never looked at here. Draft answer v2 (shown to the owner 2026-11-11; posting needs the OK):
+  "Short version: we don't sync looks ourselves, the game does. In the shared-world builds both players are in the
+  host's game world, and each player's character is the game's own player character, loaded from that player's own
+  save. The game tells the other PC what you wear and what your save says about your look, and the other PC draws it
+  with its own game files. We never send models or mod files. So for any appearance mod the question is 'does my
+  friend's PC have the same data', not whether it uses an .asi. Character Creator: it keeps your look in the save as
+  picks from the barber's lists and fills those lists with its own faces and hair, so a friend without the identical
+  mod has nothing at those entries. With the same version on both PCs it may well work; we have not tested it, which
+  is why it is listed as unsupported. We can't ship it either: its author is fine with compatibility, not with
+  bundling. Heroine of Pywell: not tested and I haven't looked inside it. If it replaces Kliff's model files, each
+  PC shows what its own files say: you see the heroine (most likely on your friend's Kliff too) and a friend without
+  it sees plain Kliff; if both install it, both see it. A mod that changes the character only through its own code
+  while the game runs shows on your PC only, unless both run it. If you try either with a friend, a screenshot from
+  both sides in #play-testing-feedback would help a lot."
+  NOT verified by a test: that barber choices (hair, beard, face) show right for the other player; only different
+  outfits were seen (t5-lowsave). To do: a two-copy run where the guest's save has another hair / beard.
 - Checked 2026-11-11 15:00: no tester has written since D3vils at 08:46 (JackyChan retests "tomorrow"); nothing new
   in #bug-reports or #play-testing-feedback.
 - DISK, your OK needed (2026-11-11 16:00): the game folder (bin64) holds about 45 GB of packet captures from MY test
