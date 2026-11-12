@@ -1679,7 +1679,24 @@ void tunnel_tick(troc::TrocLink& link, uint32_t now_ms) {
         end_tick(link);
         return;
     }
-    if (!g_tunnel_dead && link.broken()) kill_tunnel("the link broke (reconnection or overflow)");
+    if (!g_tunnel_dead && link.broken()) {
+        // Co-op+ (rt1a, 2026-11-12): a reconnection only ends a conversation when there was one. A second Start
+        // Co-op restarts both games; the guest's OLD process (already in guest mode, its tunnel open) is on the link
+        // for a few seconds when this game comes back, then its new process connects. Nothing went either way on
+        // that first connection (no Req of the guest in, none held, no packet of the server out, no user 2): the
+        // new connection simply is the guest's. Before this the tunnel was dead for the whole launch and the guest
+        // sat at the title with "host ready no".
+        if (link.packets_in() == 0 && link.packets_out() == 0 && g_early.empty() && !server_user2_present()) {
+            link.reset();
+            static uint32_t n_replaced = 0;
+            if (++n_replaced <= 20)
+                log::warn("Session2: the guest's connection was replaced by a new one before anything was said on "
+                          "it (the guest's game restarted): the tunnel goes on with the new connection [{} so far]",
+                          n_replaced);
+        } else {
+            kill_tunnel("the link broke (reconnection or overflow)");
+        }
+    }
     if (!g_tunnel_dead && server_outgoing_lost()) kill_tunnel("a packet of the server was lost");
     identity_logout_tick();
     server_logout_tick();  // C4: a goodbye asked for during the login goes once user 2 exists

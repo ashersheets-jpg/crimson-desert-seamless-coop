@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "mod/game/fault_line.h"
+#include "mod/game/hook_traps.h"
 #include "mod/game/offsets.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
@@ -1144,8 +1145,16 @@ LONG CALLBACK crash_veh(EXCEPTION_POINTERS* ep) {
                                reinterpret_cast<LPCWSTR>(&crash_veh), &m);
             return reinterpret_cast<uintptr_t>(m);
         }();
+        // An execute fault while the hook library is writing a hook: a thread ran into a page that is read/write
+        // for that instant (the patched bytes' page, a system DLL's, or the trampolines' right below the exe). The
+        // library's handler retries it. Not an error: an INF line, so a tester's report has no false alarm in it
+        // (10 logs with the trampoline form and 66 with the system DLL form by 2026-11-12, the game went on in all).
+        const bool trapped = er->NumberParameters >= 2 && er->ExceptionInformation[0] == 8 &&
+                             game::hook_trap_stats().patching > 0;
         game::FixedLine l;
-        l.str("GuestS3 first-chance AV at ");
+        l.str(trapped ? "GuestS3: a thread ran into a page while a hook was being written (retried by the hook "
+                        "library, not an error): execute fault at "
+                      : "GuestS3 first-chance AV at ");
         if (at >= g_base && at < g_base + 0x14000000) {
             l.str("exe+").hex(at - g_base);
         } else if (mod_base && at >= mod_base && at < mod_base + 0x2000C40) {
@@ -1165,7 +1174,7 @@ LONG CALLBACK crash_veh(EXCEPTION_POINTERS* ep) {
                 l.str(" [rsp] exe+").hex(ret - g_base);
             }
         }
-        log::emergency(log::Level::Error, l.view());
+        log::emergency(trapped ? log::Level::Info : log::Level::Error, l.view());
     }
     if (!in_game_code(at)) return EXCEPTION_CONTINUE_SEARCH;
     c_crash_events.fetch_add(1, std::memory_order_relaxed);
