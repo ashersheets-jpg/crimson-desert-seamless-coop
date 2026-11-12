@@ -118,4 +118,17 @@ void guest_save_set_result_handler(GuestSaveResultFn fn);
 gsv::SlotState guest_save_state();
 std::string guest_save_describe();
 
+// ---- Co-op+ 2026-11-12, the co-op world's character (coop_world_logic.h; the gate and its files are
+// guest_save_tunnel.cpp's, network thread). Any thread.
+// The folders it works in: the world (the save folder's stand-in, where the marker cdmp_coop_world.txt is), the
+// world's account folder (the host's slot folders) and last session's guest slot, <world>_guest_prev\<account>\
+// slot204 (save_hooks.cpp sets it aside at the host's start). All empty unless [session2] coop_world_character=1 and
+// own-save mode 1 is installed: then nothing of the co-op world's character is read or written.
+struct CoopWorldPaths {
+    std::wstring world, account, prev_slot;
+};
+CoopWorldPaths guest_save_coop_world_paths();
+// The labels of the staged pair and of the live slot as they are now (whether one is staged / live: guest_save_state).
+void guest_save_labels(GuestSaveLabel& staged, GuestSaveLabel& live);
+
 }  // namespace cdmp::session2

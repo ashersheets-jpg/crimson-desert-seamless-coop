@@ -223,6 +223,7 @@ Config load_config(const std::wstring& ini_path) {
     c.s2_kill_loot_per_user = narrow(read_string(ini_path, L"session2", L"kill_loot_per_user", "0"));
     // P8 session 15, fast travel (pendientes/p8-impl-viaje-rapido.md).
     c.s2_user2_fast_travel = narrow(read_string(ini_path, L"session2", L"user2_fast_travel", "0"));
+    c.s2_schedule_timer_guard_test = static_cast<int>(read_uint(ini_path, L"session2", L"schedule_timer_guard_test", 0));
     c.s2_user2_revive_manager = narrow(read_string(ini_path, L"session2", L"user2_revive_manager", "0"));
     c.s2_guest_fast_travel_veto = narrow(read_string(ini_path, L"session2", L"guest_fast_travel_veto", "0"));
     c.s2_guest_reload_wait_fix = narrow(read_string(ini_path, L"session2", L"guest_reload_wait_fix", "0"));
@@ -439,6 +440,8 @@ Config load_config(const std::wstring& ini_path) {
         const std::string seed = narrow(read_string(ini_path, L"session2", L"coop_save_seed", "keep"));
         c.s2_coop_save_seed = seed == "copy" || seed == "new" ? seed : "keep";
     }
+    // Co-op+ 2026-11-12 (session2/coop_world_logic.h): the friend's character of a new co-op save.
+    c.s2_coop_world_character = read_uint(ini_path, L"session2", L"coop_world_character", 1) != 0;
     c.s2_mirror_delay_ms = std::clamp(read_uint(ini_path, L"session2", L"mirror_delay_ms", 1000), 100u, 10000u);
     {
         const std::wstring v = read_string(ini_path, L"session2", L"account", "1");

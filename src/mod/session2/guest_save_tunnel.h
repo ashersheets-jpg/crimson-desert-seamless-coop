@@ -50,6 +50,15 @@ gsw::ReqPolicy guest_save_req_policy(uint16_t opcode, std::span<const uint8_t> p
 void guest_save_tunnel_note_req(uint16_t opcode, std::span<const uint8_t> payload);
 // A link loss now should save user 2 first (mode 1, its own slot live and both files verified). Any thread.
 bool guest_save_final_save_wanted();
+// Co-op+ 2026-11-12, the co-op world's character (coop_world_logic.h). Asked by server.cpp for user 2's
+// LoginUserToFieldServerReq 2535, on the network thread (the thread of guest_save_tunnel_on_frame: the gate reads
+// what the upload left). In a world with the marker <world>\cdmp_coop_world.txt it stages what user 2 loads: marker
+// pending -> a copy of the host's own complete slot, read the same twice (a new line; the marker becomes "world");
+// marker world -> the newest mailbox generation of the world's line, else last session's guest slot
+// (<world>_guest_prev), else the host's slot again (a warning). True = the Req may go on (always, in a world
+// without a marker, with coop_world_character=0, or when own-save mode is not 1); false = not yet, offer it again.
+// A hard failure opens the gate with the behaviour before (the friend's upload is staged), with an error line.
+bool guest_save_coop_world_gate();
 // server.cpp queued the host's own final 2910 (the next export's reason is "link lost").
 void guest_save_tunnel_note_final_injected();
 std::string guest_save_tunnel_describe();

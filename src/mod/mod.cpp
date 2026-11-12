@@ -1011,6 +1011,11 @@ DWORD WINAPI worker(LPVOID) {
                 CreateMutexW(nullptr, FALSE, seeded.c_str());  // kept for the life of the process
                 const bool first_process = GetLastError() != ERROR_ALREADY_EXISTS;
                 if (!first_process) wcscpy_s(buf, L"keep");
+                // Co-op+ 2026-11-12 (session2/coop_world_logic.h): [session2] coop_world_character (default 1), read
+                // here because the folder is made before the config is loaded: a world made with seed "new" gets its
+                // marker (the friend plays that world's own character). 0 = no marker, as before.
+                session2::save_hooks_set_coop_world_marker(
+                    GetPrivateProfileIntW(L"session2", L"coop_world_character", 1, ip.c_str()) != 0);
                 session2::save_hooks_set_coop_folder(coop_dir, narrow(std::wstring(buf)), first_process);
                 const bool s2_on = GetPrivateProfileIntW(L"session2", L"enabled", 0, ip.c_str()) != 0;
                 const bool s2_guest = GetPrivateProfileIntW(L"session2", L"guest", 0, ip.c_str()) != 0;
@@ -1362,6 +1367,7 @@ DWORD WINAPI worker(LPVOID) {
                                             cfg.s2_user2_fast_travel, cfg.s2_user2_revive_manager,
                                             cfg.s2_create_session};
             fo.quest_policy = cfg.s2_quest_policy;
+            fo.timer_guard_test = cfg.s2_schedule_timer_guard_test;
             session2::user2_funnels_start(fo);
             log::info("Config: P8 quest_policy '{}'", cfg.s2_quest_policy);
             // F2 (pendientes/p8-impl-viaje-rapido.md): user 2's 2283 never reaches the server unless F3 is live.

@@ -23,6 +23,7 @@
 
 #include "common/sha256.h"
 #include "common/troc_frame.h"
+#include "mod/session2/coop_world_logic.h"
 #include "mod/session2/guest_save_wire.h"
 
 #pragma comment(lib, "bcrypt.lib")
@@ -905,6 +906,179 @@ void test_save_req() {
     CHECK(took == save && in.file(gsw::Kind::Save).empty());
 }
 
+// ---------------------------------------------------------------- the co-op world's character (coop_world_logic.h)
+
+void test_coop_world() {
+    using cwl::Character;
+    using cwl::Stage;
+
+    // The marker: what save_hooks writes for a new co-op save, and what the gate rewrites it to.
+    cwl::Marker pending;
+    pending.character = Character::Pending;
+    const std::string pending_text = cwl::marker_text(pending);
+    CHECK(pending_text.find("user2_character=pending\n") != std::string::npos);
+    CHECK(pending_text.find("lineage_root") == std::string::npos && pending_text.find("guest=") == std::string::npos);
+    auto m = cwl::parse_marker(pending_text);
+    CHECK(m && *m == pending);
+
+    const std::string root = sha256::hex(digest_of(21));
+    cwl::Marker world;
+    world.character = Character::World;
+    world.guest = "76561198000000001";
+    world.lineage_root = root;
+    const std::string world_text = cwl::marker_text(world);
+    CHECK(world_text.find("user2_character=world\n") != std::string::npos);
+    CHECK(world_text.find("guest=76561198000000001\n") != std::string::npos);
+    CHECK(world_text.find("lineage_root=" + root + "\n") != std::string::npos);
+    m = cwl::parse_marker(world_text);
+    CHECK(m && *m == world);
+
+    // Windows line ends, an upper-case root (stored lower case), keys in another order, unknown keys.
+    std::string upper = root;
+    for (char& c : upper) c = static_cast<char>(c >= 'a' && c <= 'f' ? c - 32 : c);
+    m = cwl::parse_marker("some title\r\nlineage_root=" + upper + "\r\nfuture_key=1\r\nguest=local-peer\r\n"
+                          "user2_character=world\r\n");
+    CHECK(m && m->character == Character::World && m->guest == "local-peer" && m->lineage_root == root);
+    // No guest: still the world's character (the line names it).
+    m = cwl::parse_marker("user2_character=world\nlineage_root=" + root + "\n");
+    CHECK(m && m->character == Character::World && m->guest.empty() && m->lineage_root == root);
+    // Pending ignores a stray line root.
+    m = cwl::parse_marker("user2_character=pending\nlineage_root=" + root + "\n");
+    CHECK(m && m->character == Character::Pending && m->lineage_root.empty());
+    // Not a marker this build understands: nothing, no key, another word, "world" without a usable root.
+    CHECK(!cwl::parse_marker(""));
+    CHECK(!cwl::parse_marker("cdmp co-op world\nversion=1\n"));
+    CHECK(!cwl::parse_marker("user2_character=solo\n"));
+    CHECK(!cwl::parse_marker("user2_character=world\n"));
+    CHECK(!cwl::parse_marker("user2_character=world\nlineage_root=" + root.substr(1) + "\n"));
+    CHECK(!cwl::parse_marker("user2_character=world\nlineage_root=" + std::string(64, '0') + "\n"));
+    CHECK(!cwl::parse_marker("user2_character=world\nlineage_root=" + std::string(64, 'g') + "\n"));
+    // A guest id never breaks the file's lines.
+    cwl::Marker odd = world;
+    odd.guest = "a\r\nuser2_character=pending";
+    m = cwl::parse_marker(cwl::marker_text(odd));
+    CHECK(m && m->character == Character::World && m->guest == "auser2_character=pending" && m->lineage_root == root);
+    CHECK(std::string(cwl::character_name(Character::None)) == "none" &&
+          std::string(cwl::character_name(Character::Pending)) == "pending" &&
+          std::string(cwl::character_name(Character::World)) == "world");
+
+    // Which slot of the host's: a new co-op save has only slot0, the host's first autosave.
+    std::vector<gsw::SlotSeen> seen = {{0, true, true, 500, false, false}};
+    CHECK(cwl::pick_host_slot(seen) == 0u);
+    // ... still being written (slot0_new beside it), or a save interrupted (slot0_backup): not yet.
+    seen[0].has_new = true;
+    CHECK(!cwl::pick_host_slot(seen));
+    seen[0].has_new = false;
+    seen[0].has_backup = true;
+    CHECK(!cwl::pick_host_slot(seen));
+    seen[0].has_backup = false;
+    // ... or only one of its two files.
+    seen[0].has_save = false;
+    CHECK(!cwl::pick_host_slot(seen));
+    seen[0].has_save = true;
+    seen[0].has_lobby = false;
+    CHECK(!cwl::pick_host_slot(seen));
+    seen[0].has_lobby = true;
+    CHECK(!cwl::pick_host_slot(std::vector<gsw::SlotSeen>{}));
+    // Later: the most recent save.save wins; never the guest's own 204, CrossSave 3 or the one-use 206.
+    seen = {
+        {0, true, true, 500, false, false},
+        {1, true, true, 900, false, false},
+        {100, true, true, 700, false, false},
+        {204, true, true, 9999, false, false},
+        {3, true, true, 9999, false, false},
+        {206, true, true, 9999, false, false},
+    };
+    CHECK(cwl::pick_host_slot(seen) == 1u);
+    seen[2].save_time = 900;  // a tie: the lower number
+    CHECK(cwl::pick_host_slot(seen) == 1u);
+    seen[1].has_new = true;  // the newest is being written: the next one, never a half-written slot
+    CHECK(cwl::pick_host_slot(seen) == 100u);
+    seen[2].has_backup = true;
+    CHECK(cwl::pick_host_slot(seen) == 0u);
+    // Another guest slot number is left out the same way.
+    const std::vector<gsw::SlotSeen> two = {{1, true, true, 900, false, false}, {2, true, true, 100, false, false}};
+    CHECK(cwl::pick_host_slot(two, 1) == 2u);
+
+    // The slot is copied only when two reads at least kStableMs apart gave the same sizes and hashes.
+    const cwl::SlotSample a{0, 390, 5000, digest_of(31), digest_of(32)};
+    cwl::SlotSample b = a;
+    CHECK(cwl::judge_stable(std::nullopt, 0, a, 1000) == cwl::Stable::First);
+    CHECK(cwl::judge_stable(a, 1000, b, 1000 + cwl::kStableMs - 1) == cwl::Stable::TooSoon);
+    CHECK(cwl::judge_stable(a, 1000, b, 1000 + cwl::kStableMs) == cwl::Stable::Yes);
+    CHECK(cwl::judge_stable(a, 1000, b, 900) == cwl::Stable::TooSoon);  // a clock that went back: not yet
+    b.save = digest_of(33);
+    CHECK(cwl::judge_stable(a, 1000, b, 1000 + cwl::kStableMs) == cwl::Stable::Changed);
+    b = a;
+    b.save_size = 5001;
+    CHECK(cwl::judge_stable(a, 1000, b, 99999) == cwl::Stable::Changed);
+    b = a;
+    b.lobby = digest_of(34);
+    CHECK(cwl::judge_stable(a, 1000, b, 99999) == cwl::Stable::Changed);
+    b = a;
+    b.slot = 1;  // another slot became the newest: a first read again
+    CHECK(cwl::judge_stable(a, 1000, b, 99999) == cwl::Stable::Changed);
+
+    // What user 2 loads. Off, or a world without a marker: the behaviour before, whatever else is there.
+    cwl::StageInputs in;
+    in.marker = Character::Pending;
+    in.host_stable = true;
+    CHECK(cwl::decide_stage(in) == Stage::Today);  // coop_world_character=0 / own-save mode not 1
+    in.enabled = true;
+    in.marker = Character::None;
+    in.mailbox = in.prev = in.staged_world = in.live_world = true;
+    CHECK(cwl::decide_stage(in) == Stage::Today);  // "Start From My Solo Progress", or an older world
+
+    // A new co-op save: the host's slot, once it is complete and stable; until then the login waits, but not for ever.
+    in = {};
+    in.enabled = true;
+    in.marker = Character::Pending;
+    CHECK(cwl::decide_stage(in) == Stage::Wait);
+    in.timed_out = true;
+    CHECK(cwl::decide_stage(in) == Stage::Fallback);
+    in.host_stable = true;  // it came at the last look: used, not the fallback
+    CHECK(cwl::decide_stage(in) == Stage::SeedFromHost);
+    in.timed_out = false;
+    CHECK(cwl::decide_stage(in) == Stage::SeedFromHost);
+    // Pending never takes the mailbox or last session's slot (they are not this world's).
+    in.mailbox = in.prev = true;
+    CHECK(cwl::decide_stage(in) == Stage::SeedFromHost);
+    in.host_stable = false;
+    CHECK(cwl::decide_stage(in) == Stage::Wait);
+
+    // Continue of that co-op save: the order is staged, live, mailbox, last session's slot, the host's slot again.
+    in = {};
+    in.enabled = true;
+    in.marker = Character::World;
+    in.staged_world = in.live_world = in.mailbox = in.prev = in.host_stable = true;
+    CHECK(cwl::decide_stage(in) == Stage::KeepStaged);
+    in.staged_world = false;
+    CHECK(cwl::decide_stage(in) == Stage::KeepLive);
+    in.live_world = false;
+    CHECK(cwl::decide_stage(in) == Stage::Mailbox);
+    in.mailbox = false;
+    CHECK(cwl::decide_stage(in) == Stage::Prev);
+    in.prev = false;
+    CHECK(cwl::decide_stage(in) == Stage::ReseedFromHost);
+    in.host_stable = false;
+    CHECK(cwl::decide_stage(in) == Stage::Wait);
+    in.timed_out = true;
+    CHECK(cwl::decide_stage(in) == Stage::Fallback);
+    // The mailbox emptied by hand: last session's slot, without waiting for the host's.
+    in = {};
+    in.enabled = true;
+    in.marker = Character::World;
+    in.prev = true;
+    in.timed_out = true;
+    CHECK(cwl::decide_stage(in) == Stage::Prev);
+
+    for (const Stage s : {Stage::Today, Stage::KeepStaged, Stage::KeepLive, Stage::SeedFromHost, Stage::Mailbox,
+                          Stage::Prev, Stage::ReseedFromHost, Stage::Wait, Stage::Fallback}) {
+        CHECK(std::string(cwl::stage_name(s)) != "?" && !std::string(cwl::stage_name(s)).empty());
+    }
+    CHECK(std::wstring(cwl::kMarkerFile) == L"cdmp_coop_world.txt" && std::wstring(cwl::kGuestPrevSuffix) == L"_guest_prev");
+}
+
 }  // namespace
 
 int main() {
@@ -920,6 +1094,7 @@ int main() {
     test_policy();
     test_slots();
     test_manifests();
+    test_coop_world();
     if (g_failures) {
         std::printf("%d check(s) FAILED\n", g_failures);
         return 1;
