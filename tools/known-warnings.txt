@@ -1,0 +1,29 @@
+# Warning kinds (tools/wrn-kinds.sh) the release checklist has seen and what they are. A kind that is not here
+# fails its step: look at it, then add it with its reason. Kinds with [dev] in them are a test switch speaking
+# and are never listed. NOT here on purpose: the overlay watcher's "N batches of drawing commands in N s and no
+# frame" (right only in step latehook, which allows it itself; anywhere else it is the false trigger of 2026-11-12).
+# Format: kind ## reason
+Co-op lobby: Guest has no save of their own: co-op cannot st ## step nosave
+Co-op lobby: Guest's game pressed Play N s ago and is still ## step stuck
+Co-op lobby: Play was pressed N s ago and the host's world h ## step stuck
+Co-op lobby: this player has no save of their own: co-op can ## step nosave
+Co-op save: the earlier co-op save Q set aside as Q (kept) ## a new co-op save was asked for: the old one is kept aside
+Co-op+ sector probe: actor X observer X | TS X | +X sector X ## a diagnostic
+Crash log: exception X at cdmp.asi+X (thread N) reading X | ## the base's guarded reads, caught by design (every run)
+Game errors: logger not recognised; not hooked ## a base probe not ported to game build 3576 (every run)
+GuestSN crash capture: the top-level exception filter had be ## notice: the crash capture was put back (every run)
+Net: one loop took N ms (> N ms; mostly host tunnel): receiv ## one slow network loop (4 in 25 runs)
+NpcProbe: build distinta de N o cabecera ilegible; no se lee ## a base probe not ported to 3576 (every run)
+Role guest: save REDIRECT ON: everything under Q goes to Q ( ## notice: the guest writes to its own folder
+Role guest: the ini has no [sessionN] enabled=N guest=N; thi ## step nosave
+SessionN family order: ORPHAN queued for user N: record X (t ## OPEN, rare (1 in 25 runs, pp8-newsave): a record whose parent the guest was not given
+SessionN guest save (PN SN, phase A): guest_own_save=N | use ## notice: the guest plays its own save
+SessionN guest save (PN SN, phase B): guest_own_save=N on th ## notice: the guest plays its own save
+SessionN guest save link: the upload is the root of line NfN ## the first upload of a guest save
+SessionN guest: guest_reload_wait_fix='N' needs guest_actor_ ## a settings notice of the base (every run)
+SessionN observer hold family: released member X (type N, pa ## a base diagnostic (4 in 25 runs)
+SessionN publication gate: DROPPED WITHOUT PUBLISHING X (typ ## OPEN, rare (1 in 25 runs, pp8-xess): an NPC the guest does not see until it is announced again
+SessionN save guard REDIRECT: everything under Q goes to Q, ## notice: saves go to the co-op save folder
+SessionN: the guest's connection was replaced by a new one b ## steps retry / stuck: the second start
+UserNStages [host cadence] qpc N s (~N:N:N) capture t=- | th ## a diagnostic
+UserNStages: mode N cannot arm until these are in: userN_fun ## far-world hooks not ported to 3576 (every run)

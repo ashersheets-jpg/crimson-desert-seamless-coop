@@ -113,6 +113,16 @@ unknown_errs() {  # native log
     }
   ' "$1" 2>/dev/null
 }
+# Warning kinds (tools/wrn-kinds.sh) that tools/known-warnings.txt does not list. A new warning in a run that passes
+# is a finding: the overlay watcher's false trigger sat in a passing step's log for three hours (2026-11-12).
+# $WRN_ALLOW: a pattern a step allows for itself (latehook: the watcher's own line). [dev] lines are test switches.
+new_wrn() {  # who, logs...
+  local who=$1; shift
+  local n; n=$(bash "$N/../../tools/wrn-kinds.sh" "$@" | grep -v '\[dev\]' | grep -vE "${WRN_ALLOW:-^this never matches$}" | sort -u |
+               grep -vxFf <(sed -n 's/ ## .*//p' "$N/../../tools/known-warnings.txt"))
+  if [ -z "$n" ]; then ok "$who: no warning kind that has not been seen before"
+  else bad "$who: warning kind(s) never seen before (look, then add to tools/known-warnings.txt with the reason):"; echo "$n" | head -6 | sed 's/^/          /' >> "$R"; fi
+}
 two_player_checks() {  # [round]: "2" = the harness's second round of restarts (-SecondRound)
   local O=$N/$NAME.out T=${1:-}
   has "$O" "^host in the shared world$T: True"   "host reached the shared world${T:+ (round $T)}"
@@ -136,6 +146,7 @@ two_player_checks() {  # [round]: "2" = the harness's second round of restarts (
     no_recording $N/$NAME.$r.log "$r"
     growth $N/$NAME.$r.log "$r native" 420
     growth "$L" "$r layer" 240
+    new_wrn "$r" "$L" $N/$NAME.coopplus.$r.before.log $N/$NAME.$r.log
     local e; e=$(unknown_errs $N/$NAME.$r.log | grep -c .)
     [ "${e:-0}" -eq 0 ] && ok "$r: native log: no error line outside the known set" || { bad "$r: native log: $e unknown error line(s):"; unknown_errs $N/$NAME.$r.log | cut -d']' -f3- | cut -c1-170 | sort | uniq -c | head -5 | sed 's/^/          /' >> "$R"; }
   done
@@ -206,7 +217,9 @@ fsr)
   has $N/$NAME.coopplus.host.log "frame generation \(FSR-FG\): its swap chain class is hooked" "host: the FSR-FG class is hooked" ;;
 latehook)
   head_step "no frame through Streamline's class (as on a tester's AMD card): the watcher hooks the class a new swap chain gets, the menu draws"
+  WRN_ALLOW='^Overlay: N batches of drawing commands in N s and no frame'
   run2 "$BASE -HostDev overlay_no_streamline=1 -GuestDev overlay_no_streamline=1 -WaitShots -Hold 15 -GuestKeys $FLOW_G -HostKeys $FLOW_H"; two_player_checks
+  WRN_ALLOW=
   for r in host guest; do
     for f in $N/$NAME.coopplus.$r.before.log $N/$NAME.coopplus.$r.log; do
       has $f "overlay_no_streamline=1: Streamline's swap chain class is NOT hooked" "$r ($(basename $f | sed 's/.*coopplus.//')): Streamline's class was left unhooked (the test's premise)"
