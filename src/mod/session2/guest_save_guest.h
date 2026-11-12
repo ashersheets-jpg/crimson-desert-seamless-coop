@@ -31,6 +31,8 @@ namespace cdmp::session2 {
 
 // From guest_start (the worker thread), before the tunnel exists.
 void guest_save_guest_configure(const std::string& raw);
+// 0 not known yet / feature off, 1 a save was found, 2 no save at all, 3 a save that cannot be offered.
+int guest_save_guest_own_state();
 // troc::kCapsGuestSave when probe or 1 (the tunnel's caps packet), else 0.
 uint8_t guest_save_guest_caps();
 

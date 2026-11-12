@@ -462,6 +462,7 @@ struct SlotSeen {
 struct Pick {
     std::optional<uint32_t> slot;
     std::string why;  // why nothing is offered (or which one and why)
+    bool none = false;  // no offerable slot at all: a player who has never saved (gn1, 2026-11-11)
 };
 // The slot "Continue" would load: the most recent save.save among the offerable slots with both files (ties: the
 // lower number). Refused when that slot has a _new or _backup folder: a save was interrupted and the game repairs it
@@ -477,6 +478,7 @@ inline Pick pick_continue_slot(std::span<const SlotSeen> seen) {
     Pick p;
     if (!best) {
         p.why = "no slot 0-2 / 100-108 with lobby.save and save.save";
+        p.none = true;
         return p;
     }
     if (best->has_new || best->has_backup) {

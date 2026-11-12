@@ -35,8 +35,13 @@ float load(const std::atomic<uint32_t>& a) {
 
 void on_range(safetyhook::Context& ctx) {
     c_seen.fetch_add(1, std::memory_order_relaxed);
-    const float vx = ctx.xmm6.f32[0], vz = ctx.xmm9.f32[0], vy = ctx.xmm10.f32[0];
-    const float ox = ctx.xmm11.f32[0], oz = ctx.xmm12.f32[0], oy = ctx.xmm13.f32[0];
+    // Which register holds what (asm exe+0x225CE7A..0x225CF30, read again on 2026-11-11 after of1): the VICTIM
+    // (r13) is x xmm11, z xmm9, y xmm10 (computed first); the field owner's character (rdi) is x xmm6, z xmm12,
+    // y xmm13. The first version of this hook paired them as (6, 9, 10) / (11, 12, 13): a point made of one actor's x
+    // and the other's z. It passed its test at the dock / shrine pair only because the host stood 36 m away along z
+    // (log: "another player is 37 m from the victim"); 484 m from the host it never counted a hit (of1, of2).
+    const float vx = ctx.xmm11.f32[0], vz = ctx.xmm9.f32[0], vy = ctx.xmm10.f32[0];
+    const float ox = ctx.xmm6.f32[0], oz = ctx.xmm12.f32[0], oy = ctx.xmm13.f32[0];
     // the limits as the game is about to use them (it adds the two actors' sizes: xmm8 / xmm7)
     const float lim_h = ctx.xmm0.f32[0] + ctx.xmm8.f32[0], lim_v = ctx.xmm1.f32[0] + ctx.xmm7.f32[0];
     if (!(lim_h > 0.0f) || !(lim_v > 0.0f) || !std::isfinite(vx) || !std::isfinite(vz) || !std::isfinite(vy)) return;
@@ -48,7 +53,7 @@ void on_range(safetyhook::Context& ctx) {
         const float px = load(g_pos[i][0]), py = load(g_pos[i][1]), pz = load(g_pos[i][2]);
         const float h2 = (px - vx) * (px - vx) + (pz - vz) * (pz - vz);
         if (h2 < lim_h * lim_h && std::fabs(py - vy) < lim_v) {
-            ctx.xmm11.f32[0] = px;  // this player's character stands in for the field owner's, for this comparison
+            ctx.xmm6.f32[0] = px;  // this player's character stands in for the field owner's, for this comparison
             ctx.xmm12.f32[0] = pz;
             ctx.xmm13.f32[0] = py;
             const uint64_t m = c_moved.fetch_add(1, std::memory_order_relaxed) + 1;

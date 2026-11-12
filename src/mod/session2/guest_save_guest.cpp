@@ -36,6 +36,7 @@ std::wstring g_progress_root;    // %LOCALAPPDATA%\cdmp\guest_progress
 
 struct Prepared {
     bool ok = false;
+    bool none = false;  // nothing to offer because this player has no save at all
     uint32_t slot = 0;
     std::wstring account;
     std::vector<uint8_t> lobby, save;
@@ -256,6 +257,7 @@ Prepared prepare(std::optional<uint32_t> want, bool wait_for_account) {
         const gsw::Pick pick = gsw::pick_continue_slot(list);
         if (!pick.slot) {
             p.why = pick.why;
+            p.none = pick.none;
             return p;
         }
         slot = *pick.slot;
@@ -952,4 +954,18 @@ std::string guest_save_guest_describe() {
                                 : std::string());
 }
 
+// gn1 (2026-11-11): a guest who has never saved has nothing to offer, the host's server has no slot for user 2, and
+// the lobby's "Play" does nothing at a title without Continue: the guest waited for ever. The layer asks here and
+// starts a New Game for such a guest instead. 0 = not known yet (or the own-save feature is off), 1 = a save was
+// found (offered), 2 = no save at all, 3 = a save exists but cannot be offered (interrupted, unreadable).
+int guest_save_guest_own_state() {
+    std::lock_guard lock(g_mu);
+    if (!g_prep_done) return 0;
+    return g_prep.ok ? 1 : g_prep.none ? 2 : 3;
+}
+
 }  // namespace cdmp::session2
+
+extern "C" __declspec(dllexport) int cdmp_guest_own_save_state() {
+    return cdmp::session2::guest_save_guest_own_state();
+}
