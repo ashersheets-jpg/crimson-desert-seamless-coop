@@ -65,6 +65,11 @@ topic BEFORE testing or guessing about it.
 
 ## Harness and tools
 
+- The horse call for tests: a simulated pad (-HostDev pad_sim=1 / -GuestDev pad_sim=1) and the dev script steps
+  `pad 0001 700`, `pad 0401 1300`, `pad 0400 400` (D-pad Up, then Up + right stick down, then the stick alone: the
+  wheel picks when Up is released with the stick held). Pressing both together and releasing together does nothing.
+  Then `tphorse`, `key 45 200` (E = Ride). The keyboard wheel (F1) of the old harness does not call the horse.
+
 - Script edits with backslashes go through a script FILE written with the Write tool, never a bash heredoc: the
   heredoc turned `\1` into a control byte, `'\r'` into `''`, `\a` into a bell, a C++ `"\r\n"` into a line break (six
   times on 2026-11-11, first noted on 2026-11-06). After any scripted edit: syntax check, grep the changed line.

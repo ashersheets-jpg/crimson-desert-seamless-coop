@@ -5661,3 +5661,21 @@ Report: build/native/prepost-pp5.txt (every step's switches are in it). 332 chec
   character announce; the horse position the party frame or map uses).
 - Simulated pad (dev): sticks are the two free button bits: 0x0400 right stick down, 0x0800 left stick up.
   Scripts: build/native/scan/mount_call.txt (call only), mount_ride.txt (call, go to it, mount, ride).
+
+### mr4 and t8-solostart (2026-11-11 22:08-22:25): HORSES WORK for both; Start From My Solo Progress works
+
+- mr4 (simulated pad on both, script: call, "tphorse", E, ride forward; one PC, -Fresh, the package's settings):
+  both natives "MountSync ... published Begin 1 Commit 1"; screenshots mr4-g0..g2 (the guest's view): the guest on
+  its horse ("Dismount [R]", "Kick") and the HOST on its horse 7 m ahead with its name plate; mr4-h0: the host on its
+  horse. So in the shared world each player can call its horse, mount and ride, and each sees the other mounted.
+  NOT tested: a real controller, fighting from horseback, other mounts, horse swap, dismount seen by the other.
+- Fixed on the way (layer): in the shared world each client took the other player's freshly called horse for its
+  own ("our horse ... is here now" for the host's horse on the guest). A mount load counts as ours only when its
+  user is ours (the controller key of our own character). Built 22:27; first run with it = pp6's mounts step.
+- t8-solostart (the host picks the second card): "Co-op lobby: Start From My Solo Progress", native "Co-op save:
+  folder ... (seed copy)", "the earlier co-op save ... set aside as ..._old_<date>"; both reach the world, the
+  guest's own save is loaded ("REMAP 204"), no login refused, the guest starts 1 m from the host.
+- The checklist is now 15 steps: + newsave (New Co-op Save), solostart (Start From My Solo Progress), mounts. The
+  three ways a session begins are all in it.
+- Batch for the next package (after the checked 980c5b38): the New Co-op Save login gate (native e3583a7), own-horse
+  rule, dev-only steps (tphorse, simulated sticks). One package, then one full pass (pp6).

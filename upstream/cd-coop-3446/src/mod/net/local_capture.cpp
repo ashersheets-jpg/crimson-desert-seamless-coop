@@ -806,6 +806,22 @@ void capture_observe_s2c(const uint8_t* packet, size_t size) {
         return;
     }
 
+    // Shared world (mr3, 2026-11-11): there is one server, so the OTHER player's mount load reaches this client too, and
+    // each layer took the other's freshly called horse for its own ("our horse ... is here now" for the host's horse
+    // on the guest). A mount is ours only when its user is ours: the controller key of our own character (actor+0x90
+    // = the local user key). Read before g_mutex is taken (capture_own_player_key may take it).
+    uint32_t own_user = 0;
+    if (kNativeLayer && keys::is_class(key, keys::kClassUser) &&
+        (payload[0x0D] == off::kLoadKindMount || payload[0x0D] == off::kLoadKindMount - 1)) {
+        if (const uint32_t me = capture_own_player_key()) {
+            if (const auto actor = game::find_actor(me)) own_user = game::read<uint32_t>(*actor + 0x90).value_or(0);
+        }
+        if (own_user && key != own_user) {
+            static int said = 0;
+            if (said++ < 5) log::info("Capture: a mount of user 0x{:08X} (not ours, 0x{:08X}): left alone", key, own_user);
+            return;
+        }
+    }
     std::lock_guard lock(g_mutex);
     // The kind byte follows the mount's slot in the user's container: the horse in slot 2 is kind 5, the STARTER horse
     // in slot 1 is kind 4 (3576 two-copy run hk3: 0xB0100002 kind 4; Plitos found the slot-1 horse from the copy's

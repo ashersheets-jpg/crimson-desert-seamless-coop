@@ -3,7 +3,7 @@
 # one game session and every step's screenshots can be looked at before the next one starts:
 #
 #   bash tools/prepost.sh TAG "<package folder>" STEP        STEP = static | real | fresh | xess | fsr | display |
-#                                                                   lowsave | chest | revive | loot | crime | farfight | newsave | solostart |
+#                                                                   lowsave | chest | revive | loot | crime | farfight | newsave | solostart | mounts |
 #                                                                   summary
 #
 # TAG names the run (pp1 ...): the test names are TAG-STEP, the report is build/native/prepost-TAG.txt.
@@ -286,11 +286,24 @@ solostart)
     case "$rs" in *"identical to the backup"*|*"is the backup's"*) ok "the test co-op world is back ($rs)" ;; *) bad "the test co-op world: $rs" ;; esac
   fi
   two_player_checks
-  has "$N/$NAME.coopplus.host.before.log" "from our solo progress" "the host's layer made the co-op save from its solo progress"
+  has "$N/$NAME.coopplus.host.before.log" "Co-op lobby: Start From My Solo Progress" "the host chose Start From My Solo Progress"
+  has "$N/$NAME.host.log" "Co-op save: folder .* \\(seed copy\\)" "the co-op world was made as a copy of the host's own save"
+  has "$N/$NAME.host.log" "the earlier co-op save .* set aside as" "the earlier co-op world was set aside, not deleted"
   has "$N/$NAME.host.log" "LoadSlot .* = user 2 \\| slot [0-9]+ -> REMAP 204" "the guest's lobby was loaded from its own slot"
   hasnot "$N/$NAME.host.log" "C2 identity: refused user 2" "the guest's character login was not refused" ;;
+mounts)
+  head_step "horses: each player calls its horse, mounts and rides; each sees the other mounted"
+  # 2026-11-11 (mr1-mr4). The horse is called with a pad: D-pad Up held, right stick down, Up released (a simulated
+  # pad, dev key pad_sim; its two spare bits are the sticks). The script then goes to the horse (tphorse), presses E
+  # (Ride) and rides forward. Screenshots g0-g2 are the guest's view (both mounted), h0 the host's.
+  printf 'pad 0001 700\npad 0401 1300\npad 0400 400\nwait 5000\ntphorse\nwait 2500\nkey 45 200\nwait 5000\nkey 57 3000\nwait 2000\n' > $N/scan/mount_ride.txt
+  run2 "$BASE -Hold 15 -HostDev pad_sim=1 -GuestDev pad_sim=1 -HostScript $SCAN\\mount_ride.txt -GuestScript $SCAN\\mount_ride.txt -GuestKeys w:14000_shot:$NAME-g0_w:3000_shot:$NAME-g1_w:4000_shot:$NAME-g2 -HostKeys w:500_shot:$NAME-h0"; two_player_checks
+  for r in host guest; do
+    has "$N/$NAME.coopplus.$r.log" "Dev script: teleport beside actor 0xB[0-9A-F]+: \\(" "$r: its called horse was there (the script went to it)"
+    has "$N/$NAME.$r.log" "MountSync summary .* published Begin [1-9][0-9]* Commit [1-9]" "$r: mounted (its mount was published to the other player)"
+  done ;;
 summary)
-  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c '^== ' "$R") (14 in the list)"; exit 0 ;;
+  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c '^== ' "$R") (15 in the list)"; exit 0 ;;
 *) echo "unknown step $STEP"; exit 2 ;;
 esac
 sed -n "/^== $STEP /,\$p" "$R"

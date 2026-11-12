@@ -10,6 +10,8 @@ Not posted yet (2026-11-11, after 3c46bec5):
   upright at 0 health on its own screen). The death screen, the HUD and both revive choices are as before; the
   friend's hold-Interact revive and the Q / U choices stand the character up again. `[coop] downed_pose=0` turns it
   off.
+- New Co-op Save works: the guest used to stay on "Waiting for Host" for ever (its login came before the new world
+  had a save, so its own save was never loaded). Its login now waits for the host's new game.
 - A guest now starts at the host's side. Before, a guest started wherever its own save was, which could be more
   than a kilometre away, and had to use "Go to my friend". `[coop] join_beside_host=0` keeps the old start.
 - The downed friend's name sits by the body instead of floating at head height, and the "Interact" prompt on your
