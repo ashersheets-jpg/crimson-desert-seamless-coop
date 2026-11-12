@@ -25,6 +25,7 @@ constexpr uint8_t kMsgPlan = 6;        // u8 | u8 LobbyPlan                     
 // the guest)                                                                     host -> guest
 constexpr uint8_t kMsgNative = 20;  // (7 is prologue_hold.h, 8 xp_share.h: coop_worlds.cpp routes those first)
 constexpr uint8_t kMsgNativeRefused = 22;  // u8: co-op was refused on the sender's PC (B22a)   either way
+constexpr uint8_t kMsgGuestNoSave = 23;  // u8: the guest has no character of its own (gn1-gn3)   guest -> host
 constexpr uint8_t kMsgNativeReady = 21;  // u8: the guest's game is in guest mode (after its restart)   guest -> host
 constexpr uint64_t kRestartDelayMs = 1500;  // the message goes out before this game closes
 constexpr uint64_t kCountdownMs = 3000;
@@ -58,6 +59,8 @@ const char* g_restart_why = "";
 uint64_t g_solo_restart_at = 0;  // Start Solo in a game still in co-op mode: when it restarts (tcB295)
 bool g_switch_sent = false;      // host after its restart: the guest was told to switch
 bool g_ready_sent = false;       // guest after its restart: the host was told
+bool g_nosave_seen = false;      // guest: we have no save of our own; the host was told, this game goes back to solo
+uint64_t g_guest_since = 0;      // guest after its restart: connected to the partner since
 bool g_guest_ready = false;      // host: the guest is in guest mode
 bool g_auto_started = false;     // host: the plan went on after the guest came back
 bool g_resume_cleared = false;   // in the world: the next launch was set back to Solo
@@ -88,6 +91,12 @@ int native_own_save_state() {
 }
 
 bool native_write_ok(const NativeModeSpec& spec);
+
+// A line for the title menu that has to survive the game's restart (the no-save guest goes back to solo by itself).
+constexpr const wchar_t* kNoteSection = L"lobby";
+constexpr const wchar_t* kNoteKey = L"start_note";
+const char* const kNoSaveNote =
+    "You have no character yet. Start Solo, begin a New Game, and join again once you stand in the world.";
 
 // Co-op stops for this launch (ours refused, or the partner's): the next launch is solo, nothing more is sent.
 void native_back_to_solo(const std::string& note) {
@@ -193,6 +202,17 @@ void lobby_native_init(const std::wstring& coopplus_ini, const std::wstring& bin
     g_native_bin = bin_dir;
     g_native_now = native_mode_current(bin_dir);
     const NativeResume r = native_resume_read(coopplus_ini);
+    {
+        wchar_t note[32] = {};
+        GetPrivateProfileStringW(kNoteSection, kNoteKey, L"", note, 32, coopplus_ini.c_str());
+        if (note[0]) {
+            WritePrivateProfileStringW(kNoteSection, kNoteKey, nullptr, coopplus_ini.c_str());
+            if (std::wstring(note) == L"nosave" && g_native_now == NativeMode::Solo) {
+                g_native_note = kNoSaveNote;
+                log::info("Co-op lobby: back in solo after a join without a save of our own: the menu says what to do");
+            }
+        }
+    }
     if (native_resume_fresh(r) && r.mode == g_native_now) {
         g_resume = r;
         g_resume_since = GetTickCount64();
@@ -261,7 +281,25 @@ void lobby_tick(const LobbyInput& in) {
                 g_plan = static_cast<LobbyPlan>(g_resume.plan);
                 log::info("Co-op lobby: back in co-op as the host; {}'s game restarts into co-op now", in.partner_name);
             }
-            if (g_resume.mode == NativeMode::Guest && in.connected && !g_ready_sent) {
+            // gn1-gn3 (2026-11-11/12): a guest who has never played has no save. The base then has nothing to load for
+            // it in the host's world and its game sits at the title's logo for ever behind "Waiting for Host" (a
+            // New Game there does nothing: tried). So: say so. The host is told, this game restarts into solo by
+            // itself and its title menu carries the instruction. Decided before "ready" is sent, so the host does
+            // not load into its world alone. State 0 = the base has not looked yet: wait for it (10 s at most).
+            if (g_resume.mode == NativeMode::Guest && in.connected && !g_guest_since) g_guest_since = in.now_ms;
+            const int own_save = g_resume.mode == NativeMode::Guest && !g_ready_sent ? native_own_save_state() : 1;
+            if (g_resume.mode == NativeMode::Guest && in.connected && !g_ready_sent && !g_nosave_seen && own_save == 2) {
+                g_nosave_seen = true;
+                log::warn("Co-op lobby: this player has no save of their own: co-op cannot start for them yet; the host "
+                          "is told and this game restarts into solo with the instruction");
+                send({kMsgGuestNoSave});
+                native_back_to_solo(kNoSaveNote);
+                WritePrivateProfileStringW(kNoteSection, kNoteKey, L"nosave", g_native_ini.c_str());
+                reset_phase();
+                g_solo_restart_at = in.now_ms + 3000;  // after the message is out
+            }
+            if (g_resume.mode == NativeMode::Guest && in.connected && !g_ready_sent && !g_nosave_seen &&
+                (own_save != 0 || in.now_ms - g_guest_since > 10000)) {
                 g_ready_sent = true;
                 send({kMsgNativeReady});
                 g_plan = static_cast<LobbyPlan>(g_resume.plan);
@@ -353,15 +391,6 @@ void lobby_tick(const LobbyInput& in) {
                 if (g_go_at && in.now_ms >= g_go_at) {
                     g_go_at = 0;
                     todo = PressPlay;
-                } else if (g_native && g_new_go_since && !g_new_started && in.at_title && native_own_save_state() == 2) {
-                    // A guest who has never played has no save: the title has no Continue, Play does nothing, and
-                    // the guest waited for ever (gn1). It begins as a NEW character in the host's world: New Game,
-                    // the agreement, the host's difficulty (worlds_lobby_guest_new, as the old co-op saves did).
-                    g_new_started = true;
-                    guest_diff = g_partner_diff != kUnknown && g_partner_diff <= 2 ? g_partner_diff : kNormal;
-                    todo = GuestNew;
-                    log::info("Co-op lobby: the host's world is up and this player has no save of their own: New Game "
-                              "(a new character joins the host's world), difficulty {}", guest_diff);
                 } else if (g_native && g_new_go_since && !g_new_started && in.at_title) {
                     g_new_started = true;
                     todo = PressPlay;
@@ -576,6 +605,16 @@ void lobby_on_message(const std::vector<uint8_t>& b) {
                               "the next launch is solo", g_in.partner_name);
                     native_back_to_solo(g_in.partner_name.empty() ? std::string("Your friend's game could not start co-op. Restart the game to play solo.")
                                         : g_in.partner_name + "'s game could not start co-op. Restart the game to play solo.");
+                    reset_phase();
+                }
+                break;
+            case kMsgGuestNoSave:
+                if (g_native && g_in.host) {
+                    const std::string who = g_in.partner_name.empty() ? std::string("Your friend") : g_in.partner_name;
+                    log::warn("Co-op lobby: {} has no save of their own: co-op cannot start with them yet; the next "
+                              "launch is solo", who);
+                    native_back_to_solo(who + " has no character yet and must start a New Game alone first. Restart the "
+                                        "game to play solo.");
                     reset_phase();
                 }
                 break;

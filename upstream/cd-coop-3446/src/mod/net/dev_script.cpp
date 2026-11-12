@@ -711,7 +711,7 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                     std::optional<proto::Vec3> me;
                     int loaded = 0, n = static_cast<int>(st.to[1]);
                     for (const NpcRow& r : npcs_near(st.to[0], 1.5f, me, loaded)) {
-                        if (hunt_animal_name(r.variant) || r.hp_max < 1.0f || r.hp <= 0.0f) continue;
+                        if (hunt_animal_name(r.variant) || r.hp_max < 40.0f || r.hp <= 0.0f) continue;  // 40+: people, not critters (op2)
                         if (n-- > 0) continue;
                         key = r.key;
                         log::info("Dev script: tpnear: 0x{:08X} variant 0x{:08X}, {:.1f} m, hp {:.0f}/{:.0f}", r.key,
