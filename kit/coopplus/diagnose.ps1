@@ -1,5 +1,6 @@
 ﻿# Crimson Desert Seamless Co-op+ diagnostics. Started by "Diagnose Co-op+.cmd".
-# Writes CoopPlus-report-<date>.txt and CoopPlus-report-<date>.zip (the report plus the whole cdmp.log and coopplus.log) to the
+# Writes CoopPlus-report-<date>.txt and CoopPlus-report-<date>.zip (the report plus the whole cdmp.log and coopplus.log,
+# and the logs of the two game runs before: co-op restarts the game, the start of a session is in those) to the
 # Desktop and puts the zip on the clipboard, ready to paste into a message. Send it when something goes wrong.
 # Reads only; changes nothing in the game. Co-op+ (T37): personal data is taken out first: Steam names (yours and
 # your friend's), SteamIDs, lobby ids, room codes, your Windows user and PC name, IP addresses, e-mail addresses.
@@ -48,6 +49,25 @@ function Redact([string]$t) {
     return $t
 }
 function Add([string]$line) { $out.Add($line) }
+# The logs of the two game runs before the current one: the layer keeps coopplus.1.log (newest) .. coopplus.5.log,
+# the base keeps dated cdmp_YYYYMMDD-HHMMSS[_N].log files (cdmp.log is a second name of the newest of them).
+function Previous-Logs([string]$dir) {
+    $r = @()
+    if (-not $dir -or -not (Test-Path $dir)) { return $r }
+    foreach ($n in 1, 2) {
+        $p = Join-Path $dir "coopplus.$n.log"
+        if (Test-Path $p) { $r += [pscustomobject]@{ Path = $p; Name = "coopplus.prev$n.log" } }
+    }
+    $dated = @(Get-ChildItem $dir -Filter 'cdmp_*.log' -ErrorAction SilentlyContinue |
+               Where-Object { $_.Name -match '^cdmp_\d{8}-\d{6}(_\d+)?\.log$' } | Sort-Object Name -Descending)
+    $skip = if (Test-Path (Join-Path $dir 'cdmp.log')) { 1 } else { 0 }
+    $n = 0
+    foreach ($f in ($dated | Select-Object -Skip $skip -First 2)) {
+        $n++
+        $r += [pscustomobject]@{ Path = $f.FullName; Name = "cdmp.prev$n.log" }
+    }
+    return $r
+}
 
 Add "Crimson Desert Seamless Co-op+ diagnostics, $(Get-Date -Format s)"
 Add "Windows: $([Environment]::OSVersion.VersionString)"
@@ -104,6 +124,15 @@ if ($GameDir -and (Test-Path (Join-Path $GameDir 'CrimsonDesert.exe'))) {
     $log = Join-Path $GameDir 'cdmp.log'
     Add ''
     if (Test-Path $log) { Learn-Names (Get-Content $log) }
+    # The game starts again when co-op begins, and each start writes a new log: the title part of a session (the
+    # menu, the invite, the host's choice) is in the PREVIOUS run's logs. The two runs before this one go in the zip.
+    foreach ($p in (Previous-Logs $GameDir)) { Learn-Names (Get-Content $p.Path) }
+    $prev = @(Previous-Logs $GameDir)
+    if ($prev.Count) {
+        Add "--- earlier runs' logs in the zip: $(($prev | ForEach-Object { "$($_.Name) (written $((Get-Item $_.Path).LastWriteTime.ToString('s')))" }) -join ', ')"
+    } else {
+        Add "--- no earlier run's log in the game folder"
+    }
     if (Test-Path $ini) { Learn-Names ($out.ToArray()) }
     if (Test-Path $log) {
         Add "--- cdmp.log (last $LogLines lines; written $((Get-Item $log).LastWriteTime.ToString('s')))"
@@ -140,6 +169,10 @@ if ($GameDir -and (Test-Path (Join-Path $GameDir 'cdmp.log'))) {
 if ($GameDir -and (Test-Path (Join-Path $GameDir 'coopplus.log'))) {
     Get-Content (Join-Path $GameDir 'coopplus.log') -Tail 50000 | ForEach-Object { Redact $_ } |
         Set-Content -Path (Join-Path $tmp 'coopplus.log') -Encoding UTF8
+}
+foreach ($p in (Previous-Logs $GameDir)) {
+    Get-Content $p.Path -Tail 50000 | ForEach-Object { Redact $_ } |
+        Set-Content -Path (Join-Path $tmp $p.Name) -Encoding UTF8
 }
 Compress-Archive -Path (Join-Path $tmp '*') -DestinationPath $zip -Force
 Remove-Item -Recurse -Force $tmp

@@ -623,10 +623,17 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
         transport->poll(now_ms());
 
         // Co-op+ (T07): Leave on any transport (it was read only with Steam, so a room-code / UDP guest could not).
-        if (leave_key.pressed(input::action_down(input::Action::Leave, game_has_focus()))) {
+        if (leave_key.pressed(input::action_down(input::Action::Leave, game_has_focus())) || net::lobby_dev_take_leave()) {
             // tcB289: for both roles this is the game's own Return to Title; the guest's link ends at once.
             // tcB291: the host with a guest says goodbye first and returns once the guest has gone (or after 6 s).
-            if (host && session.state() == ClientSession::State::Connected) {
+            // 2026-11-12: a friend who never got into our world has nothing to unload: the goodbye goes out (its
+            // lobby goes back to its menu and it stays in the party) and we return at once.
+            if (host && session.state() == ClientSession::State::Connected && net::lobby_partner_stuck()) {
+                net::activity_send_bye();
+                log::info("Leave: the friend never got into our world: goodbye sent, back to the title now");
+                net::lobby_session_ended();
+                game::main_menu_return_to_title();
+            } else if (host && session.state() == ClientSession::State::Connected) {
                 if (!host_leave_at) {
                     net::activity_send_bye();
                     host_leave_at = now_ms() + 6000;
@@ -651,7 +658,7 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
                 game::main_menu_return_to_title();
             }
         }
-        if (!host && net::activity_take_bye()) {
+        if (!host && net::activity_take_bye() && !net::lobby_bye_at_title()) {
             net::lobby_session_ended();
                 game::main_menu_return_to_title();
             end = {Kind::Leave, 0};
@@ -2333,6 +2340,7 @@ DWORD WINAPI worker(LPVOID) {
         net::lobby_set_world_items_lootr(cfg.coop_world_items_lootr);
         net::give_set_enabled(cfg.coop_item_sharing);
         net::lobby_set_native_extra(cfg.dev_native_extra);
+        net::lobby_dev(cfg.dev_lobby_skip_play, cfg.dev_lobby_retry, cfg.dev_lobby_recover);
         net::guest_hits_set_finishes(cfg.coop_guest_finishes);
         net::aggro_set_copy_never_target(cfg.dev_copy_untargetable);
         net::activity_set_event_test(cfg.dev_event_test);

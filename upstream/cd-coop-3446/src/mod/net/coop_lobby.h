@@ -59,6 +59,7 @@ struct LobbyView {
     bool guest_wait = false;      // guest: the "waiting for the host" screen covers the game
     bool driving = false;         // the mod is pressing the title's keys itself (the game must take them)
     std::string wait_line;        // what that screen says under its title
+    std::string wait_hint;        // the small line under it ("" = the usual "please wait")
     bool host = true;
     bool connected = false;
     bool worlds_on = false;       // co-op saves are on (else co-op uses each player's own save)
@@ -75,6 +76,12 @@ LobbyView lobby_view();
 void lobby_set_shared_quest_credit(bool on);
 // [coop] world_items (host): lootr (default) writes lootr=1 into the host's native ini at the next co-op launch.
 void lobby_set_world_items_lootr(bool on);
+// dev: [dev] lobby_skip_play (guest: Play is not pressed, once) and lobby_retry (host: the first automatic start is
+// a second Start Co-op instead, once). Each clears itself in the ini when it applies.
+void lobby_dev(int skip_play, int retry, int recover);
+bool lobby_dev_take_leave();      // dev: [dev] lobby_recover asks for the host's Leave now (true once)
+bool lobby_partner_stuck();       // host: the friend said it did not get into our world
+bool lobby_bye_at_title();        // guest: the host's goodbye while we are at the title: stay in the party (true)
 // dev: [dev] native_extra (host only; research runs).
 void lobby_set_native_extra(const std::string& kv);
 void lobby_start_coop();          // host: opens the question (with a friend in the party)

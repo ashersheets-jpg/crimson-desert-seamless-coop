@@ -564,7 +564,7 @@ bool draw_lobby(float width, float height, ImDrawList* dl, ImVec2 mouse, const s
         const std::string title = "Waiting for " + v.partner_name;
         text(dl, cx - text_w(42 * s, title, true) * 0.5f, cy - 40 * s, 42 * s, title, kGold, true);
         text(dl, cx - text_w(24 * s, v.wait_line) * 0.5f, cy + 30 * s, 24 * s, v.wait_line, kText);
-        const std::string note = "Please wait. Your game follows the host's on its own.";
+        const std::string note = v.wait_hint.empty() ? std::string("Please wait. Your game follows the host's on its own.") : v.wait_hint;
         text(dl, cx - text_w(19 * s, note) * 0.5f, cy + 80 * s, 19 * s, note, kDim);
         draw_party(dl, width, height, v);
         return true;

@@ -4,6 +4,7 @@
 #
 #   bash tools/prepost.sh TAG "<package folder>" STEP        STEP = static | real | fresh | xess | fsr | display |
 #                                                                   lowsave | chest | revive | loot | crime | farfight | farfight2 | newsave | solostart | mounts | mountfight | nosave |
+#                                                                   retry | stuck |
 #                                                                   summary
 #
 # TAG names the run (pp1 ...): the test names are TAG-STEP, the report is build/native/prepost-TAG.txt.
@@ -112,10 +113,10 @@ unknown_errs() {  # native log
     }
   ' "$1" 2>/dev/null
 }
-two_player_checks() {
-  local O=$N/$NAME.out
-  has "$O" "^host in the shared world: True"   "host reached the shared world"
-  has "$O" "^guest in the shared world: True"  "guest reached the shared world"
+two_player_checks() {  # [round]: "2" = the harness's second round of restarts (-SecondRound)
+  local O=$N/$NAME.out T=${1:-}
+  has "$O" "^host in the shared world$T: True"   "host reached the shared world${T:+ (round $T)}"
+  has "$O" "^guest in the shared world$T: True"  "guest reached the shared world${T:+ (round $T)}"
   has "$O" "^host alive=True guest alive=True" "both games still running at the end"
   has "$O" "^SAVES OK"                         "the player's saves untouched (SAVES OK)"
   has "$O" "user install restored: 5/5 OK"     "the player's install put back (5/5)"
@@ -396,8 +397,34 @@ nosave)
   hasnot "$N/$NAME.coopplus.host.log" "in the shared world" "host: did not load into its world alone"
   info "LOOK: $NAME-nosave-guest (the title with 'You have no character yet...') and $NAME-nosave-host (the reason on the host's menu)"
   ;;
+retry)
+  head_step "a second Start Co-op in the same launch: both games restart again (the guest is already a guest), both reach the world"
+  # rt1a / rt1b (2026-11-12): the host's tunnel took the guest's old process for a conversation and was dead for the
+  # whole launch. [dev] lobby_retry=1: the host's first automatic start is a second Start Co-op instead.
+  run2 "$BASE -HostDev lobby_retry=1 -WaitShots -Hold 10 -GuestKeys $FLOW_G -HostKeys $FLOW_H"; two_player_checks
+  has "$N/$NAME.coopplus.host.before.log" "lobby_retry: instead of starting, a second Start Co-op" "host: the second Start Co-op ran (the test's premise)"
+  has "$N/$NAME.coopplus.guest.before.log" "the host is back in co-op: this game restarts as its guest" "guest: restarted again although it already was a guest"
+  has "$N/$NAME.host.log" "the guest's connection was replaced by a new one before anything was said on it" "host: the guest's old connection was replaced, the tunnel goes on"
+  hasnot "$N/$NAME.host.log" "the Troc tunnel stops" "host: the tunnel was never stopped"
+  ;;
+stuck)
+  head_step "a guest that is not let in: both are told; the host leaves the session and starts again; both reach the world"
+  # rt2a / rt3a / rt3b (2026-11-12). [dev] lobby_skip_play=1: the guest does not press Play (as when the host's game
+  # never answers). [dev] lobby_recover=1: the host answers its card with Leave the session and a new Start Co-op.
+  run2 "$BASE -GuestDev lobby_skip_play=1 -HostDev lobby_recover=1 -SecondRound -WaitShots -Hold 10 -GuestKeys $FLOW_G -HostKeys $FLOW_H"; two_player_checks 2
+  HB=$N/$NAME.coopplus.host.before.log; GB=$N/$NAME.coopplus.guest.before.log
+  has "$N/$NAME.out" "^guest in the shared world: False" "round 1: the guest did not get in (the test's premise)"
+  has "$GB" "Play was pressed [0-9]+ s ago and the host's world has not come: the host is told" "guest: said it is stuck"
+  has "$HB" "pressed Play [0-9]+ s ago and is still not in our world" "host: was told"
+  has "$HB" "Leave: the friend never got into our world: goodbye sent, back to the title now" "host: Leave went back to the title at once"
+  has "$GB" "the host ended the session while we were at the title: back to the menu, still in the party" "guest: stayed in the party at its menu"
+  has "$HB" "Native mode: restarting the game \\(the host starts co-op\\)" "host: the second Start Co-op restarted the game (it had been in a world)"
+  has "$GB" "the host is back in co-op: this game restarts as its guest" "guest: restarted for the second start"
+  hasnot "$N/$NAME.host.log" "the Troc tunnel stops" "host: the tunnel was never stopped"
+  info "LOOK: $NAME-g* / $NAME-Wguest4* (the guest's 'has not let you in yet' screen), $NAME-R0-guest-after-leave and $NAME-R0-host-after-leave (both menus after the Leave, the notes readable), $NAME-L3-*2* / L5 (both in the world)"
+  ;;
 summary)
-  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c '^== ' "$R") (19 in the list)"; exit 0 ;;
+  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c '^== ' "$R") (21 in the list)"; exit 0 ;;
 *) echo "unknown step $STEP"; exit 2 ;;
 esac
 sed -n "/^== $STEP /,\$p" "$R"

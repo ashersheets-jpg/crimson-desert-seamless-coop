@@ -28,7 +28,14 @@ constexpr uint8_t kMsgNative = 20;  // (7 is prologue_hold.h, 8 xp_share.h: coop
 constexpr uint8_t kMsgNativeRefused = 22;  // u8: co-op was refused on the sender's PC (B22a)   either way
 constexpr uint8_t kMsgGuestNoSave = 23;  // u8: the guest has no character of its own (gn1-gn3)   guest -> host
 constexpr uint8_t kMsgNativeReady = 21;  // u8: the guest's game is in guest mode (after its restart)   guest -> host
+// u8: the guest pressed Play for the host's world and is still not in it   guest -> host
+constexpr uint8_t kMsgGuestStuck = 24;
+// The host ended the session (a Leave). On this channel because it must reach a guest that is still at the title:
+// the activity goodbye (kBye) did not get there in rt3a (2026-11-12).   host -> guest
+constexpr uint8_t kMsgSessionEnded = 25;
 constexpr uint64_t kRestartDelayMs = 1500;  // the message goes out before this game closes
+constexpr uint64_t kStuckLineMs = 150000;   // guest: Play pressed this long ago, no world: the waiting screen says what to do
+constexpr uint64_t kStuckTellMs = 240000;   // guest: ... the host is told (its card in the world)
 constexpr uint64_t kCountdownMs = 3000;
 constexpr uint64_t kDifficultyWaitMs = 25000;  // the guest's new game waits this long for the host's difficulty
 constexpr uint32_t kUnknown = UINT32_MAX;
@@ -71,6 +78,22 @@ bool g_resume_cleared = false;   // in the world: the next launch was set back t
 uint64_t g_resume_since = 0;     // a resumed start waiting for its partner since
 std::string g_native_note;       // a line for the menu (e.g. the friend did not come back)
 bool g_refused_seen = false;     // B22a: the native base refused co-op for this launch (its save redirect failed)
+// A start that did not work (a tester's session, 2026-11-12: the host's game never answered the guest's Play, and the
+// second Start Co-op ran in the same two games: the guest's title was still waiting for the first answer, nothing
+// could come of it). A second Start Co-op in a launch that already ran one restarts BOTH games again; a guest that
+// does not get in says so on its screen and to the host. None of these is cleared by reset_phase.
+bool g_host_restarting = false;  // guest: the host said it restarts into co-op during THIS launch of ours
+uint64_t g_play_since = 0;       // guest: Play was pressed for the host's world at (0 = not)
+bool g_stuck_told = false;       // guest: the host was told we did not get in
+bool g_partner_stuck = false;    // host: the guest said so (the card in the world)
+int g_dev_skip_play = 0;         // dev: the guest does not press Play, once (the "the host never let us in" case)
+int g_dev_retry = 0;             // dev: the host's first automatic start is a second Start Co-op instead, once
+uint64_t g_stuck_at = 0;         // host: the guest said so at
+// dev: the whole recovery by itself, once: 10 s after the guest said it is stuck the host leaves the session (as
+// Menu > Co-op > Leave the session), 25 s after it is back at the title it chooses Continue Our Co-op Save.
+int g_dev_recover = 0;
+int g_dev_recover_stage = 0;     // 0 not yet, 1 the Leave was asked for, 2 the choice was made
+uint64_t g_dev_title_since = 0;
 
 // B22a (2026-11-09): the native base's reason when it refused co-op for this launch (cdmp_coop_refused_reason in
 // cdmp.asi), null when co-op is fine or the export is not there.
@@ -95,6 +118,7 @@ int native_own_save_state() {
 }
 
 bool native_write_ok(const NativeModeSpec& spec);
+bool native_write(NativeMode mode, LobbyPlan plan);
 
 // A line for the title menu that has to survive the game's restart (the no-save guest goes back to solo by itself).
 constexpr const wchar_t* kNoteSection = L"lobby";
@@ -122,6 +146,30 @@ void reset_phase() {
     g_new_go_since = 0;
     g_new_started = false;
     g_choosing = false;
+    g_play_since = 0;
+}
+
+// A [dev] switch that applies once: taken out of the ini, so the game's next launch runs normally.
+void dev_used(const wchar_t* key) {
+    if (!g_native_ini.empty()) WritePrivateProfileStringW(L"dev", key, L"0", g_native_ini.c_str());
+}
+
+// Host: Start Co-op in a launch that is not in co-op yet, or that already ran its start: this game restarts into
+// co-op with the plan, the guest's game follows when we are back (kMsgNative 1 now, 2 after the restart).
+bool host_restart_into(LobbyPlan plan, const char* why) {
+    if (!native_write(NativeMode::Host, plan)) {
+        g_native_note = "Co-op could not be set up (see coopplus.log).";
+        return false;
+    }
+    g_plan = plan;
+    g_phase = Phase::NativeRestart;
+    // rt3a (2026-11-12): a host that had been in the world (run_generation moved on) lost this phase in the next tick
+    // to "our run entered the world: the lobby's work is done", and never restarted. The mark is NOW.
+    g_gen_mark = g_in.run_generation;
+    g_restart_at = g_in.now_ms + kRestartDelayMs;
+    g_restart_why = why;
+    send({kMsgNative, static_cast<uint8_t>(plan), 1});
+    return true;
 }
 
 const char* plan_text(LobbyPlan p) {
@@ -243,10 +291,18 @@ void lobby_tick(const LobbyInput& in) {
     const bool save_ready = !w.enabled || (w.active && !w.switching);
     enum { None, PressNew, PressPlay, GuestNew } todo = None;
     bool todo_restart = false;
+    bool dev_choose = false;
     uint32_t guest_diff = kNormal;
     {
         std::lock_guard lock(g_m);
         if (in.at_title && !g_was_at_title) g_dismissed = false;  // back at the title: the menu again
+        if (g_dev_recover_stage == 1 && in.host && in.at_title && in.connected) {
+            if (!g_dev_title_since) g_dev_title_since = in.now_ms;
+            else if (in.now_ms - g_dev_title_since > 25000) {
+                g_dev_recover_stage = 2;
+                dev_choose = true;
+            }
+        }
         if (g_native && !g_refused_seen && g_resume.mode != NativeMode::Solo) {
             if (const char* why = native_refused_reason()) {
                 g_refused_seen = true;
@@ -259,6 +315,13 @@ void lobby_tick(const LobbyInput& in) {
             }
         }
         g_was_at_title = in.at_title;
+        if (g_native && g_phase == Phase::GuestWait && g_play_since && in.connected && !in.in_world && !g_stuck_told &&
+            in.now_ms - g_play_since > kStuckTellMs) {
+            g_stuck_told = true;
+            send({kMsgGuestStuck});
+            log::warn("Co-op lobby: Play was pressed {} s ago and the host's world has not come: the host is told (a "
+                      "second Start Co-op restarts both games)", (in.now_ms - g_play_since) / 1000);
+        }
         if (!in.connected) {
             if (g_phase != Phase::Menu && g_phase != Phase::HostSetup) log::info("Co-op lobby: the party broke up");
             if (g_phase != Phase::HostSetup) reset_phase();
@@ -339,10 +402,18 @@ void lobby_tick(const LobbyInput& in) {
             if (g_resume.mode == NativeMode::Host && g_guest_ready && !g_auto_started && in.connected &&
                 in.at_title && g_phase == Phase::Menu) {
                 g_auto_started = true;
-                g_phase = Phase::HostPrepare;
-                g_plan = static_cast<LobbyPlan>(g_resume.plan);
-                g_gen_mark = in.run_generation;
-                log::info("Co-op lobby: both games are in co-op: starting {}", plan_text(g_plan));
+                if (g_dev_retry) {
+                    g_dev_retry = 0;
+                    dev_used(L"lobby_retry");
+                    log::warn("Co-op lobby: [dev] lobby_retry: instead of starting, a second Start Co-op ({}): both "
+                              "games restart again", plan_text(static_cast<LobbyPlan>(g_resume.plan)));
+                    host_restart_into(static_cast<LobbyPlan>(g_resume.plan), "a second Start Co-op ([dev] lobby_retry)");
+                } else {
+                    g_phase = Phase::HostPrepare;
+                    g_plan = static_cast<LobbyPlan>(g_resume.plan);
+                    g_gen_mark = in.run_generation;
+                    log::info("Co-op lobby: both games are in co-op: starting {}", plan_text(g_plan));
+                }
             }
             // In the world: this launch's co-op is under way; the next launch is the player's own game again (the
             // native base read its ini at this start).
@@ -413,8 +484,16 @@ void lobby_tick(const LobbyInput& in) {
                     todo = PressPlay;
                 } else if (g_native && g_new_go_since && !g_new_started && in.at_title) {
                     g_new_started = true;
-                    todo = PressPlay;
-                    log::info("Co-op lobby: the host's world is up: Play (our character joins it)");
+                    g_play_since = in.now_ms;
+                    if (g_dev_skip_play) {
+                        g_dev_skip_play = 0;
+                        dev_used(L"lobby_skip_play");
+                        log::warn("Co-op lobby: the host's world is up: [dev] lobby_skip_play: Play is NOT pressed "
+                                  "(as when the host's game does not let us in)");
+                    } else {
+                        todo = PressPlay;
+                        log::info("Co-op lobby: the host's world is up: Play (our character joins it)");
+                    }
                 } else if (g_new_go_since && !g_new_started && save_ready && in.at_title &&
                            (g_partner_diff != kUnknown || in.now_ms - g_new_go_since > kDifficultyWaitMs)) {
                     g_new_started = true;
@@ -434,6 +513,11 @@ void lobby_tick(const LobbyInput& in) {
             g_native_note = "The game could not restart by itself: close it and start it again from Steam.";
             reset_phase();
         }
+    }
+    if (dev_choose) {
+        log::warn("Co-op lobby: [dev] lobby_recover: back at the title with the friend in the party: Start Co-op, "
+                  "Continue Our Co-op Save");
+        lobby_choose(LobbyPlan::ContinueCoop);
     }
     if (todo == PressNew) worlds_lobby_press(true);
     if (todo == PressPlay) worlds_lobby_press(false);
@@ -464,8 +548,17 @@ LobbyView lobby_view() {
     v.driving = w.switching;
     v.show = g_in.at_title && !g_dismissed && g_phase != Phase::HostSetup && !v.guest_wait;
     const std::string& f = v.partner_name;
-    if (v.guest_wait) {
-        v.wait_line = g_new_started ? "Joining the start of the story..."
+    if (v.guest_wait && g_native && g_play_since && g_in.now_ms - g_play_since > kStuckLineMs) {
+        const std::string who = f.empty() ? std::string("the host") : f;
+        v.wait_line = (f.empty() ? std::string("The host") : f) + "'s game has not let you in yet.";
+        v.wait_hint = "If this stays: ask " + who + " to open Menu > Co-op > Leave the session, then choose Start Co-op again.";
+    } else if (v.guest_wait) {
+        // "The start of the story" only when it is one (New Co-op Save, and the non-native flow's New Game): on
+        // Continue / From my progress the guest joins the host's world where it is (read wrong on screenshots
+        // through three checklist passes, 2026-11-12).
+        v.wait_line = g_new_started ? (g_plan == LobbyPlan::NewSave || !g_native
+                                           ? std::string("Joining the start of the story...")
+                                           : "Joining " + (f.empty() ? std::string("the host") : f) + "'s world...")
                       : g_plan == LobbyPlan::NewSave
                           ? f + " is setting up the game. You join at the start of the story."
                           : g_native ? f + " is loading the shared world. You join right after."
@@ -512,21 +605,19 @@ void lobby_choose(LobbyPlan plan) {
     }
     if (g_native) {
         std::lock_guard lock(g_m);
-        if (g_resume.mode == NativeMode::Host && !g_guest_ready) {
+        // This launch already ran its start (the plan went on, maybe into the world and back to the title): the
+        // save folder, the base's session and the guest's game all belong to that start. Again from the beginning.
+        const bool again = g_resume.mode == NativeMode::Host && g_auto_started;
+        if (g_resume.mode == NativeMode::Host && !g_guest_ready && !again) {
             log::info("Co-op lobby: Start Co-op waits: {}'s game is not in co-op yet", g_in.partner_name);
             return;
         }
-        if (g_resume.mode != NativeMode::Host) {
-            if (!native_write(NativeMode::Host, plan)) {
-                g_native_note = "Co-op could not be set up (see coopplus.log).";
-                return;
+        if (g_resume.mode != NativeMode::Host || again) {
+            if (host_restart_into(plan, again ? "the host starts co-op again" : "the host starts co-op")) {
+                g_partner_stuck = false;
+                log::info("Co-op lobby: the host chose {}{}: this game restarts into co-op first", plan_text(plan),
+                          again ? " (a second start in this launch: both games restart again)" : "");
             }
-            g_plan = plan;
-            g_phase = Phase::NativeRestart;
-            g_restart_at = g_in.now_ms + kRestartDelayMs;
-            g_restart_why = "the host starts co-op";
-            send({kMsgNative, static_cast<uint8_t>(plan), 1});
-            log::info("Co-op lobby: the host chose {}: this game restarts into co-op first", plan_text(plan));
             return;
         }
     }
@@ -574,10 +665,53 @@ void lobby_session_ended() {
     std::lock_guard lock(g_m);
     if (!g_native) return;
     g_resume_since = 0;
+    if (g_in.host && g_in.connected) send({kMsgSessionEnded});  // a guest at the title stays in the party
     native_back_to_solo("The co-op session has ended.");
+    g_partner_stuck = false;
     reset_phase();
     g_dismissed = false;
     log::info("Co-op lobby: the session ended by a Leave: the next launch is Solo");
+}
+
+// Host: the friend said it did not get in (and has not come since). A Leave then goes back to the title at once: there
+// is no user 2 on our server to wait for.
+bool lobby_partner_stuck() {
+    std::lock_guard lock(g_m);
+    return g_native && g_in.host && g_partner_stuck && g_in.connected;
+}
+
+// Guest: the host ended the session while this game is still at the title (it never got in, or the host left before
+// our Play). Nothing of ours is in the host's world, so there is no goodbye to say and no reason to leave the party:
+// the lobby goes back to its menu, the two stay together, and the host's next Start Co-op restarts both games (this
+// game's next launch is solo until then). False = in the world: the caller does the full Leave.
+bool bye_at_title_locked() {
+    if (!g_native || g_in.host || g_in.in_world || !g_in.at_title) return false;
+    const std::string who = g_in.partner_name.empty() ? std::string("The host") : g_in.partner_name;
+    native_back_to_solo(who + " ended the session. You are still in the party: when they start co-op again, both "
+                              "games restart.");
+    reset_phase();
+    g_dismissed = false;
+    g_host_restarting = false;
+    g_stuck_told = false;
+    log::info("Co-op lobby: the host ended the session while we were at the title: back to the menu, still in the "
+              "party; the next launch is solo");
+    return true;
+}
+bool lobby_bye_at_title() {
+    std::lock_guard lock(g_m);
+    return bye_at_title_locked();
+}
+
+// dev: true once, when [dev] lobby_recover wants the host's Leave now.
+bool lobby_dev_take_leave() {
+    std::lock_guard lock(g_m);
+    if (!g_dev_recover || g_dev_recover_stage != 0 || !g_partner_stuck || !g_in.host || !g_in.in_world ||
+        now_ms() - g_stuck_at < 10000)
+        return false;
+    g_dev_recover_stage = 1;
+    dev_used(L"lobby_recover");
+    log::warn("Co-op lobby: [dev] lobby_recover: the friend did not get in: Leave the session now");
+    return true;
 }
 
 void lobby_reopen() {
@@ -653,8 +787,13 @@ void lobby_on_message(const std::vector<uint8_t>& b) {
                         g_plan = static_cast<LobbyPlan>(b[1]);
                         g_phase = Phase::GuestWait;
                         g_gen_mark = g_in.run_generation;
+                        g_host_restarting = true;
                         log::info("Co-op lobby: the host restarts into co-op; we follow when it is back");
-                    } else if (b[2] == 2 && g_resume.mode != NativeMode::Guest) {
+                    } else if (b[2] == 2 && (g_resume.mode != NativeMode::Guest || g_host_restarting)) {
+                        // Already a guest AND the host announced a restart during this launch: this game belongs to
+                        // the host's earlier start (its title may still wait for that one's answer). Restart too.
+                        // A guest that was started for THIS host launch never saw the "1": it stays.
+                        g_host_restarting = false;
                         if (native_write(NativeMode::Guest, g_plan)) {
                             g_phase = Phase::NativeRestart;
                             g_restart_at = now_ms() + kRestartDelayMs;
@@ -670,6 +809,17 @@ void lobby_on_message(const std::vector<uint8_t>& b) {
                 if (g_in.host && g_native) {
                     g_guest_ready = true;
                     log::info("Co-op lobby: {}'s game is in co-op as our guest", g_in.partner_name);
+                }
+                break;
+            case kMsgSessionEnded:
+                if (!g_in.host) bye_at_title_locked();  // in the world: the activity goodbye does the full Leave
+                break;
+            case kMsgGuestStuck:
+                if (g_native && g_in.host && !g_partner_stuck) {
+                    g_partner_stuck = true;
+                    g_stuck_at = now_ms();
+                    log::warn("Co-op lobby: {}'s game pressed Play {} s ago and is still not in our world",
+                              g_in.partner_name, kStuckTellMs / 1000);
                 }
                 break;
             case kMsgDifficulty:
@@ -701,6 +851,11 @@ void lobby_observe_c2s(const uint8_t* packet, size_t size) {
 std::string lobby_difficulty_card() {
     const uint32_t own = g_own_diff.load();
     std::lock_guard lock(g_m);
+    // First: a friend who did not get in (the host plays on alone and would never know why).
+    if (g_partner_stuck && g_in.host && g_in.connected && g_in.in_world) {
+        const std::string who = g_in.partner_name.empty() ? std::string("Your friend") : g_in.partner_name;
+        return who + " could not join your world\nMenu > Co-op > Leave the session, then choose Start Co-op again.";
+    }
     if (!g_in.connected || !g_in.in_world || own == kUnknown || g_partner_diff == kUnknown || own == g_partner_diff) return {};
     static const char* const kNames[] = {"Easy", "Normal", "Hard"};
     const auto name = [](uint32_t d) { return d <= 2 ? std::string(kNames[d]) : std::format("difficulty {}", d + 1); };
@@ -712,6 +867,15 @@ std::string lobby_difficulty_card() {
 void lobby_set_shared_quest_credit(bool on) { g_shared_quest_credit = on; }
 void lobby_set_world_items_lootr(bool on) { g_world_items_lootr = on; }
 bool lobby_native_guest() { return g_native && g_native_now == NativeMode::Guest; }
+
+void lobby_dev(int skip_play, int retry, int recover) {
+    g_dev_skip_play = skip_play;
+    g_dev_retry = retry;
+    g_dev_recover = recover;
+    if (recover) log::warn("Lobby: [dev] lobby_recover=1: as the host, a stuck friend is answered with a Leave and a new Start Co-op");
+    if (skip_play) log::warn("Lobby: [dev] lobby_skip_play=1: as the guest, Play is not pressed once");
+    if (retry) log::warn("Lobby: [dev] lobby_retry=1: as the host, the first start is a second Start Co-op");
+}
 
 void lobby_set_native_extra(const std::string& kv) {
     g_native_extra = kv;

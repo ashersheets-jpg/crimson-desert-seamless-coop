@@ -82,6 +82,9 @@ struct Config {
     bool dev_enemy_keep_origin = false;
     bool dev_no_copy = false;   // Co-op+ dev: never load the other player's character ([dev] no_copy)
     bool dev_kill_key = false;  // Co-op+ dev: Ctrl+Shift+F9 kills our player ([dev] kill_key)
+    int dev_lobby_skip_play = 0;  // dev: net/coop_lobby.h lobby_dev
+    int dev_lobby_retry = 0;
+    int dev_lobby_recover = 0;
     int dev_overlay_no_streamline = 0;  // dev: see render/dx12_hook.h ([dev] overlay_no_streamline)
     bool dev_wait_see_through = false;  // dev: the guest's waiting screen is see-through ([dev] wait_see_through)
     std::string dev_script;  // Co-op+ dev: packet script for Ctrl+Shift+F6 ([dev] script, net/dev_script.h)

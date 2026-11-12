@@ -230,6 +230,9 @@ Config load_config(const std::wstring& ini_path) {
     c.dev_kill_key = read_uint(ini_path, L"dev", L"kill_key", 0) != 0;
     c.dev_wait_see_through = read_uint(ini_path, L"dev", L"wait_see_through", 0) != 0;
     c.dev_overlay_no_streamline = static_cast<int>(read_uint(ini_path, L"dev", L"overlay_no_streamline", 0));
+    c.dev_lobby_skip_play = static_cast<int>(read_uint(ini_path, L"dev", L"lobby_skip_play", 0));
+    c.dev_lobby_retry = static_cast<int>(read_uint(ini_path, L"dev", L"lobby_retry", 0));
+    c.dev_lobby_recover = static_cast<int>(read_uint(ini_path, L"dev", L"lobby_recover", 0));
     c.dev_tp_to = narrow(read_string(ini_path, L"dev", L"tp_to", ""));
     c.dev_script = narrow(read_string(ini_path, L"dev", L"script", ""));
     c.dev_tp_offset_m = static_cast<int32_t>(std::min(read_uint(ini_path, L"dev", L"tp_offset_m", 30), 5000u));

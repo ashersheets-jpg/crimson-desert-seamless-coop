@@ -96,6 +96,22 @@ void disable(const std::string& why) {
 // itself is not enough in this game: Streamline / DLSS frame generation call
 // DXGI's Present directly, never through the vtable (verified in game: 0 calls
 // through a patched slot). Hooking the code catches every caller.
+//
+// Every function this file has hooked (rt3b / pp8-loot, 2026-11-12: the fallback below hooked Streamline's Present a
+// SECOND time on this PC, because the class a new swap chain gets here is the one already hooked).
+std::atomic<void*> g_hooked[32]{};
+std::atomic<int> g_hooked_n{0};
+void note_hooked(void* target) {
+    const int i = g_hooked_n.fetch_add(1);
+    if (i < 32) g_hooked[i].store(target);
+}
+bool already_hooked(void* target) {
+    const int n = (std::min)(g_hooked_n.load(), 32);
+    for (int i = 0; i < n; ++i)
+        if (g_hooked[i].load() == target) return true;
+    return false;
+}
+
 template <class Fn>
 bool hook_function(void* target, void* detour, SafetyHookInline& hook, Fn& original,
                    const char* name) {
@@ -111,6 +127,7 @@ bool hook_function(void* target, void* detour, SafetyHookInline& hook, Fn& origi
         log::error("Overlay: cannot enable hook on {}", name);
         return false;
     }
+    note_hooked(target);
     HMODULE mod = nullptr;
     wchar_t path[MAX_PATH] = L"?";
     if (GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
@@ -726,6 +743,36 @@ bool game_window_in_front() {
     return IsWindowVisible(w) && !IsIconic(w) && GetClientRect(w, &rc) && rc.right >= 640 && rc.bottom >= 360;
 }
 
+// The game's own window is what is on screen at its centre (not minimised, not covered there by another window).
+bool game_window_uncovered() {
+    struct Find {
+        HWND best = nullptr;
+        LONG area = 0;
+    } f;
+    EnumWindows(
+        [](HWND w, LPARAM lp) -> BOOL {
+            DWORD pid = 0;
+            RECT rc{};
+            if (!GetWindowThreadProcessId(w, &pid) || pid != GetCurrentProcessId() || !IsWindowVisible(w) || IsIconic(w) ||
+                !GetClientRect(w, &rc) || rc.right < 640 || rc.bottom < 360)
+                return TRUE;
+            auto& f = *reinterpret_cast<Find*>(lp);
+            if (rc.right * rc.bottom > f.area) {
+                f.area = rc.right * rc.bottom;
+                f.best = w;
+            }
+            return TRUE;
+        },
+        reinterpret_cast<LPARAM>(&f));
+    if (!f.best) return false;
+    RECT rc{};
+    GetClientRect(f.best, &rc);
+    POINT c{rc.right / 2, rc.bottom / 2};
+    if (!ClientToScreen(f.best, &c)) return false;
+    const HWND at = WindowFromPoint(c);
+    return at && GetAncestor(at, GA_ROOT) == f.best;
+}
+
 std::string module_of(void* f) {
     HMODULE m = nullptr;
     wchar_t path[MAX_PATH]{};
@@ -779,6 +826,14 @@ void hook_dxgi_class(const std::string& why) {
     }
     log::info("Overlay: a new swap chain's class here: Present at {}, Present1 at {}", module_of(vt[kSlotPresent]),
               module_of(vt[kSlotPresent1]));
+    if (already_hooked(vt[kSlotPresent])) {
+        // The class a swap chain gets here IS the one hooked at install (Streamline wraps it on this PC): there is
+        // nothing else to hook, the frames have simply not come (a window in the background presents nothing).
+        // Hooking it again made every frame pass our Present twice (presents counted double) in two runs of the
+        // posted 47135b83.
+        log::info("Overlay: that class is the one already hooked here: nothing to hook, frames have just not come");
+        return;
+    }
     const bool ok = ProxyHooks<kNativeHooks>::install(vt, "DXGI");
     log::info("Overlay: that swap chain class {}", ok ? "is hooked: the overlay draws through it"
                                                        : "could NOT be hooked");
@@ -787,6 +842,8 @@ void hook_dxgi_class(const std::string& why) {
 // Trigger 1 (the watcher thread, from install() on): the game sends drawing commands (ExecuteCommandLists on a direct
 // queue, hooked at install for this) and for 4 s not one Present comes through a hooked class.
 void native_fallback_watch() {
+    log::info("Overlay: watching for frames (DLSS frame generation's plugin sl.dlss_g.dll {} loaded)",
+              GetModuleHandleW(L"sl.dlss_g.dll") ? "is" : "is not");
     uint64_t p0 = g_presents.load(), e0 = g_execs.load(), t0 = GetTickCount64();
     for (;;) {
         Sleep(500);
@@ -794,6 +851,20 @@ void native_fallback_watch() {
         const uint64_t p = g_presents.load(), e = g_execs.load(), now = GetTickCount64();
         if (p != p0) {  // frames come through a hooked class
             p0 = p;
+            e0 = e;
+            t0 = now;
+            continue;
+        }
+        // A covered window draws (201 batches in 4 s) and presents nothing, which looks like the tester's PC and
+        // set this off on an Nvidia card in rt3b and pp8-loot (the copy whose window went behind the other at that
+        // moment). For a player that is alt-tab during start-up. What it leads to is a throwaway swap chain, and
+        // that is only dangerous where DLSS frame generation's plugin is loaded (it crashed one launch in five when
+        // the plugin picked the throwaway up). So: where that plugin is loaded, only while the game's window can
+        // be seen; everywhere else (the tester's AMD card; the test's simulation of it) at once, window or not.
+        // "In front" or "can be seen" for everyone took 75 s and 830 s in the two-copy test (nb1, nb2, am2: a game
+        // started by a script never gets the foreground, and on this desktop a system dialog covers the centre).
+        const bool dlss_g = GetModuleHandleW(L"sl.dlss_g.dll") != nullptr && g_dev_no_streamline.load() == 0;
+        if (dlss_g && !game_window_uncovered()) {
             e0 = e;
             t0 = now;
             continue;
