@@ -79,7 +79,8 @@ void lobby_set_world_items_lootr(bool on);
 // dev: [dev] lobby_skip_play (guest: Play is not pressed, once) and lobby_retry (host: the first automatic start is
 // a second Start Co-op instead, once). Each clears itself in the ini when it applies.
 void lobby_dev(int skip_play, int retry, int recover);
-bool lobby_dev_take_leave();      // dev: [dev] lobby_recover asks for the host's Leave now (true once)
+bool lobby_dev_take_leave();      // dev: [dev] lobby_recover=1 asks for the host's Leave now (true once)
+bool lobby_dev_take_title();      // dev: [dev] lobby_recover=2 asks for the game's own Return to Title (true once)
 bool lobby_partner_stuck();       // host: the friend said it did not get into our world
 bool lobby_bye_at_title();        // guest: the host's goodbye while we are at the title: stay in the party (true)
 // dev: [dev] native_extra (host only; research runs).

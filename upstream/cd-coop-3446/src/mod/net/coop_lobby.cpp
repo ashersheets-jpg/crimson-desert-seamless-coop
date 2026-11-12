@@ -703,15 +703,25 @@ bool lobby_bye_at_title() {
 }
 
 // dev: true once, when [dev] lobby_recover wants the host's Leave now.
-bool lobby_dev_take_leave() {
-    std::lock_guard lock(g_m);
-    if (!g_dev_recover || g_dev_recover_stage != 0 || !g_partner_stuck || !g_in.host || !g_in.in_world ||
+// which: 1 = the mod's Leave the session; 2 = the game's own Return to Title (no goodbye, the lobby is not told: what
+// a host does who uses the game's menu instead of ours).
+bool dev_recover_due(int which) {
+    if (g_dev_recover != which || g_dev_recover_stage != 0 || !g_partner_stuck || !g_in.host || !g_in.in_world ||
         now_ms() - g_stuck_at < 10000)
         return false;
     g_dev_recover_stage = 1;
     dev_used(L"lobby_recover");
-    log::warn("Co-op lobby: [dev] lobby_recover: the friend did not get in: Leave the session now");
+    log::warn("Co-op lobby: [dev] lobby_recover={}: the friend did not get in: {} now", which,
+              which == 1 ? "Leave the session" : "the game's own Return to Title");
     return true;
+}
+bool lobby_dev_take_leave() {
+    std::lock_guard lock(g_m);
+    return dev_recover_due(1);
+}
+bool lobby_dev_take_title() {
+    std::lock_guard lock(g_m);
+    return dev_recover_due(2);
 }
 
 void lobby_reopen() {
@@ -872,7 +882,8 @@ void lobby_dev(int skip_play, int retry, int recover) {
     g_dev_skip_play = skip_play;
     g_dev_retry = retry;
     g_dev_recover = recover;
-    if (recover) log::warn("Lobby: [dev] lobby_recover=1: as the host, a stuck friend is answered with a Leave and a new Start Co-op");
+    if (recover) log::warn("Lobby: [dev] lobby_recover={}: as the host, a stuck friend is answered with {} and a new Start Co-op",
+                           recover, recover == 2 ? "the game's own Return to Title" : "a Leave");
     if (skip_play) log::warn("Lobby: [dev] lobby_skip_play=1: as the guest, Play is not pressed once");
     if (retry) log::warn("Lobby: [dev] lobby_retry=1: as the host, the first start is a second Start Co-op");
 }

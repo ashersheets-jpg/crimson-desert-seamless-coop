@@ -658,6 +658,8 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
                 game::main_menu_return_to_title();
             }
         }
+        // dev ([dev] lobby_recover=2): what the game's own Return to Title row does, with nothing of ours around it.
+        if (host && net::lobby_dev_take_title()) game::main_menu_return_to_title();
         if (!host && net::activity_take_bye() && !net::lobby_bye_at_title()) {
             net::lobby_session_ended();
                 game::main_menu_return_to_title();

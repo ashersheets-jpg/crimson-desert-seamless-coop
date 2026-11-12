@@ -6317,3 +6317,27 @@ Earlier reading (am1): "not a consequence of the missing overlay on this PC; wha
 - Committed: outer 4942c8d (layer, report tool, checklist), native 24f89cb (local). Changelog has the list under
   "Not posted yet (2026-11-12, after 47135b83)".
 - Next: the 30-minute session (sk1a, running, on these files), then a package of this build and the whole checklist.
+
+### sk1a (2026-11-12 10:48-11:25): 34 minutes in one session, stable; the fights of the script did NOT happen
+
+- The next build's files (layer 4942c8d, native 24f89cb), one PC, two copies, -Fresh world, lowest graphics.
+  Scratchpad explore6.sh sk1: the host travels between the spawn, Hernand (484 m) and the dock in 3-minute cycles,
+  the guest walks at the spawn and goes to the dock and back each cycle; 10 cycles.
+- Held: both games alive at the end, link "lost 0 rejected 0" on both sides (55 000 packets each way on the layer's
+  link), the base's tunnel 1 083 699 packets out in 115 812 batches, 268 175 in, 0 dropped, 0 rejected, backlog 0,
+  compression x6.7 (511 MB as 77 MB). Network loop at the end p50 1.4 ms, p95 3.0 ms on both. No unknown error
+  line, no warning kind outside tools/known-warnings.txt (5 x "one loop took N ms", 13 x the host cadence
+  diagnostic). Overlay drew every frame on both. SAVES OK, user install restored 5/5.
+- Memory (working set, sampled every 30 s): host 7.9 GB at the title, 9.5 GB after 8 minutes, 9.5-9.6 GB from then
+  to the end; guest 7.0 -> 7.3-7.4 GB. Flat for 26 minutes: no growth to see in half an hour.
+- Log growth: host base 11 703 lines in 34 min (344 a minute), guest base 6 069, layers about 3 900 each.
+- NOT exercised, a fault of the test script: "kills host 0 guest 0", Lootr all zero. The host's script went
+  spawn -> Hernand -> dock; its "tp" from Hernand to the dock (480 m) had not arrived after 30 s (positions on the
+  way: (-10527, 625, -3782), then (-10428, 583, -3847) twice, (-10415, 553, -3891)), so "killnear: no living person
+  within 15 m" each cycle. spawn -> Hernand took about 10 s and Hernand -> spawn arrived at once. Whether that slow
+  leg is the script's teleport or something of ours holding the host is NOT known; a player never moves like that.
+  The script now goes to the dock first from the spawn (110 m, as the loot step does).
+- So what this run shows: a 34-minute session with both players moving between three places up to 484 m apart
+  holds, with flat memory. What it does not show: half an hour of fighting and looting, a town, an evening.
+- Both screens at the end: the two characters side by side at Nas River; the game clock had run from 11:57 AM to
+  4:30 PM on both (guest 4:29, host 4:33, shots a few seconds apart).
