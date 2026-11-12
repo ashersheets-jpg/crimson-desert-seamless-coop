@@ -6283,3 +6283,37 @@ Earlier reading (am1): "not a consequence of the missing overlay on this PC; wha
 - So the posted 47135b83 has, known now: (a) Start Co-op does nothing after a world was loaded in the same game
   session; (b) a failed start needs both games closed (said in the post); (c) the watcher's false trigger when the
   window is in the background at start-up (a double hook; a crash risk with DLSS frame generation, not seen).
+
+### nb1 / nb2 / nb3 (2026-11-12 09:43-10:47): the late hook's trigger settled; checklist steps retry and stuck pass
+
+- The watcher's false trigger (previous section): two rules tried and dropped, a third kept.
+  - nb1 "only while the game's window is in front" (the foreground window): the simulated AMD case took 75 s (host)
+    and 830 s (guest) to get its menu, the same numbers as am2. A game started by a script never gets the
+    foreground by itself.
+  - nb2 "only while the game's window is what is on screen at its centre" (WindowFromPoint): the same 75 s / 830 s.
+    On this desktop something else is at that point most of the time (the passkey box in the middle of the screen,
+    the other copy).
+  - nb3, kept: the danger of a false trigger is the throwaway swap chain, and that only where DLSS frame
+    generation's plugin (sl.dlss_g.dll) is loaded. So with the plugin loaded the watcher only counts while the
+    window can be seen (the nb2 test); without it (the tester's AMD card), at once, window or not. The dev switch
+    that simulates the AMD case counts as "no plugin". Logged at start: "Overlay: watching for frames (DLSS frame
+    generation's plugin sl.dlss_g.dll is / is not loaded)": it IS loaded on this PC. And in every case a class
+    whose Present is already hooked is not hooked again.
+  - latehook (nb3): 4.3 s from the hooks to the late hook, all its checks pass. retry and stuck (no dev overlay
+    switch, plugin loaded): no trigger in any of their eight launches.
+  - Not tested: the false trigger itself with the new rule (it needs the window covered in the 4 s after the
+    hooks go in; it happened in 2 of about 25 runs before). The double hook cannot happen any more by code.
+- New checklist steps (tools/prepost.sh, docs/tests/RELEASE-CHECKLIST.md; 21 steps now):
+  - retry = rt1 (`-HostDev lobby_retry=1`): the second Start Co-op ran, the guest restarted again, the base
+    replaced the guest's old connection, the tunnel never stopped, both in the world.
+  - stuck = rt3 (`-GuestDev lobby_skip_play=1 -HostDev lobby_recover=1 -SecondRound`): round 1 the guest is not in,
+    says so, the host is told, Leave at once, the guest stays in the party, the host's second start restarts the
+    game, both in the world in round 2. two_player_checks takes the round.
+  - nb3: latehook + retry + stuck = 133 PASS, 0 FAIL; SAVES OK and 5/5 in all three.
+- Screens after the Leave (nb3-stuck-R0-*): guest "You are in Host's party." with Start Solo ("The game restarts
+  into your own saves."), Waiting for Host, Leave the Party, and the line "Host ended the session. You are still in
+  the party: when they start co-op again, both games restart." (fits); host "Select how to play." with Start Co-op
+  "Begin the journey with Guest." and "The co-op session has ended.". Then both in the world side by side.
+- Committed: outer 4942c8d (layer, report tool, checklist), native 24f89cb (local). Changelog has the list under
+  "Not posted yet (2026-11-12, after 47135b83)".
+- Next: the 30-minute session (sk1a, running, on these files), then a package of this build and the whole checklist.
