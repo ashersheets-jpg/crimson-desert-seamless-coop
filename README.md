@@ -4,10 +4,23 @@ Play Crimson Desert (PC, Steam, base game) with friends in co-op that feels offi
 story and world progress, loot for everyone, enemies and bosses that scale with the party, names over heads and
 friends on the map, and an optional Comfort Pack of quality-of-life tweaks.
 
-**Status: alpha, not yet tested in the game** (waiting for the first in-game session). The co-op engine is cdmp by
-ByJunter as ported to game build 1.0.0.3446 by nouzert1 (`upstream/`, see CREDITS.md); Co-op+ adds Steam "Join Game"
-and invites, rich presence, Steam names over heads, party scaling (experimental) and a one-click installer.
-Licence: GPL-3.0.
+**Status (2026-11-12): alpha, in playtest.** The playtest builds are the "shared world" builds: one world for both
+players, joined from the title screen, for game build 1.0.0.3576. They are tested with two copies of the game on one
+PC; two PCs, AMD / Intel cards and long sessions are what the playtest is finding out. The working branch is
+`phase-a/local-pc-setup` (`main` is old). What changed and when: `CHANGELOG.md`. Licence: GPL-3.0.
+
+## What is where
+A shared-world build is three files, and their source is all here:
+- **`native-base/`**: the native shared-world base (`cdmp.asi`). This is **ByJunter's Crimson Desert Multiplayer
+  native server** (https://github.com/ByJunter/CrimsonDesertMultiplayer-NativeServer, GPL-3.0) with our changes on
+  top: his commit and each of ours are in this repository's history under that folder. Its own `LICENSE`, `README.md`
+  and research documents are his.
+- **`upstream/cd-coop-3446/`**: the Co-op+ layer (`coopplus.asi`): the title menu, Steam invites, the overlay, loot
+  rules, revive, the report tool's game side. It began as cdmp by ByJunter as ported by nouzert1 (see `CREDITS.md`).
+- `kit/`, `tools/`: the installer, the report tool ("Diagnose Co-op+"), packaging and the release checklist
+  (`docs/tests/RELEASE-CHECKLIST.md`).
+- `PROGRESS.md`: the developer's running notes (long, unedited).
+The sections below describe the older, non-shared-world package and are kept for reference.
 
 ## For players
 Build the package (below), unzip it, double-click `Install Co-op+.cmd`, start the game through Steam, press
