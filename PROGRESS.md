@@ -6612,3 +6612,33 @@ Design chosen (A, host-authoritative, with a world marker):
   (fresh save); a guest calling its horse in a New Co-op Save world (D3vils' point 5); then commit the base, run
   tools/sync-native-base.sh, package, the whole checklist (add steps: mismatch, the host's revive reload, travel).
 - Waiting on the owner: "post the reply" for the two testers (draft file); the next build's post when it has passed.
+
+### tg1a / tg2a (2026-11-12 15:52-16:18): FAR TRAVEL WORKS for both players; a skipped schedule timer never comes back, so the guard now puts it off instead
+
+- tg2a (the host goes down among the dock's bandits with the guest beside it, U = revive at the checkpoint; the
+  test scripts' "tp" and the checkpoint move now go through the new travel):
+  - FAR TRAVEL, first runs ever. Host: "Teleport: 117 m: the game's own travel (field 0x00000001, to (-10239, 546,
+    -3957))", "our loading screen is started (3071)", "far travel took 0.6 s; 0 m left for the hops", "arrived".
+    The checkpoint move (121 m): the same, 0.6 s. GUEST: "112 m: the game's own travel", 0.4 s, arrived exactly;
+    host's base: "FastTravel F2: user 2's ReloadStageStartReq 3074 (FieldInfoKey 0x1, target actor none, ...
+    position (-10243.0, 546.0, -3955.0), flag 1) | user 2 is in the host's field (shared)", "accepted by F3", then
+    its 2294 and 2437. So the base's fast-travel path for user 2 carries it. The field key came from the base's new
+    export on the host (FieldInfoKey 1) and reached the guest over the lobby channel.
+  - Screens: h0 the death screen ("Death has found you ... Q Instant Revive (30% Health) / U Revive at
+    Checkpoint"); h1 (10 s after U) the game's own warp screen; h2 the host at Nas River, the guest 109 m away.
+  - The host's reload with the guest attached: 136 stage closes "at the owner's load", NO crash, both alive at the
+    end. The guard asked 2361 timers in ten minutes and put off none: the race did not come up (it took 313 reloads
+    on the tester's PC).
+  - NOT yet tried: kilometres (lowsave 1.3 km, farfight2 484 m), another field (a dungeon), what the OTHER player
+    sees while one travels.
+- tg1a ([session2] schedule_timer_guard_test=40: timers skipped on purpose although the owner is there): 15 timers
+  came in eight minutes and all 15 were skipped; then NONE came any more. tg2a's count without skips: 2361 in ten
+  minutes. So each of these timers arms its successor when it runs: a skipped one ends the schedule updates
+  around that character for good. The research had warned of exactly this. A guard that only skips trades a crash
+  for a world that stops moving around one player.
+- Changed (base, built 16:22): a timer that is not run is OWED: its Troc, the subject's key, the session and the
+  packet's bytes are kept; from the next outermost Troc on that thread on (every 250 ms) the subject is looked up
+  again by key (the server's scoped lookup, as the game's dispatcher does), and when its field's owner has a manager
+  again the timer runs through the detour as it would have. Given up after 120 s (WRN). The summary line counts
+  asked / put off / run late / owed / given up / not kept / faulted. Test tg1b: 40 put off must be 40 run late, and
+  the timers must keep coming at about 220 a minute.
