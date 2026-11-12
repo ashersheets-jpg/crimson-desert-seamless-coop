@@ -1,0 +1,18 @@
+**Update: shared world playtest 0.1.0-alpha+a4b6eb9e**
+Please use this build instead of every earlier one. **Both players need this same build**: from now on the title menu tells you if your friend has another one, and co-op will not start until you match.
+
+Fixed, thanks to JackyChan004's and D3vils' reports:
+- **Two different builds in one session**: the mod let it happen and said nothing. A lot of the desync in that session may come from this alone.
+- **New Co-op Save: only one of you started fresh.** Now both do: the joining player starts as a copy of the host's new game (same place, same first objective), and Continue Our Co-op Save brings that character back.
+- **Going to your friend was slow and could stop short.** It is the game's own travel now: 1.3 km took 1 to 3 seconds in our runs.
+- **The host's game could close after going down and reviving** with a friend in its world.
+- **Start Co-op did nothing if you had loaded a save earlier in the same game session.**
+- **A start that does not work** no longer needs both games closed: the host opens Menu > Co-op > Leave the session and chooses Start Co-op again; both games restart.
+- The report zip no longer contains your friend's Steam ID.
+
+Known: the joining player does not see the host's cutscenes (the host looks like it jumps around). No horse or wyvern for the joining player, and getting stuck after an Axiom Force grab: not explained yet, tell us where it happens.
+
+- `...a4b6eb9e-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tested with two copies of the game on one PC (Nvidia), and the menu fix on one tester's AMD card. Not tested: two PCs over the internet with this build, Intel cards, an evening-long session, story scenes and bosses. Please tell us in #bug-reports how it goes, with the report zip from both of you.
