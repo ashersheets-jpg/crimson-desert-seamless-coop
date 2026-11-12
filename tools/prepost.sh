@@ -119,7 +119,7 @@ unknown_errs() {  # native log
 new_wrn() {  # who, logs...
   local who=$1; shift
   local n; n=$(bash "$N/../../tools/wrn-kinds.sh" "$@" | grep -v '\[dev\]' | grep -vE "${WRN_ALLOW:-^this never matches$}" | sort -u |
-               grep -vxFf <(sed -n 's/ ## .*//p' "$N/../../tools/known-warnings.txt"))
+               grep -vxFf <(tr -d '\r' < "$N/../../tools/known-warnings.txt" | sed -n 's/ ## .*//p'))
   if [ -z "$n" ]; then ok "$who: no warning kind that has not been seen before"
   else bad "$who: warning kind(s) never seen before (look, then add to tools/known-warnings.txt with the reason):"; echo "$n" | head -6 | sed 's/^/          /' >> "$R"; fi
 }
