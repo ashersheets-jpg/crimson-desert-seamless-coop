@@ -1,0 +1,18 @@
+**Update: shared world playtest 0.1.0-alpha+2e813956 (New Co-op Save works, fighting far from the host, lying down when downed, no more packet files)**
+Please use this build instead of every earlier one. You and your co-op partner both need it. It keeps everything from 3c46bec5.
+
+Fixed:
+- **New Co-op Save**: the guest stayed on "Waiting for Host" for ever. It now joins the host's new story.
+- **A guest far from the host could not fight**: more than 80 m from the host it took no damage and its hits did nothing. Now both count, at any distance.
+- **A friend who has never played could not join** and waited for ever. The game needs a character of your own first: their game now says so and goes back to its normal title by itself ("Start Solo, begin a New Game, and join again once you stand in the world"), and the host is told why.
+- **The mod wrote big files into the game folder**: playing solo (or sitting at the title) with the mod installed recorded network packets to `bin64\cdmp_packets_....log` / `.bin` with no size limit. It no longer does. You can delete those files.
+- The line at the bottom of the title menu was cut off.
+
+New:
+- **The guest starts at the host's side** instead of wherever its own save was (that could be over a kilometre away).
+- **A downed player lies on the ground** (they used to stand upright at 0 health). Your friend sees it too, and can hold Interact next to you to get you up; Q and U work as before.
+
+- `CrimsonDesert-SeamlessCoop-0.1.0-alpha+2e813956-shared-world.zip`: this is the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tested with two copies of the game on one PC (NVIDIA card): first launch, a real install, XeSS and FSR frame generation, the three ways to start (continue, from the host's solo progress, a new co-op save), a guest on a new save, a guest with no save, chests, enemy loot, going down and getting up, fights 108 m and 484 m from the host, calling and riding horses, fighting from horseback. Not tested here: two PCs over the internet, AMD and Intel cards, long sessions, the story's scenes and bosses with two players. Please tell us in #bug-reports how it goes (and send the report zip if anything goes wrong).
