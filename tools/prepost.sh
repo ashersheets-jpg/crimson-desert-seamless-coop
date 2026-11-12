@@ -3,7 +3,7 @@
 # one game session and every step's screenshots can be looked at before the next one starts:
 #
 #   bash tools/prepost.sh TAG "<package folder>" STEP        STEP = static | real | fresh | xess | fsr | display |
-#                                                                   lowsave | chest | revive | loot | crime | farfight | newsave |
+#                                                                   lowsave | chest | revive | loot | crime | farfight | newsave | solostart |
 #                                                                   summary
 #
 # TAG names the run (pp1 ...): the test names are TAG-STEP, the report is build/native/prepost-TAG.txt.
@@ -274,8 +274,23 @@ newsave)
   has "$H" "LoadSlot .* = user 2 \\| slot [0-9]+ -> REMAP 204" "the guest's lobby was loaded from its own slot"
   has "$H" "the staged guest slot moved in" "the guest's uploaded save moved into the new world"
   hasnot "$H" "C2 identity: refused user 2" "the guest's character login was not refused" ;;
+solostart)
+  head_step "Start From My Solo Progress: a new co-op world is made from the host's own save, the guest joins it"
+  # 2026-11-11: the second way a session begins; the harness had not taken it since 2026-11-09 (it always pressed
+  # the first card, Continue Our Co-op Save). Replaces the test co-op world: backed up and put back.
+  bk=$(cd $N && bash coopworld.sh backup 2>&1 | tail -1); say "  test co-op world: $bk"
+  case "$bk" in *"backed up"*|*"backup is current"*) ;; *) bad "the test co-op world could not be backed up: step not run"; sed -n "/^== $STEP /,\$p" "$R"; exit 1 ;; esac
+  run2 "-CoopPlus -Lobby -Fresh -PackageIni $MODW -HostVariant coop-test-bandits -HostChoice 2 -Hold 20 -GuestKeys $FLOW_G -HostKeys $FLOW_H"
+  if [ -z "$JUDGE_ONLY" ]; then
+    rs=$(cd $N && bash coopworld.sh restore $NAME 2>&1 | tail -1)
+    case "$rs" in *"identical to the backup"*|*"is the backup's"*) ok "the test co-op world is back ($rs)" ;; *) bad "the test co-op world: $rs" ;; esac
+  fi
+  two_player_checks
+  has "$N/$NAME.coopplus.host.before.log" "from our solo progress" "the host's layer made the co-op save from its solo progress"
+  has "$N/$NAME.host.log" "LoadSlot .* = user 2 \\| slot [0-9]+ -> REMAP 204" "the guest's lobby was loaded from its own slot"
+  hasnot "$N/$NAME.host.log" "C2 identity: refused user 2" "the guest's character login was not refused" ;;
 summary)
-  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c '^== ' "$R") (13 in the list)"; exit 0 ;;
+  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c '^== ' "$R") (14 in the list)"; exit 0 ;;
 *) echo "unknown step $STEP"; exit 2 ;;
 esac
 sed -n "/^== $STEP /,\$p" "$R"

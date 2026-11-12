@@ -545,6 +545,12 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
             steps.push_back(std::move(st));
             continue;
         }
+        if (kind == "tphorse") {  // tphorse: 1 m beside the horse the layer counts as ours (after a horse call)
+            st.kind = Step::TpActor;
+            st.addr = 0xFFFFFFFFu;
+            steps.push_back(std::move(st));
+            continue;
+        }
         if (kind == "tpkill" || kind == "tpactor") {  // tpactor <hex key>: 1 m beside a loaded actor; tpkill: beside
             st.kind = Step::TpActor;                    // the animal the last killgame killed
             st.addr = 0;
@@ -687,7 +693,9 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
             } else if (st.kind == Step::Npcs) {
                 log_npcs_near(st.to[0], st.to[1]);
             } else if (st.kind == Step::TpActor) {
-                const uint32_t key = st.addr ? static_cast<uint32_t>(st.addr) : hunt_dev_last_kill();
+                const uint32_t key = st.addr == 0xFFFFFFFFu ? capture_horse_present()
+                                     : st.addr           ? static_cast<uint32_t>(st.addr)
+                                                         : hunt_dev_last_kill();
                 const auto at = key ? game::actor_world_position(key) : std::nullopt;
                 if (at) revive_teleport_to(at->x + 1.0f, at->y + 0.5f, at->z);
                 log::info("Dev script: teleport beside actor 0x{:08X}: {}", key,

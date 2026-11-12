@@ -5644,3 +5644,20 @@ Report: build/native/prepost-pp5.txt (every step's switches are in it). 332 chec
 - Queued for the owner (design): on New Co-op Save a returning guest brings its own newest save (its own progress
   is the rule since 2026-11-08); the card says "Both of you begin the story". Keep, or give the guest a new
   character in a new co-op save?
+
+### mr2-mr3 (2026-11-11 21:48-22:05): the horse call works in the shared world for both players (one PC)
+
+- mr2: "pad 0401 2500" (D-pad Up and right stick down pressed and released together): no horse. mr3: the call as a
+  sequence (D-pad Up 0.7 s, then Up + right stick down 1.3 s, then the stick alone 0.4 s, so Up is released while the
+  stick still points down): a horse appears within a second for each player: host 22:02:55 horse 0xB0100003 at
+  (-10344.3, -3918.9), 5.6 m from it; guest 22:03:16 horse 0xB0100068 at (-10340.0, -3918.6), 9.5 m from it. So the
+  mount wheel picks on release of D-pad Up with the stick held, and the horse is placed near the caller at once.
+- Not mounted yet: the script pressed E where the player stood (5 to 10 m from the horse): MountSync "published Begin
+  0 Commit 0". Added (layer, dev only): script step "tphorse" (beside the horse the layer counts as ours). mr4: call,
+  tphorse, E, ride forward, for both; screenshots from both sides.
+- Noticed, not looked into: each layer logs the OTHER player's new horse as "our horse ... is here now; sending our
+  character again" (the guest logged the host's horse 0xB0100003 before its own). In the shared world both horses
+  are visible to both clients, so "a horse appeared" is not "our horse". To check what that mislabel does (a second
+  character announce; the horse position the party frame or map uses).
+- Simulated pad (dev): sticks are the two free button bits: 0x0400 right stick down, 0x0800 left stick up.
+  Scripts: build/native/scan/mount_call.txt (call only), mount_ride.txt (call, go to it, mount, ride).

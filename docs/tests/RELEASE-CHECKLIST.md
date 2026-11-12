@@ -23,7 +23,7 @@ starts while Crimson Desert is running):
 bash tools/prepost.sh pp1 dist/CrimsonDesert-SeamlessCoop-<version>-shared-world static
 ```
 
-Steps, in order: `static real fresh xess fsr display lowsave chest revive loot crime farfight newsave`, then `summary`.
+Steps, in order: `static real fresh xess fsr display lowsave chest revive loot crime farfight newsave solostart`, then `summary`. (`fresh` and most other steps take the first card, Continue Our Co-op Save; `newsave` and `solostart` are the other two ways a session begins.)
 The report is `build/native/prepost-<tag>.txt`. After each game step, LOOK at the screenshots the report lists
 (`build/native/shots/`): a log line saying "overlay draws" is not the same as the menu being on screen.
 
@@ -44,6 +44,7 @@ The report is `build/native/prepost-<tag>.txt`. After each game step, LOOK at th
 | crime | both fight at the bandit camp | guest's hits are seen and none is booked as a crime | town NPCs, guards, a real wanted level |
 | farfight | the host draws its quest bandits to the dock and leaves for a spot 108 m away; the guest stays and swings 50 times | the damage range hook is in, hits far from the host are counted, the guest kills at least one enemy and loses health | ordinary camps (only the host's quest bandits are known by coordinates); more than ~130 m from the host |
 | newsave | the host picks New Co-op Save; in the test copy the harness answers the game's agreement and difficulty; the guest waits on "Waiting for Host" | both reach the new world, the guest's login waited for the host's first save, its own save was moved in, no login refused; the test co-op world is put back | the story's opening minutes after that (cutscenes, the prologue's steps); a real player answering the agreement |
+| solostart | the host picks Start From My Solo Progress: a new co-op world is made from its own save, the guest joins | both reach the world, linked, the guest's own save loaded, no login refused; the test co-op world is put back | a host save from late in the story; two PCs |
 
 Every game step also checks what the session leaves behind (added 2026-11-11 after two faults found by reading the
 logs, not by a test): no packets recorded to disk (the base's log must not say "recording through a disk queue"; the
