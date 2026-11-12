@@ -1523,6 +1523,21 @@ inj::Outcome inject(std::span<const uint8_t> in, InjectKind kind) {
     }
     // An exception inside the game's code stopped the injection: nothing more (no retry).
     if (g_halted_epoch.load()) return inj::Outcome::Halted;
+    // Co-op+ 2026-11-11 (New Co-op Save, nc5 / nc6): the game's user login loads a user's lobby (its character list)
+    // from the save manager's latest slot, and only if there is one. In a brand-new co-op world there is none until
+    // the HOST's new game has written its first save; the guest logs in minutes before that, gets no lobby, so its
+    // uploaded save is never moved in, user 2 has no character, its LoginCharacterToFieldServerReq is refused and
+    // the guest sits on "Waiting for Host" for ever. So user 2's LoginUserToFieldServerReq waits (held in order, like
+    // a Req that comes before session 2 exists) until the world's folder has a slot of the host's.
+    if (v->opcode == 2535 && !guest_save_world_has_host_slot()) {
+        static std::atomic<uint64_t> waits{0};
+        const uint64_t n = waits.fetch_add(1) + 1;
+        if (n == 1 || n % 2000 == 0)
+            log::info("Session2: user 2's LoginUserToFieldServerReq waits: this co-op world has no save of the host's "
+                      "yet (a new co-op save: the host is still starting its new game); held, tried again ({} so far)", n);
+        g_held_not_ready.fetch_add(1);
+        return inj::Outcome::NotReady;
+    }
     // C4: the buffer carries the epoch of the session 2 it is for.
     const uint32_t epoch = g_want_epoch.load();
     // A new epoch's session is built by the server thread when it takes this

@@ -550,6 +550,20 @@ bool move_in(std::string& why) {
     return true;
 }
 
+// True when the co-op world's account folder holds a save slot other than the guest's (a slot of the host's).
+bool host_slot_folder() {
+    WIN32_FIND_DATAW fd{};
+    const HANDLE h = FindFirstFileW((g_account_dir + L"\\slot*").c_str(), &fd);
+    if (h == INVALID_HANDLE_VALUE) return false;
+    const std::wstring guest = widen(g_slot_name);
+    bool any = false;
+    do {
+        any = any || ((fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0 && guest != fd.cFileName);
+    } while (!any && FindNextFileW(h, &fd));
+    FindClose(h);
+    return any;
+}
+
 bool refuse_load(int* res, int32_t code, const std::string& why, bool disable) {
     if (disable) set_bits(kDisabled);
     if (res) *res = code;
@@ -1233,6 +1247,23 @@ bool guest_save_install(const GuestSaveOptions& opt) {
 }
 
 gsv::Mode guest_save_mode() { return g_mode.load(); }
+
+// Co-op+ 2026-11-11 (nc5 / nc6, New Co-op Save): see server.cpp, the gate on user 2's LoginUserToFieldServerReq.
+bool guest_save_world_has_host_slot() {
+    if (g_mode.load() != Mode::On || g_account_dir.empty()) return true;  // nothing to wait for
+    // Asked on every retry of a held Req (every NetworkThread turn): one directory look-up per 500 ms at most, and
+    // never again once a slot was seen.
+    static std::atomic<bool> seen{false};
+    static std::atomic<uint64_t> next{0};
+    if (seen.load(std::memory_order_relaxed)) return true;
+    const uint64_t now = GetTickCount64();
+    if (now < next.load(std::memory_order_relaxed)) return false;
+    next.store(now + 500, std::memory_order_relaxed);
+    if (!host_slot_folder()) return false;
+    seen = true;
+    log::info("Session2 guest save: this co-op world has a save of the host's now: user 2's login goes on");
+    return true;
+}
 
 std::wstring guest_save_incoming_dir() { return g_mode.load() == Mode::Off ? std::wstring() : g_incoming; }
 

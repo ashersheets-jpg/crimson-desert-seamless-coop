@@ -58,6 +58,9 @@ struct GuestSaveOptions {
 // After save_hooks_install and server_install, before the tunnel opens (worker thread). False = off (logged).
 bool guest_save_install(const GuestSaveOptions& opt);
 gsv::Mode guest_save_mode();  // what is installed (Off if forced off)
+// Own-save mode on and the co-op world's folder has no save slot of the host's yet (a brand-new co-op save
+// before the host's new game wrote its first save): false. Any thread (a directory look-up).
+bool guest_save_world_has_host_slot();
 
 // ---- phase B's entry points (any thread)
 // The staging folder (empty when the mode is off): write lobby.save and save.save into it, then call
