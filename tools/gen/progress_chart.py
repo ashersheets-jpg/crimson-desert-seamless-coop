@@ -30,7 +30,7 @@ G = [
 ]),
 ("COMBAT AND SAFETY", [
  ("Fighting together (the guest's hits, no false crimes)", 90, "Far from the host: fixed by real distance, tested 484 m away. Finishers unchecked."),
- ("Teammate revive rework", 97, "Posted: death screen, both revives. Next build: a downed player lies on the ground."),
+ ("Teammate revive rework", 97, "Posted: death screen, both revives, a downed player lies on the ground."),
  ("Combat feedback for both", 30, "Should come with the shared world. Needs a hands-on test."),
  ("Anti-grief protections", 80, "Only people the host has talked to are protected now. In the posted build. Needs a hands-on check."),
  ("Partner audio", 30, "Should come with the shared world. Needs a hands-on test."),
