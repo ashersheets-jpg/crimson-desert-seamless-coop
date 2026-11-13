@@ -66,24 +66,24 @@ inline constexpr uint32_t kLayerChart = 0x118;  // Co-op+ 3576: +0x118 (0x949EB0
 // Shared by this probe (host) and the P8 guest's diagnostic (guest_actor_diag.h):
 // never both in one process (guest=1 excludes create_session).
 // Co-op+ 3576 (2026-11-08, findpat over the 3576 exe: the same code, the function at 0x949EB0, +0xE57E0):
-inline constexpr uintptr_t kRestoreSite = 0x949ED2;  // 2976: 0x8646F2
+inline constexpr uintptr_t kRestoreSite = 0x9778D2;  // 2976: 0x8646F2
 inline constexpr uint8_t kRestoreSiteBytes[] = {0xC5, 0xF8, 0x29, 0x70, 0xB8, 0xC5, 0xF8, 0x29,
                                                 0x78, 0xA8, 0x48, 0x8B, 0xF2, 0x4C, 0x8B, 0xE9};
 inline constexpr uintptr_t kRestoreHook = kRestoreSite + 10;  // 0x8646FC
 // mov rax,[r13+0x40] ; cmp [rax+0x30],r14b ; jne: the restore byte, read under the lock.
-inline constexpr uintptr_t kRestoreLock = 0x949F1F;  // 2976: 0x86473F
+inline constexpr uintptr_t kRestoreLock = 0x97791F;  // 2976: 0x86473F
 inline constexpr uint8_t kRestoreLockBytes[] = {0x49, 0x8B, 0x45, 0x40, 0x44, 0x38, 0x70, 0x30, 0x75, 0x59};
 // The single exit (every path jumps to 0x864B1D): mov [rsi],r14d ; mov rax,rsi ;
 // lea r11,[rsp+0x160]. R13 = CC (written only at 0x8646FF), RSI = res (reloaded
 // from the home slot at 0x864AE0 after the layer loop).
-inline constexpr uintptr_t kRestoreExit = 0x94A2FA;  // 2976: 0x864B1A
+inline constexpr uintptr_t kRestoreExit = 0x977CFA;  // 2976: 0x864B1A
 inline constexpr uint8_t kRestoreExitBytes[] = {0x44, 0x89, 0x36, 0x48, 0x8B, 0xC6, 0x4C,
                                                 0x8D, 0x9C, 0x24, 0x60, 0x01, 0x00, 0x00};
 inline constexpr uintptr_t kRestoreExitHook = kRestoreExit + 3;  // 0x864B1D
 // The call of RestartLayerAction 0x863880 and its result: lea r8,[rsp+0x50] ;
 // lea rdx,[rbp+0xa0] ; mov rcx,r13 ; call 0x863880 ; mov eax,[rax] ; test ; je ;
 // mov [rsi],eax. With restore byte != 0 the exit's [rsi] is its result.
-inline constexpr uintptr_t kRestartCall = 0x94A2CA;  // 2976: 0x864AEA; RestartLayerAction 0x949080 on 3576
+inline constexpr uintptr_t kRestartCall = 0x977CCA;  // 2976: 0x864AEA; RestartLayerAction 0x949080 on 3576
 inline constexpr uint8_t kRestartCallBytes[] = {0x4C, 0x8D, 0x44, 0x24, 0x50, 0x48, 0x8D, 0x95, 0xA0, 0x00,
                                                 0x00, 0x00, 0x49, 0x8B, 0xCD, 0xE8, 0xA2, 0xED, 0xFF, 0xFF,
                                                 0x8B, 0x00, 0x85, 0xC0, 0x74, 0x04, 0x89, 0x06};

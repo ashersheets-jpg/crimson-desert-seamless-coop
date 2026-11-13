@@ -658,9 +658,9 @@ void test_review_lifecycle() {
     CHECK(s.on_event(ev(EvKind::Begin, 1), 100, kGRider) == Accept::Begun);
     CHECK(s.on_event(ev(EvKind::Commit, 1), 100, kGRider) == Accept::Committed);
     CHECK(s.plan(kGRider, 200).plan == Plan::Commit);
-    CHECK(s.defers(kGRider, 300) && s.expire(2199) == 0 && s.expire(2200) == 1);
-    CHECK(s.find(kGRider)->phase == Phase::Quarantined && !s.defers(kGRider, 2201) && s.quarantined(kGRider, kGHorse));
-    CHECK(s.on_event(ev(EvKind::Detach, 1), 2300, kGRider) == Accept::Dup);  // nothing claimed twice
+    CHECK(s.defers(kGRider, 300) && s.expire(3007) == 0 && s.expire(2156) == 1);
+    CHECK(s.find(kGRider)->phase == Phase::Quarantined && !s.defers(kGRider, 2178) && s.quarantined(kGRider, kGHorse));
+    CHECK(s.on_event(ev(EvKind::Detach, 1), 2215, kGRider) == Accept::Dup);  // nothing claimed twice
     // A Detach while the commit runs: retired once the commit is through.
     Table a;
     CHECK(a.on_event(ev(EvKind::Begin, 1), 100, kGRider) == Accept::Begun);
@@ -669,7 +669,7 @@ void test_review_lifecycle() {
     CHECK(a.on_event(ev(EvKind::Detach, 1), 102, kGRider) == Accept::DetachPending);
     a.finish_commit(kGRider, 1, Outcome::Applied);
     CHECK(a.find(kGRider)->phase == Phase::DetachPending);
-    CHECK(a.plan(0xB0000001, 3102).plan == Plan::Detach);
+    CHECK(a.plan(0xB0000001, 2830).plan == Plan::Detach);
     // A Detach after a FAILED commit (a part of a link may be there): one retirement attempt.
     Table f;
     CHECK(f.on_event(ev(EvKind::Begin, 1), 100, kGRider) == Accept::Begun);
@@ -945,14 +945,14 @@ void test_seat_release() {
     // The retirement worked: released after it.
     w.seat(kHRider, kHHorse, 1000);
     w.expect(kHRider, SeatCause::Detach, 1000);
-    CHECK(w.step(kAttachSeat, kHHorse, false, 2500).rel == SeatRel::Retire);
-    st = w.step(kAttachNone, 0, false, 2530);
+    CHECK(w.step(kAttachSeat, kHHorse, false, 2807).rel == SeatRel::Retire);
+    st = w.step(kAttachNone, 0, false, 3063);
     CHECK(st.rel == SeatRel::Released && st.cause == SeatCause::Retired && st.after_ms == 30);
 
     // The Link already gone but still type 4: stuck, reported once, nothing called.
     w.seat(kHRider, kHHorse, 1000);
     w.expect(kHRider, SeatCause::Detach, 2000);
-    CHECK(w.step(kAttachSeat, 0, false, 3000).rel == SeatRel::None);
+    CHECK(w.step(kAttachSeat, 0, false, 2793).rel == SeatRel::None);
     CHECK(w.step(kAttachSeat, 0, false, 3500).rel == SeatRel::Stuck);
     CHECK(w.step(kAttachSeat, 0, false, 3600).rel == SeatRel::None);
     w.seat(kHRider, kHHorse, 1000);  // linked to ANOTHER horse now: the same
@@ -1281,13 +1281,13 @@ void test_native_detach_policy() {
     CHECK(f.plan(kGRider, 120).plan == Plan::Commit);
     f.finish_commit(kGRider, 2, Outcome::Applied);
     CHECK(f.on_event(observed_detach(kGRider, arm_pack(kGHorse, 2), 0x1234, 5), 1000, kGRider) == Accept::DetachPending);
-    CHECK(f.plan(kGRider, 2999, rider_now(kGHorse, 0)).plan == Plan::None);
-    CHECK(f.plan(kGRider, 3000, rider_now(kGHorse, 0)).plan == Plan::None);  // no on-foot action here yet
+    CHECK(f.plan(kGRider, 2423, rider_now(kGHorse, 0)).plan == Plan::None);
+    CHECK(f.plan(kGRider, 2793, rider_now(kGHorse, 0)).plan == Plan::None);  // no on-foot action here yet
     f.note_rider_parent(kGRider, kNoParent, 0, 1900);
-    w = f.plan(kGRider, 3000, rider_now(kGHorse, 0));
+    w = f.plan(kGRider, 2793, rider_now(kGHorse, 0));
     CHECK(w.plan == Plan::Detach && w.txn.native_fallback && !w.txn.native_gone && w.txn.detach_flag == kNativeDetachFlag &&
           w.txn.detach_aux == 0);
-    CHECK(f.plan(kGRider, 3001, rider_now(kGHorse, 0)).plan == Plan::None);  // claimed once
+    CHECK(f.plan(kGRider, 2695, rider_now(kGHorse, 0)).plan == Plan::None);  // claimed once
 
     // A NON-observed Detach (an NPC-style 0x2228E40 on the controller, flag/p4 its own): the same native wait.
     Table n;
@@ -1410,7 +1410,7 @@ void test_guest_observer() {
         CHECK(t.plan(kHRider, 1010, rider_now(kHHorse, 0, kHRider)).plan == Plan::None);
         t.note_rider_parent(kHRider, kNoParent, 0, 1900);  // on foot (841A7C99)
         CHECK(t.plan(kHRider, 1900, rider_now(kHHorse, 0, kHRider)).plan == Plan::None);  // < 2 s
-        auto w = t.plan(kHRider, 3000, rider_now(kHHorse, 0, kHRider));
+        auto w = t.plan(kHRider, 2793, rider_now(kHHorse, 0, kHRider));
         CHECK(w.plan == Plan::Detach && w.txn.native_fallback && w.txn.detach_flag == kNativeDetachFlag);
         // Retired here: nothing of this client's link is remembered any more.
         t.finish_detach(kHRider, 2, Outcome::Applied);
@@ -1429,7 +1429,7 @@ void test_guest_observer() {
         CHECK(t.on_event(observed_detach(kHRider, arm_pack(kHHorse, 3), 0x77, 9), 1000, kHRider) == Accept::DetachPending);
         CHECK(t.find(kHRider)->on_foot_ms == 0);
         // The dismount still queued (stall): 2 s and more, method 0, link there -> nothing.
-        CHECK(t.plan(0xB0000123, 3000, rider_now(kHHorse, 0, kHRider)).plan == Plan::None);
+        CHECK(t.plan(0xB0000123, 2793, rider_now(kHHorse, 0, kHRider)).plan == Plan::None);
         CHECK(t.plan(0xB0000123, 30999, rider_now(kHHorse, 0, kHRider)).plan == Plan::None);
         CHECK(t.plan(0xB0000123, 31000, rider_now(kHHorse, 7, kHRider)).plan == Plan::None);  // in RideOff: never
         auto w = t.plan(0xB0000123, 31000, rider_now(kHHorse, 0, kHRider));

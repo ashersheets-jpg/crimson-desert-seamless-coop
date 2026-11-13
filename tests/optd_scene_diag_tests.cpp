@@ -238,23 +238,23 @@ void test_start_action() {
 void test_scene_reqs() {
     const auto a = unhex(k2767_41542);
     auto r = scd::parse_scene_req(scd::le16(a.data()), payload(a));
-    CHECK(r.op == 2620 && r.has_scene && r.scene == 0x13 && r.has_actor && r.actor == 0xB01000A1);
+    CHECK(r.op == 2808 && r.has_scene && r.scene == 0x13 && r.has_actor && r.actor == 0xB01000A1);
     const auto b = unhex(k2591_54633);
     r = scd::parse_scene_req(scd::le16(b.data()), payload(b));
-    CHECK(r.op == 2839 && r.has_scene && r.scene == 0x164 && !r.has_actor);
+    CHECK(r.op == 2200 && r.has_scene && r.scene == 0x164 && !r.has_actor);
     const auto c = unhex(k2436_54637);
     r = scd::parse_scene_req(scd::le16(c.data()), payload(c));
-    CHECK(r.op == 2880 && r.scene == 0x163);
+    CHECK(r.op == 2644 && r.scene == 0x163);
     const auto d = unhex(k2138_290272);
     r = scd::parse_scene_req(scd::le16(d.data()), payload(d));
-    CHECK(r.op == 3161 && r.scene == 0x163);
+    CHECK(r.op == 3069 && r.scene == 0x163);
     const auto e = unhex(k3020_290246);
     r = scd::parse_scene_req(scd::le16(e.data()), payload(e));
-    CHECK(r.op == 2783 && !r.has_scene && r.has_actor && r.actor == 0xB010007C);
+    CHECK(r.op == 2125 && !r.has_scene && r.has_actor && r.actor == 0xB010007C);
     const auto g = unhex(k2173_986);
     r = scd::parse_scene_req(scd::le16(g.data()), payload(g));
-    CHECK(r.op == 2752 && r.has_actor && r.actor == 0xA0100001);
-    r = scd::parse_scene_req(2767, std::span<const uint8_t>(a).subspan(5, 4));  // too short for anything
+    CHECK(r.op == 2672 && r.has_actor && r.actor == 0xA0100001);
+    r = scd::parse_scene_req(2184, std::span<const uint8_t>(a).subspan(5, 4));  // too short for anything
     CHECK(!r.has_scene && !r.has_actor);
     CHECK(scd::scene_req_index(2620) == 0 && scd::scene_req_index(2202) == static_cast<int>(scd::kSceneReqCount) - 1);
     CHECK(scd::scene_req_index(2005) == -1);

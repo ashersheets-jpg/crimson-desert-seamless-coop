@@ -369,7 +369,7 @@ void test_payload() {
     buf[3] = 7;
     CHECK(!rrp::parse_2471(12, buf, sizeof buf, p));  // not 6 bytes
     CHECK(!rrp::parse_2471(11, buf, 10, p));          // short buffer
-    static_assert(rrp::kOp2471 == 2464);  // ReleaseRemoteCatchResultAck on 1.0.0.3549 (2976: 0x09A7 = 2471)
+    static_assert(rrp::kOp2471 == 3041);  // ReleaseRemoteCatchResultAck on 1.0.0.3549 (2976: 0x09A7 = 2471)
 }
 
 void test_math() {
@@ -562,29 +562,29 @@ void script_flow(const char* file, size_t want_catches, size_t want_releases, co
             if (!v) continue;
             sent.push_back(o);
             switch (v->opcode) {
-                case 2319: p.on_server_packet(cdmp::troc::make(2840, -1, Bytes(4, 0)), t); break;
-                case 2490:
-                    p.on_server_packet(cdmp::troc::make(2646, -1, user_ack), t);
-                    p.on_server_packet(cdmp::troc::make(2869, -1, Bytes(13, 0x7F)), t);
-                    p.on_server_packet(cdmp::troc::make(2716, -1, {}), t);
+                case 2623: p.on_server_packet(cdmp::troc::make(2127, -1, Bytes(4, 0)), t); break;
+                case 3073:
+                    p.on_server_packet(cdmp::troc::make(2884, -1, user_ack), t);
+                    p.on_server_packet(cdmp::troc::make(2563, -1, Bytes(13, 0x7F)), t);
+                    p.on_server_packet(cdmp::troc::make(2352, -1, {}), t);
                     break;
-                case 3093:
-                    p.on_server_packet(cdmp::troc::make(2756, -1, player_ack), t);
-                    p.on_server_packet(cdmp::troc::make(2174, -1, Bytes(65, 0)), t);
+                case 3103:
+                    p.on_server_packet(cdmp::troc::make(3045, -1, player_ack), t);
+                    p.on_server_packet(cdmp::troc::make(3023, -1, Bytes(65, 0)), t);
                     break;
-                case 2437: p.on_server_packet(cdmp::troc::make(2174, -1, Bytes(65, 0)), t); break;
-                case 2549: p.on_server_packet(cdmp::troc::make(2144, 0, {}), t); break;
-                case 2445:
-                    p.on_server_packet(cdmp::troc::make(2762, 0, {}), t);
+                case 2757: p.on_server_packet(cdmp::troc::make(3023, -1, Bytes(65, 0)), t); break;
+                case 2320: p.on_server_packet(cdmp::troc::make(2343, 0, {}), t); break;
+                case 2123:
+                    p.on_server_packet(cdmp::troc::make(2893, 0, {}), t);
                     ++lc;
                     break;
-                case 2223:
+                case 3142:
                     // The 19:04 run: the server forced an action at the first replayed StartActionReq
                     // (ChangeActionSessionIDAck 2954 {u32 actor, u32 user, u64 session}); the script must echo it
                     // (a session above 32 bits here: the echo carries all 8 bytes).
                     if (lc >= 2 && !forced) {
                         forced = true;
-                        p.on_server_packet(cdmp::troc::make(2954, -1, Bytes{0x4C, 0x0A, 0x10, 0xA0, 0x4B, 0x0A, 0x10, 0x90,
+                        p.on_server_packet(cdmp::troc::make(3040, -1, Bytes{0x4C, 0x0A, 0x10, 0xA0, 0x4B, 0x0A, 0x10, 0x90,
                                                                            0x02, 0, 0, 0, 0x01, 0, 0, 0}),
                                            t);
                     }
@@ -607,16 +607,16 @@ void script_flow(const char* file, size_t want_catches, size_t want_releases, co
         if (!v) continue;
         const auto& pl = v->payload;
         uint32_t k = 0;
-        if ((v->opcode == 2223 || v->opcode == 2189 || v->opcode == 2556 || v->opcode == 2828) && pl.size() >= 4) {
+        if ((v->opcode == 3142 || v->opcode == 2633 || v->opcode == 2685 || v->opcode == 2534) && pl.size() >= 4) {
             std::memcpy(&k, pl.data(), 4);
             (k == key ? keyed : foreign)++;
         }
-        if (v->opcode == 2350) {
+        if (v->opcode == 3120) {
             const Bytes want = {0x4C, 0x0A, 0x10, 0xA0, 0x02, 0, 0, 0, 0x01, 0, 0, 0};
             CHECK(Bytes(pl.begin(), pl.end()) == want);  // EchoActionSessionIDReq {u32 actor, u64 session}
             ++echoes;
         }
-        if (v->opcode == 2380 && pl.size() > 0x203) {
+        if (v->opcode == 2356 && pl.size() > 0x203) {
             std::memcpy(&k, pl.data() + 1, 4);
             (k == key ? keyed : foreign)++;
             uint32_t hash = 0, frame = 0;

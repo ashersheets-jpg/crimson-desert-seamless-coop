@@ -35,8 +35,8 @@ using u2f::parse_mode;
 
 // ---------------------------------------------------------------- formats (mirror-ack-formats.md §1)
 
-inline constexpr uint16_t kOpMoveActorReq = 2833;
-inline constexpr uint16_t kOpMoveActorAck = 3094;
+inline constexpr uint16_t kOpMoveActorReq = 2790;
+inline constexpr uint16_t kOpMoveActorAck = 3008;
 inline constexpr size_t kReqSize = 514;  // payload
 inline constexpr size_t kAckSize = 235;  // payload; any other length is dropped by the client in silence
 inline constexpr size_t kHeader = 5;     // u16 opcode | i8 slot | u16 payload_len

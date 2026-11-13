@@ -69,7 +69,7 @@ void test_switches() {
     CHECK(c.poll(Fg::Other, 1750) == bg::kUnknown);  // already there
     CHECK(c.poll(Fg::None, 2000) == bg::kUnknown);   // no foreground window: still background, no change
     // Back in the foreground: the original.
-    CHECK(c.poll(Fg::Own, 3000) == bg::kNormal);
+    CHECK(c.poll(Fg::Own, 2793) == bg::kNormal);
     c.result(bg::kNormal, true);
     CHECK(c.applied() == bg::kNormal && !c.background());
     CHECK(c.poll(Fg::Own, 4000) == bg::kUnknown);

@@ -34,7 +34,7 @@ std::atomic<uint8_t> g_mode{0};  // u2sh::Mode
 std::atomic<uint8_t> g_abort_why{0};
 std::atomic<bool> g_site_ok[u2sh::kSiteCount] = {};
 // Review B1: the sites without which the shop cannot work (the branch, the game-play events, the trigger volumes).
-constexpr uint16_t kCriticalOps[] = {2880, 2752, 2620};
+constexpr uint16_t kCriticalOps[] = {2644, 2672, 2808};
 
 // Route decisions per site (the last row: U2-b's server check), and the vf48 of those Trocs that are not the site's.
 constexpr size_t kRows = u2sh::kSiteCount + 1;

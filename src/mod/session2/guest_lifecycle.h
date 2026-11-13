@@ -212,13 +212,13 @@ MoveDiag read_move_diag(uintptr_t user);
 
 // The opcodes the tracker follows (troc_messages_2976.csv).
 namespace mv {
-inline constexpr uint16_t kLoginCharacterReq = 2733;      // LoginCharacterToFieldServerReq
-inline constexpr uint16_t kGameLoadingStartReq = 2294;
-inline constexpr uint16_t kMoveFieldCompleteReq = 2471;
-inline constexpr uint16_t kLoadingCompleteReq = 2167;
-inline constexpr uint16_t kMoveFieldAck = 2653;
-inline constexpr uint16_t kMoveFieldCompleteAck = 2340;
-inline constexpr uint16_t kLoadingCompleteAck = 2190;
+inline constexpr uint16_t kLoginCharacterReq = 3081;      // LoginCharacterToFieldServerReq
+inline constexpr uint16_t kGameLoadingStartReq = 2350;
+inline constexpr uint16_t kMoveFieldCompleteReq = 2723;
+inline constexpr uint16_t kLoadingCompleteReq = 2789;
+inline constexpr uint16_t kMoveFieldAck = 2364;
+inline constexpr uint16_t kMoveFieldCompleteAck = 2268;
+inline constexpr uint16_t kLoadingCompleteAck = 2891;
 }  // namespace mv
 
 // The phase of user 2's login/move, from what crosses the tunnel only: the

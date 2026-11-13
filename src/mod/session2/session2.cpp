@@ -286,9 +286,9 @@ void kill_tunnel(const std::string& why) {
 // 2004 (pointers), and the client-local connect/disconnect 1001-1008. Also
 // SetFieldTimeReq 2125 (sleep, explicit time): the world clock is the host's
 // (reloj.md §5.1, 0x2BC8970 publishes for any field owner).
-constexpr uint16_t kOpSetFieldTimeReq = 2227;
+constexpr uint16_t kOpSetFieldTimeReq = 2150;
 bool never_from_guest(uint16_t opcode) {
-    return opcode == 2748 || opcode == 2042 || opcode == 2004 || opcode == kOpSetFieldTimeReq ||
+    return opcode == 2447 || opcode == 2042 || opcode == 2004 || opcode == kOpSetFieldTimeReq ||
            (opcode >= 1001 && opcode <= 1008);
 }
 // P8 session 25, W1 (block_guest_weather, research/noche/clima-hora.md §5.2): user 2's SyncWeatherStateReq 2560

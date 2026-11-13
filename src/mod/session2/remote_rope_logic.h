@@ -230,7 +230,7 @@ inline constexpr uint32_t kPkt_Buffer = 0x18;
 inline constexpr uint32_t kBuf_Len = 3;
 inline constexpr uint32_t kBuf_Payload = 5;
 inline constexpr uint16_t k2471Payload = 6;
-inline constexpr uint16_t kOp2471 = 2464;
+inline constexpr uint16_t kOp2471 = 3041;
 
 // ---------------------------------------------------------------- build 1.0.0.2976: the server release
 

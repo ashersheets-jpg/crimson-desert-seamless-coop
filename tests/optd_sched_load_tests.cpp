@@ -271,7 +271,7 @@ void add_record(std::vector<uint8_t>& pl, uint8_t kind, uint32_t key, const std:
 void test_packet_keys() {
     // 2335: the resource at +9.
     const auto a = gsl::packet_keys(unhex(k2335_1609), nullptr);
-    CHECK(a.ok && a.op == 2989 && a.n == 1 && a.keys[0] == 0xAC00B3BB);
+    CHECK(a.ok && a.op == 2224 && a.n == 1 && a.keys[0] == 0xAC00B3BB);
     const auto b = gsl::packet_keys(unhex(k2335_2391), nullptr);
     CHECK(b.ok && b.n == 1 && b.keys[0] == 0xDA8B15D0);
     auto shortp = unhex(k2335_1609);
@@ -286,14 +286,14 @@ void test_packet_keys() {
     put32(i2874, 0x20000059);
     put32(i2874, 0);
     i2874.resize(64, 0);
-    const auto c = gsl::packet_keys(packet(2874, i2874), nullptr);
+    const auto c = gsl::packet_keys(packet(2128, i2874), nullptr);
     CHECK(c.ok && c.n == 1 && c.keys[0] == 0xDA8B15D0);
     std::vector<uint8_t> zero_res = i2874;
     zero_res[8] = zero_res[9] = zero_res[10] = zero_res[11] = 0;
-    const auto z = gsl::packet_keys(packet(2874, zero_res), nullptr);
+    const auto z = gsl::packet_keys(packet(2128, zero_res), nullptr);
     CHECK(z.ok && z.n == 0);  // resource 0: nothing to load
     // Other opcodes and runts: nothing.
-    CHECK(!gsl::packet_keys(packet(2661, i2874), nullptr).ok);
+    CHECK(!gsl::packet_keys(packet(2455, i2874), nullptr).ok);
     const uint8_t runt[] = {0xD5, 0x07, 0xFF};
     CHECK(!gsl::packet_keys(runt, nullptr).ok);
 
@@ -622,7 +622,7 @@ void test_engine_load() {
     CHECK(eng->hist.n[gsl::Histogram::bucket(2'000)].load() == 1 && eng->hist.max_us.load() == 2'000);
     CHECK(env.count(gsl::Note::Load) == 1 && !eng->latched.load());
     // Named again: present; ours stays LOADED (the verification counts on it).
-    CHECK(gsl::process_key(*eng, env, g, 0xAC00B3BB, 2335, pk) == W::Present && eng->book.state(s) == S::Loaded);
+    CHECK(gsl::process_key(*eng, env, g, 0xAC00B3BB, 2755, pk) == W::Present && eng->book.state(s) == S::Loaded);
     CHECK(env.loads == 1 && s->wanted.load() == 2);
     // A fault inside the call: CodeOff, nothing counted as loaded.
     env.load_faults = true;
@@ -832,19 +832,19 @@ void test_engine_hold() {
     const auto g = open_gates();
     gsl::PacketBudget pk;
     // A 2335 names an absent file: loaded, and the loader's handle is KEPT (no release).
-    CHECK(gsl::process_key(*eng, env, g, K, 2335, pk) == W::Load);
+    CHECK(gsl::process_key(*eng, env, g, K, 2755, pk) == W::Load);
     auto* sk = eng->book.get(K, false);
     CHECK(sk && eng->book.state(sk) == S::Loaded && sk->held.load() == 1 && sk->by2335.load() == 1);
     CHECK(eng->holds.size() == 1 && eng->holds_taken.load() == 1 && env.outstanding() == 1 && env.releases == 0);
     CHECK(eng->held_now.load() == 1 && env.count(gsl::Note::Load) == 1);
     // Named again by a 2335 while held: the lookup's new handle goes back at once, the hold is refreshed.
     env.clock += 1'000'000;
-    CHECK(gsl::process_key(*eng, env, g, K, 2335, pk) == W::Present);
+    CHECK(gsl::process_key(*eng, env, g, K, 2755, pk) == W::Present);
     CHECK(eng->holds_refreshed.load() == 1 && env.releases == 1 && env.outstanding() == 1 && eng->holds.size() == 1);
     // A 2005 (no 2335 yet): loaded and released at once, as before.
     CHECK(gsl::process_key(*eng, env, g, J, 2005, pk) == W::Load && eng->holds.size() == 1 && env.outstanding() == 1);
     // Then a 2335 names it: present, the lookup's handle is kept.
-    CHECK(gsl::process_key(*eng, env, g, J, 2335, pk) == W::Present);
+    CHECK(gsl::process_key(*eng, env, g, J, 2755, pk) == W::Present);
     CHECK(eng->holds.size() == 2 && env.kept_on_present == 2 && env.outstanding() == 2);
     auto* sj = eng->book.get(J, false);
     CHECK(sj && sj->held.load() == 1 && eng->book.state(sj) == S::Loaded);
@@ -870,11 +870,11 @@ void test_engine_hold() {
     env.container.erase(J);
     env.clock = named_j + gsl::kHoldMaxUs + 5'000'000;
     gsl::PacketBudget pk2;
-    CHECK(gsl::process_key(*eng, env, g, J, 2335, pk2) == W::Load);
+    CHECK(gsl::process_key(*eng, env, g, J, 2755, pk2) == W::Load);
     CHECK(eng->early.load() == 1 && env.count(gsl::Note::Early) == 1 && eng->holds.has(J));
     // K ran its 2335 before it went: not counted.
     env.container.erase(K);
-    CHECK(gsl::process_key(*eng, env, g, K, 2989, pk2) == W::Load && eng->early.load() == 1 && eng->holds.has(K));
+    CHECK(gsl::process_key(*eng, env, g, K, 2224, pk2) == W::Load && eng->early.load() == 1 && eng->holds.has(K));
     // The container drops both (its own references; the same manager and container): ours are now their LAST
     // references -> Kept, counted, never given back (no destructor on this thread), the entries go.
     CHECK(env.outstanding() == 2 && env.total_refs(StubEnv::file_of(J)) == 2);
@@ -897,8 +897,8 @@ void test_engine_hold() {
     env2.container[J] = 1;
     gsl::PacketBudget pk4;
     CHECK(gsl::process_key(*eng2, env2, g, J, 2005, pk4) == W::Present && eng2->holds.size() == 0);
-    CHECK(gsl::process_key(*eng2, env2, open_gates(gsl::Mode::Probe), L, 2335, pk4) == W::WouldLoad);
-    CHECK(gsl::process_key(*eng2, env2, open_gates(gsl::Mode::Probe), J, 2335, pk4) == W::Present);
+    CHECK(gsl::process_key(*eng2, env2, open_gates(gsl::Mode::Probe), L, 2755, pk4) == W::WouldLoad);
+    CHECK(gsl::process_key(*eng2, env2, open_gates(gsl::Mode::Probe), J, 2755, pk4) == W::Present);
     CHECK(eng2->holds.size() == 0 && env2.outstanding() == 0);
     // Latched to probe: no new hold either.
     eng2->latched.store(true);
@@ -912,7 +912,7 @@ void test_engine_hold() {
     env3.add_ctx(K);
     env3.load_inserts = false;
     gsl::PacketBudget pk5;
-    CHECK(gsl::process_key(*eng3, env3, g, K, 2335, pk5) == W::Load);
+    CHECK(gsl::process_key(*eng3, env3, g, K, 2755, pk5) == W::Load);
     CHECK(eng3->book.state(eng3->book.get(K, false)) == S::Failed);
     CHECK(eng3->holds.size() == 0 && env3.releases == 1 && env3.outstanding() == 0);
     CHECK(env3.destroyed == 1 && env3.kept_last == 0);
@@ -932,7 +932,7 @@ void test_engine_hold_owner() {
         StubEnv env;
         env.add_ctx(K);
         gsl::PacketBudget pk;
-        CHECK(gsl::process_key(*eng, env, g, K, 2989, pk) == W::Load && eng->holds.has(K));
+        CHECK(gsl::process_key(*eng, env, g, K, 2224, pk) == W::Load && eng->holds.has(K));
         if (change == 0) env.owner.epoch = 2;
         if (change == 1) env.owner.live = false;  // the connection ended (end_remote)
         if (change == 2) env.owner.mgr = 0x1100;
@@ -951,10 +951,10 @@ void test_engine_hold_owner() {
         env.add_ctx(K);
         env.add_ctx(J);
         gsl::PacketBudget pk;
-        CHECK(gsl::process_key(*eng, env, g, K, 2335, pk) == W::Load);
-        CHECK(gsl::process_key(*eng, env, g, J, 2335, pk) == W::Load);
+        CHECK(gsl::process_key(*eng, env, g, K, 2755, pk) == W::Load);
+        CHECK(gsl::process_key(*eng, env, g, J, 2755, pk) == W::Load);
         env.owner.epoch = 2;
-        CHECK(gsl::process_key(*eng, env, g, K, 2335, pk) == W::Present);
+        CHECK(gsl::process_key(*eng, env, g, K, 2755, pk) == W::Present);
         CHECK(dropped(eng) == 1 && eng->holds.size() == 2 && eng->holds_taken.load() == 3 && env.outstanding() == 3);
         CHECK(env.releases == 0);
         // J (the old connection's) is dropped by the service; K (this one's) is given back when due.
@@ -971,8 +971,8 @@ void test_engine_hold_owner() {
         env.add_ctx(K);
         env.add_ctx(J);
         gsl::PacketBudget pk;
-        gsl::process_key(*eng, env, g, K, 2335, pk);
-        gsl::process_key(*eng, env, g, J, 2335, pk);
+        gsl::process_key(*eng, env, g, K, 2755, pk);
+        gsl::process_key(*eng, env, g, J, 2755, pk);
         env.module_off = true;
         CHECK(gsl::service_holds(*eng, env, env.clock, true) == 2 && eng->holds_dropped.load() == 2);
         CHECK(env.releases == 0 && env.outstanding() == 2 && eng->held_now.load() == 0);
@@ -980,7 +980,7 @@ void test_engine_hold_owner() {
         env.container.erase(K);
         env.container.erase(J);
         gsl::PacketBudget pk2;
-        gsl::process_key(*eng, env, g, K, 2335, pk2);
+        gsl::process_key(*eng, env, g, K, 2755, pk2);
         CHECK(eng->holds.size() == 1 && gsl::drop_holds(*eng, env, env.clock) == 1 && eng->holds.size() == 0);
         CHECK(dropped(eng) == 1 && env.releases == 0 && eng->held_now.load() == 0);
     }
@@ -995,7 +995,7 @@ void test_engine_hold_full() {
         env.add_ctx(k);
         env.container[k] = 1;
         gsl::PacketBudget pk;
-        gsl::process_key(*eng, env, g, k, 2335, pk);
+        gsl::process_key(*eng, env, g, k, 2755, pk);
     }
     CHECK(eng->holds.size() == gsl::kHolds && eng->holds_full.load() == 3 && env.releases == 3);
     CHECK(eng->held_peak.load() == gsl::kHolds && env.outstanding() == static_cast<int>(gsl::kHolds));

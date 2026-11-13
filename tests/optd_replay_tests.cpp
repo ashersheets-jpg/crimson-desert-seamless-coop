@@ -112,10 +112,10 @@ void test_guest_save_round_trip(bool fail_final) {
     const Bytes down_lobby = make_save(400, 3), down_save = make_save(65000, 4);
     write_text(in_dir + L"\\lobby.save", std::string(up_lobby.begin(), up_lobby.end()));
     write_text(in_dir + L"\\save.save", std::string(up_save.begin(), up_save.end()));
-    write_text(script, R"(send crypto 2319 -1 0404000000
-expect 2840 5000
-send login 2490 -1 01000000000000000000000000000000000000
-expect 2716 5000
+    write_text(script, R"(send crypto 2623 -1 0404000000
+expect 2127 5000
+send login 3073 -1 01000000000000000000000000000000000000
+expect 2352 5000
 logout_session
 expect 2003 10000
 expect 2002 10000
@@ -196,19 +196,19 @@ expect 2002 10000
             if (!v) continue;
             order.push_back(std::to_string(v->opcode));
             switch (v->opcode) {
-                case 2319: link.push(troc::make(2840, -1, Bytes(16, 0x11))); break;
-                case 2490: link.push(troc::make(2716, -1, Bytes{})); break;
-                case 2910: {
+                case 2623: link.push(troc::make(2127, -1, Bytes(16, 0x11))); break;
+                case 3073: link.push(troc::make(2352, -1, Bytes{})); break;
+                case 2905: {
                     const auto req = gsw::parse_save_req(v->payload);
                     final_req_ok = req && req->slot == 100 && req->name == u"Co-op" && v->slot == 0;
                     final_at_ms = now_ms();
                     if (fail_final) {
                         // The server refused it (e.g. CanSave 0x186F000): a 3016 with ok 0, and nothing exported.
-                        link.push(troc::make(3016, -1, Bytes{0x01, 0x02, 0x10, 0xA0, 100, 0, 0, 0, 0, 1, 0x08, 0x76, 0xCF, 0x06}));
+                        link.push(troc::make(2226, -1, Bytes{0x01, 0x02, 0x10, 0xA0, 100, 0, 0, 0, 0, 1, 0x08, 0x76, 0xCF, 0x06}));
                         break;
                     }
                     // The server saved user 2: its 3016 (ok), then the export as SAVE_RESULT gen1 + chunks.
-                    link.push(troc::make(3016, -1, Bytes{0x01, 0x02, 0x10, 0xA0, 100, 0, 0, 0, 1, 1, 0, 0, 0, 0}));
+                    link.push(troc::make(2226, -1, Bytes{0x01, 0x02, 0x10, 0xA0, 100, 0, 0, 0, 1, 1, 0, 0, 0, 0}));
                     result_xfer = 500;
                     const gsw::Result r{result_xfer, 1, 101, static_cast<uint8_t>(gsw::Reason::Final), 1791770400ull,
                                         gsw::files_of(down_lobby, down_save),
@@ -277,23 +277,23 @@ int main() {
     DeleteFileW(record.c_str());
     write_text(script, R"(var ACCOUNT u64 1
 var SAVE_SLOT u32 1
-learn USER_KEY u32 2646 0
-learn CHARACTER_NO u64 2869 5
+learn USER_KEY u32 2884 0
+learn CHARACTER_NO u64 2563 5
 learn_child CHILD_KEY 2005 USER_KEY
-send crypto 2319 -1 0404000000
-expect 2840 5000
-send login 2490 -1 01000000000000000000000000000000000000
+send crypto 2623 -1 0404000000
+expect 2127 5000
+send login 3073 -1 01000000000000000000000000000000000000
 put u64 0 ACCOUNT
-expect 2716 5000
-send character 3093 -1 04ffffffffffffff7f01000000d4ab54414242
+expect 2352 5000
+send character 3103 -1 04ffffffffffffff7f01000000d4ab54414242
 put u64 1 CHARACTER_NO
 put u32 9 SAVE_SLOT
-expect 2174 5000
+expect 3023 5000
 expect_learned CHILD_KEY 5000
-send child 2223 0 0000000000000000
+send child 3142 0 0000000000000000
 put u32 0 CHILD_KEY
-send done 2445 0 01
-expect 2762 5000
+send done 2123 0 01
+expect 2893 5000
 )");
 
     ReplayOptions opt;
@@ -331,17 +331,17 @@ expect 2762 5000
             auto v = troc::parse(got[handled]);
             if (!v) continue;
             switch (v->opcode) {
-                case 2319: answer(2840, Bytes(256, 0x11)); break;
-                case 2490: {
+                case 2623: answer(2840, Bytes(256, 0x11)); break;
+                case 3073: {
                     answer(2188, Bytes(20, 0));                              // ServerTimeInfoAck
                     answer(2646, Bytes{0x01, 0x17, 0x10, 0x90, 0, 0, 0, 0});  // MainUserDataStartAck
                     Bytes lobby(20, 0);
                     for (int i = 0; i < 8; ++i) lobby[5 + i] = static_cast<uint8_t>(0xA0 + i);
-                    answer(2869, lobby);  // CharacterLobbyDataAck
-                    answer(2716, {});     // MainUserDataEndAck
+                    answer(2563, lobby);  // CharacterLobbyDataAck
+                    answer(2352, {});     // MainUserDataEndAck
                     break;
                 }
-                case 3093: {
+                case 3103: {
                     answer(2005, Bytes(30000, 0x33));  // record lengths that run past the end: ignored
                     // D-53r: user 2's record (9 bytes) and its child (type 6, key 0xB0101703).
                     Bytes child = {9, 0, 0, 0x01, 0x17, 0x10, 0x90, 0, 0, 0, 0, 16, 0, 6, 0x03, 0x17, 0x10, 0xB0,
@@ -351,7 +351,7 @@ expect 2762 5000
                     answer(2174, Bytes(16, 3));
                     break;
                 }
-                case 2445: answer(2762, {}); break;
+                case 2123: answer(2893, {}); break;
                 default: break;
             }
         }
@@ -365,12 +365,12 @@ expect 2762 5000
     CHECK(got.size() == 5);
     if (got.size() == 5) {
         auto login = troc::parse(got[1]);
-        CHECK(login && login->opcode == 2490 && login->payload[0] == 7);  // --var ACCOUNT=7
+        CHECK(login && login->opcode == 3073 && login->payload[0] == 7);  // --var ACCOUNT=7
         auto ch = troc::parse(got[2]);
-        CHECK(ch && ch->opcode == 3093 && ch->payload[1] == 0xA0 && ch->payload[8] == 0xA7);  // learned
+        CHECK(ch && ch->opcode == 3103 && ch->payload[1] == 0xA0 && ch->payload[8] == 0xA7);  // learned
         CHECK(ch && ch->payload[9] == 2);  // --var SAVE_SLOT=2
         auto child = troc::parse(got[3]);  // learn_child: the key from the second 2005
-        CHECK(child && child->opcode == 2223 && child->payload[0] == 0x03 && child->payload[3] == 0xB0);
+        CHECK(child && child->opcode == 3142 && child->payload[0] == 0x03 && child->payload[3] == 0xB0);
         CHECK(troc::parse(got[4])->slot == 0);
     }
 

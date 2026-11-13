@@ -184,7 +184,7 @@ bool TunnelSender::push(std::span<const uint8_t> packet) {
 }
 
 size_t TunnelSender::shed_stale_moves() {
-    constexpr uint16_t kOpMoveActorAck = 3094;
+    constexpr uint16_t kOpMoveActorAck = 3008;
     constexpr size_t kMoveAckPayload = 235;  // the only length the client takes (horse_follow_logic.h)
     ++shed_passes_;
     size_t taken = 0;

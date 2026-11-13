@@ -255,7 +255,7 @@ void door_trace_packet(DoorTraceStage stage, std::span<const uint8_t> frame,
 }
 void door_trace_ingress(uint16_t op, uintptr_t packet, uint16_t size,
                         bool from_user2) noexcept {
-  if (!g_mode.load(std::memory_order_relaxed) || op != 2976 || size < 14)
+  if (!g_mode.load(std::memory_order_relaxed) || op != 2772 || size < 14)
     return;
   // Full native packet copied under SEH. Large batches remain native and are
   // counted as unmeasured.

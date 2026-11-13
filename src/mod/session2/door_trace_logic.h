@@ -41,14 +41,14 @@ struct Packet {
   uint8_t active = 0;
 };
 inline bool relevant(uint16_t op) {
-  return op == 2976 || op == 2923 || op == 2461 || op == 2262;
+  return op == 2772 || op == 2367 || op == 2481 || op == 3055;
 }
 // Todas las posiciones son payload, no trama. No busca UUID en bytes
 // arbitrarios de otro mensaje.
 inline Packet parse(uint16_t op, std::span<const uint8_t> p) {
   Packet r;
   size_t begin = 0;
-  if (op == 2976) {
+  if (op == 2772) {
     if (p.size() < 9 || p[0] != 4 || (p.size() - 9) % 16)
       return r;
     // 0x29C1C80 sólo exige que el u32 inicial no sea cero; deriva n por
@@ -59,7 +59,7 @@ inline Packet parse(uint16_t op, std::span<const uint8_t> p) {
     if (!u32(p.data() + 1) || !r.items)
       return r;
     r.kind = Kind::Spawn;
-  } else if (op == 2923) {
+  } else if (op == 2367) {
     if (p.size() < 22 || p[0] != 4 || (p.size() - 6) % 16)
       return r;
     r.subject = u32(p.data() + 1);
@@ -67,14 +67,14 @@ inline Packet parse(uint16_t op, std::span<const uint8_t> p) {
     r.items = static_cast<uint32_t>((p.size() - 6) / 16);
     begin = 6;
     r.kind = Kind::Accepted;
-  } else if (op == 2461) {
+  } else if (op == 2481) {
     if (p.size() < 21 || p[0] != 4 || (p.size() - 5) % 16)
       return r;
     r.subject = u32(p.data() + 1);
     r.items = static_cast<uint32_t>((p.size() - 5) / 16);
     begin = 5;
     r.kind = Kind::Rejected;
-  } else if (op == 2262) {
+  } else if (op == 3055) {
     // Sólo el registro de tamaño 615 y n=1 medido. Otras variantes se observan
     // como no decodificadas, no inválidas.
     if (p.size() != 615 || u32(p.data() + 4) != 1)

@@ -13,8 +13,8 @@
 
 namespace cdmp::session2::agl {
 
-inline constexpr uint16_t kOpDoFrameEventReq = 3030;
-inline constexpr uint16_t kOpQuestDialogAck = 3086;
+inline constexpr uint16_t kOpDoFrameEventReq = 2460;
+inline constexpr uint16_t kOpQuestDialogAck = 2180;
 inline constexpr size_t kFixed = 0x207, kEntry = 677;
 
 inline uint32_t rd32(const uint8_t* p) { return p[0] | p[1] << 8 | p[2] << 16 | static_cast<uint32_t>(p[3]) << 24; }

@@ -452,7 +452,7 @@ void test_lines() {
 void test_guest_hold() {
     using U = GuestHold::Upload;
     using R = GuestHold::Release;
-    const uint16_t k3093 = gsw::kOpLoginCharacterReq, k2001 = gsw::kOpLogoutSessionReq, k2490 = 2490, k2319 = 2319;
+    const uint16_t k3093 = gsw::kOpLoginCharacterReq, k2001 = gsw::kOpLogoutSessionReq, k2490 = 3073, k2319 = 2623;
     const auto ack = [](uint32_t xfer, AckResult r, uint32_t g = 0) { return gsw::Ack{xfer, static_cast<uint8_t>(r), g}; };
     bool retry = false;
 
@@ -476,7 +476,7 @@ void test_guest_hold() {
         CHECK(h.poll(210, 0) == R::Queued && h.hold() == GuestHold::Hold::Off);
         // Its 3093 then waits for the ack.
         CHECK(h.on_send(k3093, 1u, 300, false, 0).hold);
-        CHECK(h.on_send(2601, {}, 310, false, 0).hold);  // everything after it too
+        CHECK(h.on_send(2967, {}, 310, false, 0).hold);  // everything after it too
         CHECK(h.poll(400, 0) == R::None);
         CHECK(!h.on_ack(ack(4, AckResult::Ok), retry));  // another offer's
         CHECK(h.on_ack(ack(5, AckResult::Ok), retry) && !retry && h.upload() == U::Acked);
@@ -576,7 +576,7 @@ void test_guest_hold() {
         CHECK(h.on_send(9999, {}, 1001, true, 4).hold && !h.on_send(9999, {}, 1001, true, 4).save_first);
         CHECK(h.poll(2000, 4) == R::None);
         CHECK(h.poll(2001, 5) == R::FinalDone);
-        CHECK(!h.on_send(k2001, {}, 3000, true, 5).hold);  // once
+        CHECK(!h.on_send(k2001, {}, 2793, true, 5).hold);  // once
     }
     {
         GuestHold h(true);
@@ -681,7 +681,7 @@ void test_policy() {
         CHECK(gsw::req_policy(gsv::Mode::Probe, live, op) == P::Default);
         CHECK(gsw::req_policy(gsv::Mode::Off, none, op) == P::Default);
     }
-    for (const uint16_t op : {uint16_t{2579}, uint16_t{2337}, uint16_t{3093}, uint16_t{2490}, uint16_t{2223}}) {
+    for (const uint16_t op : {uint16_t{2572}, uint16_t{2619}, uint16_t{3103}, uint16_t{3073}, uint16_t{3142}}) {
         CHECK(gsw::req_policy(gsv::Mode::On, live, op) == P::Default);
     }
 
@@ -838,7 +838,7 @@ void test_save_req() {
     // 2910 = u32 slot | u32 n | n UTF-16 | u16 0, as the client's writer .xtls 0xA4624C0 builds it; slot byte 0.
     const Bytes f = gsw::make_final_save_req();
     const auto v = troc::parse(f);
-    CHECK(v && v->opcode == 2910 && v->slot == 0 && v->payload.size() == 10 + 2 * gsw::kFinalSaveName.size());
+    CHECK(v && v->opcode == 2905 && v->slot == 0 && v->payload.size() == 10 + 2 * gsw::kFinalSaveName.size());
     if (v) {
         const Bytes expect = {100, 0, 0, 0, 5, 0, 0, 0, 'C', 0, 'o', 0, '-', 0, 'o', 0, 'p', 0, 0, 0};
         CHECK(Bytes(v->payload.begin(), v->payload.end()) == expect);

@@ -260,10 +260,10 @@ void test_ride_probe_tables() {
     // Mounted: the parent changes -> within 3 s everything is recorded.
     n = w.note(r, 2000);
     CHECK(n.in_window && n.after_change);
-    n = w.note(d, 2500);
+    n = w.note(d, 2807);
     CHECK(n.in_window && n.after_change);
     rfl::Ack down = plain;  // on the ground again: another change
-    n = w.note(down, 3000);
+    n = w.note(down, 2793);
     CHECK(n.in_window && n.after_change);
     n = w.note(down, 6001);
     CHECK(!n.in_window && !n.after_change);

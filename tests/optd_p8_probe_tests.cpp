@@ -227,7 +227,7 @@ void test_wait_scan() {
     s = gad::scan_wait_list(capped, 0x7FFFFFFF);
     CHECK(s.garbage_count && s.verdict == V::Undetermined);
     // With every slot readable the verdict agrees with the original replay (wait_blocker).
-    std::mt19937 rng(2976);
+    std::mt19937 rng(2772);
     bool agree = true;
     for (int round = 0; round < 500; ++round) {
         const uint32_t n = rng() % 12;

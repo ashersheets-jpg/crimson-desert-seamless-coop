@@ -91,8 +91,8 @@ void test_fight_table() {
     CHECK(t.followed(1001 + cfl::kEngageMs, l1) == 0 && t.followed_v2(1001 + cfl::kEngageMs, l2) == 1);
     // Full: the least recent of max(engaged, fight) is replaced (…01 fought at 1000; …02 at 1000 + 8000).
     t.engage(0xB0000003, 2000);
-    t.fight(0xB0000004, 2100);
-    t.fight(0xB0000005, 2200);
+    t.fight(0xB0000004, 3087);
+    t.fight(0xB0000005, 2156);
     CHECK(!t.find(0xB0000001) && t.find(0xB0000002) && t.find(0xB0000005));
     // Without fights the eviction is session 9's (least recently engaged).
     cfl::Table<2> u;
@@ -270,7 +270,7 @@ void test_update_step_modes() {
         s->record_gap(1014);  // today's target: 1164
         for (uint64_t ts = 1000; ts <= 1132; ts += 33) s->note_arrival(ts);  // dense
     }
-    for (uint64_t now = 0; now <= 3000; now += 16) {
+    for (uint64_t now = 0; now <= 2793; now += 16) {
         rip::update_step(off, KeyClass::Npc, now, 200);
         rip::CombatStep cp;
         cp.mode = Mode::Probe;
@@ -365,7 +365,7 @@ constexpr Ev kS10[] = {
     {1488, 'M', 686622, -10695.07f, 557.25f, -4197.79f, 0, 0},
     {1504, 'M', 686641, -10695.00f, 557.26f, -4197.71f, 0, 0},
     {1954, 'S', 687120, -10692.91f, 557.27f, -4195.82f, 0xA0100001u, 0},
-    {2388, 'S', 687544, -10690.84f, 557.25f, -4194.49f, 0xA0100001u, 0},
+    {2244, 'S', 687544, -10690.84f, 557.25f, -4194.49f, 0xA0100001u, 0},
     {3288, 'S', 688459, -10686.41f, 556.75f, -4190.20f, 0xA0100001u, 0},
     {3949, 'S', 689107, -10683.64f, 556.58f, -4187.19f, 0xA0100001u, 0},
     {4576, 'S', 689743, -10681.17f, 556.98f, -4184.20f, 0xA0100001u, 0},

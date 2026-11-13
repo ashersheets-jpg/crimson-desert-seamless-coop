@@ -64,12 +64,12 @@ static_assert(kTrocHeader + kChunkHeader + kMaxChunk <= 0x8000 - 0x20);
 inline constexpr uint64_t kLoginHoldMs = 30000;  // a 3093 waits at most this for the host's SAVE_ACK
 inline constexpr uint64_t kFinalHoldMs = 15000;  // a goodbye waits at most this for the final save's SAVE_RESULT
 inline constexpr uint32_t kOfferRetries = 1;     // a refused upload is offered once more
-inline constexpr uint16_t kOpSaveAutoReq = 3134;
-inline constexpr uint16_t kOpSaveToFileCurrentPlayerReq = 2122;
-inline constexpr uint16_t kOpSaveToFileCurrentPlayerAck = 2966;
-inline constexpr uint16_t kOpCreateCharacterReq = 2824;
-inline constexpr uint16_t kOpNewGameStartReq = 2668;
-inline constexpr uint16_t kOpLoginCharacterReq = 2733;  // u8 | u64 characterNo @1 | u32 slot @9
+inline constexpr uint16_t kOpSaveAutoReq = 2234;
+inline constexpr uint16_t kOpSaveToFileCurrentPlayerReq = 3158;
+inline constexpr uint16_t kOpSaveToFileCurrentPlayerAck = 2813;
+inline constexpr uint16_t kOpCreateCharacterReq = 2533;
+inline constexpr uint16_t kOpNewGameStartReq = 2688;
+inline constexpr uint16_t kOpLoginCharacterReq = 3081;  // u8 | u64 characterNo @1 | u32 slot @9
 inline constexpr uint16_t kOpLogoutSessionReq = 2001;   // D1 07 FF (internal form, 3 bytes)
 
 // The two files, always in this order in an offer and a result.

@@ -38,13 +38,13 @@ using shp::Who;
 //   E 0x288B7A0  mov rax,rsp ; mov [rax+0x10],rbx                    7 bytes, the entry of 0x288B7A0 (.pdata
 //                                                                    0x288B7A0-0x288BE21); rcx = mgr, rdx = field,
 //                                                                    r8 = the manager's character
-constexpr uintptr_t kE = 0x2AE9650;  // 3576 (2976 0x288B7A0), same head
+constexpr uintptr_t kE = 0x2B4D650;  // 3576 (2976 0x288B7A0), same head
 constexpr uint32_t kEPatch = 7;
 constexpr uint8_t kEBytes[] = {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x10};
 //   G 0x288B87A  cmp [r15+0x180],eax                                 7 bytes (the jne rel32 after it is not
 //                                                                    patched); a jmp target at its first byte
 //                (0x288B876). Context 0x288B867: mov rax,[r13+0xA0] ; test ; je ; mov eax,[rax+0x60] ; jmp ; mov eax,esi
-constexpr uintptr_t kG = 0x2AE972A, kGCtx = 0x2AE9716;  // 3576: as user2_stages' gate (4th argument in rsi)
+constexpr uintptr_t kG = 0x2B4D72A, kGCtx = 0x2B4D716;  // 3576: as user2_stages' gate (4th argument in rsi)
 constexpr uint32_t kGPatch = 7;
 constexpr uint8_t kGBytes[] = {0x41, 0x39, 0x87, 0x80, 0x01, 0x00, 0x00, 0x0F, 0x85, 0x80, 0x05, 0x00, 0x00};
 constexpr uint8_t kGCtxBytes[] = {0x49, 0x8B, 0x85, 0xA0, 0x00, 0x00, 0x00, 0x48, 0x85, 0xC0,
@@ -54,24 +54,24 @@ constexpr uint8_t kGCtxBytes[] = {0x49, 0x8B, 0x85, 0xA0, 0x00, 0x00, 0x00, 0x48
 //                vzeroupper ; call 0x287C200 (E8 11 17 FF FF)
 // 3576: in the element 0x2AE8700, after call 0x2AD8E60: nop ; mov r12,[rbp-0x69]. There rcx = r14 (the manager), rdx =
 // r15 (the result), the element in RBX (2976: r15 / r14 / rdi); the frame is unchanged (playData rbp-0x51, inst rbp+0x77).
-constexpr uintptr_t kP = 0x2AE8883, kPCtx = 0x2AE886A;
+constexpr uintptr_t kP = 0x2B4C865, kPCtx = 0x2B4C84C;
 constexpr uint32_t kPPatch = 5;
-constexpr uint8_t kPBytes[] = {0x90, 0x4C, 0x8B, 0x65, 0x97};
+constexpr uint8_t kPBytes[] = {0x90, 0x4C, 0x8B, 0x65, 0x87};
 constexpr uint8_t kPCtxBytes[] = {0x4C, 0x8B, 0x8B, 0x00, 0x02, 0x00, 0x00, 0x4C, 0x8D, 0x45, 0xAF, 0x49, 0x8B,
-                                  0xD7, 0x49, 0x8B, 0xCE, 0xC5, 0xF8, 0x77, 0xE8, 0xDD, 0x05, 0xFF, 0xFF};
+                                  0xD7, 0x49, 0x8B, 0xCE, 0xC5, 0xF8, 0x77, 0xE8, 0xBB, 0x02, 0xFF, 0xFF};
 //   C 0x29E9282  mov ebx,[rbp-0x58] ; test ebx,ebx                   5 bytes (the je rel32 after it is not patched)
 //                Context 0x29E9276: mov rcx,[rcx+0x98] ; call 0x2B36860 (E8 DE D5 14 00)
 // 3576: TrocTrInteractionPreemptionStepReq (vtable 0x5EEC638) slot 2 0x2C70910: mov ebx,[rbp-0x80] after call 0x2DD0720.
-constexpr uintptr_t kC = 0x2C70C39, kCCtx = 0x2C70C2D;
+constexpr uintptr_t kC = 0x2CD76B9, kCCtx = 0x2CD76AD;
 constexpr uint32_t kCPatch = 5;
 constexpr uint8_t kCBytes[] = {0x8B, 0x5D, 0x80, 0x85, 0xDB};
-constexpr uint8_t kCCtxBytes[] = {0x48, 0x8B, 0x89, 0x98, 0x00, 0x00, 0x00, 0xE8, 0xE7, 0xFA, 0x15, 0x00};
+constexpr uint8_t kCCtxBytes[] = {0x48, 0x8B, 0x89, 0x98, 0x00, 0x00, 0x00, 0xE8, 0x37, 0x00, 0x16, 0x00};
 
 // Offsets (server objects; the same ones observer_stage / observer_milestone read).
 constexpr uint32_t kActor_Key = 0x60, kActor_User = 0xA0, kUser_Key = 0x60, kField_Owner = 0x180, kMgr_Actor = 0x18;
 // User 2's character ([user+0xD0], as observer_milestone reads it) and its manager [[[char+0x68]+0xA8]+0x18] (the
 // chain ServerField::vf48 0x2B00CE0 follows for the field owner). +0x6A0: the manager's state byte 0x288B7A0 tests.
-constexpr uint32_t kUser_Main = 0xD0, kActor_Comps = 0x68, kComps_Seq = 0xA8, kSeqComp_Mgr = 0x18, kMgr_State = 0x6D0;  // 3576 +0x6D0
+constexpr uint32_t kUser_Main = 0xD0, kActor_Comps = 0x68, kComps_Seq = 0xA8, kSeqComp_Mgr = 0x18, kMgr_State = 0x6D8;  // 3663 (3576 +0x6D0)
 // playData as 0x288A970 builds it: 0x48 bytes from [rbp-0x51] (owner +0, id +8, type +0x10, ...) are logged raw.
 constexpr uint32_t kPlayDataLogged = 0x40;
 // 0x288A970's frame (rbp = rsp - 0x2F after its pushes): playData at [rbp-0x51] (owner u32 +0, id u64 +8), the

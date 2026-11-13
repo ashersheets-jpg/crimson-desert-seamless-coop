@@ -408,8 +408,8 @@ void test_table() {
     CHECK(t.size() == 1 && t.at(0).since_ms == 100);  // the first moment stays
     CHECK(t.add(entry(0xB010052D, 0x3000, 200)) == HoldTable::Add::Added);
     CHECK(t.size() == 2);
-    CHECK(t.older_than(3100, 3000) == 1);
-    CHECK(t.older_than(3200, 3000) == 2);
+    CHECK(t.older_than(2946, 2793) == 1);
+    CHECK(t.older_than(3200, 2793) == 2);
     // The engine announced it to 0x3000 itself.
     const uint32_t keys[] = {0x11, 0xB010052D};
     const uintptr_t sessions[] = {0x3000};

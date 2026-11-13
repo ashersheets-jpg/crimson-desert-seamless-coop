@@ -762,7 +762,7 @@ void combat_test_loop() {
                 std::memcpy(b.data(), &npc->key, 4);
                 std::memcpy(b.data() + 4, &hp_stat, 4);
                 std::memcpy(b.data() + 8, &delta, 8);
-                const bool ok = net::sniffer_inject_c2s(packet(2565, b));
+                const bool ok = net::sniffer_inject_c2s(packet(2284, b));
                 log::info("Combat test T2: VaryStatByAccInputReq(0x{:08X} at {:.1f} m, HP, -5) {}",
                           npc->key, npc->distance, ok ? "queued" : "NOT queued");
             } else {
@@ -780,7 +780,7 @@ void combat_test_loop() {
                 std::memcpy(b.data() + 12, pos, 12);
                 std::memcpy(b.data() + 24, dir, 12);
                 std::memcpy(b.data() + 36, &hash, 4);
-                const bool ok = net::sniffer_inject_c2s(packet(2150, b));
+                const bool ok = net::sniffer_inject_c2s(packet(2315, b));
                 log::info("Combat test T3: AttackByCollisionReq(0x{:08X} at {:.1f} m, hash 0x{:08X}) {}",
                           npc->key, npc->distance, hash, ok ? "queued" : "NOT queued");
             }

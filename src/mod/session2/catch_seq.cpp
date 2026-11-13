@@ -35,7 +35,7 @@ namespace g2976 = game::build_2976;
 using csq::Mode;
 
 // Hooks only at verified function entries inside [0x1000, 0x51EB000) (.rsrc, never .xtls).
-constexpr uintptr_t kCodeBegin = 0x1000, kCodeEnd = 0x5597000;  // Co-op+ port: end of .xtext on 1.0.0.3549 (2976: .rsrc ends at 0x51EB000)
+constexpr uintptr_t kCodeBegin = 0x1000, kCodeEnd = 0x5613000;  // Co-op+ port: end of .xtext on 1.0.0.3549 (2976: .rsrc ends at 0x51EB000)
 constexpr uint32_t kTickMs = 500;
 constexpr uint32_t kWorldTicks = 6;     // the local player read 6 ticks in a row (3 s) before the hook goes in
 constexpr uint64_t kMinuteMs = 60000;

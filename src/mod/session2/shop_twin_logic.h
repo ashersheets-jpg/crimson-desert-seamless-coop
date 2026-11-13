@@ -28,9 +28,9 @@
 
 namespace cdmp::session2::stl {
 
-inline constexpr uint16_t kOpPrepare = 2380, kOpBranchState = 2920, kOpBranchEvent = 2436, kOpDelete = 2292,
-                          kOpChartEventAck = 2187;
-inline constexpr uint16_t kOpBranchReq = 2880, kOpChartEventReq = 2839, kOpAvoidByCutScene = 2708;
+inline constexpr uint16_t kOpPrepare = 2356, kOpBranchState = 2752, kOpBranchEvent = 2369, kOpDelete = 2659,
+                          kOpChartEventAck = 2105;
+inline constexpr uint16_t kOpBranchReq = 2644, kOpChartEventReq = 2200, kOpAvoidByCutScene = 2698;
 inline constexpr uint64_t kTwinIdBase = 0x10000000;  // a twin's id = the host scene's id + this (below 0x1FFFFFFF)
 inline constexpr size_t kHeader = 5;
 inline constexpr size_t kPrepareFixed = 92, kBinding = 11, kHashAt = 27;
@@ -193,7 +193,7 @@ inline std::vector<std::vector<uint8_t>> local_answers(uint16_t op, std::span<co
 // them in the per-player table of the player whose client controls the NPC (the host) only, so the guest's 3086 for
 // that NPC lacks them and its shop menu stays empty (the dialog closes itself, tcB161). The host's entries are sent
 // to the guest (tunnel control state 17) and added to the guest's own 3086 for that NPC.
-inline constexpr uint16_t kOpQuestDialogAck = 3086;
+inline constexpr uint16_t kOpQuestDialogAck = 2180;
 inline constexpr uint32_t kShopDialogGroup = 0x000F4440;
 inline constexpr uint8_t kDialogState = 17, kDialogVersion = 1;
 inline constexpr size_t kMaxDialogNpcs = 256, kMaxDialogsPerNpc = 8;

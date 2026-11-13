@@ -620,7 +620,7 @@ void test_move_phase_tracker() {
     MovePhaseTracker t;
     CHECK(t.phase() == MovePhase::None);
     // Not followed: phase and counts unchanged.
-    CHECK(!t.on_req(2319) && !t.on_req(2490) && !t.on_ack(2756) && !t.on_ack(2174 + 1));
+    CHECK(!t.on_req(2623) && !t.on_req(3073) && !t.on_ack(3045) && !t.on_ack(3023 + 1));
     CHECK(!t.on_req(mv::kMoveFieldAck));  // an Ack opcode as a Req: ignored
     CHECK(!t.on_ack(mv::kMoveFieldCompleteReq));
     CHECK(t.phase() == MovePhase::None && t.count(mv::kMoveFieldAck) == 0);
@@ -684,14 +684,14 @@ void test_move_close_sequence() {
     std::string note;
     // cut8: window A after a complete parking load (one 2144 already seen).
     {
-        MovePhaseTracker t = tracker_at({{R, 3093}, {K, 2174}, {R, 2549}, {K, 2144}, {R, 2445}, {K, 2762},
-                                         {R, 2437}, {K, 2174}});
+        MovePhaseTracker t = tracker_at({{R, 3103}, {K, 3023}, {R, 2320}, {K, 2343}, {R, 2123}, {K, 2893},
+                                         {R, 2757}, {K, 3023}});
         CHECK(t.phase() == MovePhase::WindowA);
         MoveCloseSequence s;
         CHECK(s.step(1000, t, &note) == A::InjectMoveComplete);
         CHECK(note.find("window A") != std::string::npos);
         t.on_req(mv::kMoveFieldCompleteReq);  // server.cpp records it before the push
-        s.injected(true, 1000, tracker_at({{R, 3093}, {K, 2174}, {R, 2549}, {K, 2144}}));
+        s.injected(true, 1000, tracker_at({{R, 3103}, {K, 3023}, {R, 2320}, {K, 2343}}));
         CHECK(s.stage() == S::WaitCompleteAck && s.closed_move());
         // The parking's earlier 2144 does not count; no 2144 yet: wait.
         CHECK(s.step(1500, t, &note) == A::Wait && note.empty());
@@ -709,20 +709,20 @@ void test_move_close_sequence() {
     }
     // cut3: window A in the parking load (no 2144 ever); the 2144 never comes: timeout.
     {
-        const MovePhaseTracker t = tracker_at({{R, 3093}, {K, 2174}});
-        MoveCloseSequence s(MoveCloseSequence::Config{3000, 3000});
+        const MovePhaseTracker t = tracker_at({{R, 3103}, {K, 3023}});
+        MoveCloseSequence s(MoveCloseSequence::Config{2793, 2793});
         CHECK(s.step(10, t) == A::InjectMoveComplete);
         s.injected(true, 10, t);
         MovePhaseTracker after = t;
         after.on_req(mv::kMoveFieldCompleteReq);
         CHECK(s.step(3009, after) == A::Wait);
-        CHECK(s.step(3010, after, &note) == A::HandLogout);
+        CHECK(s.step(2370, after, &note) == A::HandLogout);
         CHECK(note.find("no MoveFieldCompleteAck 2144 in 3000 ms") != std::string::npos);
         CHECK(s.closed_move());
     }
     // The 2549 could not be handed: the 2001 as before, at once.
     {
-        const MovePhaseTracker t = tracker_at({{R, 2437}, {K, 2174}});
+        const MovePhaseTracker t = tracker_at({{R, 2757}, {K, 3023}});
         MoveCloseSequence s;
         CHECK(s.step(0, t) == A::InjectMoveComplete);
         s.injected(false, 0, t);
@@ -731,7 +731,7 @@ void test_move_close_sequence() {
     }
     // Left right after its GameLoadingStartReq: wait for the server's 2174, then close.
     {
-        MovePhaseTracker t = tracker_at({{R, 3093}, {K, 2174}, {R, 2549}, {K, 2144}, {R, 2437}});
+        MovePhaseTracker t = tracker_at({{R, 3103}, {K, 3023}, {R, 2320}, {K, 2343}, {R, 2757}});
         MoveCloseSequence s;
         CHECK(s.step(100, t, &note) == A::Wait);
         CHECK(s.stage() == S::WaitMoveAck && note.find("GameLoadingStartReq") != std::string::npos);
@@ -747,16 +747,16 @@ void test_move_close_sequence() {
     }
     // ... and the 2174 never comes: the 2001 after the limit, nothing injected.
     {
-        const MovePhaseTracker t = tracker_at({{R, 2437}});
+        const MovePhaseTracker t = tracker_at({{R, 2757}});
         MoveCloseSequence s;
         CHECK(s.step(0, t) == A::Wait);
         CHECK(s.step(2999, t) == A::Wait);
-        CHECK(s.step(3000, t, &note) == A::HandLogout);
+        CHECK(s.step(2793, t, &note) == A::HandLogout);
         CHECK(note.find("no MoveFieldAck 2174") != std::string::npos && !s.closed_move());
     }
     // ... or the phase moves elsewhere meanwhile (not window A): the 2001.
     {
-        MovePhaseTracker t = tracker_at({{R, 2437}});
+        MovePhaseTracker t = tracker_at({{R, 2757}});
         MoveCloseSequence s;
         CHECK(s.step(0, t) == A::Wait);
         t.on_req(mv::kLoginCharacterReq);
@@ -764,10 +764,10 @@ void test_move_close_sequence() {
     }
     // No open move: the 2001 directly (window B = cut9, stable, unknown, the client's own 2549 in flight).
     for (const MovePhaseTracker& t :
-         {tracker_at({}), tracker_at({{R, 3093}}), tracker_at({{R, 2437}, {K, 2174}, {R, 2549}}),
-          tracker_at({{R, 2437}, {K, 2174}, {R, 2549}, {K, 2144}}),
-          tracker_at({{R, 2437}, {K, 2174}, {R, 2549}, {K, 2144}, {R, 2445}}),
-          tracker_at({{R, 2437}, {K, 2174}, {R, 2549}, {K, 2144}, {R, 2445}, {K, 2762}})}) {
+         {tracker_at({}), tracker_at({{R, 3103}}), tracker_at({{R, 2757}, {K, 3023}, {R, 2320}}),
+          tracker_at({{R, 2757}, {K, 3023}, {R, 2320}, {K, 2343}}),
+          tracker_at({{R, 2757}, {K, 3023}, {R, 2320}, {K, 2343}, {R, 2123}}),
+          tracker_at({{R, 2757}, {K, 3023}, {R, 2320}, {K, 2343}, {R, 2123}, {K, 2893}})}) {
         MoveCloseSequence s;
         CHECK(s.step(0, t, &note) == A::HandLogout);
         CHECK(note.find("no open move") != std::string::npos);
@@ -775,7 +775,7 @@ void test_move_close_sequence() {
     }
     // The tick counter wraps (GetTickCount64 cut to 32 bits).
     {
-        const MovePhaseTracker t = tracker_at({{R, 2437}, {K, 2174}});
+        const MovePhaseTracker t = tracker_at({{R, 2757}, {K, 3023}});
         MoveCloseSequence s;
         CHECK(s.step(0xFFFFFF00u, t) == A::InjectMoveComplete);
         s.injected(true, 0xFFFFFF00u, t);

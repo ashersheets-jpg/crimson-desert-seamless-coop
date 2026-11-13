@@ -129,7 +129,7 @@ inline uint8_t climb_result(ClimbOut o, uint8_t orig) { return o == ClimbOut::Fo
 // The game's code: [0x1000, 0x51EB000) (the section named .rsrc). Nothing of
 // the mod's ever writes there except verified hooks; the data byte must be
 // outside it, outside .xtls (Denuvo) and in a writable, non-executable section.
-inline constexpr uint32_t kCodeBegin = 0x1000, kCodeEnd = 0x5597000;  // Co-op+ port: end of .xtext on 1.0.0.3549 (2976: .rsrc ends at 0x51EB000)
+inline constexpr uint32_t kCodeBegin = 0x1000, kCodeEnd = 0x5613000;  // Co-op+ port: end of .xtext on 1.0.0.3549 (2976: .rsrc ends at 0x51EB000)
 inline constexpr uint32_t kScnExecute = 0x20000000, kScnRead = 0x40000000, kScnWrite = 0x80000000;
 
 struct SectionInfo {

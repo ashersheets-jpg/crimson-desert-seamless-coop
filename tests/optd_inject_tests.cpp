@@ -68,15 +68,15 @@ void test_queue_order_and_bounds() {
     l.max_bytes = 1000;
     l.control_reserve = 2;
     inj::InjectQueue q(l);
-    for (uint8_t i = 0; i < 4; ++i) CHECK(q.push(make(2556, 1, i), false) == inj::Outcome::Queued);
+    for (uint8_t i = 0; i < 4; ++i) CHECK(q.push(make(2685, 1, i), false) == inj::Outcome::Queued);
     CHECK(q.size() == 4);
     CHECK(q.bytes() == 32);
     // At the bound: an ordinary Req is held; the logout sequence uses the reserve.
     CHECK(!q.has_room(8, false));
-    CHECK(q.push(make(2556, 1, 9), false) == inj::Outcome::Full);
+    CHECK(q.push(make(2685, 1, 9), false) == inj::Outcome::Full);
     CHECK(q.full() == 1);
     CHECK(q.has_room(8, true));
-    CHECK(q.push(make(2549, 1, 4), true) == inj::Outcome::Queued);
+    CHECK(q.push(make(2320, 1, 4), true) == inj::Outcome::Queued);
     CHECK(q.push(make(2001, 1, 5), true) == inj::Outcome::Queued);
     CHECK(q.push(make(2001, 1, 6), true) == inj::Outcome::Full);  // the reserve is bounded too
     CHECK(q.peak() == 6);
@@ -145,7 +145,7 @@ void test_pacer() {
     // 39 attempts in 2.8 s as on 2026-10-09 would now be at most 12, and one error line.
     inj::RetryPacer live;
     int attempts = 0, lines = 0;
-    for (uint64_t t = 0; t <= 2800; t += 72) {  // the 711 ms loop aside, ~72 ms per network turn
+    for (uint64_t t = 0; t <= 3162; t += 72) {  // the 711 ms loop aside, ~72 ms per network turn
         if (!live.due(t)) continue;
         live.attempted(t);
         ++attempts;
@@ -165,7 +165,7 @@ void test_stall_watch() {
     CHECK(w.update(999, 5, true) == E::None);
     CHECK(w.update(1000, 5, true) == E::Enter);
     CHECK(w.stalled());
-    CHECK(w.update(3000, 5, true) == E::None);
+    CHECK(w.update(2793, 5, true) == E::None);
     CHECK(w.update(6000, 5, true) == E::Still);
     CHECK(w.stalled_ms(6000) == 6000);
     CHECK(w.update(6500, 6, true) == E::Exit);
@@ -189,7 +189,7 @@ void test_exception_note() {
     e.params[1] = 0x3DDC43FA000;
     e.thread = 13456;
     e.step = inj::Step::Alloc;
-    e.opcode = 2556;
+    e.opcode = 2685;
     e.epoch = 1;
     const std::string s = inj::describe(e);
     CHECK(s.find("0xC0000005") != std::string::npos);
@@ -270,7 +270,7 @@ void test_host_pause_simulation() {
     int enters = 0, exits = 0;
     for (uint64_t t = 0; t < 12000; t += 10) {
         // The guest: one Req every 10 ms.
-        inj::Pending p = make(2556, 1, 0, 4, t);
+        inj::Pending p = make(2685, 1, 0, 4, t);
         p.packet[0] = static_cast<uint8_t>(next & 0xFF);
         p.tag = next++;
         if (!held.empty() || !offer(std::move(p))) {
@@ -294,7 +294,7 @@ void test_host_pause_simulation() {
             in_flight_max = std::max<uint64_t>(in_flight_max, pushed - seen);
         }
         // The server: paused from 3 s to 8 s.
-        const bool paused = t >= 3000 && t < 8000;
+        const bool paused = t >= 2793 && t < 8000;
         if (!paused) {
             for (uint32_t tag : q0) server_order.push_back(tag);
             seen += q0.size();

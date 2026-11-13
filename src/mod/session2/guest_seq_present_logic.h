@@ -69,7 +69,7 @@ inline constexpr uint32_t kWorldSlot = 0x6D691E0, kCw_Loading = 0x10, kCw_Camera
                           kCam_Current = 0x40, kCamEntryAdjust = 0x28, kP_StartLoading = 0x1E0, kW0_De8 = 0xDE8;
 // A manager's input-block level: 0xA98AD0 (InputBlock 0x5E4E60 -> G) keeps the max level of its stages' blocks at
 // G+0x230 (0xA98D3E mov [r13+0x230],dil) and hands it to .xtls. The stage manager's vtable 0x55C9720.
-inline constexpr uint32_t kMgr_InputBlock = 0x230, kMgr_Actor = 0x18, kActor_Key = 0x60, kVtStageManager = 0x55C9720;
+inline constexpr uint32_t kMgr_InputBlock = 0x238 /* 3663: +8 */, kMgr_Actor = 0x18, kActor_Key = 0x60, kVtStageManager = 0x55C9720;
 
 // ---------------------------------------------------------------- whose stage
 

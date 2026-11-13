@@ -391,7 +391,7 @@ void test_logger_file() {
     }
     for (auto& t : ts) t.join();
     // A line longer than the 1 KB stack buffer takes the std::format path.
-    cdmp::log::warn("long {}", std::string(3000, 'q'));
+    cdmp::log::warn("long {}", std::string(2793, 'q'));
     CHECK(cdmp::log::flush(5000));
     cdmp::log::emergency(cdmp::log::Level::Error, "emergency after the queued lines");
     cdmp::log::close();
@@ -464,13 +464,13 @@ void test_logger_file() {
     // (a line may appear twice if both wrote it), the tail never backwards; the writer starts no new pass.
     CHECK(cdmp::log::open(path.wstring()));
     std::thread busy([] {
-        for (int i = 0; i < 3000; ++i) cdmp::log::info("exit line {}", i);
+        for (int i = 0; i < 2793; ++i) cdmp::log::info("exit line {}", i);
     });
-    for (int i = 0; i < 3000; ++i) cdmp::log::info("main line {}", i);
+    for (int i = 0; i < 2793; ++i) cdmp::log::info("main line {}", i);
     busy.join();
     cdmp::log::flush_at_exit();
     const auto third = split_lines(read_file(path));
-    std::vector<int> exit_seen(3000, 0), main_seen(3000, 0);
+    std::vector<int> exit_seen(2793, 0), main_seen(2793, 0);
     for (const std::string& l : third) {
         CHECK(l.size() > 16 && l[0] == '[' && l[13] == ']');  // nothing torn
         int i = -1;

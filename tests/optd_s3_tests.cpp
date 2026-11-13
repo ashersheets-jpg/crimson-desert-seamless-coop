@@ -580,7 +580,7 @@ uint64_t fake_now() { return g_now; }
 struct FakeReq {
     Blob wrapper{0x40}, raw{0x40};
     explicit FakeReq(uint32_t key, uint16_t len = 0x2D5) {
-        put(raw.p(), 0, uint16_t{2223});
+        put(raw.p(), 0, uint16_t{3142});
         put(raw.p(), hold::kReqRawLen, len);
         put(raw.p(), hold::kReqRawPayload, key);
         put(wrapper.p(), hold::kReqWrapperSize, static_cast<uint16_t>(len + 5));
@@ -903,11 +903,11 @@ void test_hold_acks_with_observer_hold() {
         CHECK(observer_hold_acks_keys() == 1);
         // 2. The server relays the Crow's AI changes and its spawn action to user 2 meanwhile (session 6B order):
         //    kept; another key's packet passes.
-        take(npc_packet(2404, kCrow, 1));
-        take(npc_packet(2404, kCrow, 2));
-        take(npc_packet(2404, kOther, 9));
-        take(npc_packet(2404, kCrow, 3));
-        take(npc_packet(2723, kCrow, 4));
+        take(npc_packet(2674, kCrow, 1));
+        take(npc_packet(2674, kCrow, 2));
+        take(npc_packet(2674, kOther, 9));
+        take(npc_packet(2674, kCrow, 3));
+        take(npc_packet(2387, kCrow, 4));
         CHECK(g_out.size() == 2 && op_of(g_out[1]) == 2404 && key_of(g_out[1]) == kOther);
         // 3. Its first action: observer_hold re-announces it to user 2: the 2005, then its packets in order.
         w.crow.set_restore(1);
@@ -917,14 +917,14 @@ void test_hold_acks_with_observer_hold() {
         CHECK(g_out.size() == 7);
         if (g_out.size() == 7) {
             CHECK(op_of(g_out[2]) == 2005 && key_of(g_out[2]) == kCrow);
-            const uint16_t ops[] = {2404, 2404, 2404, 2723};
+            const uint16_t ops[] = {2674, 2674, 2674, 2387};
             for (size_t i = 0; i < 4; ++i) {
                 CHECK(op_of(g_out[3 + i]) == ops[i] && key_of(g_out[3 + i]) == kCrow && g_out[3 + i][9] == i + 1);
             }
         }
         CHECK(observer_hold_acks_keys() == 0);
         // 4. After its 2005 its packets pass again.
-        take(npc_packet(2404, kCrow, 5));
+        take(npc_packet(2674, kCrow, 5));
         CHECK(g_out.size() == 8 && op_of(g_out[7]) == 2404);
     }
     oha::Counters c = observer_hold_acks_counters();
@@ -936,14 +936,14 @@ void test_hold_acks_with_observer_hold() {
         w.seams.notify = fake_notify_2005;
         g_out.clear();
         w.appear({kCrow});
-        take(npc_packet(2404, kCrow, 1));
+        take(npc_packet(2674, kCrow, 1));
         CHECK(g_out.empty() && observer_hold_acks_keys() == 1);
         w.sector.set({w.host.a()});
         g_now = 1050;
         FakeReq crow(kCrow);
         hold_test::start_action(crow.wrapper.a());
         CHECK(g_out.empty() && observer_hold_acks_keys() == 0);
-        take(npc_packet(2404, kCrow, 2));
+        take(npc_packet(2674, kCrow, 2));
         CHECK(g_out.size() == 1);
     }
     c = observer_hold_acks_counters();
@@ -960,7 +960,7 @@ void test_hold_acks_with_observer_hold() {
         g_out.clear();
         w.appear({0xB0100600});
         CHECK(native_has(0, {kS2}, {0xB0100600}) && hold_test::npc_size() == 1 && observer_hold_acks_keys() == 0);
-        take(npc_packet(2404, 0xB0100600, 1));
+        take(npc_packet(2674, 0xB0100600, 1));
         CHECK(g_out.size() == 2);  // its 2005 to its controller, then the packet: nothing held
     }
     {
@@ -968,7 +968,7 @@ void test_hold_acks_with_observer_hold() {
         World w;
         w.seams.notify = fake_notify_2005;
         w.appear({kCrow});
-        take(npc_packet(2723, kCrow, 1));
+        take(npc_packet(2387, kCrow, 1));
         CHECK(observer_hold_acks_keys() == 1);
         t_leaving = true;
         observer_hold_acks_tick();
@@ -986,7 +986,7 @@ void test_hold_acks_with_observer_hold() {
         w.seams.notify = fake_notify_2005;
         g_out.clear();
         w.appear({kCrow});
-        take(npc_packet(2723, kCrow, 1));
+        take(npc_packet(2387, kCrow, 1));
         CHECK(observer_hold_acks_keys() == 0 && g_out.size() == 1);
     }
     t_live_s2 = 0;
@@ -1132,7 +1132,7 @@ void test_hold_load_defer() {
             g_out.clear();
             w.appear({kCrow});
             CHECK(g_out.empty() && observer_hold_acks_keys() == 0 && hold_test::npc_size() == 1);
-            take(npc_packet(2697, kCrow, 1));
+            take(npc_packet(2505, kCrow, 1));
             CHECK(g_out.size() == 1 && op_of(g_out[0]) == 2697);
             hold_test::set_load_defer(2, false);
             g_now = 1200;
@@ -1561,9 +1561,9 @@ void test_hold_pieces_acks() {
         g_out.clear();
         w.appear({kCrow, kPiece});
         CHECK(g_out.empty() && observer_hold_acks_keys() == 2);
-        take(npc_packet(2697, kPiece, 1));
-        take(npc_packet(2356, kPiece, 2));
-        take(npc_packet(2404, kCrow, 3));
+        take(npc_packet(2505, kPiece, 1));
+        take(npc_packet(3101, kPiece, 2));
+        take(npc_packet(2674, kCrow, 3));
         CHECK(g_out.empty());
         w.release_crow(1160);
         CHECK(g_out.size() == 4);
@@ -1585,7 +1585,7 @@ void test_hold_pieces_acks() {
         w.seams.notify = fake_notify_2005;
         g_out.clear();
         w.appear({kCrow, kPiece});
-        take(npc_packet(2697, kPiece, 1));
+        take(npc_packet(2505, kPiece, 1));
         w.sector.set({w.host.a()});
         w.release_crow(1050);
         CHECK(g_out.empty() && observer_hold_acks_keys() == 0);
@@ -1702,8 +1702,8 @@ void test_npc_local_retirement() {
     w.appear({grandchild, child, root});
     CHECK(hold_test::npc_size() == 1 && hold_test::family_size() == 2);
     g_out.clear();
-    take(npc_packet(2697, child, 1));
-    take(npc_packet(2404, root, 2));
+    take(npc_packet(2505, child, 1));
+    take(npc_packet(2674, root, 2));
     CHECK(g_out.empty() && observer_hold_acks_keys() == 3);
     const uint32_t roots[] = {root};
     CHECK(!child_hold_retire_family(server_epoch() + 1, 10, roots));
@@ -1720,8 +1720,8 @@ void test_npc_local_retirement() {
     CHECK(!hold_test::family_known(root) && !hold_test::family_known(child));
     CHECK(hold_test::family_known(healthy));
     g_out.clear();
-    take(npc_packet(2697, child, 3)); // tampoco pasa tras desaparecer la retención
-    take(npc_packet(2404, healthy, 4));
+    take(npc_packet(2505, child, 3)); // tampoco pasa tras desaparecer la retención
+    take(npc_packet(2674, healthy, 4));
     CHECK(g_out.size() == 1 && key_of(g_out[0]) == healthy);
     auto mixed = wire(2005, family_2005({root, healthy, child}));
     CHECK(observer_hold_acks_filter_retired(mixed));
@@ -1729,7 +1729,7 @@ void test_npc_local_retirement() {
     oha::announce_keys(std::span<const uint8_t>(mixed).subspan(5), keys);
     CHECK(keys == std::vector<uint32_t>({healthy}));
     CHECK(static_cast<size_t>(mixed[3] | (mixed[4] << 8)) == mixed.size() - 5);
-    auto removed = wire(2516, remove_2516(root));
+    auto removed = wire(3067, remove_2516(root));
     const auto original_removed = removed;
     CHECK(observer_hold_acks_filter_retired(removed) && removed == original_removed);
     constexpr uint32_t late = 0xB0100314;
@@ -2044,7 +2044,7 @@ void test_family_reverse() {
     w.appear({kLeader, kMember});
     CHECK(g_native.size() == 1 && native_has(0, {kS1, kS2}, {kLeader, kMember}));
     CHECK(hold_test::family_known(kLeader) && hold_test::family_known(kMember));
-    child_hold_on_user2_out(2516, remove_2516(kLeader));
+    child_hold_on_user2_out(3067, remove_2516(kLeader));
     CHECK(!hold_test::family_known(kLeader) && hold_test::family_known(kMember));
     g_native.clear();
     w.appear({kMember});
@@ -2162,7 +2162,7 @@ void test_family_field_change_and_gate() {
     w.appear({kLeader, kMember});
     CHECK(hold_test::family_known(kLeader) && hold_test::family_known(kMember));
     const std::vector<uint8_t> move(17, 0);
-    child_hold_on_user2_out(2174, move);
+    child_hold_on_user2_out(3023, move);
     CHECK(!hold_test::family_known(kLeader) && !hold_test::family_known(kMember));
     // The member alone after the field change: user 2 has no leader any more -> it waits for it.
     g_native.clear();
@@ -2718,7 +2718,7 @@ void test_full_sets() {
     static s3::GuardTable<2048> guards;
     bool first = false;
     size_t taken = 0;
-    for (uint32_t k = 1; k <= 3000; ++k) taken += guards.touch(0xB0000000u + k, kHostKey, k, first) && first;
+    for (uint32_t k = 1; k <= 2793; ++k) taken += guards.touch(0xB0000000u + k, kHostKey, k, first) && first;
     CHECK(guards.closed() && taken == guards.size() && taken <= s3::GuardTable<2048>::kMaxKeys);
 }
 

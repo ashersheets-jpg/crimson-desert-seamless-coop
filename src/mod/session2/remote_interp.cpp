@@ -51,26 +51,26 @@ struct HookSite {
 // functions at the same offsets: setPos 0x1386C00 +0x3E, updPos +0x27 of its chunk 0x13870A3, setRot 0x1387310 +0x50,
 // updRot; same destination registers, now = rax+rbx / rcx as on 2976).
 constexpr HookSite kHooks[rip::kSites] = {
-    {0x13873EE, {0x4C, 0x63, 0x15, 0xE3, 0x2E, 0xD8, 0x05}, Site::SetPos, rip::kPosBuffer,
+    {0x13C5A8E, {0x4C, 0x63, 0x15, 0xB3, 0x8F, 0xDC, 0x05}, Site::SetPos, rip::kPosBuffer,
      "the delay read of setInterpolatePositionData 0x11B1FD0"},
-    {0x1387B10, {0x4C, 0x63, 0x1D, 0xC1, 0x27, 0xD8, 0x05}, Site::SetRot, rip::kRotBuffer,
+    {0x13C61B0, {0x4C, 0x63, 0x1D, 0x91, 0x88, 0xDC, 0x05}, Site::SetRot, rip::kRotBuffer,
      "the delay read of setInterpolateRotateData 0x11B26E0"},
-    {0x138787A, {0x48, 0x63, 0x05, 0x57, 0x2A, 0xD8, 0x05}, Site::UpdPos, rip::kPosBuffer,
+    {0x13C5F1A, {0x48, 0x63, 0x05, 0x27, 0x8B, 0xDC, 0x05}, Site::UpdPos, rip::kPosBuffer,
      "the delay read of updateInterpolatePositionData 0x11B2420"},
-    {0x1387F42, {0x48, 0x63, 0x05, 0x8F, 0x23, 0xD8, 0x05}, Site::UpdRot, rip::kRotBuffer,
+    {0x13C65E2, {0x48, 0x63, 0x05, 0x5F, 0x84, 0xDC, 0x05}, Site::UpdRot, rip::kRotBuffer,
      "the delay read of updateInterpolateRotateData 0x11B2AF0"},
 };
 constexpr uint32_t kHookLen = 7;
-constexpr uintptr_t kDelayGlobal = 0x710A2D8;  // GlobalVariableInt value, default 200 (Co-op+ port 3549; 2976 0x6CB9548)
+constexpr uintptr_t kDelayGlobal = 0x718EA48;  // GlobalVariableInt value, default 200 (Co-op+ port 3549; 2976 0x6CB9548)
 
 // The emptying threshold: cmp r8,0x3E8 right before `jbe` (0x11B207A / 0x11B277C).
-constexpr uintptr_t kThreshold[2] = {0x1387453, 0x1387B55};  // 3549 (2976 0x11B2073, 0x11B2775)
+constexpr uintptr_t kThreshold[2] = {0x13C5AF3, 0x13C61F5};  // 3549 (2976 0x11B2073, 0x11B2775)
 constexpr uint8_t kThresholdOrig[7] = {0x49, 0x81, 0xF8, 0xE8, 0x03, 0x00, 0x00};
 constexpr uint8_t kThresholdNew[7] = {0x49, 0x81, 0xF8, 0xC4, 0x09, 0x00, 0x00};  // 2500
 static_assert(rip::kPatchedThreshold == 0x9C4);
 
 // The rule of the task: hooks and patches only inside [0x1000, 0x51EB000) (never .xtls).
-constexpr uintptr_t kCodeBegin = 0x1000, kCodeEnd = 0x5597000;  // Co-op+ port: end of .xtext on 1.0.0.3549 (2976: .rsrc ends at 0x51EB000)
+constexpr uintptr_t kCodeBegin = 0x1000, kCodeEnd = 0x5613000;  // Co-op+ port: end of .xtext on 1.0.0.3549 (2976: .rsrc ends at 0x51EB000)
 
 constexpr uint64_t kSummaryMs = 60000;
 
@@ -298,7 +298,7 @@ void remote_character_line() noexcept {
                                   game::safe_read(cc + 0xE8, &vis, sizeof vis) && vis &&
                                   game::safe_read(vis + 0x100, &alpha, sizeof alpha);
             return std::format("Status 0x{:X} (vtable {}) +0x3B8 0x{:X} +0x3C0 0x{:X} | alpha {}", status,
-                               vt == this_base + 0x591C7C0 ? "ClientStatusActorComponent" : std::format("exe+0x{:X}", vt - this_base),
+                               vt == this_base + 0x5998B60 ? "ClientStatusActorComponent" : std::format("exe+0x{:X}", vt - this_base),
                                f[0], f[1], alpha_ok ? std::format("{:.2f}", alpha) : std::string("unreadable"));
         };
         log::info("RemoteInterp [actor flags] remote character: {} | a visible NPC: {}", status_flags(actor),
@@ -517,7 +517,7 @@ bool write_code(uintptr_t rva, const uint8_t* bytes, size_t len) {
 // [rax+0x10],rbx: 7 bytes, whole instructions, the function start): for the other player's character (key class 0xA,
 // local mark actor+0x96 == 0) a SET of bit 20 is stripped, and any CLEAR also clears bit 20, so the game's own next
 // flag change brings the alpha back natively (slot 79 runs because the combined value changes).
-constexpr uintptr_t kFlagSetter = 0x18CD090;
+constexpr uintptr_t kFlagSetter = 0x1932980;
 constexpr uint8_t kFlagSetterBytes[] = {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x10, 0x48, 0x89, 0x68, 0x18, 0x48, 0x89, 0x70, 0x20};
 constexpr uint64_t kHideBit = 0x100000;
 constexpr uint32_t kStatusActor = 0x08, kActorLocalMark = 0x96;
@@ -566,7 +566,7 @@ void on_flag_setter(safetyhook::Context& c) noexcept {
 bool install_hooks() {
     if (bytes_at(kFlagSetter, kFlagSetterBytes) &&
         p8_install_mid(g_base, g_secs, kFlagSetter, 7, kFlagSetterBytes, on_flag_setter, g_flag_hook, "RemoteInterp",
-                       "the Status flag setter 0x18CD090 (the other player stays visible)")) {
+                       "the Status flag setter 0x1932980 (the other player stays visible)")) {
         log::info("RemoteInterp: the other player's character stays visible: Status flag bit 0x100000 is never set on "
                   "it, and cleared with the game's next flag clear (hook exe+0x{:X})", kFlagSetter);
     } else {
@@ -1005,7 +1005,7 @@ static void conversation_check() noexcept {
 void remote_interp_on_host_packet(uint16_t opcode, std::span<const uint8_t> payload) noexcept {
     if (g_on.load(std::memory_order_relaxed) && g_guest) conversation_check();
     if (!g_combat.load(std::memory_order_relaxed)) return;
-    if (opcode == 2524) {  // MainPlayerDataStartAck: this client's character, u32 at +0 (guest.cpp, mount_sync)
+    if (opcode == 2844) {  // MainPlayerDataStartAck: this client's character, u32 at +0 (guest.cpp, mount_sync)
         if (payload.size() >= 4) {
             const uint32_t key = cfl::rd32(payload, 0);
             if (cfl::is_a(key)) g_own_char.store(key, std::memory_order_relaxed);

@@ -34,19 +34,19 @@
 
 namespace cdmp::session2::road {
 
-inline constexpr uint32_t kVtDescBase = 0x5ECDC48;   // pa::ICreateServerActorDesc (0x278EA70, 0x278EAE1)
-inline constexpr uint32_t kVtWrapRider = 0x5ECDDC0;  // CreateChildServerActorDesc_Rider (.xtls 0x100E63B0)
+inline constexpr uint32_t kVtDescBase = 0x5F47838;   // pa::ICreateServerActorDesc (0x278EA70, 0x278EAE1)
+inline constexpr uint32_t kVtWrapRider = 0x5F47950;  // CreateChildServerActorDesc_Rider (.xtls 0x100E63B0)
 // Prueba en dos copias, fase C probe (15-10 noche, cdmp.host-Cprobe.log): los acompañantes de las bandadas (0x1F5) y de
 // los caminantes (0x3FD) cuelgan de su raíz con el envoltorio _Simple (20 de 21 preexámenes fallidos «envoltorio no
 // _Rider», todos envoltorio=exe+0x5B04E80 interior=exe+0x5B04BE8, op 2550, solicitante el invitado). Mismo contrato
 // que 0x281DBD0 (fase B §2.1): {vtable, inner}, [inner+0x2F0] = padre, push_back(padre+0x2F8). _Rider queda para los
 // conductores de vehículo (raíz clase 5).
-inline constexpr uint32_t kVtWrapSimple = 0x5ECDD60;
+inline constexpr uint32_t kVtWrapSimple = 0x5F47930;
 // Gimmicks hijos de una caravana («Game Mechanic», tipo 7): con el anfitrión (host-kept), la regla de la fase B §2.7
 // (publication_gate=1, que el modo 1 exige). Su propio subárbol (la carga de un carro: hasta 19 tipo 7 en la prueba 3 de
 // la fase B) no se recorre ni cuenta: es del gimmick, también del anfitrión.
-inline constexpr uint32_t kVtInstantGimmick = 0x5ECDB08, kVtWrapAutoSpawnGimmick = 0x5ECDD40,
-                          kVtWrapCombinationGimmick = 0x5ECDD00;
+inline constexpr uint32_t kVtInstantGimmick = 0x5F47730, kVtWrapAutoSpawnGimmick = 0x5F478F0,
+                          kVtWrapCombinationGimmick = 0x5F47990;
 // S40 carros (docs/research/s25/s40-carros.md §2): el vehículo enlazado de un carro. 0x2797510 (sólo si la clase del
 // descriptor padre, +0x68 de sus datos, es 5): hasta dos descriptores base 0x278EA70 por vehículo (bucle de 2, ranuras
 // +0x82/+0x84 de los datos del vehículo), cada uno con +0x490 = la clave del ACTOR padre ([param_4+0x60]), los campos
@@ -56,7 +56,7 @@ inline constexpr uint32_t kVtInstantGimmick = 0x5ECDB08, kVtWrapAutoSpawnGimmick
 // (0x43DB70). Lo crea la creación del actor padre: nace DESPUÉS del mid de su padre (siempre tardío). Prueba en dos
 // copias C probe 2 (cdmp.host-Cprobe2.log): la carreta 0xB01002D8 (tipo 5, carretera 0xFA1) con 0xB01002DA (tipo 5,
 // sub 0x0, solicitante y carretera copiados) partía su unidad («no es un viajero del mismo solicitante»).
-inline constexpr uint32_t kVtWrapLinkedVehicle = 0x5ECDCA0, kDesc_ParentActorKey = 0x490;
+inline constexpr uint32_t kVtWrapLinkedVehicle = 0x5F47970, kDesc_ParentActorKey = 0x490;
 // Envoltorio de un viajero (interior de carretera) / de un gimmick (interior InstantGimmick).
 inline bool traveller_wrap(uint32_t w) noexcept { return w == kVtWrapRider || w == kVtWrapSimple; }
 inline bool gimmick_wrap(uint32_t w) noexcept {
@@ -67,7 +67,7 @@ inline constexpr uint32_t kDesc_User = 0x40, kDesc_Saved0 = 0x280, kDesc_Saved1 
                           kDesc_ReqKey = 0x3C8, kDesc_First = 0x3CC, kDesc_Mark = 0x3CD, kDesc_Road = 0x3D0,
                           kDesc_RoadB = 0x3D8, kDesc_RoadC = 0x3E0, kDesc_RoadD = 0x3E8, kWrap_Inner = 0x08;
 inline constexpr uint32_t kActor_Key = 0x60, kActor_Ctl = 0x90, kActor_User = 0xA0, kField_Owner = 0x180;
-inline constexpr uint16_t kOpAutoSpawnRoad = 2530;
+inline constexpr uint16_t kOpAutoSpawnRoad = 3063;
 // Una caravana medida en S34: conductor + carro + caballo(s) + cabras/ovejas. 16 registros por unidad (raíz + 15).
 // Revisión de la fase C (§3.2): una carreta lleva un gimmick con su carga (19 tipo 7 en la prueba 3 de la fase B): 16 no
 // cabía. 32 registros por unidad (raíz + preexamen de como mucho 15 + tardíos / host-kept / hijos retenidos).
@@ -1332,7 +1332,7 @@ inline const char* stop_name(Stop s) noexcept {
 // 3/5/6 no envió ninguna de éstas (sólo 2556 para los «Game Mechanic» tipo 7): una de ellas desde el cliente del
 // anfitrión para un viajero asignado es su IA corriendo también allí. 2556 sólo se cuenta (indicio).
 inline bool controller_only_req(uint16_t op) noexcept {
-    return op == 2202 || op == 2394 || op == 2606 || op == 2913 || op == 2852;
+    return op == 2431 || op == 2766 || op == 2346 || op == 2637 || op == 2296;
 }
 // Un 2005 de una clave de carretera registrada. to_host: el visto por el cliente del anfitrión (S>C capturado).
 enum class Check2005 : uint8_t { Ignore, Ok, BadController, Restore0ToHost };
@@ -1382,8 +1382,8 @@ inline int in_request(const Request& r, uint64_t troc, uint32_t road) noexcept {
 // ---------------------------------------------------------------- posición de una Req (para «se mueve»)
 // 2223: payload +0x8E; 2556: +4 (npc_probe_client_logic.h). Desplazamiento X/Z máximo desde la primera.
 inline bool req_position_offset(uint16_t op, size_t& off) noexcept {
-    if (op == 2202) { off = 0x8E; return true; }
-    if (op == 2833) { off = 4; return true; }
+    if (op == 2431) { off = 0x8E; return true; }
+    if (op == 2790) { off = 4; return true; }
     return false;
 }
 inline void note_position(Rec& c, float x, float z) noexcept {

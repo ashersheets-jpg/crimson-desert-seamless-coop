@@ -1526,7 +1526,7 @@ inline HoldAct hold_decide(Mode m, HoldWho who, bool pose_read, const float pos[
 
 // A StartActionReq 2223 (u16 opcode | i8 slot | u16 len | u32 actor ...) this client sends for the remote rider (1) or
 // its horse (2); 0 = anything else. An observer must never request actions of the other player's pair (S18 §11.4).
-inline constexpr uint16_t kOpStartActionReq = 2202;
+inline constexpr uint16_t kOpStartActionReq = 2431;
 inline uint8_t self_check_hit(const uint8_t* packet, size_t size, uint32_t rider, uint32_t horse) {
     if (!packet || size < kHeader + 4 || (packet[0] | (packet[1] << 8)) != kOpStartActionReq) return 0;
     const uint32_t key = get32(packet + kHeader);

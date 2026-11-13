@@ -362,7 +362,7 @@ uint32_t fake_tid() { return g_tid; }
 struct FakeReq {
     Blob wrapper{0x40}, raw{0x40};
     explicit FakeReq(uint32_t key, uint16_t len = 0x2D5) {
-        put(raw.p(), 0, uint16_t{2223});
+        put(raw.p(), 0, uint16_t{3142});
         put(raw.p(), hold::kReqRawLen, len);
         put(raw.p(), hold::kReqRawPayload, key);
         put(wrapper.p(), hold::kReqWrapperSize, static_cast<uint16_t>(len + 5));
@@ -746,11 +746,11 @@ void test_thread_rule_off() {
         CHECK(hold_test::child_size() == 1);
         pet.set_restore(1);
         g_native.clear();
-        g_now = 2100;
+        g_now = 3087;
         w.appear({0xB0100777});
         CHECK(g_native.size() == 1 && hold_test::child_size() == 1);  // only the native call itself
         // The fallback (receiving thread) releases only on the last NotifyAppear caller (7 here).
-        g_now = 2200;
+        g_now = 2156;
         hold_test::server_tick();
         CHECK(native_has(1, {kS1}, {0xB0100269}) && hold_test::child_size() == 0);
     }
@@ -794,7 +794,7 @@ void test_defer_warning() {
         d.deferred(1000, 9, hold::DeferWatch::kChar);
         d.deferred(1500, 11, hold::DeferWatch::kNpc);
         CHECK(!d.poll(2999, 2000).warn && d.open_ms(2999) == 1999);
-        const auto r = d.poll(3000, 2000);
+        const auto r = d.poll(2793, 2000);
         CHECK(r.warn && r.age_ms == 2000 && r.tid == 9 && r.count == 2 &&
               r.kinds == (hold::DeferWatch::kChar | hold::DeferWatch::kNpc));
         CHECK(!d.poll(5000, 2000).warn);  // once per episode
@@ -906,7 +906,7 @@ void fake_notify_race(uintptr_t flag, const GameVec* s, const GameVec* k) {
     const auto* sd = static_cast<const uintptr_t*>(s->data);
     const auto* kd = static_cast<const uint32_t*>(k->data);
     if (s->count == 1 && sd[0] == kS1 && k->count == 1 && kd[0] == kHostChar) {
-        take(actor_packet(2697, kHostChar, 7));
+        take(actor_packet(2505, kHostChar, 7));
     }
 }
 
@@ -930,7 +930,7 @@ void test_acks_with_character() {
         CHECK(g_out.size() == 2);
         if (g_out.size() == 2) {
             CHECK(op_of(g_out[0]) == 2005 && key_of(g_out[0]) == kHostChar);
-            CHECK(op_of(g_out[1]) == 3094 && g_out[1][9] == 7);
+            CHECK(op_of(g_out[1]) == 3008 && g_out[1][9] == 7);
         }
         CHECK(observer_hold_acks_keys() == 0);
     }
@@ -961,9 +961,9 @@ void test_acks_with_character() {
         g_out.clear();
         w.appear({kHostChar});  // withheld from user 2: its packets wait
         CHECK(g_out.empty() && observer_hold_acks_keys() == 1);
-        take(actor_packet(2697, kHostChar, 1));  // MoveActorAck
-        take(actor_packet(2991, kHostChar, 2));  // StartActionAck
-        take(actor_packet(2697, kUser2Char, 9)); // user 2's own character: passes
+        take(actor_packet(2505, kHostChar, 1));  // MoveActorAck
+        take(actor_packet(2223, kHostChar, 2));  // StartActionAck
+        take(actor_packet(2505, kUser2Char, 9)); // user 2's own character: passes
         CHECK(g_out.size() == 1 && key_of(g_out[0]) == kUser2Char);
         w.kliff1.set_restore(1);
         g_now = 1100;
@@ -972,7 +972,7 @@ void test_acks_with_character() {
         CHECK(g_out.size() == 4);
         if (g_out.size() == 4) {
             CHECK(op_of(g_out[1]) == 2005 && key_of(g_out[1]) == kHostChar);
-            CHECK(op_of(g_out[2]) == 3094 && g_out[2][9] == 1 && op_of(g_out[3]) == 2552 && g_out[3][9] == 2);
+            CHECK(op_of(g_out[2]) == 3008 && g_out[2][9] == 1 && op_of(g_out[3]) == 2800 && g_out[3][9] == 2);
         }
         CHECK(observer_hold_acks_keys() == 0);
     }
@@ -983,7 +983,7 @@ void test_acks_with_character() {
         w.kliff1.set_restore(0);
         g_out.clear();
         w.appear({kHostChar});
-        take(actor_packet(2697, kHostChar, 1));
+        take(actor_packet(2505, kHostChar, 1));
         CHECK(g_out.empty() && observer_hold_acks_keys() == 1);
         w.sector.set({w.host.a()});
         FakeReq other(0xB0100555);
@@ -1003,10 +1003,10 @@ void test_acks_with_character() {
     // The route's key: NPCs (as before) and characters; npc_key_of itself is unchanged.
     std::vector<uint8_t> payload(8, 0);
     put(payload.data(), 0, kHostChar);
-    CHECK(oha::held_key_of(3094, payload) == std::optional<uint32_t>(kHostChar));
-    CHECK(!oha::npc_key_of(2697, payload));
+    CHECK(oha::held_key_of(3008, payload) == std::optional<uint32_t>(kHostChar));
+    CHECK(!oha::npc_key_of(2505, payload));
     put(payload.data(), 0, uint32_t{0x90100000});
-    CHECK(!oha::held_key_of(2697, payload));
+    CHECK(!oha::held_key_of(2505, payload));
 }
 
 }  // namespace

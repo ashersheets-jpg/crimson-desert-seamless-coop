@@ -394,8 +394,8 @@ inline LocalAfterRemote parse_local_after_remote(std::string_view s, bool* bad =
     return LocalAfterRemote::Allow;
 }
 
-constexpr uint16_t kOpLoginCharacterToFieldServerReq = 2733;  // the title's Play / Load: a save is loaded
-constexpr uint16_t kOpMoveFieldCompleteReq = 2471;            // the client finished its field load
+constexpr uint16_t kOpLoginCharacterToFieldServerReq = 3081;  // the title's Play / Load: a save is loaded
+constexpr uint16_t kOpMoveFieldCompleteReq = 2723;            // the client finished its field load
 constexpr uint8_t kStateInWorld = 0x18;                       // [P+0x15C] in the world
 
 // The watch: guest_send notes the frames of a local connection, the diagnostics thread samples [P+0x15C] every 5 s.
