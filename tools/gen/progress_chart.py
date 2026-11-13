@@ -38,7 +38,7 @@ G = [
 ]),
 ("LAST", [
  ("3-4 player co-op", 0, "Only after two-player play is stable."),
- ("Release (package, installer, save protection)", 82, "A 23-step checklist runs before every post. The build for game 1.0.0.3663 is going through it."),
+ ("Release (package, installer, save protection)", 82, "A 23-step checklist runs before every post. Build 5a81a327 for game 1.0.0.3663 passed all 23 steps and is out."),
 ]),
 ]
 BG="#1e1f24"; TRACK="#2e3038"; BAR="#5b9bd5"; INK="#f2f2f2"; MUT="#a6a8ad"
@@ -47,7 +47,7 @@ H = 1.9 + rows*ROW + len(G)*GH + 0.9
 fig = plt.figure(figsize=(21.5, H), dpi=100, facecolor=BG)
 ax = fig.add_axes([0,0,1,1]); ax.set_xlim(0,21.5); ax.set_ylim(H,0); ax.axis('off')
 ax.text(0.26,0.52,"Co-op+ big update: progress by task",color=INK,fontsize=26,fontweight='bold',va='center')
-ax.text(0.26,1.08,"13 Nov 2026.  Percentages are the developer's estimates, not measurements.  The game updated to 1.0.0.3663; the posted build (cf8c7fa3) is for the version before. First two-PC reports are in.",color=MUT,fontsize=14,va='center')
+ax.text(0.26,1.08,"13 Nov 2026.  Percentages are the developer's estimates, not measurements.  Build 5a81a327 for game 1.0.0.3663 is out (tested on one PC, two copies of the game). First two-PC reports are in.",color=MUT,fontsize=14,va='center')
 y=1.9
 for name, items in G:
     ax.text(0.26,y,name,color=MUT,fontsize=12.5,fontweight='bold',va='center'); y+=GH*0.95
