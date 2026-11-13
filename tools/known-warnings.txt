@@ -31,3 +31,4 @@ SessionN child hold: a due release has waited N ms for a thr ## after the HOST's
 Teleport: far travel did not take us there in N s: hops from ## the game's travel did not move us (seen at the join, nb6-lowsave): the hops take over; look at why when it shows
 Teleport: N s after asking we still stand where we started: ## the travel request is sent once more (first seen at the join)
 Teleport: N s after the far travel we are back where we star ## a load that was still finishing undid the travel (the join, nb5-lowsave): repeated
+NpcActivation [contención abandonada] key=X nacimiento=N mo ## OPEN, rare (1 in ~50 checklist runs, pp11b-farfight2; also tcB228-239 and a tester's host log x10): the base gave up withdrawing ONE late NPC unit of the guest's stage after 3 refusals (by design, per unit; here two schedule NPCs born in a busy fight, gone by themselves 22 and 37 s later). What a player sees of such a unit is not known
