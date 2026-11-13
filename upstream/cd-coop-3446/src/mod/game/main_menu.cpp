@@ -25,7 +25,7 @@ const char* const kPanels[kMenuPageCount] = {"WorldMapView", "InventoryEquipment
 
 constexpr uintptr_t kTabButton = 0xF573A0;       // the menu's LB / RB handler (root, sender, button, 0, 0, float*)
 constexpr uintptr_t kTabChanged = 0xF57790;      // void (root, list, flag): the tab row's selection changed
-constexpr uintptr_t kListSelect = 0xA7866B0;      // void (list, page + 0x10, 0, flag): select the item with this key
+constexpr uintptr_t kListSelect = 0xA97F1D0;  /* 3663 (3576 0xA7866B0), in the protected section: found by its 160-byte masked pattern, one hit */      // void (list, page + 0x10, 0, flag): select the item with this key
 constexpr uintptr_t kRoot_Pages = 0x158;          // stride 0x30
 constexpr uintptr_t kRoot_PageCount = 0x160;      // uint32
 constexpr uintptr_t kRoot_TabRow = 0x1A8;         // UIGamePlayControlCommon_CircularList*
@@ -135,7 +135,7 @@ void tab_changed(uintptr_t root, uintptr_t list, uint64_t flag) {
 // by the menu root's per-frame update (vftable slot 36, exe+0xF1B8F0) while the menu is open; when that has not run
 // within a second (menu closed), a helper thread does it.
 constexpr uintptr_t kMenuUpdate = 0xF56140;
-constexpr uintptr_t kReturnLevel = 0x96525F0;
+constexpr uintptr_t kReturnLevel = 0x9790FD0;  /* 3663 (3576 0x96525F0), in the protected section: one hit of its masked pattern; reads P+0x24C now */
 constexpr uintptr_t kStateRootA = 0x7245218;
 std::atomic<bool> g_title_wanted{false};
 std::atomic<uint32_t> g_update_calls{0};
