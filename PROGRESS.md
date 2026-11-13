@@ -5,8 +5,11 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
-- NEXT BUILD, your OK needed to post: 0.1.0-alpha+cf8c7fa3 is in the whole 23-step checklist (pp11, 2026-11-12
-  evening; dc7ade5e and a4b6eb9e were dropped; post text: docs/release/shared-world-playtest/download-cf8c7fa3-draft.txt).
+- NEXT BUILD, THE CHECKLIST HAS PASSED, your OK needed to post ("post it"): 0.1.0-alpha+cf8c7fa3. All 23 steps
+  have a clean pass on this package (2026-11-12 20:06 to 23:45): 21 in pass pp11; the two far-fight steps failed
+  there on faults of the checks themselves and passed after the checks were corrected (pp11b, pp11c), the package
+  the same throughout. One PC, two copies of the game, Nvidia. Post text:
+  docs/release/shared-world-playtest/download-cf8c7fa3-draft.txt; both zips are in dist\.
   In it since 47135b83: a New Co-op Save is a new save for both players; two
   different builds are refused and both are told; going to your friend is the game's own travel; the host's crash
   at a reload with a friend in its world; Start Co-op doing nothing after a save was loaded; a failed start no
@@ -6797,3 +6800,36 @@ Design chosen (A, host-authoritative, with a world marker):
   pp11, then farfight and farfight2 again with the corrected script under pp11b. If all pass, the statement is:
   "21 steps passed in pp11; the two far-fight steps failed there on their own checks and passed in pp11b after the
   checks were corrected; the package was the same throughout".
+
+### pp11 / pp11b / pp11c on 0.1.0-alpha+cf8c7fa3: ALL 23 STEPS HAVE A CLEAN PASS (2026-11-12 20:06 - 23:45)
+
+PASS/FAIL per step. pp11: static 12/0, real 13/0, fresh 41/0, xess 42/0, fsr 42/0, latehook 57/0, display 6/0,
+lowsave 46/0, chest 45/0, revive 47/0, loot 46/0, crime 43/0, farfight 40/1, farfight2 39/1, newsave 88/0,
+solostart 43/0, mounts 41/0, mountfight 41/0, nosave 7/0, retry 41/0, stuck 45/0, mismatch 9/0, hostrevive 45/0
+(879 PASS, 2 FAIL). pp11b (the corrected checks): farfight 45/0, farfight2 43/1. pp11c: farfight2 44/0.
+- SAVES OK (step real: "REAL SAVES UNCHANGED") and "user install restored: 5/5 OK" in every .out of the three passes.
+- Screenshots looked at for every step. The corrected far fight: the guest stayed in the camp, 21 health samples
+  below full, 7 kills. revive: the death screen with both choices, up again. chest / loot: each takes its own.
+  display: its screenshot shows the owner's own windows (Claude, Discord) over the game, he was at the PC at 22:29;
+  the step's log checks passed.
+- The three FAILs, none of them the build:
+  1. pp11 farfight "the guest never lost health": the scenario (previous section). Corrected, passed in pp11b.
+  2. pp11 farfight2 "log growth 434 > 420": the measure (previous section). Corrected, 316 and 246 against 380 since.
+  3. pp11b farfight2 "warning kind never seen before": the BASE's "NpcActivation [contencion abandonada]", twice.
+     ByJunter's S35 containment gave up on two schedule NPCs of the guest's stage (0xB010061D/E, born 23:31:51 in the
+     fight, "sin progreso" after 5 s, withdrawal refused three times): "only this unit; it stays alive with its
+     controller 0x90100065". Both were removed by the game 22 and 37 s later. By design and per unit; seen before in
+     tcB228-239 and ten times in the tester's host log of 2026-11-11, never in a checklist run until now (1 in about
+     50). Recorded in tools/known-warnings.txt as OPEN, rare. NOT KNOWN: what a player sees of such a unit while it
+     lives (an NPC only one of them sees? one that stands still?). Worth a look when desync reports come from a
+     session on ONE build. Passed in pp11c with the kind recorded.
+- What "passed" means here: this package, this PC, two copies of the game, Nvidia, each step 5 to 10 minutes.
+  Not covered: two PCs, the internet, AMD / Intel beyond the tester's menu fix, an evening, the story.
+
+### ax1a / ax2a (2026-11-12 23:46 - 00:02): Axiom Force as guest and as host: NOT EXERCISED
+
+- Holding Tab for 1.5 s (the web's description: hold to aim, release to throw the claw, Q to take hold) changed
+  nothing on screen for the guest (ax1a) or the host (ax2a): no aim, no claw. Both walked normally afterwards. So
+  nothing was learned about the tester's "stuck after a grab"; either the test save does not have the ability or
+  the key needs something else. ax4a (running): the menu's tabs for the skill, and Tab held for 4 s.
+- SAVES OK, 5/5 in both.
