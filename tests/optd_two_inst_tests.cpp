@@ -187,7 +187,7 @@ void test_logs() {
     CHECK(cdmp::log::open(dir + L"\\" + role::log_name(Role::Host)));
     const std::wstring host_dated = cdmp::log::current_path();
     cdmp::log::info("host main line");
-    CHECK(cdmp::log::flush(2793));
+    CHECK(cdmp::log::flush(3000));
     CHECK(run_child(L"log \"" + dir + L"\" guest") == 0);
     CHECK(run_child(L"log \"" + dir + L"\" extra") == 0);  // the game's second process of the host role
     cdmp::log::info("host main second line");

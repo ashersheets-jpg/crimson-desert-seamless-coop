@@ -354,7 +354,7 @@ void test_retire() {
 void test_packets() {
     auto p = packet(dgl::kOpActorLoad, payload({kGuestDevice}));
     CHECK(dgl::payload_2005(p).size() == p.size() - dgl::kHeader);
-    auto other = packet(3067, payload({kGuestDevice}));
+    auto other = packet(2516, payload({kGuestDevice}));
     CHECK(dgl::payload_2005(other).empty());
     std::vector<uint8_t> tiny = {0xD5, 0x07, 0xFF};
     CHECK(dgl::payload_2005(tiny).empty());
@@ -368,11 +368,11 @@ void test_packets() {
     for (size_t i = 0; i < dgl::kWithheldOpCount; ++i) {
         CHECK(dgl::withhold_index(packet(dgl::kWithheldOps[i], upd), keys) == static_cast<int>(i));
     }
-    CHECK(dgl::withhold_index(packet(2685, upd), keys) == -1);  // MoveActorReq: never withheld
-    CHECK(dgl::withhold_index(packet(3037, upd), keys) == -1);  // RegionInOutReq
+    CHECK(dgl::withhold_index(packet(2556, upd), keys) == -1);  // MoveActorReq: never withheld
+    CHECK(dgl::withhold_index(packet(3067, upd), keys) == -1);  // RegionInOutReq
     auto host_dev = upd;
     dgl::put32(host_dev.data(), 0xB0100156u);
-    CHECK(dgl::withhold_index(packet(2896, host_dev), keys) == -1);  // not local-only
+    CHECK(dgl::withhold_index(packet(3082, host_dev), keys) == -1);  // not local-only
     const std::vector<uint8_t> short_req = {0x0A, 0x0C, 0xFF, 0x02, 0x00, 0xA1, 0x04};
     CHECK(dgl::withhold_index(short_req, keys) == -1);
 
@@ -452,8 +452,8 @@ void test_mode_and_bytes() {
     const uint8_t mov[7] = {0x41, 0x89, 0x86, 0x90, 0x00, 0x00, 0x00};
     static_assert(dgl::kControllerWritePatch == 7);
     CHECK(std::memcmp(dgl::kControllerWriteBytes, mov, 7) == 0);
-    static_assert(dgl::kFieldOwnerReadBytes[3] == 0x80 && dgl::kFieldOwnerReadBytes[4] == 0x01);
-    static_assert(dgl::kFieldOwnerRead + 11 == dgl::kControllerWrite);
+    static_assert(dgl::kFieldOwnerReadBytes[2] == 0x80 && dgl::kFieldOwnerReadBytes[3] == 0x01);  // 3663: mov eax,[rdi+0x180], no REX
+    static_assert(dgl::kFieldOwnerRead + 10 == dgl::kControllerWrite);
     // 0x2970ADF: E8 rel32 -> 0x28AD170.
     const int32_t rel = static_cast<int32_t>(dgl::le32(&dgl::kDockEquipCall[1]));
     CHECK(dgl::kDockEquipCall[0] == 0xE8 &&
@@ -500,7 +500,7 @@ void test_other_player() {
         const std::vector<uint8_t> req = {0x4e, 0x01, 0x10, 0xb0, 0x59, 0xcc, 0x3e, 0x00};
         CHECK(dgl::withhold_index(packet(2996, req), keys) == 0);
         CHECK(dgl::withhold_index(packet(2662, req), keys) == 3);
-        CHECK(dgl::withhold_index(packet(2685, req), keys) == -1);
+        CHECK(dgl::withhold_index(packet(2556, req), keys) == -1);
         // Announced again with the same parent: kept. With another parent, or undocked: retired.
         auto again = payload({kS28HostDevice});
         const auto r2 = dgl::process_2005(again, self, dgl::Mode::On, keys, dgl::Mode::On);

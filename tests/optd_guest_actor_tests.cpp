@@ -141,7 +141,8 @@ void test_sections() {
     CHECK(in_real_code(b3576, 0x9439B0, 16));
     CHECK(!in_real_code(b3576, 0x13826010, 5));
     CHECK(!in_real_code(b3576, 0x7A44010, 5));
-    CHECK(is_denuvo_name(".tls$") && is_denuvo_name(".xpdata") && is_denuvo_name(".xtls") && !is_denuvo_name(".rsrc"));
+    // 3663: the protection is ".data1"; ".tls$" is a small data section there, so the old names are no longer taken.
+    CHECK(is_denuvo_name(".data1") && !is_denuvo_name(".tls$") && !is_denuvo_name(".rsrc"));
 }
 
 void test_line_budget() {

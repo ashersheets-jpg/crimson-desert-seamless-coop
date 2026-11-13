@@ -92,20 +92,20 @@ void test_parsers() {
     CHECK(tavern);
     CHECK(sls::le32(p.list.data()) == 0x04F6D06D);
     // The handlers' own rejections are Bad, not tracked.
-    CHECK(frame(make(2485, {1, 0, 0, 0, 0xAA, 0x52, 0x7B})).kind == sls::Kind::Bad);         // 7 bytes
-    CHECK(frame(make(2485, {1, 0, 0, 0, 0, 0, 0, 0})).kind == sls::Kind::Bad);               // hash 0
-    CHECK(frame(make(2485, {0, 0, 0, 0, 0xAA, 0x52, 0x7B, 0xDE})).kind == sls::Kind::Bad);   // u32 0
-    CHECK(frame(make(2414, {1, 0, 0, 0, 4, 0xAA, 0x52, 0x7B, 0xDE, 1})).kind == sls::Kind::Bad);  // type 4
-    CHECK(frame(make(2414, {1, 0, 0, 0, 1, 0xAA, 0x52, 0x7B, 0xDE, 1})).type == 1);
-    CHECK(frame(make(2745, {4, 1, 2, 3})).kind == sls::Kind::Bad);  // 1 + 3
-    CHECK(frame(make(2745, {4})).kind == sls::Kind::Resync && frame(make(2745, {4})).count == 0);
+    CHECK(frame(make(2598, {1, 0, 0, 0, 0xAA, 0x52, 0x7B})).kind == sls::Kind::Bad);         // 7 bytes
+    CHECK(frame(make(2598, {1, 0, 0, 0, 0, 0, 0, 0})).kind == sls::Kind::Bad);               // hash 0
+    CHECK(frame(make(2598, {0, 0, 0, 0, 0xAA, 0x52, 0x7B, 0xDE})).kind == sls::Kind::Bad);   // u32 0
+    CHECK(frame(make(2834, {1, 0, 0, 0, 4, 0xAA, 0x52, 0x7B, 0xDE, 1})).kind == sls::Kind::Bad);  // type 4
+    CHECK(frame(make(2834, {1, 0, 0, 0, 1, 0xAA, 0x52, 0x7B, 0xDE, 1})).type == 1);
+    CHECK(frame(make(2104, {4, 1, 2, 3})).kind == sls::Kind::Bad);  // 1 + 3
+    CHECK(frame(make(2104, {4})).kind == sls::Kind::Resync && frame(make(2104, {4})).count == 0);
     auto broken = clean(k2598Tavern);
     broken.pop_back();  // the header's size no longer matches
     CHECK(frame(broken).kind == sls::Kind::Bad);
-    for (const uint16_t op : {uint16_t{2819}, uint16_t{2914}, uint16_t{2757}, uint16_t{2001}})
+    for (const uint16_t op : {uint16_t{2283}, uint16_t{2362}, uint16_t{2437}, uint16_t{2001}})
         CHECK(frame(make(op, {1, 2, 3})).kind == sls::Kind::Flush);
-    CHECK(frame(make(3004, {4, 1, 0, 0, 0})).kind == sls::Kind::None);
-    CHECK(!sls::relevant(3004) && sls::relevant(2745));
+    CHECK(frame(make(2928, {4, 1, 0, 0, 0})).kind == sls::Kind::None);
+    CHECK(!sls::relevant(2928) && sls::relevant(2104));
 }
 
 void test_hashes() {
@@ -177,7 +177,7 @@ void test_tracker() {
     // Emptied at its load (2283 / 2362 / 2437 / 2001).
     t.apply(U::User2, load(7));
     t.apply(U::User2, load(8));
-    CHECK(t.apply(U::User2, frame(make(2757, {0}))) == sls::Applied::Flushed);
+    CHECK(t.apply(U::User2, frame(make(2437, {0}))) == sls::Applied::Flushed);
     CHECK(t.size(U::User2) == 0 && t.has(U::User2, 7) == sls::Has::No);
     // The Resync list replaces the set (the stale ones go).
     t.apply(U::Host, load(9));
@@ -257,7 +257,7 @@ void test_gate() {
     g.actor = 0x9999;
     CHECK(sls::decide_gate(g) == W::OtherSubject);
     g = gate_base(sls::Mode::On);
-    g.opcode = 3004;
+    g.opcode = 2928;
     CHECK(sls::decide_gate(g) == W::WrongOpcode);
 }
 
@@ -374,11 +374,11 @@ void test_callers() {
     CHECK(sls::caller_of(0x2877145) == sls::Caller::Other && sls::caller_of(0) == sls::Caller::Other);
     using P = sls::Who;
     CHECK(sls::provoker_of(sls::Caller::Unload2834, true, true, sls::kOpUnload) == P::User2);
-    CHECK(sls::provoker_of(sls::Caller::Unload2834, true, true, 2485) == P::Unknown);
+    CHECK(sls::provoker_of(sls::Caller::Unload2834, true, true, 2598) == P::Unknown);
     CHECK(sls::provoker_of(sls::Caller::Unload2834, true, false, 0) == P::Host);
     CHECK(sls::provoker_of(sls::Caller::Unload2834, false, false, 0) == P::Unknown);
     CHECK(sls::provoker_of(sls::Caller::OwnerLoad, true, false, 0) == P::Host);
-    CHECK(sls::provoker_of(sls::Caller::OwnerLoad, true, true, 2757) == P::User2);
+    CHECK(sls::provoker_of(sls::Caller::OwnerLoad, true, true, 2437) == P::User2);
     CHECK(sls::provoker_of(sls::Caller::Loader, false, false, 0) == P::Nobody);
     CHECK(sls::provoker_of(sls::Caller::Other, true, false, 0) == P::Unknown);
     // The 2834 handler's frame: name at C + 0x140, type at C + 0x98.
@@ -430,7 +430,7 @@ void test_scenario() {
     CHECK(decide(sls::Who::Host, tavern, tavern).verdict == V::Keep);
     // The guest loads elsewhere (2437 empties its set) and the host's late 2834 of the level comes: the native delete.
     t.apply(U::Host, load(tavern));
-    t.apply(U::User2, frame(make(2757, {0})));
+    t.apply(U::User2, frame(make(2437, {0})));
     t.apply(U::Host, unload(tavern));
     CHECK(decide(sls::Who::Host, tavern, tavern).verdict == V::Delete);
     // The last user's own 2834 deletes natively.

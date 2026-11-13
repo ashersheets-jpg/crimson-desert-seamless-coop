@@ -300,13 +300,13 @@ void test_chain() {
 
 void test_counters() {
     static u2f::OpCounts ops;  // 16 KB: not on the stack
-    for (int i = 0; i < 5; ++i) ops.add(2356);
-    for (int i = 0; i < 3; ++i) ops.add(2176);
-    ops.add(2274);
+    for (int i = 0; i < 5; ++i) ops.add(2380);
+    for (int i = 0; i < 3; ++i) ops.add(2112);
+    ops.add(2372);
     ops.add(9999);  // out of range: opcode 0
     auto top = ops.top(2);
     CHECK(top.size() == 2 && top[0].first == 2380 && top[0].second == 5 && top[1].first == 2112);
-    CHECK(ops.at(0) == 1 && ops.at(2274) == 1);
+    CHECK(ops.at(0) == 1 && ops.at(2372) == 1);
     CHECK(ops.top(10).size() == 4);
 
     static u2f::SiteCounts<4> sites;
@@ -380,7 +380,7 @@ void test_quest_policy() {
     CHECK(u2f::classify_event_actor(0xA0100001, 0xA0100200, 0xA0100001) == EventActor::Host);
     CHECK(u2f::classify_event_actor(0xA0100001, 0xA0100200, 0) == EventActor::Other);
     CHECK(u2f::host_quest_ack_index(2558) == 0 && u2f::host_quest_ack_index(2375) == 3);
-    CHECK(u2f::host_quest_ack_index(3156) == -1);
+    CHECK(u2f::host_quest_ack_index(2808) == -1);
     for (size_t i = 0; i < static_cast<size_t>(PolicyCaller::Count); ++i) {
         CHECK(*u2f::policy_caller_name(static_cast<PolicyCaller>(i)) != '?');
     }
@@ -426,8 +426,8 @@ void test_quest_policy() {
         CHECK(u2f::policy_measured_req(op) && u2f::policy_relevant_req(op));
         CHECK(!u2f::policy_drops_req(Mode::On, op, RouteFail::NotLive, false));
     }
-    CHECK(!u2f::policy_relevant_req(2685));  // MoveActorReq
-    CHECK(!u2f::policy_relevant_req(2954));  // the cheats are blocked by the tunnel, not here
+    CHECK(!u2f::policy_relevant_req(2556));  // MoveActorReq
+    CHECK(!u2f::policy_relevant_req(2627));  // the cheats are blocked by the tunnel, not here
     for (size_t i = 0; i < static_cast<size_t>(RouteFail::Count); ++i) {
         CHECK(*u2f::route_fail_name(static_cast<RouteFail>(i)) != '?');
     }

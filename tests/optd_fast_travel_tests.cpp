@@ -229,7 +229,7 @@ void test_f4() {
     in.own_field = false;
     // Another Req of user 2 at the setter in a field it does not own: decided by the field, like the 2362 (the
     // setter resets whatever manager vf48 returns; S29 one-PC: a 2601 at the login reset the host's).
-    in.opcode = 2967;
+    in.opcode = 2601;
     CHECK(ftl::decide_f4(in) == F4Out::OtherSubstitute);
     in.mgr_ok = false;
     CHECK(ftl::decide_f4(in) == F4Out::NoManager);
@@ -524,7 +524,7 @@ void test_reply_and_window() {
     CHECK(!tpl::ack_in_window(1500, 1000, tpl::kMaxAcks));
     CHECK(!tpl::ack_in_window(1500, 0, 0));  // never opened
     CHECK(!tpl::ack_in_window(999, 1000, 0));
-    CHECK(tpl::always_noted(tpl::kOpLogoutCharacterAck) && tpl::always_noted(tpl::kOpNak) && !tpl::always_noted(3151));
+    CHECK(tpl::always_noted(tpl::kOpLogoutCharacterAck) && tpl::always_noted(tpl::kOpNak) && !tpl::always_noted(2643));
     // P8 S16: the 2322s to user 2 are counted, without changing the reply class.
     tpl::ReplyCounts r;
     r.add(tpl::kOpLoadingFieldDataAck);

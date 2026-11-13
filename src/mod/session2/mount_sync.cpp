@@ -1031,11 +1031,11 @@ uintptr_t inter_common(SafetyHookInline& h, uint16_t op, uintptr_t self, int32_t
 }
 uintptr_t __fastcall h2663_detour(uintptr_t self, int32_t* res, uintptr_t pkt, uint64_t a4) {
     const FreezeMark mark(g_mark[6]);
-    return inter_common(g_h_2663, 2285, self, res, pkt, a4);
+    return inter_common(g_h_2663, 2663, self, res, pkt, a4);
 }
 uintptr_t __fastcall h2916_detour(uintptr_t self, int32_t* res, uintptr_t pkt, uint64_t a4) {
     const FreezeMark mark(g_mark[7]);
-    return inter_common(g_h_2916, 2710, self, res, pkt, a4);
+    return inter_common(g_h_2916, 2916, self, res, pkt, a4);
 }
 
 // ---------------------------------------------------------------- the observer's native calls (client main thread)

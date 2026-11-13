@@ -134,24 +134,24 @@ void test_sites() {
         CHECK(u2sh::site_index(u2sh::kSites[i].op) == i);
         for (size_t j = i + 1; j < u2sh::kSiteCount; ++j) CHECK(u2sh::kSites[i].op != u2sh::kSites[j].op);
     }
-    CHECK(!u2sh::site_of(2583) && !u2sh::site_of(2908) && !u2sh::site_of(3087) && !u2sh::site_of(2043));
+    CHECK(!u2sh::site_of(2671) && !u2sh::site_of(2720) && !u2sh::site_of(2100) && !u2sh::site_of(2043));
     CHECK(u2sh::site_index(2671) == u2sh::kSiteCount);
     // 3576 (2026-11-09): the opcodes are 3549's; the protected-section sites are 0 (matched by section).
-    CHECK(u2sh::site_of(2644)->ret_rva == 0x2CEA189);
+    CHECK(u2sh::site_of(2644)->ret_rva == 0x2D510A9);
     CHECK(u2sh::site_of(2200)->ret_rva == 0 && u2sh::site_matches(*u2sh::site_of(2200), 0xE3FA800) &&
-          !u2sh::site_matches(*u2sh::site_of(2200), 0x2CEA189));
+          !u2sh::site_matches(*u2sh::site_of(2200), 0x2D510A9));
     CHECK(u2sh::site_of(2048)->ret_rva == 0 && u2sh::site_of(2048)->id_at == u2sh::kTimerId);
     CHECK(u2sh::site_of(2059)->ret_rva == 0 && u2sh::site_of(2059)->id_at == u2sh::kTimerId);
-    CHECK(u2sh::site_matches(*u2sh::site_of(2644), 0x2CEA189) && !u2sh::site_matches(*u2sh::site_of(2644), 0x2CEA18A));
+    CHECK(u2sh::site_matches(*u2sh::site_of(2644), 0x2D510A9) && !u2sh::site_matches(*u2sh::site_of(2644), 0x2CEA18A));
     CHECK(u2sh::kOpDeleteTimer == 2059);
     // S13 (the host's smithy 0x19D): a 2436 as a packet (u16 opcode | i8 slot | u16 length | payload).
     const auto b2436 = bytes_of({0x84, 0x09, 0x00, 0x0E, 0x00, 0x9D, 0x01, 0, 0, 0, 0, 0, 0, 0x06, 0, 0, 0, 0, 0});
     uint64_t id = 0;
-    CHECK(u2sh::scene_id(2369, b2436, id) && id == 0x19D);
+    CHECK(u2sh::scene_id(2436, b2436, id) && id == 0x19D);
     // A 2767 (S13, 541.621) and a 2173.
     const auto b2767 = bytes_of({0xCF, 0x0A, 0x00, 0x12, 0x00, 0x9D, 0x01, 0, 0, 0, 0, 0, 0, 0x14, 0, 0, 0x20, 0x00, 0x02,
                                  0x00, 0x10, 0xB0, 0x01});
-    CHECK(u2sh::scene_id(2184, b2767, id) && id == 0x19D);
+    CHECK(u2sh::scene_id(2767, b2767, id) && id == 0x19D);
     // The 2044 timer: u16 opcode | u8 | u64 id | u32 (0x2895820(mgr, packet+3, [packet+0xB])).
     const auto b2044 = bytes_of({0xFC, 0x07, 0xFF, 0xA7, 0x01, 0, 0, 0, 0, 0, 0, 0x06, 0, 0, 0});
     CHECK(u2sh::scene_id(2044, b2044, id) && id == 0x1A7);
@@ -159,10 +159,10 @@ void test_sites() {
     const auto b2054 = bytes_of({0x06, 0x08, 0xFF, 0xC4, 0x02, 0, 0, 0, 0, 0, 0, 0x0E, 0, 0, 0, 0});
     CHECK(u2sh::scene_id(2054, b2054, id) && id == 0x2C4);
     // Too short, not a site, no id (2173's "u32 1 | u32 actor" form still gives a non-zero id: the lookup refuses it).
-    CHECK(!u2sh::scene_id(2369, std::span<const uint8_t>(b2436.data(), 12), id));
-    CHECK(!u2sh::scene_id(2583, b2436, id));
+    CHECK(!u2sh::scene_id(2436, std::span<const uint8_t>(b2436.data(), 12), id));
+    CHECK(!u2sh::scene_id(2671, b2436, id));
     const auto zero = bytes_of({0x84, 0x09, 0x00, 0x0E, 0x00, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0});
-    CHECK(!u2sh::scene_id(2369, zero, id));
+    CHECK(!u2sh::scene_id(2436, zero, id));
 }
 
 void test_route() {
@@ -311,7 +311,7 @@ void test_shop_watch() {
     CHECK(u2sh::hold_decision(h) == H::Expired);
     // Review B4: the Req opcode of a Nak 1013 (u16 0x3F5 | u8 0xFF | i32 error | u16 opcode @7 | u64).
     const auto nak = bytes_of({0xF5, 0x03, 0xFF, 0x05, 0, 0, 0, 0x84, 0x09, 0, 0, 0, 0, 0, 0, 0, 0});
-    CHECK(u2sh::nak_req_opcode(nak) == 2369 && u2sh::site_of(u2sh::nak_req_opcode(nak)));
+    CHECK(u2sh::nak_req_opcode(nak) == 2436 && u2sh::site_of(u2sh::nak_req_opcode(nak)));
     CHECK(u2sh::nak_req_opcode(std::span<const uint8_t>(nak.data(), 8)) == 0);
     CHECK(u2sh::nak_error(nak) == 5);  // S46: the i32 error @3
     CHECK(u2sh::nak_error(std::span<const uint8_t>(nak.data(), 8)) == 0);

@@ -254,7 +254,7 @@ void test_scene_reqs() {
     const auto g = unhex(k2173_986);
     r = scd::parse_scene_req(scd::le16(g.data()), payload(g));
     CHECK(r.op == 2672 && r.has_actor && r.actor == 0xA0100001);
-    r = scd::parse_scene_req(2184, std::span<const uint8_t>(a).subspan(5, 4));  // too short for anything
+    r = scd::parse_scene_req(2767, std::span<const uint8_t>(a).subspan(5, 4));  // too short for anything
     CHECK(!r.has_scene && !r.has_actor);
     CHECK(scd::scene_req_index(2620) == 0 && scd::scene_req_index(2202) == static_cast<int>(scd::kSceneReqCount) - 1);
     CHECK(scd::scene_req_index(2005) == -1);

@@ -68,9 +68,9 @@ void test_wire_byte_exact() {
     // The tunnel takes it as one whole S->C packet (troc_frame.h), opcode 2816, slot -1, payload 35.
     const auto v = troc::parse_wire(std::span<const uint8_t>(p), troc::Dir::ToGuestClient);
     CHECK(v.has_value());
-    if (v) CHECK(v->opcode == 2287 && v->slot == -1 && v->payload.size() == 35);
+    if (v) CHECK(v->opcode == 2816 && v->slot == -1 && v->payload.size() == 35);
     // troc::make builds the same bytes from the payload.
-    const std::vector<uint8_t> made = troc::make(2287, -1, std::span<const uint8_t>(p).subspan(ckp::kHeader));
+    const std::vector<uint8_t> made = troc::make(2816, -1, std::span<const uint8_t>(p).subspan(ckp::kHeader));
     CHECK(made.size() == p.size() && std::memcmp(made.data(), p.data(), p.size()) == 0);
 }
 
@@ -152,10 +152,10 @@ void test_loading_ack() {
 
 void test_weather_block() {
     CHECK(ckp::guest_req_blocked_by_env(2959, true));
-    CHECK(!ckp::guest_req_blocked_by_env(2920, false));
-    CHECK(!ckp::guest_req_blocked_by_env(3098, true));   // SetFieldTimeReq: never_from_guest's, not this key's
-    CHECK(!ckp::guest_req_blocked_by_env(2784, true));   // CreateProjectileByWeatherReq: combat, not the field's flags
-    CHECK(!ckp::guest_req_blocked_by_env(2685, true));
+    CHECK(!ckp::guest_req_blocked_by_env(2560, false));
+    CHECK(!ckp::guest_req_blocked_by_env(2125, true));   // SetFieldTimeReq: never_from_guest's, not this key's
+    CHECK(!ckp::guest_req_blocked_by_env(2961, true));   // CreateProjectileByWeatherReq: combat, not the field's flags
+    CHECK(!ckp::guest_req_blocked_by_env(2556, true));
 }
 
 using V = ckp::PushWatch::Verdict;
@@ -210,9 +210,9 @@ void test_watch_refused_and_reset() {
     w.failed(1000);
     CHECK(!w.has_sent());
     CHECK(w.sample(a.data(), true, 2000) == V::TooSoon);
-    CHECK(w.sample(a.data(), true, 2423) == V::TooSoon);
-    CHECK(w.sample(a.data(), true, 2793) == V::Push);
-    w.sent(a.data(), 2793);
+    CHECK(w.sample(a.data(), true, 2999) == V::TooSoon);
+    CHECK(w.sample(a.data(), true, 3000) == V::Push);
+    w.sent(a.data(), 3000);
     CHECK(w.sample(a.data(), true, 4000) == V::Same);
     // A new epoch / user 2 gone: given nothing; the settled clock goes again at once.
     w.reset();
@@ -240,8 +240,8 @@ void test_watch_refused_same_clock() {
     w.failed(1000);          // the next 2762's 2816: the queue refused it
     CHECK(!w.has_sent());
     CHECK(w.sample(a.data(), true, 2000) == V::TooSoon);
-    CHECK(w.sample(a.data(), true, 2793) == V::Push);   // same clock as before: retried all the same
-    w.sent(a.data(), 2793);
+    CHECK(w.sample(a.data(), true, 3000) == V::Push);   // same clock as before: retried all the same
+    w.sent(a.data(), 3000);
     CHECK(w.sample(a.data(), true, 4000) == V::Same);
 }
 

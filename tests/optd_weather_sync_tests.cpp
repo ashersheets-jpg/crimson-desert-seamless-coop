@@ -449,7 +449,7 @@ void test_owned() {
 }
 
 void test_selftest() {
-    wsy::Selftest st(wsy::Selftest::Config{1000, 2793});
+    wsy::Selftest st(wsy::Selftest::Config{1000, 3000});
     CHECK(st.phase() == wsy::StPhase::WaitWorld);
     wsy::StStep s = st.step(0, false, true);
     CHECK(!s.write && !s.restore && st.phase() == wsy::StPhase::WaitWorld);
@@ -473,19 +473,19 @@ void test_selftest() {
     CHECK(!st.fault(9000));
 
     // Another X while applying: aborted, restore asked once.
-    wsy::Selftest b(wsy::Selftest::Config{0, 2793});
+    wsy::Selftest b(wsy::Selftest::Config{0, 3000});
     b.step(0, true, true);
     CHECK(b.step(1, true, true).write);
     s = b.step(2, true, false);
     CHECK(s.restore && !s.write && b.phase() == wsy::StPhase::Aborted);
     CHECK(!b.step(3, true, true).restore);
     // The world leaving while applying.
-    wsy::Selftest c(wsy::Selftest::Config{0, 2793});
+    wsy::Selftest c(wsy::Selftest::Config{0, 3000});
     c.step(0, true, true);
     c.step(1, true, true);
     CHECK(c.step(2, false, true).restore && c.phase() == wsy::StPhase::Aborted);
     // A fault while applying.
-    wsy::Selftest d(wsy::Selftest::Config{0, 2793});
+    wsy::Selftest d(wsy::Selftest::Config{0, 3000});
     d.step(0, true, true);
     d.step(1, true, true);
     CHECK(d.fault(5) && d.phase() == wsy::StPhase::Aborted && !d.fault(6));

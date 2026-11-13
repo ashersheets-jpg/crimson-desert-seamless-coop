@@ -195,7 +195,7 @@ uint32_t fake_tid() { return g_tid; }
 struct FakeReq {
     Blob wrapper{0x40}, raw{0x40};
     explicit FakeReq(uint32_t key, uint16_t len = 0x2D5) {
-        put(raw.p(), 0, uint16_t{3142});
+        put(raw.p(), 0, uint16_t{2223});
         put(raw.p(), hold::kReqRawLen, len);
         put(raw.p(), hold::kReqRawPayload, key);
         put(wrapper.p(), hold::kReqWrapperSize, static_cast<uint16_t>(len + 5));
@@ -272,14 +272,14 @@ void test_settle_pure() {
     CHECK(!cst::settle_needed(0, true, 0, true, 100));
     CHECK(cst::settle_needed(1500, true, 0, false, 100));
     CHECK(cst::settle_needed(1500, false, 0, true, 100));
-    CHECK(cst::settle_needed(1500, false, 1000, false, 2943));
-    CHECK(!cst::settle_needed(1500, false, 1000, false, 2807));
-    CHECK(!cst::settle_needed(1500, false, 0, false, 2807));
+    CHECK(cst::settle_needed(1500, false, 1000, false, 2499));
+    CHECK(!cst::settle_needed(1500, false, 1000, false, 2500));
+    CHECK(!cst::settle_needed(1500, false, 0, false, 2500));
     // Never announced there: waited for only while that user sees the character (it is coming).
-    CHECK(cst::settle_needed(1500, false, 0, false, 2807, true));
-    CHECK(!cst::settle_needed(1500, false, 0, false, 2807, false));
-    CHECK(!cst::settle_needed(1500, false, 0, false, 2807, std::nullopt));
-    CHECK(!cst::settle_needed(1500, false, 100, false, 2807, true));  // announced long ago: in range is irrelevant
+    CHECK(cst::settle_needed(1500, false, 0, false, 2500, true));
+    CHECK(!cst::settle_needed(1500, false, 0, false, 2500, false));
+    CHECK(!cst::settle_needed(1500, false, 0, false, 2500, std::nullopt));
+    CHECK(!cst::settle_needed(1500, false, 100, false, 2500, true));  // announced long ago: in range is irrelevant
     // The log: newest wins, per (key, session).
     cst::AnnounceLog<4> log;
     CHECK(log.last(kHostChar, kS2) == 0);
@@ -389,11 +389,11 @@ void test_settle_same_call_user2_only() {
           contains(lines, "goes in the same NotifyAppear"));
     // Before the settle: StartActionReqs of anything release nothing.
     g_native.clear();
-    g_now = 2943;
+    g_now = 2499;
     w.action();
     CHECK(g_native.empty() && hold_test::settle_size() == 1);
     // The receiving thread's fallback (another thread than the last NotifyAppear's) does not release yet.
-    g_now = 2616;
+    g_now = 2600;
     g_tid = 9;
     hold_test::server_tick();
     CHECK(g_native.empty() && hold_test::settle_size() == 1);
@@ -417,7 +417,7 @@ void test_settle_fallback() {
         World w;
         w.appear({kHostChar, kHostPet}, {kS2});
         g_native.clear();
-        g_now = 2616;  // g_tid 7: the thread of the last NotifyAppear
+        g_now = 2600;  // g_tid 7: the thread of the last NotifyAppear
         hold_test::server_tick();
         CHECK(native_has(0, {kS2}, {kHostPet}) && hold_test::settle_size() == 0);
     }
@@ -426,7 +426,7 @@ void test_settle_fallback() {
         w.appear({kHostChar, kHostPet}, {kS2});
         g_native.clear();
         g_tid = 9;  // the receiving thread
-        g_now = 2616;
+        g_now = 2600;
         hold_test::server_tick();  // due, deferred: its wait starts
         g_now = 2600 + hold::kDeferWarnMs - 300;  // the fallback runs at most every 250 ms
         hold_test::server_tick();
@@ -442,7 +442,7 @@ void test_settle_fallback() {
         w.appear({kHostChar, kHostPet}, {kS2});  // thread 7 calls NotifyAppear natively: a native thread
         g_native.clear();
         g_tid = 9;
-        g_now = 2616;
+        g_now = 2600;
         hold_test::server_tick();
         g_now = 9000;
         hold_test::server_tick();
@@ -480,7 +480,7 @@ void test_settle_release_race() {
     g_race_key = kHostPet;
     g_race_session = kS2;
     g_native.clear();
-    g_now = 2807;
+    g_now = 2500;
     w.action();
     CHECK(g_native.size() == 1 && native_has(0, {kS2}, {kHostPet}));
     CHECK(hold_test::settle_size() == 0 && hold_test::settle_counters().raced == 1);
@@ -528,7 +528,7 @@ void test_settle_same_call_both() {
     CHECK(hold_test::settle_size() == 1);
     // The tail of a native NotifyAppear releases too (no StartActionReq at all).
     g_native.clear();
-    g_now = 2807;
+    g_now = 2500;
     w.appear({0xB0100777});
     CHECK(g_native.size() == 2 && native_has(0, {kS1, kS2}, {0xB0100777}) && native_has(1, {kS2}, {kHostPet}));
     CHECK(hold_test::settle_size() == 0);
@@ -544,17 +544,17 @@ void test_settle_recent_and_old() {
         CHECK(g_native.empty() && hold_test::settle_size() == 1);
         HoldEntry e;
         CHECK(hold_test::settle_entry(0, e) && e.since_ms == 1300);
-        g_now = 2943;
+        g_now = 2499;
         w.action();
         CHECK(g_native.empty());
-        g_now = 2807;  // 1500 ms after the character (not after the pet's hold)
+        g_now = 2500;  // 1500 ms after the character (not after the pet's hold)
         w.action();
         CHECK(native_has(0, {kS2}, {kHostPet}) && hold_test::settle_size() == 0);
     }
     {
         World w;
         w.appear({kHostChar}, {kS2});
-        g_now = 2807;  // settled long enough: the pet passes natively, nothing withheld
+        g_now = 2500;  // settled long enough: the pet passes natively, nothing withheld
         g_native.clear();
         w.appear({kHostPet}, {kS2});
         CHECK(g_native.size() == 1 && native_has(0, {kS2}, {kHostPet}) && hold_test::settle_size() == 0);
@@ -597,7 +597,7 @@ void test_settle_drops() {
         CHECK(hold_test::settle_size() == 1);
         w.sector.set({w.host.a()});  // user 2 left the pet's sectors
         g_native.clear();
-        g_now = 2616;
+        g_now = 2600;
         w.action();
         CHECK(g_native.empty() && hold_test::settle_size() == 0 && hold_test::settle_counters().dropped == 1);
         hold_test::network_tick();
@@ -637,7 +637,7 @@ void test_settle_d53_waits() {
     g_now = 1200;
     w.action(kUser2Pet);
     CHECK(g_native.empty() && hold_test::child_size() == 1 && hold_test::settle_counters().d53_waited == 1);
-    g_now = 2807;
+    g_now = 2500;
     w.action(kUser2Pet);
     CHECK(native_has(0, {kS1}, {kUser2Pet}) && hold_test::child_size() == 0);
     hold_test::network_tick();
@@ -651,7 +651,7 @@ void test_settle_behind_character_hold() {
     w.char1.set_restore(0);
     w.appear({kHostChar, kHostPet}, {kS2});
     CHECK(g_native.empty() && hold_test::char_size() == 1 && hold_test::settle_size() == 1);
-    g_now = 2793;
+    g_now = 3000;
     w.action();
     CHECK(g_native.empty() && hold_test::settle_size() == 1);  // the character is still withheld
     w.char1.set_restore(1);
@@ -732,12 +732,12 @@ void test_settle_acks() {
         CHECK(g_out.size() == 1 && op_of(g_out[0]) == 2005 && key_of(g_out[0]) == kHostChar);
         CHECK(observer_hold_acks_keys() == 1);
         // The pet's packets meanwhile (session 8: 2404 / 2991 / 2697): kept.
-        take(actor_packet(2674, kHostPet, 1));
-        take(actor_packet(2223, kHostPet, 2));
-        take(actor_packet(2505, kHostPet, 3));
-        take(actor_packet(2505, kHostChar, 4));  // the character's own: passes
+        take(actor_packet(2404, kHostPet, 1));
+        take(actor_packet(2991, kHostPet, 2));
+        take(actor_packet(2697, kHostPet, 3));
+        take(actor_packet(2697, kHostChar, 4));  // the character's own: passes
         CHECK(g_out.size() == 2 && key_of(g_out[1]) == kHostChar);
-        g_now = 2807;
+        g_now = 2500;
         w.action();
         // Its own 2005, then its three packets in order.
         CHECK(g_out.size() == 6);
@@ -756,9 +756,9 @@ void test_settle_acks() {
         w.seams.notify = fake_notify_2005;
         g_out.clear();
         w.appear({kHostChar, kHostPet}, {kS2});
-        take(actor_packet(2223, kHostPet, 2));
+        take(actor_packet(2991, kHostPet, 2));
         w.sector.set({w.host.a()});
-        g_now = 2616;
+        g_now = 2600;
         w.action();
         CHECK(observer_hold_acks_keys() == 0 && g_out.size() == 1);
     }

@@ -258,21 +258,21 @@ void test_guest_full_cycle() {
     CHECK(g.phase() == rjl::Phase::Asking);
     CHECK(g.due(2000));
     // A new connection now: local, with the reason.
-    auto v = g.judge(3087);
+    auto v = g.judge(2100);
     CHECK(!v.remote && !v.would && v.why.find("has not begun") != std::string::npos);
     // READY -> the host starts epoch 2 in-band for conversation 2.
-    g.on_epoch(ep(rjl::HostState::Active, rjl::Reason::StartRejoin, 2, 2), 2807);
+    g.on_epoch(ep(rjl::HostState::Active, rjl::Reason::StartRejoin, 2, 2), 2500);
     CHECK(g.phase() == rjl::Phase::Granted && g.granted_epoch() == 2);
     CHECK(!g.due(5000));
     // Granted, but no ready after the grant yet.
-    v = g.judge(2616);
+    v = g.judge(2600);
     CHECK(!v.remote && v.why.find("no 'ready'") != std::string::npos);
     g.on_ready();
-    v = g.judge(3115);
+    v = g.judge(2700);
     CHECK(v.remote && v.would);
     CHECK(g.hud_text().find("Continuar") != std::string::npos);
     // The client's new connection goes remote: conversation 2 plays epoch 2.
-    CHECK(g.on_remote_begin(2793) == 2);
+    CHECK(g.on_remote_begin(3000) == 2);
     CHECK(g.phase() == rjl::Phase::Playing && g.played_epoch() == 2);
     // And a third time.
     CHECK(g.on_remote_over(9000));
@@ -455,7 +455,7 @@ void test_guest_hold_conversation() {
     // With it: the final save once per conversation, and no new upload (the 3093 passes at once).
     h.new_conversation();
     CHECK(h.upload() == H::Upload::Acked && !h.final_done() && h.hold() == H::Hold::Off);
-    d = h.on_send(gsw::kOpLoginCharacterReq, 0u, 2793, false, 1);
+    d = h.on_send(gsw::kOpLoginCharacterReq, 0u, 3000, false, 1);
     CHECK(!d.hold && !d.reoffer);
     d = h.on_send(gsw::kOpLogoutSessionReq, std::nullopt, 4000, true, 1);
     CHECK(d.hold && d.save_first);
@@ -489,7 +489,7 @@ void test_guest_hold_reentry_slot() {
         CHECK(h.upload() == H::Upload::Acked);
         d = h.on_send(gsw::kOpLoginCharacterReq, 101u, 2000, false, 0);  // the same slot again: said once
         CHECK(!d.reoffer && !d.slot_kept && !d.hold);
-        d = h.on_send(gsw::kOpLoginCharacterReq, 0u, 2793, false, 0);  // its own slot: nothing to say
+        d = h.on_send(gsw::kOpLoginCharacterReq, 0u, 3000, false, 0);  // its own slot: nothing to say
         CHECK(!d.reoffer && !d.hold);
     }
 }

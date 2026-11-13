@@ -100,7 +100,7 @@ void test_observe_set() {
     CHECK(!o.reset && o.reset_1000 && o.record);
     in.ts_new = 13000;  // 3 s: emptied even at 2500; still a recorded gap (<= 5 s)
     o = rip::observe_set(in);
-    CHECK(o.reset && o.record && o.gap == 2793);
+    CHECK(o.reset && o.record && o.gap == 3000);
     in.ts_new = 16000;  // 6 s: a pause, not the cadence
     o = rip::observe_set(in);
     CHECK(o.reset && !o.record);

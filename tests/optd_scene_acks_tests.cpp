@@ -93,7 +93,7 @@ void test_book() {
     // Wrong sizes are ignored.
     CHECK(b.on_out(osc::kOpPrepare, std::vector<uint8_t>(90, 0), 500, 1) == osc::SceneBook::Seen::Other);
     CHECK(b.on_out(osc::kOpDelete, std::vector<uint8_t>(16, 0), 500, 1) == osc::SceneBook::Seen::Other);
-    CHECK(b.on_out(2513, del, 500, 1) == osc::SceneBook::Seen::Other);
+    CHECK(b.on_out(2111, del, 500, 1) == osc::SceneBook::Seen::Other);
     // Bounded: the oldest goes.
     for (uint64_t s = 1; s <= 5; ++s) {
         auto q = p;
@@ -222,9 +222,9 @@ void test_filter_and_parser() {
     CHECK(oha::npc_key_of(2499, ai) == std::optional<uint32_t>(0xB0100425u));
     CHECK(oha::npc_key_of(3039, spawn) == std::optional<uint32_t>(0xB0100425u));
     for (const uint16_t op : oha::kHeldOps) CHECK(oha::op_index(op) >= 0 && oha::npc_key_of(op, ai));
-    CHECK(!oha::npc_key_of(2005, ai) && !oha::npc_key_of(2513, ai) && !oha::npc_key_of(2455, ai));
-    CHECK(!oha::npc_key_of(2674, hex("1f0310a0")));  // a character key: not held
-    CHECK(!oha::npc_key_of(2674, hex("2504")));      // too short
+    CHECK(!oha::npc_key_of(2005, ai) && !oha::npc_key_of(2111, ai) && !oha::npc_key_of(2661, ai));
+    CHECK(!oha::npc_key_of(2404, hex("1f0310a0")));  // a character key: not held
+    CHECK(!oha::npc_key_of(2404, hex("2504")));      // too short
     // The 2005 key parser on the session-4 fixtures (guest_s3_logic.h parse_2005 finds the same keys).
     std::vector<uint32_t> keys;
     const auto crow = load("p8s4_2005_12334.bin");
@@ -254,10 +254,10 @@ void test_hold_order() {
     constexpr uint32_t a = 0xB0100425, b = 0xB0100426;
     CHECK(h.begin(a, 1, 1000) == oha::Begin::Started && h.begin(b, 1, 1000) == oha::Begin::Started);
     // Not held: other keys, and a held key's opcodes outside the list never reach offer (filter).
-    auto other = npc(2674, 0xB0100999, 0);
-    CHECK(h.offer(2674, 0xB0100999, other, 1001, spill) == oha::Offer::Pass && !other.empty());
+    auto other = npc(2404, 0xB0100999, 0);
+    CHECK(h.offer(2404, 0xB0100999, other, 1001, spill) == oha::Offer::Pass && !other.empty());
     // Session 6B's pattern for a, interleaved with b's.
-    const uint16_t ops[] = {2674, 2674, 2674, 2387};
+    const uint16_t ops[] = {2404, 2404, 2404, 2723};
     uint8_t m = 0;
     for (const uint16_t op : ops) {
         auto pa = npc(op, a, ++m);
@@ -278,7 +278,7 @@ void test_hold_order() {
         CHECK(out[i].key == (i % 2 == 0 ? a : b));
         CHECK(out[i].bytes[9] == (i % 2 == 0 ? i / 2 + 1 : 100 + i / 2 + 1));
     }
-    CHECK(out[6].opcode == 2387 && out[0].opcode == 2674);
+    CHECK(out[6].opcode == 2723 && out[0].opcode == 2404);
     CHECK(rel.size() == 2 && h.keys() == 0 && h.bytes() == 0);
     const oha::Counters& c = h.counters();
     CHECK(c.held == 8 && c.released_pkts == 8 && c.released_keys == 2 && c.per_key_max == 4);
@@ -287,8 +287,8 @@ void test_hold_order() {
           c.held_by_op[static_cast<size_t>(oha::op_index(2586))] == 4);
     CHECK(c.wait_max_ms == 1200 - 1011);
     // After its 2005 the key passes.
-    auto later = npc(2674, a, 50);
-    CHECK(h.offer(2674, a, later, 1300, spill) == oha::Offer::Pass && !later.empty());
+    auto later = npc(2404, a, 50);
+    CHECK(h.offer(2404, a, later, 1300, spill) == oha::Offer::Pass && !later.empty());
     // A 2005 for a key held with nothing yet: the hold ends, nothing to push.
     h.begin(a, 1, 1400);
     CHECK(h.announce(std::vector<uint32_t>{a}, 1401).empty() && h.counters().announced_empty == 1 && h.keys() == 0);
@@ -308,8 +308,8 @@ void test_hold_again_refreshes_expiry() {
     constexpr uint32_t k = 0xB0100777;
     CHECK(h.begin(k, 1, 0) == oha::Begin::Started);
     CHECK(h.begin(k, 1, 30000) == oha::Begin::Again);
-    auto p = npc(2674, k, 1);
-    CHECK(h.offer(2674, k, p, 35000, spill) == oha::Offer::Held);
+    auto p = npc(2404, k, 1);
+    CHECK(h.offer(2404, k, p, 35000, spill) == oha::Offer::Held);
     CHECK(h.expire(h.limits().max_hold_ms) == 0 && h.keys() == 1);  // 40 s after the first begin: kept
     CHECK(h.announce(std::vector<uint32_t>{k}, 45000).size() == 1);  // its 2005 still releases it
     CHECK(h.begin(k, 1, 50000) == oha::Begin::Started);
@@ -322,8 +322,8 @@ void test_hold_drop_orphan_expire_epoch() {
     std::vector<std::vector<uint8_t>> spill;
     constexpr uint32_t a = 0xB0100001, b = 0xB0100002, c = 0xB0100003;
     h.begin(a, 1, 0);
-    auto p = npc(2387, a, 1);
-    h.offer(2387, a, p, 1, spill);
+    auto p = npc(2723, a, 1);
+    h.offer(2723, a, p, 1, spill);
     // A dropped hold: its packets go, nothing is returned by a later 2005.
     CHECK(h.drop(a) == 1 && h.keys() == 0 && h.bytes() == 0);
     CHECK(h.counters().discarded_pkts[static_cast<size_t>(oha::Discard::Dropped)] == 1);
@@ -331,9 +331,9 @@ void test_hold_drop_orphan_expire_epoch() {
     // Released but its 2005 never seen: orphan_ms later its packets go; a 2005 before that still flushes.
     h.begin(b, 1, 0);
     h.begin(c, 1, 0);
-    auto pb = npc(2674, b, 1), pc = npc(2674, c, 1);
-    h.offer(2674, b, pb, 10, spill);
-    h.offer(2674, c, pc, 10, spill);
+    auto pb = npc(2404, b, 1), pc = npc(2404, c, 1);
+    h.offer(2404, b, pb, 10, spill);
+    h.offer(2404, c, pc, 10, spill);
     h.released(std::vector<uint32_t>{b, c}, 100);
     CHECK(h.announce(std::vector<uint32_t>{c}, 150).size() == 1);
     std::vector<oha::AckHold::Gone> gone;
@@ -342,8 +342,8 @@ void test_hold_drop_orphan_expire_epoch() {
           gone[0].why == oha::Discard::Orphan && gone[0].packets == 1);
     // Held again (withheld again) after a release: holds again.
     h.begin(b, 1, 5000);
-    auto again = npc(2674, b, 2);
-    CHECK(h.offer(2674, b, again, 5001, spill) == oha::Offer::Held);
+    auto again = npc(2404, b, 2);
+    CHECK(h.offer(2404, b, again, 5001, spill) == oha::Offer::Held);
     h.released(std::vector<uint32_t>{b}, 5002);
     CHECK(h.begin(b, 1, 5003) == oha::Begin::Again && h.expire(5002 + h.limits().orphan_ms) == 0);
     // Expiry: a hold older than max_hold_ms, counted from its LAST begin (P8 review I5: 5003, not 5000).
@@ -352,13 +352,13 @@ void test_hold_drop_orphan_expire_epoch() {
     CHECK(h.expire(5003 + h.limits().max_hold_ms, &gone) == 1 && gone[0].why == oha::Discard::Expired);
     // Another epoch: the old hold's packets go, a fresh one starts.
     h.begin(a, 1, 6000);
-    auto pa = npc(2674, a, 3);
-    h.offer(2674, a, pa, 6001, spill);
+    auto pa = npc(2404, a, 3);
+    h.offer(2404, a, pa, 6001, spill);
     CHECK(h.begin(a, 2, 6002) == oha::Begin::Started && h.packets() == 0);
     CHECK(h.counters().discarded_pkts[static_cast<size_t>(oha::Discard::Epoch)] == 1);
     // Everything (user 2 gone).
-    auto pa2 = npc(2674, a, 4);
-    h.offer(2674, a, pa2, 6003, spill);
+    auto pa2 = npc(2404, a, 4);
+    h.offer(2404, a, pa2, 6003, spill);
     CHECK(h.clear(oha::Discard::UserGone) == 1 && h.keys() == 0 && h.bytes() == 0);
 }
 
@@ -376,23 +376,23 @@ void test_hold_bounds() {
     const uint32_t k = 0xB0000001;
     // Per key: the 4th packet spills the key in order (its 3 then this one), then it passes.
     for (uint8_t i = 1; i <= 3; ++i) {
-        auto p = npc(2674, k, i, 8);
-        CHECK(h.offer(2674, k, p, i, spill) == oha::Offer::Held);
+        auto p = npc(2404, k, i, 8);
+        CHECK(h.offer(2404, k, p, i, spill) == oha::Offer::Held);
     }
-    auto p4 = npc(2674, k, 4, 8);
+    auto p4 = npc(2404, k, 4, 8);
     CHECK(h.offer(2404, k, p4, 4, spill) == oha::Offer::Spill && spill.size() == 4);
     for (size_t i = 0; i < spill.size(); ++i) CHECK(spill[i][9] == i + 1);
     CHECK(!h.holding(k) && h.bytes() == 0 && h.counters().spilled_keys == 1 && h.counters().spilled_pkts == 4);
-    auto p5 = npc(2674, k, 5, 8);
-    CHECK(h.offer(2674, k, p5, 5, spill) == oha::Offer::Pass);
+    auto p5 = npc(2404, k, 5, 8);
+    CHECK(h.offer(2404, k, p5, 5, spill) == oha::Offer::Pass);
     // Its 2005 closes the spilled hold (nothing to push).
     CHECK(h.announce(std::vector<uint32_t>{k}, 6).empty() && h.counters().spilled_closed == 1);
     // In all: the total bound spills too.
     spill.clear();
     const uint32_t k2 = 0xB0000002;
-    auto big = npc(2387, k2, 1, 60);  // 65 bytes
-    CHECK(h.offer(2387, k2, big, 7, spill) == oha::Offer::Held);
-    auto big2 = npc(2387, k2, 2, 60);
+    auto big = npc(2723, k2, 1, 60);  // 65 bytes
+    CHECK(h.offer(2723, k2, big, 7, spill) == oha::Offer::Held);
+    auto big2 = npc(2723, k2, 2, 60);
     CHECK(h.offer(2723, k2, big2, 8, spill) == oha::Offer::Spill && spill.size() == 2 && h.bytes() == 0);
 }
 

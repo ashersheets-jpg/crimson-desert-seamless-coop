@@ -213,8 +213,8 @@ void test_points() {
     const uintptr_t call_at = isl::kCtxLookup + sizeof isl::kCtxLookupBytes - 5;
     int32_t rel = 0;
     std::memcpy(&rel, isl::kCtxLookupBytes + sizeof isl::kCtxLookupBytes - 4, 4);
-    static_assert(isl::kCtxLookup + sizeof isl::kCtxLookupBytes - 5 == 0x22EE424);  // 3576 (2976 0x2126A6A)
-    CHECK(call_at + 5 + rel == 0x21578E0);  // 3576 (2976 0x1F6C190)
+    static_assert(isl::kCtxLookup + sizeof isl::kCtxLookupBytes - 5 == 0x235ECB4);  // 3663 (3576 0x22EE424; 2976 0x2126A6A)
+    CHECK(call_at + 5 + rel == 0x21C5750);  // 3663 (3576 0x21578E0; 2976 0x1F6C190)
     static_assert(isl::kPointR > isl::kPointA && isl::kPointF > isl::kPointR);
 }
 

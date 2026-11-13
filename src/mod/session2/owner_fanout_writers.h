@@ -239,7 +239,7 @@ inline constexpr WriterRow kWriters[] = {
     {0x2A1C2B4, 0x2A1C250, 3108, 1, "DeleteCharacterAck"},
     {0x2A1C749, 0x2A1C6F0, 3103, 1, "CancelDeleteCharacterAck"},
     {0x2A1CB99, 0x2A1CB40, 3152, 1, "NewGameStartAck"},
-    {0x2A1CFD6, 0x2A1CF80, 2282, 1, "ClearCharacterLobbyDataForSinglePlayAck"},
+    {0x2A1CFD6, 0x2A1CF80, 2468, 1, "ClearCharacterLobbyDataForSinglePlayAck"},
     {0x2A1E55E, 0x2A1E500, 2535, 1, "LoginUserToAuthenticationServerAck"},
     {0x2A1EA2E, 0x2A1E9D0, 2474, 1, "ServerTimeInfoAck"},
     {0x2A1EE99, 0x2A1EE40, 2420, 1, "MainUserDataStartAck"},

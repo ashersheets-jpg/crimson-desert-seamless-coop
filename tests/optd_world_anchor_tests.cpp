@@ -94,7 +94,7 @@ void test_option() {
     CHECK(wal::parse_mode("2").mode == Mode::Off);
     CHECK(std::strcmp(wal::mode_name(Mode::Probe), "probe") == 0);
     CHECK(wal::leaves_field(2350) && wal::leaves_field(3018) && wal::leaves_field(2001));
-    CHECK(!wal::leaves_field(2123) && !wal::leaves_field(2320) && !wal::leaves_field(0));
+    CHECK(!wal::leaves_field(2445) && !wal::leaves_field(2549) && !wal::leaves_field(0));
     // The build's numbers the cpp checks (documented in mundo-invitado.md).
     static_assert(wal::kFieldSlotOn == 0x198 && wal::kFieldSlotKey == 0x19C && wal::kTsField == 0x518);  // 3576
     static_assert(wal::kLockSlotTry == 0x28 && wal::kLockSlotUnlock == 0x20);
@@ -108,7 +108,7 @@ void test_off_does_nothing() {
     CHECK(!a.due(0));
     const Decision d = a.step(ready(1000));
     CHECK(d.act == Act::None);
-    CHECK(a.on_leave(2757, 1, 1000).act == Act::None);
+    CHECK(a.on_leave(2437, 1, 1000).act == Act::None);
     CHECK(!a.owned());
 }
 
@@ -218,7 +218,7 @@ void test_lost_set_again() {
     CHECK(a.owned() && !a.owned()->verified && a.owned()->since_ms == 6000);
     // Lost again right away (the watchdog's next read is 5 s later anyway; a forced read before is rate-limited).
     Anchor b = set_at_1000();
-    d = b.step(held(2793, Slot{0, 0}));  // not due yet, but step() is a read: rate-limited by the last write
+    d = b.step(held(3000, Slot{0, 0}));  // not due yet, but step() is a read: rate-limited by the last write
     CHECK(d.act == Act::None && d.why == Why::Lost);
     CHECK(!b.due(5999) && b.due(6000));
     d = b.step(held(6000, Slot{0, 0}));
@@ -245,7 +245,7 @@ void test_busy_never_stolen() {
     d = c.step(gone);  // cleared, as the fallback
     c.applied(d, Result::Stale, 2000);  // say the clear found it changed: forgotten
     CHECK(!c.owned());
-    Inputs next = ready(2793, 1, Slot{1, kUser2Key});
+    Inputs next = ready(3000, 1, Slot{1, kUser2Key});
     next.key = 0xA0100002;  // the new user 2's character
     d = c.step(next);
     CHECK(d.act == Act::Set && d.key == 0xA0100002 && d.found == (Slot{1, kUser2Key}));
@@ -283,7 +283,7 @@ void test_field_reset_forgets() {
 // ---------------------------------------------------------------- the leaves and the re-arm
 
 void test_leave_clears_and_rearms() {
-    for (const uint16_t op : {uint16_t{2757}, uint16_t{2819}, uint16_t{2001}}) {
+    for (const uint16_t op : {uint16_t{2437}, uint16_t{2283}, uint16_t{2001}}) {
         Anchor a = set_at_1000();
         Decision d = a.on_leave(op, 1, 2000);
         CHECK(d.act == Act::Clear && d.why == Why::Leave && d.leave_op == op);
@@ -294,28 +294,28 @@ void test_leave_clears_and_rearms() {
         d = a.step(ready(2000, 1));
         CHECK(d.act == Act::None && d.why == Why::NotArmed);
         // Its next 2762: set again.
-        d = a.step(ready(2807, 2));
+        d = a.step(ready(2500, 2));
         CHECK(d.act == Act::Set && d.why == Why::First);
     }
 }
 
 void test_leave_without_slot() {
     Anchor a(Mode::On);
-    Decision d = a.on_leave(2757, 3, 1000);
-    CHECK(d.act == Act::None && d.why == Why::Leave && d.leave_op == 2757);
+    Decision d = a.on_leave(2437, 3, 1000);
+    CHECK(d.act == Act::None && d.why == Why::Leave && d.leave_op == 2437);
     CHECK(a.armed_after() == 3);
     CHECK(a.step(ready(1000, 3)).why == Why::NotArmed);
     CHECK(a.step(ready(1500, 4)).act == Act::Set);
     // A leave never lowers the bar.
     Anchor b(Mode::On);
-    b.on_leave(2757, 5, 1000);
+    b.on_leave(2437, 5, 1000);
     b.on_leave(2001, 2, 1000);
     CHECK(b.armed_after() == 5);
 }
 
 void test_leave_retry_then_clear() {
     Anchor a = set_at_1000();
-    Decision d = a.on_leave(2757, 1, 2000);
+    Decision d = a.on_leave(2437, 1, 2000);
     a.applied(d, Result::Retry, 2000);  // the lock stayed busy
     CHECK(a.owned() && a.due(2000));
     // The next packet: not armed any more -> cleared (an ordinary clear now).
@@ -400,14 +400,14 @@ void test_clear_stale_forgets() {
 
 void test_epochs() {
     Anchor a(Mode::On);
-    a.on_leave(2757, 3, 1000);
+    a.on_leave(2437, 3, 1000);
     CHECK(a.armed_after() == 3);
     a.on_epoch();  // a new guest: its 2762s from 0
     CHECK(a.armed_after() == 0 && a.due(0));
     CHECK(a.step(ready(1000, 1)).act == Act::Set);
     // The phase tracker restarted inside an epoch (a rebuilt session 2): the bar goes with it.
     Anchor b(Mode::On);
-    b.on_leave(2757, 3, 1000);
+    b.on_leave(2437, 3, 1000);
     CHECK(b.step(ready(1000, 3)).why == Why::NotArmed);
     CHECK(b.step(ready(2000, 1)).act == Act::Set);
     // The server instance replaced: nothing of the old one is touched.
@@ -431,8 +431,8 @@ void test_probe_would() {
     d = a.step(in);
     CHECK(d.act == Act::None && !d.verified);
     // Leaves and clears as "would".
-    d = a.on_leave(2819, 1, 7000);
-    CHECK(d.act == Act::Clear && d.leave_op == 2819);
+    d = a.on_leave(2283, 1, 7000);
+    CHECK(d.act == Act::Clear && d.leave_op == 2283);
     a.applied(d, Result::Written, 7000);
     CHECK(!a.owned());
     d = a.step(ready(7500, 2));

@@ -227,7 +227,7 @@ void provenance_reader() {
     in.in_road_troc = false;
     CHECK(road::root_verdict(in) == Verdict::NotRoadTroc);
     // NPCSchedule (U-e) nunca es de carretera; otra vtable tampoco; lecturas fallidas -> sin marca.
-    const uintptr_t sched = a.desc(0x5ECDB60);
+    const uintptr_t sched = a.desc(0x5F477E0);
     a.mark(sched, kU2Char, kU2Ptr, 0x101);
     CHECK(!road::marked(road::read_prov(rd, sched, kBase, kImage)));
     a.bad[d + road::kDesc_ReqKey] = true;
@@ -244,7 +244,7 @@ void provenance_reader() {
     ci.eax = kHostUser; ci.field_owner = kHostUser; ci.host_field = true; ci.key2 = kKey2;
     CHECK(u2s::ctl_verdict(ci) == u2s::Ctl::OtherDesc);
     road::Prov ps;
-    ps.ok = true; ps.vt = 0x5ECDB60; ps.mark = 1; ps.req_key = kU2Char;
+    ps.ok = true; ps.vt = 0x5F477E0; ps.mark = 1; ps.req_key = kU2Char;
     CHECK(road::root_verdict(good_root(ps)) == Verdict::NotMarked);
     // El S33 de U-e en el Troc 2550 sale NotTimer: nunca asigna por U-e.
     ci.opcode = road::kOpAutoSpawnRoad;
@@ -301,14 +301,14 @@ void caravan_scan() {
     {
         Arena b = a;
         ArenaRead rb{&b};
-        const uintptr_t gm = b.desc(0x5ECDB08);
-        b.link(wagon, 0x5ECDD40, gm);  // _AutoSpawnGimmick
-        for (int i = 0; i < 19; ++i) b.link(gm, road::kVtWrapSimple, b.desc(0x5ECDB08));  // la carga del carro
+        const uintptr_t gm = b.desc(0x5F47730);
+        b.link(wagon, 0x5F478F0, gm);  // _AutoSpawnGimmick
+        for (int i = 0; i < 19; ++i) b.link(gm, road::kVtWrapSimple, b.desc(0x5F47730));  // la carga del carro
         road::scan_unit(rb, wagon, kBase, kImage, kU2Char, kU2Ptr, s);
         CHECK(s.v == ScanV::Ok && s.n == 5 && s.gimmicks == 1 && s.nodes[2].gimmick && !s.nodes[0].gimmick);
         Arena bs = a;
         ArenaRead rbs{&bs};
-        bs.link(horse, road::kVtWrapSimple, bs.desc(0x5ECDB08));  // InstantGimmick bajo _Simple
+        bs.link(horse, road::kVtWrapSimple, bs.desc(0x5F47730));  // InstantGimmick bajo _Simple
         road::scan_unit(rbs, wagon, kBase, kImage, kU2Char, kU2Ptr, s);
         CHECK(s.v == ScanV::Ok && s.gimmicks == 1 && s.nodes[s.n - 1].gimmick && s.nodes[s.n - 1].depth == 2);
         // Otro envoltorio (_Docking): fuera, entera.
@@ -316,15 +316,15 @@ void caravan_scan() {
         ArenaRead rbd{&bd};
         const uintptr_t dk = bd.desc(road::kVtDescBase);
         bd.mark(dk, kU2Char, kU2Ptr, 0x100);
-        bd.link(wagon, 0x5ECDDA0, dk);
+        bd.link(wagon, 0x5F47910, dk);
         road::scan_unit(rbd, wagon, kBase, kImage, kU2Char, kU2Ptr, s);
-        CHECK(s.v == ScanV::NotRider && s.bad_wrap == 0x5ECDDA0);
+        CHECK(s.v == ScanV::NotRider && s.bad_wrap == 0x5F47910);
         Arena c2 = a;
         ArenaRead rc{&c2};
-        const uintptr_t gm2 = c2.desc(0x5ECDB08);
+        const uintptr_t gm2 = c2.desc(0x5F47730);
         c2.link(wagon, road::kVtWrapRider, gm2);
         road::scan_unit(rc, wagon, kBase, kImage, kU2Char, kU2Ptr, s);
-        CHECK(s.v == ScanV::NotTraveller && s.bad_inner == 0x5ECDB08);
+        CHECK(s.v == ScanV::NotTraveller && s.bad_inner == 0x5F47730);
     }
     // Un acompañante de OTRO solicitante (o sin marca): fuera.
     {
@@ -606,7 +606,7 @@ void strict_cleanup() {
     CHECK(c.clean == Clean::Leaving && c.leave_us == 1000);
     road::apply_call(c, Call::Present, true, 2000);
     CHECK(c.clean == Clean::Leaving && c.checks == 1);
-    road::apply_call(c, Call::NotFound, true, 2793);
+    road::apply_call(c, Call::NotFound, true, 3000);
     CHECK(c.clean == Clean::Gone);
     road::reset_rec(c);
     road::apply_call(c, Call::AlreadyLeaving, false, 1000);
@@ -771,16 +771,16 @@ void stops_and_checks() {
     CHECK(road::check_2005(true, kKey2, kKey2, true, 1) == Check2005::Ok);
     CHECK(road::check_2005(true, 0, 0, false, 1) == Check2005::BadController);
     // Doble control: sólo las Req que envía el controlador (S34: el no controlador no envió ninguna para 3/5/6).
-    for (const uint16_t op : std::initializer_list<uint16_t>{3142, 2976, 2879, 2415, 2534}) CHECK(road::controller_only_req(op));
-    CHECK(!road::controller_only_req(2685) && !road::controller_only_req(2400) && !road::controller_only_req(2005));
+    for (const uint16_t op : std::initializer_list<uint16_t>{2223, 2734, 2291, 2405, 2828}) CHECK(road::controller_only_req(op));
+    CHECK(!road::controller_only_req(2556) && !road::controller_only_req(2550) && !road::controller_only_req(2005));
     for (size_t s = 0; s < static_cast<size_t>(road::Stop::Count); ++s) {
         CHECK(std::strcmp(road::stop_name(static_cast<road::Stop>(s)), "?") != 0);
     }
     // Posición de las Req del invitado: ¿se mueve?
     size_t off = 0;
-    CHECK(road::req_position_offset(3142, off) && off == 0x8E);
-    CHECK(road::req_position_offset(2685, off) && off == 4);
-    CHECK(!road::req_position_offset(2976, off));
+    CHECK(road::req_position_offset(2223, off) && off == 0x8E);
+    CHECK(road::req_position_offset(2556, off) && off == 4);
+    CHECK(!road::req_position_offset(2734, off));
     road::Rec c;
     road::reset_rec(c);
     road::note_position(c, 100.f, 200.f);
@@ -985,7 +985,7 @@ void carts_s40() {
     CHECK(is(road::child_verdict(c), MemberV::HostKept, Split::None, road::ChildKind::Cargo));
     c.vt = road::kVtInstantGimmick;
     CHECK(is(road::child_verdict(c), MemberV::HostKept, Split::None, road::ChildKind::Cargo));
-    c.vt = 0x5ECDB60;  // NPCSchedule bajo un gimmick: no es carga
+    c.vt = 0x5F477E0;  // NPCSchedule bajo un gimmick: no es carga
     CHECK(is(road::child_verdict(c), MemberV::Split, Split::CargoType, road::ChildKind::Cargo));
     c.vt = road::kVtDescBase; c.type = 3;
     CHECK(is(road::child_verdict(c), MemberV::Split, Split::CargoType, road::ChildKind::Cargo));
@@ -1000,7 +1000,7 @@ void carts_s40() {
     c.in_vector = -1;
     CHECK(is(road::child_verdict(c), MemberV::Split, Split::LinkUnknown, road::ChildKind::Foreign));
     c = road::ChildIn{};
-    c.vt = 0x5ECDB60; c.type = 3;
+    c.vt = 0x5F477E0; c.type = 3;
     CHECK(is(road::child_verdict(c), MemberV::Split, Split::NotTraveller, road::ChildKind::Foreign));
     c = good_linked();
     c.wrap = road::kVtWrapSimple;  // descriptor base de tipo 5 con otro envoltorio: ajeno
@@ -1150,7 +1150,7 @@ void carts_s40() {
         const road::Composition o = road::compose(k.t->u[k.ui]);
         CHECK(o.riders == 1 && o.linked == 0 && o.gimmicks == 0 && o.born == 2);
         // Un hijo ajeno (otro descriptor) parte la unidad y el libro lo cuenta por su clase y motivo.
-        k.child(0xB01002BF, 0x7000, dRoot, 0x5ECDB60, 3, false);
+        k.child(0xB01002BF, 0x7000, dRoot, 0x5F477E0, 3, false);
         CHECK(k.t->u[k.ui].split && k.t->u[k.ui].split_why == Split::NotTraveller);
         k.t->close(static_cast<size_t>(k.ui), 0);
         CHECK(k.t->u[k.ui].state == UState::Retire);  // asignada y partida: se retira entera
@@ -1325,10 +1325,10 @@ void churn_hygiene() {
         CHECK(road::sample_keep(65) && road::sample_keep(90) && !road::sample_keep(91));
         auto s = std::make_unique<road::Sampler<32>>();
         uint32_t kept = 0, ord = 0;
-        for (int i = 0; i < 2276; ++i) kept += s->take(road::sample_key(0x1F5, true), false, &ord);
-        CHECK(ord == 2276);
-        CHECK(kept == 40 + (2276 - 40) / 25);  // ~30 min de bandadas al ritmo nativo: 135 líneas, no 2435
-        CHECK(s->kept.load() == kept && s->dropped.load() == 2276 - kept);
+        for (int i = 0; i < 2435; ++i) kept += s->take(road::sample_key(0x1F5, true), false, &ord);
+        CHECK(ord == 2435);
+        CHECK(kept == 40 + (2435 - 40) / 25);  // ~30 min de bandadas al ritmo nativo: 135 líneas, no 2435
+        CHECK(s->kept.load() == kept && s->dropped.load() == 2435 - kept);
         // Otra carretera y la misma en probe empiezan su propia cuenta.
         CHECK(s->take(road::sample_key(0x3FD, true), false, &ord) && ord == 1);
         CHECK(s->take(road::sample_key(0x1F5, false), false, &ord) && ord == 1);

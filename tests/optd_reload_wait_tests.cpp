@@ -33,23 +33,23 @@ constexpr uint32_t kA3 = 0xB01000A3, k12D = 0xB010012D;  // the two S15 blockers
 void test_trip_clock() {
     TripClock t;
     // The title -> 0x18 is not a trip; 0x18 -> 0x01 (the 2283) begins one.
-    auto c = t.on_state(-1, 0x18, 10);
+    auto c = t.on_state(-1, 0x19, 10);
     CHECK(!c.began && !t.in_trip());
-    c = t.on_state(0x18, 0x01, 100);
+    c = t.on_state(0x19, 0x01, 100);
     CHECK(c.began && t.in_trip() && t.trip() == 1 && t.start_us() == 100);
     t.on_state(0x01, 0x04, 110);
-    t.on_state(0x04, 0x11, 200);
+    t.on_state(0x04, 0x12, 200);
     CHECK(!t.wait_since_us());
-    c = t.on_state(0x11, 0x12, 300);
+    c = t.on_state(0x12, 0x13, 300);
     CHECK(c.entered_wait && t.wait_since_us() == 300 && !c.began);
-    c = t.on_state(0x12, 0x13, 400);
+    c = t.on_state(0x13, 0x14, 400);
     CHECK(c.left_wait && !t.wait_since_us());
-    c = t.on_state(0x17, 0x18, 500);
+    c = t.on_state(0x18, 0x19, 500);
     CHECK(c.ended && !t.in_trip());
     // The same value again is no change.
-    c = t.on_state(0x18, 0x18, 600);
+    c = t.on_state(0x19, 0x19, 600);
     CHECK(!c.began && !c.ended && t.trip() == 1);
-    c = t.on_state(0x18, 0x04, 700);
+    c = t.on_state(0x19, 0x04, 700);
     CHECK(c.began && t.trip() == 2 && t.start_us() == 700);
 }
 
@@ -57,24 +57,24 @@ void test_trip_clock_2283() {
     using O = TripClock::Origin;
     // The 2283 seen while still in 0x18: the trip begins there; the exit from 0x18 is the same trip.
     TripClock t;
-    t.on_state(-1, 0x18, 10);
+    t.on_state(-1, 0x19, 10);
     CHECK(t.on_2283(100) && t.in_trip() && t.trip() == 1 && t.start_us() == 100 && t.origin() == O::Req2283);
-    auto c = t.on_state(0x18, 0x01, 150);
+    auto c = t.on_state(0x19, 0x01, 150);
     CHECK(!c.began && t.trip() == 1 && t.start_us() == 100);
     // A second 2283 inside the trip changes nothing.
     CHECK(!t.on_2283(200) && t.trip() == 1);
-    c = t.on_state(0x17, 0x18, 900);
+    c = t.on_state(0x18, 0x19, 900);
     CHECK(c.ended && !t.in_trip());
     // The exit from 0x18 first (the usual order): the 2283 right after is the same trip.
-    c = t.on_state(0x18, 0x01, 1'000);
+    c = t.on_state(0x19, 0x01, 1'000);
     CHECK(c.began && t.trip() == 2 && t.origin() == O::StateExit);
     CHECK(!t.on_2283(1'010) && t.trip() == 2);
-    t.on_state(0x01, 0x18, 2'000);
+    t.on_state(0x01, 0x19, 2'000);
     // A 2283 whose load never starts: no end while in 0x18, and the real exit much later is a new trip.
     CHECK(t.on_2283(3'000) && t.trip() == 3);
-    c = t.on_state(0x18, 0x18, 4'000);
+    c = t.on_state(0x19, 0x19, 4'000);
     CHECK(!c.ended && t.in_trip());
-    c = t.on_state(0x18, 0x01, 3'000 + kStaleBeginUs + 1);
+    c = t.on_state(0x19, 0x01, 3'000 + kStaleBeginUs + 1);
     CHECK(c.began && t.trip() == 4 && t.origin() == O::StateExit && t.start_us() == 3'000 + kStaleBeginUs + 1);
     // A 2283 after a missed 0x18 exit (the mod saw the machine first mid-load): begins at once.
     TripClock late;
@@ -82,7 +82,7 @@ void test_trip_clock_2283() {
     CHECK(!late.in_trip() && late.on_2283(20) && late.in_trip());
     c = late.on_state(0x09, 0x0A, 30);
     CHECK(!c.began && !c.ended);
-    c = late.on_state(0x17, 0x18, 40);
+    c = late.on_state(0x18, 0x19, 40);
     CHECK(c.ended && !late.in_trip());
 }
 
@@ -105,15 +105,15 @@ void test_waiting_own_2322() {
     const uint64_t start = 1'205'690'570, last_2643 = 1'206'834'000, last_2174 = 58'590'000;
     const bool reload = is_reload_trip(start, last_2643, last_2174);
     CHECK(reload);
-    CHECK(!waiting_own_2322(0x11, reload, 1, 5'006'000));   // the first [still] line (5 s): not yet
-    CHECK(waiting_own_2322(0x11, reload, 1, 10'018'000));   // the second (10 s): warned
-    CHECK(waiting_own_2322(0x11, reload, 0, 40'070'000));
-    CHECK(!waiting_own_2322(0x11, reload, 2, 40'070'000));  // its 2322 came (trip 3)
-    CHECK(!waiting_own_2322(0x11, reload, 3, 40'070'000));
-    CHECK(!waiting_own_2322(0x11, reload, 0xFF, 40'070'000));  // unreadable: nothing said
-    CHECK(!waiting_own_2322(0x11, false, 1, 40'070'000));      // an entry (2174): observer_milestone's path
-    CHECK(!waiting_own_2322(0x12, reload, 1, 40'070'000));     // 0x12 is the wait list's (its own lines)
-    CHECK(!waiting_own_2322(0x10, reload, 1, 40'070'000));
+    CHECK(!waiting_own_2322(0x12 /* 3663 (3576 0x11) */, reload, 1, 5'006'000));   // the first [still] line (5 s): not yet
+    CHECK(waiting_own_2322(0x12 /* 3663 (3576 0x11) */, reload, 1, 10'018'000));   // the second (10 s): warned
+    CHECK(waiting_own_2322(0x12 /* 3663 (3576 0x11) */, reload, 0, 40'070'000));
+    CHECK(!waiting_own_2322(0x12 /* 3663 (3576 0x11) */, reload, 2, 40'070'000));  // its 2322 came (trip 3)
+    CHECK(!waiting_own_2322(0x12 /* 3663 (3576 0x11) */, reload, 3, 40'070'000));
+    CHECK(!waiting_own_2322(0x12 /* 3663 (3576 0x11) */, reload, 0xFF, 40'070'000));  // unreadable: nothing said
+    CHECK(!waiting_own_2322(0x12 /* 3663 (3576 0x11) */, false, 1, 40'070'000));      // an entry (2174): observer_milestone's path
+    CHECK(!waiting_own_2322(0x13, reload, 1, 40'070'000));     // 0x12 is the wait list's (its own lines)
+    CHECK(!waiting_own_2322(0x11, reload, 1, 40'070'000));
 }
 
 Front blocker(uint32_t key, uintptr_t actor) {

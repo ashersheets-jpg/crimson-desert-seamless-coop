@@ -420,7 +420,7 @@ void test_filter() {
     c.set_filter_2100(false);
     CHECK(c.judge_req(osq::kOpCandidatePos, pos, l) == osq::Copier::Req::Pass);
     CHECK(c.judge_req(osq::kOpChartEvent, chart, l) == osq::Copier::Req::HostSequencer);
-    CHECK(c.judge_req(2685, chart, l) == osq::Copier::Req::Pass);
+    CHECK(c.judge_req(2556, chart, l) == osq::Copier::Req::Pass);
     CHECK(c.judge_req(osq::kOpChartEvent, hex("ad01"), l) == osq::Copier::Req::Pass);  // too short
     // guest_seq_play (p8-impl-escenas-play.md §5): 2276 DeleteSequencerReq (u64 seq | u8 code, 0xC02CB0) and 2105
     // StageBranchStateDelayEndReq (one u64) about the host's sequencers: dropped, each with its own kind.
@@ -496,8 +496,8 @@ void test_guest_route() {
     g = f, g.packet_key = 0;  // 2322: the key is the packet's, the actor found by it
     CHECK(gsr::decide(g) == gsr::Verdict::Route);
 
-    CHECK(gsr::point_of_op(2455) == gsr::Point::P2661 && gsr::point_of_op(2491) == gsr::Point::P2322 &&
-          gsr::point_of_op(2844) == gsr::Point::P2524 && !gsr::point_of_op(2513));
+    CHECK(gsr::point_of_op(2661) == gsr::Point::P2661 && gsr::point_of_op(2322) == gsr::Point::P2322 &&
+          gsr::point_of_op(2524) == gsr::Point::P2524 && !gsr::point_of_op(2111));
     // Session 9: the payload layouts the hooks read (p8-s9-npc.md §6.2; GC1/GC2 captures).
     {
         // GC2 t=61.409 2524: u8 4 | u32 actor @1 | u64 sequencer @5 | ... (the hook read @0/@4 before: x44 KeyMismatch)
@@ -544,9 +544,9 @@ void test_guest_route() {
     // guest_seq_play_live: the 2524 is routed, never gated (it arrives natively: 144 in session 8, into M).
     {
         const std::vector<uint8_t> p2524 = hex("04010010a0ab010000000000000100000000");  // u8 4 | u32 actor | u64 seq
-        CHECK(!gsr::named_actor(2844, p2524));
-        CHECK(gsr::gate(2844, p2524, kUser2Char, false) == gsr::Gate::Deliver);
-        CHECK(gsr::gate(2844, p2524, 0, false) == gsr::Gate::Deliver);
+        CHECK(!gsr::named_actor(2524, p2524));
+        CHECK(gsr::gate(2524, p2524, kUser2Char, false) == gsr::Gate::Deliver);
+        CHECK(gsr::gate(2524, p2524, 0, false) == gsr::Gate::Deliver);
         gsr::RouteFacts r = f;  // the 2524 point: no kind, the packet's key = the actor's
         r.need_known = true;    // only into an X guest_seq_play ticks (review 11)
         r.x_known = true;
@@ -614,17 +614,17 @@ void test_guest_route() {
         }
     }
     const std::vector<uint8_t> p2661 = hex(k2661_1AB), p2810 = hex(k2810_19E), p2322 = hex(k2322_host);
-    CHECK(gsr::named_actor(2455, payload_of(p2661)) == kHost && gsr::named_actor(2269, payload_of(p2810)) == kHost &&
-          gsr::named_actor(2491, payload_of(p2322)) == kHost && !gsr::named_actor(2258, payload_of(p2661)));
+    CHECK(gsr::named_actor(2661, payload_of(p2661)) == kHost && gsr::named_actor(2810, payload_of(p2810)) == kHost &&
+          gsr::named_actor(2322, payload_of(p2322)) == kHost && !gsr::named_actor(2981, payload_of(p2661)));
     // The gate: the host's copies only when routed; the own key unknown or the own character: delivered.
-    CHECK(gsr::gate(2455, payload_of(p2661), kUser2Char, false) == gsr::Gate::DropNotRouted);
-    CHECK(gsr::gate(2455, payload_of(p2661), kUser2Char, true) == gsr::Gate::Deliver);
-    CHECK(gsr::gate(2491, payload_of(p2322), kUser2Char, false) == gsr::Gate::DropNotRouted);
-    CHECK(gsr::gate(2269, payload_of(p2810), kUser2Char, false) == gsr::Gate::DropNotRouted);
+    CHECK(gsr::gate(2661, payload_of(p2661), kUser2Char, false) == gsr::Gate::DropNotRouted);
+    CHECK(gsr::gate(2661, payload_of(p2661), kUser2Char, true) == gsr::Gate::Deliver);
+    CHECK(gsr::gate(2322, payload_of(p2322), kUser2Char, false) == gsr::Gate::DropNotRouted);
+    CHECK(gsr::gate(2810, payload_of(p2810), kUser2Char, false) == gsr::Gate::DropNotRouted);
     // The own character not known yet on this connection: fail closed (none arrives before 2756 in session 7).
-    CHECK(gsr::gate(2455, payload_of(p2661), 0, true) == gsr::Gate::DropOwnUnknown);
-    CHECK(gsr::gate(2491, payload_of(hex("1209ff0400e90210a0")), 0, true) == gsr::Gate::DropOwnUnknown);
-    CHECK(gsr::gate(2491, payload_of(hex("1209ff0400e90210a0")), kUser2Char, false) == gsr::Gate::Deliver);  // GC #800
+    CHECK(gsr::gate(2661, payload_of(p2661), 0, true) == gsr::Gate::DropOwnUnknown);
+    CHECK(gsr::gate(2322, payload_of(hex("1209ff0400e90210a0")), 0, true) == gsr::Gate::DropOwnUnknown);
+    CHECK(gsr::gate(2322, payload_of(hex("1209ff0400e90210a0")), kUser2Char, false) == gsr::Gate::Deliver);  // GC #800
     CHECK(gsr::gate(2005, payload_of(p2661), kUser2Char, false) == gsr::Gate::Deliver);
 }
 
@@ -836,11 +836,11 @@ void test_sched_parsers() {
     CHECK(!osq::parse_sched(osq::kOpSchedCreate, std::span<const uint8_t>(a).subspan(5, 21)));
     const auto cl = osq::parse_sched(osq::kOpSchedClosed, payload_of(make_2411(0x2000019E)));
     CHECK(cl && cl->actor == kHost && cl->closed_id == 0x2000019E);
-    CHECK(osq::sched_op(2755) && osq::sched_op(2647) && osq::sched_op(2103) && osq::sched_op(2655) &&
-          osq::sched_op(2928) && !osq::sched_op(2455) && !osq::sched_op(2128));
+    CHECK(osq::sched_op(2335) && osq::sched_op(2126) && osq::sched_op(2411) && osq::sched_op(2958) &&
+          osq::sched_op(2909) && !osq::sched_op(2661) && !osq::sched_op(2874));
     CHECK(osq::sched_creates(4) && osq::sched_creates(1) && !osq::sched_creates(2));
-    CHECK(osq::sched_live_index(2647) == 0 && osq::sched_live_index(2655) == 1 && osq::sched_live_index(2928) == 2 &&
-          osq::sched_live_index(2755, 2) == 3 && osq::sched_live_index(2755, 4) == -1 && osq::sched_live_index(2103) == -1);
+    CHECK(osq::sched_live_index(2126) == 0 && osq::sched_live_index(2958) == 1 && osq::sched_live_index(2909) == 2 &&
+          osq::sched_live_index(2335, 2) == 3 && osq::sched_live_index(2335, 4) == -1 && osq::sched_live_index(2411) == -1);
 }
 
 void test_sched_ledger() {
@@ -960,17 +960,17 @@ void test_sched_snapshot_and_live() {
     // A 2958 of C: the same payload went natively a moment before -> not repeated; another one -> copied.
     const std::vector<uint8_t> chg_c1 = make_change(osq::kOpSchedChange, kKeyC, 0xB9F63F22, 0x29);
     const std::vector<uint8_t> chg_c2 = make_change(osq::kOpSchedChange, kKeyC, 0xB9F63F22, 0x3F);
-    feed_native(*l, *t, chg_c1, 3087);
+    feed_native(*l, *t, chg_c1, 2100);
     CHECK(feed_live(*l, *t, chg_c1, 2101, rec) == Live::NativeAlready && rec.out.size() == 1);
     CHECK(feed_live(*l, *t, chg_c2, 2102, rec) == Live::Forwarded && rec.out.size() == 2 && rec.out[1] == chg_c2);
     // Two equal real events, one of them native: one suppressed, the other copied (a hash is consumed once).
-    feed_native(*l, *t, chg_c2, 2156);
-    CHECK(feed_live(*l, *t, chg_c2, 2178, rec) == Live::NativeAlready);
+    feed_native(*l, *t, chg_c2, 2200);
+    CHECK(feed_live(*l, *t, chg_c2, 2201, rec) == Live::NativeAlready);
     CHECK(feed_live(*l, *t, chg_c2, 2202, rec) == Live::Forwarded && rec.out.size() == 3);
     // A 2909 of B; a native hash too old matches nothing (10 s).
-    CHECK(feed_live(*l, *t, make_change(osq::kOpSchedEvade, kKeyB, 0x8EFF20F5, 0x3B), 2215, rec) == Live::Forwarded);
+    CHECK(feed_live(*l, *t, make_change(osq::kOpSchedEvade, kKeyB, 0x8EFF20F5, 0x3B), 2300, rec) == Live::Forwarded);
     const std::vector<uint8_t> evade_b = make_change(osq::kOpSchedEvade, kKeyB, 0x8EFF20F5, 0x29);
-    feed_native(*l, *t, evade_b, 2793);
+    feed_native(*l, *t, evade_b, 3000);
     CHECK(feed_live(*l, *t, evade_b, 3000 + ST::kNativeTtlUs + 1, rec) == Live::Forwarded && rec.out.size() == 5);
     // The 2126 of C reached user 2 natively (its ToNear site): the host's copy is not repeated.
     feed_native(*l, *t, make_2126(kKeyC), 4000);
@@ -1186,8 +1186,8 @@ void test_sched_pending_refusal_bounds() {
         Recorder rec;
         const std::vector<uint8_t> old = make_change(osq::kOpSchedChange, kKeyA, 1, 0);
         const std::vector<uint8_t> newer = make_change(osq::kOpSchedChange, kKeyA, 1, 2);
-        CHECK(t->on_host_live(*osq::parse_sched(2655, payload_of(newer)), newer, 30, std::ref(rec)) == Live::NativeAlready);
-        CHECK(t->on_host_live(*osq::parse_sched(2655, payload_of(old)), old, 31, std::ref(rec)) == Live::Forwarded);
+        CHECK(t->on_host_live(*osq::parse_sched(2958, payload_of(newer)), newer, 30, std::ref(rec)) == Live::NativeAlready);
+        CHECK(t->on_host_live(*osq::parse_sched(2958, payload_of(old)), old, 31, std::ref(rec)) == Live::Forwarded);
     }
     {
         auto l = std::make_unique<SL>();
@@ -1220,8 +1220,8 @@ void test_sched_pending_refusal_bounds() {
         t->on_user2_announced(2);
         CHECK(t->release(2000, *l, ann_none, std::ref(rec), first_npc) == 46);
         CHECK(rec.out.size() == 46 && t->pending() == 0 && t->has_count() == 46 && npc_before == 2);
-        const auto first = osq::parse_sched(2755, payload_of(rec.out[0]));
-        const auto last = osq::parse_sched(2755, payload_of(rec.out[45]));
+        const auto first = osq::parse_sched(2335, payload_of(rec.out[0]));
+        const auto last = osq::parse_sched(2335, payload_of(rec.out[45]));
         CHECK(first && first->key == 0x20000011 && last && last->key == 0x20000010 + 59);
     }
 }
@@ -1230,7 +1230,7 @@ void test_sched_pending_refusal_bounds() {
 // changes of a scene key with its 2335. S11 phase 1 (H1 #286431 t=374.333 2335 of 0x2000019E, H1 #286282 2126 of
 // 0x20000148, H1 #284867 2958 of 0x20000181), all naming the host's Kliff A0100001.
 void test_guest_sched_route() {
-    CHECK(gsr::kSchedOp[0] == 2755 && gsr::kSchedOp[1] == 2647 && gsr::kSchedOp[2] == 2655 && gsr::kSchedOp[3] == 2928);
+    CHECK(gsr::kSchedOp[0] == 2335 && gsr::kSchedOp[1] == 2126 && gsr::kSchedOp[2] == 2958 && gsr::kSchedOp[3] == 2909);
     CHECK(std::string(gsr::sched_point_name(gsr::SchedPoint::P2126)).find("0xC0BA4E") != std::string::npos);
     gsr::RouteFacts f;
     f.mode = gsr::Mode::On;

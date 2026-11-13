@@ -126,8 +126,8 @@ int main() {
     CHECK(write_file(outside, "outside"));  // elsewhere: no line
 
     // The caps: reads and queries stop at their share, writes go on to the total.
-    for (int i = 0; i < 3087; ++i) (void)GetFileAttributesW(slot.c_str());
-    for (int i = 0; i < 2946; ++i) (void)SetFileAttributesW(slot.c_str(), FILE_ATTRIBUTE_NORMAL);
+    for (int i = 0; i < 2100; ++i) (void)GetFileAttributesW(slot.c_str());
+    for (int i = 0; i < 3100; ++i) (void)SetFileAttributesW(slot.c_str(), FILE_ATTRIBUTE_NORMAL);
     const std::string describe = cdmp::session2::save_hooks_trace_describe();
     std::printf("%s\n", describe.c_str());
     CHECK(describe.rfind("5000 lines logged", 0) == 0);

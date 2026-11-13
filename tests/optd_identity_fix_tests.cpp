@@ -292,15 +292,15 @@ void test_admit() {
     std::string why;
     const uint8_t req3093[13] = {4, 0x02, 0xF0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x7F, 108, 0, 0, 0};
     // Not wanted: everything passes.
-    CHECK(identity_fix_admit(3103, req3093, why) && why.empty());
-    CHECK(identity_fix_admit(3073, {}, why));
+    CHECK(identity_fix_admit(3093, req3093, why) && why.empty());
+    CHECK(identity_fix_admit(2490, {}, why));
     // Wanted but not installed: the two logins are refused, the rest (and the 2001) pass.
     identity_fix_set_wanted(true);
     CHECK(identity_fix_wanted() && !identity_fix_active());
     CHECK(!identity_fix_admit(2554, {}, why) && why.find("not active") != std::string::npos);
     CHECK(!identity_fix_admit(3081, req3093, why));
     CHECK(identity_fix_admit(2001, {}, why));
-    CHECK(identity_fix_admit(2127, {}, why));
+    CHECK(identity_fix_admit(2840, {}, why));
     std::string logout;
     CHECK(!identity_fix_take_logout(logout));
     CHECK(identity_fix_describe().find("WANTED BUT OFF") != std::string::npos);

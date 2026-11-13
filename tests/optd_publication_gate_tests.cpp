@@ -203,7 +203,7 @@ void old_ack_beyond_max_hold() {
     std::vector<std::vector<uint8_t>> spill;
     CHECK(h.begin(key, 1, 0) == cdmp::session2::oha::Begin::Started);
     std::vector<uint8_t> p = {0x7B, 0x0B, 0, 4, 0, 0xA0, 0x02, 0x10, 0xB0};  // 2991 for the key
-    CHECK(h.offer(2223, key, p, 10, spill) == cdmp::session2::oha::Offer::Held && spill.empty());
+    CHECK(h.offer(2991, key, p, 10, spill) == cdmp::session2::oha::Offer::Held && spill.empty());
     std::vector<cdmp::session2::oha::AckHold::Gone> gone;
     CHECK(h.expire(h.limits().max_hold_ms - 1, &gone) == 0);
     CHECK(h.expire(h.limits().max_hold_ms, &gone) == 1 && gone[0].why == cdmp::session2::oha::Discard::Expired);

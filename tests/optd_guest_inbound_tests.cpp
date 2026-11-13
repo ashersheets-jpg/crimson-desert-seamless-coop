@@ -92,7 +92,7 @@ void test_stats() {
     turn.on_batch(0, 0);
     CHECK(turn.batches == 0);
     turn.on_batch(3, 0);
-    turn.on_delivered(1000, 2793);   // 2 ms
+    turn.on_delivered(1000, 3000);   // 2 ms
     turn.on_delivered(1000, 5000);   // 4 ms
     turn.on_delivered(9000, 5000);   // clock went "back": 0, never negative
     CHECK(turn.batches == 1 && turn.batch_max == 3 && turn.capped == 0 && turn.delivered == 3);

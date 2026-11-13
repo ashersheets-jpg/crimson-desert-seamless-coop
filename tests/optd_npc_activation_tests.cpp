@@ -273,10 +273,10 @@ void decisions() {
         CHECK(!containment_ready(x));
     }
     // Sitios de 0x281CEE0: veto exacto; grupo nativo (sólo entero agotado); padre nativo y desconocido nunca.
-    CHECK(veto_site(0x2A5EB72) == VetoSite::Exact && veto_site(0x2A5F6E1) == VetoSite::Exact);
-    CHECK(veto_site(0x2A5FCF7) == VetoSite::Exact && veto_site(0x2A631A5) == VetoSite::Exact);
-    CHECK(veto_site(0x2A5F855) == VetoSite::Group && veto_site(0x2A5F929) == VetoSite::Group);
-    CHECK(veto_site(0x2A66891) == VetoSite::Parent && veto_site(0x2A62EAE) == VetoSite::Parent);
+    CHECK(veto_site(0x2AC25FC) == VetoSite::Exact && veto_site(0x2AC3171) == VetoSite::Exact);
+    CHECK(veto_site(0x2AC3788) == VetoSite::Exact && veto_site(0x2AC6C65) == VetoSite::Exact);
+    CHECK(veto_site(0x2AC32E5) == VetoSite::Group && veto_site(0x2AC33B9) == VetoSite::Group);
+    CHECK(veto_site(0x2ACA351) == VetoSite::Parent && veto_site(0x2AC696E) == VetoSite::Parent);
     CHECK(veto_site(0) == VetoSite::Unknown && veto_site(0x2A68794) == VetoSite::Unknown && veto_site(0x281A4B5) == VetoSite::Unknown);
     static_assert(sizeof(Family) <= 2048, "la familia va en la pila del servidor");
 }
@@ -350,7 +350,7 @@ void group_veto_only_when_whole_group_exhausted() {
     CHECK(!read_group(rd, rsp, kGroupMemberRet, nodes, g) && g.size == 0);
     CHECK(!read_group(rd, rsp, kGroupLeaderRet, nodes + 0x168, g));
     CHECK(!read_group(rd, rsp, kGroupLeaderRet, nodes + 0x168 * 2, g));
-    CHECK(!read_group(rd, rsp, 0x2A66891, nodes, g) && !read_group(rd, rsp, 0x2A5EB72, nodes, g));
+    CHECK(!read_group(rd, rsp, 0x2ACA351, nodes, g) && !read_group(rd, rsp, 0x2AC25FC, nodes, g));
     CHECK(!read_group(rd, 0, kGroupLeaderRet, nodes, g));
     CHECK(!read_group(rd, m.base() + 8000, kGroupLeaderRet, nodes, g));
     m.put<uint32_t>(group + 0x10, kMaxGroup + 1);

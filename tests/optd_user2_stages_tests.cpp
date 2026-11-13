@@ -188,7 +188,7 @@ void test_who_and_tables() {
     CHECK(u2s::timer_of(2047) == u2s::Timer::T2043);
     CHECK(u2s::timer_of(2049) == u2s::Timer::T2045);
     CHECK(u2s::timer_of(2050) == u2s::Timer::T2046);
-    CHECK(u2s::timer_of(2685) == u2s::Timer::NotTimer);
+    CHECK(u2s::timer_of(2556) == u2s::Timer::NotTimer);
 
     static u2s::RouteTable rt;
     rt.add(u2s::Timer::T2043, true, u2s::Who::Host);
@@ -316,7 +316,7 @@ void test_u1() {
     CHECK(u2s::route_of(u2s::Mode::On, 2049, true) == Route::Own);
     CHECK(u2s::route_of(u2s::Mode::On, 2050, true) == Route::Own);
     CHECK(u2s::route_of(u2s::Mode::On, 2043, false) == Route::None);  // its own field: native already
-    CHECK(u2s::route_of(u2s::Mode::On, 2819, true) == Route::None);   // not a timer
+    CHECK(u2s::route_of(u2s::Mode::On, 2283, true) == Route::None);   // not a timer
     CHECK(u2s::route_of(u2s::Mode::Probe, 2047, true) == Route::Would);
     CHECK(u2s::route_of(u2s::Mode::Off, 2043, true) == Route::None);
     CHECK(std::string(u2s::mode_name(u2s::Mode::On)) == "1" && std::string(u2s::mode_name(u2s::Mode::Probe)) == "probe");
@@ -508,7 +508,7 @@ void test_npc_control() {
     CHECK(u2s::ctl_verdict(t) == u2s::Ctl::Assign);
     // Each condition, in order.
     t = in;
-    t.opcode = 2400;  // its road spawns: not U-e's
+    t.opcode = 2550;  // its road spawns: not U-e's
     CHECK(u2s::ctl_verdict(t) == u2s::Ctl::NotTimer);
     t = in;
     t.own_mgr_troc = false;  // review 6: a Troc whose vf48 gave the HOST's manager (the host's stages)
@@ -554,7 +554,7 @@ void test_npc_control() {
     for (size_t i = 0; i < static_cast<size_t>(u2s::Ctl::Count); ++i) {
         CHECK(std::string(u2s::ctl_name(static_cast<u2s::Ctl>(i))) != "?");
     }
-    static_assert(u2s::kVtDescNpcSchedule == 0x5ECDB60 &&  // 3576 (2976 0x5ECDB60)
+    static_assert(u2s::kVtDescNpcSchedule == 0x5F477E0 &&  // 3576 (2976 0x5ECDB60)
                   u2s::kActor_Ctl == 0x90 && u2s::kDesc_User == 0x40 &&
                   u2s::kLogoutAiReason == 42);
 }
@@ -805,7 +805,7 @@ void test_ctl_stats_and_abort() {
     {
         // A mix: 20 distinct slots once, and 3 slots put back 5 + 4 + 5 times (4 + 3 + 4 = 11 repeats): abort.
         static R42Sim mix;
-        const uint64_t t0 = 2793 * s;
+        const uint64_t t0 = 3000 * s;
         for (uint32_t n = 0; n < 20; ++n) mix.life(u2s::r42_slot_id(0x3537D7CEu, 4 * n), t0, t0 + 10 * s + n * 1000);
         const uint32_t lives[3] = {5, 4, 5};
         for (uint32_t j = 0; j < 3; ++j) {
@@ -911,9 +911,9 @@ void test_ctl_stats_and_abort() {
     for (size_t i = 0; i < static_cast<size_t>(u2s::CtlAbort::Count); ++i) {
         CHECK(std::string(u2s::ctl_abort_name(static_cast<u2s::CtlAbort>(i))) != "?");
     }
-    CHECK(u2s::ai_req(2685) && u2s::ai_req(3142) && u2s::ai_req(2976) && u2s::ai_req(2415) && u2s::ai_req(2879) &&
+    CHECK(u2s::ai_req(2556) && u2s::ai_req(2223) && u2s::ai_req(2734) && u2s::ai_req(2405) && u2s::ai_req(2291) &&
           u2s::ai_req(2296));
-    CHECK(!u2s::ai_req(2005) && !u2s::ai_req(2356));
+    CHECK(!u2s::ai_req(2005) && !u2s::ai_req(2380));
 }
 
 void test_2005_walk() {
@@ -1016,7 +1016,7 @@ void test_prep_drain() {
     CHECK(u2s::hold_distance_drain(true, 100 * sec, 95 * sec, 90 * sec, 0));     // starts holding
     CHECK(u2s::hold_distance_drain(true, 114 * sec, 95 * sec, 90 * sec, 100 * sec));
     CHECK(!u2s::hold_distance_drain(true, 115 * sec, 95 * sec, 90 * sec, 100 * sec));  // 15 s: expired
-    CHECK(u2s::prep_caller_known(0x2ADAAD5) && u2s::prep_caller_known(0x2AF45BE) && u2s::prep_caller_known(0x2E6C2DC));
+    CHECK(u2s::prep_caller_known(0x2B3E7B5) && u2s::prep_caller_known(0x2B585DE) && u2s::prep_caller_known(0x2ED42F9));
     CHECK(!u2s::prep_caller_known(0x287DCD0) && !u2s::prep_caller_known(0));
     CHECK(std::string(u2s::prep_caller_name(0x1234)) == "an UNKNOWN caller");
     for (size_t i = 0; i < static_cast<size_t>(u2s::PrepDrain::Count); ++i) {

@@ -53,14 +53,14 @@ Bytes packet(uint16_t op, size_t payload_len, uint8_t fill = 0xAB, int8_t slot =
 
 void test_troc_packet() {
     const Bytes payload = {1, 2, 3};
-    const Bytes p = troc::make(3073, -1, payload);
+    const Bytes p = troc::make(2490, -1, payload);
     CHECK(p.size() == 8);
     CHECK(p[0] == 0xBA && p[1] == 0x09 && p[2] == 0xFF && p[3] == 3 && p[4] == 0);
     auto v = troc::parse(p);
-    CHECK(v && v->opcode == 3073 && v->slot == -1 && v->payload.size() == 3 && v->payload[2] == 3);
+    CHECK(v && v->opcode == 2490 && v->slot == -1 && v->payload.size() == 3 && v->payload[2] == 3);
 
     // Header only (empty payload) is a valid packet.
-    CHECK(troc::parse(troc::make(2123, 0, {})).has_value());
+    CHECK(troc::parse(troc::make(2445, 0, {})).has_value());
     // payload_len must match exactly, as in the game.
     Bytes bad = p;
     bad[3] = 4;
@@ -75,7 +75,7 @@ void test_troc_packet() {
 }
 
 void test_troc_batch() {
-    troc::Batch b{troc::Dir::ToGuestClient, {packet(2005, 30000), packet(2744, 20), packet(2123, 0)}};
+    troc::Batch b{troc::Dir::ToGuestClient, {packet(2005, 30000), packet(2188, 20), packet(2445, 0)}};
     const Bytes enc = troc::encode_batch(b);
     CHECK(enc.size() == 3 + (2 + 30005) + (2 + 25) + (2 + 5));
     auto d = troc::decode_batch(enc);
@@ -130,13 +130,13 @@ void test_troc_internal() {
     CHECK(!troc::parse_wire(Bytes{0xF6, 0x07, 0xFF}, Dir::ToHostServer));  // 2038, 3 bytes
     CHECK(!troc::parse_wire(Bytes(19, 0xFF), Dir::ToHostServer));
     // Ordinary packets are unchanged.
-    CHECK(troc::parse_wire(packet(3073, 19), Dir::ToHostServer).has_value());
+    CHECK(troc::parse_wire(packet(2490, 19), Dir::ToHostServer).has_value());
 
     // Through batches and the sender, each in its own direction.
-    troc::Batch up{Dir::ToHostServer, {packet(3142, 20), bye}};
+    troc::Batch up{Dir::ToHostServer, {packet(2223, 20), bye}};
     auto d = troc::decode_batch(troc::encode_batch(up));
     CHECK(d && d->packets == up.packets);
-    troc::Batch down{Dir::ToGuestClient, {ack_user, ack_session, packet(3067, 9)}};
+    troc::Batch down{Dir::ToGuestClient, {ack_user, ack_session, packet(2516, 9)}};
     auto e = troc::decode_batch(troc::encode_batch(down));
     CHECK(e && e->packets == down.packets);
     troc::Batch wrong{Dir::ToGuestClient, {bye}};
@@ -381,11 +381,11 @@ void test_troc_link() {
     CHECK(!guest_link.broken() && !host_link.broken());
 
     // The guest's login Req reach the host; the server's burst reaches the guest.
-    CHECK(guest_link.push(packet(2623, 286)));
-    CHECK(guest_link.push(packet(3073, 14)));
+    CHECK(guest_link.push(packet(2319, 286)));
+    CHECK(guest_link.push(packet(2490, 14)));
     for (int i = 0; i < 300; ++i) CHECK(host_link.push(packet(static_cast<uint16_t>(2005 + i % 3), i % 10 ? 200 : 20000)));
     pump(200);
-    CHECK(host_got.size() == 2 && troc::parse(host_got[0])->opcode == 2623 && troc::parse(host_got[1])->opcode == 3073);
+    CHECK(host_got.size() == 2 && troc::parse(host_got[0])->opcode == 2319 && troc::parse(host_got[1])->opcode == 2490);
     CHECK(guest_got.size() == 300 && troc::parse(guest_got[299])->opcode == 2005 + 299 % 3);
     CHECK(!guest_link.push(Bytes{1, 2}) && guest_link.broken());  // not a packet: broken
     guest_link.reset();
@@ -399,7 +399,7 @@ void test_troc_link() {
     CHECK(!host_link.push(packet(1, 1)));
     host_link.reset();
     guest_link.reset();
-    CHECK(host_link.push(packet(2352, 0)));
+    CHECK(host_link.push(packet(2716, 0)));
     pump(20);
     CHECK(guest_got.size() == 301);
 }
@@ -618,7 +618,7 @@ Bytes scene_object(uint32_t id, std::mt19937& rng) {
     payload[33] = 2;
     std::memset(payload.data() + 44, 0xFF, 4);
     for (int i = 0; i < 6; ++i) payload[64 + rng() % 500] = static_cast<uint8_t>(rng());  // a few fields
-    return troc::make(3154, -1, payload);
+    return troc::make(2665, -1, payload);
 }
 Bytes actor_load(uint32_t key, std::mt19937& rng) {
     Bytes payload(6000, 0);
@@ -631,7 +631,7 @@ void test_compressed_batches() {
     std::mt19937 rng(5);
     troc::Batch b{troc::Dir::ToGuestClient, {}};
     for (uint32_t i = 0; i < 80; ++i) b.packets.push_back(scene_object(i, rng));
-    b.packets.push_back(troc::make(2343, -1, Bytes(46, 7)));
+    b.packets.push_back(troc::make(2144, -1, Bytes(46, 7)));
     const Bytes raw = troc::encode_batch(b);
     const auto z = troc::compress_batch(raw);
     CHECK(z.has_value());
@@ -676,7 +676,7 @@ void test_compressed_batches() {
         expected.push_back(i % 50 == 49 ? actor_load(i, rng) : scene_object(i, rng));
         CHECK(s.push(expected.back()));
     }
-    expected.push_back(troc::make(2343, -1, Bytes(46, 7)));
+    expected.push_back(troc::make(2144, -1, Bytes(46, 7)));
     CHECK(s.push(expected.back()));
     size_t flushes = 0;
     while (s.flush() > 0 || s.backlog_bytes() > 0) ++flushes;
@@ -726,20 +726,20 @@ void test_troc_link_compression() {
     guest_link.set_announce_caps(true);
     pump(20);
     CHECK(!host_link.peer_decodes_compressed());  // the caps go with the guest's first packet, never alone
-    CHECK(guest_link.push(packet(2623, 286)));
+    CHECK(guest_link.push(packet(2319, 286)));
     pump(20);
     CHECK(host_link.peer_decodes_compressed() && host_link.compressing());
-    CHECK(host_got.size() == 1 && troc::parse(host_got[0])->opcode == 2623);  // the caps never reach the owner
+    CHECK(host_got.size() == 1 && troc::parse(host_got[0])->opcode == 2319);  // the caps never reach the owner
     std::mt19937 rng(9);
     std::vector<Bytes> expected;
     for (uint32_t i = 0; i < 500; ++i) {
         expected.push_back(scene_object(i, rng));
         CHECK(host_link.push(expected.back()));
     }
-    CHECK(guest_link.push(packet(2320, 1)));
+    CHECK(guest_link.push(packet(2549, 1)));
     pump(200);
     CHECK(guest_got == expected);
-    CHECK(host_got.size() == 2 && troc::parse(host_got[1])->opcode == 2320);
+    CHECK(host_got.size() == 2 && troc::parse(host_got[1])->opcode == 2549);
     CHECK(host_link.wire_bytes_out() * 4 < host_link.raw_bytes_out());
     CHECK(host_link.describe().find("compression ON") != std::string::npos);
     // Without the host's key: raw, whatever the guest says.
@@ -756,10 +756,10 @@ void test_troc_link_compression() {
     guest_link.reset();
     pump(20);
     CHECK(!host_link.peer_decodes_compressed());
-    CHECK(guest_link.push(packet(2623, 286)));
+    CHECK(guest_link.push(packet(2319, 286)));
     pump(20);
     CHECK(host_link.peer_decodes_compressed());
-    CHECK(host_got.size() == 3 && troc::parse(host_got[2])->opcode == 2623);  // still no caps packet for the owner
+    CHECK(host_got.size() == 3 && troc::parse(host_got[2])->opcode == 2319);  // still no caps packet for the owner
     // P8 review M7: opcode 2 is the caps packet only in ToHostServer batches; toward the guest it is the owner's.
     const size_t before = guest_got.size();
     CHECK(host_link.push(packet(troc::kCapsOpcode, 1, 0x01)));
@@ -797,7 +797,7 @@ BurstResult run_burst_sim(bool compress) {
             r.in_order = false;
             return;
         }
-        if (v->opcode == 2343) {
+        if (v->opcode == 2144) {
             if (next != burst.size()) r.in_order = false;  // the 2144 only after everything before it
             r.delivered_all = next == burst.size();
             r.ms_to_2144 = now - start;
@@ -821,12 +821,12 @@ BurstResult run_burst_sim(bool compress) {
         down.deliver(now, [&](const Bytes& b) { guest.on_datagram(b, now); });
     };
     for (int i = 0; i < 400; ++i) step();
-    guest_link.push(packet(2320, 1));  // the guest's Req (its caps go with it)
+    guest_link.push(packet(2549, 1));  // the guest's Req (its caps go with it)
     for (int i = 0; i < 100; ++i) step();
     CHECK(host_link.compressing() == compress);
     start = now;
     for (const auto& p : burst) host_link.push(p);
-    host_link.push(troc::make(2343, -1, Bytes(46, 7)));
+    host_link.push(troc::make(2144, -1, Bytes(46, 7)));
     while (!r.ms_to_2144 && now - start < 60000) step();
     return r;
 }
@@ -867,7 +867,7 @@ void test_capture_file() {
     capture::Record a;
     a.t_us = 0x123456789ull;
     a.dir = capture::Dir::ClientToServer;
-    a.data = packet(3073, 14);
+    a.data = packet(2490, 14);
     a.size = static_cast<uint16_t>(a.data.size());
     a.session = 4;
     a.thread = 77;
@@ -926,14 +926,14 @@ void test_script_parse() {
     auto s = troc::parse_script(R"(
 # E2
 var ACCOUNT u64 1
-send crypto 2623 -1 0400            # comment
-expect 2127 5000
-send login 3073 -1 01000000000000000000
+send crypto 2319 -1 0400            # comment
+expect 2840 5000
+send login 2490 -1 01000000000000000000
 put u64 0 ACCOUNT
 learn USER_KEY u32 0x089B 0
-expect 2352
+expect 2716
 wait 200
-reply 2801 2362 0 000000000000000000000000
+reply 3097 2624 0 000000000000000000000000
 put u32 0 USER_KEY
 end
 send never 1 0 -
@@ -945,7 +945,7 @@ send never 1 0 -
     }
     CHECK(s->steps.size() == 6 && s->learns.size() == 1 && s->vars.at("ACCOUNT") == 1);
     CHECK(s->steps[1].ms == 5000 && s->steps[3].ms == troc::ScriptPlayer::kDefaultExpectMs);
-    CHECK(s->steps[5].kind == troc::ScriptStep::Kind::Reply && s->steps[5].on_opcode == 2801);
+    CHECK(s->steps[5].kind == troc::ScriptStep::Kind::Reply && s->steps[5].on_opcode == 3097);
     CHECK(s->learns[0].opcode == 0x089B);
 
     const char* bad[] = {
@@ -968,18 +968,18 @@ send never 1 0 -
 void test_script_player() {
     auto s = troc::parse_script(R"(
 var ACCOUNT u64 1
-send crypto 2623 -1 0400
-expect 2127 1000
-send login 3073 -1 01000000000000000000
+send crypto 2319 -1 0400
+expect 2840 1000
+send login 2490 -1 01000000000000000000
 put u64 0 ACCOUNT
-learn USER_KEY u32 2202 0
-learn CHAR u64 2840 5
-expect 2352
-send character 3103 -1 04ffffffffffffff7f01000000
+learn USER_KEY u32 2203 0
+learn CHAR u64 2213 5
+expect 2716
+send character 3093 -1 04ffffffffffffff7f01000000
 put u64 1 CHAR
 wait 100
-send done 2123 0 01
-reply 2801 2362 0 000000000000000000000000
+send done 2445 0 01
+reply 3097 2624 0 000000000000000000000000
 put u32 0 USER_KEY
 )", nullptr);
     CHECK(s.has_value());
@@ -988,37 +988,37 @@ put u32 0 USER_KEY
     p.set_var("ACCOUNT", 0x1234);
     uint32_t t = 1000;
     auto out = p.tick(t);
-    CHECK(out.size() == 1 && troc::parse(out[0])->opcode == 2623);
+    CHECK(out.size() == 1 && troc::parse(out[0])->opcode == 2319);
     CHECK(p.tick(t + 500).empty());  // waiting for 2840
     // An Ack that arrived BEFORE the send would not count; this one is after.
-    p.on_server_packet(troc::make(2127, -1, Bytes(4, 0)), t + 600);
+    p.on_server_packet(troc::make(2840, -1, Bytes(4, 0)), t + 600);
     out = p.tick(t + 600);
     CHECK(out.size() == 1);
     auto login = troc::parse(out[0]);
-    CHECK(login && login->opcode == 3073 && login->payload[0] == 0x34 && login->payload[1] == 0x12);
+    CHECK(login && login->opcode == 2490 && login->payload[0] == 0x34 && login->payload[1] == 0x12);
     // The user's acks: learn the key and the character number.
     Bytes start(8, 0);
     start[0] = 0x05;
     start[1] = 0x17;
     start[2] = 0x10;
     start[3] = 0x90;
-    p.on_server_packet(troc::make(2202, -1, start), t + 700);
+    p.on_server_packet(troc::make(2203, -1, start), t + 700);
     Bytes lobby(13, 0);
     for (int i = 0; i < 8; ++i) lobby[5 + i] = static_cast<uint8_t>(0x10 + i);
-    p.on_server_packet(troc::make(2840, -1, lobby), t + 700);
+    p.on_server_packet(troc::make(2213, -1, lobby), t + 700);
     CHECK(p.var("USER_KEY") == 0x90101705u);
     CHECK(p.tick(t + 800).empty());  // still waiting for 2716
-    p.on_server_packet(troc::make(2352, -1, {}), t + 900);
+    p.on_server_packet(troc::make(2716, -1, {}), t + 900);
     out = p.tick(t + 900);
     CHECK(out.size() == 1);
     auto ch = troc::parse(out[0]);
-    CHECK(ch && ch->opcode == 3103 && ch->payload[1] == 0x10 && ch->payload[8] == 0x17 && ch->payload[9] == 1);
+    CHECK(ch && ch->opcode == 3093 && ch->payload[1] == 0x10 && ch->payload[8] == 0x17 && ch->payload[9] == 1);
     // A reply fires whenever its trigger arrives, with learned variables.
-    p.on_server_packet(troc::make(2801, -1, Bytes(12, 0)), t + 950);
+    p.on_server_packet(troc::make(3097, -1, Bytes(12, 0)), t + 950);
     out = p.tick(t + 950);  // the reply; the wait of 100 ms is not over
-    CHECK(out.size() == 1 && troc::parse(out[0])->opcode == 2362 && out[0][5] == 0x05 && out[0][8] == 0x90);
+    CHECK(out.size() == 1 && troc::parse(out[0])->opcode == 2624 && out[0][5] == 0x05 && out[0][8] == 0x90);
     out = p.tick(t + 1001);
-    CHECK(out.size() == 1 && troc::parse(out[0])->opcode == 2123);
+    CHECK(out.size() == 1 && troc::parse(out[0])->opcode == 2445);
     CHECK(p.state() == troc::ScriptPlayer::State::Done && p.sent() == 4);
 
     // Timeout: the expect fails, nothing more is sent.
@@ -1241,8 +1241,8 @@ void test_script_learn_2661() {
     // Owner and hash must match; the last fitting 2661 wins; then the Reqs carry them.
     troc::ScriptPlayer p(*s);
     CHECK(p.tick(0).size() == 1);
-    p.on_server_packet(troc::make(3045, -1, Bytes{0x36, 0x03, 0x10, 0xA0}), 10);  // PLAYER_KEY 0xA0100336
-    p.on_server_packet(troc::make(2455, -1, butcher), 20);                          // the host's: not ours
+    p.on_server_packet(troc::make(2756, -1, Bytes{0x36, 0x03, 0x10, 0xA0}), 10);  // PLAYER_KEY 0xA0100336
+    p.on_server_packet(troc::make(2661, -1, butcher), 20);                          // the host's: not ours
     CHECK(!p.learned("SEQ") && p.take_notes().empty());
     Bytes mine = butcher;
     mine[5] = 0x36;
@@ -1251,22 +1251,22 @@ void test_script_learn_2661() {
     mine[10] = 0x02;  // sequencer 0x2C4
     Bytes other_shop = mine;
     other_shop[27] = 0x61;  // another resource hash
-    p.on_server_packet(troc::make(2455, -1, other_shop), 30);
+    p.on_server_packet(troc::make(2661, -1, other_shop), 30);
     CHECK(!p.learned("SEQ"));
-    p.on_server_packet(troc::make(2455, -1, mine), 40);
+    p.on_server_packet(troc::make(2661, -1, mine), 40);
     CHECK(p.var("SEQ") == 0x2C4u && p.var("NPC") == 0xB0100156u);
     auto notes = p.take_notes();
     CHECK(notes.size() == 1 && notes[0].find("SEQ = 0x2C4") != std::string::npos);
     mine[9] = 0xD0;  // a re-prepared scene (a drain and a new arm): the last wins
-    p.on_server_packet(troc::make(2455, -1, mine), 50);
+    p.on_server_packet(troc::make(2661, -1, mine), 50);
     CHECK(p.var("SEQ") == 0x2D0u);
     auto out = p.tick(60);
     CHECK(out.size() == 2 && p.state() == troc::ScriptPlayer::State::Done);
     if (out.size() == 2) {
         auto a = troc::parse(out[0]);
         auto b = troc::parse(out[1]);
-        CHECK(a && a->opcode == 2583 && get32(a->payload, 0) == 0xA0100336u && get32(a->payload, 4) == 0xB0100156u);
-        CHECK(b && b->opcode == 2369 && get32(b->payload, 0) == 0x2D0u && b->payload[8] == 6);
+        CHECK(a && a->opcode == 2671 && get32(a->payload, 0) == 0xA0100336u && get32(a->payload, 4) == 0xB0100156u);
+        CHECK(b && b->opcode == 2436 && get32(b->payload, 0) == 0x2D0u && b->payload[8] == 6);
     }
     // With NODE: the shopkeeper's link only (here the butcher's node 0x20000004; a wrong node learns no NPC).
     auto sn = troc::parse_script("learn PLAYER_KEY u32 2756 0\nvar SHOP_HASH u32 0x978345CA\nvar NODE u32 0x20000004\n"
@@ -1275,8 +1275,8 @@ void test_script_learn_2661() {
     CHECK(sn.has_value());
     if (sn) {
         troc::ScriptPlayer q(*sn);
-        q.on_server_packet(troc::make(3045, -1, Bytes{0x36, 0x03, 0x10, 0xA0}), 0);
-        q.on_server_packet(troc::make(2455, -1, mine), 0);
+        q.on_server_packet(troc::make(2756, -1, Bytes{0x36, 0x03, 0x10, 0xA0}), 0);
+        q.on_server_packet(troc::make(2661, -1, mine), 0);
         CHECK(q.var("NPC") == 0xB0100156u && q.var("SEQ") == 0x2D0u);
         CHECK(q.learned("SEQ2") && !q.learned("NPC2"));
     }
@@ -1285,13 +1285,13 @@ void test_script_learn_2661() {
 void test_script_learn_child() {
     std::string err;
     const char* text = R"(
-learn USER_KEY u32 2884 0
+learn USER_KEY u32 2646 0
 learn_child CHILD_KEY 2005 USER_KEY 6
 learn_child_hash CHILD_HASH
 var CHILD_HASH u32 0x11111111
 send a 1002 0 00
 expect_learned CHILD_KEY 1000
-send child 3142 0 000000000000000000000000
+send child 2223 0 000000000000000000000000
 put u32 0 CHILD_KEY
 put u32 8 CHILD_HASH
 )";
@@ -1336,7 +1336,7 @@ put u32 8 CHILD_HASH
         CHECK(p.tick(100).empty() && p.describe().find("waiting to learn CHILD_KEY") != std::string::npos);
         p.on_server_packet(troc::make(2005, -1, mixed_2005()), 150);  // the owner is not known yet: nothing
         CHECK(!p.learned("CHILD_KEY") && p.take_notes().empty());
-        p.on_server_packet(troc::make(2884, -1, user_ack), 200);
+        p.on_server_packet(troc::make(2646, -1, user_ack), 200);
         Bytes bad_2005 = mixed_2005();
         bad_2005.push_back(1);
         p.on_server_packet(troc::make(2005, -1, bad_2005), 250);
@@ -1355,13 +1355,13 @@ put u32 8 CHILD_HASH
         CHECK(out.size() == 1 && p.state() == troc::ScriptPlayer::State::Done);
         if (out.size() == 1) {
             auto v = troc::parse(out[0]);
-            CHECK(v && v->opcode == 3142 && get32(v->payload, 0) == 0xB0100228u && get32(v->payload, 8) == 0x866C7489u);
+            CHECK(v && v->opcode == 2223 && get32(v->payload, 0) == 0xB0100228u && get32(v->payload, 8) == 0x866C7489u);
         }
     }
     // Learned before the step: it passes at once. No CC block: the hash keeps its var value.
     {
         troc::ScriptPlayer p(*s);
-        p.on_server_packet(troc::make(2884, -1, user_ack), 0);
+        p.on_server_packet(troc::make(2646, -1, user_ack), 0);
         p.on_server_packet(troc::make(2005, -1, load_payload({actor_record(6, 0xB0100301, kUser2, 0x40, false)})), 0);
         auto notes = p.take_notes();
         CHECK(notes.size() == 1 && notes[0].find("CHILD_HASH not learned") != std::string::npos &&
@@ -1374,7 +1374,7 @@ put u32 8 CHILD_HASH
     {
         troc::ScriptPlayer p(*s);
         p.set_var("CHILD_HASH", 0x94D333D6);
-        p.on_server_packet(troc::make(2884, -1, user_ack), 0);
+        p.on_server_packet(troc::make(2646, -1, user_ack), 0);
         p.on_server_packet(troc::make(2005, -1, mixed_2005()), 0);
         auto out = p.tick(0);
         CHECK(out.size() == 2 && p.var("CHILD_HASH") == 0x94D333D6u);
@@ -1424,23 +1424,23 @@ void test_child_script_flow() {
             if (!v) continue;
             sent.push_back(o);
             switch (v->opcode) {
-                case 2623: p.on_server_packet(troc::make(2127, -1, Bytes(4, 0)), t); break;
-                case 3073:
-                    p.on_server_packet(troc::make(2884, -1, user_ack), t);
-                    p.on_server_packet(troc::make(2563, -1, Bytes(13, 0x7F)), t);  // CharacterLobbyDataAck
-                    p.on_server_packet(troc::make(2352, -1, {}), t);
+                case 2319: p.on_server_packet(troc::make(2840, -1, Bytes(4, 0)), t); break;
+                case 2490:
+                    p.on_server_packet(troc::make(2646, -1, user_ack), t);
+                    p.on_server_packet(troc::make(2869, -1, Bytes(13, 0x7F)), t);  // CharacterLobbyDataAck
+                    p.on_server_packet(troc::make(2716, -1, {}), t);
                     break;
-                case 3103:
-                    p.on_server_packet(troc::make(3045, -1, player_ack), t);
-                    p.on_server_packet(troc::make(3023, -1, move_field(0, 1000, 0)), t);
+                case 3093:
+                    p.on_server_packet(troc::make(2756, -1, player_ack), t);
+                    p.on_server_packet(troc::make(2174, -1, move_field(0, 1000, 0)), t);
                     break;
-                case 2757: p.on_server_packet(troc::make(3023, -1, move_field(-10717.79f, 620.17f, -3914.56f)), t); break;
-                case 2320:
+                case 2437: p.on_server_packet(troc::make(2174, -1, move_field(-10717.79f, 620.17f, -3914.56f)), t); break;
+                case 2549:
                     // The shared load: the child's 2005 right after the Ack, as in c4r_d53.
-                    p.on_server_packet(troc::make(2343, 0, {}), t);
+                    p.on_server_packet(troc::make(2144, 0, {}), t);
                     if (++mfc == 2) p.on_server_packet(troc::make(2005, -1, mixed_2005()), t);
                     break;
-                case 2123: p.on_server_packet(troc::make(2893, 0, {}), t); break;
+                case 2445: p.on_server_packet(troc::make(2762, 0, {}), t); break;
                 case 2001:
                     p.on_server_packet(Bytes{0xD3, 0x07, 0xFF, 0x04, 0x00, 0x00, 0x00}, t);
                     p.on_server_packet(Bytes{0xD2, 0x07, 0xFF, 0x04, 0x00, 0x00, 0x00}, t);
@@ -1454,7 +1454,7 @@ void test_child_script_flow() {
     std::vector<troc::PacketView> actions;
     for (const auto& o : sent) {
         auto v = troc::parse(o);
-        if (v && v->opcode == 3142) actions.push_back(*v);
+        if (v && v->opcode == 2223) actions.push_back(*v);
     }
     CHECK(actions.size() == 2);
     if (actions.size() != 2) return;
@@ -1472,7 +1472,7 @@ void test_child_script_flow() {
     // Order: after the second MoveFieldCompleteReq, before LoadingCompleteReq #2; goodbye last.
     std::vector<uint16_t> ops;
     for (const auto& o : sent) ops.push_back(troc::parse_wire(o, troc::Dir::ToHostServer)->opcode);
-    const std::vector<uint16_t> want = {2623, 3073, 3103, 2320, 3142, 2123, 2967, 2757, 2320, 3142, 2123, 2001};
+    const std::vector<uint16_t> want = {2319, 2490, 3093, 2549, 2223, 2445, 2601, 2437, 2549, 2223, 2445, 2001};
     CHECK(ops == want);
 }
 
@@ -1505,22 +1505,22 @@ void test_travel_script_flow() {
             if (!v) continue;
             sent.emplace_back(t, o);
             switch (v->opcode) {
-                case 2623: p.on_server_packet(troc::make(2127, -1, Bytes(4, 0)), t); break;
-                case 3073:
-                    p.on_server_packet(troc::make(2884, -1, user_ack), t);
-                    p.on_server_packet(troc::make(2563, -1, Bytes(13, 0x7F)), t);
-                    p.on_server_packet(troc::make(2352, -1, {}), t);
+                case 2319: p.on_server_packet(troc::make(2840, -1, Bytes(4, 0)), t); break;
+                case 2490:
+                    p.on_server_packet(troc::make(2646, -1, user_ack), t);
+                    p.on_server_packet(troc::make(2869, -1, Bytes(13, 0x7F)), t);
+                    p.on_server_packet(troc::make(2716, -1, {}), t);
                     break;
-                case 3103:
-                    p.on_server_packet(troc::make(3045, -1, player_ack), t);
-                    p.on_server_packet(troc::make(3023, -1, Bytes(65, 0)), t);
+                case 3093:
+                    p.on_server_packet(troc::make(2756, -1, player_ack), t);
+                    p.on_server_packet(troc::make(2174, -1, Bytes(65, 0)), t);
                     break;
-                case 2757:
-                    if (lc < 2) p.on_server_packet(troc::make(3023, -1, Bytes(65, 0)), t);
+                case 2437:
+                    if (lc < 2) p.on_server_packet(troc::make(2174, -1, Bytes(65, 0)), t);
                     break;
-                case 2320: p.on_server_packet(troc::make(2343, 0, {}), t); break;
-                case 2123:
-                    p.on_server_packet(troc::make(2893, 0, {}), t);
+                case 2549: p.on_server_packet(troc::make(2144, 0, {}), t); break;
+                case 2445:
+                    p.on_server_packet(troc::make(2762, 0, {}), t);
                     if (++lc == 2) t_second_2762 = t;
                     break;
                 default: break;
@@ -1531,7 +1531,7 @@ void test_travel_script_flow() {
     if (p.state() != troc::ScriptPlayer::State::Done) std::printf("  %s\n", p.describe().c_str());
     std::vector<uint16_t> ops;
     for (const auto& [t, o] : sent) ops.push_back(troc::parse_wire(o, troc::Dir::ToHostServer)->opcode);
-    const std::vector<uint16_t> want = {2623, 3073, 3103, 2320, 3142, 2123, 2967, 2757, 2320, 2123, 2819, 2757};
+    const std::vector<uint16_t> want = {2319, 2490, 3093, 2549, 2223, 2445, 2601, 2437, 2549, 2445, 2283, 2437};
     CHECK(ops == want);
     if (ops != want || sent.size() != want.size()) return;
     const auto reload = troc::parse(sent[10].second);
@@ -1577,35 +1577,35 @@ void test_travel_script_b_flow() {
                 if (!v) continue;
                 sent.emplace_back(t, o);
                 switch (v->opcode) {
-                    case 2623: p.on_server_packet(troc::make(2127, -1, Bytes(4, 0)), t); break;
-                    case 3073:
-                        p.on_server_packet(troc::make(2884, -1, user_ack), t);
-                        p.on_server_packet(troc::make(2563, -1, Bytes(13, 0x7F)), t);
-                        p.on_server_packet(troc::make(2352, -1, {}), t);
+                    case 2319: p.on_server_packet(troc::make(2840, -1, Bytes(4, 0)), t); break;
+                    case 2490:
+                        p.on_server_packet(troc::make(2646, -1, user_ack), t);
+                        p.on_server_packet(troc::make(2869, -1, Bytes(13, 0x7F)), t);
+                        p.on_server_packet(troc::make(2716, -1, {}), t);
                         break;
-                    case 3103:
-                        p.on_server_packet(troc::make(3045, -1, player_ack), t);
-                        p.on_server_packet(troc::make(3023, -1, Bytes(65, 0)), t);
+                    case 3093:
+                        p.on_server_packet(troc::make(2756, -1, player_ack), t);
+                        p.on_server_packet(troc::make(2174, -1, Bytes(65, 0)), t);
                         break;
-                    case 2757:
+                    case 2437:
                         if (lc < 2) {
-                            p.on_server_packet(troc::make(3023, -1, Bytes(65, 0)), t);
+                            p.on_server_packet(troc::make(2174, -1, Bytes(65, 0)), t);
                         } else {  // the reload: 0x2BCA3D0's 2643 (20 + 48 bytes) and 3066 (6 bytes)
-                            p.on_server_packet(troc::make(3151, 0, Bytes(68, 0)), t);
-                            p.on_server_packet(troc::make(2347, 0, Bytes(6, 0)), t);
+                            p.on_server_packet(troc::make(2643, 0, Bytes(68, 0)), t);
+                            p.on_server_packet(troc::make(3066, 0, Bytes(6, 0)), t);
                         }
                         break;
-                    case 2320: p.on_server_packet(troc::make(2343, 0, {}), t); break;
-                    case 2123:
-                        p.on_server_packet(troc::make(2893, 0, {}), t);
+                    case 2549: p.on_server_packet(troc::make(2144, 0, {}), t); break;
+                    case 2445:
+                        p.on_server_packet(troc::make(2762, 0, {}), t);
                         ++lc;
                         break;
-                    case 3037:
+                    case 3067:
                         // observer_seq_copy_2322's copy of the HOST's 2322 (0xA0100001) comes first, whatever the
                         // fix does; only the one naming the peer's character (PLAYER_KEY 0xA0100A4C) may satisfy
                         // the expect (review of d09254d: a bare expect 2322 passed falsely)
-                        p.on_server_packet(troc::make(2491, 0, Bytes{0x01, 0x00, 0x10, 0xA0}), t);
-                        if (answer_2322) p.on_server_packet(troc::make(2491, 0, Bytes{0x4C, 0x0A, 0x10, 0xA0}), t);
+                        p.on_server_packet(troc::make(2322, 0, Bytes{0x01, 0x00, 0x10, 0xA0}), t);
+                        if (answer_2322) p.on_server_packet(troc::make(2322, 0, Bytes{0x4C, 0x0A, 0x10, 0xA0}), t);
                         break;
                     default: break;
                 }
@@ -1613,8 +1613,8 @@ void test_travel_script_b_flow() {
         }
         std::vector<uint16_t> ops;
         for (const auto& [t, o] : sent) ops.push_back(troc::parse_wire(o, troc::Dir::ToHostServer)->opcode);
-        const std::vector<uint16_t> want = {2623, 3073, 3103, 2320, 3142, 2123, 2967, 2757,
-                                            2320, 2123, 2819, 2757, 2433, 3037};
+        const std::vector<uint16_t> want = {2319, 2490, 3093, 2549, 2223, 2445, 2601, 2437,
+                                            2549, 2445, 2283, 2437, 2873, 3067};
         CHECK(ops == want);
         if (answer_2322) {
             CHECK(p.state() == troc::ScriptPlayer::State::Done);
@@ -1627,7 +1627,7 @@ void test_travel_script_b_flow() {
         CHECK(pre && pre->payload.empty() && pre->slot == 0);
         const auto carrier = troc::parse(sent[13].second);
         CHECK(carrier && carrier->payload.size() == 8);
-        CHECK(sent[12].first - sent[11].first >= 2215 && sent[12].first - sent[11].first <= 2547);
+        CHECK(sent[12].first - sent[11].first >= 2300 && sent[12].first - sent[11].first <= 2310);
         CHECK(sent[13].first - sent[12].first >= 400 && sent[13].first - sent[12].first <= 410);
     }
 }
@@ -1663,36 +1663,36 @@ void test_revive_script_flow() {
                 if (!v) continue;
                 sent.emplace_back(t, o);
                 switch (v->opcode) {
-                    case 2623: p.on_server_packet(troc::make(2127, -1, Bytes(4, 0)), t); break;
-                    case 3073:
-                        p.on_server_packet(troc::make(2884, -1, user_ack), t);
-                        p.on_server_packet(troc::make(2563, -1, Bytes(13, 0x7F)), t);
-                        p.on_server_packet(troc::make(2352, -1, {}), t);
+                    case 2319: p.on_server_packet(troc::make(2840, -1, Bytes(4, 0)), t); break;
+                    case 2490:
+                        p.on_server_packet(troc::make(2646, -1, user_ack), t);
+                        p.on_server_packet(troc::make(2869, -1, Bytes(13, 0x7F)), t);
+                        p.on_server_packet(troc::make(2716, -1, {}), t);
                         break;
-                    case 3103:
-                        p.on_server_packet(troc::make(3045, -1, player_ack), t);
-                        p.on_server_packet(troc::make(3023, -1, Bytes(65, 0)), t);
+                    case 3093:
+                        p.on_server_packet(troc::make(2756, -1, player_ack), t);
+                        p.on_server_packet(troc::make(2174, -1, Bytes(65, 0)), t);
                         break;
-                    case 2914: p.on_server_packet(troc::make(2299, 0, Bytes(9, 0)), t); break;
-                    case 2757:
+                    case 2362: p.on_server_packet(troc::make(2993, 0, Bytes(9, 0)), t); break;
+                    case 2437:
                         if (lc < 2) {
-                            p.on_server_packet(troc::make(3023, -1, Bytes(65, 0)), t);
+                            p.on_server_packet(troc::make(2174, -1, Bytes(65, 0)), t);
                         } else {  // the revive's reload in the same field (0x2BCA3D0)
-                            p.on_server_packet(troc::make(3151, 0, Bytes(68, 0)), t);
-                            p.on_server_packet(troc::make(2347, 0, Bytes(6, 0)), t);
+                            p.on_server_packet(troc::make(2643, 0, Bytes(68, 0)), t);
+                            p.on_server_packet(troc::make(3066, 0, Bytes(6, 0)), t);
                         }
                         break;
-                    case 2320: p.on_server_packet(troc::make(2343, 0, {}), t); break;
-                    case 2123:
-                        p.on_server_packet(troc::make(2893, 0, {}), t);
+                    case 2549: p.on_server_packet(troc::make(2144, 0, {}), t); break;
+                    case 2445:
+                        p.on_server_packet(troc::make(2762, 0, {}), t);
                         ++lc;
                         break;
-                    case 3037:
+                    case 3067:
                         // observer_seq_copy_2322's copy of the HOST's 2322 (0xA0100001) comes first, whatever the
                         // fix does; only the one naming the peer's character (PLAYER_KEY 0xA0100A4C) may satisfy
                         // the expect (review of d09254d: a bare expect 2322 passed falsely)
-                        p.on_server_packet(troc::make(2491, 0, Bytes{0x01, 0x00, 0x10, 0xA0}), t);
-                        if (answer_2322) p.on_server_packet(troc::make(2491, 0, Bytes{0x4C, 0x0A, 0x10, 0xA0}), t);
+                        p.on_server_packet(troc::make(2322, 0, Bytes{0x01, 0x00, 0x10, 0xA0}), t);
+                        if (answer_2322) p.on_server_packet(troc::make(2322, 0, Bytes{0x4C, 0x0A, 0x10, 0xA0}), t);
                         break;
                     default: break;
                 }
@@ -1700,9 +1700,9 @@ void test_revive_script_flow() {
         }
         std::vector<uint16_t> ops;
         for (const auto& [t, o] : sent) ops.push_back(troc::parse_wire(o, troc::Dir::ToHostServer)->opcode);
-        std::vector<uint16_t> want = {2623, 3073, 3103, 2320, 3142, 2123, 2967, 2757,
-                                      2320, 2123, 2914, 2757, 2518, 2433, 3037};
-        if (answer_2322) want.push_back(2123);
+        std::vector<uint16_t> want = {2319, 2490, 3093, 2549, 2223, 2445, 2601, 2437,
+                                      2549, 2445, 2362, 2437, 2988, 2873, 3067};
+        if (answer_2322) want.push_back(2445);
         CHECK(ops == want);
         if (answer_2322) {
             CHECK(p.state() == troc::ScriptPlayer::State::Done);
@@ -1746,18 +1746,18 @@ void test_expect_value() {
     {  // another value does not count; the right one does
         troc::ScriptPlayer p(*s);
         CHECK(p.tick(0).size() == 1);
-        p.on_server_packet(troc::make(2491, 0, Bytes{0x22, 0, 0, 0}), 1);
+        p.on_server_packet(troc::make(2322, 0, Bytes{0x22, 0, 0, 0}), 1);
         CHECK(p.tick(2).empty() && p.state() == troc::ScriptPlayer::State::Running);
         CHECK(p.describe().find("holding K") != std::string::npos);
-        p.on_server_packet(troc::make(2491, 0, Bytes{0x11, 0, 0, 0}), 3);
+        p.on_server_packet(troc::make(2322, 0, Bytes{0x11, 0, 0, 0}), 3);
         CHECK(p.tick(4).size() == 1);
         CHECK(p.state() == troc::ScriptPlayer::State::Done);
     }
     {  // only the wrong value: fails at the timeout, saying how many of any value came
         troc::ScriptPlayer p(*s);
         p.tick(0);
-        p.on_server_packet(troc::make(2491, 0, Bytes{0x22, 0, 0, 0}), 1);
-        p.on_server_packet(troc::make(2491, 0, Bytes{0x01}), 2);  // too short: ignored
+        p.on_server_packet(troc::make(2322, 0, Bytes{0x22, 0, 0, 0}), 1);
+        p.on_server_packet(troc::make(2322, 0, Bytes{0x01}), 2);  // too short: ignored
         p.tick(50);
         CHECK(p.state() == troc::ScriptPlayer::State::Running);
         p.tick(101);
@@ -1771,9 +1771,9 @@ void test_expect_value() {
         if (!s2) return;
         troc::ScriptPlayer p(*s2);
         p.tick(0);
-        p.on_server_packet(troc::make(3045, 0, Bytes{0x4C, 0x0A, 0x10, 0xA0}), 1);
+        p.on_server_packet(troc::make(2756, 0, Bytes{0x4C, 0x0A, 0x10, 0xA0}), 1);
         CHECK(p.tick(2).size() == 1);
-        p.on_server_packet(troc::make(2491, 0, Bytes{0x4C, 0x0A, 0x10, 0xA0}), 3);
+        p.on_server_packet(troc::make(2322, 0, Bytes{0x4C, 0x0A, 0x10, 0xA0}), 3);
         p.tick(4);
         CHECK(p.state() == troc::ScriptPlayer::State::Done);
     }
@@ -1803,7 +1803,7 @@ void test_generated_scripts() {
         }
         troc::ScriptPlayer p(*s);
         auto out = p.tick(0);
-        CHECK(out.size() == 1 && troc::parse(out[0])->opcode == 2623 && out[0].size() == 5 + 286);
+        CHECK(out.size() == 1 && troc::parse(out[0])->opcode == 2319 && out[0].size() == 5 + 286);
     }
 }
 

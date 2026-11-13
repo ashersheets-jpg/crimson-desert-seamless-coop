@@ -399,9 +399,9 @@ void test_b1() {
     // Session 9: 3093 at 749.012 (local connection after the remote one), state 0x0C from ~757 s, no 2549 until Alt+F4.
     {
         W w;
-        w.note_frame(stuck, true, 3073, 746'634);  // the title's login: nothing
+        w.note_frame(stuck, true, 2490, 746'634);  // the title's login: nothing
         CHECK(!w.armed());
-        w.note_frame(stuck, true, 3103, 749'012);
+        w.note_frame(stuck, true, 3093, 749'012);
         CHECK(w.armed());
         uint64_t t = 749'012;
         bool tripped = false;
@@ -418,16 +418,16 @@ void test_b1() {
     // A normal local load: the 2549 ~15 s after (a first trip of session 9: 2174 at 31.2, 2549 at 46.2).
     {
         W w;
-        w.note_frame(stuck, true, 3103, 0);
+        w.note_frame(stuck, true, 3093, 0);
         CHECK(!w.sample(5'000, 0x0C, true));
-        w.note_frame(stuck, true, 2320, 16'000);
+        w.note_frame(stuck, true, 2549, 16'000);
         CHECK(!w.armed());
         CHECK(!w.sample(60'000, 0x0C, true));
     }
     // A slow load that keeps moving (the state changes): never stuck while it moves.
     {
         W w;
-        w.note_frame(stuck, true, 3103, 0);
+        w.note_frame(stuck, true, 3093, 0);
         const uint8_t states[] = {0x04, 0x0C, 0x0E, 0x11, 0x12, 0x12, 0x12, 0x13, 0x14, 0x16, 0x17, 0x17};
         uint64_t t = 0;
         bool tripped = false;
@@ -438,7 +438,7 @@ void test_b1() {
     // Unreadable state: never a trip on that sample (and the "still" clock restarts).
     {
         W w;
-        w.note_frame(stuck, true, 3103, 0);
+        w.note_frame(stuck, true, 3093, 0);
         bool tripped = false;
         for (uint64_t t = 5'000; t <= 120'000; t += 5'000) tripped |= w.sample(t, 0, false);
         CHECK(!tripped && w.armed());
@@ -446,9 +446,9 @@ void test_b1() {
     // Not armed: allow, or no remote session in this run, or other frames.
     {
         W w;
-        w.note_frame(allow, true, 3103, 0);
+        w.note_frame(allow, true, 3093, 0);
         CHECK(!w.armed());
-        w.note_frame(stuck, false, 3103, 0);
+        w.note_frame(stuck, false, 3093, 0);
         CHECK(!w.armed());
         w.note_frame(stuck, true, 2001, 0);
         CHECK(!w.armed() && !w.sample(100'000, 0x0C, true));

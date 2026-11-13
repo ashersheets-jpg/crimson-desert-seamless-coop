@@ -263,7 +263,7 @@ void test_receiver() {
     CHECK(p && near_f(p->amount, 0.5f));
     // The sender restarted on the same connection (seq back to 1): dropped within 2 s, accepted after.
     CHECK(rx.on_sample(sample(kHost, 2, 1, 0.5f, 150), 8, 2060) == tbl::Rx::Accepted);
-    CHECK(rx.on_sample(sample(kHost, 1, 1, 0.1f, 10), 8, 2793) == tbl::Rx::OldSeq);
+    CHECK(rx.on_sample(sample(kHost, 1, 1, 0.1f, 10), 8, 3000) == tbl::Rx::OldSeq);
     CHECK(rx.on_sample(sample(kHost, 1, 1, 0.1f, 10), 8, 4100) == tbl::Rx::NewRun);
     // Two throwers at once.
     CHECK(rx.on_sample(sample(kGuest, 1, 1, 0.7f, 10), 8, 4100) == tbl::Rx::NewRun);

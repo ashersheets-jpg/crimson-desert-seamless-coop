@@ -66,7 +66,7 @@ void test_episode_samples_and_end() {
     CHECK(w.observe(last_frame + 325, ++f).kind == FreezeWatch::Kind::None);
     // A 2.35 s freeze (P8 session 10 #1).
     const uint64_t frozen_at = last_frame + 325;
-    const auto samples = stall(w, frozen_at + 25, frozen_at + 3120, f);
+    const auto samples = stall(w, frozen_at + 25, frozen_at + 2350, f);
     // First sample once > 300 ms, then 50 ms apart (5 in all), then one per second: 325, 375, ..., 525, 1525.
     CHECK(samples.size() == 6);
     CHECK(samples.size() == 6 && samples[0].stalled_ms > 300 && samples[0].stalled_ms <= 325 && samples[0].sample == 1);
@@ -74,12 +74,12 @@ void test_episode_samples_and_end() {
     CHECK(samples.size() == 6 && samples[4].stalled_ms - samples[3].stalled_ms == 50);
     CHECK(samples.size() == 6 && samples[5].stalled_ms - samples[4].stalled_ms == 1000);
     CHECK(samples.size() == 6 && samples[0].episode == 1 && samples[5].sample == 6);
-    const auto end = w.observe(frozen_at + 2112, ++f);
+    const auto end = w.observe(frozen_at + 2375, ++f);
     CHECK(end.kind == FreezeWatch::Kind::End && end.episode == 1 && end.stalled_ms == 2375 && end.samples == 6 &&
           end.log_end);
     CHECK(!w.in_episode());
     // Frames again: nothing more.
-    CHECK(w.observe(frozen_at + 2407, ++f).kind == FreezeWatch::Kind::None);
+    CHECK(w.observe(frozen_at + 2400, ++f).kind == FreezeWatch::Kind::None);
 }
 
 void test_caps() {

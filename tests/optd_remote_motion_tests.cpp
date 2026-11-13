@@ -128,7 +128,7 @@ void test_byte_site() {
     CHECK(rmo::check_data_byte(secs, 0x87DD2F) == rmo::ByteSite::InCode);
     CHECK(rmo::check_data_byte(secs, 0x8000000) == rmo::ByteSite::Xtls);
     // .xdata, past kCodeEnd (0x5595000 since the Co-op+ port to 3549: the end of its .xtext)
-    CHECK(rmo::check_data_byte(secs, 0x5600000) == rmo::ByteSite::NotWritable);
+    CHECK(rmo::check_data_byte(secs, 0x5620000) == rmo::ByteSite::NotWritable);  // 3663: kCodeEnd is 0x5613000
     CHECK(rmo::check_data_byte(secs, 0x170D4010) == rmo::ByteSite::Ok);  // .shared: RW (0xC0000020, no MEM_EXECUTE)
     CHECK(rmo::check_data_byte(secs, 0x16F10010) == rmo::ByteSite::NotWritable);  // .text
     auto rwx = secs;
@@ -367,7 +367,7 @@ void test_divergence_per_candidate() {
     rmo::DivergenceWatch frozen, close;
     using K = rmo::DivergenceWatch::Kind;
     uint32_t frozen_lines = 0, close_lines = 0;
-    for (uint64_t t = 0; t <= 2793; t += 30) {
+    for (uint64_t t = 0; t <= 3000; t += 30) {
         if (frozen.observe(t, true, 6.0f, led).kind == K::Line) ++frozen_lines;
         if (close.observe(t, true, 0.3f, led).kind == K::Line) ++close_lines;
     }
@@ -479,7 +479,7 @@ void test_read_interp() {
     sw.observe(160, true, 5030);
     CHECK(sw.since_ms(160) == 0);
     sw.observe(190, false, 0);     // unreadable: ignored
-    sw.observe(2138, true, 5030);  // stuck for 2 s
+    sw.observe(2160, true, 5030);  // stuck for 2 s
     CHECK(sw.since_ms(2160) == 2000);
 }
 
