@@ -5,23 +5,13 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
-- NEXT BUILD, THE CHECKLIST HAS PASSED, your OK needed to post ("post it"): 0.1.0-alpha+cf8c7fa3. All 23 steps
-  have a clean pass on this package (2026-11-12 20:06 to 23:45): 21 in pass pp11; the two far-fight steps failed
-  there on faults of the checks themselves and passed after the checks were corrected (pp11b, pp11c), the package
-  the same throughout. One PC, two copies of the game, Nvidia. Post text:
-  docs/release/shared-world-playtest/download-cf8c7fa3-draft.txt; both zips are in dist\.
-  In it since 47135b83: a New Co-op Save is a new save for both players; two
-  different builds are refused and both are told; going to your friend is the game's own travel; the host's crash
-  at a reload with a friend in its world; Start Co-op doing nothing after a save was loaded; a failed start no
-  longer needs both games closed; the "no menu" fix's false trigger; the report tool's Steam IDs. I post nothing
-  without your word; the notes at the end of this file say when the checklist has passed.
-- FOUND AFTER THE POST (2026-11-12 09:30), your call whether to tell testers now or with the next build: in
-  47135b83 (and every earlier build) Start Co-op does NOTHING if the host has already loaded a world in the same
-  game session (played solo, went back to the title, then invited): the friend waits for ever. Workaround: restart
-  the game, then invite and Start Co-op without loading a save first. Fixed in the next build (tested for a host
-  coming back from its co-op world; the solo case is read from the code, not tested: a solo test copy would load
-  your real save). Suggested line for #download-here: "Known: if you played solo first, close and restart the game
-  before Start Co-op, or nothing happens." Say "post the known issue" and I post that line.
+- POSTED 2026-11-13 00:13 (your "Go ahead and upload the new build"): build 0.1.0-alpha+cf8c7fa3 in
+  #download-here, both zips (message 1570667810735267942; text as posted:
+  docs/release/shared-world-playtest/download-cf8c7fa3.txt). Tested on ONE PC with two copies of the game (Nvidia):
+  all 23 checklist steps. It replaces 47135b83 and answers JackyChan004's and D3vils' reports except: no horse or
+  wyvern for the joining player, stuck after an Axiom Force grab (both said in the post as not explained), the
+  host's cutscenes. Waiting for: their retest on ONE build, and the first word that a build works between two PCs.
+  The posting OK is used; the next post needs your OK again.
 - POSTED 2026-11-12 08:03: build 0.1.0-alpha+47135b83 in #download-here (both zips), and at 08:04 a line to
   JackyChan004 in #play-testing-feedback. Tested on ONE PC with two copies of the game (Nvidia); the fix for his
   missing menu was tested only by simulating his situation, we have no AMD card. Waiting for: his retest, and his
@@ -6833,3 +6823,17 @@ solostart 43/0, mounts 41/0, mountfight 41/0, nosave 7/0, retry 41/0, stuck 45/0
   nothing was learned about the tester's "stuck after a grab"; either the test save does not have the ability or
   the key needs something else. ax4a (running): the menu's tabs for the skill, and Tab held for 4 s.
 - SAVES OK, 5/5 in both.
+
+### POSTED 2026-11-13 00:13: 0.1.0-alpha+cf8c7fa3 in #download-here (the owner: "Go ahead and upload the new build")
+
+- Message 1570667810735267942 (05:13:07 UTC): the text (1991 characters, docs/release/shared-world-playtest/
+  download-cf8c7fa3.txt) and both zips; Discord shows 11.96 MB and 6.52 MB = 12 538 853 and 6 839 046 bytes, the
+  files in dist\ (sha256 5acf71111f103294..., 9da4b6e0ab6a6111...). The channel mention resolved.
+- Changed against the draft: the "Start Co-op did nothing after a loaded save" line now says "(tested after a
+  co-op session, not after solo play)", which is what was tested; two phrases shortened to stay under 2000.
+- Before posting: #play-testing-feedback, #bug-reports and #general read. Nothing new from a tester since
+  2026-11-12 18:15 UTC (JackyChan004: he had told his friend to install the latest). #general: squidbots32's LAN
+  question was answered by the owner.
+- How: as before (the app's browser pane, signed in; the zips through a loopback page into window.name; File
+  objects on the composer's input; a synthetic paste; Enter). No sign-in was asked. No test was running.
+- One post for this batch. The next post needs the owner's OK.

@@ -5,7 +5,7 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-Not posted yet (2026-11-12, after 47135b83):
+Posted 2026-11-13 00:13 as 0.1.0-alpha+cf8c7fa3 (checklist pp11 / pp11b / pp11c: all 23 steps, one PC):
 - **A New Co-op Save is a new save for BOTH players.** The joining friend used to arrive with their own solo
   character (a tester's 1,858-mission character in a world at mission 0). Now the friend's own save is checked and
   set aside, and they start as a copy of the host's new game, once its first real save exists (about a minute after
