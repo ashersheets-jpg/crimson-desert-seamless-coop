@@ -308,7 +308,7 @@ def apply(tree, dry):
 
 
 # ---------------------------------------------------------------- heads / inline byte lists
-ARR = re.compile(r'(\w+)\[\]\s*=\s*\{([^{}]*)\}', re.S)
+ARR = re.compile(r'(?:(\w+)\[\w*\]\s*=\s*|std::array<\s*(?:std::)?uint8_t\s*,\s*[\w:]+\s*>\s+(\w+)\s*=?\s*)\{([^{}]*)\}', re.S)
 
 
 def heads(tree, dry):
@@ -335,10 +335,10 @@ def heads(tree, dry):
         out = []
         for mm in ARR.finditer(text):
             line = text.count('\n', 0, mm.start()) + 1
-            body = mm.group(2)
+            body = mm.group(3)
             vals = re.findall(r'0x([0-9A-Fa-f]{2})\b', body)
             span = set(range(line, text.count('\n', 0, mm.end()) + 2))
-            if len(vals) < 4 or not (span & lines) or re.search(r'0x[0-9A-Fa-f]{3,}', body):
+            if len(vals) < 4 or re.search(r'0x[0-9A-Fa-f]{3,}', body):
                 continue
             b = bytes(int(x, 16) for x in vals)
             hit = None
@@ -354,7 +354,7 @@ def heads(tree, dry):
                         hit = (a, i - 0x400)
                         break
             if hit is None:
-                unfound.append('%s:%d %s (%d bytes)' % (f, line, mm.group(1), len(b)))
+                unfound.append('%s:%d %s (%d bytes)' % (f, line, mm.group(1) or mm.group(2), len(b)))
                 continue
             a, off = hit
             nb = p.NEW.rd(mp[a] + off, len(b))
@@ -372,11 +372,11 @@ def heads(tree, dry):
                 lead = re.match(r'\s*', r).group(0)
                 tail = ',' if r.rstrip().endswith(',') else ''
                 new_rows.append(lead + ', '.join('0x%02X' % next(it) for _ in range(c)) + tail)
-            out.append((mm.start(2), mm.end(2), '\n'.join(new_rows)))
+            out.append((mm.start(3), mm.end(3), '\n'.join(new_rows)))   # group 3 = the bytes (2 is a std::array's name)
             import fmap
             so, sn = fmap.shape_len(p.OLD, a + off, len(b)), fmap.shape_len(p.NEW, mp[a] + off, len(b))
             tag = 'numbers' if so == sn else 'SHAPE'
-            changed.append('%-7s %s:%d %s @0x%X%+d' % (tag, f, line, mm.group(1), mp[a], off) +
+            changed.append('%-7s %s:%d %s @0x%X%+d' % (tag, f, line, mm.group(1) or mm.group(2), mp[a], off) +
                            ('' if so == sn else ' || old: %s || new: %s' % (
                                fmap.text_len(p.OLD, a + off, len(b)), fmap.text_len(p.NEW, mp[a] + off, len(b)))))
         if out and not dry:
