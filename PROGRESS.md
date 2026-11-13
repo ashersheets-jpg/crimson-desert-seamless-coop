@@ -7037,3 +7037,10 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   http.server from .claude/launch.json "upload-staging" (git-excluded), into window.name; File objects on the
   composer's input; a synthetic paste; Enter). No test was running.
 - One post for this batch. The next post needs the owner's OK.
+
+## Shared cutscenes: the owner's design pick (2026-11-13 ~17:00): the READY CHECK
+
+- Asked with three options (watch along / ready check / own story each); the owner picked "Ready check first" (Jay's idea): a story trigger waits until both players are there and both press interact, then each game plays the scene. Memory: cutscene-ready-check.
+- What it needs: (1) knowing a story trigger when the host's client meets one (its Req: interaction, SequencerTriggerVolumeInOutReq 2808, a quest step), (2) holding it until the joined player is there and has pressed too, (3) the scene playing in the joined player's game as well (the base's guest_seq_play never played one: 43 created, 0 played; not ported), (4) what the scene brings into the world (a story boss) visible to both.
+- Measurement first, on a New Co-op Save (both start ~50 m from the first objective "Return to your comrades"): scratchpad cs.sh <name> host|guest|both (backs up and puts back the test co-op world). cs1 = the host walks there, the guest stays.
+- Note: the layer's prologue_hold says "while either player is in the prologue, co-op works as if far apart: no shared cutscenes / skip vote"; a New Co-op Save is at 0 missions: to check what that switch does in the shared world.
