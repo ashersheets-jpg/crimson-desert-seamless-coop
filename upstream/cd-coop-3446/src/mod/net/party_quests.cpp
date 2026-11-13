@@ -29,7 +29,7 @@ constexpr MissionName kNames[] = {
 #include "mod/net/mission_names.inc"
 };
 
-constexpr uint16_t kOpUpdateMissionListAck = 2360;
+constexpr uint16_t kOpUpdateMissionListAck = 2558;
 constexpr uint8_t kQuestType = 13;  // Activity event type
 constexpr uint8_t kUnderWay = 2, kDone = 5;
 

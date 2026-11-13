@@ -14,14 +14,14 @@
 namespace cdmp::net {
 namespace {
 
-constexpr uint16_t kOpPrepareSequencerAck = 2380;  // 3479
-constexpr uint16_t kOpDeleteSequencerAck = 2292;   // 3479
-constexpr uint16_t kOpStageBranchStateAck = 2920;     // u8 4 | u32 player | u64 sequencer | u32 branch | u32 previous |
+constexpr uint16_t kOpPrepareSequencerAck = 2356;  // 3479
+constexpr uint16_t kOpDeleteSequencerAck = 2659;   // 3479
+constexpr uint16_t kOpStageBranchStateAck = 2752;     // u8 4 | u32 player | u64 sequencer | u32 branch | u32 previous |
                                                       // u32 hash | u32 0 | u32 hash | u32 counter
-constexpr uint16_t kOpStageBranchStateReq = 2880;     // u64 sequencer | u32 branch | u16 0 (every ~60 s)
-constexpr uint16_t kOpStageOnBranchEventAck = 2436;   // u8 4 | u32 player | u64 sequencer | u32 branch | u8 0
-constexpr uint16_t kOpUpdateStageChartEventReq = 2839;  // u64 sequencer | u32 branch | u32 index | u8 value
-constexpr uint16_t kOpUpdateStageChartEventAck = 2187;  // u8 4 | u32 player | + the request
+constexpr uint16_t kOpStageBranchStateReq = 2644;     // u64 sequencer | u32 branch | u16 0 (every ~60 s)
+constexpr uint16_t kOpStageOnBranchEventAck = 2369;   // u8 4 | u32 player | u64 sequencer | u32 branch | u8 0
+constexpr uint16_t kOpUpdateStageChartEventReq = 2200;  // u64 sequencer | u32 branch | u32 index | u8 value
+constexpr uint16_t kOpUpdateStageChartEventAck = 2105;  // u8 4 | u32 player | + the request
 constexpr uint8_t kDeleteReason = 7;               // what the server sends when a stage ends normally
 constexpr uint64_t kFakeIdBase = 0x7E000000;       // our own sequencer ids for the host's stages (the server's: ~0x200)
 constexpr uint32_t kSendEveryMs = 5000;

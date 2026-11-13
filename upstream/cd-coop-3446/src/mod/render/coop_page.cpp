@@ -543,6 +543,7 @@ void draw_party(ImDrawList* dl, float width, float height, const net::LobbyView&
 }
 
 std::atomic<bool> g_dev_see_through{false};
+std::atomic<bool> g_dev_lobby_see_through{false};
 
 // Draws the lobby (or the guest's waiting screen) and takes its input; false when neither is on screen.
 bool draw_lobby(float width, float height, ImDrawList* dl, ImVec2 mouse, const std::vector<ImVec2>& clicks,
@@ -715,7 +716,7 @@ bool draw_lobby(float width, float height, ImDrawList* dl, ImVec2 mouse, const s
     const uint16_t pad = input::pad_buttons();
     const uint16_t pressed = g_steam_overlay || settling ? 0 : pad & ~pad_before;
     pad_before = pad;
-    input::mask_from_game(input::kPadDpad | input::kPadA | input::kPadB | input::kPadStart, 150);
+    if (!input::hold_no_button_mask()) input::mask_from_game(input::kPadDpad | input::kPadA | input::kPadB | input::kPadStart, 150);
     auto move = [&](int d) {
         for (int i = 0; i < n; ++i) {
             g_lobby_sel = (g_lobby_sel + d + n) % n;
@@ -745,9 +746,12 @@ bool draw_lobby(float width, float height, ImDrawList* dl, ImVec2 mouse, const s
     if (pressed & input::kPadA) act(g_lobby_sel);
     if (pressed & input::kPadB) back();
     // drawing: our own screen in place of the game's title (opaque), the wordmark, the dialog, the party, key hints
-    dl->AddRectFilled(ImVec2(0, 0), ImVec2(width, height), IM_COL32(7, 6, 5, 255));
-    dl->AddRectFilledMultiColor(ImVec2(0, height * 0.18f), ImVec2(width, height * 0.82f), IM_COL32(20, 16, 12, 255),
-                                IM_COL32(20, 16, 12, 255), IM_COL32(7, 6, 5, 255), IM_COL32(7, 6, 5, 255));
+    const bool see = g_dev_lobby_see_through.load();
+    dl->AddRectFilled(ImVec2(0, 0), ImVec2(width, height), IM_COL32(7, 6, 5, see ? 60 : 255));
+    if (!see) {
+        dl->AddRectFilledMultiColor(ImVec2(0, height * 0.18f), ImVec2(width, height * 0.82f), IM_COL32(20, 16, 12, 255),
+                                    IM_COL32(20, 16, 12, 255), IM_COL32(7, 6, 5, 255), IM_COL32(7, 6, 5, 255));
+    }
     {
         // letter-spaced capitals, the way the game sets its own name
         const auto spaced = [](const std::string& w) {
@@ -780,9 +784,11 @@ bool draw_lobby(float width, float height, ImDrawList* dl, ImVec2 mouse, const s
     }
     draw_party(dl, width, height, v);
     // the title's own prompts (Play, New Game, Load, Exit) are not in play while the lobby is up: hidden
+    if (!see)
     dl->AddRectFilledMultiColor(ImVec2(width * 0.30f, height - 120 * s), ImVec2(width * 0.55f, height), IM_COL32(6, 5, 4, 0),
                                 IM_COL32(6, 5, 4, 255), IM_COL32(6, 5, 4, 255), IM_COL32(6, 5, 4, 0));
-    dl->AddRectFilled(ImVec2(width * 0.55f, height - 120 * s), ImVec2(width, height), IM_COL32(6, 5, 4, 255));
+    if (!see) dl->AddRectFilled(ImVec2(width * 0.55f, height - 120 * s), ImVec2(width, height), IM_COL32(6, 5, 4, 255));
+    if (!see)
     dl->AddRectFilledMultiColor(ImVec2(0, height - 120 * s), ImVec2(width * 0.2f, height), IM_COL32(6, 5, 4, 255),
                                 IM_COL32(6, 5, 4, 0), IM_COL32(6, 5, 4, 0), IM_COL32(6, 5, 4, 255));
     // The footer line is drawn AFTER the cover above (pp1-real, 2026-11-11: with five cards the line sits inside the
@@ -821,6 +827,7 @@ bool draw_lobby(float width, float height, ImDrawList* dl, ImVec2 mouse, const s
 }  // namespace
 
 void coop_page_dev_see_through(bool on) { g_dev_see_through = on; }
+void coop_page_dev_lobby_see_through(bool on) { g_dev_lobby_see_through = on; }
 
 bool coop_page_open() { return g_open.load(); }
 bool coop_page_details() { return g_details.load(); }
@@ -926,6 +933,7 @@ void coop_page_draw(float width, float height, const HudData& d, const std::vect
         // reached it). The overlay keeps the game's own screens from reacting meanwhile.
         input::set_game_input_blocked((lv.show || lv.guest_wait) && !lv.driving && !steam_overlay);
     }
+    input::game_input_block_tick(g_hwnd.load());
     if (!g_open.load() && draw_lobby(width, height, dl, mouse, clicks, keys)) return;
     // ---- a different difficulty from the friend's (net/coop_lobby.h)
     if (!g_open.load()) {

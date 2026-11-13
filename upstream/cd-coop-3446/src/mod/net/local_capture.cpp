@@ -55,7 +55,7 @@
 
 namespace cdmp::net {
 namespace {
-namespace off = game::build_3576;
+namespace off = game::build_3663;
 using Bytes = std::vector<uint8_t>;
 
 // Keys our own puppet uses (remote_puppet.cpp): never learn templates from those.
@@ -118,10 +118,10 @@ std::atomic<uint32_t> g_last_attack_target{0};
 std::set<uint32_t> g_has_hp;  // under g_actors_mutex
 // Co-op+: message numbers for game 1.0.0.3460, read from the live Troc table (every
 // TrocTr handler instance: RTTI name, opcode). The values here before were 2976-era.
-constexpr uint16_t kOpVaryHPAck = 2740;
-constexpr uint16_t kOpNotifyHandleDeadAck = 2985;
-constexpr uint16_t kOpCreateOrChangeSelfDestinationReq = 2663;  // Co-op+: vec3 | u8 (our map waypoint)
-constexpr uint16_t kOpVaryStatByAccInputReq = 2565;
+constexpr uint16_t kOpVaryHPAck = 2608;
+constexpr uint16_t kOpNotifyHandleDeadAck = 2316;
+constexpr uint16_t kOpCreateOrChangeSelfDestinationReq = 2285;  // Co-op+: vec3 | u8 (our map waypoint)
+constexpr uint16_t kOpVaryStatByAccInputReq = 2284;
 constexpr uint32_t kStatHP = 0x000F4240;
 
 // World actors with hit points, from their loads and HP messages.
@@ -138,9 +138,9 @@ std::map<uint32_t, Enemy> g_enemies;  // under g_actors_mutex
 std::atomic<bool> g_damage_enabled{false};
 std::atomic<bool> g_key_alarm{false};
 uint64_t g_damage_sent = 0, g_damage_applied = 0, g_damage_unmatched = 0;
-constexpr uint16_t kOpAttackTargetAck = 2791;  // PostProcessAttackResult_AttackTargetAck
-constexpr uint16_t kOpChangedEquipByQuickSlotAck = 2440;  // 6 B: u32 player | u16 weapon set
-constexpr uint16_t kOpSetAvoidByCutSceneAck = 2708;       // boss_safe.h: stage cinematic on/off
+constexpr uint16_t kOpAttackTargetAck = 2519;  // PostProcessAttackResult_AttackTargetAck
+constexpr uint16_t kOpChangedEquipByQuickSlotAck = 2273;  // 6 B: u32 player | u16 weapon set
+constexpr uint16_t kOpSetAvoidByCutSceneAck = 2698;       // boss_safe.h: stage cinematic on/off
 
 // ---------------------------------------------------------------- writer-thread state
 game::PlayerReader g_reader;
@@ -1058,7 +1058,8 @@ std::optional<EquipSnapshot> read_own_equipment() {
         std::memcpy(&slot, e + off::kSlotEntry_Slot, 2);
         if (index == 0xFFFF || n <= 0 || slot > EquipState::kMaxSlot) continue;
         if (index >= *records_n) return std::nullopt;
-        auto record = game::read_ptr(*records + index * 8ull);
+        auto record = game::read_ptr(*records + index * static_cast<uint64_t>(off::kItemInfoTable_Stride) +
+                                     off::kItemInfoTable_RecordAt);
         auto key = record ? game::read<uint32_t>(*record + off::kItemInfo_Key) : std::nullopt;
         if (!key || !*key) return std::nullopt;  // record not loaded yet: read again later
         snap.slots[slot] = *key;
@@ -1133,7 +1134,7 @@ bool capture_install_equip_hook() {
         if (base == off::kImageBase && game::safe_read(base + off::kItemInfoTableLoad, load, sizeof load)) {
             std::memcpy(&rel, load + 3, 4);
         }
-        if (load[0] != 0x48 || load[1] != 0x8B || load[2] != 0x1D ||
+        if (load[0] != 0x48 || load[1] != 0x8B || load[2] != off::kItemInfoTableLoadReg ||
             off::kItemInfoTableLoad + 7 + rel != off::kItemInfoTableSlot) {
             log::warn("Capture: item table not recognised; equipment changes won't be sent");
             return false;

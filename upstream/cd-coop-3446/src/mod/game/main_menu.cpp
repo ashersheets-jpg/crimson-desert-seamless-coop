@@ -15,16 +15,16 @@
 
 namespace cdmp::game {
 namespace {
-namespace off = build_3576;
+namespace off = build_3663;
 
-constexpr uintptr_t kOpenPanel = 0xF19180;        // void (root, const char* panel, void* sub, uint64 flag)
-constexpr uintptr_t kRootVftable = 0x5A033D0;     // UIGamePlayControl_Root_MainMenu
+constexpr uintptr_t kOpenPanel = 0xF539D0;        // void (root, const char* panel, void* sub, uint64 flag)
+constexpr uintptr_t kRootVftable = 0x5A7F6A0;     // UIGamePlayControl_Root_MainMenu
 constexpr uintptr_t kRoot_PageIndex = 0x1C8;      // uint32
 const char* const kPanels[kMenuPageCount] = {"WorldMapView", "InventoryEquipmentPanel", "QuestMenuPanel2",
                                              "SkillTreePanel", "LogoutView"};
 
-constexpr uintptr_t kTabButton = 0xF1CB50;       // the menu's LB / RB handler (root, sender, button, 0, 0, float*)
-constexpr uintptr_t kTabChanged = 0xF1CF40;      // void (root, list, flag): the tab row's selection changed
+constexpr uintptr_t kTabButton = 0xF573A0;       // the menu's LB / RB handler (root, sender, button, 0, 0, float*)
+constexpr uintptr_t kTabChanged = 0xF57790;      // void (root, list, flag): the tab row's selection changed
 constexpr uintptr_t kListSelect = 0xA7866B0;      // void (list, page + 0x10, 0, flag): select the item with this key
 constexpr uintptr_t kRoot_Pages = 0x158;          // stride 0x30
 constexpr uintptr_t kRoot_PageCount = 0x160;      // uint32
@@ -73,12 +73,12 @@ void shift_rb(uintptr_t root, bool fresh) {
     // setter (exe+0x6D9090) hides it; the Co-op tab's code then draws the glyph to the right of "Co-op".
     if (g_rb_test) return;  // [dev] rb_test: leave the game's glyph alone (to compare)
     uint8_t id = 0x0C, value = 1, flag = 0;
-    reinterpret_cast<void (*)(uintptr_t, uint8_t*, uint8_t*, uint8_t*, uint8_t)>(base + 0x6D9090)(handle, &id, &value, &flag, 0);
+    reinterpret_cast<void (*)(uintptr_t, uint8_t*, uint8_t*, uint8_t*, uint8_t)>(base + 0x7047C0)(handle, &id, &value, &flag, 0);
     // tcB289: the byte setter alone left the glyph on screen. tcB288 had ALSO run the length setter (exe+0x712F00)
     // on the same property with 160 px, and that pair made it vanish.
     float len = kMenuRbShift;
     uint8_t unit = 1;
-    reinterpret_cast<void (*)(uintptr_t, uint8_t*, float*, uint8_t*, uint8_t)>(base + 0x712F00)(handle, &id, &len, &unit, 0);
+    reinterpret_cast<void (*)(uintptr_t, uint8_t*, float*, uint8_t*, uint8_t)>(base + 0x73EB50)(handle, &id, &len, &unit, 0);
     g_rb_hidden = true;
     static bool said = false;
     if (!said) {
@@ -134,9 +134,9 @@ void tab_changed(uintptr_t root, uintptr_t list, uint64_t flag) {
 // calls it while the state byte is 4 (in the world), and so do we. Asked for from any thread, done on the UI thread
 // by the menu root's per-frame update (vftable slot 36, exe+0xF1B8F0) while the menu is open; when that has not run
 // within a second (menu closed), a helper thread does it.
-constexpr uintptr_t kMenuUpdate = 0xF1B8F0;
+constexpr uintptr_t kMenuUpdate = 0xF56140;
 constexpr uintptr_t kReturnLevel = 0x96525F0;
-constexpr uintptr_t kStateRootA = 0x71C0158;
+constexpr uintptr_t kStateRootA = 0x7245218;
 std::atomic<bool> g_title_wanted{false};
 std::atomic<uint32_t> g_update_calls{0};
 SafetyHookMid g_update_hook;
@@ -162,14 +162,14 @@ void do_return_to_title(const char* from) {
 // TrocTrUpdateSequencerGamePlayDataEventReq (exe+0x2CE9AD0) asks the sender's actor for a part (vfunction +0x48)
 // that is already gone while the world unloads, and exe+0x2AEFE40 reads through it without a check. Guard: a null
 // part answers with the routine's own "nothing to do" error (exe+0x714B900).
-constexpr uintptr_t kSeqDataApply = 0x2AEFE40;
+constexpr uintptr_t kSeqDataApply = 0x2B53E50;
 SafetyHookInline g_seq_guard;
 uint32_t* seq_data_apply(uintptr_t part, uint32_t* out, uintptr_t data, int n) {
     if (!part) {
         static std::atomic<int> said{0};
         if (said.fetch_add(1) < 3) log::info("Main menu: a sequencer data request for an actor that is unloading was skipped");
         uint32_t e = 0;
-        safe_read(reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)) + 0x714B900, &e, sizeof e);
+        safe_read(reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)) + 0x71D06E8, &e, sizeof e);
         *out = e ? e : 1;
         return out;
     }
@@ -299,7 +299,7 @@ bool main_menu_install(MenuTabFilter filter) {
 
 // ---- [dev] write watch on the page index -------------------------------------------------------------------------
 namespace {
-constexpr uintptr_t kListVftable = 0x5A70548;  // UIGamePlayControlCommon_CircularList
+constexpr uintptr_t kListVftable = 0x5AEAB58;  // UIGamePlayControlCommon_CircularList
 bool g_watch_on = false;
 int g_watch_state = 0;  // 1 armed, -1 failed
 uintptr_t g_watch_addr = 0;

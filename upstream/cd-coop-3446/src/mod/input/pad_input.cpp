@@ -55,6 +55,20 @@ std::atomic<bool> g_chord_modifier{true};  // set_chord_modifier
 void filter(XINPUT_STATE* st) {
     if (!st) return;
     const uint64_t t = now64();
+    // 2026-11-13: a Co-op+ screen stands in for the game's (the title lobby, the death screen): the game gets an idle
+    // pad, sticks and triggers too. Not while the mod presses the game's buttons itself (press_for_game).
+    if (pads_held() && t >= g_press_until.load()) {
+        static std::atomic<bool> was{false};
+        const XINPUT_GAMEPAD idle{};
+        if (std::memcmp(&st->Gamepad, &idle, sizeof idle) != 0) {
+            st->Gamepad = idle;
+            ++st->dwPacketNumber;
+            if (!was.exchange(true)) log::info("Input: pad input kept from the game (a Co-op+ screen is up)");
+        } else {
+            was = false;
+        }
+        return;
+    }
     WORD b = st->Gamepad.wButtons;
     if (t < g_mask_until.load()) b &= static_cast<WORD>(~g_mask.load());
     if (t < g_press_until.load()) b |= static_cast<WORD>(g_press.load() & 0xF3FF);

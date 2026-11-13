@@ -19,7 +19,7 @@
 
 namespace cdmp::net {
 namespace {
-namespace off = game::build_3576;
+namespace off = game::build_3663;
 
 constexpr uint32_t kPuppetPlayer = 0xA010F001;
 

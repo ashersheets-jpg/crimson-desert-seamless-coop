@@ -17,7 +17,7 @@
 namespace cdmp::net {
 namespace {
 
-constexpr uint16_t kOpAddSubLevelExperienceAck = 2995;  // u32 player | i64 | u8 | u32 sub-level | u64 amount | u16
+constexpr uint16_t kOpAddSubLevelExperienceAck = 2454;  // u32 player | i64 | u8 | u32 sub-level | u64 amount | u16
 constexpr uint64_t kEchoWindowMs = 10000;
 constexpr size_t kMaxQueued = 64;
 

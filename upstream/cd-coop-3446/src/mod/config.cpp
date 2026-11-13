@@ -244,6 +244,9 @@ Config load_config(const std::wstring& ini_path) {
     c.dev_ui_preview = static_cast<int>(read_uint(ini_path, L"dev", L"ui_preview", 0));
     c.dev_rb_test = read_uint(ini_path, L"dev", L"rb_test", 0) != 0;
     c.dev_pad_sim = static_cast<int>(read_uint(ini_path, L"dev", L"pad_sim", 0));
+    c.dev_title_pad = narrow(read_string(ini_path, L"dev", L"title_pad", ""));
+    c.dev_title_hold_mode = read_uint(ini_path, L"dev", L"title_hold_mode", 7) & 15;
+    c.dev_lobby_see_through = read_uint(ini_path, L"dev", L"lobby_see_through", 0) != 0;
     c.dev_challenge_test = static_cast<int>(read_uint(ini_path, L"dev", L"challenge_test", 0));
     c.dev_duel_test = read_uint(ini_path, L"dev", L"duel_test", 0) != 0;
     c.dev_quest_test = static_cast<uint32_t>(read_uint(ini_path, L"dev", L"quest_test", 0));

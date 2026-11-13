@@ -21,11 +21,11 @@
 namespace cdmp::net {
 namespace {
 
-namespace off = game::build_3576;
+namespace off = game::build_3663;
 
 // Co-op+: message numbers for game 1.0.0.3460, read from the live Troc table (every
 // TrocTr handler instance: RTTI name, opcode). The values here before were 2976-era.
-constexpr uint16_t kOpCurrentTargetChangeReq = 2820;  // u32 actor | u32 target | ...
+constexpr uint16_t kOpCurrentTargetChangeReq = 2918;  // u32 actor | u32 target | ...
 constexpr uint32_t kPuppetPlayer = 0xA010F001;
 constexpr uint64_t kRecentMs = 5000;
 constexpr uint32_t kMaxListed = 16;

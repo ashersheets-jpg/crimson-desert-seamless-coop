@@ -28,15 +28,15 @@
 
 namespace cdmp::net {
 namespace {
-namespace off = game::build_3576;
+namespace off = game::build_3663;
 
-constexpr uint16_t kOpReviveReq = 2957;             // u32 player | u8 type | u8 x3
-constexpr uint16_t kOpReviveLoadingStartReq = 3139;  // 04 | u8 type | 00
-constexpr uint16_t kOpReviveLoadingReq = 2390;       // u8 type
-constexpr uint16_t kOpGameLoadingStartReq = 2294;    // empty: the client starts loading a field
-constexpr uint16_t kOpLoadingFieldDataAck = 2399;    // 04 | u32 player | ... | +28 vec3, quat, scale
-constexpr uint16_t kOpNotifyHandleDeadAck = 2985;   // u32 dead | u32 killer | type | ...
-constexpr uint16_t kOpDoTeleportAck = 3052;          // u32 actor | vec3 | 8 bytes (handler reads 4, 12, 8)
+constexpr uint16_t kOpReviveReq = 2869;             // u32 player | u8 type | u8 x3
+constexpr uint16_t kOpReviveLoadingStartReq = 2972;  // 04 | u8 type | 00
+constexpr uint16_t kOpReviveLoadingReq = 2887;       // u8 type
+constexpr uint16_t kOpGameLoadingStartReq = 2350;    // empty: the client starts loading a field
+constexpr uint16_t kOpLoadingFieldDataAck = 2286;    // 04 | u32 player | ... | +28 vec3, quat, scale
+constexpr uint16_t kOpNotifyHandleDeadAck = 2316;   // u32 dead | u32 killer | type | ...
+constexpr uint16_t kOpDoTeleportAck = 2379;          // u32 actor | vec3 | 8 bytes (handler reads 4, 12, 8)
 constexpr uint8_t kInstant = 1, kCheckpoint = 2;
 constexpr uint32_t kWaitForGameMs = 4000;   // the game's own screen shows ~2 s after the death
 constexpr uint32_t kLoadingStepMs = 1000;   // the game's gap between its two checkpoint requests
@@ -131,8 +131,8 @@ void request_move(float x, float y, float z) {
 // The hops stay for short moves, for the last metres, and as the way out when this does not take.
 // The FieldInfoKey of the field we are in: on the host from the native base (cdmp_field_info_key), on the guest from
 // the host (coop_lobby's kMsgFieldKey: both are in the host's field). 0 = not known: hops as before.
-constexpr uint16_t kOpReloadStageStartReq = 3074;
-constexpr uint16_t kOpTeleportRevivePointAck = 3071;
+constexpr uint16_t kOpReloadStageStartReq = 3018;
+constexpr uint16_t kOpTeleportRevivePointAck = 3072;
 // Farther than this: the game's travel. 250 m, not 80 (pp10-revive, 2026-11-12): the travel is a load of about 9 s on
 // the server whatever the distance (the traveller cannot be hit, or revived, while it lasts: the step's kill came 7 s
 // after a 112 m travel and did nothing), and a few hops cover 250 m in less than that.
@@ -391,7 +391,7 @@ std::atomic<uint64_t> g_death_withheld_at{0};
 // one call of the 5-byte jmp stub exe+0xBA3700, which puts the UI into its "gameover" sub-phase (HUD hidden, menus
 // locked, the game's own death screen). With the stub skipped while we are down in co-op, the notice can go to the
 // client: the character falls and stays down, the UI stays ours. The game's two revive packets stand it up again.
-constexpr uintptr_t kGameOverStub = 0xBA3700;
+constexpr uintptr_t kGameOverStub = 0xBDB280;
 constexpr uint8_t kGameOverStubBytes[5] = {0xE9, 0xCB, 0xD3, 0xF2, 0x08};  // build 1.0.0.3576
 SafetyHookInline g_gameover;
 std::atomic<bool> g_pose_down{false};

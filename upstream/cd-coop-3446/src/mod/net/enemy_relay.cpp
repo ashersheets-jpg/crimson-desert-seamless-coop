@@ -50,12 +50,12 @@ bool load_is_relayable(uint32_t type, uint32_t key) {
 // Co-op+: message numbers for game 1.0.0.3460, read from the live Troc table (every
 // TrocTr handler instance: RTTI name, opcode). The values here before were 2976-era.
 constexpr uint16_t kOpActorLoadDataAck = 2005;
-constexpr uint16_t kOpRemoveActorAck = 3067;
-constexpr uint16_t kOpStartActionReq = 2202;
-constexpr uint16_t kOpRotateActorReq = 2852;
-constexpr uint16_t kOpChangeBattleStateReq = 2453;  // 5 B: u32 actor | u8 state (0 = out of combat)
-constexpr uint16_t kOpDoFrameEventReq = 3030;       // u8 4 | u32 attacker | ... | 665-byte target entries at the end
-constexpr uint16_t kOpCurrentTargetChangeReq = 2820;  // u32 actor | u32 target | u64 seq | u8 | u8 reason
+constexpr uint16_t kOpRemoveActorAck = 3037;
+constexpr uint16_t kOpStartActionReq = 2431;
+constexpr uint16_t kOpRotateActorReq = 2296;
+constexpr uint16_t kOpChangeBattleStateReq = 2704;  // 5 B: u32 actor | u8 state (0 = out of combat)
+constexpr uint16_t kOpDoFrameEventReq = 2460;       // u8 4 | u32 attacker | ... | 665-byte target entries at the end
+constexpr uint16_t kOpCurrentTargetChangeReq = 2918;  // u32 actor | u32 target | u64 seq | u8 | u8 reason
 constexpr uint64_t kEngagedMs = 20000;
 // An enemy that aimed at or struck one of us this long ago still counts as
 // hostile: one locked on us sends no new CurrentTargetChangeReq, and its
@@ -63,16 +63,16 @@ constexpr uint64_t kEngagedMs = 20000;
 constexpr uint64_t kAimedMs = 120000;
 // Server->client messages about an enemy (key at +0), relayed for its copy
 // (enemigos-del-anfitrion.md §3.1): HP and death reliably, hit reactions not.
-constexpr uint16_t kOpVaryHPAck = 2740;               // 92 B; +0x40 per-actor sequence, kept
-constexpr uint16_t kOpNotifyHandleDeadAck = 2985;     // 19 B: dead | killer | reason
+constexpr uint16_t kOpVaryHPAck = 2608;               // 92 B; +0x40 per-actor sequence, kept
+constexpr uint16_t kOpNotifyHandleDeadAck = 2316;     // 19 B: dead | killer | reason
 // What a server sends once a corpse is emptied (botin-invitado.md §1): a dead
 // copy offered the loot prompt, but our server has no such actor and gave
 // nothing (two-PC test, 6 Oct). Sent for it ~1 s after its death.
-constexpr uint16_t kOpLootDropCharacterRewardListAck = 2414;  // u8 4 | u32 dead | n x 37 B
-constexpr uint16_t kOpRemoveLootableAck = 3066;               // u32 dead | u32 player
+constexpr uint16_t kOpLootDropCharacterRewardListAck = 2106;  // u8 4 | u32 dead | n x 37 B
+constexpr uint16_t kOpRemoveLootableAck = 2347;               // u32 dead | u32 player
 constexpr uint64_t kNoLootAfterMs = 1000;
-constexpr uint16_t kOpAttackTargetAck = 2791;         // hit effect on the target at +0
-constexpr uint16_t kOpApplyActionRestrictionAck = 3059;
+constexpr uint16_t kOpAttackTargetAck = 2519;         // hit effect on the target at +0
+constexpr uint16_t kOpApplyActionRestrictionAck = 2183;
 constexpr size_t kRotateActorReqSize = 176;
 constexpr uint64_t kPosIntervalMs = 66;  // ~15 Hz
 constexpr uint64_t kPosKeepAliveMs = 900;  // the remote buffer wants a sample every <= 1 s
@@ -1176,7 +1176,7 @@ void enemy_observe_s2c(const uint8_t* packet, size_t size) {
     const uint8_t* p = packet + 5;
     const size_t n = size - 5;
     // Co-op+ (T10): RemoveLootableAck 3066 (u32 dead | u32 looter) of one of our enemies the guest has a copy of.
-    if (op == 3066 && n >= 8 && loot_mode() == 2) {
+    if (op == 2347 && n >= 8 && loot_mode() == 2) {
         const uint32_t dead = u32_at(p), looter = u32_at(p + 4);
         std::lock_guard lock(g_mutex);
         if (auto s = g_sent.find(dead); s != g_sent.end() && looter == capture_own_player_key() &&
@@ -2021,8 +2021,8 @@ void enemy_partner_looted_copy(uint32_t copy) {
     std::memcpy(empty.data() + 1, &native, 4);
     std::memcpy(gone.data(), &native, 4);
     std::memcpy(gone.data() + 4, &own, 4);
-    puppet_inject_s2c(2414, empty);  // LootDropCharacterRewardListAck: no items
-    puppet_inject_s2c(3066, gone);   // RemoveLootableAck
+    puppet_inject_s2c(2106, empty);  // LootDropCharacterRewardListAck: no items
+    puppet_inject_s2c(2347, gone);   // RemoveLootableAck
     log::info("Loot: the guest looted 0x{:08X} (our 0x{:08X}) first (first come): nothing here", copy, native);
 }
 

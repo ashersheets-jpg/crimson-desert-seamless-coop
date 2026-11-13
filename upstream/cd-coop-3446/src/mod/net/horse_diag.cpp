@@ -16,7 +16,7 @@
 
 namespace cdmp::net {
 namespace {
-namespace off = game::build_3576;
+namespace off = game::build_3663;
 
 constexpr uint32_t kCopyHorse = 0xB010F002;
 
@@ -95,13 +95,13 @@ struct Site {
 // the action layers); all heads unchanged. build/port3527/portmap.py.
 // 1.0.0.3479 (Co-op+): CC update and restore -0x30 (CC update = vtable slot 16 again), pending
 // -0x70 with the action layers; the post-update site did not move. All four heads unchanged.
-constexpr Site kCcUpdate = {0x9439B0, {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x18, 0x57, 0x48,
+constexpr Site kCcUpdate = {0x971190, {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x18, 0x57, 0x48,
                                        0x83, 0xEC, 0x20, 0x48}, "CC update"};
-constexpr Site kCcPost = {0x862790, {0x0F, 0x85, 0xB6, 0x00, 0x00, 0x00, 0x4C, 0x89, 0x6C, 0x24, 0x28, 0x80,
+constexpr Site kCcPost = {0x88F300, {0x0F, 0x85, 0xB6, 0x00, 0x00, 0x00, 0x4C, 0x89, 0x6C, 0x24, 0x28, 0x80,
                                      0x7C, 0x24, 0x38, 0x00}, "CC post-update"};
-constexpr Site kRestore = {0x949EB0, {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x20, 0x48, 0x89, 0x50, 0x10, 0x55,
+constexpr Site kRestore = {0x9778B0, {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x20, 0x48, 0x89, 0x50, 0x10, 0x55,
                                       0x56, 0x57, 0x41, 0x54}, "restore actions"};
-constexpr Site kPending = {0x23326E0, {0x74, 0x51, 0x4C, 0x89, 0x3F, 0x44, 0x38, 0x3E, 0x74, 0x32, 0x48, 0xC7,
+constexpr Site kPending = {0x23A2E30, {0x74, 0x51, 0x4C, 0x89, 0x3F, 0x44, 0x38, 0x3E, 0x74, 0x32, 0x48, 0xC7,
                                        0xC3, 0xFF, 0xFF, 0xFF}, "pending actions"};
 
 // Co-op+ (3479): the CC's per-frame update (rcx = the component, xmm1 = frame time), called
@@ -109,7 +109,7 @@ constexpr Site kPending = {0x23326E0, {0x74, 0x51, 0x4C, 0x89, 0x3F, 0x44, 0x38,
 // "still loading?" query), not this. A bandit copy with a chart and no action crashed in here
 // 0.2 s after loading (exe+0x944080 -> 0x948560 -> 0x25164ED reads [[layer+0x18]+0x28], the
 // action, null). Same containment rule, for the copies it was written for (horse and enemies).
-constexpr Site kCcTick = {0x9451E0, {0x48, 0x89, 0x5C, 0x24, 0x10, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55,
+constexpr Site kCcTick = {0x9729C0, {0x48, 0x89, 0x5C, 0x24, 0x10, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55,
                                      0x41, 0x56, 0x41, 0x57}, "CC tick"};
 // Co-op+ (2026-11-07, 3576, Ghidra + three guest crashes: xs3, ag3 at exe+0xA12E4E reading 0x115, after an enemy
 // copy "came with no action"): exe+0xA128C0(rcx) processes a character's queued animation events; [rcx] is its CC.
@@ -126,17 +126,17 @@ constexpr uint8_t kActionEventsHead[16] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0
 // (exe+0x945402 -> 0x975B60(obj, frame time); obj+0x60 = the CC). For a copy with a chart and no
 // action it reaches 0x976590, which dereferences the missing action (exe+0x976921: the second
 // enemy-copy crash). A void function that already returns early in some states: skipped the same way.
-constexpr Site kAnimUpdate = {0x976B70, {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x10, 0x48, 0x89, 0x70, 0x18, 0x55,
+constexpr Site kAnimUpdate = {0x9A55B0, {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x10, 0x48, 0x89, 0x70, 0x18, 0x55,
                                          0x57, 0x41, 0x54, 0x41}, "animation update"};
 // Co-op+ (3479): a second per-frame CC update (exe+0x99A68A -> 0x94EA00(cc, frame time)); in a fight a
 // bandit copy crashed in it (-> 0x7F1E50 -> 0x7F58D0 reads [[main layer]+0x10]+0x116, null).
-constexpr Site kCcLate = {0x94FB60, {0x48, 0x89, 0x5C, 0x24, 0x10, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55,
+constexpr Site kCcLate = {0x97D6D0, {0x48, 0x89, 0x5C, 0x24, 0x10, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55,
                                      0x41, 0x56, 0x41, 0x57}, "CC late update"};
 // Co-op+ (2026-11-05, 3549): in a brand-new game the other player's copy never gets an action and a sixth function
 // read the missing one (exe+0x96918B, in the function at 0x968F50 called from 0x9671E1; the CC is
 // [[[[rcx+0x60]+8]+0x68]+0x40]: it then reads the CC's main layer and its +0x10 action). It answers a bool;
 // skipped as "no".
-constexpr Site kLayerSample = {0x9692C0, {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x18, 0x48, 0x89, 0x68, 0x20, 0x56,
+constexpr Site kLayerSample = {0x997480, {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x18, 0x48, 0x89, 0x68, 0x20, 0x56,
                                           0x57, 0x41, 0x54, 0x41}, "layer sample"};
 SafetyHookMid g_cc_hook, g_post_hook, g_restore_hook, g_pending_hook, g_tick_hook, g_anim_hook, g_late_hook, g_sample_hook;
 uint8_t* g_ret = nullptr;
@@ -454,7 +454,7 @@ void on_restore(safetyhook::Context& ctx) {
     State s;
     s.key = key;
     if (!read_state(ctx.rcx, s)) return;
-    log_state("RESTORE(0x8646D0)", s);
+    log_state("RESTORE(0x891241)", s);
     // The restore data: bytes +0x30..+0x40 and the u64 at +0xF8 of [CC+0x40].
     uint8_t raw[0x10] = {};
     uint64_t f8 = 0;
@@ -473,7 +473,7 @@ void on_pending(safetyhook::Context& ctx) {
     State s;
     s.key = key;
     if (!read_state(ctx.rcx, s)) return;
-    if (s.pending) log_state("PENDING(0x2329D70)", s);
+    if (s.pending) log_state("PENDING(0x239A7F0)", s);
 }
 
 bool hook(const Site& site, SafetyHookMid& out, safetyhook::MidHookFn fn) {
@@ -551,8 +551,8 @@ bool horse_diag_install(bool contain) {
     if (contain && !g_events_hook) {
         const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
         uint8_t head[sizeof kActionEventsHead] = {};
-        if (game::safe_read(base + 0xA128C0, head, sizeof head) && std::memcmp(head, kActionEventsHead, sizeof head) == 0) {
-            g_events_hook = safetyhook::create_mid(reinterpret_cast<void*>(base + 0xA128C0), on_action_events);
+        if (game::safe_read(base + 0xA427E0, head, sizeof head) && std::memcmp(head, kActionEventsHead, sizeof head) == 0) {
+            g_events_hook = safetyhook::create_mid(reinterpret_cast<void*>(base + 0xA427E0), on_action_events);
         }
         log::info("HorseDiag: animation-events guard {}", g_events_hook ? "installed" : "NOT installed (code not as expected)");
     }
@@ -560,9 +560,9 @@ bool horse_diag_install(bool contain) {
     if (contain && !g_playback_hook) {
         const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
         uint8_t code[sizeof kPlaybackFrameCode] = {};
-        if (game::safe_read(base + 0x251975D, code, sizeof code) && std::memcmp(code, kPlaybackFrameCode, sizeof code) == 0) {
-            g_playback_resume = base + 0x251976F;
-            g_playback_hook = safetyhook::create_mid(reinterpret_cast<void*>(base + 0x251975D), on_playback_frame);
+        if (game::safe_read(base + 0x258B13D, code, sizeof code) && std::memcmp(code, kPlaybackFrameCode, sizeof code) == 0) {
+            g_playback_resume = base + 0x258B14F;
+            g_playback_hook = safetyhook::create_mid(reinterpret_cast<void*>(base + 0x258B13D), on_playback_frame);
         }
         log::info("HorseDiag: action-playback guard {}", g_playback_hook ? "installed" : "NOT installed (code not as expected)");
     }

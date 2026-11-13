@@ -197,7 +197,7 @@ bool game_build_supported() {
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
     const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(base + dos->e_lfanew);
-    return base == game::build_3576::kImageBase && nt->FileHeader.TimeDateStamp == game::build_3576::kPeTimestamp;
+    return base == game::build_3663::kImageBase && nt->FileHeader.TimeDateStamp == game::build_3663::kPeTimestamp;
 }
 
 bool log_process_info() {
@@ -238,7 +238,7 @@ public:
     explicit LocalSource(bool in_game) : in_game_(in_game) {
         if (!in_game_) return;
         if (reader_.init()) {
-            log::info("Game reader enabled (build 1.0.0.3576 offsets)");
+            log::info("Game reader enabled (build 1.0.0.3663 offsets)");
         } else {
             log::warn("Game reader DISABLED: {}. Only networking will run.",
                       reader_.last_failure());
@@ -1025,6 +1025,32 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
                         li.partner_address = ep.substr(0, ep.rfind(':'));
                     }
                     net::lobby_tick(li);
+                    // [dev] title_pad (2026-11-13): simulated pad presses under the title lobby, to see whether the
+                    // game's own title reacts beneath it. "ms:hexmask:hold_ms,..." from the moment the lobby shows.
+                    if (!cfg.dev_title_pad.empty() && net::lobby_view().show) {
+                        struct Step { uint64_t at; uint16_t mask; uint32_t hold; bool done; };
+                        static std::vector<Step> steps;
+                        static uint64_t t0 = 0;
+                        if (!t0) {
+                            t0 = li.now_ms;
+                            const char* p = cfg.dev_title_pad.c_str();
+                            while (*p) {
+                                unsigned at = 0, mask = 0, hold = 0;
+                                int used = 0;
+                                if (std::sscanf(p, "%u:%x:%u%n", &at, &mask, &hold, &used) < 3) break;
+                                steps.push_back({at, static_cast<uint16_t>(mask), hold, false});
+                                p += used;
+                                if (*p == ',' || *p == '/') ++p;
+                            }
+                            log::info("Dev title pad: {} presses queued", steps.size());
+                        }
+                        for (Step& st : steps) {
+                            if (st.done || li.now_ms - t0 < st.at) continue;
+                            st.done = true;
+                            input::dev_pad_press(st.mask, st.hold);
+                            log::info("Dev title pad: 0x{:04X} for {} ms", st.mask, st.hold);
+                        }
+                    }
                     // Co-op+ (2026-11-07): the prologue is played solo (prologue_hold.h).
                     net::PrologueInput pi;
                     pi.now_ms = li.now_ms;
@@ -1811,7 +1837,7 @@ void minimap_cycle_loop() {
         if (down && !was_down) {
             const bool back = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
             int at = net::puppet_minimap_offset();
-            if (at < 0xEA || at > 0x16C) at = game::build_3576::kMinimapIconPlayerArrow;
+            if (at < 0xEA || at > 0x16C) at = game::build_3663::kMinimapIconPlayerArrow;
             else at += back ? -2 : 2;
             if (at > 0x16C) at = 0xEA;
             if (at < 0xEA) at = 0x16C;
@@ -1865,7 +1891,7 @@ void combat_test_loop() {
                 std::memcpy(b.data(), &npc->key, 4);
                 std::memcpy(b.data() + 4, &hp_stat, 4);
                 std::memcpy(b.data() + 8, &delta, 8);
-                const bool ok = net::sniffer_inject_c2s(packet(2565, b));  // VaryStatByAccInputReq on 3460 (2976: 2181)
+                const bool ok = net::sniffer_inject_c2s(packet(2284, b));  // VaryStatByAccInputReq on 3460 (2976: 2181)
                 log::info("Combat test T2: VaryStatByAccInputReq(0x{:08X} at {:.1f} m, HP, -5) {}",
                           npc->key, npc->distance, ok ? "queued" : "NOT queued");
             } else {
@@ -1883,7 +1909,7 @@ void combat_test_loop() {
                 std::memcpy(b.data() + 12, pos, 12);
                 std::memcpy(b.data() + 24, dir, 12);
                 std::memcpy(b.data() + 36, &hash, 4);
-                const bool ok = net::sniffer_inject_c2s(packet(2150, b));  // AttackByCollisionReq on 3460 (2976: 2815)
+                const bool ok = net::sniffer_inject_c2s(packet(2315, b));  // AttackByCollisionReq on 3460 (2976: 2815)
                 log::info("Combat test T3: AttackByCollisionReq(0x{:08X} at {:.1f} m, hash 0x{:08X}) {}",
                           npc->key, npc->distance, hash, ok ? "queued" : "NOT queued");
             }
@@ -1948,7 +1974,7 @@ DWORD WINAPI late_init(LPVOID param) {
     if (init->in_game) {
         log::info("Late init: waiting for the game to finish starting up");
         const auto world_slot = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)) +
-                                game::build_3576::kWorldSystemSlot;
+                                game::build_3663::kWorldSystemSlot;
         // WorldSystem exists from the title screen on, i.e. after the game
         // created its device and swap chain and started presenting.
         while (!stop_requested(500)) {
@@ -2195,7 +2221,7 @@ DWORD WINAPI worker(LPVOID) {
         const bool build_ok = !in_game || game_build_supported();
         std::string build_problem;
         if (!build_ok) {
-            build_problem = std::format("Co-op+ is off: this mod was made for game version 1.0.0.3576, not {}. "
+            build_problem = std::format("Co-op+ is off: this mod was made for game version 1.0.0.3663, not {}. "
                                         "The game runs normally; update Co-op+ to play together.",
                                         file_version(module_path(nullptr)));
             log::warn("{}", build_problem);
@@ -2385,6 +2411,8 @@ DWORD WINAPI worker(LPVOID) {
         net::enemy_set_zone_copy_test(cfg.dev_zone_copy_test);
         input::input_start();  // Co-op+: pads, input method, button icons (input/pad_input.h)
         input::set_sim(cfg.dev_pad_sim);
+        input::set_hold_mode(cfg.dev_title_hold_mode);
+        render::coop_page_dev_lobby_see_through(cfg.dev_lobby_see_through);
         game::main_menu_rb_test(cfg.dev_rb_test);
         if (cfg.dev_boss_hp) {
             net::boss_set_test_threshold(static_cast<int64_t>(cfg.dev_boss_hp) * 1000);

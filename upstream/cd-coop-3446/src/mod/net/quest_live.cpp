@@ -18,10 +18,10 @@
 namespace cdmp::net {
 namespace {
 
-constexpr uint16_t kOpMissionTrigger = 2899;    // MissionTriggerInOutReq: u32 mission, u32 user key, u8 in/out
-constexpr uint16_t kOpDialogEnd = 2223;         // QuestDialogEndReq: u32 NPC actor, u32 dialog, ... (30 bytes)
-constexpr uint16_t kOpMissionList = 2360;       // UpdateMissionListAck: the user key at offset 6, then missions
-constexpr uint16_t kOpDialogList = 3086;        // SetQuestDialogAck: u8, u32 user, u32 NPC, [u32 n, n x u32 dialog]
+constexpr uint16_t kOpMissionTrigger = 3106;    // MissionTriggerInOutReq: u32 mission, u32 user key, u8 in/out
+constexpr uint16_t kOpDialogEnd = 3142;         // QuestDialogEndReq: u32 NPC actor, u32 dialog, ... (30 bytes)
+constexpr uint16_t kOpMissionList = 2558;       // UpdateMissionListAck: the user key at offset 6, then missions
+constexpr uint16_t kOpDialogList = 2180;        // SetQuestDialogAck: u8, u32 user, u32 NPC, [u32 n, n x u32 dialog]
 // A step of ours finished (u32 mission key). Sent with the list's opcode; the partner's game finishes the same step
 // through its quest server (quest_advance.h) if that step is under way there.
 constexpr uint16_t kOpStepDone = kOpMissionList;

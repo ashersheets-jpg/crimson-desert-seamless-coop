@@ -27,6 +27,8 @@ void coop_page_toggle();
 // [dev] wait_see_through (gn2, 2026-11-12): the guest's "Waiting for Host" screen is drawn see-through, so a test
 // screenshot shows what the game does behind it.
 void coop_page_dev_see_through(bool on);
+// [dev] lobby_see_through (2026-11-13): the title lobby too, so a shot shows what the game's own title does under it.
+void coop_page_dev_lobby_see_through(bool on);
 // The old status panel (top left) is shown while the page is closed (the page's Status section turns it on/off).
 bool coop_page_details();
 

@@ -17,16 +17,17 @@
 #include "mod/net/local_capture.h"
 #include "mod/net/remote_puppet.h"
 #include "mod/net/troc_sniffer.h"
+#include "mod/game/info_row.h"
 
 namespace cdmp::net {
 namespace {
 
-namespace off = game::build_3576;
+namespace off = game::build_3663;
 
 constexpr uint8_t kStashType = 29;  // coop_activity's kStash
 constexpr uint8_t kOpAsk = 1, kOpPage = 2;
 constexpr size_t kPerPage = 100;
-constexpr uint16_t kOpMoveItem = 3111;
+constexpr uint16_t kOpMoveItem = 3104;
 constexpr uint32_t kWithdrawEntry = 0xC0DE0003;  // the native's stash withdraw (upstream/cdmp-native trade_probe)
 constexpr uint32_t kHostCharacter = 0xA0100001;
 constexpr uint32_t kAskEveryMs = 4000;
@@ -54,7 +55,7 @@ uint64_t now64() { return GetTickCount64(); }
 bool warehouse_index(uint16_t& wh) {
     const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     // The game's own chain (exe+0xEC03A0): *(*(*(*[exe+0x71C04A0]) + 8) + 0x240) + 0xB2.
-    auto slot = game::read_ptr(base + 0x71C04A0);
+    auto slot = game::read_ptr(base + 0x7245560);
     if (!slot || !*slot) return false;
     auto root = game::read_ptr(*slot);
     if (!root || !*root) return false;
@@ -68,7 +69,7 @@ bool warehouse_index(uint16_t& wh) {
 uint16_t inventory_key(uint16_t index) {
     const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     __try {
-        const uintptr_t row = reinterpret_cast<uintptr_t (__fastcall*)(uint64_t, uint32_t)>(base + 0x5560E0)(0, index);
+        const uintptr_t row = game::info_row(base + 0x57B410, index);
         return row ? *reinterpret_cast<uint16_t*>(row + 8) : 0xFFFF;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return 0xFFFF;
@@ -457,7 +458,7 @@ bool read_name(uint16_t idx, char* out, size_t cap) noexcept {
     const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     out[0] = 0;
     __try {
-        const uintptr_t row = reinterpret_cast<uintptr_t (__fastcall*)(uint64_t, uint32_t)>(base + 0x3DD8A0)(0, idx);
+        const uintptr_t row = game::info_row(base + 0x3DAF10, idx);
         if (!row) return false;
         const uintptr_t obj = *reinterpret_cast<uintptr_t*>(row + 0x90);
         if (!obj) return false;

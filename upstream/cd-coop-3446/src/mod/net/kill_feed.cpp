@@ -23,7 +23,7 @@ namespace cdmp::net {
 namespace {
 
 constexpr uint8_t kType = 23;
-constexpr uint16_t kOpNotifyHandleFatalAck = 2225, kOpNotifyHandleDeadAck = 2985;  // coop_hunt.cpp
+constexpr uint16_t kOpNotifyHandleFatalAck = 2863, kOpNotifyHandleDeadAck = 2316;  // coop_hunt.cpp
 constexpr uint64_t kOursWithinMs = 3000;
 constexpr uint32_t kShowMs = 6000;
 constexpr size_t kMaxLines = 4;

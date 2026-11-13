@@ -13,7 +13,7 @@ namespace {
 // EnableSpecialModeAck: u32 user | u32 mode | f32 duration (FLT_MAX = until disabled) | u32 | u32. Focus is
 // mode 101 (0x65): the server switches it on when the player starts Focus and off (DisableSpecialModeAck) at the end;
 // the client never asks for it (2026-11-04 recordings).
-constexpr uint16_t kOpEnableSpecialModeAck = 3126;
+constexpr uint16_t kOpEnableSpecialModeAck = 2551;
 constexpr uint32_t kModeFocus = 101;
 
 std::atomic<bool> g_block{true}, g_always{false}, g_connected{false};

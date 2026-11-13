@@ -44,7 +44,7 @@ const Fish* fish(uint32_t item) {
     return it != std::end(kFish) && it->item == item ? it : nullptr;
 }
 
-constexpr uint16_t kOpAddItemToInventoryAck = 3110;
+constexpr uint16_t kOpAddItemToInventoryAck = 2210;
 constexpr uint16_t kReasonCatch = 0x0D0F;  // AddItemToInventoryAck +10: a fish kept after the catch card
 constexpr uint8_t kFishType = 27;          // Activity event type: u32 round | u16 score | u16 fish | u32 item
 constexpr uint32_t kCountdownMs = 3000;

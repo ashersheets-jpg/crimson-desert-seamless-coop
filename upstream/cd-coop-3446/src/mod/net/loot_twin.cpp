@@ -35,29 +35,29 @@ using Bytes = std::vector<uint8_t>;
 // Co-op+: message numbers for game 1.0.0.3460, read from the live Troc table (every
 // TrocTr handler instance: RTTI name, opcode). The values here before were 2976-era.
 constexpr uint16_t kOpActorLoadDataAck = 2005;
-constexpr uint16_t kOpDoFrameEventReq = 3030;              // u8 4 | u32 attacker | ... | target entries at the end (wire_layout.h)
-constexpr uint16_t kOpSpawnCharacterCheatReq = 2185;       // u32 variant | u32 0 | vec3 | u8 0 | u8 spawn reason (3479)
-constexpr uint16_t kOpKillCheatReq = 2210;                 // u32 victim | u32 option (0 = dies at once)
-constexpr uint16_t kOpNotifyHandleDeadAck = 2985;          // u32 dead | ...
-constexpr uint16_t kOpLootDropCharacterRewardListAck = 2414;  // u8 4 | u32 dead | n x 37 B
-constexpr uint16_t kOpRemoveLootableAck = 3066;            // u32 dead | u32 player
-constexpr uint16_t kOpInteractionPreemptionStepReq = 3008;  // u32 who | u32 target | ... (25 B)
-constexpr uint16_t kOpInteractionDoStepReq = 3073;          // u32 who | u32 target | ... (16 B)
-constexpr uint16_t kOpInteractionPreemptionStepSuccessAck = 2120;  // u32 who | the 25 B (target at +8)
-constexpr uint16_t kOpInteractionPreemptionStepFailAck = 3100;     // u32 who | u32 target | ... | u32 error at +12
-constexpr uint16_t kOpLootingDropFromDeadBodyReq = 2491;            // u32 dead | u8 | u8 (botin-invitado.md §1.4)
+constexpr uint16_t kOpDoFrameEventReq = 2460;              // u8 4 | u32 attacker | ... | target entries at the end (wire_layout.h)
+constexpr uint16_t kOpSpawnCharacterCheatReq = 2981;       // u32 variant | u32 0 | vec3 | u8 0 | u8 spawn reason (3479)
+constexpr uint16_t kOpKillCheatReq = 2322;                 // u32 victim | u32 option (0 = dies at once)
+constexpr uint16_t kOpNotifyHandleDeadAck = 2316;          // u32 dead | ...
+constexpr uint16_t kOpLootDropCharacterRewardListAck = 2106;  // u8 4 | u32 dead | n x 37 B
+constexpr uint16_t kOpRemoveLootableAck = 2347;            // u32 dead | u32 player
+constexpr uint16_t kOpInteractionPreemptionStepReq = 2642;  // u32 who | u32 target | ... (25 B)
+constexpr uint16_t kOpInteractionDoStepReq = 2304;          // u32 who | u32 target | ... (16 B)
+constexpr uint16_t kOpInteractionPreemptionStepSuccessAck = 2308;  // u32 who | the 25 B (target at +8)
+constexpr uint16_t kOpInteractionPreemptionStepFailAck = 2946;     // u32 who | u32 target | ... | u32 error at +12
+constexpr uint16_t kOpLootingDropFromDeadBodyReq = 2382;            // u32 dead | u8 | u8 (botin-invitado.md §1.4)
 constexpr uint32_t kErrInteractionCondition = 0x2569C661;          // eErrNoInteractionTargetConditionCheckFail
 constexpr uint64_t kRescueWaitMs = 3000;
-constexpr uint16_t kOpInteractionDoStepSuccessAck = 2794;          // u32 player | the 16 B (target at +8)
-constexpr uint16_t kOpAttackerAck = 2181;           // PostProcessAttackResult_AttackerAck: u32 attacker | u32 target
-constexpr uint16_t kOpRemoveActorAck = 3067;        // 04 | u32 0 | u8 reason | n x u32 key
+constexpr uint16_t kOpInteractionDoStepSuccessAck = 2363;          // u32 player | the 16 B (target at +8)
+constexpr uint16_t kOpAttackerAck = 2537;           // PostProcessAttackResult_AttackerAck: u32 attacker | u32 target
+constexpr uint16_t kOpRemoveActorAck = 3037;        // 04 | u32 0 | u8 reason | n x u32 key
 constexpr uint8_t kSpawnReasonCheat = 33;
 // Co-op+ shared XP: a normal kill of our hidden enemy (guest_hits.cpp's finishing blow: HP down, then our collision).
-constexpr uint16_t kOpVaryStatCheatReq = 2326;      // u32 key | u32 stat | u8 mode | i32 delta | u8 | u8
-constexpr uint16_t kOpAttackByCollisionReq = 2150;  // u32 victim | u32 attacker | u32 0 | vec3 point | vec3 dir | u32
+constexpr uint16_t kOpVaryStatCheatReq = 2136;      // u32 key | u32 stat | u8 mode | i32 delta | u8 | u8
+constexpr uint16_t kOpAttackByCollisionReq = 2315;  // u32 victim | u32 attacker | u32 0 | vec3 point | vec3 dir | u32
 constexpr uint32_t kStatHP = 0x000F4240;
 constexpr uint32_t kCollisionProjectile = 0xF2EE2678;
-constexpr uint16_t kOpAddExperienceAck = 3152, kOpAddSubLevelExperienceAck = 2995;
+constexpr uint16_t kOpAddExperienceAck = 2404, kOpAddSubLevelExperienceAck = 2454;
 constexpr float kSharedXpRange = 400.0f;
 constexpr size_t kTargetEntry = wire::kFrameEventTargetEntry, kFirstEntry = wire::kFrameEventFixed;
 

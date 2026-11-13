@@ -11,7 +11,7 @@
 
 namespace cdmp::game {
 namespace {
-namespace off = build_3576;
+namespace off = build_3663;
 
 // 1 = checked and usable, -1 = refused, 0 = not checked yet.
 int g_state = 0;

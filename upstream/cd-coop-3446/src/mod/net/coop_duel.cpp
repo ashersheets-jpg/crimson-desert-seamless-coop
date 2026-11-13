@@ -28,7 +28,7 @@ enum Sub : uint8_t { kStart = 1, kHit = 2, kLost = 3 };
 enum Why : uint8_t { kDown = 1, kOut = 2 };
 enum Phase : uint8_t { kIdle, kWaitStart, kCountdown, kFight, kOver };
 
-constexpr uint16_t kOpStartActionReq = 2202;
+constexpr uint16_t kOpStartActionReq = 2431;
 constexpr float kRadiusM = 20.0f;       // the duel ground
 constexpr uint32_t kOutMs = 10000;      // out of it this long in a row: the round is lost
 constexpr uint32_t kCountdownMs = 3000;

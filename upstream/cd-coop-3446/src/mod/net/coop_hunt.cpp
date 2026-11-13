@@ -35,8 +35,8 @@ const Animal* animal(uint32_t variant) {
     return it != std::end(kAnimals) && it->key == variant ? it : nullptr;
 }
 
-constexpr uint16_t kOpNotifyHandleFatalAck = 2225;  // +0 victim | +4 killer
-constexpr uint16_t kOpNotifyHandleDeadAck = 2985;   // +0 victim | +4 (the victim again in the captures)
+constexpr uint16_t kOpNotifyHandleFatalAck = 2863;  // +0 victim | +4 killer
+constexpr uint16_t kOpNotifyHandleDeadAck = 2316;   // +0 victim | +4 (the victim again in the captures)
 constexpr uint64_t kOursWithinMs = 8000;            // a death within this of our last blow on it is our kill
 constexpr uint8_t kHuntType = 14;                   // Activity event type: u32 round | u16 score | u16 kills
 constexpr uint32_t kCountdownMs = 3000;
@@ -78,7 +78,7 @@ bool hunt_dev_kill() {
         if (!a || std::find(tried.begin(), tried.end(), key) != tried.end()) continue;
         tried.push_back(key);
         std::vector<uint8_t> pkt(5 + 8, 0);
-        const uint16_t op = 2210, len = 8;  // KillCheatReq: u32 key | u32 option
+        const uint16_t op = 2322, len = 8;  // KillCheatReq: u32 key | u32 option
         std::memcpy(pkt.data(), &op, 2);
         std::memcpy(pkt.data() + 3, &len, 2);
         std::memcpy(pkt.data() + 5, &key, 4);

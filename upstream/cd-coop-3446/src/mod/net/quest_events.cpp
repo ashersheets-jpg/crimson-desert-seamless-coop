@@ -16,13 +16,13 @@
 
 namespace cdmp::net {
 namespace {
-namespace off = game::build_3576;
+namespace off = game::build_3663;
 
-constexpr uintptr_t kPostEvent = 0x1944110;  // 3549: 0x19434D0; exe+0x1944110(handler, GameEventHandlerParameter*)
+constexpr uintptr_t kPostEvent = 0x19A9B80;  // 3549: 0x19434D0; exe+0x1944110(handler, GameEventHandlerParameter*)
 constexpr uint8_t kPostHead[16] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74,
                                    0x24, 0x18, 0x48, 0x89, 0x7C, 0x24, 0x20, 0x55};
 // The quest advancement routine (quest_advance.h): every call is logged with its mission index.
-constexpr uintptr_t kAdvance = 0x2B96850;  // 3549: 0x2B95BE0
+constexpr uintptr_t kAdvance = 0x2BFC3D0;  // 3549: 0x2B95BE0
 constexpr uint8_t kAdvanceHead[16] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x55, 0x56, 0x57,
                                       0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57};
 constexpr int kPerSite = 6;      // lines per (type, caller)

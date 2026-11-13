@@ -125,7 +125,11 @@ struct Config {
     std::wstring dev_online_guard_test;  // Co-op+ dev: a module name the online guard also looks for (online_guard.h)
     bool dev_rb_test = false;        // Co-op+ dev: the menu's RB glyph, another way at each opening ([dev] rb_test)
     int dev_pad_sim = 0;             // Co-op+ dev: act as an Xbox (1) / PlayStation (2) pad ([dev] pad_sim)
-    int dev_ui_preview = 0;          // Co-op+ dev: 1 = show the death screen ([dev] ui_preview)
+    std::string dev_title_pad;       // Co-op+ dev: "ms:hexmask:hold_ms,..." simulated pad presses, counted from the
+                                     // moment the title lobby shows ([dev] title_pad; needs pad_sim)
+    unsigned dev_title_hold_mode = 7;  // Co-op+ dev: input/game_input_block.h ([dev] title_hold_mode)
+    bool dev_lobby_see_through = false;  // Co-op+ dev: the title lobby is drawn see-through ([dev] lobby_see_through)
+    int dev_ui_preview = 0;         // Co-op+ dev: 1 = show the death screen ([dev] ui_preview)
     int dev_rps_test = -1;  // Co-op+ dev: simulated RPS opponent's hand 0/1/2 ([dev] rps_test=1..3, 0 = off)
     bool dev_cinema_test = false;  // Co-op+ dev: replay our own stage cutscenes as a guest would ([dev] cinema_test)
     uint32_t dev_weather_test = 0;  // Co-op+ dev: act as a guest whose host has this weather stage ([dev] weather_test)

@@ -28,11 +28,11 @@ namespace fs = std::filesystem;
 // resolved by name at runtime (opcode_for), so a patch that renumbers them is fine.
 // Co-op+: message numbers for game 1.0.0.3460, read from the live Troc table (every
 // TrocTr handler instance: RTTI name, opcode). The values here before were 2976-era.
-constexpr uint16_t kOpSaveAutoReq = 3134;
-constexpr uint16_t kOpSaveToFileCurrentPlayerReq = 2122;
+constexpr uint16_t kOpSaveAutoReq = 2234;
+constexpr uint16_t kOpSaveToFileCurrentPlayerReq = 3158;
 // Co-op+: the server's answer to EVERY save, including the autosaves it starts itself on entering some areas
 // (no request before it, 2026-11-02): u32 player | u32 slot | ... (slot 2 = the autosave slot).
-constexpr uint16_t kOpSaveToFileCurrentPlayerAck = 2966;
+constexpr uint16_t kOpSaveToFileCurrentPlayerAck = 2813;
 constexpr uint64_t kBackupEveryMs = 10 * 60 * 1000;
 constexpr size_t kKeepBackups = 10;
 constexpr uint64_t kNoticeMs = 20000;
