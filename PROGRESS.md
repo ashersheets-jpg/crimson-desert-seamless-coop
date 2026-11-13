@@ -5,6 +5,7 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- OK TO POST GIVEN 2026-11-13 (after the PC came back on), the owner's words: "If there is already an update that you made that is compatible with the new crimson desert update you can go ahead and post it as well." For 0.1.0-alpha+5a81a327 (game 1.0.0.3663). Held until the rest of pass pp13 (loot again, mounts .. hostrevive) has passed on that package: the release rule. Then ONE post in #download-here (text: docs/release/shared-world-playtest/download-5a81a327.txt, both zips). The OK is for this build only.
 - GAME UPDATED 2026-11-13 02:24 to 1.0.0.3663 (Steam, by itself). The posted build 0.1.0-alpha+cf8c7fa3 is made for
   1.0.0.3576 and switches itself off on the new game ("Co-op+ is off: this mod was made for game version 1.0.0.3576").
   The testers were told (reply of 03:25 in #play-testing-feedback). The move to 3663 is under way; a build for it
