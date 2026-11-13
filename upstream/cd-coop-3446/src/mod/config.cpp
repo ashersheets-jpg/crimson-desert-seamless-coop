@@ -217,6 +217,7 @@ Config load_config(const std::wstring& ini_path) {
         const std::wstring w = read_string(ini_path, L"dev", L"native_extra", "");
         c.dev_native_extra.assign(w.begin(), w.end());
     }
+    c.dev_native_record = read_uint(ini_path, L"dev", L"native_record", 0) != 0;
     c.dev_aggro_test = read_uint(ini_path, L"dev", L"aggro_test", 0) != 0;
     c.dev_enemy_relay = read_uint(ini_path, L"dev", L"enemy_relay", 0) != 0;
     c.dev_piece4_test = read_uint(ini_path, L"dev", L"piece4_test", 0) != 0;

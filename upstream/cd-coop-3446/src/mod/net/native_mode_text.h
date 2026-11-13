@@ -29,6 +29,7 @@ struct NativeModeSpec {
     bool shared_quest_credit = false;  // B10 option 2 (host): [session2] quest_shared_credit
     bool world_items_lootr = true;     // user 2026-11-10 (host): [session2] lootr
     std::string extra;                 // dev: "k=v,k=v" appended to [session2] (config dev_native_extra)
+    bool record = false;               // dev: [sniffer] record=1 (config dev_native_record; research runs only)
 };
 
 inline const char* native_mode_name(NativeMode m) {
@@ -89,7 +90,7 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
     line("enabled=0");  // one Present hook only: Co-op+'s (native-coopplus-layer.md)
     line("[sniffer]");
     line("enabled=1");  // the packet bridge to the Co-op+ layer
-    line("record=0");
+    line(s.record ? "record=1" : "record=0");  // record=1 only in research runs ([dev] native_record)
     line("[coop]");
     line("enabled=0");
     line("[session2]");

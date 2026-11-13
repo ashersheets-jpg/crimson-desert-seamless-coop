@@ -2404,6 +2404,7 @@ DWORD WINAPI worker(LPVOID) {
         net::lobby_set_world_items_lootr(cfg.coop_world_items_lootr);
         net::give_set_enabled(cfg.coop_item_sharing);
         net::lobby_set_native_extra(cfg.dev_native_extra);
+        net::lobby_set_native_record(cfg.dev_native_record);
         net::lobby_dev(cfg.dev_lobby_skip_play, cfg.dev_lobby_retry, cfg.dev_lobby_recover);
         net::guest_hits_set_finishes(cfg.coop_guest_finishes);
         net::aggro_set_copy_never_target(cfg.dev_copy_untargetable);

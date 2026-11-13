@@ -85,6 +85,8 @@ bool lobby_partner_stuck();       // host: the friend said it did not get into o
 bool lobby_bye_at_title();        // guest: the host's goodbye while we are at the title: stay in the party (true)
 // dev: [dev] native_extra (host only; research runs).
 void lobby_set_native_extra(const std::string& kv);
+// dev: [dev] native_record=1: the native ini (both roles) gets [sniffer] record=1 (every packet to bin64; research).
+void lobby_set_native_record(bool on);
 void lobby_start_coop();          // host: opens the question (with a friend in the party)
 void lobby_choose(LobbyPlan plan);  // host: the answer (None = cancel)
 void lobby_start_solo();          // the Start Solo card (restarts when the game is still in co-op mode)

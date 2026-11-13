@@ -69,6 +69,7 @@ struct Config {
     bool dev_minimap_cycle = false;
     // [dev] native_extra: k=v,k=v appended to the native ini's [session2] the lobby writes (research runs only).
     std::string dev_native_extra;
+    bool dev_native_record = false;  // [dev] native_record: the native base records every packet (research runs)
     // Ctrl+F5: an enemy targets the other player's copy (aggro_test.h).
     bool dev_aggro_test = false;
     // Ctrl+F6: send the nearest enemy to the other player (enemy_relay.h).
