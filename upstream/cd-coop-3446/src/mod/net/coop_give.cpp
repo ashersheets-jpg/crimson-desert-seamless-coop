@@ -150,14 +150,18 @@ bool give_install() {
     if (!g_enabled.load()) return false;
     if (g_state) return g_state > 0;
     const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-    static const uint8_t kHandlerHead[16] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74,
-                                             0x24, 0x18, 0x48, 0x89, 0x7C, 0x24, 0x20, 0x55};
+    // 3663: the two handlers no longer share a prologue (the bag one keeps a frame pointer now: the inventory-row
+    // getter takes its index by address there). Same arguments, same fields (fdiff.py EF6560 F31570).
+    static const uint8_t kBagHead[16] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74,
+                                         0x24, 0x18, 0x48, 0x89, 0x7C, 0x24, 0x20, 0x55};
+    static const uint8_t kListHead[16] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x6C,
+                                          0x24, 0x18, 0x48, 0x89, 0x74, 0x24, 0x20, 0x57};
     static const uint8_t kClientHead[16] = {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x10, 0x66,
                                             0x44, 0x89, 0x48, 0x20, 0x4C, 0x89, 0x40, 0x18};
     uint8_t a[16] = {}, b[16] = {}, c[16] = {};
     if (base != off::kImageBase || !game::safe_read(base + kDiscardBag, a, 16) ||
         !game::safe_read(base + kDiscardList, b, 16) || !game::safe_read(base + kClientDiscard, c, 16) ||
-        std::memcmp(a, kHandlerHead, 16) != 0 || std::memcmp(b, kHandlerHead, 16) != 0 ||
+        std::memcmp(a, kBagHead, 16) != 0 || std::memcmp(b, kListHead, 16) != 0 ||
         std::memcmp(c, kClientHead, 16) != 0) {
         log::warn("Give: the inventory's discard functions differ on this build; giving from the inventory is off");
         g_state = -1;

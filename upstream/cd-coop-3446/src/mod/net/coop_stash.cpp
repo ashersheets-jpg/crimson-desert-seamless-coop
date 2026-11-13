@@ -61,9 +61,9 @@ bool warehouse_index(uint16_t& wh) {
     if (!root || !*root) return false;
     auto info = game::read_ptr(*root + 8);
     if (!info || !*info) return false;
-    auto mgr = game::read_ptr(*info + 0x240);
+    auto mgr = game::read_ptr(*info + 0x220);  // 3663 (3576 +0x240)
     if (!mgr || !*mgr) return false;
-    return game::safe_read(*mgr + 0xB2, &wh, sizeof wh) && wh != 0xFFFF;
+    return game::safe_read(*mgr + 0x8A, &wh, sizeof wh) && wh != 0xFFFF;  // 3663 (3576 +0xB2)
 }
 
 uint16_t inventory_key(uint16_t index) {

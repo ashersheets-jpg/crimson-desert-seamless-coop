@@ -205,3 +205,12 @@ topic BEFORE testing or guessing about it.
   the build links, and read the code while it runs.
 - Compare a new run with the SAME scenario on the old build (logdiff.py), numbers masked; a different scenario
   drowns the real differences.
+
+## A shared byte pattern for two functions breaks on the next game build (2026-11-13)
+- Give compared two handlers against ONE 16-byte head. The update recompiled one of them with another prologue; a tool that refreshes patterns from the exe then made the pattern match only that one. Keep one pattern per function, and after any pattern refresh check every USE of the pattern, not only its definition.
+- To see whether a function really changed or only its registers did: `python build/port3663/fdiff.py <old> <new>`.
+
+## After a game update, survey field shifts in every function we name, not only the ones that crash (2026-11-13)
+- The 3663 port fixed the structs whose shift made a run fail. The inventory manager (-0x28, its holder -0x20) made nothing fail: Lootr's chest share, Give and the stash just stopped working quietly, and only the checklist's chest step showed it.
+- Now part of a port: run dispsurvey.py and dispcand.py (build/port3663) right after the address map, and read every candidate line. A read through a moved offset usually does not crash; it returns a plausible wrong number.
+- A feature that reads game data should log once what it read at start (the bag index, the table size), so a wrong offset shows in the first log and not as a silent "0 shares".
