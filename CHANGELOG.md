@@ -5,7 +5,7 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-NOT POSTED YET: the build for game 1.0.0.3663 (checklist pass pp13 on the package, one PC; result in PROGRESS.md):
+Posted 2026-11-13 16:53 as 0.1.0-alpha+5a81a327, for game 1.0.0.3663 (checklist pp13 / pp13b: all 23 steps, one PC):
 - **Works with game 1.0.0.3663** (Steam's update of 13 November 2026). The build before, cf8c7fa3, is for 1.0.0.3576
   and switches itself off on the updated game. Moved to the new game: every address and message number the mod
   uses (1066 of the game's 1175 messages were renumbered), the item and field tables' new readers, the structures

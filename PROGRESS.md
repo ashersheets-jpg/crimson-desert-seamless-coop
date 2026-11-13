@@ -5,8 +5,8 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
-- OK TO POST GIVEN 2026-11-13 (after the PC came back on), the owner's words: "If there is already an update that you made that is compatible with the new crimson desert update you can go ahead and post it as well." For 0.1.0-alpha+5a81a327 (game 1.0.0.3663). Held until the rest of pass pp13 (loot again, mounts .. hostrevive) has passed on that package: the release rule. Then ONE post in #download-here (text: docs/release/shared-world-playtest/download-5a81a327.txt, both zips). The OK is for this build only.
-- GAME UPDATED 2026-11-13 02:24 to 1.0.0.3663 (Steam, by itself). The posted build 0.1.0-alpha+cf8c7fa3 is made for
+- POSTED 2026-11-13 16:53 (21:53 UTC; the owner's OK of the afternoon: "If there is already an update that you made that is compatible with the new crimson desert update you can go ahead and post it as well."): build 0.1.0-alpha+5a81a327 for game 1.0.0.3663 in #download-here, both zips (message 1570919529251475618; text as posted: docs/release/shared-world-playtest/download-5a81a327.txt). Tested on ONE PC with two copies of the game (Nvidia): all 23 checklist steps (pp13, loot and mounts again as pp13b). Waiting for: the testers on the new build (Yagiisama and Jay plan to play this weekend), a real PlayStation pad on the title menu, the first two-PC report. The posting OK is used; the next post needs your OK again.
+- (DONE: 5a81a327 posted for it) GAME UPDATED 2026-11-13 02:24 to 1.0.0.3663 (Steam, by itself). The posted build 0.1.0-alpha+cf8c7fa3 is made for
   1.0.0.3576 and switches itself off on the new game ("Co-op+ is off: this mod was made for game version 1.0.0.3576").
   The testers were told (reply of 03:25 in #play-testing-feedback). The move to 3663 is under way; a build for it
   needs the whole checklist again and then your OK to post.
@@ -7024,3 +7024,16 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - Run again under pp13b, both for the scenario, not the mod: loot (44/1: none of 20 loot rolls gave the host an item, the step's own dice) -> 46/0; mounts (44/1: the host's horse arrived beside the guest, and the script's E opened "Interact" with the guest instead of Ride; screens pp13-mounts-39-host-view) -> 45/0. mounts was also cut once by the power loss.
 - Screens looked at: chest share, loot fight, revive screens, far fights, both players at the story's start (New Co-op Save), both mounted, mounted fight, the Leave screens (host "The co-op session has ended", guest "Host ended the session. You are still in the party"), host revive at the checkpoint.
 - Tested under: ONE PC, two copies of the game, Nvidia, game 1.0.0.3663. Not tested: two PCs, AMD / Intel, a real PlayStation pad, an evening-long session, story scenes / bosses.
+
+### POSTED 2026-11-13 16:53: 0.1.0-alpha+5a81a327 in #download-here (game 1.0.0.3663)
+
+- Message 1570919529251475618 (21:53:22 UTC): the text (1797 characters, download-5a81a327.txt, as drafted) and both
+  zips, 11.97 MB and 6.52 MB = 12 549 629 and 6 838 431 bytes, sha256 0b06070102d12016... and 84ae47a2c81eedfd...,
+  identical to dist\. The #bug-reports mention resolved.
+- Before posting: #play-testing-feedback and #bug-reports read. New since the morning: Yagiisama 18:22 UTC "We were
+  running from his save location. So we will try again later this weekend. I don't recall the boss because i
+  couldn't see it." Nothing in #bug-reports since 11-07.
+- How: as before (the app's browser pane, signed in, no sign-in asked; the zips through a loopback page, a python
+  http.server from .claude/launch.json "upload-staging" (git-excluded), into window.name; File objects on the
+  composer's input; a synthetic paste; Enter). No test was running.
+- One post for this batch. The next post needs the owner's OK.
