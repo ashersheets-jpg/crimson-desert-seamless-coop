@@ -168,3 +168,9 @@ topic BEFORE testing or guessing about it.
 - 2026-11-12: A new mechanism replaces an old one only where it is better. The game's travel beats hops over
   kilometres and loses to them at 100 m. Decide the threshold from both costs before wiring the new path in
   everywhere (the first threshold was a guess, and a checklist step paid for it).
+- 2026-11-12: A check that failed once "on the scene's luck" and passed on the re-run (pp8 far fight) was left as
+  it was, and it failed again three passes later and cost a re-run of two steps. When a step fails for a reason
+  that is not the build, fix the STEP the same day: find what varied (here: the guest's swings walk it out of the
+  camp) and take the variation out of the scenario. "Passed on re-run" is not a result.
+- 2026-11-12: A rate limit (lines a minute) over a 7-minute test counts per-session-capped output as if it went on
+  all evening. Measure a rate only over what is unbounded; check the capped things against their caps.

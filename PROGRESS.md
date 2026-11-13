@@ -6773,3 +6773,27 @@ Design chosen (A, host-authoritative, with a world marker):
 - So all three ways the world's character comes back have run once: a copy of the host's first real save (new
   world), last session's set-aside slot (no save in between), the newest mailbox generation (a save in between).
 - Not run: the fourth (neither there: seeded again with a warning), a second partner, two PCs.
+
+### pp11 on 0.1.0-alpha+cf8c7fa3, first half (2026-11-12 20:06-21:51): 451 PASS, 2 FAIL, both faults of the checks
+
+- static 12, newsave 88 (New Co-op Save, then Continue), solostart 43, mounts 41, mountfight 41, nosave 7, retry 41,
+  stuck 45, mismatch 9, hostrevive 45: no FAIL. SAVES OK and 5/5 in every game step (newsavec too). Screenshots
+  looked at for every step: both players in the world, the new save starts both at "Unfamiliar Lands", Continue
+  brings both back side by side, the mismatch and no-save lines read as written, the host is revived.
+- farfight 40 PASS, 1 FAIL "the guest never lost health far from the host". NOT the build: the guest killed three
+  bandits and took one blow (the host's count "NPC>guest 1") that its 5 s health samples never showed; its fifty
+  swings carried it 58 m out of the camp to a rock face on Rocca's Hill (g1/g2). pp8 failed the same way (60 m to
+  the west). 2 of 6 runs: the scenario was a coin, the step no proof either way.
+  Corrected (tools/prepost.sh, 0f473bf): the guest stands among the bandits for 24 s before its first swing, in
+  both far-fight steps.
+- farfight2 39 PASS, 1 FAIL "host native: log growth 434 lines a minute (limit 420)". NOT the build: this step has
+  always sat at 386-426 because two diagnostics that are capped per SESSION (horse 400 + summaries, stage creation
+  300) count as up to 100 lines a minute in a 7-minute test; a livelier scene (60 more stage creations) tipped it.
+  Corrected: the rate is counted without those two, their caps are checked on their own (horse <= 520, stage
+  creation <= 301), and the limit for the rest came DOWN from 420 to 380 (seen: 214-346 in the steps, 319 a minute
+  over the 35-minute soak sk1a; that soak's host log was 8.6 MB, so about 60 MB in a four-hour evening: no size cap
+  in the base's log, old logs are pruned per run).
+- The package is unchanged by this (only the checklist script moved). Running now: the other eleven steps under
+  pp11, then farfight and farfight2 again with the corrected script under pp11b. If all pass, the statement is:
+  "21 steps passed in pp11; the two far-fight steps failed there on their own checks and passed in pp11b after the
+  checks were corrected; the package was the same throughout".
