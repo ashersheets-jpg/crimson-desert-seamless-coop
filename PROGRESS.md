@@ -6758,3 +6758,17 @@ Design chosen (A, host-authoritative, with a world marker):
 - a4b6eb9e is therefore NOT the candidate. New package next; its checklist starts with the eleven steps a4b6eb9e
   did not get to (to see their faults first), then the twelve above again.
 - Not run yet: Continue with the friend's progress saved during the session (the mailbox path).
+
+### fs4a / fs2d (2026-11-12 19:45-20:04): Continue brings back the friend's SAVED progress (the mailbox path)
+
+- fs4a: New Co-op Save, the guest walks a little, then its game is closed while the host plays on (the harness's
+  -GuestLeave): the host's final save of the guest's slot goes to the mailbox. Seeded as before from the host's
+  first real save; "the Troc tunnel stops: the guest has been gone for 15 s" is the known line of a guest whose game
+  was closed.
+- fs2d: Continue on that world, the guest with another save of its own: "the upload ... is checked and kept aside,
+  NOT staged", then "STAGED from mailbox gen16 of guest local-peer ... (the co-op world's character, line
+  fcfdb612...): ... save 597603 B" and "staged the newest generation of that line". Both in the world, no unknown
+  error line. Test world put back, identical to the backup. SAVES OK, 5/5 in both.
+- So all three ways the world's character comes back have run once: a copy of the host's first real save (new
+  world), last session's set-aside slot (no save in between), the newest mailbox generation (a save in between).
+- Not run: the fourth (neither there: seeded again with a warning), a second partner, two PCs.
