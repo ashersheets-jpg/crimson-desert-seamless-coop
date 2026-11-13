@@ -11,7 +11,7 @@ version by nouzert1. See CREDITS.md.
 
 BEFORE YOU START
 ----------------
-- Both players: Crimson Desert on Steam, game version 1.0.0.3576 (the current
+- Both players: Crimson Desert on Steam, game version 1.0.0.3663 (the current
   patch when this was built). On another version the mod switches itself off and
   the game runs normally.
 - Both players need THIS SAME ZIP. Different builds warn "Different mod versions".

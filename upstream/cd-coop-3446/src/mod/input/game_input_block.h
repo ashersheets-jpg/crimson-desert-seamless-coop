@@ -30,6 +30,8 @@ void set_game_input_downed(bool on);
 // [dev] title_hold_mode: bit 1 the user32 answers, bit 2 the "inactive" messages, bit 4 the idle XInput pad
 // (default 7; a test takes one away to see what the others do alone).
 bool pads_held();
+// The title lobby is up (also while the hold above is open for the Steam overlay's mouse).
+void set_game_pads_blocked(bool on);
 void game_input_block_tick(void* game_window);
 void set_hold_mode(unsigned bits);
 bool hold_no_button_mask();  // [dev] bit 8: the lobby does not keep its own buttons from the game (a test of the rest)

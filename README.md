@@ -5,7 +5,7 @@ story and world progress, loot for everyone, enemies and bosses that scale with 
 friends on the map, and an optional Comfort Pack of quality-of-life tweaks.
 
 **Status (2026-11-12): alpha, in playtest.** The playtest builds are the "shared world" builds: one world for both
-players, joined from the title screen, for game build 1.0.0.3576. They are tested with two copies of the game on one
+players, joined from the title screen, for game build 1.0.0.3663. They are tested with two copies of the game on one
 PC; two PCs, AMD / Intel cards and long sessions are what the playtest is finding out. The working branch is
 `phase-a/local-pc-setup` (`main` is old). What changed and when: `CHANGELOG.md`. Licence: GPL-3.0.
 

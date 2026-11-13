@@ -69,7 +69,10 @@ def classify(line, masked, hits, tests):
         elif TIME.search(masked):
             out.append('time')
         elif tests:
-            out.append('syntax')
+            # 2026-11-13: "everything in a test that is not time" also rewrote 3000 ms loops and 2100 .. 2400 ms
+            # timestamps (the layer's tests broke). A round number (a multiple of 50) outside opcode syntax is left
+            # for a look; the others are packet fixtures.
+            out.append('syntax' if n % 50 else 'review')
         elif WEAK.search(masked):
             out.append('weak')
         else:
@@ -84,6 +87,26 @@ def run(tree, apply):
     if apply and os.path.exists(stamp):
         sys.exit('already applied (%s): a second run would map the new numbers again' % stamp)
     stats, listed = {}, []
+    # 2026-11-13: the native TESTS keep fixtures in 2976 numbers on lines never touched since the base author's commit
+    # (captured packets, the .troc scripts' answers); only lines the Co-op+ ports wrote hold 3576 numbers. So for that
+    # tree only lines added between the base commit and the commit before this port are looked at (the tree must be
+    # checked out at that commit when this runs).
+    only = None
+    if tree == 'native-tests':
+        import subprocess
+        repo = ROOT + 'upstream/cdmp-native'
+        diff = subprocess.run(['git', '-C', repo, 'diff', '3cbb03c', 'c212b93', '-U0', '--', 'tests'],
+                              capture_output=True, text=True, encoding='utf-8', errors='replace').stdout
+        only, cur, ln = set(), None, 0
+        for line in diff.splitlines():
+            if line.startswith('+++ '):
+                cur = line[6:] if line.startswith('+++ b/') else None
+            elif line.startswith('@@'):
+                mm = re.search(r'\+(\d+)', line)
+                ln = int(mm.group(1)) if mm else 0
+            elif line.startswith('+') and cur:
+                only.add((cur[len('tests/'):], ln))
+                ln += 1
     for f in files:
         f = f.replace('\\', '/')
         if SKIP_FILES.search(f):
@@ -97,7 +120,7 @@ def run(tree, apply):
             masked = STR.sub(lambda m: ' ' * len(m.group(0)), code)
             masked = BLOCK.sub(lambda m: ' ' * len(m.group(0)), masked)
             hits = [m for m in NUM.finditer(masked) if int(m.group(1)) in name_by_old]
-            if not hits:
+            if not hits or (only is not None and (rel, i + 1) not in only):
                 continue
             cls = classify(line, masked, hits, 'tests' in tree)
             forced = FORCE.get('%s:%s:%d' % (tree, rel, i + 1))

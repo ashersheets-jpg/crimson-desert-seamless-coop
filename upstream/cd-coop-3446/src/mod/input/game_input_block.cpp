@@ -15,7 +15,7 @@ namespace cdmp::input {
 namespace {
 
 SafetyHookInline g_fg, g_active;
-std::atomic<bool> g_blocked{false}, g_downed{false};
+std::atomic<bool> g_blocked{false}, g_downed{false}, g_pads{false};
 std::atomic<unsigned> g_mode{7};
 uintptr_t g_exe_lo = 0, g_exe_hi = 0;
 
@@ -71,7 +71,9 @@ void set_game_input_downed(bool on) {
 
 bool hold_no_button_mask() { return (g_mode.load(std::memory_order_relaxed) & 8) != 0; }
 
-bool pads_held() { return held() && (g_mode.load(std::memory_order_relaxed) & 4); }
+bool pads_held() { return (held() || g_pads.load(std::memory_order_relaxed)) && (g_mode.load(std::memory_order_relaxed) & 4); }
+
+void set_game_pads_blocked(bool on) { g_pads.store(on, std::memory_order_relaxed); }
 
 void set_hold_mode(unsigned bits) {
     g_mode = bits & 15;

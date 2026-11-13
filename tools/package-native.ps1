@@ -5,7 +5,7 @@
 #   .\tools\package-native.ps1 -SkipNormal  # reuse the normal package's stage already in dist\
 #
 # Made from the normal package's stage (installer, README, licences, scaling.toml, the player's Co-op+ settings), with:
-#   mod\cdmp.asi      = the native base (ByJunter's NativeServer, ported to 3576, upstream/cdmp-native, GPL-3.0)
+#   mod\cdmp.asi      = the native base (ByJunter's NativeServer, ported to 3663, upstream/cdmp-native, GPL-3.0)
 #   mod\coopplus.asi  = the Co-op+ layer (upstream/cd-coop-3446 built with -DCDMP_NATIVE_LAYER=ON)
 #   mod\coopplus.ini  = the player's Co-op+ settings (the normal package's cdmp.ini)
 #   mod\cdmp.ini      = Co-op+'s launch-mode file for the native base, Solo (net/native_mode_text.h writes the others)

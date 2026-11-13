@@ -70,6 +70,7 @@ int g_wheel = 0;
 std::atomic<long> g_tab_l{0}, g_tab_t{0}, g_tab_r{0}, g_tab_b{0};
 std::atomic<bool> g_tab_shown{false};
 std::atomic<bool> g_swallow_up{false};
+std::atomic<uint64_t> g_mouse_ms{0};  // the last mouse event of any kind (the Steam overlay window, below)
 bool g_steam_overlay = false;  // the Steam overlay is open this frame (draw thread only)
 
 int g_section = 0, g_row = 0, g_top = 0;
@@ -131,6 +132,7 @@ bool game_in_front() {
 }
 
 LRESULT CALLBACK mouse_hook(int code, WPARAM wp, LPARAM lp) {
+    if (code == HC_ACTION) g_mouse_ms.store(GetTickCount64(), std::memory_order_relaxed);
     if (code == HC_ACTION && game_in_front() && !net::join_overlay_active()) {
         const auto* m = reinterpret_cast<const MSLLHOOKSTRUCT*>(lp);
         if (m->dwExtraInfo != kOurInput) {
@@ -928,10 +930,21 @@ void coop_page_draw(float width, float height, const HudData& d, const std::vect
     // screen) is up the game takes no input of its own (game_input_block.h), except while the mod presses its keys.
     {
         const net::LobbyView lv = net::lobby_view();
-        // Not while the Steam overlay is open: it takes its clicks from the input the game reads, and a game that
+        // The Steam overlay (the invite dialog) takes its clicks from the input the game reads, and a game that
         // believes it is in the background reads none (tcB260: the dialog's X lit up under the mouse but no click
-        // reached it). The overlay keeps the game's own screens from reacting meanwhile.
-        input::set_game_input_blocked((lv.show || lv.guest_wait) && !lv.driving && !steam_overlay);
+        // reached it). So the hold has to open for it. 2026-11-13 (a tester on a PlayStation pad: confirming on
+        // "Invite Friends" also started a save on the hidden title): it opened for the WHOLE time the overlay was
+        // up, and the overlay does not keep a pad from a game that reads it by itself. Now it opens only while the
+        // MOUSE is in use (an event in the last 1.5 s) and no pad button is down nor was in the last 0.7 s; a pad
+        // press closes it again at once. XInput pads are kept from the game the whole time the lobby is up.
+        const bool lobby = (lv.show || lv.guest_wait) && !lv.driving;
+        const uint64_t now_ms = GetTickCount64();
+        static uint64_t pad_ms = 0;
+        if (input::pad_buttons()) pad_ms = now_ms;
+        const bool mouse_now = now_ms - g_mouse_ms.load(std::memory_order_relaxed) < 1500;
+        const bool pad_now = pad_ms && now_ms - pad_ms < 700;
+        input::set_game_input_blocked(lobby && !(steam_overlay && mouse_now && !pad_now));
+        input::set_game_pads_blocked(lobby);
     }
     input::game_input_block_tick(g_hwnd.load());
     if (!g_open.load() && draw_lobby(width, height, dl, mouse, clicks, keys)) return;

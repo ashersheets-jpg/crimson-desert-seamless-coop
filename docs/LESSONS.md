@@ -174,3 +174,34 @@ topic BEFORE testing or guessing about it.
   camp) and take the variation out of the scenario. "Passed on re-run" is not a result.
 - 2026-11-12: A rate limit (lines a minute) over a 7-minute test counts per-session-capped output as if it went on
   all evening. Measure a rate only over what is unbounded; check the capped things against their caps.
+
+## 2026-11-13: a block is tested with every kind of input it claims to block
+
+- The title's input hold was written for "keyboard, mouse and every pad" and tested with five keyboard keys. A pad
+  went straight through for a week of playtests. A claim about pads needs a pad in the test (the simulated one is
+  enough to see the title react).
+- To see what a covered screen does, draw the cover see-through for the test ([dev] lobby_see_through). The shot
+  showed in one look that the title has button prompts, not a menu: no reasoning about "which item is selected".
+- When testing whether something hidden reacts, press the one harmless button (Y = Load opens a list); never the one
+  that loads a save.
+- A simulated press has to be timed against what is on screen, not against when the code path first runs (the first
+  batch pressed during the intro logos and proved nothing).
+
+## 2026-11-13: porting to a new game build (1.0.0.3663)
+
+- Keep both exes. Pair the FUNCTIONS of the two builds first (exception tables: order and size), then place each
+  address inside its pair; "the same bytes nearest to the old address" fails when shifts vary from +0x3650 to
+  +0x7C000 and whole families of functions were rewritten.
+- After addresses: message numbers (by name), byte arrays (once!), build stamps, then the things no tool sees:
+  fields that moved inside structures, enum values that shifted by one, registers and stack slots at mid-function
+  hooks, calling conventions (the getters took a pointer instead of a value), patch lengths, whole-body checksums.
+  For each there is now a check in tools/native-port; run them before the first live test, not after.
+- Named constants are not all: grep the raw numbers too (`mgr + 0x259`). One missed WRITE kept the guest in a dark
+  scene for three runs.
+- A tool that rewrites source is run ONCE; make it refuse a second run or make it idempotent. Two of mine were
+  neither and damaged files; a commit right before each rewriting step made that a one-minute repair.
+- Tests are not exempt from care: "every number in a test that is not time is an opcode" rewrote 3000 ms loops.
+- The first live run costs 8 minutes and names the refusals that an hour of reading would not: start it as soon as
+  the build links, and read the code while it runs.
+- Compare a new run with the SAME scenario on the old build (logdiff.py), numbers masked; a different scenario
+  drowns the real differences.

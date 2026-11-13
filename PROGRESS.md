@@ -6921,3 +6921,51 @@ said (asked).
   presses reach the hidden menu, use mouse / keyboard there for now, was it a PlayStation pad?; cutscenes and the
   boss: the known gap, the next big piece; asked: which boss, what exactly the damage glitch was, the report zips.
 - The port: tools/native-port/p63.py (the 3576 pipeline for both trees, mapping on 6 processes), build/port3663.
+
+### PORT TO 1.0.0.3663, 2026-11-13 03:25 - 04:45: both players in one world again (p63d); the checklist is still to run
+
+Everything is in docs/research/port-3663.md (what changed in the game, the tools, the hand decisions, the mistakes).
+In short:
+- The update is far bigger than the last ones: the code grew by 0x7C000 and most functions moved by different
+  amounts; 1066 of the 1175 message numbers changed; the 127 info-table getters take a POINTER to the index now; the
+  client stage manager grew by 8 from +0x170, the load machine's object by 0xF0, and a load state was inserted
+  (every state from 0x0B on is one higher); 51 of 251 native mid-function sites have other registers or stack slots.
+- Method: build/port3663/fmap.py pairs the two builds' 223,488 / 224,300 functions by order and size (215,383
+  pairs) and places an address inside its paired function; tools/native-port/p63.py (addresses, byte arrays),
+  op63.py (message numbers by name), pins63 / getters63 / fields63 / hand63_*.py (what needed a hand); checks:
+  verify63.py, verify63b.py (299 byte arrays hold on both builds), logdiff.py (a run against the 3576 baseline).
+- Live, one PC, two copies, SAVES OK and 5/5 in each:
+  - p63a: the layer runs at the title; option D off (clock gate refused: its two mid hooks, the field is in rsi now).
+  - p63b / p63c: both in the world on the HOST's screen, the guest's screen stayed in a dark scene (not a load: its
+    load machine reached "in the world"). Cause: merchant_unhide read and WROTE the stage manager's ready byte at
+    the old +0x259 (now +0x261): raw offsets the sweep over named constants had missed.
+  - p63d: the guest stands beside the host at Nas River on BOTH screens, party frames right. Against pp11-fresh
+    (3576, the same test): no warning kind and no refusal that the old game did not have.
+- NOT done yet: the 23-step checklist (fights, loot, revive, mounts, travel, New Co-op Save, ...), the native and
+  layer unit tests, a package. Until then nothing is known about those features on 3663.
+- The title menu's pad fix (Jay's report) is in this build too: an idle XInput pad for the game while the lobby is
+  up, the "window inactive" messages, and the hold now opens for Steam's overlay only while the MOUSE is in use.
+  Its tests (tp8b / tp9b / tp10b / tp7b) are running.
+
+### tp8c / tp9c / tp10c / tp12c / tp7c (04:51 - 04:59, game 3663): the title under the Co-op menu and a pad: MEASURED
+
+The host alone at the title lobby, the lobby drawn see-through ([dev] lobby_see_through), a simulated XInput pad
+pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in all five.
+- What the see-through shots show first: the game's title has NO menu to move in. It is button prompts:
+  A Play, X New Game, Y Load, B Exit. So a pad's "confirm" on our "Invite Friends" is "Play" for the title under
+  it: exactly the tester's "it would start a save game file while i was hovering over the invite friend button".
+  Y (Load) is the one harmless button: it opens the slot list and loads nothing.
+- tp8c, no hold at all (the control): the title's Load screen opens under our menu. The method works.
+- tp9c, ONLY the hold the posted builds have (GetForegroundWindow / GetActiveWindow answered "none"): THE LOAD
+  SCREEN OPENS. That hold never stopped a pad; it was only ever tested with the keyboard (cpm1, 2026-11-07). On an
+  Xbox pad the lobby also masked D-pad / A / B / Start at XInput, so there X (New Game) and Y (Load) got through;
+  a PlayStation pad, which the game reads by itself, had nothing in its way: every button reached the title.
+- tp10c, only the "your window is inactive" messages (WM_ACTIVATE inactive + WM_KILLFOCUS every 400 ms while held,
+  "active" again when the hold ends): the Load screen does NOT open. The game's input manager stops reading.
+- tp12c, only the idle XInput pad: does not open. tp7c, all three (what the build does now): does not open.
+- So the fix is in: the inactive messages (every device the game reads, a PlayStation pad's too as far as one PC
+  without such a pad can tell: it is the game's own "stop reading input") and the idle XInput pad. The hold now
+  opens for Steam's overlay only while the mouse is in use and no pad button is down.
+- NOT tested: a real PlayStation pad; Steam's invite dialog with the new rule (its X must still take a click:
+  to do with the tcB261 routine, a shot first, a click on the X only); the whole lobby flow ran with the inactive
+  messages in p63b - p63d and went through.

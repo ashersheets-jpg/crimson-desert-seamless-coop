@@ -155,21 +155,21 @@ void test_session_handshake_and_retry() {
     CHECK(h.count(proto::Type::Hello) == 2);  // lost Hello is retried
 
     // States are not sent before the handshake completes.
-    h.session.send_local_state({}, 3087);
+    h.session.send_local_state({}, 2100);
     CHECK(h.count(proto::Type::PlayerState) == 0);
 
     // Nothing but Welcome is accepted while connecting.
-    h.deliver(proto::PlayerState{}, 2315);
+    h.deliver(proto::PlayerState{}, 2150);
     CHECK(!h.session.remote_state());
 
-    h.deliver(proto::Welcome{"peer"}, 2156);
+    h.deliver(proto::Welcome{"peer"}, 2200);
     CHECK(h.session.state() == ClientSession::State::Connected);
     CHECK(h.session.peer_name() == "peer");
 
-    h.session.send_local_state({}, 2215);
+    h.session.send_local_state({}, 2300);
     CHECK(h.count(proto::Type::PlayerState) == 1);
 
-    h.deliver(proto::PlayerState{{1, 2, 3}, {}, 0}, 2407);
+    h.deliver(proto::PlayerState{{1, 2, 3}, {}, 0}, 2400);
     CHECK(h.session.remote_state() && h.session.remote_state()->pos.y == 2.0f);
 }
 
@@ -512,7 +512,7 @@ void test_reliable_order_and_streams() {
     std::vector<proto::Body> wire, acks;
     ReliableChannel a([&](proto::Body b) { wire.push_back(std::move(b)); });
     ReliableChannel b([&](proto::Body x) { acks.push_back(std::move(x)); });
-    for (uint8_t i = 0; i < 5; ++i) CHECK(a.send(proto::RelKind::EnemyState, std::vector<uint8_t>(2793, i), 0));
+    for (uint8_t i = 0; i < 5; ++i) CHECK(a.send(proto::RelKind::EnemyState, std::vector<uint8_t>(3000, i), 0));
     std::vector<proto::RelData> frags;
     for (auto& w : wire) frags.push_back(std::get<proto::RelData>(w));
     CHECK(frags.size() == 15);
@@ -661,7 +661,7 @@ void test_clock_mapper() {
     ClockMapper m;
     CHECK(!m.offset());
     uint32_t seed = 7;
-    for (uint32_t t = 0; t < 2793; t += 25) {
+    for (uint32_t t = 0; t < 3000; t += 25) {
         seed = seed * 1103515245 + 12345;
         const uint32_t transit = 30 + (seed >> 16) % 51;
         m.add(50000 + t + transit, 100000 + t, t);  // (our clock on arrival, remote ts)
@@ -1443,7 +1443,7 @@ void test_enemy_zone_machine() {
         Z z;
         z.tick(in(0, 30));
         CHECK(z.tick(in(2000, 30)).ask);
-        auto no = in(3087, 30);
+        auto no = in(2100, 30);
         no.host_refused = true;
         auto st = z.tick(no);
         CHECK(st.withdraw && !st.turned_off && st.why == Z::Why::HostStopped && z.state() == Z::State::Off);
