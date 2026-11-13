@@ -44,3 +44,13 @@ there and both have pressed interact; then the scene plays in each player's game
 
 Risks: the base's guest_seq_play crashed / reloaded the guest on some scenes (the camp liberation scene sent it to the
 title); U-1 near the host was never tried; story scenes that spawn the same NPCs for both.
+
+## cs4: the story scenes by name (native [session2] stage_names_probe=1, read only)
+
+- At the host's world entry (18:16:06.7, one burst, the manager already known as the host's) its manager evaluated: sequencer
+  elements `cd_seq_quest_intro_0300`, `cd_seq_quest_intro_trigger`, `bgm_cd_seq_quest_intro_0300`,
+  `cd_seq_quest_intro_0310_01 .. _15`, `cd_seq_quest_intro_0300_01_dlc`, `_0340_dlc`, `_0340_01_dlc`, `_0360_dlc`,
+  `_0360_01_dlc`, the weather scenes `cd_seq_contents_weather_*`, and many schedule / class2 elements (the 400-line cap
+  was spent on class2).
+- So the story class for U-f is the base name prefix `cd_seq_quest_` (and `bgm_cd_seq_quest_`), as the merchants' is
+  `cd_seq_funcnpc_`. `cd_seq_quest_intro_trigger` is the likely owner of the cabin's trigger volume (sequencer 0x1BC).
