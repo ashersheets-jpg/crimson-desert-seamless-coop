@@ -1407,6 +1407,7 @@ bool install(const Options& opt) {
             user2_stages_start(lc.s2_user2_stages, lc.s2_user2_timer_route, lc.s2_user2_stages_elements,
                                lc.s2_user2_npc_control, lc.s2_user2_drain_at_host_prepare);
             user2_stages_set_trade_list(lc.s2_user2_shop_trade_list);  // S46 phase 3, T1 (s46-tenderos.md §9)
+            user2_stages_set_names_probe(lc.s2_stage_names_probe);    // Co-op+ shared cutscenes research (read only)
             g_tap_user2_stages.store(true);
             net::sniffer_set_tap(&sniffer_fanout);
         }

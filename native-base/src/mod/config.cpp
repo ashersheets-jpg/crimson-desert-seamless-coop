@@ -319,6 +319,7 @@ Config load_config(const std::wstring& ini_path) {
     c.s2_observer_hold_scene_conflict =
         narrow(read_string(ini_path, L"session2", L"observer_hold_scene_conflict", "0")) == "1";
     c.s2_user2_shop_trade_list = narrow(read_string(ini_path, L"session2", L"user2_shop_trade_list", "0"));
+    c.s2_stage_names_probe = read_uint(ini_path, L"session2", L"stage_names_probe", 0) != 0;
     c.s2_shop_interaction_own_delete =
         narrow(read_string(ini_path, L"session2", L"shop_interaction_own_delete", "0"));
     // P8 option U, S31 (u0-resultados-s28.md §8.17): U-e and the drain at the host's preparation.

@@ -661,6 +661,9 @@ struct Config {
     // cells) U-f lets through ONLY the cd_seq_funcnpc_* whose base name hashes to the trade list (smithy 0xA7132561,
     // butcher 0x978345CA), instead of user2_stages_elements; probe = the verdict in the lines only.
     std::string s2_user2_shop_trade_list = "0";
+    // stage_names_probe = 0 | 1 (Co-op+ 2026-11-13, shared cutscenes research, HOST, with user2_stages): READ ONLY.
+    // Logs the sequencer resource names (and element kinds) the HOST's own stage manager prepares, at most 400 lines.
+    bool s2_stage_names_probe = false;
     // shop_interaction_own_delete = 0 | probe | 1 (S46 phase 2, R0; session2/shop_trade_probe.h), HOST and GUEST: at
     // SetInteraction's exit (P2 0x2369862, the actor's lock held), when the native erase would take ANOTHER stage's
     // entry, this stage has its own, the key is the shop's (0x000F4321) and an entry with that key belongs to the other
