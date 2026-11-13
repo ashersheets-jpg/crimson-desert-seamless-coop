@@ -5,6 +5,10 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- GAME UPDATED 2026-11-13 02:24 to 1.0.0.3663 (Steam, by itself). The posted build 0.1.0-alpha+cf8c7fa3 is made for
+  1.0.0.3576 and switches itself off on the new game ("Co-op+ is off: this mod was made for game version 1.0.0.3576").
+  The testers were told (reply of 03:25 in #play-testing-feedback). The move to 3663 is under way; a build for it
+  needs the whole checklist again and then your OK to post.
 - POSTED 2026-11-13 00:13 (your "Go ahead and upload the new build"): build 0.1.0-alpha+cf8c7fa3 in
   #download-here, both zips (message 1570667810735267942; text as posted:
   docs/release/shared-world-playtest/download-cf8c7fa3.txt). Tested on ONE PC with two copies of the game (Nvidia):
@@ -6837,3 +6841,83 @@ solostart 43/0, mounts 41/0, mountfight 41/0, nosave 7/0, retry 41/0, stuck 45/0
 - How: as before (the app's browser pane, signed in; the zips through a loopback page into window.name; File
   objects on the composer's input; a synthetic paste; Enter). No sign-in was asked. No test was running.
 - One post for this batch. The next post needs the owner's OK.
+
+### ax4a - ax10a (2026-11-13 00:20 - 01:00): Axiom Force as the joined player: the "stuck after a grab" NOT reproduced
+
+All on 0.1.0-alpha+cf8c7fa3, the usual test world, SAVES OK and 5/5 in every .out (scratchpad explore10.sh).
+- The early test saves (rps, coop-test-bandits and their variants: Day 27, Attack 9) do not have the ability: Tab,
+  and the pad's left stick, do nothing (ax1a, ax2a, ax5a; ax4a was wasted on a menu left open, ax5a's pad press
+  never happened: the "pad:" step needs [dev] pad_sim=1).
+- The one far-along character here is slot103-usercopy (the sandbox copy of the owner's save of 2026-11-07). As the
+  GUEST with it (-GuestVariant usercopy):
+  - ax6a: holding Tab aims (the camera closes in); nothing in the aim, nothing grabbed; walks afterwards.
+  - ax7a: camera turned to the wagon at Nas River: releasing Tab GRABS it (blue glow, the game's prompts
+    "Control [CTRL]" and "Cancel [R]"). Q does nothing. The guest walked forward and back afterwards.
+  - ax8a: a tap on Ctrl changes nothing, R cancels the grab, the guest walks (its position changed 00:50:10 - :15).
+  - ax10a: Ctrl held 5 s. This time the HOST stood in the aim, nothing was grabbed (the prompt was "Interact", Ctrl
+    drew the weapon); the guest walked forward 00:59:06 - :11 and back. Says nothing about a held control.
+- So: grab, tap, cancel leave the guest free. NOT tried: a held control of a grabbed thing, small things carried or
+  thrown, grabbing an NPC / an enemy / the other player, a grab while the host is far away. The tester did not say
+  what he grabbed: the question to ask.
+- Side fact: the far-along character's horse 0xB0100067 stands at Hernand (-10666, 634, -3701), 380 m from Nas River.
+
+### TESTERS, 2026-11-13 06:02 - 06:25 UTC (#play-testing-feedback), after the cf8c7fa3 post of 05:13 UTC. No report zips.
+
+The owner: "Some playtesting feedback from our playtesters. Feel free to respond to them on discord."
+Yagiisama and Jay are new names; they played TOGETHER (two PCs, very likely: "I played with @Jay"), got into one
+world and reached a boss fight. That is the first word of a two-PC session on a current build; which build is not
+said (asked).
+1. D3vils 06:02: "Is it also normal for the mod to close down both the host and person joining's games then re-open
+   then before being able to start a new save world and selecting the difficulty". YES, as built: New Co-op Save
+   restarts both games into the co-op save folder, then the host is asked the difficulty.
+2. Yagiisama 06:17: a boss fight: "The host is the only one who can see the boss, and there is a health damage
+   glitch where if a non-host gets hit, the host does not take any damage." Which boss is not said. Reading: a boss
+   that a STORY SCENE of the host puts into the world is not in the guest's game (the base copies the host's
+   scenes to the guest and plays none of them: "Story scenes for two", 2026-11-12). The second half is not clear
+   (each player has their own health by design; or: the guest is hit by a boss it cannot see). Asked.
+3. Jay 06:23: "our game kept getting desynced when host was triggering cutscenes. it happened every time". His
+   ideas: a "1/2 players" mark on a quest giver / trigger that waits until everyone has pressed, and a queue so
+   that everyone fast-forwards a cutscene together. D3vils 06:25: or the joined player watches the cutscene
+   through the host's character and goes back to their own afterwards.
+   -> The known gap (chart: shared cutscenes 30 %), now named by three testers in two sessions as THE thing that
+   breaks a story session. It is the next foundational piece after "everyone gets in".
+4. Jay 06:25: at the title "it would still be operating the native game main menu while it was showing the co op
+   menu overlay, it would start a save game file while i was hovering over the 'invite' friend button on the co-op
+   menu because it was still taking the native menu inputs that just werent visible"; they had to restart the game
+   a couple of times. He names the pad's "square", so a PlayStation pad. -> next section.
+
+### The title menu under the Co-op menu (Jay's report): what the code says, what was built, NOT TESTED YET
+
+- The Co-op menu at the title keeps the game's own title from reacting by answering "no window" to the game's
+  GetForegroundWindow / GetActiveWindow (input/game_input_block). Tested 2026-11-07 with KEYBOARD keys only (cpm1).
+  For pads the lobby only kept the D-pad, A, B and Start of an XINPUT pad from the game (mask_from_game); a
+  PlayStation pad is read by the game itself (HID) and nothing of it can be masked. Never tested with any pad.
+  And the hold is lifted on purpose while Steam's overlay is open (tcB260: Steam takes its clicks from the input
+  the game reads) and while the mod presses the game's keys.
+- Reading of his words (a PlayStation pad, "square"): his presses reached the hidden title as well as our menu, so
+  confirming on "Invite Friends" also pressed Continue / New Game underneath. Not proven.
+- Built (layer, uncommitted, not in any package): (1) pads_held(): while a Co-op+ screen holds the input, the
+  XInput hook hands the game an idle pad (buttons, sticks, triggers); (2) game_input_block_tick(): while held the
+  game's window is told what Windows tells it when it loses the focus (WM_ACTIVATE inactive + WM_KILLFOCUS; the
+  game's input manager then stops reading every device, dos-instancias.md 2.6), every 400 ms, and "active" again
+  when the hold ends; (3) [dev] title_hold_mode (which of the three holds are on), [dev] title_pad (simulated pad
+  presses under the title lobby), [dev] lobby_see_through (a shot shows the game's title under the lobby).
+  STILL TO DO: the Steam overlay window (the hold lifted only while the mouse is in use), then the tests
+  (scratchpad explore12.sh: modes 8 / 9 / 10 / 7, D-pad only, never A: a title that reacts would load a save).
+- tp8a (03:20, the control run) said nothing about it: see the next section.
+
+### GAME UPDATED BY STEAM: 1.0.0.3663 (exe written 2026-11-13 02:24:xx, PE 0x6AF5D198, SizeOfImage 0x144E9000, 335,440,280 bytes)
+
+- Found at 03:24 in tp8a's logs: "Host version: 1.0.0.3663" and "Co-op+ is off: this mod was made for game version
+  1.0.0.3576, not 1.0.0.3663". ax10a (01:00) was the last run on 3576. SAVES OK, 5/5 in tp8a; nothing was loaded.
+- Every player whose game updates has the mod switched off (the game runs normally, solo) until a build for 3663.
+- Both exes are in build/exe-archive (3576: 326,872,984 bytes; 3663 copied 03:25). The code section grew by
+  0x7C000 (0x5596000 -> 0x5612000), so nearly every address moved; the sections were renamed again (code ".reloc",
+  the copy protection ".data1", and ".tls$" is now a small other section: never go by names).
+- REPLY TO THE TESTERS, posted 2026-11-13 03:25 (08:25:44 UTC) in #play-testing-feedback, message
+  1570716284373704766 (the owner: "Feel free to respond to them on discord"); text:
+  docs/release/shared-world-playtest/reply-2026-11-13-testers.txt. It says: the game update and what it means;
+  D3vils: the restart before a New Co-op Save is normal; Jay: the title menu is a real bug, "it looks like" pad
+  presses reach the hidden menu, use mouse / keyboard there for now, was it a PlayStation pad?; cutscenes and the
+  boss: the known gap, the next big piece; asked: which boss, what exactly the damage glitch was, the report zips.
+- The port: tools/native-port/p63.py (the 3576 pipeline for both trees, mapping on 6 processes), build/port3663.

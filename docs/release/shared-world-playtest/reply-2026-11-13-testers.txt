@@ -1,0 +1,13 @@
+Thanks, all of you. This is exactly the kind of report that helps.
+
+**Heads-up first: Crimson Desert got a game update tonight (1.0.0.3663).** The mod is made for one exact game version, so after the update it switches itself off (the game then runs as normal, solo) until it has been moved to the new version. That is being worked on now and the new build will be in <#1567300331296264233>. If neither of you has updated the game yet, the current build keeps working.
+
+<@297687738386350080> Yes, that is normal. New Co-op Save closes and reopens both games once so that both load the fresh co-op save, then the host picks the difficulty.
+
+<@697964924860891246> The title menu: a real bug, thank you. The Co-op menu covers the game's own title menu, and it looks like controller presses still reach the hidden menu underneath (so confirming on ours also presses Continue / New Game below). Were you on a PlayStation controller? A fix is being built. Until it is out, use mouse or keyboard on the title's Co-op menu; a controller is fine once you are in the world.
+
+**Cutscenes and the boss** (<@289718510312095745>, Jay, D3vils): a known gap, and the biggest one. The host's story cutscenes are not shown to the joined player yet, and what a cutscene brings into the world (a story boss, for example) exists only in the host's game. It is the next big piece of work. Your ideas (a ready check at quest triggers, skipping together, watching through the host) are written down.
+
+Two questions: which boss was it? And the damage: did the joined player get hit by a boss they could not see, or was it something else?
+
+If you can, close the game, run **Diagnose Co-op+.cmd** and paste the zip in <#1567319198206525450> (both players). The logs show far more than we can guess.
