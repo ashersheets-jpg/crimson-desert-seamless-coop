@@ -486,7 +486,7 @@ hostrevive)
   has "$L" "our death notice goes to the client" "host: went down"
   has "$L" "Revive: checkpoint revive, step 3" "host: asked for the checkpoint revive"
   has "$L" "Revive: at the checkpoint" "host: stands at the checkpoint again"
-  has "$L" "Teleport: [0-9]+ m: the game's own travel" "host: moved by the game's own travel"
+  has "$L" "Teleport: arrived" "host: the move to the checkpoint arrived"
   has "$H" "reason 19" "host: its stages closed 'at the owner's load' (the reload happened with the guest in the world)"
   hasnot "$H" "the Troc tunnel stops" "host: the tunnel was never stopped"
   asked=$(grep -h 'timer guard: schedule timers' "$H" | tail -1 | sed -n 's/.*asked \([0-9]*\).*/\1/p')

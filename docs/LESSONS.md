@@ -161,3 +161,10 @@ topic BEFORE testing or guessing about it.
   will meet it too. I wrote "a player never moves like that" and fixed the script; two hours later a tester
   described the same thing in "Go to my friend". An oddity in a test tool that uses the mod's own code is a finding
   about the mod until shown otherwise.
+- 2026-11-12: "It took 0.6 s" was MY log line's measure (the position jumped), not the player's (a loading screen of
+  about ten seconds). I put that number into the changelog and a post draft. Before a number goes into words for
+  players: what did the PLAYER wait for, measured where the wait ends (here the server's "load complete" and the
+  screenshot ten seconds later that still showed the warp)?
+- 2026-11-12: A new mechanism replaces an old one only where it is better. The game's travel beats hops over
+  kilometres and loses to them at 100 m. Decide the threshold from both costs before wiring the new path in
+  everywhere (the first threshold was a guess, and a checklist step paid for it).

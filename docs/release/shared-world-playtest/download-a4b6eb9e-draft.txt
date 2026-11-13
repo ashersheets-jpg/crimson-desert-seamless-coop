@@ -4,7 +4,7 @@ Please use this build instead of every earlier one. **Both players need this sam
 Fixed, thanks to JackyChan004's and D3vils' reports:
 - **Two different builds in one session**: the mod let it happen and said nothing. A lot of the desync in that session may come from this alone.
 - **New Co-op Save: only one of you started fresh.** Now both do: the joining player starts as a copy of the host's new game (same place, same first objective), and Continue Our Co-op Save brings that character back.
-- **Going to your friend was slow and could stop short.** It is the game's own travel now: 1.3 km took 1 to 3 seconds in our runs.
+- **Going to your friend was slow and could stop short.** Beyond 250 m it is the game's own travel now: a loading screen of about ten seconds, whatever the distance.
 - **The host's game could close after going down and reviving** with a friend in its world.
 - **Start Co-op did nothing if you had loaded a save earlier in the same game session.**
 - **A start that does not work** no longer needs both games closed: the host opens Menu > Co-op > Leave the session and chooses Start Co-op again; both games restart.

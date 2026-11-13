@@ -133,7 +133,10 @@ void request_move(float x, float y, float z) {
 // the host (coop_lobby's kMsgFieldKey: both are in the host's field). 0 = not known: hops as before.
 constexpr uint16_t kOpReloadStageStartReq = 3074;
 constexpr uint16_t kOpTeleportRevivePointAck = 3071;
-constexpr float kFarM = 80.0f;            // farther than this: the game's travel
+// Farther than this: the game's travel. 250 m, not 80 (pp10-revive, 2026-11-12): the travel is a load of about 9 s on
+// the server whatever the distance (the traveller cannot be hit, or revived, while it lasts: the step's kill came 7 s
+// after a 112 m travel and did nothing), and a few hops cover 250 m in less than that.
+constexpr float kFarM = 250.0f;
 constexpr float kFarLandedM = 40.0f;      // this close after the load: it took us there
 constexpr uint32_t kFarAckDelayMs = 300;  // the server has our destination before our client starts loading
 constexpr uint32_t kFarTimeoutMs = 45000;

@@ -16,10 +16,11 @@ Not posted yet (2026-11-12, after 47135b83):
   build each and the mod said nothing: its "same build" check compared a number that had not changed in any
   package since 10 November. It now compares a hash of the installed mod files, and both title menus say "Can't
   play together: <name> has another Co-op+ build ... Both install the same zip, the newest one."
-- **Going to your friend is the game's own travel now.** Over 80 m it no longer drags you across the map in 40 m hops
-  (testers: two to three minutes for 3 km, sometimes stopping short): it asks the game for a travel to that spot, as
-  the world map does. 1.3 km took 0.6 to 3 seconds in our runs. The hops remain for short moves and as the way out
-  when the travel does not take. The move to the host's side when you join uses it too.
+- **Going to your friend is the game's own travel now, beyond 250 m.** It no longer drags you across the map in 40 m
+  hops (testers: two to three minutes for 3 km, sometimes stopping short): it asks the game for a travel to that
+  spot, as the world map does. That is a loading screen of about ten seconds whatever the distance (500 m and 1.3 km
+  in our runs). Under 250 m the hops remain, they are quicker there; they are also the way out when the travel does
+  not take. The move to the host's side when you join uses it too.
 - **The host's game could crash when its world reloaded with a friend in it** (a tester: down in a fight, Q, crash).
   A timer of the game's NPC schedules ran in the moment the world's owner was gone and read through a null pointer.
   Such a timer is now put off and run when the owner is back. Tested with timers put off on purpose (the schedules

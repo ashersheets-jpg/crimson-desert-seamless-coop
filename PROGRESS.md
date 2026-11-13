@@ -6740,3 +6740,21 @@ Design chosen (A, host-authoritative, with a world marker):
   Save the friend has no horse yet by the story; in other worlds our mounts step passes: to be asked again when they
   play on one build), stuck after an Axiom Force grab (not tried), the host's cutscenes for the friend (known gap).
 - Not tested and not testable here on purpose: the Steam fault retry (nothing provokes the fault).
+
+### pp10 on 0.1.0-alpha+a4b6eb9e, steps 1-12 (2026-11-12 18:22-19:41): 438 PASS, 5 FAIL, all in `revive`: the travel is a 9 s load
+
+- static 12, real 12, fresh 37, xess 38, fsr 38, latehook 53, display 6, lowsave 42, chest 41, loot 42, crime 39: no
+  FAIL. SAVES OK and 5/5 in every game step. (display: no Steam fault this time.)
+- revive: 38 PASS, 5 FAIL: the guest never went down. The step sends the guest to the dock and the host's KillCheat
+  7 s later. The guest's 112 m move was the game's own travel now (over the 80 m threshold), and the host's base
+  shows user 2's load of that travel ending 9 s after it began ("user 2 has its 2762 (load #3)" at 19:20:29, the
+  request at 19:20:20.7): the kill at 19:20:27.5 fell into the load and did nothing.
+  The layer's "far travel took 0.7 s" is only when the position jumps; THE TRAVEL IS A LOAD OF ABOUT 9 s on the
+  server whatever the distance (tg2a's screenshot 10 s after the host's revive still showed the game's warp).
+  During it the traveller cannot be hit, killed or revived.
+- So 80 m was the wrong threshold: three hops cover 112 m in about 1.5 s. Changed (layer, built 19:50): the game's
+  travel beyond 250 m, hops below. The changelog and the post draft said "1.3 km took 0.6 to 3 seconds": corrected to
+  "a loading screen of about ten seconds whatever the distance".
+- a4b6eb9e is therefore NOT the candidate. New package next; its checklist starts with the eleven steps a4b6eb9e
+  did not get to (to see their faults first), then the twelve above again.
+- Not run yet: Continue with the friend's progress saved during the session (the mailbox path).
