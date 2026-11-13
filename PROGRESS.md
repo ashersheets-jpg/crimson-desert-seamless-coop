@@ -5,8 +5,9 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
-- NEXT BUILD, your OK needed to post: being packaged and put through the whole 23-step checklist (2026-11-12
-  evening; dc7ade5e was dropped). In it since 47135b83: a New Co-op Save is a new save for both players; two
+- NEXT BUILD, your OK needed to post: 0.1.0-alpha+cf8c7fa3 is in the whole 23-step checklist (pp11, 2026-11-12
+  evening; dc7ade5e and a4b6eb9e were dropped; post text: docs/release/shared-world-playtest/download-cf8c7fa3-draft.txt).
+  In it since 47135b83: a New Co-op Save is a new save for both players; two
   different builds are refused and both are told; going to your friend is the game's own travel; the host's crash
   at a reload with a friend in its world; Start Co-op doing nothing after a save was loaded; a failed start no
   longer needs both games closed; the "no menu" fix's false trigger; the report tool's Steam IDs. I post nothing

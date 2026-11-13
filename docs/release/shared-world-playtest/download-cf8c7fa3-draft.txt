@@ -1,4 +1,4 @@
-**Update: shared world playtest 0.1.0-alpha+a4b6eb9e**
+**Update: shared world playtest 0.1.0-alpha+cf8c7fa3**
 Please use this build instead of every earlier one. **Both players need this same build**: from now on the title menu tells you if your friend has another one, and co-op will not start until you match.
 
 Fixed, thanks to JackyChan004's and D3vils' reports:
@@ -12,7 +12,7 @@ Fixed, thanks to JackyChan004's and D3vils' reports:
 
 Known: the joining player does not see the host's cutscenes (the host looks like it jumps around). No horse or wyvern for the joining player, and getting stuck after an Axiom Force grab: not explained yet, tell us where it happens.
 
-- `...a4b6eb9e-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...cf8c7fa3-shared-world.zip`: the one you want. Run its installer with the game closed.
 - `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
 
 Tested with two copies of the game on one PC (Nvidia), and the menu fix on one tester's AMD card. Not tested: two PCs over the internet with this build, Intel cards, an evening-long session, story scenes and bosses. Please tell us in #bug-reports how it goes, with the report zip from both of you.
