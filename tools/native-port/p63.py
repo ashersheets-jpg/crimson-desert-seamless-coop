@@ -141,6 +141,36 @@ def scan(tree):
     print(len(res), 'mapped ->', out_path(tree), Counter(e['kind'] for e in res.values()))
 
 
+def map_two(item):
+    """The function map's answer (build/port3663/fmap.py) for one literal already scanned by portmap."""
+    v, kind = item
+    import fmap
+    if kind == 'code':
+        n, how = fmap.addr(v)
+        if n is None or how in ('guess', 'gap-guess', None):
+            i = fmap.func(v)
+            if i is not None and fmap.A[i][0] == v:
+                t = fmap.target(v)
+                if t is not None:
+                    n, how = t, 'callee'
+        return v, {'f_new': n, 'f_how': how}
+    n, votes, sites = fmap.data(v)
+    return v, {'f_new': n, 'f_votes': votes, 'f_sites': sites}
+
+
+def scan2(tree):
+    from multiprocessing import Pool
+    m = json.load(open(out_path(tree)))
+    todo = [(int(k, 16), e['kind']) for k, e in m.items() if e['kind'] in ('code', 'data')]
+    with Pool(int(os.environ.get('P63_PROCS', '6'))) as pool:
+        for i, (v, e) in enumerate(pool.imap_unordered(map_two, todo, chunksize=4)):
+            m['0x%X' % v].update(e)
+            if i % 200 == 199:
+                print(' ', i + 1, flush=True)
+    json.dump(m, open(out_path(tree), 'w'), indent=1)
+    print(Counter(str(e.get('f_how')) for e in m.values() if e['kind'] == 'code'))
+
+
 # ---------------------------------------------------------------- judge
 def judge(tree):
     import portmap as p
@@ -162,28 +192,34 @@ def judge(tree):
             return 0, 1 << 30
         a, s = min(c, key=lambda t: abs(t[0] - v))
         return s, abs(a - v)
+    GOOD = ('same', 'moved', 'gap', 'gap-moved', 'begin', 'same~', 'moved~', 'call', 'callee')
     verdict = {}
     for k, e in m.items():
         v = int(k, 16)
         if e['kind'] == 'code':
-            if e['new'] is None:
-                verdict[k] = ('nomap', None)
-                continue
-            s, d = near_shift(v)
-            sh = e['new'] - v
-            if e['hits'] == 1:
-                ok = abs(sh - s) <= 0x400 or d > 0x20000
-                verdict[k] = ('ok' if ok else 'odd1', e['new'])
+            pm_ok = e['hits'] == 1 and e['new'] and e.get('same16')
+            if e.get('f_how') in GOOD:
+                # the function map placed it; a different unique whole-image match is worth a look
+                verdict[k] = ('conflict' if pm_ok and e['new'] != e['f_new'] else 'ok', e['f_new'])
+            elif pm_ok:
+                s_, d = near_shift(v)
+                verdict[k] = ('ok' if abs(e['new'] - v - s_) <= 0x2000 or d > 0x40000 else 'odd1', e['new'])
+            elif e.get('f_new'):
+                verdict[k] = ('weak:' + str(e.get('f_how')), e['f_new'])
             else:
-                rx, _ = p.pattern(p.OLD, v, 40)
-                hits = p.find(p.NEW, rx) if rx else []
-                best = [h for h in hits if abs((h - v) - s) <= 0x100]
-                verdict[k] = ('multi_ok', best[0]) if len(best) == 1 else ('multi?', [hex(h) for h in best][:4])
+                verdict[k] = ('nomap', None)
         elif e['kind'] == 'vtable':
             verdict[k] = ('ok' if e['new'] else 'vt?', e['new'])
         else:
-            ok = e['new'] and e['votes'] >= max(1, (e['sites'] + 1) // 2)
-            verdict[k] = ('ok' if ok else 'data?', e['new'])
+            fv, fn = e.get('f_votes', 0), e.get('f_new')
+            if fn and fv >= 2:
+                verdict[k] = ('ok', fn)
+            elif fn and fv == 1 and e['new'] == fn:
+                verdict[k] = ('ok', fn)
+            elif e['new'] and e['votes'] >= max(2, (e['sites'] + 1) // 2) and not fn:
+                verdict[k] = ('ok', e['new'])
+            else:
+                verdict[k] = ('data?', fn or e['new'])
     keep, drop = {}, []
     for k, e in m.items():
         val = int(k, 16)
@@ -199,9 +235,9 @@ def judge(tree):
     hand = OVERRIDES[tree]
     for k, (st, nv) in sorted(keep.items(), key=lambda t: int(t[0], 16)):
         v = int(k, 16)
-        if st not in ('ok', 'multi_ok') and v not in hand and v not in SKIP[tree]:
+        if st != 'ok' and v not in hand and v not in SKIP[tree]:
             e = m[k]
-            print(st, k, nv, e['at'][0], {x: e[x] for x in ('hits', 'same16', 'votes', 'sites', 'name', 'cands') if x in e},
+            print(st, k, nv if not isinstance(nv, int) else '0x%X' % nv, e['at'][0], {x: (('0x%X' % e[x]) if x in ('new', 'f_new') and isinstance(e[x], int) else e[x]) for x in ('new', 'hits', 'same16', 'f_new', 'f_how', 'votes', 'sites', 'f_votes', 'f_sites', 'name', 'cands') if x in e},
                   'near shift %+X' % near_shift(v)[0] if e['kind'] == 'code' else '')
 
 
@@ -217,7 +253,7 @@ def mapping(tree):
         st, nv = verdict[k]
         if v in OVERRIDES[tree]:
             out[v] = OVERRIDES[tree][v]
-        elif st in ('ok', 'multi_ok'):
+        elif st == 'ok':
             out[v] = nv
     return out, {int(k, 16) for k in m if k not in base and int(k, 16) not in SKIP[tree]}
 
@@ -337,7 +373,12 @@ def heads(tree, dry):
                 tail = ',' if r.rstrip().endswith(',') else ''
                 new_rows.append(lead + ', '.join('0x%02X' % next(it) for _ in range(c)) + tail)
             out.append((mm.start(2), mm.end(2), '\n'.join(new_rows)))
-            changed.append('%s:%d %s @0x%X%+d: %s -> %s' % (f, line, mm.group(1), mp[a], off, b[:8].hex(' '), nb[:8].hex(' ')))
+            import fmap
+            so, sn = fmap.shape_len(p.OLD, a + off, len(b)), fmap.shape_len(p.NEW, mp[a] + off, len(b))
+            tag = 'numbers' if so == sn else 'SHAPE'
+            changed.append('%-7s %s:%d %s @0x%X%+d' % (tag, f, line, mm.group(1), mp[a], off) +
+                           ('' if so == sn else ' || old: %s || new: %s' % (
+                               fmap.text_len(p.OLD, a + off, len(b)), fmap.text_len(p.NEW, mp[a] + off, len(b)))))
         if out and not dry:
             for s, e, t in reversed(out):
                 text = text[:s] + t + text[e:]
@@ -389,5 +430,5 @@ def inline(tree, dry):
 if __name__ == '__main__':
     cmd, tree = sys.argv[1], sys.argv[2]
     dry = '--dry' in sys.argv
-    {'scan': lambda: scan(tree), 'judge': lambda: judge(tree), 'apply': lambda: apply(tree, dry),
+    {'scan': lambda: scan(tree), 'scan2': lambda: scan2(tree), 'judge': lambda: judge(tree), 'apply': lambda: apply(tree, dry),
      'heads': lambda: heads(tree, dry), 'inline': lambda: inline(tree, dry)}[cmd]()
