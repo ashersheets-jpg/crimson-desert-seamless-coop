@@ -1,0 +1,14 @@
+**Update: shared world playtest 0.1.0-alpha+5a81a327, for game 1.0.0.3663**
+Crimson Desert updated on 13 November (1.0.0.3663). The build before this one switches itself off on the updated game, so the game ran solo. This build is for the updated game. **Both players need this build and the updated game**; the title menu tells you if your friend has another build.
+
+New in this build:
+- **Works with game 1.0.0.3663.** If Steam has not updated your game yet, let it update first: this build does not run on the older version.
+- **Controllers on the title's Co-op menu** (thanks Jay): the game's own title menu underneath no longer reacts to your controller while the Co-op menu is open, so nothing starts or loads behind it. Tested with a simulated Xbox controller; a real PlayStation controller is not tested here, so please tell us.
+- Steam's invite list, "Leave the session", each player's own chest and enemy loot, reviving, mounts and New Co-op Save were all checked again on the new game version.
+
+Known, unchanged: **the host's story cutscenes, and what they bring into the world (a story boss), are not shown to the joined player.** That is the biggest gap and the next piece of work; thank you for the detailed reports on it. Restarting both games once before a New Co-op Save is normal.
+
+- `...5a81a327-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tested with two copies of the game on one PC (Nvidia). Not tested: two PCs over the internet with this build, AMD / Intel cards with this build, an evening-long session, story scenes and bosses. Tell us in <#1567319198206525450> how it goes, with the report zip from both of you (close the game, run **Diagnose Co-op+.cmd**).

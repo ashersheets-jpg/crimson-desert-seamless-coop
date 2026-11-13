@@ -7001,3 +7001,12 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - tools/known-warnings.txt: the xess family warning added as OPEN / rare with its count.
 - CHANGELOG.md: the entry for the 3663 build ("NOT POSTED YET").
 - Next: sync the native base, package, the whole checklist again as pp13 on that exact package.
+
+## 2026-11-13: HANDOVER NOTE (the final pass is running)
+
+- Package under test: dist/CrimsonDesert-SeamlessCoop-0.1.0-alpha+5a81a327-shared-world (outer 5a81a32, native 96b3927), for game 1.0.0.3663.
+- Running in the background: `bash <scratchpad>/run_pp.sh pp13 5a81a327 static real fresh ... hostrevive` (all 23 steps, about 3.5 h). Report: build/native/prepost-pp13.txt; per step build/native/pp13-<step>.out (SAVES OK, 5/5) and build/native/shots/pp13-<step>-*.png (to look at).
+- While it runs: no builds, no harness edits, no browser.
+- When it ends: read the totals and every FAIL. A step that fails for the scenario (hostrevive did once in pp12: the host was put back at its start point after the test's teleport) is run again under pp13b and both results are written down; a real fault is fixed, and then the WHOLE pass is run again on a new package. `bash tools/prepost.sh pp13 "<package dir>" summary` at the end.
+- If pp13 is clean: fill the pass result into CHANGELOG.md (the "NOT POSTED YET" entry) and PROGRESS.md, put "the 3663 build 5a81a327 passed pp13: needs your OK to post" at the top of "Waiting on the user", commit, push. The post text is drafted in docs/release/shared-world-playtest/download-5a81a327.txt; the chart is docs/drafts/progress-2026-11-13-b.png. POSTING NEEDS THE USER'S OK (the OK of 13 Nov was used for cf8c7fa3).
+- After that, the next foundational piece: shared cutscenes / story bosses for the joined player (the testers' main complaint). Open small items: Give / Stash not re-tested on 3663 (hooks and offsets checked by reading only); a real PlayStation pad; the xess family warning (1 in 31 runs).
