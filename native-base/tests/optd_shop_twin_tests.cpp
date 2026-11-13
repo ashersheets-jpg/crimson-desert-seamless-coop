@@ -85,10 +85,10 @@ int main() {
     if (a.size() == 3) {
         uint16_t op = 0;
         std::span<const uint8_t> p;
-        CHECK(stl::split(a[0], op, p) && op == 2708 && p.size() == 18 && p[13] == 1 && stl::rd32(p.data() + 14) == guest);
-        CHECK(stl::split(a[1], op, p) && op == 2436 && p.size() == 18 && p[0] == 4 && stl::rd32(p.data() + 1) == guest &&
+        CHECK(stl::split(a[0], op, p) && op == 2698 && p.size() == 18 && p[13] == 1 && stl::rd32(p.data() + 14) == guest);
+        CHECK(stl::split(a[1], op, p) && op == 2369 && p.size() == 18 && p[0] == 4 && stl::rd32(p.data() + 1) == guest &&
               stl::rd64(p.data() + 5) == tid && stl::rd32(p.data() + 13) == 6 && p[17] == 0);
-        CHECK(stl::split(a[2], op, p) && op == 2920 && p.size() == 21 && stl::rd32(p.data() + 13) == 1 &&
+        CHECK(stl::split(a[2], op, p) && op == 2752 && p.size() == 21 && stl::rd32(p.data() + 13) == 1 &&
               stl::rd32(p.data() + 17) == 6);
     }
     stl::wr32(br.data() + 8, 0);  // the greeting ends: the menu (the host's own answer, tcB116)
@@ -97,9 +97,9 @@ int main() {
     if (a.size() == 3) {
         uint16_t op = 0;
         std::span<const uint8_t> p;
-        CHECK(stl::split(a[0], op, p) && op == 2436 && stl::rd32(p.data() + 13) == 0);
-        CHECK(stl::split(a[1], op, p) && op == 2708 && p[13] == 0);
-        CHECK(stl::split(a[2], op, p) && op == 2920 && p.size() == 29 && stl::rd32(p.data() + 13) == 2 &&
+        CHECK(stl::split(a[0], op, p) && op == 2369 && stl::rd32(p.data() + 13) == 0);
+        CHECK(stl::split(a[1], op, p) && op == 2698 && p[13] == 0);
+        CHECK(stl::split(a[2], op, p) && op == 2752 && p.size() == 29 && stl::rd32(p.data() + 13) == 2 &&
               stl::rd32(p.data() + 17) == 0 && stl::rd32(p.data() + 21) == 0x979C909Du && stl::rd32(p.data() + 25) == 0);
     }
     // Buy from the menu: the store opens (type 3, no root, no 2708); closing it: the menu again (host, 566.4 / 573.6)
@@ -110,11 +110,11 @@ int main() {
         if (r.empty()) return;
         uint16_t op = 0;
         std::span<const uint8_t> p;
-        CHECK(stl::split(r.back(), op, p) && op == 2920 && p.size() == len && stl::rd32(p.data() + 13) == type &&
+        CHECK(stl::split(r.back(), op, p) && op == 2752 && p.size() == len && stl::rd32(p.data() + 13) == type &&
               stl::rd32(p.data() + 17) == branch);
         if (len == 29) CHECK(stl::rd32(p.data() + 21) == 0x979C909Du);
         bool ev = false;
-        for (const auto& m : r) ev = ev || (stl::split(m, op, p) && op == 2436 && stl::rd32(p.data() + 13) == branch);
+        for (const auto& m : r) ev = ev || (stl::split(m, op, p) && op == 2369 && stl::rd32(p.data() + 13) == branch);
         CHECK(ev);
     };
     expect(0, 3, 21, 2);  // Buy
@@ -133,9 +133,9 @@ int main() {
     if (a.size() == 1) {
         uint16_t op = 0;
         std::span<const uint8_t> p;
-        CHECK(stl::split(a[0], op, p) && op == 2187 && p.size() == 22 && p[17] == 1 && p[21] == 1);
+        CHECK(stl::split(a[0], op, p) && op == 2105 && p.size() == 22 && p[17] == 1 && p[21] == 1);
     }
-    CHECK(stl::local_answers(2752, ce, guest).empty());
+    CHECK(stl::local_answers(2672, ce, guest).empty());
     // shop dialog choices: the host's 3086 for Renee (tcB116) and the guest's (tcB161)
     const auto hostd = hexs("04010010a0f30110b040440f000a00000040440f000b00000001000000e4110000");
     uint32_t npc = 0;

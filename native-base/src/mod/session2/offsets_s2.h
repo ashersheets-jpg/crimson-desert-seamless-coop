@@ -9,9 +9,9 @@
 namespace cdmp::session2::off {
 
 // Globals (pointers to the objects).
-inline constexpr uintptr_t kServerNetSlot = 0x71C05F0;  // [exe+..] = ServerNet
-inline constexpr uintptr_t kClientNetSlot = 0x71C00E0;  // [exe+..] = ClientNet
-inline constexpr uintptr_t kSamSlot = 0x71FE6E8;        // [exe+..] = ServerActorManager (Co-op+ port: 3549, found live; 2976 0x6DA67D8)
+inline constexpr uintptr_t kServerNetSlot = 0x72456B8;  // [exe+..] = ServerNet
+inline constexpr uintptr_t kClientNetSlot = 0x72451A0;  // [exe+..] = ClientNet
+inline constexpr uintptr_t kSamSlot = 0x7283378;        // [exe+..] = ServerActorManager (Co-op+ port: 3549, found live; 2976 0x6DA67D8)
 
 // ServerNet fields.
 inline constexpr uint32_t kServerNet_Session = 0x18;  // the only NwVirtualAsyncSession
@@ -25,8 +25,8 @@ inline constexpr uint32_t kSam_FreeKeys = 0xD0;     // u32: keys left in the com
 inline constexpr uint32_t kSam_ActorCount = 0x9C;   // u32
 
 // NwVirtualAsyncSession (0xD0 bytes).
-inline constexpr uintptr_t kNwVirtualAsyncSessionVtable = 0x5AC5BD0;  // 15 entries, COL at [-1]
-inline constexpr uintptr_t kNwAsyncSessionVtable = 0x5AC5CD8;
+inline constexpr uintptr_t kNwVirtualAsyncSessionVtable = 0x5B40310;  // 15 entries, COL at [-1]
+inline constexpr uintptr_t kNwAsyncSessionVtable = 0x5B403A8;
 inline constexpr uint32_t kSessionVtableEntries = 15;
 inline constexpr uint32_t kSessionVfSend = 9;
 inline constexpr uint32_t kSessionSize = 0xD0;
@@ -40,7 +40,7 @@ inline constexpr uint32_t kSession_C0 = 0xC0;       // u16
 inline constexpr uint32_t kSession_OutQueue = 0xC8;
 
 // ServerUserActor (0x218 bytes).
-inline constexpr uintptr_t kServerUserActorVtable = 0x5EEEEA8;
+inline constexpr uintptr_t kServerUserActorVtable = 0x5F68B10;
 inline constexpr uint32_t kUser_Key = 0x60;
 inline constexpr uint32_t kUser_Session = 0x1F8;
 // Any server actor: the key of the user whose client controls it (D0 §7.3).
@@ -48,16 +48,16 @@ inline constexpr uint32_t kServerActor_Controller = 0x90;
 inline constexpr uint32_t kServerActor_Key = 0x60;
 
 // Functions.
-inline constexpr uintptr_t kServerOnRecvPacket = 0x29AC440;  // (ServerNet*, int*, NwSession*, u8* pkt, u16 size, u8 channel)
+inline constexpr uintptr_t kServerOnRecvPacket = 0x2A0EA70;  // (ServerNet*, int*, NwSession*, u8* pkt, u16 size, u8 channel)
 inline constexpr uint8_t kServerOnRecvPacketHead[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x4C, 0x89, 0x4C, 0x24, 0x20, 0x48, 0x89,
                                                       0x4C, 0x24, 0x08, 0x55, 0x56, 0x57, 0x41, 0x54};
-inline constexpr uintptr_t kSessionSend = 0x161B4E0;  // vf9 (this, int* res, AsyncRequestSend* rq) -> res
+inline constexpr uintptr_t kSessionSend = 0x165C1F0;  // vf9 (this, int* res, AsyncRequestSend* rq) -> res
 inline constexpr uint8_t kSessionSendHead[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x57, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B,
                                                0x89, 0xC8, 0x00, 0x00, 0x00, 0x49, 0x8D, 0x40, 0x30};
-inline constexpr uintptr_t kNwSessionCtor = 0x161ACC0;  // (this, bool) -> this
+inline constexpr uintptr_t kNwSessionCtor = 0x165B9D0;  // (this, bool) -> this
 inline constexpr uint8_t kNwSessionCtorHead[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x4C, 0x24, 0x08, 0x55, 0x56,
                                                  0x57, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57};
-inline constexpr uintptr_t kQueuePush = 0x3A7D10;  // (Queue*, void** item)
+inline constexpr uintptr_t kQueuePush = 0x3AB4C0;  // (Queue*, void** item)
 inline constexpr uint8_t kQueuePushHead[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x18, 0x57, 0x48,
                                              0x83, 0xEC, 0x20, 0x48, 0x8B, 0xF2, 0x48, 0x8B, 0xF9};
 // The game's two allocators (docs/research/pendientes/p8-heap-inyeccion.md). Every one of the
@@ -68,20 +68,20 @@ inline constexpr uint8_t kQueuePushHead[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48,
 //              of the thread that created it) behind the CRITICAL_SECTION exe+0x6C169C8. NEVER called
 //              by the mod any more.
 //   0x47EF9B0  the calling thread's own heap ([TLS+0x90], initialised on demand by 0x48953C4).
-inline constexpr uintptr_t kAllocGlobal = 0x4B01B48;  // (size, align) -> void*; global heap with a lock
+inline constexpr uintptr_t kAllocGlobal = 0x4B7E188;  // (size, align) -> void*; global heap with a lock
 inline constexpr uint8_t kAllocGlobalHead[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x57, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B,
                                                0xF9, 0x48, 0x8B, 0xDA};
-inline constexpr uintptr_t kAllocThread = 0x4B01A80;  // (size, align) -> void*; the thread's own heap
+inline constexpr uintptr_t kAllocThread = 0x4B7E0C0;  // (size, align) -> void*; the thread's own heap
 // The whole function (0x47EF9B0..0x47EFA0C, 92 bytes; unique in the file).
 inline constexpr uint8_t kAllocThreadBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74, 0x24, 0x10, 0x57, 0x48,
                                                 0x83, 0xEC, 0x20, 0x65, 0x48, 0x8B, 0x04, 0x25, 0x58, 0x00, 0x00, 0x00,
-                                                0x48, 0x8B, 0xFA, 0x44, 0x8B, 0x05, 0xAE, 0x63, 0x5D, 0x02, 0x48, 0x8B,
+                                                0x48, 0x8B, 0xFA, 0x44, 0x8B, 0x05, 0xEE, 0xDE, 0x5D, 0x02, 0x48, 0x8B,
                                                 0xF1, 0x4A, 0x8B, 0x1C, 0xC0, 0xB8, 0x98, 0x00, 0x00, 0x00, 0x80, 0x3C,
                                                 0x18, 0x00, 0x75, 0x05, 0xE8, 0xDB, 0x59, 0x0A, 0x00, 0xB9, 0x90, 0x00,
                                                 0x00, 0x00, 0x4C, 0x8B, 0xC7, 0x48, 0x8B, 0xD6, 0x48, 0x8B, 0x0C, 0x19,
                                                 0x48, 0x8B, 0x5C, 0x24, 0x30, 0x48, 0x8B, 0x74, 0x24, 0x38, 0x48, 0x83,
                                                 0xC4, 0x20, 0x5F, 0xE9, 0x3C, 0xFC, 0xFF, 0xFF};
-inline constexpr uintptr_t kTlsIndexSlot = 0x70D7E50;  // u32 _tls_index (0 in the dumps)
+inline constexpr uintptr_t kTlsIndexSlot = 0x715BFD0;  // u32 _tls_index (0 in the dumps)
 inline constexpr uint32_t kTls_UseGlobalHeap = 0x1FE;  // u8: the allocator test above (Co-op+ port 3549: 807 tests use +0x1FE; 2976: 0x1FD)
 // The server's thread park flags: ServerNet::RegisterThread 0x27751D0 (called first by ServerRunThread's
 // loop 0x27733F0) appends {u32 tid, u8* &TLS[+0x4460]} to [ServerNet+0xF8], count [+0x100] (lock +0x98).
@@ -93,12 +93,12 @@ inline constexpr uint32_t kServerThreadEntry = 0x10;
 
 // Recipient finders: vf1 (finder*, Array<NwSession*>* out). The two
 // "except one" ones are emptied in this build (segunda-sesion.md §2.3).
-inline constexpr uintptr_t kToNearExceptOneControlVtable = 0x5EEEAE0;
-inline constexpr uintptr_t kToNearExceptOneSelfVtable = 0x5EEEB00;
-inline constexpr uintptr_t kToNearVtable = 0x5EEEB20;
-inline constexpr uintptr_t kExceptOneVf1 = 0x2D05410;      // control
-inline constexpr uintptr_t kExceptOneSelfVf1 = 0x2D052E0;  // self
-inline constexpr uintptr_t kToNearVf1 = 0x2D052C0;
+inline constexpr uintptr_t kToNearExceptOneControlVtable = 0x5F686C0;
+inline constexpr uintptr_t kToNearExceptOneSelfVtable = 0x5F686A0;
+inline constexpr uintptr_t kToNearVtable = 0x5F68780;
+inline constexpr uintptr_t kExceptOneVf1 = 0x2D6C360;      // control
+inline constexpr uintptr_t kExceptOneSelfVf1 = 0x2D6C230;  // self
+inline constexpr uintptr_t kToNearVf1 = 0x2D6C210;
 inline constexpr uint8_t kExceptOneVf1Head[] = {0x40, 0x53, 0x48, 0x83, 0xEC, 0x50, 0x48, 0x8B, 0x41, 0x10, 0x48, 0x8B,
                                                 0x48, 0x68, 0x48, 0x8B, 0x99, 0xA0, 0x01, 0x00, 0x00};
 inline constexpr uint8_t kToNearVf1Head[] = {0x48, 0x8B, 0x41, 0x10, 0x48, 0x8B, 0x48, 0x68, 0x48, 0x8B, 0x89, 0xA0,
@@ -125,8 +125,8 @@ inline constexpr uint32_t kRq_Frame = 0x30;
 
 // Troc handler instances (the sniffer's table): u32 kind +0x08, u16 opcode
 // +0x0C, u8 channel +0x14, u16 flags +0x16.
-inline constexpr uintptr_t kTrocInstancesBegin = 0x6E90D10;
-inline constexpr uintptr_t kTrocInstancesEnd = 0x6EC4378;
+inline constexpr uintptr_t kTrocInstancesBegin = 0x6F14E10;
+inline constexpr uintptr_t kTrocInstancesEnd = 0x6F487B8;
 inline constexpr uint32_t kTroc_Kind = 0x08;
 inline constexpr uint32_t kTroc_Opcode = 0x0C;
 inline constexpr uint32_t kTroc_Channel = 0x14;
@@ -138,10 +138,10 @@ inline constexpr uint32_t kClientNet_Session = 0x10;   // NwVirtualSyncSession (
 inline constexpr uint32_t kClientNet_FreeC2S = 0x28;   // Q3: C->S buffers the NetworkThread frees
 inline constexpr uint32_t kClientNet_Slot4 = 0x58;     // != 0 once the client connected (1001)
 inline constexpr uint32_t kSyncSession_Epoch = 0xB0;   // new on every connection (OnConnect 0x8CAFF0)
-inline constexpr uintptr_t kSyncSessionSend = 0x161BE50;  // vf6 (this, int* res, PacketBuffer* pb) -> res
+inline constexpr uintptr_t kSyncSessionSend = 0x165CB60;  // vf6 (this, int* res, PacketBuffer* pb) -> res
 inline constexpr uint8_t kSyncSessionSendHead[] = {0x40, 0x53, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B, 0x89, 0xE0, 0x00, 0x00,
                                                    0x00, 0x48, 0x8B, 0xDA};
-inline constexpr uintptr_t kNetLoopPump = 0x3A5744;  // NetworkThread loop, each turn (<= 16 ms); r15 = ClientNet
+inline constexpr uintptr_t kNetLoopPump = 0x3A8D94;  // NetworkThread loop, each turn (<= 16 ms); r15 = ClientNet
 inline constexpr uint8_t kNetLoopPumpHead[] = {0x49, 0x8B, 0x87, 0xE0, 0x00, 0x00, 0x00, 0x48, 0x8B, 0x38, 0x48, 0x89,
                                                0x7D, 0xC7};
 // The host's own NetworkThread, same point (p8-heap-inyeccion.md): the native forwarder of C->S
@@ -156,7 +156,7 @@ inline constexpr uint8_t kNetLoopPumpAob[] = {0x49, 0x8B, 0x87, 0xE0, 0x00, 0x00
                                               0x7D, 0xC7, 0x48, 0x8B, 0x07, 0x48, 0x8B, 0xCF, 0xFF, 0x50, 0x08, 0x90,
                                               0x8B, 0x5F, 0x58, 0x48, 0x8B, 0x07, 0x48, 0x8B, 0xCF, 0xFF, 0x50, 0x10,
                                               0x85, 0xDB, 0x74};
-inline constexpr uintptr_t kClientOnRecvPacket = 0x3A66A0;  // (ClientNet*, NwSession*, -, u8* pkt, u16 size)
+inline constexpr uintptr_t kClientOnRecvPacket = 0x3A9CF0;  // (ClientNet*, NwSession*, -, u8* pkt, u16 size)
 inline constexpr uint8_t kClientOnRecvPacketHead[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74, 0x24, 0x10, 0x48, 0x89,
                                                       0x7C, 0x24};
 
@@ -164,9 +164,9 @@ inline constexpr uint8_t kClientOnRecvPacketHead[] = {0x48, 0x89, 0x5C, 0x24, 0x
 // table, which the title reads for Play/Load and only the server's
 // "refresh slots from disk" 0x1870C20 rebuilds. Checked byte for byte before
 // the guest calls it (guest.cpp, refresh_title_slots).
-inline constexpr uintptr_t kWorldSystemSlot = 0x71C0100;      // [exe+..] = WorldSystem
+inline constexpr uintptr_t kWorldSystemSlot = 0x72451C0;      // [exe+..] = WorldSystem
 inline constexpr uint32_t kWorldSystem_SaveManager = 0x88;     // the save manager the title reads
-inline constexpr uintptr_t kServerActorLookupSlot = 0x71C0608;  // [exe+..]; +0x48 = the server's save manager
+inline constexpr uintptr_t kServerActorLookupSlot = 0x72456D0;  // [exe+..]; +0x48 = the server's save manager
 inline constexpr uint32_t kServerActorLookup_SaveManager = 0x48;
 // The save manager (ctor .xtls 0xCBD2920, one construction site 0xACDA95).
 inline constexpr uint32_t kSaveMgr_Lock = 0x00;     // pa::WindowsLock<3>* (= this + 8)
@@ -178,38 +178,38 @@ inline constexpr uint32_t kSaveMgr_Storage = 0x50;  // SaveStorage*; +0x38 slot 
 inline constexpr uint32_t kSaveMgr_Busy = 0x60;     // u8: a refresh/login holds the table
 inline constexpr uint32_t kSaveMgr_EntrySize = 0x68;
 inline constexpr uint32_t kSaveStorage_FolderCount = 0x40;
-inline constexpr uintptr_t kWindowsLock3Vtable = 0x590AE88;  // vf1 -> EnterCriticalSection, vf2 -> Leave
-inline constexpr uintptr_t kWindowsLockVf1 = 0x1553E30;      // mov rax,[rcx]; jmp [rax+0x18]
-inline constexpr uintptr_t kWindowsLockVf2 = 0xDF0590;       // mov rax,[rcx]; jmp [rax+0x20]
+inline constexpr uintptr_t kWindowsLock3Vtable = 0x59874C8;  // vf1 -> EnterCriticalSection, vf2 -> Leave
+inline constexpr uintptr_t kWindowsLockVf1 = 0x1593240;      // mov rax,[rcx]; jmp [rax+0x18]
+inline constexpr uintptr_t kWindowsLockVf2 = 0xE297F0;       // mov rax,[rcx]; jmp [rax+0x20]
 inline constexpr uint8_t kWindowsLockVf1Head[] = {0x48, 0x8B, 0x01, 0x48, 0xFF, 0x60, 0x18};
 inline constexpr uint8_t kWindowsLockVf2Head[] = {0x48, 0x8B, 0x01, 0x48, 0xFF, 0x60, 0x20};
 // 0x1870C20: jmp .xtls 0xCBD92D0 (refresh the slot table from the slot folders).
-inline constexpr uintptr_t kSaveMgrRefreshSlots = 0x19B2CC0;
-inline constexpr uint8_t kSaveMgrRefreshSlotsHead[] = {0xE9, 0x4B, 0x87, 0xEF, 0x09};
+inline constexpr uintptr_t kSaveMgrRefreshSlots = 0x1A18320;
+inline constexpr uint8_t kSaveMgrRefreshSlotsHead[] = {0xE9, 0x9B, 0x48, 0x0F, 0x0A};
 // SaveDataSlotRefreshReq 0x2A22380, +0xF5..+0x172: the native sequence the
 // guest copies (gestor = [[0x6D69698]+0x48]; lock vf1; test/set +0x60;
 // vf2; call 0x1870C20; lock vf1; +0x60 = 0; vf2), without its Ack 0x2A206E0.
-inline constexpr uintptr_t kSlotRefreshReqSequence = 0x2CACA2B;
-inline constexpr uint8_t kSlotRefreshReqSequenceBytes[] = {0x48, 0x8B, 0x05, 0xD6, 0x3B, 0x51, 0x04, 0x4C, 0x8B, 0x78, 0x48, 0x4C,
+inline constexpr uintptr_t kSlotRefreshReqSequence = 0x2D134AB;
+inline constexpr uint8_t kSlotRefreshReqSequenceBytes[] = {0x48, 0x8B, 0x05, 0x1E, 0x22, 0x53, 0x04, 0x4C, 0x8B, 0x78, 0x48, 0x4C,
                                                            0x89, 0x7D, 0x07, 0x45, 0x32, 0xF6, 0x44, 0x88, 0x75, 0x0F, 0x49, 0x8B,
                                                            0x1F, 0x48, 0x89, 0x5D, 0x77, 0x48, 0x8B, 0x03, 0x48, 0x8B, 0xCB, 0xFF,
                                                            0x50, 0x08, 0x90, 0x45, 0x38, 0x77, 0x60, 0x75, 0x0C, 0x41, 0xC6, 0x47,
                                                            0x60, 0x01, 0x41, 0xB6, 0x01, 0x44, 0x88, 0x75, 0x0F, 0x48, 0x8B, 0x03,
                                                            0x48, 0x8B, 0xCB, 0xFF, 0x50, 0x10, 0x90, 0x45, 0x84, 0xF6, 0x75, 0x05,
-                                                           0xE9, 0x91, 0x00, 0x00, 0x00, 0x48, 0x8B, 0x0D, 0x89, 0x3B, 0x51, 0x04,
-                                                           0x48, 0x8B, 0x49, 0x48, 0xE8, 0x38, 0x62, 0xD0, 0xFE, 0x90, 0x49, 0x8B,
+                                                           0xE9, 0x91, 0x00, 0x00, 0x00, 0x48, 0x8B, 0x0D, 0xD1, 0x21, 0x53, 0x04,
+                                                           0x48, 0x8B, 0x49, 0x48, 0xE8, 0x18, 0x4E, 0xD0, 0xFE, 0x90, 0x49, 0x8B,
                                                            0x1F, 0x48, 0x89, 0x5D, 0x77, 0x48, 0x8B, 0x03, 0x48, 0x8B, 0xCB, 0xFF,
                                                            0x50, 0x08, 0x90, 0x41, 0xC6, 0x47, 0x60, 0x00, 0x48, 0x8B, 0x03, 0x48,
                                                            0x8B, 0xCB, 0xFF, 0x50, 0x10};  // call [rax+0x10] (unlock)
 // The title's own read of the table (2976: Play 0x65DB90, mov r11,[exe+0x6D69190]; mov rax,[r11+0x88] at +0xAE).
 // Co-op+ port (3549): the same read in 0x72B350 at +0xA8, mov rcx,[WorldSystem]; mov rcx,[rcx+0x88], then a call
 // into the save manager (0x19B2E80, beside the refresh thunk 0x19B2080). The check only needs [WorldSystem+0x88].
-inline constexpr uintptr_t kTitlePlayReadsSaveMgr = 0x72BA58;
-inline constexpr uint8_t kTitlePlayReadsSaveMgrBytes[] = {0x48, 0x8B, 0x0D, 0xA1, 0x46, 0xA9, 0x06,
+inline constexpr uintptr_t kTitlePlayReadsSaveMgr = 0x757F98;
+inline constexpr uint8_t kTitlePlayReadsSaveMgrBytes[] = {0x48, 0x8B, 0x0D, 0x21, 0xD2, 0xAE, 0x06,
                                                           0x48, 0x8B, 0x89, 0x88, 0x00, 0x00, 0x00};
 
 inline constexpr uintptr_t kImageBase = 0x140000000;
-inline constexpr uint32_t kPeTimestamp = 0x6AED2E85;  // Co-op+ port: 1.0.0.3576 (3549: 0x6AEB7D59; 2976: 0x6AB28F00)
+inline constexpr uint32_t kPeTimestamp = 0x6AF5D198;  /* 1.0.0.3663 (3576: 0x6AED2E85) */  // Co-op+ port: 1.0.0.3576 (3549: 0x6AEB7D59; 2976: 0x6AB28F00)
 inline constexpr uint32_t kPeTimestampUnported = 0x6AB28F00;  // modules not ported yet
 
 }  // namespace cdmp::session2::off

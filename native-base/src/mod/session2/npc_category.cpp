@@ -28,9 +28,9 @@ namespace off = game::build_2976;
 // The category getter 0x1C358E0(table, NPC key) -> u8 (0 also when the NPC has no entry). Its callers: the condition
 // CheckQuestDialogCategory (0x24752E0) AND the quest-dialog search of HasQuestDialog (0x1C35970 -> 0x1C34B00), which
 // stops at a category 0 before it looks at the player's own dialogs (tcB86: the Greet's "Hello" search).
-constexpr uintptr_t kGetter = 0x1C358E0;
+constexpr uintptr_t kGetter = 0x1C99810;
 constexpr uint8_t kGetterHead[9] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x83, 0x79, 0x6C, 0x00};
-constexpr uintptr_t kLocalUserRoot = 0x71C0100;  // [[[root]+0x30]+0x58] = the local user, its +0x50 the character
+constexpr uintptr_t kLocalUserRoot = 0x72451C0;  // [[[root]+0x30]+0x58] = the local user, its +0x50 the character
 constexpr uint64_t kSendEveryMs = 5000, kGuestStaleMs = 15000, kReadEveryMs = 1000;
 
 bool g_on = false, g_guest = false;
@@ -44,7 +44,7 @@ SafetyHookInline g_hook;
 // sets the category for the player whose client controls it (the host) only. Host: at the builder's entry for user 2's
 // table, an EXISTING record of user 2 whose effective category is 0 gets the host's category in its AI byte (+0x19 of
 // the entry, the byte the getter prefers when < 6). [session2] npc_dialog_share = 1 (default 0 until proven).
-constexpr uintptr_t kBuilder = 0x2B72670;
+constexpr uintptr_t kBuilder = 0x2BD86B0;
 constexpr uint8_t kBuilderHead[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74, 0x24, 0x10,
                                     0x48, 0x89, 0x7C, 0x24, 0x20, 0x55};
 SafetyHookMid g_builder;
@@ -82,13 +82,13 @@ uintptr_t table_of(uintptr_t actor) {
     return table_of_main(main);
 }
 
-// 0x1C358E0's lookup: buckets +0x68, count +0x6C, bucket array +0x78 (0x100 bytes each: u32 n, then n pairs
+// 0x1C358E0's lookup (3663: every offset of this line is 0x18 lower): buckets +0x68, count +0x6C, bucket array +0x78 (0x100 bytes each: u32 n, then n pairs
 // {u32 key, u32 index} from +8), entries [[+0x80] + index*8] (+4 key, category +0x18 / +0x19).
 bool lookup(uintptr_t tab, uint32_t key, uint8_t& cat) {
     uint32_t buckets = 0, count = 0;
     uintptr_t bk = 0, ents = 0;
-    if (!rd(tab + 0x68, buckets) || !rd(tab + 0x6C, count) || !buckets || !count || !rd(tab + 0x78, bk) ||
-        !rd(tab + 0x80, ents) || !bk || !ents)
+    if (!rd(tab + 0x50, buckets) || !rd(tab + 0x54, count) || !buckets || !count || !rd(tab + 0x60, bk) ||  /* 3663: -0x18 */
+        !rd(tab + 0x68, ents) || !bk || !ents)
         return false;
     const uintptr_t b = bk + static_cast<uintptr_t>(key % buckets) * 0x100;
     uint32_t n = 0;
@@ -124,8 +124,8 @@ bool host_category(uint32_t key, uint8_t& cat, uint64_t now) {
 uintptr_t entry_of(uintptr_t tab, uint32_t key) {
     uint32_t buckets = 0, count = 0;
     uintptr_t bk = 0, ents = 0;
-    if (!rd(tab + 0x68, buckets) || !rd(tab + 0x6C, count) || !buckets || !count || !rd(tab + 0x78, bk) ||
-        !rd(tab + 0x80, ents) || !bk || !ents)
+    if (!rd(tab + 0x50, buckets) || !rd(tab + 0x54, count) || !buckets || !count || !rd(tab + 0x60, bk) ||  /* 3663: -0x18 */
+        !rd(tab + 0x68, ents) || !bk || !ents)
         return 0;
     const uintptr_t b = bk + static_cast<uintptr_t>(key % buckets) * 0x100;
     uint32_t n = 0;
@@ -219,7 +219,7 @@ std::vector<ncl::Entry> read_local_table() {
     const uintptr_t tab = local_table();
     uint32_t count = 0;
     uintptr_t ents = 0;
-    if (!tab || !rd(tab + 0x6C, count) || !rd(tab + 0x80, ents) || !ents) return out;
+    if (!tab || !rd(tab + 0x54, count) || !rd(tab + 0x68, ents) || !ents) return out;  /* 3663: -0x18 */
     if (count > ncl::kMaxEntries) count = ncl::kMaxEntries;
     out.reserve(count);
     for (uint32_t i = 0; i < count; ++i) {

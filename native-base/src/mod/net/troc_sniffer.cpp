@@ -172,7 +172,7 @@ void interaction_line(Dir dir, const uint8_t* pkt, uint16_t size) {
     uint16_t op = 0;
     if (!guarded_copy(&op, pkt, 2)) return;
     switch (op) {
-        case 3008: case 3073: case 2887: case 2120: case 3100: case 2794: case 2980: case 2369: break;
+        case 2642: case 2304: case 2751: case 2308: case 2946: case 2363: case 2160: case 2930: break;
         default: return;
     }
     if (g_ia_lines.fetch_add(1, std::memory_order_relaxed) >= 400) return;
@@ -302,11 +302,11 @@ void on_post_packet(safetyhook::Context& ctx) {
         // log lines a second for hours (ff7: 654 lines in 9 minutes). Those: the first 10, then every 1000th; a
         // failure always.
         static std::atomic<uint64_t> own_3111{0};
-        const uint64_t nth = pop == 3111 ? own_3111.fetch_add(1) + 1 : 0;
-        if (!ok || pop != 3111 || nth <= 10 || nth % 1000 == 0)
+        const uint64_t nth = pop == 3104 ? own_3111.fetch_add(1) + 1 : 0;
+        if (!ok || pop != 3104 || nth <= 10 || nth % 1000 == 0)
             log::info("Inject C>S: opcode {} ({} bytes, channel {}, flags 0x{:X}) {}{}", pop, pkt.size(),
                       a & 0xFF, (a >> 8) & 0xFFFF, ok ? "posted" : "EXCEPTION",
-                      pop == 3111 && nth >= 10 ? std::format(" ({} of these so far; logged every 1000th from now)", nth) : "");
+                      pop == 3104 && nth >= 10 ? std::format(" ({} of these so far; logged every 1000th from now)", nth) : "");
         if (!ok) g_post_fn = nullptr;
     }
 }

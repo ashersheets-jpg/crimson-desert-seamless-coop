@@ -120,7 +120,7 @@ struct Script {
 // u8 kind @0 | u32 actor @1 | the play data, packed, from @5: owner u32 @5, sequencer id u64 @9, type u8 @17, u8 @18,
 // u64 @19, the resource's file-name hash u32 @27, ... up to @91; then 11-byte bindings {u32 node, u32 actor, u8 type,
 // 2 x u8}.
-inline constexpr uint16_t kOpPrepareSequencerAck = 2380;
+inline constexpr uint16_t kOpPrepareSequencerAck = 2356;
 inline constexpr size_t kPrepareBindings = 92, kPrepareBindingSize = 11;  // Co-op+ 3576: 92 (2976: 91)
 struct Prepare2661 {
     struct Binding {

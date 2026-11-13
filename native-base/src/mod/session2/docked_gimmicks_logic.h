@@ -71,9 +71,9 @@ inline const char* mode_name(Mode m) {
 
 inline constexpr size_t kHeader = 5;  // u16 opcode | u8 slot | u16 payload length
 inline constexpr uint16_t kOpActorLoad = 2005;           // ActorLoadDataAck: [u16 len][record] ...
-inline constexpr uint16_t kOpMainPlayerDataStart = 2524;  // u32 at +0: this client's own character
-inline constexpr uint16_t kOpSceneUnspawnReq = 2596;     // SceneLevelOnDemandGimmickUnspawnReq: u8 4 | u32 n | n keys
-inline constexpr uint16_t kOpSceneSpawnReq = 2976;       // SceneLevelOnDemandGimmickSpawnReq
+inline constexpr uint16_t kOpMainPlayerDataStart = 2844;  // u32 at +0: this client's own character
+inline constexpr uint16_t kOpSceneUnspawnReq = 2738;     // SceneLevelOnDemandGimmickUnspawnReq: u8 4 | u32 n | n keys
+inline constexpr uint16_t kOpSceneSpawnReq = 2772;       // SceneLevelOnDemandGimmickSpawnReq
 // The state requests keyed by the gimmick at +0 that the guest withholds for its local-only keys
 // (gimmicks-dueno.md section 6.1, from the server's handlers in build 2976):
 //   3082 GimmickExecuteFrameEventReq   0x2AC1270: ignored unless the requester controls the gimmick
@@ -87,7 +87,7 @@ inline constexpr uint16_t kOpSceneSpawnReq = 2976;       // SceneLevelOnDemandGi
 //                                      so that it keeps coming from the controller only
 // So for 3082 / 2758 / 2609 withholding changes nothing on the server; for 2774 / 3089 / 2779 / 2826 / 2618 it keeps the
 // host (the controller) the only writer.
-inline constexpr uint16_t kWithheldOps[] = {2155, 2787, 2165, 2251, 2381, 3154, 2881, 2849};
+inline constexpr uint16_t kWithheldOps[] = {2996, 3134, 2806, 2662, 2303, 2904, 2325, 3119};
 inline constexpr size_t kWithheldOpCount = sizeof(kWithheldOps) / sizeof(kWithheldOps[0]);
 inline int withheld_op_index(uint16_t op) {
     for (size_t i = 0; i < kWithheldOpCount; ++i) {
@@ -672,7 +672,7 @@ inline const char* age_bucket_name(size_t b) {
 // The requests whose +0 key counts as "this user's client still has the gimmick" for the 2221 probe.
 inline bool touch_op(uint16_t op) {
     switch (op) {
-        case 2833: case 2852: case 2539: case 2787: case 2155: case 2165: case 2251: case 2381: return true;
+        case 2790: case 2296: case 3140: case 3134: case 2996: case 2806: case 2662: case 2303: return true;
         default: return false;
     }
 }
@@ -691,7 +691,7 @@ inline size_t unspawn_keys(std::span<const uint8_t> pl, uint32_t* out, size_t ma
     return k;
 }
 // RemoveActorAck 2516: u8 4 | u32 | u8 reason | u32 key (+6), more keys after it in a longer one (S27: 10 bytes).
-inline constexpr uint16_t kOpRemoveActor = 3067;
+inline constexpr uint16_t kOpRemoveActor = 3037;
 inline size_t removed_keys(std::span<const uint8_t> pl, uint32_t* out, size_t max_keys) {
     size_t k = 0;
     for (size_t i = 6; i + 4 <= pl.size() && k < max_keys; i += 4) out[k++] = le32(&pl[i]);
@@ -737,18 +737,18 @@ inline constexpr uintptr_t kDockEquipCallSite = 0x2970ADF;
 // The controller's write in ICreateServerActorDesc::vf3 0x2791CD0: mov [r14+0x90],eax (one 7-byte instruction;
 // r14 the new actor, r13 the field, eax the controller: the field owner [r13+0x180] unless the descriptor or an
 // owner user said otherwise), then mov rax,[rsi] | mov r9,r14 | mov r8,r13 | lea rdx,[rbp+0x67].
-inline constexpr uintptr_t kControllerWrite = 0x29CCBB1;  // 3576 (2976 0x2792A7B): ICreateServerActorDesc vf3 0x29CBEE0, same bytes and registers
+inline constexpr uintptr_t kControllerWrite = 0x2A2F43B;  // 3663: ICreateServerActorDesc vf3 0x2A2E6C0; THE FIELD IS IN RDI (2976 / 3576: r13), mov r8,rdi | lea rdx,[rbp+0x60]
 inline constexpr uint8_t kControllerWriteBytes[20] = {0x41, 0x89, 0x86, 0x90, 0x00, 0x00, 0x00, 0x48, 0x8B, 0x06,
-                                                      0x4D, 0x8B, 0xCE, 0x4D, 0x8B, 0xC5, 0x48, 0x8D, 0x55, 0x67};
+                                                      0x4D, 0x8B, 0xCE, 0x4C, 0x8B, 0xC7, 0x48, 0x8D, 0x55, 0x60};
 inline constexpr uint32_t kControllerWritePatch = 7;
 // The block's head (unique in the exe, control-npc-lejos.md §1.1): mov eax,[r14+0x90] | test eax,eax | jne 0x2792A7B |
 // mov rax,[rsi+0x40] | test.. : r14 = the actor, rsi = the descriptor (callee-saved across 0x389570 / 0x4A2010).
-inline constexpr uintptr_t kControllerBlock = 0x29CCB4C;  // 3576 (2976 0x2792A11)
+inline constexpr uintptr_t kControllerBlock = 0x2A2F3D2;  // 3576 (2976 0x2792A11)
 inline constexpr uint8_t kControllerBlockBytes[16] = {0x41, 0x8B, 0x86, 0x90, 0x00, 0x00, 0x00, 0x85,
-                                                      0xC0, 0x75, 0x5A, 0x48, 0x8B, 0x46, 0x40, 0x48};  // 3576: jne +0x5A
+                                                      0xC0, 0x75, 0x5E, 0x48, 0x8B, 0x46, 0x40, 0x48};  // 3576: jne +0x5A
 // Its "from the field owner" read just before: mov eax,[r13+0x180] | test eax,eax | je 0x2792A82.
-inline constexpr uintptr_t kFieldOwnerRead = 0x29CCBA6;  // 3576 (2976 0x2792A70)
-inline constexpr uint8_t kFieldOwnerReadBytes[11] = {0x41, 0x8B, 0x85, 0x80, 0x01, 0x00, 0x00, 0x85, 0xC0, 0x74, 0x07};
+inline constexpr uintptr_t kFieldOwnerRead = 0x2A2F431;  // 3576 (2976 0x2792A70)
+inline constexpr uint8_t kFieldOwnerReadBytes[10] = {0x8B, 0x87, 0x80, 0x01, 0x00, 0x00, 0x85, 0xC0, 0x74, 0x07};  /* 3663: mov eax,[rdi+0x180] (no REX: 10 bytes; 3576 mov eax,[r13+0x180], 11) */
 inline constexpr uint32_t kField_Owner = 0x180;
 // The server's gimmick logic: ExecuteFrameEvent 0x2AC1270 (comp, requester user actor, event*, u16*), void; and
 // Update 0x2AC0790 (comp, int* err, requester, data*). Both: accepted only when [[comp+8]+0x90] ==

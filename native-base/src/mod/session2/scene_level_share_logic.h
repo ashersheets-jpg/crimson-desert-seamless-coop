@@ -59,9 +59,9 @@ inline const char* mode_name(Mode m) {
 // callers at the same offsets: the 2449 SceneLevelUnloadReq handler 0x2C43250, the owner load 0x2A7CE10, the
 // field loader's unload event 0x2AD1100), the same registry map; the handler's frame keeps rbp = C + 0x110, but
 // &name is C + 0x150 and the hash C + 0xE8 (lea rdx,[rbp+0x40] ; mov r8d,[rbp-0x28]).
-inline constexpr uint32_t kPeTimestamp = 0x6AED2E85;  // 1.0.0.3576 (3549: 0x6AEB7D59)
+inline constexpr uint32_t kPeTimestamp = 0x6AF5D198;  /* 1.0.0.3663 (3576: 0x6AED2E85) */  // 1.0.0.3576 (3549: 0x6AEB7D59)
 inline constexpr uintptr_t kImageBase = 0x140000000;
-inline constexpr uint32_t kVtServerField = 0x5EF2B10;  // 3549 (2976 0x5B29A60)  // pa::ServerField (as user2_stages_logic.h)
+inline constexpr uint32_t kVtServerField = 0x5F6C7E8;  // 3549 (2976 0x5B29A60)  // pa::ServerField (as user2_stages_logic.h)
 inline constexpr uintptr_t kMgrField = 0x210;          // registry -> its ServerField
 inline constexpr uintptr_t kFieldOwner = 0x180;        // ServerField -> the owner's user key
 inline constexpr uintptr_t kActorKey = 0x60;           // actor -> its key
@@ -73,15 +73,15 @@ inline constexpr uint32_t kWatchedHash = 0xDE7B52AA;
 // takes the 7-byte cmp (no RIP-relative operand; no branch of the function lands inside it). Context there:
 // r13 = rcx = the registry (mgr), rdx = the actor, r8 = [mgr+0x210] = the field, eax = [[actor+0xA0]+0x60] (its user
 // key), rdi = r9 = &name (the string object's holder).
-inline constexpr uint32_t kGateFnBegin = 0x2A77DD0, kGateFnEnd = 0x2A782AD;
-inline constexpr uint32_t kGateRva = 0x2A77E1D, kGatePatch = 7;
-inline constexpr uint32_t kGateSigRva = 0x2A77E02;
+inline constexpr uint32_t kGateFnBegin = 0x2ADBE00, kGateFnEnd = 0x2ADC2DD;
+inline constexpr uint32_t kGateRva = 0x2ADBE4D, kGatePatch = 7;
+inline constexpr uint32_t kGateSigRva = 0x2ADBE32;
 inline constexpr std::array<uint8_t, 40> kGateSig{0x48, 0x8B, 0x82, 0xA0, 0x00, 0x00, 0x00, 0x48, 0x85, 0xC0, 0x0F, 0x84, 0x80, 0x04, 0x00, 0x00, 0x8B, 0x40, 0x60, 0x85, 0xC0, 0x0F, 0x84, 0x75, 0x04, 0x00, 0x00, 0x41, 0x39, 0x80, 0x80, 0x01, 0x00, 0x00, 0x0F, 0x85, 0x68, 0x04, 0x00, 0x00};
 inline constexpr size_t kGateSigPatchAt = kGateRva - kGateSigRva;  // 27: the cmp inside the signature
 
 // B: the delete 0x2829E60(mgr, &name, &type, char, u8, u8, u8) -> void (.pdata [0x2829E60, 0x282A9CA)). Its first
 // instruction `mov [rsp+0x20],r9b` is exactly 5 bytes (the inline hook's jump).
-inline constexpr uint32_t kDeleteRva = 0x2A71660, kDeleteEnd = 0x2A72212, kDeletePatch = 5;
+inline constexpr uint32_t kDeleteRva = 0x2AD51C0, kDeleteEnd = 0x2AD5D33 /* 3663: the function is 0x2AD51C0..0x2AD5D33 */, kDeletePatch = 5;
 inline constexpr std::array<uint8_t, 16> kDeleteHead{0x44, 0x88, 0x4C, 0x24, 0x20, 0x4C, 0x89, 0x44,
                                                      0x24, 0x18, 0x48, 0x89, 0x54, 0x24, 0x10, 0x55};
 inline bool delete_patch_ok(std::span<const uint8_t> relocated) {
@@ -89,20 +89,20 @@ inline bool delete_patch_ok(std::span<const uint8_t> relocated) {
 }
 
 // The direct callers of 0x2829E60 (E8 rel32 in .rsrc; the returns are what the hook sees).
-inline constexpr uint32_t kRet2834 = 0x2C441CF;  // 3549: the 2449 handler 0x2C43250's call 0x2C4355A       // 0x29C3044: SceneLevelUnloadReq 2834's handler 0x29C2D50
-inline constexpr uint32_t kRetOwnerLoad = 0x2A7DCC4;  // 3549: 0x2A7CE10's call 0x2A7D06F  // 0x28363CF: 0x2836110 (every ready entry; owner load, DL != 0)
-inline constexpr uint32_t kRetLoader = 0x2AD1D90;  // 3549: 0x2AD1100's call 0x2AD113B     // 0x287645B: 0x2876420, the field loader's unload event
+inline constexpr uint32_t kRet2834 = 0x2CAA04F;  // 3549: the 2449 handler 0x2C43250's call 0x2C4355A       // 0x29C3044: SceneLevelUnloadReq 2834's handler 0x29C2D50
+inline constexpr uint32_t kRetOwnerLoad = 0x2AE1D14;  // 3549: 0x2A7CE10's call 0x2A7D06F  // 0x28363CF: 0x2836110 (every ready entry; owner load, DL != 0)
+inline constexpr uint32_t kRetLoader = 0x2B36240;  // 3549: 0x2AD1100's call 0x2AD113B     // 0x287645B: 0x2876420, the field loader's unload event
 // 0x2877145 (type 1), 0x281CADC (type 3), 0x2A9E728 (type 2): never changed.
 
 // The 2834 handler's frame at its call (0x29C2D50: 7 pushes, lea rbp,[rsp-0x60], sub rsp,0x170, so rbp = C + 0x110
 // with C the rsp at the call = the hook's address of the return address + 8). Its arguments and the packet's hash:
 //   0x29C2FF7 mov r8d,[rbp-0x38]   the packet's u32 hash (C + 0xD8), kept in the frame (only read up to the call)
 //   0x29C3036 mov r9b,1 ; lea r8,[rbp-0x78] (C + 0x98 = &type) ; lea rdx,[rbp+0x30] (C + 0x140 = &name) ; call
-inline constexpr uint32_t kFrameSiteRva = 0x2C43ED0;
-inline constexpr std::array<uint8_t, 12> kFrameSite{0x48, 0x8D, 0x6C, 0x24, 0x90, 0x48, 0x81, 0xEC, 0x80, 0x01, 0x00, 0x00};
-inline constexpr uint32_t kCallSiteRva = 0x2C4417D;
+inline constexpr uint32_t kFrameSiteRva = 0x2CA9D50;
+inline constexpr std::array<uint8_t, 12> kFrameSite{0x48, 0x8D, 0x6C, 0x24, 0xA0, 0x48, 0x81, 0xEC, 0x70, 0x01, 0x00, 0x00};
+inline constexpr uint32_t kCallSiteRva = 0x2CA9FFD;
 inline constexpr std::array<uint8_t, 82> kCallSite{0x44, 0x8B, 0x45, 0xD8, 0x48, 0x8D, 0x55, 0x38, 0x48, 0x8B, 0x8B, 0x10, 0x02, 0x00, 0x00, 0xE8, 0x4F, 0x63, 0x66, 0xFF, 0x90, 0x83, 0x7D, 0x38, 0x00, 0x74, 0x3A, 0x48, 0x8B, 0x45, 0x40, 0x48, 0x8B, 0x10, 0x48, 0x85, 0xD2, 0x74, 0x2E, 0x80, 0x3A, 0x00, 0x74, 0x29, 0x44, 0x88, 0x75, 0x88, 0x40, 0x88, 0x74, 0x24, 0x30, 0xC6, 0x44, 0x24, 0x28, 0x00, 0xC6, 0x44, 0x24, 0x20, 0x00, 0x41, 0xB1, 0x01, 0x4C, 0x8D, 0x45, 0x88, 0x48, 0x8D, 0x55, 0x40, 0x48, 0x8B, 0xCB, 0xE8, 0xB1, 0xD4, 0xE2, 0xFF};
-inline constexpr uintptr_t kFrameName = 0x150, kFrameType = 0x98, kFrameHash = 0xE8;  // 3549 (2976 0x140, 0x98, 0xD8)
+inline constexpr uintptr_t kFrameName = 0x138, kFrameType = 0x98, kFrameHash = 0xE8;  // 3663: the name is at [rbp+0x28] (3576 [rbp+0x40] = 0x150; 2976 0x140, 0x98, 0xD8); rbp = C + 0x110 as before
 // The frame is the 2834 handler's exactly when the call's own arguments sit where its code puts them.
 inline bool frame_matches(uintptr_t frame, uintptr_t name_arg, uintptr_t type_arg) {
     return frame && name_arg == frame + kFrameName && type_arg == frame + kFrameType;
@@ -122,10 +122,10 @@ inline constexpr size_t kNameMax = 255;
 
 // ---------------------------------------------------------------- packets (C->S, payload after the 5-byte header)
 
-inline constexpr uint16_t kOpLoad = 2713;     // SceneLevelLoadCompleteSyncSceneObjectListReq: u32 != 0, u32 hash != 0
-inline constexpr uint16_t kOpUnload = 2449;   // SceneLevelUnloadReq: u32 != 0, u8 type 0..3, u32 hash != 0, u8 flag
-inline constexpr uint16_t kOpResync = 2319;   // ResyncSyncSceneObjectDataForReloadReq: u8, then u32 hashes
-inline constexpr uint16_t kOpReloadStage = 3074, kOpRevive = 2390, kOpGameLoading = 2294, kOpLogout = 2001;
+inline constexpr uint16_t kOpLoad = 2720;     // SceneLevelLoadCompleteSyncSceneObjectListReq: u32 != 0, u32 hash != 0
+inline constexpr uint16_t kOpUnload = 2948;   // SceneLevelUnloadReq: u32 != 0, u8 type 0..3, u32 hash != 0, u8 flag
+inline constexpr uint16_t kOpResync = 2623;   // ResyncSyncSceneObjectDataForReloadReq: u8, then u32 hashes
+inline constexpr uint16_t kOpReloadStage = 3018, kOpRevive = 2887, kOpGameLoading = 2350, kOpLogout = 2001;
 inline constexpr size_t kHeader = 5;  // u16 opcode, u8, u16 payload size
 
 enum class Kind : uint8_t { None, Bad, Load, Unload, Resync, Flush };

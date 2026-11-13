@@ -14,6 +14,7 @@
 #include <windows.h>
 #include <atomic>
 #include <cstdint>
+#include "mod/game/info_row.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
 #include "mod/session2/server.h"
@@ -21,7 +22,7 @@
 namespace cdmp::session2 {
 namespace {
 
-constexpr uintptr_t kFieldInfoGetter = 0x555DE0;  // (TS, u16 index) -> record; FieldInfoKey = u32 [record+8]
+constexpr uintptr_t kFieldInfoGetter = 0x57B290;  // 3663: (const u16* index) -> record; FieldInfoKey = u32 [record+8]
 constexpr uintptr_t kUserMainCharacter = 0xD0, kActorComponents = 0x68, kComponentsTransformSync = 0x1A0,
                     kTsFieldIndex = 0x28, kRecordFieldInfoKey = 0x08;
 
@@ -33,8 +34,9 @@ std::atomic<bool> g_said{false};
 uint32_t ask(uintptr_t ts, uint16_t index) noexcept {
     __try {
         const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-        const auto fn = reinterpret_cast<uintptr_t(__fastcall*)(uintptr_t, uint16_t)>(base + kFieldInfoGetter);
-        const uintptr_t rec = fn(ts, index);
+        // 3663: the getter takes a pointer to the index and never answers null (game/info_row.h)
+        (void)ts;
+        const uintptr_t rec = game::info_row(base + kFieldInfoGetter, index);
         if (!rec) return 0;
         return *reinterpret_cast<uint32_t*>(rec + kRecordFieldInfoKey);
     } __except (EXCEPTION_EXECUTE_HANDLER) {

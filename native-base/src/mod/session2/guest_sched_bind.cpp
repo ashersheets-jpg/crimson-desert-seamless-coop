@@ -78,11 +78,11 @@ constexpr uint16_t kStateLoggedIn = 0x10;
 constexpr uint32_t kComps_Ctrl = 0x30, kComps_Ai = 0x58, kComps_Seq = 0xA8, kComps_Play = 0xB0, kSeqComp_Mgr = 0x18;
 constexpr uint32_t kAi_X1 = 0x90, kX1_Handle = 0x08, kX1_Mode = 0x66;
 constexpr uint32_t kComp_Actor = 0x08, kComp_Owner = 0x2D8, kComp_Key = 0x2E0, kComp_Stage = 0x318;
-constexpr uint32_t kMgr_Sched = 0x170 /* 3576 (2976 0x148) */, kSched_Vec = 0x18, kSched_Count = 0x20;
+constexpr uint32_t kMgr_Sched = 0x178 /* 3663; 3576 (2976 0x148) */, kSched_Vec = 0x18, kSched_Count = 0x20;
 constexpr uint32_t kStage_Mgr = 0x28, kStage_Key = 0x30, kStage_Active = 0x180 /* 3576 (2976 0x178) */, kStage_Nodes = 0x140 /* 3576 (2976 0x138) */,
                    kStage_NodeCount = 0x148 /* 3576 (2976 0x140) */, kNodeStride = 0x188 /* 3576 (2976 0x168) */, kNode_Npc = 0x28;
 constexpr uint32_t kManager_Table = 0x08;
-constexpr uint32_t kMgr_State = 0x259;  // Co-op+ port 3549 (2976 0x231)  // a manager's load state (3 = loaded; guest_seq_play's M+0x231 gate)
+constexpr uint32_t kMgr_State = 0x261; /* 3663 (3576 0x259) */  // Co-op+ port 3549 (2976 0x231)  // a manager's load state (3 = loaded; guest_seq_play's M+0x231 gate)
 constexpr uint8_t kTypeCharacter = 7;  // [[actor+0x88]+1] == 7: 0x9F2FA0's path A (0x9F2FDC)
 
 uintptr_t g_base = 0;

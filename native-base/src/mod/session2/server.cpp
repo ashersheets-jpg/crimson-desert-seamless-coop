@@ -132,14 +132,14 @@ troc::PacketQueue g_outgoing(kMaxOutgoingBytes);
 // The save slot the host's own client loaded (its LoginCharacterToFieldServerReq):
 // the E3 script loads the same one for user 2. -1 = not seen yet.
 std::atomic<int64_t> g_host_slot{-1};
-constexpr uint16_t kOpLoginCharacterToFieldServerReq = 2733;
-constexpr uint16_t kOpLoginUserToFieldServerReq = 2535;
+constexpr uint16_t kOpLoginCharacterToFieldServerReq = 3081;
+constexpr uint16_t kOpLoginUserToFieldServerReq = 2554;
 
 // E4 mirror. Opcodes of build 2976 (checked against the handler table at install).
-constexpr uint16_t kOpMoveActorReq = 2833, kOpStartActionReq = 2202, kOpRotateActorReq = 2852;
-constexpr uint16_t kOpMainPlayerDataStartAck = 2524;
-constexpr uint16_t kOpMainUserDataStartAck = 3048;  // u32 user key at +0
-constexpr uint16_t kOpMoveFieldAck = 2653;          // u8 | u32 actor | u32 | u32 field owner @9 | 0x38 * n (3549; 2976 0x30)
+constexpr uint16_t kOpMoveActorReq = 2790, kOpStartActionReq = 2431, kOpRotateActorReq = 2296;
+constexpr uint16_t kOpMainPlayerDataStartAck = 2844;
+constexpr uint16_t kOpMainUserDataStartAck = 2420;  // u32 user key at +0
+constexpr uint16_t kOpMoveFieldAck = 2364;          // u8 | u32 actor | u32 | u32 field owner @9 | 0x38 * n (3549; 2976 0x30)
 std::atomic<uint32_t> g_user2_userkey{0};           // from user 2's MainUserDataStartAck
 std::atomic<uint32_t> g_host_userkey{0};            // the host's user key, read once (session 1's user +0x60)
 std::atomic<uint64_t> g_owner_rewrites{0}, g_owner_unexpected{0};
@@ -181,7 +181,7 @@ MovePhaseTracker g_phase;  // under g_phase_mu
 MoveCloseSequence g_close;
 uintptr_t g_close_session = 0;
 constexpr uint16_t kOpNak = 1013;
-constexpr uint16_t kOpRemoveActorAck2516 = 3067;  // RemoveActorAck (world_anchor's probe)
+constexpr uint16_t kOpRemoveActorAck2516 = 3037;  // RemoveActorAck (world_anchor's probe)
 std::atomic<uint64_t> g_nak{0}, g_nak_after_logout{0};  // Nak 1013 written to session 2 (this epoch)
 
 MovePhaseTracker phase_snapshot() {
@@ -475,7 +475,7 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
             world_anchor_on_user2_out(v->opcode, v->payload);
         }
         // Co-op+ 2026-11-09 B04 (fog_share.h): the guest's map fog chunks OR the host's, in place.
-        if (v->opcode == 2196 && self == live_session2()) fog_share_on_user2_out(std::span<uint8_t>(p));
+        if (v->opcode == 2932 && self == live_session2()) fog_share_on_user2_out(std::span<uint8_t>(p));
         // C4: the server's answers to user 2's logout (7-byte internal Acks).
         if (v->opcode == troc::kOpLogoutSessionAck || v->opcode == troc::kOpLogoutUserAck) {
             g_n.logout_acks.fetch_add(1, std::memory_order_relaxed);
@@ -595,7 +595,7 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
         // Co-op+ 2026-11-10 Lootr (lootr.h): what the guest is not shown about a gimmick the host took (kept for the
         // guest); a RemoveActorAck may lose that one key (then the view is read again).
         if (self == live_session2() &&
-            (opcode == 2214 || opcode == 2760 || opcode == 2096 || opcode == 3067 || opcode == 2414)) {
+            (opcode == 3059 || opcode == 2985 || opcode == 2883 || opcode == 3037 || opcode == 2106)) {
             const size_t before = p.size();
             if (lootr_on_guest_out(p)) return;
             if (p.size() != before) {
@@ -644,7 +644,7 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
         // P8 S15/S16 (child_hold.h, observer_hold_family): what user 2 is given (2005), loses (2516) or starts over
         // with (2174), in queue order, only once really queued (review 6); the orphans among its records are
         // counted. None of these opcodes is ever kept above (p is intact).
-        if (pushed && (opcode == 2005 || opcode == 3067 || opcode == 2653) && self == live_session2()) {
+        if (pushed && (opcode == 2005 || opcode == 3037 || opcode == 2364) && self == live_session2()) {
             child_hold_on_user2_out(opcode, v->payload);
         }
         // P8 S15 (travel_probe.h): the Acks queued for user 2 after its 2283 / 2437 (bounded, read only).
@@ -679,7 +679,7 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
         user2_shops_on_out(opcode, v->payload, self == live_session2(), pushed);
         // P8 option U, U-1 (user2_stages.h): the 2322 / 2335 really queued for user 2 (abort criterion, counts); the
         // 2005s for U-e's controller check (user2_npc_control).
-        if (pushed && (opcode == 2384 || opcode == 2989 || opcode == 2005)) {
+        if (pushed && (opcode == 2941 || opcode == 2224 || opcode == 2005)) {
             user2_stages_on_out(opcode, v->payload, self == live_session2());
         }
         // P8 B step 2 (owner_fanout.h): user 2's observer trip, by the same rule (counts only).
@@ -837,7 +837,7 @@ void on_server_recv(safetyhook::Context& ctx) {
         }
     }
     // P6, second layer (log only, decision D-5): the server is asked to save.
-    if (pkt && peek(pkt, op) && (op == 3134 || op == 2122)) g_n.save_reqs.fetch_add(1, std::memory_order_relaxed);
+    if (pkt && peek(pkt, op) && (op == 2234 || op == 3158)) g_n.save_reqs.fetch_add(1, std::memory_order_relaxed);
     // E4: copy the host player's movement for user 2 (mirror_delay_ms later).
     if (g_opt.mirror_host && (op == kOpMoveActorReq || op == kOpStartActionReq || op == kOpRotateActorReq) &&
         ctx.r8 != s2) {
@@ -1224,9 +1224,9 @@ void server_probe_log(const char* when) {
     // (RTTI .?AVServerActorManager@pa@@, exe+0x5EECE88 on 3549) and log each slot found.
     static bool sam_scanned = false;
     const auto sam_vt = sam ? read_ptr(*sam) : std::nullopt;
-    if (!sam_scanned && game::read_ptr(g_base + off::kServerActorLookupSlot) && sam_vt != g_base + 0x5EEF0A8) {
+    if (!sam_scanned && game::read_ptr(g_base + off::kServerActorLookupSlot) && sam_vt != g_base + 0x5F69100) {
         sam_scanned = true;
-        constexpr uintptr_t kSamVtable = 0x5EEF0A8, kFrom = 0x6C00000, kTo = 0x7400000, kChunk = 0x10000;
+        constexpr uintptr_t kSamVtable = 0x5F69100, kFrom = 0x6C00000, kTo = 0x7400000, kChunk = 0x10000;
         std::vector<uint64_t> buf(kChunk / 8);
         int found = 0;
         for (uintptr_t at = kFrom; at < kTo && found < 8; at += kChunk) {
@@ -1287,7 +1287,7 @@ void server_probe_log(const char* when) {
     // FieldTime 0x6EAB998 + 0x20, as on 2976): user 2's MoveField and
     // LoadingCompleteReq 01 copy its save's time here (R1).
     uint8_t ft[32] = {};
-    if (game::safe_read(g_base + 0x6EAD9B8, ft, sizeof ft)) {
+    if (game::safe_read(g_base + 0x6F31C98, ft, sizeof ft)) {
         std::string h;
         for (uint8_t b : ft) h += std::format("{:02X}", b);
         log::info("Session2 probe ({}): server FieldTime {}", when, h);
@@ -1529,7 +1529,7 @@ inj::Outcome inject(std::span<const uint8_t> in, InjectKind kind) {
     // uploaded save is never moved in, user 2 has no character, its LoginCharacterToFieldServerReq is refused and
     // the guest sits on "Waiting for Host" for ever. So user 2's LoginUserToFieldServerReq waits (held in order, like
     // a Req that comes before session 2 exists) until the world's folder has a slot of the host's.
-    if (v->opcode == 2535 && !guest_save_world_has_host_slot()) {
+    if (v->opcode == 2554 && !guest_save_world_has_host_slot()) {
         static std::atomic<uint64_t> waits{0};
         const uint64_t n = waits.fetch_add(1) + 1;
         if (n == 1 || n % 2000 == 0)
@@ -1542,7 +1542,7 @@ inj::Outcome inject(std::span<const uint8_t> in, InjectKind kind) {
     // user 2 loads that world's own character, not the save the guest uploaded. It is staged here, before the login
     // that loads user 2's lobby: the Req waits (held in order, as above) while the host's first save is not complete
     // yet. Always true in a world without a marker; it logs its own lines ("Session2 guest save (co-op world)").
-    if (v->opcode == 2535 && !guest_save_coop_world_gate()) {
+    if (v->opcode == 2554 && !guest_save_coop_world_gate()) {
         g_held_not_ready.fetch_add(1);
         return inj::Outcome::NotReady;
     }

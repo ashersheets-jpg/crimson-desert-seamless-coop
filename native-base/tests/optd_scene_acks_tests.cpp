@@ -219,8 +219,8 @@ void test_filter_and_parser() {
     // Session 6B, the held NPC B0100425: the payload prefixes of its 2404 (#10348) and 2723 (#10386).
     const auto ai = hex("250410b001000100010001000100010001010101");
     const auto spawn = hex("250410b0000000004e698c960000ffffffffffff");
-    CHECK(oha::npc_key_of(3047, ai) == std::optional<uint32_t>(0xB0100425u));
-    CHECK(oha::npc_key_of(2392, spawn) == std::optional<uint32_t>(0xB0100425u));
+    CHECK(oha::npc_key_of(2499, ai) == std::optional<uint32_t>(0xB0100425u));
+    CHECK(oha::npc_key_of(3039, spawn) == std::optional<uint32_t>(0xB0100425u));
     for (const uint16_t op : oha::kHeldOps) CHECK(oha::op_index(op) >= 0 && oha::npc_key_of(op, ai));
     CHECK(!oha::npc_key_of(2005, ai) && !oha::npc_key_of(2111, ai) && !oha::npc_key_of(2661, ai));
     CHECK(!oha::npc_key_of(2404, hex("1f0310a0")));  // a character key: not held

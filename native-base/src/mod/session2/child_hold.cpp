@@ -884,33 +884,33 @@ namespace {
 
 // Entries and body instructions checked against the copy analysed for D-53
 // (prologues alone repeat; companeros-publicacion.md §1.2-§1.3, §2).
-constexpr uintptr_t kNotifyAppear = 0x2D97820;
+constexpr uintptr_t kNotifyAppear = 0x2DFE6D0;
 constexpr uint8_t kNotifyAppearHead[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74, 0x24, 0x10, 0x48, 0x89,
                                          0x7C, 0x24, 0x18, 0x55, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57,
                                          0x48, 0x8B, 0xEC, 0x48, 0x83, 0xEC, 0x50, 0x4D, 0x8B, 0xE0, 0x4C, 0x8B,
                                          0xF2, 0x45, 0x33, 0xED};
-constexpr uintptr_t kNotifyReadSessions = 0x2D9792C;  // mov rbx,[rsi] ; mov eax,[rsi+8]
+constexpr uintptr_t kNotifyReadSessions = 0x2DFE7DC;  // mov rbx,[rsi] ; mov eax,[rsi+8]
 constexpr uint8_t kNotifyReadSessionsBytes[] = {0x49, 0x8B, 0x1E, 0x41, 0x8B, 0x46};
-constexpr uintptr_t kNotifyReadKeys = 0x2D97997;  // mov rax,[r15] ; mov [rbp-0x10],rax ; mov eax,[r15+8]
+constexpr uintptr_t kNotifyReadKeys = 0x2DFE847;  // mov rax,[r15] ; mov [rbp-0x10],rax ; mov eax,[r15+8]
 constexpr uint8_t kNotifyReadKeysBytes[] = {0x49, 0x8B, 0x04, 0x24, 0x48, 0x89, 0x45, 0xF0, 0x41, 0x8B, 0x44};
-constexpr uintptr_t kNotifyFindCall = 0x2D979AF;  // call 0x2B060E0 (keys -> actors, owner filter)
-constexpr uint8_t kNotifyFindCallBytes[] = {0xE8, 0x8C, 0x84, 0x00, 0x00};
-constexpr uintptr_t kCallerNewObservers = 0x2D8FFFB;  // call 0x2B000C0
-constexpr uint8_t kCallerNewObserversBytes[] = {0xE8, 0x20, 0x78, 0x00, 0x00};
-constexpr uintptr_t kCallerMovingUser = 0x2D901FC;  // call 0x2B000C0
-constexpr uint8_t kCallerMovingUserBytes[] = {0xE8, 0x1F, 0x76, 0x00, 0x00};
-constexpr uintptr_t kStartAction = 0x2BE1530;  // TrocTrStartActionReq::vf2 (this, int* res, ctx*) -> res
+constexpr uintptr_t kNotifyFindCall = 0x2DFE85F;  // call 0x2B060E0 (keys -> actors, owner filter)
+constexpr uint8_t kNotifyFindCallBytes[] = {0xE8, 0x9C, 0x85, 0x00, 0x00};
+constexpr uintptr_t kCallerNewObservers = 0x2DF6D9B;  // call 0x2B000C0
+constexpr uint8_t kCallerNewObserversBytes[] = {0xE8, 0x30, 0x79, 0x00, 0x00};
+constexpr uintptr_t kCallerMovingUser = 0x2DF6F9C;  // call 0x2B000C0
+constexpr uint8_t kCallerMovingUserBytes[] = {0xE8, 0x2F, 0x77, 0x00, 0x00};
+constexpr uintptr_t kStartAction = 0x2C46FA0;  // TrocTrStartActionReq::vf2 (this, int* res, ctx*) -> res
 constexpr uint8_t kStartActionHead[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55,
                                         0x41, 0x56, 0x41, 0x57, 0x48, 0x8D, 0xAC, 0x24, 0xD0, 0xFC, 0xFF, 0xFF,
                                         0x48, 0x81, 0xEC, 0x40, 0x04, 0x00, 0x00, 0x4D, 0x8B, 0xE0, 0x4C, 0x8B,
                                         0xF2, 0x4C, 0x8B, 0xF9};
-constexpr uintptr_t kStartActionVtable = 0x5EEE318;  // .?AVTrocTrStartActionReq@pa@@, vf2 at +0x10
-constexpr uintptr_t kRestoreWrite = 0x2519E2A;  // mov rax,[r14+0x40] ; mov byte [rax+0x30],1 (the only writer)
+constexpr uintptr_t kStartActionVtable = 0x5F682B8;  // .?AVTrocTrStartActionReq@pa@@, vf2 at +0x10
+constexpr uintptr_t kRestoreWrite = 0x258B7AA;  // mov rax,[r14+0x40] ; mov byte [rax+0x30],1 (the only writer)
 constexpr uint8_t kRestoreWriteBytes[] = {0x49, 0x8B, 0x47, 0x40, 0xC6, 0x40, 0x30, 0x01};
 // ServerRunThread's entry 0x2773390 marks its thread as the server's realm
 // (TLS block 0 +0x1EC = 1) before its loop; NotifyAppear's key lookup picks the
 // server's actor manager by that byte (0x2B06147).
-constexpr uintptr_t kServerRealmSet = 0x29ABB86;  // mov eax,0x1EB ; mov byte [rax+rbx],1 (Co-op+ port 3549; 2976: 0x27733A6, 0x1EC)
+constexpr uintptr_t kServerRealmSet = 0x2A0E1B6;  // mov eax,0x1EB ; mov byte [rax+rbx],1 (Co-op+ port 3549; 2976: 0x27733A6, 0x1EC)
 constexpr uint8_t kServerRealmSetBytes[] = {0xB8, 0xEB, 0x01, 0x00, 0x00, 0xC6, 0x04, 0x18, 0x01};
 constexpr uint32_t kTlsServerRealm = 0x1EB;  // Co-op+ port 3549 (2976: 0x1EC)
 
@@ -4449,7 +4449,7 @@ bool child_hold_install(bool children, bool observers) { return child_hold_insta
 // the game writes an empty one (the byte 0, nothing else; 0x3DEEF0 after it does not read the slot), so the stream
 // user 2 reads stays the same shape. Host only, the prologue checked first (10 bytes: mov [rsp+18],rbx ; push rdi ;
 // sub rsp,20; no RIP-relative instruction).
-constexpr uintptr_t kSlotSerializer = 0x2495000;
+constexpr uintptr_t kSlotSerializer = 0x2506E70;
 constexpr uint8_t kSlotSerializerHead[] = {0x48, 0x89, 0x5C, 0x24, 0x18, 0x57, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x83, 0x39, 0x00};
 SafetyHookInline g_slot_guard;
 std::atomic<uint64_t> g_slot_nulls{0};
@@ -4484,7 +4484,7 @@ bool install_slot_guard() {
         log::warn("Session2 slot guard: exe+0x{:X} could not be hooked", kSlotSerializer);
         return false;
     }
-    log::info("Session2 slot guard ON: a null interaction slot (0x2495000) is serialized as an empty one, not a crash");
+    log::info("Session2 slot guard ON: a null interaction slot (0x2506E70) is serialized as an empty one, not a crash");
     return true;
 }
 
@@ -4794,7 +4794,7 @@ void child_hold_npc_playdata_diag(uint32_t key, const char* tag) noexcept {
             const auto c = m.rd<uintptr_t>(*comps + slot);
             if (!c || !*c || *c < 0x10000) continue;
             const auto vt = m.rd<uintptr_t>(*c);
-            if (!vt || *vt != base + 0x5EF6360) continue;
+            if (!vt || *vt != base + 0x5F6FFE0) continue;
             std::string t;
             for (uint32_t o = 0x2A0; o < 0x360; o += 4) {
                 const auto v = m.rd<uint32_t>(*c + o);
@@ -4836,7 +4836,7 @@ bool child_hold_npc_rebind(uint32_t key, uint32_t stale_owner, uint32_t owner, u
             const auto c = m.rd<uintptr_t>(*comps + slot);
             if (!c || !*c || *c < 0x10000) continue;
             const auto vt = m.rd<uintptr_t>(*c);
-            if (!vt || *vt != base + 0x5EF6360) continue;
+            if (!vt || *vt != base + 0x5F6FFE0) continue;
             const auto cur = m.rd<uint32_t>(*c + 0x2D8);
             if (!cur || *cur != stale_owner) return false;  // only what still names user 2's character
             const bool ok = rebind_write(*c, owner, scene, node);
@@ -4892,7 +4892,7 @@ bool child_hold_npc_reannounce(uint32_t key) noexcept {
                 const auto c = m.rd<uintptr_t>(*comps + slot);
                 if (!c || !*c || *c < 0x10000) continue;
                 const auto vt = m.rd<uintptr_t>(*c);
-                if (!vt || *vt != base + 0x5EF6360) continue;
+                if (!vt || *vt != base + 0x5F6FFE0) continue;
                 std::string t;
                 for (uint32_t o = 0x2A0; o < 0x360; o += 4) {
                     const auto v = m.rd<uint32_t>(*c + o);

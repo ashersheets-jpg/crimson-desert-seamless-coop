@@ -93,7 +93,7 @@ void test_option() {
     CHECK(!wal::parse_mode("2").known);
     CHECK(wal::parse_mode("2").mode == Mode::Off);
     CHECK(std::strcmp(wal::mode_name(Mode::Probe), "probe") == 0);
-    CHECK(wal::leaves_field(2294) && wal::leaves_field(3074) && wal::leaves_field(2001));
+    CHECK(wal::leaves_field(2350) && wal::leaves_field(3018) && wal::leaves_field(2001));
     CHECK(!wal::leaves_field(2445) && !wal::leaves_field(2549) && !wal::leaves_field(0));
     // The build's numbers the cpp checks (documented in mundo-invitado.md).
     static_assert(wal::kFieldSlotOn == 0x198 && wal::kFieldSlotKey == 0x19C && wal::kTsField == 0x518);  // 3576

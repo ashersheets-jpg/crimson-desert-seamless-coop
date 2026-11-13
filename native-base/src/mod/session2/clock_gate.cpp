@@ -19,26 +19,26 @@ namespace {
 // Entries and one instruction of each body, from the copy analysed in
 // docs/research/pendientes/reloj/capstone_*.txt (prologues alone repeat).
 // Co-op+ port (1.0.0.3549): FieldMover::SyncFieldTimeOnMove (2976: its own function 0x2BC0A30) is inlined into
-// 0x2E61990 here. FM = r15, the destination field = rdi, TS = [FM]. The owner check
+// 0x2E61990 here. FM = r15, the destination field = rdi (1.0.0.3663: RSI), TS = [FM]. The owner check
 // `cmp [rdi+0x180], eax; jne` (eax = the moving user's key) leads to the publish of the world clock; both ways then
 // meet at 0x2E620A1: `mov rbx,[r15]; getter(field) 0x22A8F70; FieldComponent::SetFieldTime(TS, ft) 0x2370570`
 // (which publishes again when the user owns the field). For user 2 a mid hook on the owner check copies the field's
 // time into its character only (clock_user2_travel, as on 2976) and resumes after the setter call: nothing published.
-constexpr uintptr_t kTravelOwnerCmp = 0x2E62C28;  // cmp [rdi+0x180], eax ; jne 0x2E620A1
-constexpr uint8_t kTravelOwnerCmpBytes[] = {0x39, 0x87, 0x80, 0x01, 0x00, 0x00, 0x0F, 0x85, 0xDD, 0x00, 0x00, 0x00};
-constexpr uintptr_t kTravelGetterCall = 0x2E62D11;  // mov rbx,[r15]; getter(rdi); SetFieldTime(rbx, ft)
+constexpr uintptr_t kTravelOwnerCmp = 0x2ECAABD;  // 3663: cmp [rsi+0x180], eax ; jne 0x2ECABA4 (3576 0x2E62C28, the field in rdi)
+constexpr uint8_t kTravelOwnerCmpBytes[] = {0x39, 0x86, 0x80, 0x01, 0x00, 0x00, 0x0F, 0x85, 0xDB, 0x00, 0x00, 0x00};
+constexpr uintptr_t kTravelGetterCall = 0x2ECABA4;  // mov rbx,[r15]; getter(rsi); SetFieldTime(rbx, ft) (3576 0x2E62D11)
 constexpr uint8_t kTravelGetterCallBytes[] = {0x49, 0x8B, 0x1F, 0x48, 0x8D, 0x54, 0x24, 0x70, 0x48,
-                                              0x8B, 0xCF, 0xE8, 0x8F, 0x6E, 0x44, 0xFF, 0x48, 0x8B,
-                                              0xD0, 0x48, 0x8B, 0xCB, 0xE8, 0x94, 0xE5, 0x50, 0xFF};
+                                              0x8B, 0xCE, 0xE8, 0xCC, 0xF5, 0x44, 0xFF, 0x48, 0x8B,
+                                              0xD0, 0x48, 0x8B, 0xCB, 0xE8, 0x01, 0x6C, 0x51, 0xFF};
 constexpr uintptr_t kTravelResume = kTravelGetterCall + sizeof kTravelGetterCallBytes;  // 0x2E620BC
-constexpr uintptr_t kLoading = 0x236C400;
-constexpr uint8_t kLoadingHead[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74, 0x24, 0x10, 0x48, 0x89,
-                                    0x7C, 0x24, 0x18, 0x55, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57,
+constexpr uintptr_t kLoading = 0x23DC630;
+constexpr uint8_t kLoadingHead[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x18, 0x48, 0x89,
+                                    0x7C, 0x24, 0x20, 0x55, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57,
                                     0x48, 0x8B, 0xEC, 0x48, 0x83, 0xEC, 0x60, 0x4D, 0x8B, 0xE9, 0x49, 0x8B,
                                     0xF0, 0x4C, 0x8B, 0xF2, 0x48, 0x8B, 0xD9};
-constexpr uintptr_t kLoadingFlagCmp = 0x236C43B;  // cmp [rbp+0x50], r12b ; je 0x219D941
+constexpr uintptr_t kLoadingFlagCmp = 0x23DC66B;  // cmp [rbp+0x50], r12b ; je 0x219D941
 constexpr uint8_t kLoadingFlagCmpBytes[] = {0x44, 0x38, 0x65, 0x50, 0x0F, 0x84, 0x0C, 0x01, 0x00, 0x00};
-constexpr uintptr_t kGetter = 0x22A9BB0;
+constexpr uintptr_t kGetter = 0x231A180;
 constexpr uint8_t kGetterHead[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x57, 0x48, 0x83, 0xEC, 0x60, 0x48, 0x8B,
                                    0x01, 0x48, 0x8B, 0xFA, 0x48, 0x8D, 0x54, 0x24, 0x70, 0x48, 0x8B, 0xD9,
                                    0xFF, 0x50, 0x60};
@@ -145,7 +145,7 @@ void travel_mid(safetyhook::Context& ctx) noexcept {
     try {
         const uintptr_t ts = ts_of(reinterpret_cast<void*>(ctx.r15));
         if (!ts || who_now(ts) != ClockWho::User2) return;
-        const uintptr_t field = ctx.rdi;
+        const uintptr_t field = ctx.rsi;  // 3663: the destination field is in rsi (3576 and before: rdi)
         g_travels.fetch_add(1);
         const WorldTime before = world_now();
         const bool copied = clock_user2_travel(g_game, ts, field);

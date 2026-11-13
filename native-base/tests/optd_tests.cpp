@@ -262,8 +262,8 @@ void test_tunnel_sender_shed() {
     });
     auto move = [](uint32_t key, uint8_t tag) {
         Bytes p(5 + 235, 0);
-        p[0] = static_cast<uint8_t>(3094 & 0xFF);
-        p[1] = static_cast<uint8_t>(3094 >> 8);
+        p[0] = static_cast<uint8_t>(3008 & 0xFF);
+        p[1] = static_cast<uint8_t>(3008 >> 8);
         p[2] = 0xFF;
         p[3] = 235;
         p[4] = 0;

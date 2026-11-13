@@ -212,38 +212,38 @@ namespace {
 // .rsrc/.xtls/.text/.xtext lands in its first 0x20 bytes except a junk byte
 // run at 0x20C24B4 (between int3 paddings, aiming at 0x2B7F4D4, the middle of
 // the first instruction: not code).
-constexpr uintptr_t kLobbyLoad = 0x2E20270;  // (comp, int* res, -, data**) -> res; r8 unused, no stack args
+constexpr uintptr_t kLobbyLoad = 0x2E879A0;  // (comp, int* res, -, data**) -> res; r8 unused, no stack args
 constexpr uint8_t kLobbyLoadHead[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x54, 0x24, 0x10, 0x55, 0x56,
                                       0x57, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8D, 0xAC,
                                       0x24, 0xF0, 0xFD, 0xFF, 0xFF, 0x48, 0x81, 0xEC, 0x10, 0x03};
-constexpr uintptr_t kLobbyVtable = 0x5EF5638;     // ServerLobbyActorComponent; +0x50 = 0x2B7F4D0
-constexpr uintptr_t kLobbyConstant = 0x2E2068B;   // movabs rax,7FFF.. ; mov [rbp-0x40],rax (3549; 2976: [rsp+0x70])
+constexpr uintptr_t kLobbyVtable = 0x5F6F2E8;     // ServerLobbyActorComponent; +0x50 = 0x2B7F4D0
+constexpr uintptr_t kLobbyConstant = 0x2E87DB0;   // movabs rax,7FFF.. ; mov [rbp-0x40],rax (3549; 2976: [rsp+0x70])
 constexpr uint8_t kLobbyConstantBytes[] = {0x48, 0xB8, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x7F, 0x48, 0x89,
                                            0x45, 0xC0};
-constexpr uintptr_t kLobbyAddCall = 0x2E206EB;    // call 0x230D130 (adds the entry, R8 = &number; 2976: 0x2143E70)
-constexpr uint8_t kLobbyAddCallBytes[] = {0xE8, 0x90, 0xD7, 0x4E, 0xFF};
+constexpr uintptr_t kLobbyAddCall = 0x2E87E10;    // call 0x230D130 (adds the entry, R8 = &number; 2976: 0x2143E70)
+constexpr uint8_t kLobbyAddCallBytes[] = {0xE8, 0x4B, 0x6C, 0x4F, 0xFF};
 // The 3093's ClearLobby: lobby = [[user+0x68]+0x10], owner [lobby+8], list [lobby+0x18].
-constexpr uintptr_t kClearLobbySite = 0x2EE2AD2;
+constexpr uintptr_t kClearLobbySite = 0x2F4AF52;
 constexpr uint8_t kClearLobbySiteBytes[] = {0x49, 0x8B, 0x47, 0x68, 0x48, 0x8B, 0x58, 0x10, 0x48, 0x8B, 0x7B, 0x08};
-constexpr uintptr_t kClearListSite = 0x2EE2AF9;
+constexpr uintptr_t kClearListSite = 0x2F4AF79;
 constexpr uint8_t kClearListSiteBytes[] = {0x48, 0x8B, 0x4B, 0x18};
-constexpr uintptr_t kStatusVtable = 0x5EE9828;    // ServerStatusActorComponent; +0x50 = 0x293FE70
-constexpr uintptr_t kStatusLoad = 0x2BB06B0;
+constexpr uintptr_t kStatusVtable = 0x5F63430;    // ServerStatusActorComponent; +0x50 = 0x293FE70
+constexpr uintptr_t kStatusLoad = 0x2C160B0;
 // The logged-in actors that FindByCharacterNo 0x2A83F80 searches: manager =
 // [[exe+0x6D696A8]] (0x2777A18), array [mgr+0xB8], u32 count [mgr+0xC0].
-constexpr uintptr_t kLoginMgrSite = 0x29B0428;
-constexpr uint8_t kLoginMgrSiteBytes[] = {0x48, 0x8B, 0x0D, 0xE9, 0x01, 0x81, 0x04, 0x48, 0x8B, 0x09};
-constexpr uintptr_t kLoginMgrSlot = 0x71C0618;
-constexpr uintptr_t kFindByNoScan = 0x2D137C6;
+constexpr uintptr_t kLoginMgrSite = 0x2A12A58;
+constexpr uint8_t kLoginMgrSiteBytes[] = {0x48, 0x8B, 0x0D, 0x81, 0x2C, 0x83, 0x04, 0x48, 0x8B, 0x09};
+constexpr uintptr_t kLoginMgrSlot = 0x72456E0;
+constexpr uintptr_t kFindByNoScan = 0x2D7A726;
 constexpr uint8_t kFindByNoScanBytes[] = {0x48, 0x8B, 0x8D, 0xB8, 0x00, 0x00, 0x00, 0x8B, 0x85, 0xC0, 0x00, 0x00,
                                           0x00, 0x48, 0x8D, 0x14, 0xC1};
-constexpr uintptr_t kFindByNoRead = 0x2D137F0;
+constexpr uintptr_t kFindByNoRead = 0x2D7A750;
 // Through the characterNo read [Status+0x90] (Co-op+ port 3549: the 11 bytes alone missed that +0x70 became +0x90).
 constexpr uint8_t kFindByNoReadBytes[] = {0x4C, 0x8B, 0x31, 0x49, 0x8B, 0x46, 0x68, 0x48, 0x8B, 0x40, 0x20, 0x48, 0x85, 0xC0, 0x75, 0x05, 0x49, 0x8B, 0xC0, 0xEB, 0x07, 0x48, 0x8B, 0x80, 0x90, 0x00, 0x00, 0x00};
 constexpr uint32_t kLoginMgrActors = 0xB8;
 constexpr uint32_t kLoginMgrCount = 0xC0;
-constexpr uint16_t kOpLoginUser = 2535;
-constexpr uint16_t kOpLoginCharacter = 2733;
+constexpr uint16_t kOpLoginUser = 2554;
+constexpr uint16_t kOpLoginCharacter = 3081;
 constexpr uint64_t kMaxLogged = 48, kMaxRefusalsLogged = 8;
 
 uintptr_t g_base = 0;
@@ -311,7 +311,7 @@ bool on_server_thread() {
     uintptr_t block = 0;
     uint8_t flag = 0;
     return game::safe_read(tls_array, &block, sizeof block) && block &&
-           game::safe_read(block + 0x1EB, &flag, sizeof flag)  /* Co-op+ port 3549: ServerRunThread 0x29ABB86 sets +0x1EB (2976: +0x1EC) */ && flag != 0;
+           game::safe_read(block + 0x1EB, &flag, sizeof flag)  /* Co-op+ port 3549: ServerRunThread 0x2A0E1B6 sets +0x1EB (2976: +0x1EC) */ && flag != 0;
 }
 
 // Read only, unlocked (no game call may take the manager's lock): a stale

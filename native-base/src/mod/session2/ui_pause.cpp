@@ -55,7 +55,7 @@ using uip::Site;
 // None is RIP-relative; the first one is (0x35CD9B4 vmovss xmm6,[rip+..] = 1.0f).
 // Co-op+ port 1.0.0.3549: scale 0x389FB30 (unique 30-byte match), its two calls at the same +0x13C/+0x1D6 of
 // 0xBDE6F0, the clock read by FrameClock_NowMs 0x15F9B20 (called right before each delay read of remote_interp).
-constexpr uintptr_t kScale = 0x38A0830;
+constexpr uintptr_t kScale = 0x39191C0;
 constexpr uint8_t kScaleHead[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x6C, 0x24, 0x10,
                                   0x48, 0x89, 0x74, 0x24, 0x18, 0x48, 0x89, 0x7C, 0x24, 0x20,
                                   0x41, 0x56, 0x48, 0x83, 0xEC, 0x30, 0x48, 0x8B, 0x41, 0x38};
@@ -64,17 +64,17 @@ constexpr uint8_t kScaleHead[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x6C
 // end on one of them.
 constexpr uint32_t kBoundaries[] = {5, 10, 15, 20, 22, 26, 30};
 // The callers (0xAD1300): 0xAD143C call (vf 0x160's scale) / 0xAD14D6 call (the dt).
-constexpr uintptr_t kCall1 = 0xBDEC4C, kCall2 = 0xBDECE6;
-constexpr uint8_t kCall1Bytes[] = {0xE8, 0xDF, 0x1B, 0xCC, 0x02};
-constexpr uint8_t kCall2Bytes[] = {0xE8, 0x45, 0x1B, 0xCC, 0x02};
-constexpr uintptr_t kRet1 = 0xBDEC51, kRet2 = 0xBDECEB;
+constexpr uintptr_t kCall1 = 0xC160EC, kCall2 = 0xC16186;
+constexpr uint8_t kCall1Bytes[] = {0xE8, 0xCF, 0x30, 0xD0, 0x02};
+constexpr uint8_t kCall2Bytes[] = {0xE8, 0x35, 0x30, 0xD0, 0x02};
+constexpr uintptr_t kRet1 = 0xC160F1, kRet2 = 0xC1618B;
 // vf 0x168 of every UI root: vmovss xmm0,[rip+..] (1.0f) ; ret.
-constexpr uintptr_t kTrivialVf = 0x700900;  // 3549: the 1.0f-returning vf in 561 vtables (2976 0x63DA70)
-constexpr uint8_t kTrivialVfBytes[] = {0xC5, 0xFA, 0x10, 0x05, 0x88, 0x16, 0xA4, 0x05, 0xC3};
+constexpr uintptr_t kTrivialVf = 0x72C2C0;  // 3549: the 1.0f-returning vf in 561 vtables (2976 0x63DA70)
+constexpr uint8_t kTrivialVfBytes[] = {0xC5, 0xFA, 0x10, 0x05, 0x80, 0x28, 0xA9, 0x05, 0xC3};
 // FrameClock_NowMs 0x1416B80's globals (read only, from the drain thread).
-constexpr uintptr_t kClockLocal = 0x70DBF2D;  /* 3549 (2976 0x6C8CD35) */  // u8: 1 = the per-frame scaled clock for every thread
-constexpr uintptr_t kClockBase = 0x70DBF68; /* 3549 */  // u64 ms
-constexpr uintptr_t kClockFrac = 0x70DBF78; /* 3549 */  // u64 us (added dt * 1e6 per frame, 0xAD19D3)
+constexpr uintptr_t kClockLocal = 0x71600AD;  /* 3549 (2976 0x6C8CD35) */  // u8: 1 = the per-frame scaled clock for every thread
+constexpr uintptr_t kClockBase = 0x71600E8; /* 3549 */  // u64 ms
+constexpr uintptr_t kClockFrac = 0x71600F0; /* 3549 */  // u64 us (added dt * 1e6 per frame, 0xAD19D3)
 
 constexpr uint32_t kOneBits = 0x3F800000;  // 1.0f
 constexpr uint32_t kSourceCheckEvery = 30;  // first-call frames between two walks while a UI value is in force
@@ -195,8 +195,8 @@ float on_scale(uintptr_t world, float orig, uintptr_t ret) noexcept {
 // ReloadStageStartReq 3074 with that actor; the host's user2_funnels F3 lets it through and the host's server reloads
 // user 2 at the actor (a client-side hop broke user 2's character: tcB13). Run here, on the game's thread at the top
 // of the UI frame, never on the layer's thread. One request at a time, SEH-guarded; the drain thread logs it.
-constexpr uintptr_t kFastTravelEntry = 0x7221F0;
-constexpr uintptr_t kTravelCtxGlobal = 0x71C0158;
+constexpr uintptr_t kFastTravelEntry = 0x74E470;
+constexpr uintptr_t kTravelCtxGlobal = 0x7245218;
 std::atomic<uint32_t> g_travel_actor{0};    // asked (the layer's thread)
 std::atomic<uint32_t> g_travel_called{0};   // the actor of the last call (game thread)
 std::atomic<int> g_travel_rc{-2};           // its al (0/1), -1 = no context, -3 = the call faulted
@@ -600,9 +600,9 @@ DWORD WINAPI ui_thread(LPVOID) {
         if (const uint32_t a = g_travel_called.load(std::memory_order_acquire); a && a != g_travel_logged.load()) {
             g_travel_logged = a;
             const int rc = g_travel_rc.load();
-            log::info("Co-op+ travel: the client's fast travel 0x7221F0 to actor 0x{:08X}: {}", a,
+            log::info("Co-op+ travel: the client's fast travel 0x74E470 to actor 0x{:08X}: {}", a,
                       rc == 1 ? "started (al 1)" : rc == 0 ? "refused by the game (al 0)"
-                      : rc == -1 ? "NOT called: its context [[[0x71C0158]+0x90]+0x1240] was not readable"
+                      : rc == -1 ? "NOT called: its context [[[0x7245218]+0x90]+0x1240] was not readable"
                                  : "the call FAULTED");
         }
         if (tick % 50 == 0) {

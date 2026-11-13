@@ -136,11 +136,11 @@ inline uint32_t schedule_key_of_name(std::string_view name) {
 // ---------------------------------------------------------------- the manager (build 1.0.0.2976)
 
 struct Layout {
-    static constexpr uintptr_t kManagerSlot = 0x70DBFA0;  /* 3576 (2976 0x6C8CDA0; read by 0x19ABC70) */   // exe+..: pa::NPCScheduleManager* (ctor 0x1861F00)
-    static constexpr uintptr_t kClientRootSlot = 0x71C0488;  /* 3576 (2976 0x6D69518; 0xBABAE5) */  // [..]+0x40: the manager the client's 0xA9FEE0 uses
-    static constexpr uintptr_t kServerRootSlot = 0x71C0490;  /* 3576 (2976 0x6D69520; 0xBABAEF) */  // [..]+0x40: the one the server uses (TLS +0x1EC = 1)
+    static constexpr uintptr_t kManagerSlot = 0x7160120;  /* 3576 (2976 0x6C8CDA0; read by 0x1A11270) */   // exe+..: pa::NPCScheduleManager* (ctor 0x1861F00)
+    static constexpr uintptr_t kClientRootSlot = 0x7245548;  /* 3576 (2976 0x6D69518; 0xBE3665) */  // [..]+0x40: the manager the client's 0xA9FEE0 uses
+    static constexpr uintptr_t kServerRootSlot = 0x7245550;  /* 3576 (2976 0x6D69520; 0xBE366F) */  // [..]+0x40: the one the server uses (TLS +0x1EC = 1)
     static constexpr uint32_t kRoot_Manager = 0x40;
-    static constexpr uintptr_t kVtManager = 0x5B7CD28;  /* 3576 (2976 0x57DB090) */     // pa::NPCScheduleManager (RTTI; written at 0x1861F27)
+    static constexpr uintptr_t kVtManager = 0x5BF89D8;  /* 3576 (2976 0x57DB090) */     // pa::NPCScheduleManager (RTTI; written at 0x1861F27)
     static constexpr uint32_t kManager_Container = 0x08;   // ThreadSafeRefCountedContainer<u32, NPCScheduleData_File>
     static constexpr uint32_t kManager_FileSystem = 0x90;  // 0x18643B0: [mgr+0x90]->vf40 reads the file
     // The schedule-context table, inline at mgr+0x10 (0x1862F53 deserializes it; 0x281B78D / 0xA9FF4D read it).
@@ -314,7 +314,7 @@ inline uint32_t rd32(const uint8_t* p) {
            static_cast<uint32_t>(p[3]) << 24;
 }
 
-inline constexpr uint16_t kOpActorLoad = 2005, kOpScheduleCreate = 2989, kOpInitSchedule = 2769;
+inline constexpr uint16_t kOpActorLoad = 2005, kOpScheduleCreate = 2224, kOpInitSchedule = 2272;
 inline constexpr size_t kHeader = 5;
 inline constexpr size_t kScheduleCreateResource = 9, kScheduleCreateMin = 22;  // scene_diag_logic.h
 inline constexpr size_t kInitScheduleResource = 8, kInitScheduleMin = 24;

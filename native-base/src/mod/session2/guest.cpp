@@ -70,20 +70,20 @@ namespace {
 using OnRecvFn = void(__fastcall*)(void* net, void* session, uint64_t unused, const uint8_t* pkt, uint16_t size);
 using PushFn = void(__fastcall*)(void* queue, void** item);
 
-constexpr uint16_t kOpConnectCryptogramToServerReq = 2493;
+constexpr uint16_t kOpConnectCryptogramToServerReq = 2401;
 constexpr uint64_t kNoEpoch = 0x7FFFFFFFFFFFFFFFull;  // what PostPacket writes without a session
 constexpr uint32_t kHostReadyFreshMs = 3000;
 
 // G2/G3 (p8-preparacion.md §3): what is only counted and logged, never changed.
 constexpr uint16_t kOpScopeSenderAck = 2046;
 constexpr uint16_t kOpActorAppear = 2005;
-constexpr uint16_t kOpDataAck = 3082;
-constexpr uint16_t kOp2679 = 2623;
-constexpr uint16_t kOpLoginCharacterToFieldServerReq = 2733;  // u8 | u64 characterNo @1 | u32 slot @9
-constexpr uint16_t kOpReserveShutDownServerReq = 2748;
+constexpr uint16_t kOpDataAck = 2896;
+constexpr uint16_t kOp2679 = 3116;
+constexpr uint16_t kOpLoginCharacterToFieldServerReq = 3081;  // u8 | u64 characterNo @1 | u32 slot @9
+constexpr uint16_t kOpReserveShutDownServerReq = 2447;
 // g_ServerFrameworkMode (opcion-d-d0.md §1.1): the u32 the host's server writes
 // into its 2002 (0x1051F1E0); the client uses it as PostPacket's index (§1.3).
-constexpr uintptr_t kServerFrameworkMode = 0x6EAD858;
+constexpr uintptr_t kServerFrameworkMode = 0x6F29B70;
 constexpr uint64_t kMaxDecisionLogged = 32, kMaxInternalLogged = 16, kMaxLoginLogged = 8;
 
 uintptr_t g_base = 0;
@@ -213,7 +213,7 @@ uint64_t g_ll_seen_3093 = 0, g_ll_seen_2549 = 0;        // the diagnostics threa
 // never runs UserLogin). Armed by guest_send, run by guest_pump (both the
 // NetworkThread); the diagnostic is armed by the install thread.
 namespace sr = slot_refresh;
-constexpr uint16_t kOpLoginUserToFieldServerReq = 2535;
+constexpr uint16_t kOpLoginUserToFieldServerReq = 2554;
 constexpr uint64_t kSlotTestKey = ~0ull;  // the diagnostic's own key (never an epoch PostPacket writes)
 std::mutex g_refresh_mutex;
 sr::Planner g_refresh;                   // under g_refresh_mutex
@@ -272,14 +272,14 @@ void interaction_trace(const char* dir, std::span<const uint8_t> p) {
     const uint16_t op = opcode_of(p);
     const char* name = nullptr;
     switch (op) {
-        case 3008: name = "InteractionPreemptionStepReq"; break;
-        case 3073: name = "InteractionDoStepReq"; break;
-        case 2887: name = "InteractionResetReq"; break;
-        case 2120: name = "InteractionPreemptionStepSuccessAck"; break;
-        case 3100: name = "InteractionPreemptionStepFailAck"; break;
-        case 2794: name = "InteractionDoStepSuccessAck"; break;
-        case 2980: name = "InteractionDoStepDoInteractionSuccessAck"; break;
-        case 2369: name = "InteractionResetAck"; break;
+        case 2642: name = "InteractionPreemptionStepReq"; break;
+        case 2304: name = "InteractionDoStepReq"; break;
+        case 2751: name = "InteractionResetReq"; break;
+        case 2308: name = "InteractionPreemptionStepSuccessAck"; break;
+        case 2946: name = "InteractionPreemptionStepFailAck"; break;
+        case 2363: name = "InteractionDoStepSuccessAck"; break;
+        case 2160: name = "InteractionDoStepDoInteractionSuccessAck"; break;
+        case 2930: name = "InteractionResetAck"; break;
         default: return;
     }
     if (g_ia_lines.fetch_add(1, std::memory_order_relaxed) >= 400) return;
@@ -1246,8 +1246,8 @@ void end_without_host(const goodbye::State& s) noexcept {
         uint8_t state = 0;
         const bool have_p = game::safe_read(g_base + off::kWorldSystemSlot, &world, sizeof world) && world &&
                             game::safe_read(world + 0x60, &p, sizeof p) && p;
-        const bool have_q = have_p && game::safe_read(p + 0xC0, &q, sizeof q);
-        const bool have_state = have_p && game::safe_read(p + 0x15C, &state, sizeof state);
+        const bool have_q = have_p && game::safe_read(p + 0x1B0 /* 3663 (3576 0xC0) */, &q, sizeof q);
+        const bool have_state = have_p && game::safe_read(p + 0x24C /* 3663 (3576 0x15C) */, &state, sizeof state);
         log::error("Session2 guest: the client said goodbye (2001) {} ms ago with a field of the host (its 3093 went "
                    "to the host) and {}. Answering locally would delete its own user, the field's owner, before the "
                    "field (session 6: crash at exe+0x2045A6A 22 ms later), so the game ENDS NOW (TerminateProcess, "
@@ -1672,7 +1672,7 @@ void guest_local_load_watch() noexcept {
         uint8_t state = 0;
         const bool ok = game::safe_read(g_base + off::kWorldSystemSlot, &world, sizeof world) && world &&
                         game::safe_read(world + 0x60, &p, sizeof p) && p &&
-                        game::safe_read(p + 0x15C, &state, sizeof state);
+                        game::safe_read(p + 0x24C /* 3663 (3576 0x15C) */, &state, sizeof state);
         if (g_ll_watch.sample(now, state, ok)) end_local_after_remote(g_ll_epoch.load(), now - g_ll_watch.since_ms(), state);
     } catch (...) {
     }
@@ -1788,7 +1788,7 @@ void guest_deliver(std::vector<uint8_t>&& packet) {
     }
     if (g_mode.load() != Mode::Remote || g_broken.load()) return;  // nothing to deliver to
     // P8 mounts: this client's own character key (its MainPlayerDataStartAck 2756, u32 at +0).
-    if (v && v->opcode == 2524 && v->payload.size() >= 4) {
+    if (v && v->opcode == 2844 && v->payload.size() >= 4) {
         mount_sync_set_local_key(msl::get32(v->payload.data()));
     }
     // P8 mounts (mode 1): held in order while a Begin of the host's character waits for its Commit.
@@ -2103,6 +2103,30 @@ bool guest_push_own_request(const std::vector<uint8_t>& p) {
     return remote_live_for_keys() && !p.empty() && g_to_host.push(p);
 }
 
+// Co-op+ (2026-11-13, the 3663 port: the guest's second load stayed in the transition): the client's load machine in
+// every status line. P = [WorldSystem+0x60]; its state byte (3663: +0x24C; one state more from 0x0B on: 0x0B is new and
+// waits for [P+0x180]->vf(0x278)(0), 0x12 waits for the own stage manager's ready byte, 0x13 is the wait list, 0x19 is
+// "in the world"); what [P+0x180] is (its vtable); the byte the machine reads to choose 0x0B or 0x0C after 0x0A.
+std::string load_machine_text() {
+    uintptr_t world = 0, p = 0, obj = 0, vt = 0;
+    uint8_t state = 0xFF, flag = 0xFF, o23e = 0xFF;
+    uint32_t o1f8 = 0;
+    if (!game::safe_read(g_base + off::kWorldSystemSlot, &world, sizeof world) || !world ||
+        !game::safe_read(world + 0x60, &p, sizeof p) || !p) {
+        return " | load machine: no P";
+    }
+    game::safe_read(p + 0x24C, &state, sizeof state);
+    game::safe_read(g_base + 0x717DC98, &flag, sizeof flag);
+    if (game::safe_read(p + 0x180, &obj, sizeof obj) && obj) {
+        game::safe_read(obj, &vt, sizeof vt);
+        game::safe_read(obj + 0x23E, &o23e, sizeof o23e);
+        game::safe_read(obj + 0x1F8, &o1f8, sizeof o1f8);
+    }
+    return std::format(" | load machine: P 0x{:X} state 0x{:02X} | [P+0x180] 0x{:X} (vtable exe+0x{:X}, +0x23E {}, +0x1F8 {}) | "
+                       "the 0x0B flag [exe+0x717DC98] {}",
+                       p, state, obj, vt > g_base ? vt - g_base : 0, o23e, o1f8, flag);
+}
+
 std::string guest_describe() {
     const Mode m = g_mode.load();
     const char* mode = m == Mode::Remote ? "REMOTE (host's server)" : m == Mode::Undecided ? "deciding" : "local";
@@ -2119,7 +2143,8 @@ std::string guest_describe() {
            (guest_actor_diag_wanted() ? guest_actor_diag_describe() : std::string()) + guest_s3_describe() +
            guest_stage_diag_describe() + guest_scene_diag_describe() + guest_seq_route_describe() + guest_bodyanim_diag_describe() + guest_seq_play_describe() +
            guest_sched_load_describe() + guest_seq_restore_describe() + load_trip_describe() + guest_diag_worker_describe() +
-           actor_create_failures_text() + reannounce_describe() + guest_save_guest_describe() + rejoin_describe();
+           actor_create_failures_text() + reannounce_describe() + guest_save_guest_describe() + rejoin_describe() +
+           load_machine_text();
 }
 
 }  // namespace cdmp::session2

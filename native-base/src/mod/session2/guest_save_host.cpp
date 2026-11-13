@@ -40,26 +40,26 @@ using gsv::Owner;
 // ---------------------------------------------------------------- build 1.0.0.2976
 
 // Entries (all in .rsrc, inline hooks at the entry only), decoded with capstone over the disk exe (PE 0x6AB28F00).
-constexpr uintptr_t kLoadSlot = 0x19B1610;  // LoadSlot(mgr, int* res, u32 slot, actor) -> res
+constexpr uintptr_t kLoadSlot = 0x1A16C40;  // LoadSlot(mgr, int* res, u32 slot, actor) -> res
 constexpr uint8_t kLoadSlotHead[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74, 0x24, 0x10, 0x48, 0x89,
                                      0x7C, 0x24, 0x20, 0x44, 0x89, 0x44, 0x24, 0x18, 0x55, 0x41, 0x54, 0x41,
                                      0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8D, 0xAC, 0x24, 0x50, 0xFF, 0xFF,
                                      0xFF, 0x48, 0x81, 0xEC, 0xB0, 0x01, 0x00, 0x00, 0x4D, 0x8B, 0xF1};
-constexpr uintptr_t kSave = 0x19B0310;  // SavePlayerToSlot(mgr, int* res, u32 slot, character, opts*) -> res
+constexpr uintptr_t kSave = 0x1A15930;  // SavePlayerToSlot(mgr, int* res, u32 slot, character, opts*) -> res
 constexpr uint8_t kSaveHead[] = {0x4C, 0x89, 0x4C, 0x24, 0x20, 0x44, 0x89, 0x44, 0x24, 0x18, 0x48, 0x89,
                                  0x54, 0x24, 0x10, 0x48, 0x89, 0x4C, 0x24, 0x08, 0x55, 0x53, 0x56, 0x57,
                                  0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8D, 0xAC, 0x24,
                                  0x38, 0xFC, 0xFF, 0xFF, 0x48, 0x81, 0xEC, 0xC8, 0x04, 0x00, 0x00};
 // FlushPendingSaveData(mgr, int* res, character, u16, u8* opts, int* slot_out) -> res (probe only).
-constexpr uintptr_t kFlush = 0x19B3C60;
+constexpr uintptr_t kFlush = 0x1A192D0;
 constexpr uint8_t kFlushHead[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x18, 0x55, 0x57,
                                   0x41, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8D, 0xAC, 0x24, 0x40, 0xFF,
                                   0xFF, 0xFF, 0x48, 0x81, 0xEC, 0xC0, 0x01, 0x00, 0x00, 0x45, 0x0F, 0xB7,
                                   0xF9, 0x4D, 0x8B, 0xE8, 0x48, 0x8B, 0xF2};
 // Called (never hooked): GetOrCreateSlot's .rsrc thunk (jmp .xtls 0xEF537A0) and AddFile.
-constexpr uintptr_t kGetOrCreate = 0x2549C10;  // (S, const char* name, u8 in_memory) -> slot
-constexpr uint8_t kGetOrCreateHead[] = {0xE9, 0x0B, 0x8B, 0xE2, 0x0A};
-constexpr uintptr_t kAddFile = 0x254F0A0;  // (slot, const char* name) -> ...; makes the 0x140-byte file object
+constexpr uintptr_t kGetOrCreate = 0x25BB470;  // (S, const char* name, u8 in_memory) -> slot
+constexpr uint8_t kGetOrCreateHead[] = {0xE9, 0x9B, 0x3B, 0x2A, 0x0B};
+constexpr uintptr_t kAddFile = 0x25C0900;  // (slot, const char* name) -> ...; makes the 0x140-byte file object
 constexpr uint8_t kAddFileHead[] = {0x40, 0x53, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41,
                                     0x57, 0x48, 0x81, 0xEC, 0x88, 0x00, 0x00, 0x00, 0x48, 0x8B, 0xEA, 0x4C,
                                     0x8B, 0xF9};
@@ -71,9 +71,9 @@ struct CallSite {
 };
 constexpr CallSite kCallSites[] = {
     // Co-op+ port 1.0.0.3549 (calls found by scanning .xtext and .xpdata for E8 to each entry; order as on 2976).
-    {0x2EBBE8B, kLoadSlot}, {0x2EE2BA1, kLoadSlot}, {0xE3927BF, kLoadSlot},  // UserLogin, 3093 lobby, 3093 character
-    {0xB8A786C, kSave},     {0xE35801A, kSave},                               // autosave, 2910
-    {0x2B5CD6A, kFlush},    {0xE69FA88, kFlush},                              // logout phase, flush timer
+    {0x2F242AB, kLoadSlot}, {0x2F4B021, kLoadSlot}, {0xE9F5065, kLoadSlot},  // UserLogin, 3093 lobby, 3093 character
+    {0xBB0BEC8, kSave},     {0xE98E356, kSave},                               // autosave, 2910
+    {0x2BC2A6A, kFlush},    {0xED099C8, kFlush},                              // logout phase, flush timer
 };
 struct ErrorSite {
     uintptr_t at, global;
@@ -81,10 +81,10 @@ struct ErrorSite {
 };
 // 3549: the same reads in LoadSlot / LoadComponentsFromFile / SavePlayerToSlot, globals in the 2976 pattern (busy =
 // save failure + 4, invalid = absent + 0xE4).
-constexpr ErrorSite kErrBusy = {0x19B179E, 0x714BF14, "LoadSlot's busy error"};
-constexpr ErrorSite kErrInvalidSlot = {0x19B1700, 0x714BB44, "LoadSlot's invalid-slot error"};
-constexpr ErrorSite kErrAbsentSlot = {0x2226CAF, 0x714BA60, "LoadComponentsFromFile's absent-slot error"};
-constexpr ErrorSite kErrSaveFail = {0x19B060A, 0x714BF10, "SavePlayerToSlot's own failure"};
+constexpr ErrorSite kErrBusy = {0x1A16DCE, 0x71D0CFC, "LoadSlot's busy error"};
+constexpr ErrorSite kErrInvalidSlot = {0x1A16D30, 0x71D092C, "LoadSlot's invalid-slot error"};
+constexpr ErrorSite kErrAbsentSlot = {0x2295FCF, 0x71D0848, "LoadComponentsFromFile's absent-slot error"};
+constexpr ErrorSite kErrSaveFail = {0x1A15C2A, 0x71D0CF8, "SavePlayerToSlot's own failure"};
 
 // Fields (evidence in the report and in guest_save_logic.h).
 constexpr uint32_t kSlotMemoryOnly = 0x699;  // u8: GetOrCreateSlot .xtls 0xEF538D7, CommitSlot .xtls 0xEF5186D
@@ -225,7 +225,7 @@ bool on_server_thread() {
     uintptr_t block = 0;
     uint8_t flag = 0;
     return game::safe_read(tls_array, &block, sizeof block) && block &&
-           game::safe_read(block + 0x1EB, &flag, sizeof flag)  /* Co-op+ port 3549: ServerRunThread 0x29ABB86 sets +0x1EB (2976: +0x1EC) */ && flag != 0;
+           game::safe_read(block + 0x1EB, &flag, sizeof flag)  /* Co-op+ port 3549: ServerRunThread 0x2A0E1B6 sets +0x1EB (2976: +0x1EC) */ && flag != 0;
 }
 
 std::string thread_text() {

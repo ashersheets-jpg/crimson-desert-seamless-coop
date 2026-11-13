@@ -72,21 +72,21 @@ constexpr uint8_t kStartBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x4C, 0x89, 0x4
                                    0x24, 0x18, 0x48, 0x89, 0x4C, 0x24, 0x08, 0x55};
 
 // Co-op+ port 1.0.0.3549 (tools/native-port: wildcard match + the read below; 2976 addresses in the names).
-constexpr Site kNullConsumer{0x251ED90, kNullConsumerBytes, 5, "0x232D5C0 (null-action consumer)"};
-constexpr Site kUpdate{0x9451E0, kUpdateBytes, 5, "CharacterControl::Update 0x85FBA0"};
-constexpr Site kSpawn{0x533220, kSpawnBytes, 5, "2723's consumer 0x48B120"};
-constexpr Site kSpawnAl{0x53329D, kSpawnAlBytes, 7, "2723's vf188(5) test 0x48B197"};
-constexpr Site kAck{0x532E30, kAckBytes, 5, "2991's consumer 0x48AD40"};
-constexpr Site kStart{0x948D30, kStartBytes, 5, "StartAction 0x863530"};
-constexpr uintptr_t kNullRead = 0x251EDCB;
-constexpr uintptr_t kSpawnCall = 0x533295;
+constexpr Site kNullConsumer{0x2590720, kNullConsumerBytes, 5, "0x232D5C0 (null-action consumer)"};
+constexpr Site kUpdate{0x9729C0, kUpdateBytes, 5, "CharacterControl::Update 0x85FBA0"};
+constexpr Site kSpawn{0x55E6D0, kSpawnBytes, 5, "2723's consumer 0x48B120"};
+constexpr Site kSpawnAl{0x55E74D, kSpawnAlBytes, 7, "2723's vf188(5) test 0x48B197"};
+constexpr Site kAck{0x55E2E0, kAckBytes, 5, "2991's consumer 0x48AD40"};
+constexpr Site kStart{0x976730, kStartBytes, 5, "StartAction 0x863530"};
+constexpr uintptr_t kNullRead = 0x259075B;
+constexpr uintptr_t kSpawnCall = 0x55E745;
 // Co-op+ (3549, two-copy run tc9): a second reader of a layer's current action, in the movement update 0x7F66A0:
 // rax = layer, `mov rdx,[rax+0x10] ; cmp byte [rdx+0x116],r15b ; jge 0x7F6CC3`. With the current action null (a
 // remote actor, as at 0x232D5C0) it read [0x116] and the guest's game ended. Guard: a null action takes the code's
 // own jge way (0x7F6CC3 uses neither rdx nor rax; no branch lands inside the 11 bytes).
 constexpr uint8_t kMoveNullBytes[] = {0x48, 0x8B, 0x50, 0x10, 0x44, 0x38, 0xBA, 0x16, 0x01, 0x00, 0x00};
-constexpr uintptr_t kMoveNullResume = 0x7F7363;
-constexpr Site kMoveNull{0x7F6F12, kMoveNullBytes, 11, "0x7F6F12 (movement update, current action read)"};
+constexpr uintptr_t kMoveNullResume = 0x8254F3;
+constexpr Site kMoveNull{0x8250A2, kMoveNullBytes, 11, "0x8250A2 (movement update, current action read)"};
 
 // Offsets (build 2976; p8-raiz-invitado.md §5, companeros.md).
 constexpr uint32_t kCc_Actor = 0x08, kCc_Ack60 = 0x60, kCc_Default0 = 0x70, kCc_Default1 = 0x78, kCc_Layer0 = 0x88,
@@ -95,7 +95,7 @@ constexpr uint32_t kLayer_Cur = 0x10, kLayer_Play = 0x18, kLayer_Chart = 0x110, 
 constexpr uint32_t kActor_State = 0x5E, kActor_C1 = 0xC1, kActor_C2 = 0xC2, kActor_CF = 0xCF, kActor_C8 = 0xC8;
 constexpr uint32_t kAck60_Flags = 0x10;
 
-constexpr uint16_t kOp2005 = 2005, kOp2723 = 2392, kOp2991 = 2552;
+constexpr uint16_t kOp2005 = 2005, kOp2723 = 3039, kOp2991 = 2800;
 
 // Budgets.
 constexpr size_t kRingSize = 8192;          // 1 MB
@@ -589,7 +589,7 @@ DWORD WINAPI install_thread(LPVOID) {
             }
             g_move_null_on = make_mid(kMoveNull, g_h_move_null, on_move_null);
             log::info("GuestS3 guard (Co-op+, 3549): the movement update's current-action read exe+0x{:X} {}",
-                      kMoveNull.rva, g_move_null_on.load() ? "guarded (a null action skips to exe+0x7F7363)" : "OFF");
+                      kMoveNull.rva, g_move_null_on.load() ? "guarded (a null action skips to exe+0x8254F3)" : "OFF");
             if (g_diag.load()) {
                 // One owner per entry: with guest_remote_update_guard=1, horse_diag hooks 0x85FBA0.
                 if (!g_update_taken.load()) g_update_on = make_mid(kUpdate, g_h_update, on_update);
@@ -899,7 +899,7 @@ void tick_once() {
 // does not handle and ends the process; its reporter (Sentry) may replace our
 // top-level filter, so there the vectored handler is the only place sure to run.
 
-constexpr uintptr_t kKnownCrashSite = 0x251EDCF;  // Co-op+ port 3549 (2976: 0x232D5FF)
+constexpr uintptr_t kKnownCrashSite = 0x259075F;  // Co-op+ port 3549 (2976: 0x232D5FF)
 constexpr uint32_t kMaxCrashRecords = 64;
 constexpr size_t kKeepDumps = 2;  // cdmp_crash_*.dmp kept next to cdmp.asi (the newest)
 
@@ -1157,7 +1157,7 @@ LONG CALLBACK crash_veh(EXCEPTION_POINTERS* ep) {
                       : "GuestS3 first-chance AV at ");
         if (at >= g_base && at < g_base + 0x14000000) {
             l.str("exe+").hex(at - g_base);
-        } else if (mod_base && at >= mod_base && at < mod_base + 0x2000C40) {
+        } else if (mod_base && at >= mod_base && at < mod_base + 0x2065780) {
             l.str("cdmp.asi+").hex(at - mod_base);
         } else {
             l.hex(at);

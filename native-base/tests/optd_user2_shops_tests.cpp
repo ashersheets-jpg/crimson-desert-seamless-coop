@@ -137,12 +137,12 @@ void test_sites() {
     CHECK(!u2sh::site_of(2671) && !u2sh::site_of(2720) && !u2sh::site_of(2100) && !u2sh::site_of(2043));
     CHECK(u2sh::site_index(2671) == u2sh::kSiteCount);
     // 3576 (2026-11-09): the opcodes are 3549's; the protected-section sites are 0 (matched by section).
-    CHECK(u2sh::site_of(2880)->ret_rva == 0x2CEA189);
-    CHECK(u2sh::site_of(2839)->ret_rva == 0 && u2sh::site_matches(*u2sh::site_of(2839), 0xE3FA800) &&
-          !u2sh::site_matches(*u2sh::site_of(2839), 0x2CEA189));
+    CHECK(u2sh::site_of(2644)->ret_rva == 0x2D510A9);
+    CHECK(u2sh::site_of(2200)->ret_rva == 0 && u2sh::site_matches(*u2sh::site_of(2200), 0xE3FA800) &&
+          !u2sh::site_matches(*u2sh::site_of(2200), 0x2D510A9));
     CHECK(u2sh::site_of(2048)->ret_rva == 0 && u2sh::site_of(2048)->id_at == u2sh::kTimerId);
     CHECK(u2sh::site_of(2059)->ret_rva == 0 && u2sh::site_of(2059)->id_at == u2sh::kTimerId);
-    CHECK(u2sh::site_matches(*u2sh::site_of(2880), 0x2CEA189) && !u2sh::site_matches(*u2sh::site_of(2880), 0x2CEA18A));
+    CHECK(u2sh::site_matches(*u2sh::site_of(2644), 0x2D510A9) && !u2sh::site_matches(*u2sh::site_of(2644), 0x2CEA18A));
     CHECK(u2sh::kOpDeleteTimer == 2059);
     // S13 (the host's smithy 0x19D): a 2436 as a packet (u16 opcode | i8 slot | u16 length | payload).
     const auto b2436 = bytes_of({0x84, 0x09, 0x00, 0x0E, 0x00, 0x9D, 0x01, 0, 0, 0, 0, 0, 0, 0x06, 0, 0, 0, 0, 0});

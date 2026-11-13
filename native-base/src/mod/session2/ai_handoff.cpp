@@ -26,14 +26,14 @@ Mode g_mode = Mode::Off;
 bool g_guest = false;
 
 constexpr uint32_t kHostCharacter = 0xA0100001;
-constexpr uint16_t kOpChangeAiControlAck = 2660;
+constexpr uint16_t kOpChangeAiControlAck = 2152;
 constexpr uint32_t kPrivateMagic = 0xC0DEA1C7;   // our 12-byte form of 2660: magic | actor key | new controller
 constexpr uint32_t kTickEntry = 0xC0DE0008;      // trade_probe's entry for the server-thread check
-constexpr uintptr_t kServerActorMgrSlot = 0x71C0608;
-constexpr uintptr_t kClientWorldSlot = 0x71C0100;
-constexpr uintptr_t kFnPosition = 0x5ACE70;      // (transform comp, buf)
-constexpr uintptr_t kFnAiSessionBump = 0x2B64FD0, kFnMoveSessionBump = 0x2B66830, kFnActionReset = 0x222C920;
-constexpr uintptr_t kFnClientControlMode = 0x5AF410;  // (client actor): recomputes the control mode byte actor+0xC8
+constexpr uintptr_t kServerActorMgrSlot = 0x72456D0;
+constexpr uintptr_t kClientWorldSlot = 0x72451C0;
+constexpr uintptr_t kFnPosition = 0x5D8540;      // (transform comp, buf)
+constexpr uintptr_t kFnAiSessionBump = 0x2BCAD70, kFnMoveSessionBump = 0x2BCC6B0, kFnActionReset = 0x229BC60;
+constexpr uintptr_t kFnClientControlMode = 0x5DAB00;  // (client actor): recomputes the control mode byte actor+0xC8
 constexpr float kSector = 0.015625f;             // 1 / 64 m
 constexpr float kFarM = 60.0f, kNearM = 30.0f;   // controller farther than kFarM, another player within kNearM
 constexpr int kNeedChecks = 2;                   // the same answer on two checks in a row (about 2 s)
@@ -311,7 +311,7 @@ void ai_handoff_tick() noexcept {
         std::memcpy(&pl[14], &kHostCharacter, 4);
         std::memcpy(&pl[18], &kHostCharacter, 4);
         std::memcpy(&pl[26], &kTickEntry, 4);
-        net::sniffer_inject_c2s(lrl::make(3111, pl, 0x00));
+        net::sniffer_inject_c2s(lrl::make(3104, pl, 0x00));
     } catch (...) {
     }
 }

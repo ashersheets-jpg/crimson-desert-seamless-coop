@@ -32,10 +32,10 @@
 
 namespace cdmp::session2::obs {
 
-inline constexpr uint16_t kOpPrepare = 2380;    // PrepareSequencerAck
-inline constexpr uint16_t kOpDelete = 2292;     // DeleteSequencerAck
-inline constexpr uint16_t kOpBranch = 2920;     // StageBranchStateAck
-inline constexpr uint16_t kOpMilestone = 2384;  // PlayAllPreLoadSequencerAck
+inline constexpr uint16_t kOpPrepare = 2356;    // PrepareSequencerAck
+inline constexpr uint16_t kOpDelete = 2659;     // DeleteSequencerAck
+inline constexpr uint16_t kOpBranch = 2752;     // StageBranchStateAck
+inline constexpr uint16_t kOpMilestone = 2941;  // PlayAllPreLoadSequencerAck
 
 inline constexpr size_t kHeader = 5;          // u16 opcode | i8 slot | u16 payload length
 inline constexpr size_t kPreparePrefix = 92;  // u8 kind | u32 actor | 87-byte play data (3576; 2976: 86)

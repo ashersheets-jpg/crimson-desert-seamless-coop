@@ -433,7 +433,7 @@ void test_tables() {
     CHECK(dgl::age_bucket(200000, 50000) == 4);
     CHECK(dgl::age_bucket(200000, 0) == 5);
     CHECK(dgl::age_bucket(100, 200) == 5);
-    CHECK(dgl::touch_op(2539) && dgl::touch_op(2155) && !dgl::touch_op(2596) && !dgl::touch_op(2005));
+    CHECK(dgl::touch_op(3140) && dgl::touch_op(2996) && !dgl::touch_op(2738) && !dgl::touch_op(2005));
 }
 
 void test_mode_and_bytes() {
@@ -452,8 +452,8 @@ void test_mode_and_bytes() {
     const uint8_t mov[7] = {0x41, 0x89, 0x86, 0x90, 0x00, 0x00, 0x00};
     static_assert(dgl::kControllerWritePatch == 7);
     CHECK(std::memcmp(dgl::kControllerWriteBytes, mov, 7) == 0);
-    static_assert(dgl::kFieldOwnerReadBytes[3] == 0x80 && dgl::kFieldOwnerReadBytes[4] == 0x01);
-    static_assert(dgl::kFieldOwnerRead + 11 == dgl::kControllerWrite);
+    static_assert(dgl::kFieldOwnerReadBytes[2] == 0x80 && dgl::kFieldOwnerReadBytes[3] == 0x01);  // 3663: mov eax,[rdi+0x180], no REX
+    static_assert(dgl::kFieldOwnerRead + 10 == dgl::kControllerWrite);
     // 0x2970ADF: E8 rel32 -> 0x28AD170.
     const int32_t rel = static_cast<int32_t>(dgl::le32(&dgl::kDockEquipCall[1]));
     CHECK(dgl::kDockEquipCall[0] == 0xE8 &&
@@ -498,8 +498,8 @@ void test_other_player() {
         CHECK(std::strcmp(dgl::docked_action_name(r.docked[0]), "REWRITTEN (other player, local drive)") == 0);
         // Its requests are withheld (the device's key at +0), like phase 1's.
         const std::vector<uint8_t> req = {0x4e, 0x01, 0x10, 0xb0, 0x59, 0xcc, 0x3e, 0x00};
-        CHECK(dgl::withhold_index(packet(2155, req), keys) == 0);
-        CHECK(dgl::withhold_index(packet(2251, req), keys) == 3);
+        CHECK(dgl::withhold_index(packet(2996, req), keys) == 0);
+        CHECK(dgl::withhold_index(packet(2662, req), keys) == 3);
         CHECK(dgl::withhold_index(packet(2556, req), keys) == -1);
         // Announced again with the same parent: kept. With another parent, or undocked: retired.
         auto again = payload({kS28HostDevice});

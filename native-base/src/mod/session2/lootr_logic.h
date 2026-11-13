@@ -17,12 +17,12 @@
 
 namespace cdmp::session2::lrl {
 
-inline constexpr uint16_t kOpGimmickGone = 2214;      // u32 gimmick | u32 gimmick
-inline constexpr uint16_t kOpCoolTime = 2760;         // SyncFieldGimmickSavedByCoolTimeAck
-inline constexpr uint16_t kOpGimmickState = 2096;     // u32 gimmick | ...
-inline constexpr uint16_t kOpRemoveActor = 3067;      // RemoveActorAck
-inline constexpr uint16_t kOpPreemptReq = 3008, kOpPreemptAck = 2120;
-inline constexpr uint16_t kOpDoStepReq = 3073, kOpDoStepAck = 2794;
+inline constexpr uint16_t kOpGimmickGone = 3059;      // u32 gimmick | u32 gimmick
+inline constexpr uint16_t kOpCoolTime = 2985;         // SyncFieldGimmickSavedByCoolTimeAck
+inline constexpr uint16_t kOpGimmickState = 2883;     // u32 gimmick | ...
+inline constexpr uint16_t kOpRemoveActor = 3037;      // RemoveActorAck
+inline constexpr uint16_t kOpPreemptReq = 2642, kOpPreemptAck = 2308;
+inline constexpr uint16_t kOpDoStepReq = 2304, kOpDoStepAck = 2363;
 inline constexpr size_t kHeader = 5;
 
 inline uint32_t rd32(const uint8_t* p) {

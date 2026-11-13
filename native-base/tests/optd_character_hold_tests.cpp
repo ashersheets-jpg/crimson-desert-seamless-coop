@@ -930,7 +930,7 @@ void test_acks_with_character() {
         CHECK(g_out.size() == 2);
         if (g_out.size() == 2) {
             CHECK(op_of(g_out[0]) == 2005 && key_of(g_out[0]) == kHostChar);
-            CHECK(op_of(g_out[1]) == 3094 && g_out[1][9] == 7);
+            CHECK(op_of(g_out[1]) == 3008 && g_out[1][9] == 7);
         }
         CHECK(observer_hold_acks_keys() == 0);
     }
@@ -972,7 +972,7 @@ void test_acks_with_character() {
         CHECK(g_out.size() == 4);
         if (g_out.size() == 4) {
             CHECK(op_of(g_out[1]) == 2005 && key_of(g_out[1]) == kHostChar);
-            CHECK(op_of(g_out[2]) == 3094 && g_out[2][9] == 1 && op_of(g_out[3]) == 2552 && g_out[3][9] == 2);
+            CHECK(op_of(g_out[2]) == 3008 && g_out[2][9] == 1 && op_of(g_out[3]) == 2800 && g_out[3][9] == 2);
         }
         CHECK(observer_hold_acks_keys() == 0);
     }
@@ -1003,7 +1003,7 @@ void test_acks_with_character() {
     // The route's key: NPCs (as before) and characters; npc_key_of itself is unchanged.
     std::vector<uint8_t> payload(8, 0);
     put(payload.data(), 0, kHostChar);
-    CHECK(oha::held_key_of(3094, payload) == std::optional<uint32_t>(kHostChar));
+    CHECK(oha::held_key_of(3008, payload) == std::optional<uint32_t>(kHostChar));
     CHECK(!oha::npc_key_of(2697, payload));
     put(payload.data(), 0, uint32_t{0x90100000});
     CHECK(!oha::held_key_of(2697, payload));

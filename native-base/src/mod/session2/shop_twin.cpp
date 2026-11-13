@@ -45,7 +45,7 @@ std::atomic<uint64_t> c_dialog_frames_out{0}, c_dialog_frames_in{0}, c_dialog_re
 uint32_t own_key() {
     uintptr_t g = 0, g30 = 0, user = 0, ch = 0;
     uint32_t k = 0;
-    if (game::safe_read(g_base + 0x71C0100, &g, 8) && g && game::safe_read(g + 0x30, &g30, 8) && g30 &&
+    if (game::safe_read(g_base + 0x72451C0, &g, 8) && g && game::safe_read(g + 0x30, &g30, 8) && g30 &&
         game::safe_read(g30 + 0x58, &user, 8) && user && game::safe_read(user + 0xD0, &ch, 8) && ch)
         game::safe_read(ch + 0x60, &k, 4);
     return (k >> 28) == 0xA ? k : 0;

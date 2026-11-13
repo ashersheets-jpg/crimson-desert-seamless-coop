@@ -20,7 +20,7 @@ namespace {
 using rfl::Kind;
 using rfl::Mode;
 
-constexpr uint16_t kOpMainPlayerDataStartAck = 2524;  // u32 the client's own character at +0 (server.cpp)
+constexpr uint16_t kOpMainPlayerDataStartAck = 2844;  // u32 the client's own character at +0 (server.cpp)
 constexpr uint16_t kEvRewrite = 1, kEvWindow = 2;
 constexpr uint64_t kMaxLines = 48;       // rewrite / window lines in a run
 constexpr uint64_t kSummaryMs = 60000;

@@ -15,12 +15,12 @@
 namespace cdmp::session2 {
 namespace {
 
-constexpr uintptr_t kCall = 0x2CECC28;   // call [rax+0x48]   (the scene's candidate holder)
-constexpr uintptr_t kPoint = 0x2CECC2B;  // vmovsd xmm0,[rbp-0x50]; vmovsd [rax+0x668],xmm0 (the crash)
-constexpr uintptr_t kExit = 0x2CECCBF;   // the handler's exit path after the copy loop
+constexpr uintptr_t kCall = 0x2D53B48;   // call [rax+0x48]   (the scene's candidate holder)
+constexpr uintptr_t kPoint = 0x2D53B4B;  // vmovsd xmm0,[rbp-0x50]; vmovsd [rax+0x668],xmm0 (the crash)
+constexpr uintptr_t kExit = 0x2D53BDF;   // the handler's exit path after the copy loop
 // call [rax+0x48] | vmovsd xmm0,[rbp-0x50] | vmovsd [rax+0x668],xmm0 | mov ecx,[rbp-0x48]
 constexpr uint8_t kBytes[] = {0xFF, 0x50, 0x48, 0xC5, 0xFB, 0x10, 0x45, 0xB0, 0xC5, 0xFB, 0x11,
-                              0x80, 0x68, 0x06, 0x00, 0x00, 0x8B, 0x4D, 0xB8};
+                              0x80, 0x70, 0x06, 0x00, 0x00, 0x8B, 0x4D, 0xB8};
 // lea rax,[rip+..] at the exit path (the scope's vtable put back), checked too.
 constexpr uint8_t kExitBytes[] = {0x48, 0x8D, 0x05};
 

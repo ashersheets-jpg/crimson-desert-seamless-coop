@@ -43,14 +43,14 @@
 
 namespace cdmp::session2::oms {
 
-inline constexpr uint16_t kOpMoveFieldAck = 2653;
-inline constexpr uint16_t kOpMoveFieldCompleteAck = 2340;
-inline constexpr uint16_t kOpMoveFieldCompletePostAck = 3029;
-inline constexpr uint16_t kOpMilestone = 2384;
-inline constexpr uint16_t kOpLoadingCompleteAck = 2190;
+inline constexpr uint16_t kOpMoveFieldAck = 2364;
+inline constexpr uint16_t kOpMoveFieldCompleteAck = 2268;
+inline constexpr uint16_t kOpMoveFieldCompletePostAck = 2792;
+inline constexpr uint16_t kOpMilestone = 2941;
+inline constexpr uint16_t kOpLoadingCompleteAck = 2891;
 inline constexpr uint16_t kOpScopeSenderAck = 2046;   // a native bundle (scope sender): contents not parsed
-inline constexpr uint16_t kOpMoveFieldCompleteReq = 2471;
-inline constexpr uint16_t kOpLoadingCompleteReq = 2167;
+inline constexpr uint16_t kOpMoveFieldCompleteReq = 2723;
+inline constexpr uint16_t kOpLoadingCompleteReq = 2789;
 
 // The take_frame opcodes the ledger follows (anything else is never handed to it).
 constexpr bool followed_out(uint16_t op) {

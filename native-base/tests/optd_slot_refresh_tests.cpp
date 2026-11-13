@@ -136,7 +136,7 @@ void test_expected_sequence_shape() {
     // The thunk: jmp .xtls (2976: 0xCBD92D0; 3549: 0xB7F20A0; 3576: 0xB8AB410).
     int32_t j = 0;
     std::memcpy(&j, kSaveMgrRefreshSlotsHead + 1, 4);
-    CHECK(kSaveMgrRefreshSlots + 5 + static_cast<int64_t>(j) == 0xB8AB410);
+    CHECK(kSaveMgrRefreshSlots + 5 + static_cast<int64_t>(j) == 0xBB0CBC0);  // 3663 (3576: 0xB8AB410)
     // The title's read: [rip+...] = kWorldSystemSlot, then +0x88.
     int32_t w = 0;
     std::memcpy(&w, kTitlePlayReadsSaveMgrBytes + 3, 4);

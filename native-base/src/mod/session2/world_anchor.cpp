@@ -26,9 +26,9 @@ namespace w = wal;
 // 3576 (2026-11-09): the 2245 handler (TrocTrUpdateWorldObserverStateReq vtable 0x5EED4D8 slot 2 0x2C43980 -> 0x2EE64D0)
 // writes the slot at 0x2EE653A: mov byte [rsi+0x198],al ; mov eax,[rbp+0x38] ; mov dword [rsi+0x19C],eax (rsi = the
 // field, its lock [rsi+8]); ServerField::Reset (vtable slot 4, 0x2D8E290) clears +0x19C, +0x198 and the owner +0x180.
-constexpr uintptr_t kHandlerWrite = 0x2EE653A;
+constexpr uintptr_t kHandlerWrite = 0x2F4E9DA;
 constexpr uint8_t kHandlerWriteBytes[] = {0x88, 0x86, 0x98, 0x01, 0x00, 0x00, 0x8B, 0x45, 0x38, 0x89, 0x86, 0x9C, 0x01, 0x00, 0x00};
-constexpr uintptr_t kCollectorRead = 0x2D8E3CF;  // 3576: Reset's mov byte [rbx+0x198],0 (2976: the collector's read 0x2C38E28)
+constexpr uintptr_t kCollectorRead = 0x2DF516F;  // 3576: Reset's mov byte [rbx+0x198],0 (2976: the collector's read 0x2C38E28)
 constexpr uint8_t kCollectorReadBytes[] = {0xC6, 0x83, 0x98, 0x01, 0x00, 0x00, 0x00};
 
 uintptr_t g_base = 0;

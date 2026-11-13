@@ -37,7 +37,7 @@ namespace cdmp::session2::gsr {
 // never gated, only routed.
 enum class Point : uint8_t { P2661, P2981, P2810, P2322, P2524, Count };
 inline constexpr size_t kPoints = static_cast<size_t>(Point::Count);
-inline constexpr std::array<uint16_t, kPoints> kPointOp = {2380, 2920, 2292, 2384, 2436};
+inline constexpr std::array<uint16_t, kPoints> kPointOp = {2356, 2752, 2659, 2941, 2369};
 inline const char* point_name(Point p) {
     switch (p) {
         case Point::P2661: return "2380 PrepareSequencerAck 0xC0612A";
@@ -404,11 +404,11 @@ inline Verdict decide(const RouteFacts& f) {
 // nullopt for any other opcode or a short payload.
 inline std::optional<uint32_t> named_actor(uint16_t op, std::span<const uint8_t> payload) {
     switch (op) {
-        case 2380:
+        case 2356:
             if (payload.size() >= 5) return le32(&payload[1]);
             return std::nullopt;
-        case 2292:
-        case 2384:
+        case 2659:
+        case 2941:
             if (payload.size() >= 4) return le32(&payload[0]);
             return std::nullopt;
         default:
@@ -473,7 +473,7 @@ inline bool refuse(Point p, const RouteFacts& f, Verdict v) {
 // 2126 u32 actor | u64 key @4; 2958 / 2909 u8 | u32 actor @1 | u32 resource @5 | u64 key @9 | u32 x n.
 enum class SchedPoint : uint8_t { P2335, P2126, P2958, P2909, Count };
 inline constexpr size_t kSchedPoints = static_cast<size_t>(SchedPoint::Count);
-inline constexpr std::array<uint16_t, kSchedPoints> kSchedOp = {2989, 2796, 2616, 2297};
+inline constexpr std::array<uint16_t, kSchedPoints> kSchedOp = {2224, 2338, 3099, 2509};
 inline const char* sched_point_name(SchedPoint p) {
     switch (p) {
         case SchedPoint::P2335: return "2989 CreateNPCScheduleStageAck 0xC0B5C1";

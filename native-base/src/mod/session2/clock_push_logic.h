@@ -24,9 +24,9 @@
 
 namespace cdmp::session2::ckp {
 
-inline constexpr uint16_t kOpLoadingCompleteAck = 2190;
-inline constexpr uint16_t kOpSetFieldTimeAck = 2952;
-inline constexpr uint16_t kOpSyncWeatherStateReq = 2689;
+inline constexpr uint16_t kOpLoadingCompleteAck = 2891;
+inline constexpr uint16_t kOpSetFieldTimeAck = 3145;
+inline constexpr uint16_t kOpSyncWeatherStateReq = 2959;
 inline constexpr size_t kHeader = 5;          // u16 opcode | i8 slot (-1) | u16 payload length
 inline constexpr size_t kFieldTimeMem = 32;
 inline constexpr size_t kFieldTimeWire = 31;

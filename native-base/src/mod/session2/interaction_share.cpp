@@ -19,7 +19,7 @@
 // (rcx = component, edx = key) -> 0x22EBF00 -> 0xCADEB10, which deletes EVERY dynamic entry of that key.
 namespace cdmp::session2 {
 namespace {
-constexpr uintptr_t kAddCall = 0x255E45C, kRemoveCall = 0x255E639, kRemoveNext = 0x255E63E;
+constexpr uintptr_t kAddCall = 0x25CFCFC, kRemoveCall = 0x25CFED8, kRemoveNext = 0x25CFEDD;
 SafetyHookMid g_add, g_remove;
 std::mutex g_mu;
 ishare::Ledger g_ledger;
@@ -91,7 +91,7 @@ void interaction_share_start() {
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     // Byte guards: the two call sites as built for 3576.
     uint8_t a[5]{}, r[5]{};
-    const uint8_t want_a[5] = {0xE8, 0xDF, 0xD6, 0xD8, 0xFF}, want_r[5] = {0xE8, 0xC2, 0xD8, 0xD8, 0xFF};
+    const uint8_t want_a[5] = {0xE8, 0xCF, 0xC6, 0xD8, 0xFF}, want_r[5] = {0xE8, 0xC3, 0xC8, 0xD8, 0xFF};
     if (!game::safe_read(g_base + kAddCall, a, 5) || !game::safe_read(g_base + kRemoveCall, r, 5) ||
         std::memcmp(a, want_a, 5) != 0 || std::memcmp(r, want_r, 5) != 0) {
         log::warn("InteractionShare: the node's call sites do not match this build; off");

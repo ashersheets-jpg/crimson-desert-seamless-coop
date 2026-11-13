@@ -133,9 +133,9 @@ bool npc_action_probe_wanted() noexcept {return g_wanted.load() && user2_stages_
 void npc_action_probe_install(uintptr_t base,std::span<const gad::Section> sections,bool applied_mid_ready) {
     if (!npc_action_probe_wanted()) return;
     g_base=base;
-    const bool action=install(base,sections,0x2D08190,  // 3576 (2976 0x2A78CA0), same head
+    const bool action=install(base,sections,0x2D6F0D0,  // 3576 (2976 0x2A78CA0), same head
                                   kActionBytes,reinterpret_cast<void*>(&action_detour),g_action);
-    const bool node=install(base,sections,0x2A62280,  // 3576 (2976 0x281CEE0), same head
+    const bool node=install(base,sections,0x2AC5D40,  // 3576 (2976 0x281CEE0), same head
                                 kNodeBytes,reinterpret_cast<void*>(&node_detour),g_node);
     user2_stages_npc_action_probe_ready(action && applied_mid_ready);
     user2_stages_npc_node_probe_ready(node);

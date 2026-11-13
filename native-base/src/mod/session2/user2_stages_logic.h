@@ -60,12 +60,12 @@ inline constexpr uint16_t kOp2043 = 2047;  // UpdateStageOnceTimer -> .xtls 0x10
 inline constexpr uint16_t kOp2045 = 2049;  // UpdateScheduleStageOnceTimer -> .xtls 0x108309B0 -> 0x2822D00([mgr+0x148])
 inline constexpr uint16_t kOp2046 = 2050;  // UpdateFactionSpawnStageOnceTimer -> .xtls 0x10835A30 -> 0x27FBD60([mgr+0x10])
 // ServerSequencerStageManager (vtable 0x5B17A58).
-inline constexpr uint32_t kVtStageMgr = 0x5EE0B88;  // 3576 RTTI (2976 0x5B17A58)
-inline constexpr uint32_t kVtSchedMgr = 0x5EDFA10;  // 3576 RTTI  // ServerNPCScheduleSpawnManger
+inline constexpr uint32_t kVtStageMgr = 0x5F5A758;  // 3576 RTTI (2976 0x5B17A58)
+inline constexpr uint32_t kVtSchedMgr = 0x5F596D8;  // 3576 RTTI  // ServerNPCScheduleSpawnManger
 // (+0x74 is not a count of active stages: S28 read 52065 there. Not read any more.)
 inline constexpr uint32_t kMgr_Actor = 0x18, kMgr_Faction = 0x10, kMgr_SeqList = 0x28, kMgr_SeqCount = 0x30,
-                          kMgr_KeepCount = 0xD0, kMgr_Sched = 0x170, kMgr_CellX = 0x6A8,
-                          kMgr_CellZ = 0x6AC, kMgr_Preparing = 0x6B9, kMgr_PrepPending = 0x6BA, kMgr_State = 0x6D0;
+                          kMgr_KeepCount = 0xD0, kMgr_Sched = 0x178, kMgr_CellX = 0x6B0,  /* 3663: +8 */
+                          kMgr_CellZ = 0x6B4, kMgr_Preparing = 0x6C1, kMgr_PrepPending = 0x6C2, kMgr_State = 0x6D8;  /* 3663: +8 */
 // 3576 (2026-11-09): +0x28 before the schedule manager (E reads [mgr+0x170]; the id list +0x178), cells +0x6A8/+0x6AC,
 // +0x6B8..0x6BA and the state +0x6D0 (+0x30; 0x2AE9650 / 0x2ADBCE0 / 0x2ADA9B0). SeqList / SeqCount / KeepCount: not
 // re-verified (read for logs and the drain's "anything left" check).
@@ -91,7 +91,7 @@ inline constexpr uint32_t kTs_Local = 0xB4, kTs_Parent = 0xD0;
 // The field a TransformSync's field mover holds (TS+0x4F0, +0x10: fast_travel.cpp's kTsFieldMoverField) and the
 // ServerField vtable it must have.
 inline constexpr uint32_t kTs_Field = 0x518;  // Co-op+ port 3549: field mover TS+0x508, +0x10 (2976: 0x500)
-inline constexpr uint32_t kVtServerField = 0x5EF2B10;  // 3576
+inline constexpr uint32_t kVtServerField = 0x5F6C7E8;  // 3576
 
 // ---------------------------------------------------------------- positions and cells (0x288B7A0's arithmetic)
 
@@ -675,7 +675,7 @@ inline ChainCount count_chains(const uint64_t* ticks_us, size_t n, uint64_t peri
 // a loop the guest saw as guards walking off and reappearing). U-e: at the controller write 0x2792A7B (mov
 // [r14+0x90],eax; r14 the new actor, rsi the descriptor, r13 the field) eax := user 2's user key for exactly those
 // NPCs, so the guest's client - next to them, with their stage bound in its own M - runs their AI.
-inline constexpr uint32_t kVtDescNpcSchedule = 0x5ECDB60;  // 3576 RTTI  // pa::CreateServerActorDesc_NPCSchedule (vf3 0x27A6160)
+inline constexpr uint32_t kVtDescNpcSchedule = 0x5F477E0;  // 3576 RTTI  // pa::CreateServerActorDesc_NPCSchedule (vf3 0x27A6160)
 inline constexpr uint32_t kActor_Ctl = 0x90, kActor_TypeInfo = 0x88, kDesc_User = 0x40, kField_Owner = 0x180;
 inline constexpr uint8_t kLogoutAiReason = 42;  // ServerAiActorComponent vf69's Logout (the client's AI 'logout')
 
@@ -1120,7 +1120,7 @@ inline bool ctl_undriven(const CtlStats& s) { return s.eligible >= 8 && s.eligib
 
 // The AI / movement Reqs whose payload starts with the actor's key (driven / the host's client drives).
 inline bool ai_req(uint16_t op) {
-    return op == 2833 || op == 2202 || op == 2394 || op == 2913 || op == 2606 || op == 2852;
+    return op == 2790 || op == 2431 || op == 2766 || op == 2637 || op == 2346 || op == 2296;
 }
 
 // A 2005 payload: [u16 length][record] repeated; a record: type u8 +0, key u32 +1, controller u32 +0x12. Calls
@@ -1208,9 +1208,9 @@ inline bool hold_distance_drain(bool dprep_on, uint64_t now_us, uint64_t last_ho
 }
 
 // 0x287EF60's three callers (Ghidra xrefs, build 2976): their return addresses.
-inline constexpr uint32_t kPrepRetTick = 0x2ADAAD5;      // 0x287DBB0, the 2043 tick (+0x68A set)
-inline constexpr uint32_t kPrepRet2895 = 0x2AF45BE;      // 0x2895EF0
-inline constexpr uint32_t kPrepRetMoveField = 0x2E6C2DC;  // 3576: P's three callers // TransformSync::MoveFieldCompleteCore 0x2BC7670
+inline constexpr uint32_t kPrepRetTick = 0x2B3E7B5;      // 0x287DBB0, the 2043 tick (+0x68A set)
+inline constexpr uint32_t kPrepRet2895 = 0x2B585DE;      // 0x2895EF0
+inline constexpr uint32_t kPrepRetMoveField = 0x2ED42F9;  // 3576: P's three callers // TransformSync::MoveFieldCompleteCore 0x2BC7670
 inline const char* prep_caller_name(uint32_t ret_rva) {
     switch (ret_rva) {
         case kPrepRetTick: return "the 2043 tick 0x287DBB0";

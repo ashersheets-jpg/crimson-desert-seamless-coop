@@ -379,7 +379,7 @@ void test_quest_policy() {
     CHECK(u2f::classify_event_actor(0xA0100200, 0xA0100200, 0xA0100001) == EventActor::User2);
     CHECK(u2f::classify_event_actor(0xA0100001, 0xA0100200, 0xA0100001) == EventActor::Host);
     CHECK(u2f::classify_event_actor(0xA0100001, 0xA0100200, 0) == EventActor::Other);
-    CHECK(u2f::host_quest_ack_index(2360) == 0 && u2f::host_quest_ack_index(2459) == 3);
+    CHECK(u2f::host_quest_ack_index(2558) == 0 && u2f::host_quest_ack_index(2375) == 3);
     CHECK(u2f::host_quest_ack_index(2808) == -1);
     for (size_t i = 0; i < static_cast<size_t>(PolicyCaller::Count); ++i) {
         CHECK(*u2f::policy_caller_name(static_cast<PolicyCaller>(i)) != '?');

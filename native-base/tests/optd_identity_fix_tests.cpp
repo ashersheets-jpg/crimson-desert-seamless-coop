@@ -297,8 +297,8 @@ void test_admit() {
     // Wanted but not installed: the two logins are refused, the rest (and the 2001) pass.
     identity_fix_set_wanted(true);
     CHECK(identity_fix_wanted() && !identity_fix_active());
-    CHECK(!identity_fix_admit(2535, {}, why) && why.find("not active") != std::string::npos);
-    CHECK(!identity_fix_admit(2733, req3093, why));
+    CHECK(!identity_fix_admit(2554, {}, why) && why.find("not active") != std::string::npos);
+    CHECK(!identity_fix_admit(3081, req3093, why));
     CHECK(identity_fix_admit(2001, {}, why));
     CHECK(identity_fix_admit(2840, {}, why));
     std::string logout;

@@ -743,9 +743,9 @@ void test_settle_acks() {
         CHECK(g_out.size() == 6);
         if (g_out.size() == 6) {
             CHECK(op_of(g_out[2]) == 2005 && key_of(g_out[2]) == kHostPet);
-            CHECK(op_of(g_out[3]) == 3047 && g_out[3][9] == 1);
-            CHECK(op_of(g_out[4]) == 2552 && g_out[4][9] == 2);
-            CHECK(op_of(g_out[5]) == 3094 && g_out[5][9] == 3);
+            CHECK(op_of(g_out[3]) == 2499 && g_out[3][9] == 1);
+            CHECK(op_of(g_out[4]) == 2800 && g_out[4][9] == 2);
+            CHECK(op_of(g_out[5]) == 3008 && g_out[5][9] == 3);
         }
         CHECK(observer_hold_acks_keys() == 0);
     }
