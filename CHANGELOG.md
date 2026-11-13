@@ -1,9 +1,28 @@
 # Changelog
 
-## Shared world playtest builds (0.1.0-alpha+<id>-shared-world; game 1.0.0.3576)
+## Shared world playtest builds (0.1.0-alpha+<id>-shared-world; game 1.0.0.3663 from the build after cf8c7fa3, 1.0.0.3576 before)
 
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
+
+NOT POSTED YET: the build for game 1.0.0.3663 (checklist pass pp13 on the package, one PC; result in PROGRESS.md):
+- **Works with game 1.0.0.3663** (Steam's update of 13 November 2026). The build before, cf8c7fa3, is for 1.0.0.3576
+  and switches itself off on the updated game. Moved to the new game: every address and message number the mod
+  uses (1066 of the game's 1175 messages were renumbered), the item and field tables' new readers, the structures
+  that moved (stage manager, character control, movement, the loading machine, the inventory manager) and the two
+  routines in the game's protected code that "Leave the session" and the menu's tab key use.
+- **The title's Co-op menu no longer lets a controller press the game's own menu under it** (a tester on a
+  PlayStation pad: a save started while "Invite Friends" was highlighted). Measured: the old hold never stopped a
+  pad. While the Co-op menu is up the game now gets the same "your window is not active" message it gets when you
+  click away, and an idle pad. Tested with a simulated Xbox pad on the game's own title (the Load screen opens
+  without the hold, stays closed with it). Not tested: a real PlayStation pad.
+- Steam's invite list still takes the mouse under that hold (opened from Invite Friends, closed with its X, the
+  menu's keys work afterwards). Tested on one PC; no invite was sent.
+- Calling your horse as the joined player works in the test world on a far-along character (called, mounted,
+  ridden). The tester's "can't summon horse or wyvern" was in a host's new game, where the joining player used to
+  arrive with their own character; since cf8c7fa3 both start fresh, as in the solo game.
+- Known and unchanged: the host's story cutscenes, and what they bring into the world (a story boss), are not shown
+  to the joined player. That is the next big piece of work.
 
 Posted 2026-11-13 00:13 as 0.1.0-alpha+cf8c7fa3 (checklist pp11 / pp11b / pp11c: all 23 steps, one PC):
 - **A New Co-op Save is a new save for BOTH players.** The joining friend used to arrive with their own solo
