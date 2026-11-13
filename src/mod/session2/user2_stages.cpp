@@ -2594,8 +2594,41 @@ bool dup_skip(bool user2, uintptr_t res, uintptr_t elem, uint32_t stage_id) noex
     return true;
 }
 
+// Co-op+ 2026-11-13, [session2] stage_names_probe (READ ONLY, shared cutscenes research): every manager's elements
+// (tagged host / user 2 / not known yet: the host's world-entry preparation comes before the module knows its manager), with the sequencer resource base name. At most 400 lines.
+std::atomic<bool> g_names_probe{false};
+std::atomic<int> g_names_said{0};
+void names_probe_line(uintptr_t mgr, uintptr_t elem, uint64_t a5) noexcept {
+    if (g_names_said.fetch_add(1, std::memory_order_relaxed) >= 400) return;
+    const uintptr_t res_ptr = rdp(elem + kElem_Res);
+    const u2s::Element el = u2s::element_of(res_ptr, rdp(elem + kElem_Schedule), rdv<int16_t>(elem + kElem_Class2, -1));
+    char name[96] = {};
+    size_t n = 0;
+    if (el == u2s::Element::Sequencer) {
+        const uintptr_t path = res_ptr ? rdp(rdp(res_ptr)) : 0;
+        size_t base = 0, len = 0;
+        for (size_t i = 0; path && i < 200; ++i) {
+            uint8_t c = 0;
+            if (!rd(path + i, c) || c == 0) break;
+            if (c == '/' || c == '\\') base = i + 1;
+            len = i + 1;
+        }
+        for (size_t i = base; path && i < len && n + 1 < sizeof name; ++i, ++n) {
+            uint8_t c = 0;
+            if (!rd(path + i, c)) break;
+            name[n] = static_cast<char>(c);
+        }
+    }
+    const char* who = mgr == g_host_mgr.load(std::memory_order_relaxed) ? "host"
+                      : mgr == g_u2_mgr.load(std::memory_order_relaxed)   ? "user 2"
+                                                                          : "not known yet";
+    log::info("User2Stages [names probe] manager 0x{:X} ({}) | element {} | static stage id 0x{:X} | {}", mgr, who,
+              u2s::element_name(el), static_cast<uint32_t>(a5), n ? name : "-");
+}
+
 uintptr_t elem_detour(uintptr_t mgr, uintptr_t res, uintptr_t stage, uintptr_t elem, uint64_t a5) {
     const u2s::Mode m = mode_now();
+    if (g_names_probe.load(std::memory_order_relaxed) && mgr) names_probe_line(mgr, elem, a5);
     // U-f2 for the HOST's manager: a schedule stage user 2's armed manager already has is not created twice.
     if (m == u2s::Mode::On && mgr && mgr == g_host_mgr.load(std::memory_order_relaxed) &&
         g_armed.load(std::memory_order_acquire) && !g_aborted.load(std::memory_order_relaxed) && rdp(elem + kElem_Schedule) &&
@@ -7374,6 +7407,11 @@ void user2_stages_set_trade_list(const std::string& mode) {
     }
 }
 bool user2_stages_trade_list_active() noexcept { return t1_list_on(); }
+
+void user2_stages_set_names_probe(bool on) {
+    g_names_probe = on;
+    if (on) log::warn("User2Stages: [session2] stage_names_probe=1: the host manager's stage elements are logged (read only, 400 lines at most)");
+}
 bool user2_stages_in_trade_prepare() noexcept { return t_t1_origin != 0; }
 void user2_stages_clear_trade_mark() noexcept { t_t1_origin = 0; }
 void user2_stages_trade_list_breach(uint64_t seq_id, uint32_t hash) noexcept {

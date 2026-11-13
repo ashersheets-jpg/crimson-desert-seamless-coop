@@ -99,6 +99,10 @@ void user2_stages_set_fast_rearm(const std::string& mode);
 // before. breach (user2_shops' P point): user 2's manager prepared a funcnpc off the list -> T1 latches off.
 void user2_stages_set_trade_list(const std::string& mode);
 bool user2_stages_trade_list_active() noexcept;
+// Co-op+ 2026-11-13 ([session2] stage_names_probe=1, shared cutscenes research, docs/research/shared-cutscenes.md):
+// READ ONLY. Every stage element the HOST's own manager evaluates is logged with its kind and, for a sequencer, its
+// resource base name and the static stage id (at most 400 lines). Nothing else changes.
+void user2_stages_set_names_probe(bool on);
 void user2_stages_trade_list_breach(uint64_t seq_id, uint32_t hash) noexcept;
 // Review M2: this thread is inside the original 0x288A970 of an element T1 let through (its mark is set).
 bool user2_stages_in_trade_prepare() noexcept;
