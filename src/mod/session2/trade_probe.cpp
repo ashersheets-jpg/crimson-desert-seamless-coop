@@ -279,10 +279,10 @@ bool inventory_indices(uintptr_t base, uint16_t& bag, uint16_t& wh) noexcept {
         if (!root) return false;
         const uintptr_t info = *reinterpret_cast<uintptr_t*>(root + 8);
         if (!info) return false;
-        const uintptr_t mgr = *reinterpret_cast<uintptr_t*>(info + 0x240);
+        const uintptr_t mgr = *reinterpret_cast<uintptr_t*>(info + 0x220);  // 3663 (3576 +0x240)
         if (!mgr) return false;
-        bag = *reinterpret_cast<uint16_t*>(mgr + 0xA2);  // "Character", the main bag
-        wh = *reinterpret_cast<uint16_t*>(mgr + 0xB2);   // "WareHouse"
+        bag = *reinterpret_cast<uint16_t*>(mgr + 0x7A);  // "Character", the main bag (3663; 3576 +0xA2)
+        wh = *reinterpret_cast<uint16_t*>(mgr + 0x8A);   // "WareHouse" (3663; 3576 +0xB2)
         return bag != 0xFFFF && wh != 0xFFFF && bag != wh;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return false;
@@ -434,7 +434,7 @@ uintptr_t inventory_manager(uintptr_t base) noexcept {
         const uintptr_t slot = *reinterpret_cast<uintptr_t*>(base + 0x7245558);
         const uintptr_t root = slot ? *reinterpret_cast<uintptr_t*>(slot) : 0;
         const uintptr_t info = root ? *reinterpret_cast<uintptr_t*>(root + 8) : 0;
-        return info ? *reinterpret_cast<uintptr_t*>(info + 0x240) : 0;
+        return info ? *reinterpret_cast<uintptr_t*>(info + 0x220) : 0;  // 3663 (3576 +0x240)
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return 0;
     }
@@ -481,7 +481,7 @@ void stash_dump(uintptr_t base, uintptr_t holder) {
     std::string line;
     for (int i = 0; i < 24; ++i) {
         uint16_t idx = 0xFFFF;
-        game::fast_read(mgr + 0xA0 + i * 2, &idx, 2);
+        game::fast_read(mgr + 0x78 + i * 2, &idx, 2);  // 3663 (3576 +0xA0)
         const int16_t slots = idx == 0xFFFF ? -1 : inventory_slots(holder, idx);
         int used = 0;
         for (int16_t k = 0; k < slots && k < 512; ++k) {
@@ -512,7 +512,7 @@ uint16_t stash_inventory_index(uintptr_t base) noexcept {
     const uintptr_t mgr = inventory_manager(base);
     uint16_t bag = 0xFFFF, unused = 0xFFFF;
     if (!mgr || !inventory_indices(base, bag, unused)) return 0xFFFF;
-    for (const uintptr_t off : {uintptr_t{0xB4}, uintptr_t{0xB2}}) {
+    for (const uintptr_t off : {uintptr_t{0x8C}, uintptr_t{0x8A}}) {  // 3663 (3576 +0xB4, +0xB2)
         uint16_t idx = 0xFFFF;
         game::fast_read(mgr + off, &idx, 2);
         if (idx != 0xFFFF && idx != bag && move_route(base, bag, idx) && move_route(base, idx, bag)) return idx;

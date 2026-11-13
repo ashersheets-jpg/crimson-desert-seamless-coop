@@ -52,8 +52,8 @@ bool snap_bag(uintptr_t picker, BagSnap& b) noexcept {
         const uintptr_t slot = *reinterpret_cast<uintptr_t*>(base + 0x7245558);
         const uintptr_t root = *reinterpret_cast<uintptr_t*>(slot);
         const uintptr_t info = *reinterpret_cast<uintptr_t*>(root + 8);
-        const uintptr_t mgr = *reinterpret_cast<uintptr_t*>(info + 0x240);
-        const uint16_t bag = *reinterpret_cast<uint16_t*>(mgr + 0xA2);
+        const uintptr_t mgr = *reinterpret_cast<uintptr_t*>(info + 0x220);  // 3663 (3576 +0x240)
+        const uint16_t bag = *reinterpret_cast<uint16_t*>(mgr + 0x7A);  // 3663 (3576 +0xA2)
         const uintptr_t holder = reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t)>(base + 0x23626F0)(picker);
         if (!holder) return false;
         const uintptr_t list = *reinterpret_cast<uintptr_t*>(holder + 0x18);
