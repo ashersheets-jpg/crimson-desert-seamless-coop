@@ -83,7 +83,7 @@ struct ErrorSite {
 // save failure + 4, invalid = absent + 0xE4).
 constexpr ErrorSite kErrBusy = {0x1A16DCE, 0x71D0CFC, "LoadSlot's busy error"};
 constexpr ErrorSite kErrInvalidSlot = {0x1A16D30, 0x71D092C, "LoadSlot's invalid-slot error"};
-constexpr ErrorSite kErrAbsentSlot = {0x2295FCF, 0x71D0844, "LoadComponentsFromFile's absent-slot error"};
+constexpr ErrorSite kErrAbsentSlot = {0x2295FCF, 0x71D0848, "LoadComponentsFromFile's absent-slot error"};
 constexpr ErrorSite kErrSaveFail = {0x1A15C2A, 0x71D0CF8, "SavePlayerToSlot's own failure"};
 
 // Fields (evidence in the report and in guest_save_logic.h).

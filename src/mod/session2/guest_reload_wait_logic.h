@@ -24,8 +24,8 @@ namespace cdmp::session2::grw {
 
 // ---------------------------------------------------------------- the client's loading states
 
-inline constexpr int kStateIdle = 0x18;   // in the field, no load running
-inline constexpr int kStateWait = 0x12;   // the wait list (0x779E8B..0x779F25)
+inline constexpr int kStateIdle = 0x19;  /* 3663 (3576 0x18): one state more from 0x0B on */   // in the field, no load running
+inline constexpr int kStateWait = 0x13;  /* 3663 (3576 0x12) */   // the wait list (0x779E8B..0x779F25)
 inline constexpr uint16_t kOpMoveFieldAck = 2364, kOpReloadPos = 2286, kOpPostAck = 2792;
 
 inline constexpr uint16_t kOpTravelReq = 3018;  // the client's fast-travel / reload request (C>S)
@@ -112,7 +112,7 @@ constexpr bool is_reload_trip(uint64_t trip_start_us, uint64_t last_2643_us, uin
 // [M+0x231] >= 2, and only the handler of a PlayAllPreLoadSequencerAck 2322 naming this client's own character
 // writes 2 (0xB87A67). In a reload with own M+0x231 < 2 for this long, that 2322 is missing: the host's server sent it
 // to the field owner's character (its 2873's single-owner path), the load never reaches 0x17 / its 2445.
-inline constexpr int kStateOwn2322 = 0x11;
+inline constexpr int kStateOwn2322 = 0x12;  /* 3663 (3576 0x11) */
 inline constexpr uint64_t kOwn2322WarnUs = 10'000'000;
 constexpr bool waiting_own_2322(int state, bool reload, unsigned own_m231, uint64_t in_state_us) {
     return state == kStateOwn2322 && reload && own_m231 != 0xFF && own_m231 < 2 && in_state_us >= kOwn2322WarnUs;

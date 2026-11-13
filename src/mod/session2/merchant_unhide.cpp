@@ -111,14 +111,14 @@ void on_login_pre(safetyhook::Context& ctx) {  // 0x99C17A: rcx = the character 
     if (!me || owner == me) return;  // this client's own character: its real field load
     t_login_remote = true;
     t_login_mgr = own_manager();
-    if (t_login_mgr) game::safe_read(t_login_mgr + 0x259, &t_login_state, 1);
+    if (t_login_mgr) game::safe_read(t_login_mgr + 0x261 /* 3663 (3576 0x259) */, &t_login_state, 1);
     c_login_remote.fetch_add(1);
     g_last_restored_key.store(key);
 }
 void on_login_post(safetyhook::Context&) {  // 0x99C17F: back from 0x1928650
     if (!t_login_remote || !t_login_mgr) return;
     uint8_t now = 0;
-    game::safe_read(t_login_mgr + 0x259, &now, 1);
+    game::safe_read(t_login_mgr + 0x261 /* 3663 (3576 0x259) */, &now, 1);
     g_dbg_mgr.store(t_login_mgr);
     g_dbg_before.store(t_login_state);
     g_dbg_after.store(now);
@@ -127,7 +127,7 @@ void on_login_post(safetyhook::Context&) {  // 0x99C17F: back from 0x1928650
     // dropped it to 1 for good: the guest's 2167 never came and it stayed in the loading void (tcB264, tcB299,
     // tcB307-tcB327: "before 2" every time). Only 3 was put back before.
     if (t_login_state >= 2 && now < t_login_state) {
-        *reinterpret_cast<volatile uint8_t*>(t_login_mgr + 0x259) = t_login_state;
+        *reinterpret_cast<volatile uint8_t*>(t_login_mgr + 0x261 /* 3663 (3576 0x259) */) = t_login_state;
         c_login_restored.fetch_add(1);
     }
     t_login_remote = false;
@@ -180,8 +180,8 @@ std::string snapshot(uint32_t key) {
         const uintptr_t mgr = rv<uintptr_t>(stage + 0x28);
         t += std::format(" (key 0x{:X} active +0x180 {} | manager 0x{:X}: ready +0x259 {} loading +0x174 {} created "
                          "+0x17C {})",
-                         rv<uint64_t>(stage + 0x30), rv<uint8_t>(stage + 0x180), mgr, rv<uint8_t>(mgr + 0x259),
-                         rv<uint32_t>(mgr + 0x174), rv<uint32_t>(mgr + 0x17C));
+                         rv<uint64_t>(stage + 0x30), rv<uint8_t>(stage + 0x180), mgr, rv<uint8_t>(mgr + 0x261),
+                         rv<uint32_t>(mgr + 0x17C), rv<uint32_t>(mgr + 0x184));
     }
     return t;
 }
@@ -261,14 +261,14 @@ void worker() {
                           "0x{:08X} (this client's user 0x{:08X}) | calls {} | character 0xA0100001's manager 0x{:X}: "
                           "state +0x259 {} pending +0x1C0 {} loading +0x174 {} created +0x17C {} list +0x1D0 {} / "
                           "+0x1F0 {}",
-                          g_tick_field.load(), o, local_user_key(), g_tick_calls.load(), mgr, rv<uint8_t>(mgr + 0x259),
-                          rv<uint32_t>(mgr + 0x1C0), rv<uint32_t>(mgr + 0x174), rv<uint32_t>(mgr + 0x17C),
-                          rv<uint32_t>(mgr + 0x1D0), rv<uint32_t>(mgr + 0x1F0));
+                          g_tick_field.load(), o, local_user_key(), g_tick_calls.load(), mgr, rv<uint8_t>(mgr + 0x261),
+                          rv<uint32_t>(mgr + 0x1C8), rv<uint32_t>(mgr + 0x17C), rv<uint32_t>(mgr + 0x184),
+                          rv<uint32_t>(mgr + 0x1D8), rv<uint32_t>(mgr + 0x1F8));
                 if (g_guest) {
                     const uintptr_t own = own_manager();
                     log::info("MerchantUnhide [field tick] this guest's OWN stage manager 0x{:X}: state +0x259 {} "
                               "loading +0x174 {} created +0x17C {}",
-                              own, rv<uint8_t>(own + 0x259), rv<uint32_t>(own + 0x174), rv<uint32_t>(own + 0x17C));
+                              own, rv<uint8_t>(own + 0x261), rv<uint32_t>(own + 0x17C), rv<uint32_t>(own + 0x184));
                 }
                 last_owner = o;
                 last_tick_log = t;

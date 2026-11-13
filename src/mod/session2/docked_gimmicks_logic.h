@@ -739,16 +739,16 @@ inline constexpr uintptr_t kDockEquipCallSite = 0x2970ADF;
 // owner user said otherwise), then mov rax,[rsi] | mov r9,r14 | mov r8,r13 | lea rdx,[rbp+0x67].
 inline constexpr uintptr_t kControllerWrite = 0x2A2F43B;  // 3576 (2976 0x2792A7B): ICreateServerActorDesc vf3 0x29CBEE0, same bytes and registers
 inline constexpr uint8_t kControllerWriteBytes[20] = {0x41, 0x89, 0x86, 0x90, 0x00, 0x00, 0x00, 0x48, 0x8B, 0x06,
-                                                      0x4D, 0x8B, 0xCE, 0x4D, 0x8B, 0xC5, 0x48, 0x8D, 0x55, 0x67};
+                                                      0x4D, 0x8B, 0xCE, 0x4C, 0x8B, 0xC7, 0x48, 0x8D, 0x55, 0x60};
 inline constexpr uint32_t kControllerWritePatch = 7;
 // The block's head (unique in the exe, control-npc-lejos.md §1.1): mov eax,[r14+0x90] | test eax,eax | jne 0x2792A7B |
 // mov rax,[rsi+0x40] | test.. : r14 = the actor, rsi = the descriptor (callee-saved across 0x389570 / 0x4A2010).
 inline constexpr uintptr_t kControllerBlock = 0x2A2F3D2;  // 3576 (2976 0x2792A11)
 inline constexpr uint8_t kControllerBlockBytes[16] = {0x41, 0x8B, 0x86, 0x90, 0x00, 0x00, 0x00, 0x85,
-                                                      0xC0, 0x75, 0x5A, 0x48, 0x8B, 0x46, 0x40, 0x48};  // 3576: jne +0x5A
+                                                      0xC0, 0x75, 0x5E, 0x48, 0x8B, 0x46, 0x40, 0x48};  // 3576: jne +0x5A
 // Its "from the field owner" read just before: mov eax,[r13+0x180] | test eax,eax | je 0x2792A82.
 inline constexpr uintptr_t kFieldOwnerRead = 0x2A2F431;  // 3576 (2976 0x2792A70)
-inline constexpr uint8_t kFieldOwnerReadBytes[11] = {0x41, 0x8B, 0x85, 0x80, 0x01, 0x00, 0x00, 0x85, 0xC0, 0x74, 0x07};
+inline constexpr uint8_t kFieldOwnerReadBytes[11] = {0x8B, 0x87, 0x80, 0x01, 0x00, 0x00, 0x85, 0xC0, 0x74, 0x07, 0x41};
 inline constexpr uint32_t kField_Owner = 0x180;
 // The server's gimmick logic: ExecuteFrameEvent 0x2AC1270 (comp, requester user actor, event*, u16*), void; and
 // Update 0x2AC0790 (comp, int* err, requester, data*). Both: accepted only when [[comp+8]+0x90] ==

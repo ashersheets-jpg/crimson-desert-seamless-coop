@@ -1185,7 +1185,7 @@ void lootr_start(bool on, bool probe, bool guest, bool bodies) {
             }
         }
         if (g_bodies_on && g_body_loot) {
-            static const uint8_t kLea[7] = {0x48, 0x8D, 0x35, 0xF4, 0xC1, 0x0C, 0x03};
+            static const uint8_t kLea[7] = {0x48, 0x8D, 0x35, 0x76, 0xE7, 0x0D, 0x03};
             uint8_t at[7] = {};
             if (game::safe_read(base + 0x2E89FC3, at, sizeof at) && std::memcmp(at, kLea, sizeof at) == 0) {
                 if (auto h = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x2E89FC3), on_keep_body)) {

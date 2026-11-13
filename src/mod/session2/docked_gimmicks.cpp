@@ -398,7 +398,7 @@ void ctl_write_mid(safetyhook::Context& ctx) {
     // only); it returns at once unless user 2's armed timer is creating an NPC.
     if (g_ctl_users.load(std::memory_order_relaxed) & kCtlUserU2) {
         uintptr_t rax = ctx.rax;
-        user2_stages_npc_control(rax, ctx.rsi, ctx.r13, ctx.r14);
+        user2_stages_npc_control(rax, ctx.rsi, ctx.rdi /* 3663: the field is in rdi (3576: r13) */, ctx.r14);
         ctx.rax = rax;
     }
     // Every actor creation passes here: the per-thread variable first, nothing else outside a docking spawn.
@@ -412,7 +412,7 @@ void ctl_write_mid(safetyhook::Context& ctx) {
     if (const auto ti = game::fast_ptr(ctx.r14 + dgl::kActor_TypeInfo)) {
         if (const auto t = game::fast<uint8_t>(*ti + 1)) type = *t;
     }
-    if (const auto o = game::fast<uint32_t>(ctx.r13 + dgl::kField_Owner)) {
+    if (const auto o = game::fast<uint32_t>(ctx.rdi + dgl::kField_Owner)) {  // 3663: rdi (3576: r13)
         owner = *o;
         g_field_owner.store(owner, std::memory_order_relaxed);
     }

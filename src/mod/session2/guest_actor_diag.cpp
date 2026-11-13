@@ -570,7 +570,7 @@ void tick_wait_list() {
     const uint32_t blocker_key = scan.verdict == gad::WaitVerdict::Blocks ? scan.key : 0;
     const int old_state = g_tick_state.exchange(state);
     const uint64_t now = GetTickCount64();
-    if (state == 0x12) {
+    if (state == 0x13) {  /* 3663 (3576 0x12) */
         uint64_t zero = 0;
         g_tick_12_since.compare_exchange_strong(zero, now);
     } else {

@@ -176,7 +176,7 @@ constexpr uintptr_t kVtStageManager = 0x55C9720;   // pa::ClientSequencerStageMa
 // Structure offsets.
 constexpr uint32_t kActor_Key = 0x60, kActor_Comps = 0x68, kComps_Seq = 0xA8, kSeqComp_Mgr = 0x18;
 constexpr uint32_t kMgr_Actor = 0x18, kMgr_Ready = 0x261 /* 3663 (3576 0x259) */, kMgr_Count = 0x17C;
-constexpr uint32_t kField_Owner = 0x180, kWorld_P = 0x60, kP_Q = 0x1B0 /* 3663 (3576 0xC0) */, kP_State = 0x15C;
+constexpr uint32_t kField_Owner = 0x180, kWorld_P = 0x60, kP_Q = 0x1B0 /* 3663 (3576 0xC0) */, kP_State = 0x24C;  /* 3663 (3576 0x15C) */
 constexpr uint32_t kComp_Npc = 0x08, kComp_Owner = 0x2D8, kComp_Key = 0x2E0;
 constexpr uint32_t kWrap_Raw = 0x18, kWrap_Len = 0x10, kThis_Busy = 0x21;
 constexpr size_t kHeader = 5;

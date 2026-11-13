@@ -1246,8 +1246,8 @@ void end_without_host(const goodbye::State& s) noexcept {
         uint8_t state = 0;
         const bool have_p = game::safe_read(g_base + off::kWorldSystemSlot, &world, sizeof world) && world &&
                             game::safe_read(world + 0x60, &p, sizeof p) && p;
-        const bool have_q = have_p && game::safe_read(p + 0xC0, &q, sizeof q);
-        const bool have_state = have_p && game::safe_read(p + 0x15C, &state, sizeof state);
+        const bool have_q = have_p && game::safe_read(p + 0x1B0 /* 3663 (3576 0xC0) */, &q, sizeof q);
+        const bool have_state = have_p && game::safe_read(p + 0x24C /* 3663 (3576 0x15C) */, &state, sizeof state);
         log::error("Session2 guest: the client said goodbye (2001) {} ms ago with a field of the host (its 3093 went "
                    "to the host) and {}. Answering locally would delete its own user, the field's owner, before the "
                    "field (session 6: crash at exe+0x2045A6A 22 ms later), so the game ENDS NOW (TerminateProcess, "
@@ -1672,7 +1672,7 @@ void guest_local_load_watch() noexcept {
         uint8_t state = 0;
         const bool ok = game::safe_read(g_base + off::kWorldSystemSlot, &world, sizeof world) && world &&
                         game::safe_read(world + 0x60, &p, sizeof p) && p &&
-                        game::safe_read(p + 0x15C, &state, sizeof state);
+                        game::safe_read(p + 0x24C /* 3663 (3576 0x15C) */, &state, sizeof state);
         if (g_ll_watch.sample(now, state, ok)) end_local_after_remote(g_ll_epoch.load(), now - g_ll_watch.since_ms(), state);
     } catch (...) {
     }
@@ -2103,6 +2103,30 @@ bool guest_push_own_request(const std::vector<uint8_t>& p) {
     return remote_live_for_keys() && !p.empty() && g_to_host.push(p);
 }
 
+// Co-op+ (2026-11-13, the 3663 port: the guest's second load stayed in the transition): the client's load machine in
+// every status line. P = [WorldSystem+0x60]; its state byte (3663: +0x24C; one state more from 0x0B on: 0x0B is new and
+// waits for [P+0x180]->vf(0x278)(0), 0x12 waits for the own stage manager's ready byte, 0x13 is the wait list, 0x19 is
+// "in the world"); what [P+0x180] is (its vtable); the byte the machine reads to choose 0x0B or 0x0C after 0x0A.
+std::string load_machine_text() {
+    uintptr_t world = 0, p = 0, obj = 0, vt = 0;
+    uint8_t state = 0xFF, flag = 0xFF, o23e = 0xFF;
+    uint32_t o1f8 = 0;
+    if (!game::safe_read(g_base + off::kWorldSystemSlot, &world, sizeof world) || !world ||
+        !game::safe_read(world + 0x60, &p, sizeof p) || !p) {
+        return " | load machine: no P";
+    }
+    game::safe_read(p + 0x24C, &state, sizeof state);
+    game::safe_read(g_base + 0x717DC98, &flag, sizeof flag);
+    if (game::safe_read(p + 0x180, &obj, sizeof obj) && obj) {
+        game::safe_read(obj, &vt, sizeof vt);
+        game::safe_read(obj + 0x23E, &o23e, sizeof o23e);
+        game::safe_read(obj + 0x1F8, &o1f8, sizeof o1f8);
+    }
+    return std::format(" | load machine: P 0x{:X} state 0x{:02X} | [P+0x180] 0x{:X} (vtable exe+0x{:X}, +0x23E {}, +0x1F8 {}) | "
+                       "the 0x0B flag [exe+0x717DC98] {}",
+                       p, state, obj, vt > g_base ? vt - g_base : 0, o23e, o1f8, flag);
+}
+
 std::string guest_describe() {
     const Mode m = g_mode.load();
     const char* mode = m == Mode::Remote ? "REMOTE (host's server)" : m == Mode::Undecided ? "deciding" : "local";
@@ -2119,7 +2143,8 @@ std::string guest_describe() {
            (guest_actor_diag_wanted() ? guest_actor_diag_describe() : std::string()) + guest_s3_describe() +
            guest_stage_diag_describe() + guest_scene_diag_describe() + guest_seq_route_describe() + guest_bodyanim_diag_describe() + guest_seq_play_describe() +
            guest_sched_load_describe() + guest_seq_restore_describe() + load_trip_describe() + guest_diag_worker_describe() +
-           actor_create_failures_text() + reannounce_describe() + guest_save_guest_describe() + rejoin_describe();
+           actor_create_failures_text() + reannounce_describe() + guest_save_guest_describe() + rejoin_describe() +
+           load_machine_text();
 }
 
 }  // namespace cdmp::session2

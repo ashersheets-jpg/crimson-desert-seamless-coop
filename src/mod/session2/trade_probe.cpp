@@ -961,7 +961,7 @@ void trade_probe_start() {
     if (auto h = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x2E579E0), on_move)) g_move = std::move(*h);
     if (auto h = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x2E59A60), on_move2)) g_move2 = std::move(*h);
     {
-        static const uint8_t kOwnerCmp[9] = {0x48, 0x39, 0x82, 0xA0, 0x00, 0x00, 0x00, 0x74, 0x16};
+        static const uint8_t kOwnerCmp[9] = {0x48, 0x39, 0x82, 0xA0, 0x00, 0x00, 0x00, 0x74, 0x0B};
         uint8_t got[9] = {};
         if (game::safe_read(base + 0x2E58D68, got, sizeof got) && std::memcmp(got, kOwnerCmp, sizeof got) == 0) {
             if (auto h = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x2E58D68), on_owner_check)) {

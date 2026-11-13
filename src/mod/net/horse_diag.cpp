@@ -1163,11 +1163,11 @@ DWORD WINAPI interact_probe_thread(LPVOID) {
                 if (game::safe_read(*ch + 0x68, &comps, 8) && comps && game::safe_read(comps + 0xA8, &seq, 8) && seq &&
                     game::safe_read(seq + 0x18, &mgr, 8) && mgr) {
                     uint8_t st = 0;
-                    game::safe_read(mgr + 0x259, &st, 1);
+                    game::safe_read(mgr + 0x261 /* 3663 */, &st, 1);
                     if (st == 3) {  // armed once the manager plays: the next write is the one that stops it
                         log::info("HideWatch: the host character's stage manager 0x{:X} is at state 3: watching +0x259", mgr);
                         g_hw_requested.store(true);
-                        g_hw_addr.store(mgr + 0x259);
+                        g_hw_addr.store(mgr + 0x261);
                     }
                 }
             }
