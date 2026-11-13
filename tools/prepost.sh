@@ -36,7 +36,12 @@ growth() {  # log, who, limit per minute
   local f=$1 a b n
   [ -s "$f" ] || return
   a=$(grep -m1 -oE "^\[[0-9]{2}:[0-9]{2}:[0-9]{2}" "$f" | tr -d '['); b=$(grep -oE "^\[[0-9]{2}:[0-9]{2}:[0-9]{2}" "$f" | tail -1 | tr -d '[')
-  n=$(grep -vc "Lootr probe" "$f")  # not the loot probe's own lines (a dev key the loot step switches on)
+  # Not the loot probe's own lines (a dev key the loot step switches on). Not the base's two diagnostics that are
+  # capped per SESSION either (horse: 400 lines + its summaries; stage creation: 300): in a 7-minute test they are
+  # up to 100 lines a minute that an evening does not have, and they put the busiest step at 386-434 against 420
+  # (pp11-farfight2 failed on 434 with nothing wrong). Their caps are checked below; the limit for the rest came
+  # down from 420 to 380 (seen without them: 214-346 in the steps, 319 over the 35-minute soak).
+  n=$(grep -vcE "Lootr probe|HorseDiag |User2Stages \[create\]" "$f")
   local sa=$((10#${a:0:2}*3600 + 10#${a:3:2}*60 + 10#${a:6:2})) sb=$((10#${b:0:2}*3600 + 10#${b:3:2}*60 + 10#${b:6:2}))
   local secs=$((sb - sa)); [ $secs -lt 60 ] && secs=60
   local per=$((n * 60 / secs))
@@ -51,7 +56,9 @@ growth() {  # log, who, limit per minute
   [ $tper -le 30 ] && ok "$2: no line repeats more than 30 times a minute (the most repeated: $tper a minute)" || bad "$2: one line repeats $tper times a minute: $(echo "$top" | cut -c1-90)"
   local cr=$(grep -c "User2Stages \[create\]" "$f")
   [ $cr -le 301 ] && ok "$2: the stage-creation diagnostic is capped ($cr lines, at most 301)" || bad "$2: $cr stage-creation diagnostic lines (the cap is 300)"
-  [ $per -le $3 ] && ok "$2: log growth $per lines a minute ($n lines in $((secs / 60)) min, limit $3)" || bad "$2: log growth $per lines a minute ($n lines in $((secs / 60)) min, limit $3)"
+  local hd=$(grep -c "HorseDiag " "$f")
+  [ $hd -le 520 ] && ok "$2: the horse diagnostic is capped ($hd lines, at most 520)" || bad "$2: $hd horse diagnostic lines (its cap is 400 and its summaries)"
+  [ $per -le $3 ] && ok "$2: log growth $per lines a minute without the two capped diagnostics ($n lines in $((secs / 60)) min, limit $3)" || bad "$2: log growth $per lines a minute without the two capped diagnostics ($n lines in $((secs / 60)) min, limit $3)"
 }
 # Nothing may record packets to disk in a player's game: the base's log must say so, and no capture of this run may
 # be larger than 64 KB.
@@ -144,7 +151,7 @@ two_player_checks() {  # [round]: "2" = the harness's second round of restarts (
     # native log errors: the known ones (the harness's own sandbox copy, three far-world hooks not ported to this
     # game build, the guest's guarded reads) are counted; any other is a FAIL.
     no_recording $N/$NAME.$r.log "$r"
-    growth $N/$NAME.$r.log "$r native" 420
+    growth $N/$NAME.$r.log "$r native" 380
     growth "$L" "$r layer" 240
     new_wrn "$r" "$L" $N/$NAME.coopplus.$r.before.log $N/$NAME.$r.log
     local e; e=$(unknown_errs $N/$NAME.$r.log | grep -c .)
@@ -201,7 +208,7 @@ real)
   has "$N/$NAME.real.coopplus.log" "Room: hosting" "real install: the Steam room opened (title Co-op menu can invite)"
   no_recording "$N/$NAME.real.cdmp.log" "real install (solo mode at the title)"
   has "$N/$NAME.real.cdmp.log" "not recording packets to disk" "real install: the base says it does not record"
-  growth "$N/$NAME.real.cdmp.log" "real install native" 420
+  growth "$N/$NAME.real.cdmp.log" "real install native" 380
   info "screenshots to LOOK AT: $(cd $N/shots && ls $NAME-*.png 2>/dev/null | tr '\n' ' ')"
   ;;
 fresh)
@@ -311,8 +318,13 @@ crime)
   info "AntiGrief last summary: $(grep -h 'AntiGrief' "$H" | grep -v 'crime type' | tail -1 | cut -d']' -f3- | cut -c1-260)" ;;
 farfight)
   head_step "a guest fights 108 m from the host: the host draws its bandits to the dock and leaves, the guest stays and swings"
+  # The guest STANDS among the bandits for 24 s before it swings (it is at the dock 2 s after its script starts).
+  # Until pp11 it swung after 7 s, and every swing steps forward: in pp8 and pp11 fifty swings carried it 58-60 m
+  # out of the camp, three bandits dead and no blow taken, and "the guest lost health" failed on the scene's luck
+  # (2 of 6 runs). What the step has to show is that a far NPC's blow takes the guest's health; standing still shows
+  # it whatever the swings do afterwards.
   GA=""; for i in $(seq 1 50); do GA="${GA}click:L:90_w:800_"; done
-  run2 "$BASE -Hold 10 -HostScript $SCAN\\ff_host_lure.txt -GuestScript $SCAN\\ff_guest_watch40.txt -GuestKeys w:9000_shot:$NAME-g0_${GA}shot:$NAME-g1_w:20000_shot:$NAME-g2 -HostKeys w:500_shot:$NAME-h0"; two_player_checks
+  run2 "$BASE -Hold 10 -HostScript $SCAN\\ff_host_lure.txt -GuestScript $SCAN\\ff_guest_watch40.txt -GuestKeys w:26000_shot:$NAME-g0_${GA}shot:$NAME-g1_w:20000_shot:$NAME-g2 -HostKeys w:500_shot:$NAME-h0"; two_player_checks
   H=$N/$NAME.host.log
   has "$H" "DamageRange ON" "host: the damage range hook is in"
   has "$H" "DamageRange: on .* counted because another player was in range [1-9]" "hits far from the host counted because the guest was in range"
@@ -326,7 +338,7 @@ farfight2)
   # step, because the host stood 36 m away along one map axis. This placement differs along both axes.
   printf 'tp -10239 546 -3957\nwait 9000\nnpcs 40\nwait 9000\nnpcs 40\nwait 8000\nnpcs 40\ntp -10665 634.5 -3701\nwait 5000\nnpcs 30\n' > $N/scan/ff_host_lure430.txt
   GA=""; for i in $(seq 1 50); do GA="${GA}click:L:90_w:800_"; done
-  run2 "$BASE -Hold 10 -HostScript $SCAN\\ff_host_lure430.txt -GuestScript $SCAN\\ff_guest_watch40.txt -GuestKeys w:9000_shot:$NAME-g0_${GA}shot:$NAME-g1_w:20000_shot:$NAME-g2 -HostKeys w:500_shot:$NAME-h0"; two_player_checks
+  run2 "$BASE -Hold 10 -HostScript $SCAN\\ff_host_lure430.txt -GuestScript $SCAN\\ff_guest_watch40.txt -GuestKeys w:26000_shot:$NAME-g0_${GA}shot:$NAME-g1_w:20000_shot:$NAME-g2 -HostKeys w:500_shot:$NAME-h0"; two_player_checks
   H=$N/$NAME.host.log
   has "$H" "DamageRange: on .* counted because another player was in range [1-9]" "hits 484 m from the host counted because the guest was in range"
   has "$H" "DamageRange: a hit [34][0-9][0-9] m from the field owner's character counts: another player is [0-9] m from the victim" "the hook's own numbers are right: the hit is 300-499 m from the host and under 10 m from a player"
