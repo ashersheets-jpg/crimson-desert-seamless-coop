@@ -6969,3 +6969,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - NOT tested: a real PlayStation pad; Steam's invite dialog with the new rule (its X must still take a click:
   to do with the tcB261 routine, a shot first, a click on the X only); the whole lobby flow ran with the inactive
   messages in p63b - p63d and went through.
+
+## 2026-11-13 (later): the 3663 build is packaged; the checklist has NOT started
+
+- Package: dist/CrimsonDesert-SeamlessCoop-0.1.0-alpha+83c52bf6-shared-world (outer 83c52bf, native 2bba59b), built for game 1.0.0.3663.
+- Tested so far under 3663: both copies reach one world on both screens (run p63d); layer unit tests pass; native unit tests at the known baseline (31).
+- NOT tested on 3663: every one of the 23 checklist steps (pass name to use: pp12), Steam's invite dialog with the new title hold, a real PlayStation pad, Give/Stash, the guest horse call (explore11.sh hr2 / hr1 / hr3).
+- Next: `bash tools/prepost.sh pp12 "dist/CrimsonDesert-SeamlessCoop-0.1.0-alpha+83c52bf6-shared-world" static`, then real, fresh, ... summary. Nothing is posted; a post needs the user's OK.
+- Stopped here because the session's usage limit was reached, not because the list is done.
