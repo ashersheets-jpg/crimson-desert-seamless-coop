@@ -169,6 +169,14 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
                               "guest_schedule_load=1", "guest_x_interaction_stage=1", "seq_actor_restore=1"}) {
             line(k);
         }
+        // dev (research runs): the guest's extra keys, as the host's above.
+        for (size_t at = 0; at < s.extra.size();) {
+            size_t comma = s.extra.find(',', at);
+            if (comma == std::string::npos) comma = s.extra.size();
+            const std::string kv = s.extra.substr(at, comma - at);
+            if (kv.find('=') != std::string::npos) line(kv.c_str());
+            at = comma + 1;
+        }
     }
     // tunnel_compress (both ends; p8-tunel-rendimiento.md: x9.5 on a town's burst): the host compresses the tunnel's
     // batches once the guest says it decodes them. Playtest 2026-11-10 (Borque, Steam relay): without it the host's

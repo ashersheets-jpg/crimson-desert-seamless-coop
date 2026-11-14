@@ -229,7 +229,7 @@ bool native_write(NativeMode mode, LobbyPlan plan) {
     spec.shared_quest_credit = g_shared_quest_credit.load();
     spec.world_items_lootr = g_world_items_lootr.load();
     spec.story_together = g_story_together.load();
-    if (mode == NativeMode::Host) spec.extra = g_native_extra;
+    spec.extra = g_native_extra;  // dev (research runs); the guest's too since 2026-11-14 (story_gate=client_probe)
     spec.record = g_native_record.load();
     // Over udp the Co-op+ link already has its port (Radmin VPN / Direct IP: 37015): the native tunnel takes the next.
     if (!spec.steam) spec.port = static_cast<uint16_t>((g_in.direct_port ? g_in.direct_port : 37015) + 1);
