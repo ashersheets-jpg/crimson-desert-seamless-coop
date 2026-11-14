@@ -12,6 +12,7 @@
 #include "mod/session2/npc_retirement_logic.h"
 #include "mod/session2/p8_probe_logic.h"
 #include "mod/session2/server.h"
+#include "mod/session2/story_gate.h"
 
 namespace cdmp::session2 {
 namespace {
@@ -293,8 +294,28 @@ AckRoute observer_hold_acks_route(uint16_t opcode, std::span<const uint8_t> payl
         if (t2 && opcode != oha::kOpAnnounce && hso::t2_op(opcode)) {
             const auto own_key = g_t2_own_key.load(std::memory_order_relaxed);
             const uint32_t own = own_key ? own_key() : 0;  // an atomic read (before the lock: no lock inside)
+            // Co-op+ 2026-11-14 (story mode, story_gate.h): user 2's own story scene waits for its NPCs like a trade
+            // scene (cs9i: its cabin cinematic reached the guest before its comrades and the game dropped it).
+            uint64_t story_id = 0;
+            if (opcode == hso::kOpPrepare) {
+                const hso::Prepare pr = hso::parse_prepare(payload);
+                {
+                    static std::atomic<int> seen{0};
+                    if (pr.ok && pr.owner == own && seen.fetch_add(1) < 40)
+                        log::info("ObserverHoldAcks [story check] user 2's own 2661 0x{:X} hash@27 0x{:08X}: story by id {}, by name hash {}",
+                                  pr.id, pr.hash, story_gate_user2_story(pr.id), story_gate_story_hash(pr.hash));
+                }
+                if (pr.ok && own && pr.owner == own && (story_gate_user2_story(pr.id) || story_gate_story_hash(pr.hash))) {
+                    story_id = pr.id;
+                    static std::atomic<int> said{0};
+                    if (said.fetch_add(1) < 30)
+                        log::info("ObserverHoldAcks [story] user 2's own story scene 0x{:X} ({} NPC(s) bound): kept until "
+                                  "they reached the guest, like a trade scene", pr.id, pr.bound.size());
+                }
+            }
             std::vector<hso::Event> ev;
             std::lock_guard lock(g_mu);
+            if (story_id) g_scene.allow_id(story_id);
             const hso::Take tk = g_scene.offer(
                 opcode, payload, packet, t2_now_us(), own, [](uint32_t k) { return g_hold.withheld(k); },
                 [] { return g_hold.next_seq(); }, ev);

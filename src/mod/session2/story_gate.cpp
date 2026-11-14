@@ -487,6 +487,49 @@ void on_vol_call(safetyhook::Context& ctx) {
     if (skip) ctx.rip = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)) + kVolCall + sizeof kVolCallBytes;
 }
 
+// Research (2026-11-14): the client sequencer object's scene name, for a hold on the guest's game (no server table
+// there). A string "cd_seq_" (or a path holding "/cd_seq_") at *(obj+a) or *(*(obj+a)+b), a < 0x200, b < 0x100.
+bool name_at(uintptr_t p, char* out, size_t cap) {
+    char buf[96] = {};
+    if (!p || !sg_read(buf, p, sizeof buf - 1)) return false;
+    for (size_t i = 0; i + 7 < sizeof buf - 1; ++i) {
+        if (std::memcmp(buf + i, "cd_seq_", 7) == 0 && (i == 0 || buf[i - 1] == '/' || buf[i - 1] == '\\')) {
+            size_t n = 0;
+            while (i + n < sizeof buf - 1 && n + 1 < cap && buf[i + n] > 32 && buf[i + n] < 127) {
+                out[n] = buf[i + n];
+                ++n;
+            }
+            out[n] = 0;
+            return n > 7;
+        }
+        if (buf[i] == 0) break;
+    }
+    return false;
+}
+void find_name(uintptr_t obj, uint64_t id) {
+    static std::atomic<int> said{0};
+    if (said.load() >= 12) return;
+    char name[64] = {};
+    for (uint32_t a = 0; a < 0x200; a += 8) {
+        uintptr_t p1 = 0;
+        if (!sg_read(&p1, obj + a, 8) || p1 < 0x10000 || (p1 >> 47)) continue;
+        if (name_at(p1, name, sizeof name)) {
+            if (said.fetch_add(1) < 12) log::info("StoryGate [name] sequencer 0x{:X}: '{}' at *(obj+0x{:X})", id, name, a);
+            return;
+        }
+        for (uint32_t b = 0; b < 0x100; b += 8) {
+            uintptr_t p2 = 0;
+            if (!sg_read(&p2, p1 + b, 8) || p2 < 0x10000 || (p2 >> 47)) continue;
+            if (name_at(p2, name, sizeof name)) {
+                if (said.fetch_add(1) < 12)
+                    log::info("StoryGate [name] sequencer 0x{:X}: '{}' at *(*(obj+0x{:X})+0x{:X})", id, name, a, b);
+                return;
+            }
+        }
+    }
+    if (said.fetch_add(1) < 12) log::info("StoryGate [name] sequencer 0x{:X}: no 'cd_seq_' name within two pointers", id);
+}
+
 void on_lookup(safetyhook::Context& ctx) {
     static std::atomic<int> said{0};
     if (said.load(std::memory_order_relaxed) >= 300) return;
@@ -497,6 +540,7 @@ void on_lookup(safetyhook::Context& ctx) {
     sg_read(&kind, ctx.rsp + 0xD0, 4);
     uint64_t id = 0;
     if (seq) sg_read(&id, seq + 0x30, 8);
+    if (seq) find_name(seq, id);
     if (said.fetch_add(1) >= 300) return;
     log::info("StoryGate [volume] character 0x{:08X} {} a volume of kind 0x{:08X}: {}", key, static_cast<uint8_t>(ctx.r12) ? "in" : "out",
               kind, seq ? std::format("sequencer 0x{:X} (object 0x{:X})", id, seq) : std::string("NO sequencer found"));
@@ -610,6 +654,24 @@ void story_gate_release_done() noexcept {
     std::lock_guard lock(g_mu);
     if (!g_release_u2.empty()) g_release_u2.pop_front();
     g_release_u2_any.store(!g_release_u2.empty());
+}
+
+bool story_gate_story_hash(uint32_t hash) noexcept {
+    if (g_mode.load(std::memory_order_relaxed) != 2 || !hash) return false;
+    // cs9m: a 2661's +27 is the same file-name hash as the table's; user 2's own entries come only after its 2661 went
+    // (the table is filled after the preparation), so any player's entry counts: the host's are there before.
+    for (size_t i = 0; i < kSlots; ++i) {
+        const uint64_t k = g_slots[i].key.load(std::memory_order_acquire);
+        if (!k || !sgl::is_story_name(g_slots[i].name)) continue;
+        if (g_slots[i].hash == hash) return true;
+    }
+    return false;
+}
+
+bool story_gate_user2_story(uint64_t id) noexcept {
+    if (g_mode.load(std::memory_order_relaxed) != 2 || !id) return false;
+    const Slot* s = find(key_of(true, id));
+    return s && sgl::is_story_name(s->name);
 }
 
 bool story_gate_skip_copy(uint64_t host_seq) noexcept {
