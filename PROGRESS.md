@@ -5,7 +5,7 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
-- OK TO POST GIVEN 2026-11-13 ~21:10 (the owner picked "Fix build first (Recommended)": "Package the merchant-scene fix, run the full 23-step checklist (~3.5 h), then post it for the weekend testers, then go back to cutscenes. Posting would use this OK."). For the build after 5a81a327 with the stage-manager scene-table fix (3663). ONE post in #download-here after the whole checklist has passed on that exact package.
+- POSTED 2026-11-14 01:42 (06:42 UTC; the owner's OK of 2026-11-13 ~21:10, "Fix build first (Recommended)"): build 0.1.0-alpha+66985463 (game 1.0.0.3663: the stage manager's scene-table port fix) in #download-here, both zips (message 1571052771241623684; text: docs/release/shared-world-playtest/download-66985463.txt). Checklist pp14 / pp14b..e: all 23 steps (one PC). The posting OK is used; the next post needs your OK again.
 - POSTED 2026-11-13 16:53 (21:53 UTC; the owner's OK of the afternoon: "If there is already an update that you made that is compatible with the new crimson desert update you can go ahead and post it as well."): build 0.1.0-alpha+5a81a327 for game 1.0.0.3663 in #download-here, both zips (message 1570919529251475618; text as posted: docs/release/shared-world-playtest/download-5a81a327.txt). Tested on ONE PC with two copies of the game (Nvidia): all 23 checklist steps (pp13, loot and mounts again as pp13b). Waiting for: the testers on the new build (Yagiisama and Jay plan to play this weekend), a real PlayStation pad on the title menu, the first two-PC report. The posting OK is used; the next post needs your OK again.
 - (DONE: 5a81a327 posted for it) GAME UPDATED 2026-11-13 02:24 to 1.0.0.3663 (Steam, by itself). The posted build 0.1.0-alpha+cf8c7fa3 is made for
   1.0.0.3576 and switches itself off on the new game ("Co-op+ is off: this mod was made for game version 1.0.0.3576").
@@ -7081,3 +7081,17 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - pp14 on 66985463: 18 steps clean; display 5/3, loot 44/1 (dice: 4 requests), farfight 44/1 (the guest killed nothing far away this time: "kills host 0 guest 0"; pp13: guest 3), mounts 44/1 (the host's E beside its horse again), mountfight 43/2 (the guest's dev script never started: no horse called). Re-running those five as pp14b.
 - display: a REAL old bug found (not in this build's change): Steam's library faulted once in SetRichPresence; fail() dropped the interface and set a 10 s retry, but join_presence_hosting went on with its next three keys on the null interface: three "faults" in 1 ms, so Steam join and invites were switched off for the launch after ONE fault. Fixed in the layer source (steam_join.cpp set_presence_locked returns while the interface is dropped); NOT in 66985463 (built after the next package).
 - pp14b: display 6/0, loot 46/0, farfight 45/0, mountfight 45/0; mounts 44/1 again. The screens (pp14-, pp14b-, pp13-mounts-39-host-view): the host's horse arrives beside the GUEST, the host's script E then meets the "Interact" prompt of the guest (the nearer target) instead of Ride, and the host stays on foot (the guest is mounted). The scenario's positions, the same on 5a81a327 (pp13 1 of 2). A player-facing snag to look at later: standing right beside your friend, E goes to the friend's prompt before your own horse. pp14c: mounts again.
+
+### POSTED 2026-11-14 01:42: 0.1.0-alpha+66985463 in #download-here (game 1.0.0.3663)
+
+- Message 1571052771241623684 (06:42:49 UTC): the text (1370 characters, download-66985463.txt) and both zips (11.98 MB,
+  6.53 MB = 12 564 115 / 6 848 148 bytes, identical to dist\). The #bug-reports mention resolved. Nothing new from
+  the testers since Yagiisama 2026-11-13 18:22 UTC.
+- The checklist on this exact package: pp14 18 steps clean; pp14b display 6/0 (pp14: Steam's own library faulted in
+  SetRichPresence and the old counting bug switched invites off: fixed in the source for the next build), loot 46/0
+  (pp14: dice), farfight 45/0, mountfight 45/0 (pp14: the guest's script never started); mounts passed as pp14e 45/0
+  after two fixes OF THE TEST (tools/prepost.sh): the host's E met the guest's "Interact" prompt (both horses came
+  to the same spot) and, in pp14d, picked a flower ('peony_01') of the patch the horses stand in: the guest now
+  rides 12 s after the host, both go to the horse again before E, and a second E follows 1.5 s later.
+- Not in this build: the Steam presence fault-count fix (steam_join.cpp, committed after the package).
+- One post for this batch. The next post needs the owner's OK.

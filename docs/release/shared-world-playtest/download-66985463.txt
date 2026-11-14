@@ -1,0 +1,12 @@
+**Update: shared world playtest 0.1.0-alpha+66985463, for game 1.0.0.3663**
+A small fix on top of yesterday's 5a81a327. Please use this one instead; **both players need the same build** (the title menu tells you if your friend has another one).
+
+Fixed:
+- **One part of the move to game 1.0.0.3663 was wrong**: the mod looked for the game's story and shop scenes in the wrong place, so the joined player's own scenes (a merchant far from the host, for example) could fall back to the host's. Found while working on shared cutscenes.
+
+Known, unchanged: **the host's story cutscenes, and what they bring into the world (a story boss), are not shown to the joined player.** Work on it has started: the joined player now gets its own story triggers in our tests, but its story step still lands on the host's quest. Not in this build.
+
+- `...66985463-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tested with two copies of the game on one PC (Nvidia), the full 23-step checklist. Not tested: two PCs over the internet with this build, AMD / Intel cards, a real PlayStation controller, an evening-long session, story scenes and bosses. Tell us in <#1567319198206525450> how it goes, with the report zip from both of you (close the game, run **Diagnose Co-op+.cmd**).

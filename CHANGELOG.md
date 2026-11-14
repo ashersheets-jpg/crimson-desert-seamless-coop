@@ -5,6 +5,13 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
+Posted 2026-11-14 01:42 as 0.1.0-alpha+66985463, for game 1.0.0.3663 (checklist pp14 / pp14b-e: all 23 steps, one PC):
+- **A part of the move to 1.0.0.3663 was wrong**: the server stage manager's scene table moved by 8 bytes in that
+  game version and the mod still read the old place, so every "is this scene the joined player's?" check found
+  nothing and fell back to the host's manager (the joined player's own shop scenes far from the host, the host
+  scenes filed on the guest). Found by the shared cutscenes work.
+- Research switches for shared cutscenes are in the code, all off by default (nothing changes for players).
+
 Posted 2026-11-13 16:53 as 0.1.0-alpha+5a81a327, for game 1.0.0.3663 (checklist pp13 / pp13b: all 23 steps, one PC):
 - **Works with game 1.0.0.3663** (Steam's update of 13 November 2026). The build before, cf8c7fa3, is for 1.0.0.3576
   and switches itself off on the updated game. Moved to the new game: every address and message number the mod
