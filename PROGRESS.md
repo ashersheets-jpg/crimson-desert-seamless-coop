@@ -5,6 +5,7 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- OK TO POST GIVEN 2026-11-13 ~21:10 (the owner picked "Fix build first (Recommended)": "Package the merchant-scene fix, run the full 23-step checklist (~3.5 h), then post it for the weekend testers, then go back to cutscenes. Posting would use this OK."). For the build after 5a81a327 with the stage-manager scene-table fix (3663). ONE post in #download-here after the whole checklist has passed on that exact package.
 - POSTED 2026-11-13 16:53 (21:53 UTC; the owner's OK of the afternoon: "If there is already an update that you made that is compatible with the new crimson desert update you can go ahead and post it as well."): build 0.1.0-alpha+5a81a327 for game 1.0.0.3663 in #download-here, both zips (message 1570919529251475618; text as posted: docs/release/shared-world-playtest/download-5a81a327.txt). Tested on ONE PC with two copies of the game (Nvidia): all 23 checklist steps (pp13, loot and mounts again as pp13b). Waiting for: the testers on the new build (Yagiisama and Jay plan to play this weekend), a real PlayStation pad on the title menu, the first two-PC report. The posting OK is used; the next post needs your OK again.
 - (DONE: 5a81a327 posted for it) GAME UPDATED 2026-11-13 02:24 to 1.0.0.3663 (Steam, by itself). The posted build 0.1.0-alpha+cf8c7fa3 is made for
   1.0.0.3576 and switches itself off on the new game ("Co-op+ is off: this mod was made for game version 1.0.0.3576").
