@@ -275,6 +275,10 @@ bool join_open_invite(uint64_t lobby) {
 
 namespace {
 void set_presence_locked(const char* key, const char* value) {
+    // pp14-display (2026-11-14): after a fault fail() drops the interface (frn = null) and waits 10 s, but the caller
+    // went on with its next keys on the null interface: three "faults" in the same millisecond, and Steam join was
+    // off for the whole launch after ONE fault of Steam's. The rest of the keys wait for the retry.
+    if (!g_resolved || g_disabled || !g_api.frn) return;
     bool ok = false;
     if (!call(ok, g_api.set_rich_presence, g_api.frn, key, value)) fail("SetRichPresence");
 }
