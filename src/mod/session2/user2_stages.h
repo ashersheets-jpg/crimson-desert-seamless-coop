@@ -215,6 +215,8 @@ uintptr_t user2_stages_user2_manager() noexcept;
 bool user2_stages_host_field(uintptr_t field) noexcept;
 // U2: U-1 has user 2's manager armed now (mode 1, not aborted).
 bool user2_stages_armed() noexcept;
+// Co-op+ 2026-11-13: user2_stages_elements is schedule+funcnpc+quest (user 2's own story scenes allowed).
+bool user2_stages_quest_allowed() noexcept;
 // U2: the host's ServerSequencerStageManager now (re-checked; 0 = none).
 uintptr_t user2_stages_host_manager() noexcept;
 // U2: user 2's character stands in a field the host owns now.

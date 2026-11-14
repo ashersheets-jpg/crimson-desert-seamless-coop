@@ -23,7 +23,10 @@ using Mode = u2s::Mode;
 
 // ---------------------------------------------------------------- the keys
 
-enum class Elements : uint8_t { Schedule, ScheduleFuncnpc };
+// Co-op+ 2026-11-13 (shared cutscenes, docs/research/shared-cutscenes.md): ScheduleFuncnpcQuest also lets user 2's
+// armed manager prepare its own story scenes (cd_seq_quest_*, bgm_cd_seq_quest_*), so its client has the story's
+// trigger volumes of its own.
+enum class Elements : uint8_t { Schedule, ScheduleFuncnpc, ScheduleFuncnpcQuest };
 struct ElementsKey {
     Elements elements = Elements::Schedule;
     bool bad = false;  // anything else: schedule (logged)
@@ -35,11 +38,17 @@ inline ElementsKey parse_elements(std::string_view v) {
         k.elements = Elements::ScheduleFuncnpc;
         return k;
     }
+    if (v == "schedule+funcnpc+quest") {
+        k.elements = Elements::ScheduleFuncnpcQuest;
+        return k;
+    }
     k.bad = true;
     return k;
 }
 inline const char* elements_name(Elements e) {
-    return e == Elements::ScheduleFuncnpc ? "schedule+funcnpc" : "schedule";
+    return e == Elements::ScheduleFuncnpcQuest ? "schedule+funcnpc+quest"
+           : e == Elements::ScheduleFuncnpc    ? "schedule+funcnpc"
+                                               : "schedule";
 }
 
 // ---------------------------------------------------------------- U-f: which sequencer elements pass
@@ -51,6 +60,12 @@ inline std::string_view base_name(std::string_view path) {
 }
 inline constexpr std::string_view kFuncnpcPrefix = "cd_seq_funcnpc_";
 inline bool is_funcnpc(std::string_view base) { return base.size() > kFuncnpcPrefix.size() && base.starts_with(kFuncnpcPrefix); }
+// Co-op+ 2026-11-13: the story scenes (cs4: cd_seq_quest_intro_0300, cd_seq_quest_intro_trigger, bgm_cd_seq_quest_*).
+inline constexpr std::string_view kQuestPrefix = "cd_seq_quest_", kQuestBgmPrefix = "bgm_cd_seq_quest_";
+inline bool is_quest(std::string_view base) {
+    return (base.size() > kQuestPrefix.size() && base.starts_with(kQuestPrefix)) ||
+           (base.size() > kQuestBgmPrefix.size() && base.starts_with(kQuestBgmPrefix));
+}
 
 // What 0x288A970's hook does with one element of user 2's manager (user2_stages' elem_detour). U-1's own skip comes
 // first (u2s::skip_element: mode 1, armed, in the host's field, not a schedule); a sequencer whose resource is a
@@ -65,6 +80,7 @@ enum class ElemVerdict : uint8_t {
     SkipNear,       // a funcnpc skipped: user 2 within 10 cells of the host, or U-1's drain waiting for a shop
     PassFuncnpc,    // a funcnpc let through (U2): 0x287C200 on user 2's manager, a 2661 to user 2
     SkipNotTrade,   // S46 T1 active: a funcnpc whose base name's dictionary hash is NOT on the trade list (or T1 latched)
+    PassQuest,      // Co-op+: a story scene let through (elements=schedule+funcnpc+quest): user 2's own story sequencer
     Count
 };
 inline constexpr uint32_t kNewShopMinCells = 4;  // Co-op+ 2026-11-09: with U-1 arming at >= 4 cells (was 10)
@@ -74,12 +90,13 @@ inline constexpr uint32_t kNewShopMinCells = 4;  // Co-op+ 2026-11-09: with U-1 
 // schedule+funcnpc, which lets every funcnpc of the cell through: 12 in Hernand, p1b). Schedules and the other
 // sequencers: unchanged (U-1's own skip). list_on = false: exactly the verdict before S46 phase 3.
 inline ElemVerdict element_verdict(bool u1_skip, u2s::Element e, bool funcnpc, Elements elements, bool may_prepare,
-                                   bool near_or_waiting, bool list_on = false, bool trade = false) {
+                                   bool near_or_waiting, bool list_on = false, bool trade = false, bool quest = false) {
     if (!u1_skip) return ElemVerdict::Original;
+    if (e == u2s::Element::Sequencer && quest && elements == Elements::ScheduleFuncnpcQuest) return ElemVerdict::PassQuest;
     if (e != u2s::Element::Sequencer || !funcnpc) return ElemVerdict::Skip;
     if (list_on) {
         if (!trade) return ElemVerdict::SkipNotTrade;
-    } else if (elements != Elements::ScheduleFuncnpc) {
+    } else if (elements != Elements::ScheduleFuncnpc && elements != Elements::ScheduleFuncnpcQuest) {
         return ElemVerdict::SkipFuncnpc;
     }
     if (!may_prepare) return ElemVerdict::SkipNoRoute;
@@ -93,6 +110,7 @@ inline const char* elem_verdict_name(ElemVerdict v) {
         case ElemVerdict::SkipNoRoute: return "SKIPPED (a shop scene: user2_shop_route cannot prepare it)";
         case ElemVerdict::SkipNear: return "SKIPPED (a shop scene: user 2 < 10 cells from the host, or the drain waits)";
         case ElemVerdict::PassFuncnpc: return "LET THROUGH (U2: a shop scene of user 2's own manager)";
+        case ElemVerdict::PassQuest: return "LET THROUGH (Co-op+: a story scene of user 2's own manager)";
         case ElemVerdict::SkipNotTrade:
             return "SKIPPED (S46 T1: a shop scene whose name's hash is NOT on the trade list smithy 0xA7132561 / "
                    "butcher 0x978345CA)";

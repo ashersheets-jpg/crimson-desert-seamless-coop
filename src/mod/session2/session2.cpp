@@ -1404,7 +1404,11 @@ bool install(const Options& opt) {
             log::warn("Session2: user2_stages / user2_timer_route need create_session=1; off");
         } else {
             user2_stages_set_fast_rearm(lc.s2_user2_fast_rearm);  // S37 phase D, before the start
-            user2_stages_start(lc.s2_user2_stages, lc.s2_user2_timer_route, lc.s2_user2_stages_elements,
+            // Co-op+ 2026-11-13: user2_stages_quest=1 adds the story scenes to user 2's element filter.
+            const std::string elements = lc.s2_user2_stages_quest && lc.s2_user2_stages_elements == "schedule+funcnpc"
+                                             ? std::string("schedule+funcnpc+quest")
+                                             : lc.s2_user2_stages_elements;
+            user2_stages_start(lc.s2_user2_stages, lc.s2_user2_timer_route, elements,
                                lc.s2_user2_npc_control, lc.s2_user2_drain_at_host_prepare);
             user2_stages_set_trade_list(lc.s2_user2_shop_trade_list);  // S46 phase 3, T1 (s46-tenderos.md §9)
             user2_stages_set_names_probe(lc.s2_stage_names_probe);    // Co-op+ shared cutscenes research (read only)

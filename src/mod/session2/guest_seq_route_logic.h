@@ -1157,7 +1157,7 @@ inline bool scene_name(const uint64_t* q, size_t nq, char* out, size_t cap) {
 // X's instance of a sequencer, as 0x1F6C190 keys it (read-only peek): count [G+0x10C], nodes [G+0x120][i],
 // node +8 = sequencer id, +0x10 = the instance, instance +0x15 = dead [V capstone 0x1F6C190, 10-10]. The game walks
 // one hash bucket ([G+0x118] x [G+0x108]); the peek walks the dense node array (b728ec7's find_instance).
-inline constexpr uint32_t kMgr_MapCount = 0x134, kMgr_MapNodes = 0x148,  /* Co-op+ 3576 (2976: 0x10C, 0x120) */ kMapNode_Seq = 0x08, kMapNode_Inst = 0x10,
+inline constexpr uint32_t kMgr_MapCount = 0x13C, kMgr_MapNodes = 0x150, /* 3663 (3576 0x134, 0x148): +8, stage_lookup_logic.h */  /* Co-op+ 3576 (2976: 0x10C, 0x120) */ kMapNode_Seq = 0x08, kMapNode_Inst = 0x10,
                           kInst_Dead = 0x15;
 inline constexpr uint32_t kMaxMapNodes = 4096;
 // The scene's name candidates: [[obj+0x48]+0x1B8] for the object whose +0x30 is the sequencer id (guest_x_veto's

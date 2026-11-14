@@ -121,6 +121,17 @@ void test_names_and_verdict() {
     CHECK(u2sh::element_verdict(true, E::Sequencer, false, SF, true, false) == V::Skip);
     CHECK(u2sh::element_verdict(true, E::Class2, true, SF, true, false) == V::Skip);  // a name never makes a faction pass
     static_assert(u2sh::kNewShopMinCells == 4);  // 2026-11-09 (was 10)
+    // Co-op+ 2026-11-13: the story scenes (cd_seq_quest_*) pass only with schedule+funcnpc+quest, near or far, routed
+    // or not; a quest name never makes a non-sequencer pass; funcnpc keeps its own rules under the new key.
+    const auto SFQ = u2sh::Elements::ScheduleFuncnpcQuest;
+    CHECK(u2sh::parse_elements("schedule+funcnpc+quest").elements == SFQ && !u2sh::parse_elements("schedule+funcnpc+quest").bad);
+    CHECK(u2sh::is_quest("cd_seq_quest_intro_trigger") && u2sh::is_quest("bgm_cd_seq_quest_intro_0300"));
+    CHECK(!u2sh::is_quest("cd_seq_quest_") && !u2sh::is_quest("cd_seq_funcnpc_smithy") && !u2sh::is_quest("cd_seq_contents_weather_wind_0006"));
+    CHECK(u2sh::element_verdict(true, E::Sequencer, false, SFQ, false, true, false, false, true) == V::PassQuest);
+    CHECK(u2sh::element_verdict(true, E::Sequencer, false, SF, true, false, false, false, true) == V::Skip);
+    CHECK(u2sh::element_verdict(true, E::Schedule, false, SFQ, true, false, false, false, true) == V::Skip);
+    CHECK(u2sh::element_verdict(true, E::Sequencer, true, SFQ, true, false) == V::PassFuncnpc);  // +quest keeps the shop rules
+    CHECK(u2sh::element_verdict(false, E::Sequencer, false, SFQ, true, false, false, false, true) == V::Original);
     // And U-1's own skip (unchanged): mode 1, armed, the host's field, not a schedule.
     CHECK(u2s::skip_element(true, u2s::Mode::On, true, true, E::Sequencer));
     CHECK(!u2s::skip_element(true, u2s::Mode::Probe, true, true, E::Sequencer));

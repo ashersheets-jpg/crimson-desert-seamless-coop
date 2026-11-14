@@ -2652,7 +2652,7 @@ uintptr_t elem_detour(uintptr_t mgr, uintptr_t res, uintptr_t stage, uintptr_t e
         p::Event e;
         // U2 (tiendas-u2.md): a sequencer's resource base name (the char* at [[[elem+8]]], read byte by byte, at most
         // 160; 40 logged): a cd_seq_funcnpc_* passes when user2_stages_elements and the shop route allow it.
-        bool funcnpc = false, trade = false;
+        bool funcnpc = false, trade = false, quest = false;
         if (el == u2s::Element::Sequencer) {
             const uintptr_t path = res_ptr ? rdp(rdp(res_ptr)) : 0;
             char name[40] = {};
@@ -2670,6 +2670,7 @@ uintptr_t elem_detour(uintptr_t mgr, uintptr_t res, uintptr_t stage, uintptr_t e
                 e.v[3 + n / 8] |= static_cast<uint64_t>(c) << (8 * (n % 8));
             }
             funcnpc = u2sh::is_funcnpc(std::string_view(name, n));
+            quest = u2sh::is_quest(std::string_view(name, n));  // Co-op+ 2026-11-13: the story scenes
             // S46 phase 3: T1 decides by the EXACT dictionary hash of the base name (funcnpc_trade_policy.h dict_hash),
             // only for a name read whole (not cut at 40 bytes).
             const bool whole = n == len - base;
@@ -2687,7 +2688,7 @@ uintptr_t elem_detour(uintptr_t mgr, uintptr_t res, uintptr_t stage, uintptr_t e
         if (list_on && g_t1_latched.load(std::memory_order_relaxed)) trade = false;
         const u2sh::ElemVerdict verdict = u2sh::element_verdict(
             skip, el, funcnpc, static_cast<u2sh::Elements>(g_elements.load(std::memory_order_relaxed)),
-            user2_shops_may_prepare(), near_or_waiting, list_on, trade);
+            user2_shops_may_prepare(), near_or_waiting, list_on, trade, quest);
         if (el == u2s::Element::Sequencer) {
             g_elem_verdicts[static_cast<size_t>(verdict)].fetch_add(1, std::memory_order_relaxed);
         }
@@ -2705,7 +2706,8 @@ uintptr_t elem_detour(uintptr_t mgr, uintptr_t res, uintptr_t stage, uintptr_t e
         } else {
             e.v[11] = 0;
         }
-        const bool skipped = verdict != u2sh::ElemVerdict::Original && verdict != u2sh::ElemVerdict::PassFuncnpc;
+        const bool skipped = verdict != u2sh::ElemVerdict::Original && verdict != u2sh::ElemVerdict::PassFuncnpc &&
+                             verdict != u2sh::ElemVerdict::PassQuest;
         e.v[0] = static_cast<uint64_t>(el);
         e.v[1] = skipped;
         e.v[2] = static_cast<uint32_t>(a5);  // 0x288A970's 5th argument: the static stage id (its FUN_140473f20 key)
@@ -7392,7 +7394,8 @@ void user2_stages_set_trade_list(const std::string& mode) {
     if (k.bad) log::warn("User2Stages: user2_shop_trade_list={} is not 0, probe or 1: off", mode);
     g_trade_list.store(static_cast<uint8_t>(k.mode));
     if (k.mode == u2s::Mode::Off) return;
-    const bool funcnpc_all = g_elements.load() == static_cast<uint8_t>(u2sh::Elements::ScheduleFuncnpc);
+    const bool funcnpc_all = g_elements.load() == static_cast<uint8_t>(u2sh::Elements::ScheduleFuncnpc) ||
+                             g_elements.load() == static_cast<uint8_t>(u2sh::Elements::ScheduleFuncnpcQuest);
     if (k.mode == u2s::Mode::On) {
         log::info("User2Stages: user2_shop_trade_list=1 (S46 phase 3, T1 ACTIVE): with U-1 armed and >= 10 cells, U-f "
                   "lets through ONLY the cd_seq_funcnpc_* whose base name hashes (lookup3, seed 0xC5EDE) to the trade "
@@ -7407,6 +7410,10 @@ void user2_stages_set_trade_list(const std::string& mode) {
     }
 }
 bool user2_stages_trade_list_active() noexcept { return t1_list_on(); }
+
+bool user2_stages_quest_allowed() noexcept {
+    return g_elements.load(std::memory_order_relaxed) == static_cast<uint8_t>(u2sh::Elements::ScheduleFuncnpcQuest);
+}
 
 void user2_stages_set_names_probe(bool on) {
     g_names_probe = on;

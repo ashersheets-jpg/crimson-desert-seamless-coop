@@ -280,7 +280,7 @@ void user2_shops_host_2671(uint32_t result) noexcept {
 }
 
 void user2_shops_prepared(uintptr_t mgr, uint64_t seq_id, bool funcnpc, bool name_known, uint32_t hash,
-                          uint32_t result) noexcept {
+                          uint32_t result, bool quest) noexcept {
     if (!user2_shops_wanted() || !mgr) return;
     // Review M6: the host's shop scenes by resource hash (log only).
     if (funcnpc && !result && hash && mgr == user2_stages_host_manager()) {
@@ -318,7 +318,9 @@ void user2_shops_prepared(uintptr_t mgr, uint64_t seq_id, bool funcnpc, bool nam
         abort_now(u2sh::Abort::NotTradeList, seq_id, hash);  // and the route to probe (mode 1), one ERR line
     }
     // Review B5: only a name READ and known not to be a shop's, with user 2 armed in the host's field, is U-f broken.
-    if (name_known && !funcnpc && user2_stages_armed() && user2_stages_user2_in_host_field()) {
+    // Co-op+ 2026-11-13: a story scene is no breach when user2_stages_elements lets them through (+quest).
+    if (name_known && !funcnpc && !(quest && user2_stages_quest_allowed()) && user2_stages_armed() &&
+        user2_stages_user2_in_host_field()) {
         g_u2_not_funcnpc.fetch_add(1, std::memory_order_relaxed);
         abort_now(u2sh::Abort::NotFuncnpc, seq_id, 0);
     }
