@@ -241,6 +241,7 @@ add_library(cdmp_mod SHARED
     src/mod/session2/scene_level_share.cpp
     src/mod/session2/user2_stages.cpp
     src/mod/session2/user2_shops.cpp
+    src/mod/session2/story_gate.cpp
     src/mod/session2/freeze_watchdog.cpp
     src/mod/session2/guest_save_host.cpp
     src/mod/session2/guest_save_tunnel.cpp
@@ -412,6 +413,11 @@ add_executable(cdmp_tests_optd_fog_share tests/optd_fog_share_tests.cpp)
 cdmp_strict(cdmp_tests_optd_fog_share)
 target_link_libraries(cdmp_tests_optd_fog_share PRIVATE cdmp_common)
 add_test(NAME optd_fog_share COMMAND cdmp_tests_optd_fog_share)
+
+add_executable(cdmp_tests_optd_story_gate tests/optd_story_gate_tests.cpp)
+cdmp_strict(cdmp_tests_optd_story_gate)
+target_link_libraries(cdmp_tests_optd_story_gate PRIVATE cdmp_common)
+add_test(NAME optd_story_gate COMMAND cdmp_tests_optd_story_gate)
 add_executable(cdmp_tests_optd_anti_grief tests/optd_anti_grief_tests.cpp)
 cdmp_strict(cdmp_tests_optd_anti_grief)
 target_link_libraries(cdmp_tests_optd_anti_grief PRIVATE cdmp_common)

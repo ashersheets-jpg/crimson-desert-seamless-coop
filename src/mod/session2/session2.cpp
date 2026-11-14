@@ -70,6 +70,7 @@
 #include "mod/session2/server.h"
 #include "mod/session2/travel_probe.h"
 #include "mod/session2/user2_funnels.h"
+#include "mod/session2/story_gate.h"
 #include "mod/session2/user2_funnels_logic.h"
 #include "mod/session2/world_anchor.h"
 
@@ -329,6 +330,8 @@ void halt_tick() {
 // full because the server is not taking them: a host pause is one such case).
 // Save/cheat Req and non-server packets are dropped by policy. Nothing here
 // ends the conversation: only the link (or the hold limit) does.
+thread_local bool t_story_release = false;  // Co-op+ the ready check: a released Req is being offered
+
 bool offer(const std::vector<uint8_t>& p) {
     auto v = troc::parse_wire(p, troc::Dir::ToHostServer);
     if (v && never_from_guest(v->opcode)) {
@@ -347,6 +350,20 @@ bool offer(const std::vector<uint8_t>& p) {
     if (server_logout_requested()) {
         ++g_after_goodbye;
         return true;
+    }
+    // Co-op+ 2026-11-14 the ready check (story_gate.h, [session2] story_gate=hold): user 2's released story trigger
+    // goes first, in order (a released Req that is held by the server is offered again before this one); user 2's
+    // own entry into a story volume waits for the friend.
+    if (!t_story_release) {
+        std::vector<uint8_t> r;
+        while (story_gate_next_release(r)) {
+            t_story_release = true;
+            const bool done = offer(r);
+            t_story_release = false;
+            if (!done) return false;
+            story_gate_release_done();
+        }
+        if (story_gate_take_user2(p)) return true;
     }
     if (v && v->opcode == troc::kOpLogoutSessionReq) {
         if (g_reconnect) {
@@ -1406,6 +1423,7 @@ bool install(const Options& opt) {
             user2_stages_set_fast_rearm(lc.s2_user2_fast_rearm);  // S37 phase D, before the start
             user2_stages_set_own_quest(lc.s2_user2_stages_own_quest);  // Co-op+ shared cutscenes, before the start
             user2_funnels_set_branch_probe(lc.s2_branch_probe);          // Co-op+ shared cutscenes research
+            story_gate_set_mode(lc.s2_story_gate);                       // Co-op+ the ready check (story_gate.h)
             // Co-op+ 2026-11-13: user2_stages_quest=1 adds the story scenes to user 2's element filter.
             const std::string elements = lc.s2_user2_stages_quest && lc.s2_user2_stages_elements == "schedule+funcnpc"
                                              ? std::string("schedule+funcnpc+quest")
