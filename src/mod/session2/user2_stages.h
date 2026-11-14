@@ -103,6 +103,13 @@ bool user2_stages_trade_list_active() noexcept;
 // READ ONLY. Every stage element the HOST's own manager evaluates is logged with its kind and, for a sequencer, its
 // resource base name and the static stage id (at most 400 lines). Nothing else changes.
 void user2_stages_set_names_probe(bool on);
+// Co-op+ 2026-11-13 ([session2] user2_stages_own_quest=1, HOST, before user2_stages_start): user 2's armed cell
+// evaluation uses ITS OWN ServerQuestManager (Q1 0x2B42964: the context's [rbp+0x160]; Q2 0x2BE4070: the collector's
+// owner check passes for it in the host's field), so its story stages follow its own progress (the owner's quest
+// design). Off: as before (the host's quest manager).
+void user2_stages_set_own_quest(bool on);
+bool user2_stages_own_quest_on() noexcept;  // user2_stages_own_quest=1 (any thread)
+std::string user2_stages_own_quest_text();  // for the summary line ("" when off)
 void user2_stages_trade_list_breach(uint64_t seq_id, uint32_t hash) noexcept;
 // Review M2: this thread is inside the original 0x288A970 of an element T1 let through (its mark is set).
 bool user2_stages_in_trade_prepare() noexcept;

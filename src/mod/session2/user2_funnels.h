@@ -104,6 +104,13 @@ bool user2_funnels_vf48_live() noexcept;
 int32_t user2_funnels_trocs_in_flight() noexcept;
 // The subject and ServerField::vf40 hooks are both in (quest_per_user or quest_policy not 0). Any thread.
 bool user2_funnels_vf40_live() noexcept;
+// Co-op+ 2026-11-13: an actor's own ServerQuestManager ([[[actor+0x68]+0x138]+0x18], both vtables checked), 0 when
+// it cannot be read or the funnels are not installed. Any thread (guarded reads).
+uintptr_t user2_funnels_quest_manager_of(uintptr_t actor) noexcept;
+// Co-op+ 2026-11-13 ([session2] branch_probe=1, read only): vf40 / FindUser under user 2's 2644 / 2048 / 2654 / 2808.
+void user2_funnels_set_branch_probe(bool on);
+// branch_probe=1 and this thread is inside user 2's Troc of that opcode (its subject): for server.cpp's take_frame.
+bool user2_funnels_branch_probe_in(uint16_t opcode) noexcept;
 // quest_policy at the tunnel's ingress (session2.cpp, before the server; the network thread; never throws).
 // judge: on every offer, no counting; drop = with 1, user 2's 2372 that could reach anything but its own quest manager.
 // record: once, on the Req's final disposition (handed to the server or not): the counts and the first lines.

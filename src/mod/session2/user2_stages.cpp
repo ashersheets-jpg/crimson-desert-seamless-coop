@@ -198,6 +198,15 @@ std::atomic<uint8_t> g_elements{0};    // u2sh::Elements: user2_stages_elements 
 std::atomic<bool> g_pt_on[kPtCount] = {};
 SafetyHookMid g_hooks[kPtCount];
 SafetyHookMid g_gate_hook, g_gate2_hook, g_eval_hook;
+// Co-op+ 2026-11-13 (shared cutscenes): user2_stages_own_quest, Q1 / Q2 (user2_stages.h).
+SafetyHookMid g_q1_hook, g_q2_hook;
+std::atomic<bool> g_own_quest{false}, g_q1_on{false}, g_q2_on{false};
+std::atomic<uint64_t> g_q1_swapped{0}, g_q1_unreadable{0}, g_q2_passed{0};
+std::atomic<uintptr_t> g_q1_last_qm{0};
+constexpr uintptr_t kQ1 = 0x2B42964, kQ2 = 0x2BE4070;
+constexpr uint8_t kQ1Bytes[] = {0x48, 0x8B, 0x8D, 0x60, 0x01, 0x00, 0x00};              // mov rcx,[rbp+0x160]
+constexpr uint8_t kQ2Bytes[] = {0x44, 0x3B, 0xC0, 0x0F, 0x85, 0x08, 0x1C, 0x00, 0x00};  // cmp r8d,eax ; jne
+constexpr uint32_t kQ1CtxQuest = 0x160;
 SafetyHookInline g_elem_hook;
 std::atomic<bool> g_gate_own{false}, g_gate2_on{false}, g_eval_on{false}, g_elem_on{false}, g_calls_ok{false};
 std::atomic<uint64_t> g_evals_u2{0}, g_evals_host{0}, g_eval_u2_ids{0}, g_eval_u2_collected{0};
@@ -1618,6 +1627,39 @@ void gate_impl(uintptr_t mgr, uintptr_t chr, uintptr_t field, uintptr_t actor, u
     } else {
         g_gate_would.fetch_add(1, std::memory_order_relaxed);
     }
+}
+
+// Co-op+ Q1 (user2_stages_own_quest=1): in the cell evaluation of user 2's armed manager, its own quest manager in
+// the context (rsi = the manager; the two collectors take [rbp+0x160] in rcx right after).
+void on_q1(safetyhook::Context& ctx) noexcept {
+    if (!g_own_quest.load(std::memory_order_relaxed) || mode_now() != u2s::Mode::On) return;
+    if (!ctx.rsi || ctx.rsi != g_u2_mgr.load(std::memory_order_relaxed)) return;
+    if (!g_armed.load(std::memory_order_acquire) || g_aborted.load(std::memory_order_relaxed)) return;
+    uint16_t op = 0;
+    if (!subject_user2(&op) || op != u2s::kOp2043) return;
+    const uintptr_t qm = user2_funnels_quest_manager_of(g_u2_char.load(std::memory_order_relaxed));
+    if (!qm) {
+        g_q1_unreadable.fetch_add(1, std::memory_order_relaxed);
+        return;
+    }
+    __try {
+        *reinterpret_cast<uintptr_t*>(ctx.rbp + kQ1CtxQuest) = qm;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        g_q1_unreadable.fetch_add(1, std::memory_order_relaxed);
+        return;
+    }
+    g_q1_last_qm.store(qm, std::memory_order_relaxed);
+    g_q1_swapped.fetch_add(1, std::memory_order_relaxed);
+}
+// Co-op+ Q2: the collector's owner check (r8d = [field+0x180], eax = the quest manager's user key, rdi = the quest
+// manager) passes for user 2's own quest manager that Q1 put in, in a field the host owns.
+void on_q2(safetyhook::Context& ctx) noexcept {
+    const uintptr_t qm = g_q1_last_qm.load(std::memory_order_relaxed);
+    if (!qm || ctx.rdi != qm || !g_own_quest.load(std::memory_order_relaxed)) return;
+    const uint32_t host = g_host_user.load(std::memory_order_relaxed);
+    if (!host || static_cast<uint32_t>(ctx.r8) != host) return;
+    ctx.rax = (ctx.rax & ~static_cast<uintptr_t>(0xFFFFFFFF)) | static_cast<uint32_t>(ctx.r8);
+    g_q2_passed.fetch_add(1, std::memory_order_relaxed);
 }
 
 // U-a2 at 0x2911435: inside user 2's armed evaluation, the collector's manager guard on its own manager.
@@ -7060,7 +7102,7 @@ void summary() {
               "(direct schedule updates {}, direct faction updates {}) | other vf48 under its timers, by caller "
               "and answer (its own manager inside its armed tick, else the owner's):{} | budgets (rate-limited / over the line cap, host "
               "| user 2):{} | ring lost {}",
-              hooks, funnels ? "in" : "OUT (no user 2 subject: its timers count as 'none')", u1_text(), ctl_text(),
+              hooks, funnels ? "in" : "OUT (no user 2 subject: its timers count as 'none')", u1_text() + user2_stages_own_quest_text(), ctl_text(),
               table_text(g_closes), by_who(g_closed_npcs), table_text(g_deletes), table_text(g_logouts),
               g_logout_client.load(), by_who(g_loads), by_who(g_unloads), by_who(g_preps), by_who(g_creates),
               g_create_checked.load(), g_create_same_other.load(), routes_text(), g_direct_sched.load(),
@@ -7152,6 +7194,20 @@ void install(std::span<const gad::Section> secs) {
         g_gate2_on.store(true);
     }
     gate += g_gate2_on.load() ? " | G2 0x2911435 hooked" : " | G2 0x2911435 REFUSED";
+    // Co-op+ 2026-11-13: Q1 / Q2 (user2_stages_own_quest=1 only).
+    if (g_own_quest.load()) {
+        if (p8_install_mid(g_base, secs, kQ1, sizeof kQ1Bytes, kQ1Bytes, on_q1, g_q1_hook, "User2Stages",
+                           "Q1, user 2's own quest manager in its cell evaluation 0x2B42964 (Co-op+)")) {
+            g_q1_on.store(true);
+        }
+        if (g_q1_on.load() &&
+            p8_install_mid(g_base, secs, kQ2, sizeof kQ2Bytes, kQ2Bytes, on_q2, g_q2_hook, "User2Stages",
+                           "Q2, the collector's owner check 0x2BE4070 for that quest manager (Co-op+)")) {
+            g_q2_on.store(true);
+        }
+        gate += std::string(" | Q1 ") + (g_q1_on.load() ? "hooked" : "REFUSED") + " Q2 " +
+                (g_q2_on.load() ? "hooked" : "REFUSED");
+    }
     // H, log only.
     if (bytes_at(kEvalCtx, kEvalCtxBytes) &&
         p8_install_mid(g_base, secs, kEval, kEvalPatch, kEvalBytes, on_eval, g_eval_hook, "User2Stages",
@@ -7413,6 +7469,20 @@ bool user2_stages_trade_list_active() noexcept { return t1_list_on(); }
 
 bool user2_stages_quest_allowed() noexcept {
     return g_elements.load(std::memory_order_relaxed) == static_cast<uint8_t>(u2sh::Elements::ScheduleFuncnpcQuest);
+}
+
+bool user2_stages_own_quest_on() noexcept { return g_own_quest.load(std::memory_order_relaxed); }
+
+void user2_stages_set_own_quest(bool on) {
+    g_own_quest = on;
+    if (on) log::warn("User2Stages: [session2] user2_stages_own_quest=1: user 2's armed evaluation builds its stages on its OWN quest manager (Q1 / Q2)");
+}
+
+std::string user2_stages_own_quest_text() {
+    if (!g_own_quest.load()) return {};
+    return std::format(" | own quest (Q1 {} Q2 {}): swapped {}, unreadable {}, owner check passed {}",
+                       g_q1_on.load() ? "in" : "OUT", g_q2_on.load() ? "in" : "OUT", g_q1_swapped.load(),
+                       g_q1_unreadable.load(), g_q2_passed.load());
 }
 
 void user2_stages_set_names_probe(bool on) {
