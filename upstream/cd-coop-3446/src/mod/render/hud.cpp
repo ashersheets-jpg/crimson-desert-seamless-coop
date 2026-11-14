@@ -24,6 +24,7 @@
 #include "mod/render/coop_page.h"
 #include "mod/net/coop_activity.h"
 #include "mod/net/coop_travel.h"
+#include "mod/net/coop_story.h"
 #include "mod/net/coop_lobby.h"
 #include "mod/settings_menu.h"
 #include "mod/net/coop_worlds.h"
@@ -520,6 +521,7 @@ void hud_draw(float width, float height) {
 
     if (!d.revive_line.empty()) ui::strip(width, height * 0.74f, d.revive_line);  // Co-op+ (T15)
     if (!d.travel_line.empty()) ui::strip(width, height * 0.23f, d.travel_line);  // Co-op+ (T19)
+    if (!d.story_line.empty()) ui::strip(width, height * 0.20f, d.story_line);    // Co-op+ the ready check
     if (!d.chat_input.empty()) ui::strip(width, height * 0.82f, d.chat_input);    // Co-op+ (T24)
     if (!d.chat_quick.empty()) ui::strip(width, height * 0.82f, d.chat_quick);
     if (!d.chat_log.empty() && !game::ui_menu_open()) ui::chat_log(width, height, d.chat_log);
@@ -675,7 +677,10 @@ void hud_draw(float width, float height) {
         // Beside the friend the hold opens the menu instead (Accept / Decline / Leave).
         if (kNativeLayer && !shown && !menu_open && d.local && !game::ui_menu_open()) {
             const int travel = net::travel_request();
-            const int request = chv.state == 1 ? 1 : travel ? 2 : 0;
+            // Co-op+ 2026-11-14 the ready check (coop_story.h): 1 go on alone, 2 start together, 4 go to the friend.
+            const int story = net::story_shown();
+            const bool story_prompt = story == 1 || story == 2 || story == 4;
+            const int request = chv.state == 1 ? 1 : story_prompt ? 3 : travel ? 2 : 0;
             if (request) {
                 shown = true;
                 float t = 0.0f;
@@ -696,14 +701,20 @@ void hud_draw(float width, float height) {
                     t = static_cast<float>(now_ms - hold_since) / static_cast<float>(kHoldRingMs);
                     if (t >= 1.0f) {
                         fired = true;
-                        input::trigger(request == 1 ? input::Action::Challenge : input::Action::GoToFriend);
+                        if (request == 3 && story != 4) {
+                            net::story_answer();
+                        } else {
+                            input::trigger(request == 1 ? input::Action::Challenge : input::Action::GoToFriend);
+                        }
                         log::info("Hud: the hold prompt accepted the friend's request ({})",
-                                  request == 1 ? "challenge" : "travel");
+                                  request == 1 ? "challenge" : request == 3 ? "story" : "travel");
                     }
                 }
                 if (fired) t = 1.0f;
                 const std::string name = d.peer_name.empty() ? std::string("your friend") : d.peer_name;
                 const std::string what = request == 1 ? "Accept: " + chv.game
+                                         : request == 3 ? (story == 1 ? std::string("Go on alone")
+                                                           : story == 2 ? std::string("Start together") : "Go to " + name)
                                          : travel == 1 ? "Go to " + name : "Follow " + name;
                 const float px = static_cast<float>(width) * 0.5f - 70.0f, py = static_cast<float>(height) * 0.30f;
                 if (on_pad) ui::hold_prompt(dl, px, py, t, "", "{Interact} " + what);

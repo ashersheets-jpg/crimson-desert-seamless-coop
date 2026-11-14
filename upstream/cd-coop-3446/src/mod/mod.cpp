@@ -56,6 +56,7 @@
 #include "mod/net/coop_sync.h"
 #include "mod/net/coop_revive.h"
 #include "mod/net/coop_travel.h"
+#include "mod/net/coop_story.h"
 #include "mod/net/coop_chat.h"
 #include "mod/net/kill_feed.h"
 #include "mod/net/session_summary.h"
@@ -579,6 +580,7 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
     bool reduced_rate = false;  // Co-op+ (T11): poor link, half rate
     std::string revive_line;    // Co-op+ (T15)
     std::string travel_line;    // Co-op+ (T19)
+    std::string story_line;     // Co-op+ the ready check (coop_story.h)
     std::string chat_input, chat_quick;  // Co-op+ (T24)
     std::vector<std::string> chat_log;
     uint32_t last_state = 0;
@@ -1235,6 +1237,8 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
                     const auto tr = net::travel_tick(linked, s.position, partner_at, session.peer_name(),
                                                      game_has_focus(), now);
                     travel_line = tr.line;
+                    // Co-op+ 2026-11-14: the shared cutscenes ready check (coop_story.h).
+                    story_line = net::story_tick(linked, host, session.peer_name(), now).line;
                     if (!tr.toast.empty()) {
                         toast = tr.toast;
                         toast_until = now + 5000;
@@ -1352,6 +1356,7 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
             hud.partner_in_menu = connected && net::activity_partner_in_menu();
             hud.revive_line = revive_line;
             hud.travel_line = travel_line;
+            hud.story_line = story_line;
             hud.chat_input = chat_input;
             hud.chat_quick = chat_quick;
             hud.chat_log = chat_log;

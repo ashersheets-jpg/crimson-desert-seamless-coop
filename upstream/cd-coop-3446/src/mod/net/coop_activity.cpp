@@ -28,6 +28,7 @@
 #include "mod/net/coop_sync.h"
 #include "mod/net/coop_revive.h"
 #include "mod/net/coop_travel.h"
+#include "mod/net/coop_story.h"
 #include "mod/net/coop_chat.h"
 #include "mod/net/kill_feed.h"
 #include "mod/net/coop_race.h"
@@ -56,7 +57,7 @@ constexpr uint16_t kOpStartActionReq = 2431;      // our client also sends the N
 constexpr float kNearM = 100.0f;                   // the user's rule: cutscenes are shared within 100 m
 constexpr uint32_t kSkipTestDelayMs = 6000;
 
-enum Type : uint8_t { kCutsceneOn = 1, kCutsceneOff = 2, kSkip = 3, kGameOn = 4, kGameOff = 5, kVersus = 6, kRps = 10, kChallenge = 11, kDuel = 12, kQuest = 13, kHunt = 14, kMenu = 16, kLooted = 17, kReviveYou = 18, kWanted = 19, kTravel = 20, kEvent = 21, kChat = 22, kKill = 23, kRace = 24, kTitle = 25, kHide = 26, kFish = 27, kBye = 28, kStash = 29 };
+enum Type : uint8_t { kCutsceneOn = 1, kCutsceneOff = 2, kSkip = 3, kGameOn = 4, kGameOff = 5, kVersus = 6, kRps = 10, kChallenge = 11, kDuel = 12, kQuest = 13, kHunt = 14, kMenu = 16, kLooted = 17, kReviveYou = 18, kWanted = 19, kTravel = 20, kEvent = 21, kChat = 22, kKill = 23, kRace = 24, kTitle = 25, kHide = 26, kFish = 27, kBye = 28, kStash = 29, kStory = 30 };
 std::atomic<bool> g_bye{false};  // the host is ending the session (tcB291)
 
 // Co-op+ (T22): world events (reinforcements, bounty hunters, camp and outpost activity) are stages our server starts
@@ -1059,6 +1060,7 @@ void activity_on_event(const std::vector<uint8_t>& p) {
         case kChat:              // coop_chat.h, below
         case kTravel:            // coop_travel.h, below
         case kReviveYou:         // coop_revive.h, below
+        case kStory:             // coop_story.h, below
         case kHunt:              // coop_hunt.h, below
         case 15:                 // coop_sync.h, below
             break;
@@ -1116,6 +1118,7 @@ void activity_on_event(const std::vector<uint8_t>& p) {
     if (p[4] == kHide) hideseek_on_event(p.data() + 5, p.size() - 5);  // coop_hideseek.h
     if (p[4] == kFish) fishing_on_event(p.data() + 5, p.size() - 5);   // coop_fishing.h
     if (p[4] == kTitle) scoreboard_on_event(p.data() + 5, p.size() - 5);  // scoreboard.h
+    if (p[4] == kStory) story_on_event(p.data() + 5, p.size() - 5);       // coop_story.h (the ready check)
     if (p[4] == kStash) stash_on_event(p.data() + 5, p.size() - 5);       // coop_stash.h (records only)
 }
 

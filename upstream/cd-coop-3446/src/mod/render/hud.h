@@ -73,6 +73,7 @@ struct HudData {
     bool partner_in_menu = false;
     std::string revive_line;
     std::string travel_line;
+    std::string story_line;  // Co-op+ the ready check (coop_story.h)
     std::string chat_input, chat_quick;  // Co-op+ (T24): the open chat line / quick list
     std::vector<std::string> chat_log;   // recent chat lines  // Co-op+ (T19): a summon / party travel request  // Co-op+ (T15): "hold to revive" / progress (reviver) or the bleed-out (downed)  // Co-op+ (T09): their name tag says "in a menu"
     // Co-op+ (2026-11-05) hide and seek: we seek, so the friend is hidden from us (no name tag, no distance); while we
