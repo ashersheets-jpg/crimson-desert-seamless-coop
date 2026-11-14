@@ -63,3 +63,12 @@ What it took (all native, off by default, keys in [session2]):
 3. The shop route's safety latch accepts story scenes (it aborted at the first non-shop scene).
 4. `user2_stages_own_quest=1`: Q1/Q2 build user 2's stages on its own ServerQuestManager; Q3 0x226F3CA: a stage event of user 2's manager takes its own quest manager; nested vf48 of user 2's routed scene Trocs answer its manager; ServerField::vf40 inside any Troc of user 2's own scene (the 2059 deferred delete included) answers its own quest manager.
 Result (cs5o): at its own trigger every Ack names user 2's character and its screen shows the next objective. Open: the scene itself on its screen, the cutscene flag, U-1 arming only when far (the players near each other is the normal case), the ready check, duplicate story NPCs.
+
+## The ready check: the plan (2026-11-14, after cs6a)
+
+With story mode on, each player's own story trigger works, near or far. The gate:
+1. Recognise a story trigger: a SequencerTriggerVolumeInOutReq (2808) of kind 0x20000003 naming the sender's own character, for a sequencer whose resource is a story scene (cd_seq_quest_*), followed by its StageBranchStateReq (2644).
+2. Hold it: user 2's on the host's server (its Reqs pass the native ingress), the host's own in the host's client before it is sent (the layer / sniffer).
+3. Both screens: "<friend> is not here yet: wait / go to them / continue alone" (the defaults to propose: wait with a prompt; the waiting player may continue alone; the other gets "travel to your friend").
+4. When both are inside their own trigger (or one chose to continue): release both held Reqs in the same moment.
+Open questions for the owner, with proposed defaults: what if the friend is far (proposal: a prompt, never a silent block); a time limit (proposal: none, the prompt stays); story NPCs of the scene twice (each player's scene spawns its own comrades: to look at with both triggering).
