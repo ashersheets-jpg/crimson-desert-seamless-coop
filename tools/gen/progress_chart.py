@@ -13,7 +13,7 @@ G = [
  ("Other mounts and vehicles", 40, "The joined player calls, mounts and rides its horse in our test (one PC). Wyverns and wagons not tried."),
  ("Mounted combat damage", 70, "A mounted guest hits, kills and is hit in the saddle (one PC). The host mounted not tried."),
  ("Boss mechanics for two", 15, "Testers: a story boss was seen by the host only. It comes with shared cutscenes (next row)."),
- ("Shared cutscenes", 25, "The testers' main complaint: the friend sees neither the cutscene nor what it brings in. Next big piece."),
+ ("Shared cutscenes", 55, "Ready check built (experimental setting): the story waits for both, works in game on one PC. Friend's own cutscene camera next."),
  ("Getting to your friend (travel, call them to you)", 75, "Was slow hops (3 min for 3 km). Beyond 250 m it is the game's own travel now. Out, not confirmed."),
  ("Quests (your own progress, optional shared credit)", 72, "A new co-op save now starts both players at the first quest (out now). Shared credit is off."),
 ]),
