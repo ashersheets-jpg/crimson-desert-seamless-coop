@@ -40,6 +40,10 @@ bool story_gate_take_host(const uint8_t* packet, size_t size) noexcept;
 // The frames come from RtlVirtualUnwind from PostPacket's entry (rip = the function, the hook's rsp and nonvolatile
 // registers: rbx rbp rsi rdi r12 r13 r14 r15).
 void story_gate_host_stack(const uint8_t* packet, size_t size, uint64_t rsp, uint64_t rip, const uint64_t nv[8]) noexcept;
+// The observer copy (observer_seq_copy.cpp), hold mode: true = the host's sequencer `host_seq` is a story scene
+// (cd_seq_quest_*) of which user 2's manager prepared its own copy (the same file-name hash), so the host's copy is not
+// sent to the guest (2026-11-14: the guest's game held both copies of the cabin's cinematic and never started its own).
+bool story_gate_skip_copy(uint64_t host_seq) noexcept;
 // The layer: a player's press (0 the host, 1 user 2); the released players (bit 0 host, bit 1 user 2).
 int story_gate_press(int who) noexcept;
 // The layer: the state (see cdmp_story_gate_state in story_gate.cpp); 0 = off.

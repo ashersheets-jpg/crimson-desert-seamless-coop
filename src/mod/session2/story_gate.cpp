@@ -612,6 +612,23 @@ void story_gate_release_done() noexcept {
     g_release_u2_any.store(!g_release_u2.empty());
 }
 
+bool story_gate_skip_copy(uint64_t host_seq) noexcept {
+    if (g_mode.load(std::memory_order_relaxed) != 2) return false;
+    const Slot* s = find(key_of(false, host_seq));
+    if (!s || !sgl::is_story_name(s->name) || !s->hash) return false;
+    for (size_t i = 0; i < kSlots; ++i) {
+        const uint64_t k = g_slots[i].key.load(std::memory_order_acquire);
+        if (k && (k >> 63) && g_slots[i].hash == s->hash) {
+            static std::atomic<int> said{0};
+            if (said.fetch_add(1) < 40)
+                log::info("StoryGate: the host's story scene '{}' (sequencer 0x{:X}) is not copied to the guest: user 2 has its own "
+                          "(sequencer 0x{:X})", s->name, host_seq, k & 0x7FFFFFFFFFFFFFFFull);
+            return true;
+        }
+    }
+    return false;
+}
+
 int story_gate_press(int who) noexcept {
     if (g_mode.load() != 2 || (who != sgl::kHost && who != sgl::kUser2)) return 0;
     std::vector<std::vector<uint8_t>> host;
