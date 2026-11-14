@@ -33,6 +33,11 @@ void story_gate_release_done() noexcept;
 // The host's own client (the sniffer's PostPacket hook, the whole wire packet): true = taken (the original post is
 // skipped; a release posts it again through sniffer_inject_c2s).
 bool story_gate_take_host(const uint8_t* packet, size_t size) noexcept;
+// Research (2026-11-14, cs8c: the host's client starts the scene itself, the held Reqs do not stop it): the host's
+// stack at PostPacket's entry (rsp, up to 36 KB read: the 2808 sender's frame is ~32 KB) for its own entry into a main
+// story scene or a cinematic and their 2644s; the words that are return addresses into the exe (a call right before
+// them) are logged (a few times).
+void story_gate_host_stack(const uint8_t* packet, size_t size, uint64_t rsp) noexcept;
 // The layer: a player's press (0 the host, 1 user 2); the released players (bit 0 host, bit 1 user 2).
 int story_gate_press(int who) noexcept;
 // The layer: the state (see cdmp_story_gate_state in story_gate.cpp); 0 = off.

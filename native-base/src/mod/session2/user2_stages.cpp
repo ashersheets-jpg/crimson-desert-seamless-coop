@@ -7539,6 +7539,8 @@ bool user2_stages_quest_allowed() noexcept {
 
 bool user2_stages_own_quest_on() noexcept { return g_own_quest.load(std::memory_order_relaxed); }
 uintptr_t user2_stages_user2_character() noexcept { return g_u2_char.load(std::memory_order_relaxed); }
+uint32_t user2_stages_host_key() noexcept { return g_host_key.load(std::memory_order_relaxed); }
+uint32_t user2_stages_user2_key() noexcept { return g_u2_key.load(std::memory_order_relaxed); }
 bool user2_stages_q3_recent() noexcept { return t_q3_at && GetTickCount64() - t_q3_at <= 20; }
 
 void user2_stages_set_own_quest(bool on) {

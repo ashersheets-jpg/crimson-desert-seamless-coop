@@ -286,6 +286,7 @@ void on_post_packet(safetyhook::Context& ctx) {
         if (guarded_copy(&size, reinterpret_cast<const void*>(ctx.rsp + off::kHookArgSizeStackOffset), sizeof size) &&
             size >= 13 && size <= sizeof buf && guarded_copy(buf, reinterpret_cast<const void*>(ctx.r9), size)) {
             session2::story_gate_observe(false, op, buf + 5, size - 5u);
+            session2::story_gate_host_stack(buf, size, ctx.rsp);
             if (g_ret_stub && session2::story_gate_take_host(buf, size)) {
                 ctx.rip = reinterpret_cast<uintptr_t>(g_ret_stub);
                 return;
