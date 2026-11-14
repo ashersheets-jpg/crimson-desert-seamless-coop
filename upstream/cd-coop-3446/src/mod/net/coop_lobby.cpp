@@ -31,6 +31,9 @@ constexpr uint8_t kMsgGuestNoSave = 23;  // u8: the guest has no character of it
 constexpr uint8_t kMsgNativeReady = 21;  // u8: the guest's game is in guest mode (after its restart)   guest -> host
 // u8: the guest pressed Play for the host's world and is still not in it   guest -> host
 constexpr uint8_t kMsgGuestStuck = 24;
+// u8: the guest is in the shared world after all (cs8h, 2026-11-14: a join that took 4.5 min left the host's card
+// "could not join" up for good)   guest -> host
+constexpr uint8_t kMsgGuestIn = 27;
 // The host ended the session (a Leave). On this channel because it must reach a guest that is still at the title:
 // the activity goodbye (kBye) did not get there in rt3a (2026-11-12).   host -> guest
 constexpr uint8_t kMsgSessionEnded = 25;
@@ -445,6 +448,7 @@ void lobby_tick(const LobbyInput& in) {
                 native_write_ok(solo);
                 native_resume_clear(g_native_ini);
                 log::info("Co-op lobby: in the shared world; the next launch is solo again");
+                if (!in.host && in.connected) send({kMsgGuestIn});
             }
         }
         const uint32_t own = g_own_diff.load();
@@ -861,6 +865,12 @@ void lobby_on_message(const std::vector<uint8_t>& b) {
                 break;
             case kMsgSessionEnded:
                 if (!g_in.host) bye_at_title_locked();  // in the world: the activity goodbye does the full Leave
+                break;
+            case kMsgGuestIn:
+                if (g_in.host && g_partner_stuck) {
+                    g_partner_stuck = false;
+                    log::info("Co-op lobby: {} got into our world after all: the card is down", g_in.partner_name);
+                }
                 break;
             case kMsgGuestStuck:
                 if (g_native && g_in.host && !g_partner_stuck) {
