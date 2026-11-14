@@ -551,6 +551,9 @@ struct Config {
     // "schedule+funcnpc". With U-1 armed and user2_shop_route live, user 2's manager prepares its cd_seq_funcnpc_*
     // (shop) scenes too; every other sequencer element stays skipped.
     std::string s2_user2_stages_elements = "schedule";
+    // user2_stages_quest = 0 | 1 (Co-op+ 2026-11-13, shared cutscenes): 1 turns schedule+funcnpc into
+    // schedule+funcnpc+quest (user 2's armed manager also prepares its own story scenes cd_seq_quest_*).
+    bool s2_user2_stages_quest = false;
     // user2_npc_control, HOST (session2/user2_stages.h; u0-resultados-s28.md §8.17, U-e): "0" | "probe" | "1". The
     // NPCs born for user 2's armed stages get user 2 as controller (its client runs their AI, not the host's far one);
     // probe: '[would control]' and their reason-42 logouts counted. Acts only with user2_stages=1 armed. S43: its

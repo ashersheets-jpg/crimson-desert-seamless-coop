@@ -47,7 +47,9 @@ inline constexpr uint32_t hash_id(uint64_t id) {
 // Co-op+ port 1.0.0.3576 (2026-11-08): the lookup is 0x21578E0 (2976: 0x1F6C190); its table moved by 0x28 (count
 // +0x134, buckets +0x130, bucket array +0x140, elements +0x148; the element and instance layout and the hash 0x1547050
 // are unchanged).
-inline constexpr uint32_t kMgr_Buckets = 0x130, kMgr_Count = 0x134, kMgr_BucketArray = 0x140, kMgr_Elements = 0x148;
+// Co-op+ port 1.0.0.3663 (2026-11-13, found by the shared cutscenes runs: no id of user 2's manager was ever found):
+// the table moved by 8 again (0x21C5750: count +0x13C, buckets +0x138, bucket array +0x148, elements +0x150).
+inline constexpr uint32_t kMgr_Buckets = 0x138, kMgr_Count = 0x13C, kMgr_BucketArray = 0x148, kMgr_Elements = 0x150;
 inline constexpr uint32_t kBucketStride = 0x100, kBucketPairs = (kBucketStride - 8) / 8;  // 31 pairs fit a bucket
 inline constexpr uint32_t kElem_Id = 0x08, kElem_Inst = 0x10, kInst_Dead = 0x15;
 inline constexpr uint32_t kMaxIndex = 1u << 20;  // a sane element index (the game has hundreds)

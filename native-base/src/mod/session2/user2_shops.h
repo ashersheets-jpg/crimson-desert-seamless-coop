@@ -53,8 +53,10 @@ void user2_shops_host_2671(uint32_t result) noexcept;
 // shop_probe's on_p (0x288AAEF): a stage element prepared by 0x287C200 on `mgr` (user 2's are booked / checked).
 // name_known: the resource name could be read (an unknown name is never "not a shop"); hash: playData +0x20, the
 // resource's file-name hash (the 2661's @27).
+// quest (Co-op+ 2026-11-13): the name is a story scene (u2sh::is_quest): with user2_stages_quest_allowed() it is no
+// breach of U-f.
 void user2_shops_prepared(uintptr_t mgr, uint64_t seq_id, bool funcnpc, bool name_known, uint32_t hash,
-                          uint32_t result) noexcept;
+                          uint32_t result, bool quest = false) noexcept;
 // server.cpp's take_frame: a packet queued for the live session 2 (2916 / 3000 / Nak 1013 are read). Any thread.
 void user2_shops_on_out(uint16_t opcode, std::span<const uint8_t> payload, bool to_user2, bool pushed) noexcept;
 // user2_stages' control (its thread): should U-1's DISTANCE drain wait now? dist: the cells between the players

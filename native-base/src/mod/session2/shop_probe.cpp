@@ -22,6 +22,7 @@
 #include "mod/session2/shop_probe_logic.h"
 #include "mod/session2/stage_lookup_logic.h"
 #include "mod/session2/user2_shops.h"
+#include "mod/session2/user2_shops_logic.h"
 #include "mod/session2/user2_stages.h"
 
 namespace cdmp::session2 {
@@ -216,7 +217,7 @@ void on_p(safetyhook::Context& ctx) noexcept {
     }
     p::Event e;
     size_t n = 0;
-    char head[16] = {};
+    char head[24] = {};  // Co-op+: 24 (was 16) so that bgm_cd_seq_quest_ (17) is read whole
     for (uintptr_t a = base; path && a < path + len && n < 40; ++a, ++n) {
         uint8_t c = 0;
         if (!rd(a, c)) break;
@@ -257,7 +258,9 @@ void on_p(safetyhook::Context& ctx) noexcept {
     }
     // U2 (user2_shops.h): user 2's own preparations are booked (shop scenes) or checked (anything else).
     // playData +0x20 = the resource's file-name hash (0x288A970: uStack_88, the 2661's @27).
-    user2_shops_prepared(ctx.r14, id, funcnpc, n > 0, rdv<uint32_t>(ctx.rbp + kP_PlayData + 0x20), result);
+    // Co-op+ 2026-11-13: a story scene (cd_seq_quest_*): user2_shops lets it pass U-f's abort with +quest.
+    const bool quest = u2sh::is_quest(std::string_view(head, std::min(n, sizeof head)));
+    user2_shops_prepared(ctx.r14, id, funcnpc, n > 0, rdv<uint32_t>(ctx.rbp + kP_PlayData + 0x20), result, quest);
     if (funcnpc) {
         g_prep_funcnpc.fetch_add(1, std::memory_order_relaxed);
         if (!result) g_funcnpc.add(id);
