@@ -25,6 +25,7 @@ namespace {
 // 3663: SequencerTriggerVolumeInOutReq 2808 and StageBranchStateReq 2644 both start with the u64 sequencer id (an
 // id of the sender's own stage manager: the host's and user 2's ids are separate spaces).
 constexpr uint16_t kOpTriggerVolume = 2808, kOpStageBranch = 2644;
+constexpr uint16_t kOpGameLoadingStart = 2350;  // 3663 (a recording: "C>S GameLoadingStartReq 2350"): a player's load
 constexpr size_t kHeader = 5;
 
 std::atomic<int> g_mode{0};  // 0 off, 1 probe, 2 hold
@@ -108,6 +109,8 @@ struct ClientHeld {
 };
 std::vector<ClientHeld> g_client_calls;  // the main scene's call first, then the step's cinematic's (in order)
 std::atomic<bool> g_replay{false};
+std::vector<ClientHeld> g_client_replay;  // released calls, played by on_frame in order
+std::vector<ClientHeld> g_client_drop;  // the host's held calls of a wait that ended in a load: released on the game thread
 std::vector<uint64_t> g_extra[2];  // each player's held cinematic sequencers (their 2644s wait too)
 
 std::vector<std::vector<uint8_t>> release_locked(int mask, const char* why) {
@@ -117,7 +120,11 @@ std::vector<std::vector<uint8_t>> release_locked(int mask, const char* why) {
         log::info("StoryGate: {}'s story trigger '{}' released ({}; {} Req(s))", who_name(w), g_name[w], why, g_held[w].size());
         if (w == sgl::kHost) {
             for (auto& p : g_held[w]) host.push_back(std::move(p));
-            if (!g_client_calls.empty()) g_replay.store(true);  // the host client's own volume calls: on the game thread
+            if (!g_client_calls.empty()) {  // the host client's own volume calls: played on the game thread
+                for (auto& c : g_client_calls) g_client_replay.push_back(c);
+                g_client_calls.clear();
+                g_replay.store(true);
+            }
         } else {
             for (auto& p : g_held[w]) g_release_u2.push_back(std::move(p));
             g_release_u2_any.store(!g_release_u2.empty());
@@ -137,8 +144,28 @@ void post_host(std::vector<std::vector<uint8_t>> host) {
 
 // A Req of a player (whole wire packet). True: taken by the gate (held, or dropped with its held entry).
 bool decide(int who, const uint8_t* packet, size_t size) {
-    if (g_mode.load(std::memory_order_relaxed) != 2 || size < kHeader + 8) return false;
+    if (g_mode.load(std::memory_order_relaxed) != 2 || size < kHeader) return false;
     const uint16_t op = static_cast<uint16_t>(packet[0] | packet[1] << 8);
+    // A load (fast travel, death, a door): the player is leaving the scene it waits at, and a load may unload that
+    // stage without a volume exit. Its wait ends; the held Reqs / calls are dropped (the friend's "ready" too).
+    if (op == kOpGameLoadingStart) {
+        std::lock_guard lock(g_mu);
+        if (g_gate.p[who].held) {
+            log::info("StoryGate: {} started a load while it waited at '{}': the wait is off ({} held Req(s) dropped)",
+                      who_name(who), g_name[who], g_held[who].size());
+            g_gate.on_leave(who, g_gate.p[who].seq);
+            g_held[who].clear();
+            g_extra[who].clear();
+            g_name[who][0] = 0;
+            if (who == sgl::kHost) {
+                for (auto& c : g_client_calls) g_client_drop.push_back(c);
+                g_client_calls.clear();
+                if (!g_client_drop.empty()) g_replay.store(true);  // on_frame releases them
+            }
+        }
+        return false;
+    }
+    if (size < kHeader + 8) return false;
     const uint8_t* d = packet + kHeader;
     const size_t n = size - kHeader;
     std::vector<std::vector<uint8_t>> host;
@@ -478,14 +505,26 @@ void on_lookup(safetyhook::Context& ctx) {
 void on_frame(safetyhook::Context&) {
     g_frames.fetch_add(1, std::memory_order_relaxed);
     if (!g_replay.load(std::memory_order_acquire)) return;
-    std::vector<ClientHeld> calls;
+    std::vector<ClientHeld> calls, dropped;
     {
         std::lock_guard lock(g_mu);
         g_replay.store(false);
-        calls.swap(g_client_calls);
+        dropped.swap(g_client_drop);
+        calls.swap(g_client_replay);
     }
+    for (const ClientHeld& c : dropped) obj_ref(c.seq, -1);
     const uintptr_t fn = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)) + 0x6F41E0;  // 3663: the call's target
     for (const ClientHeld& c : calls) {
+        // A stage the game has let go of while the call waited (a load, a fast travel: no volume exit seen): only our
+        // reference is left on the sequencer object; its call is not played, the object goes with our release.
+        LONG count = 0;
+        uint64_t id_now = 0;
+        if (!sg_read(&count, c.seq + 0x10, 4) || count <= 1 || !sg_read(&id_now, c.seq + 0x30, 8) || id_now != c.id) {
+            obj_ref(c.seq, -1);
+            log::warn("StoryGate: the host's held volume call for sequencer 0x{:X} is NOT played: the game let go of that "
+                      "scene while it waited (references {}, id now 0x{:X})", c.id, count, id_now);
+            continue;
+        }
         t_replaying = true;
         const bool ok = call_vol(fn, c);
         t_replaying = false;
