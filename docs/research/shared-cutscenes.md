@@ -72,3 +72,24 @@ With story mode on, each player's own story trigger works, near or far. The gate
 3. Both screens: "<friend> is not here yet: wait / go to them / continue alone" (the defaults to propose: wait with a prompt; the waiting player may continue alone; the other gets "travel to your friend").
 4. When both are inside their own trigger (or one chose to continue): release both held Reqs in the same moment.
 Open questions for the owner, with proposed defaults: what if the friend is far (proposal: a prompt, never a silent block); a time limit (proposal: none, the prompt stays); story NPCs of the scene twice (each player's scene spawns its own comrades: to look at with both triggering).
+
+## The ready check: built and working (2026-11-14, runs cs7a - cs8i; native `[session2] story_gate = hold`, off by default)
+
+What a story trigger is, measured (cs7c / cs7d, the prologue's cabin):
+- SequencerTriggerVolumeInOutReq 2808 on 3663: `u64 sequencer | u32 kind (0x2000xxxx, one per volume) | u8 in 1 / out 0 | u32 actor | ...`. At a field's load every volume reports the NPCs inside it (0xB0...). Each client reports BOTH players in its volumes, so only the sender's own character counts (the stage machine's keys; capture_own_player_key() names the guest's character once it has joined).
+- The walk crosses many story volumes (the comrades' sub-scenes `_0310_01 ... _15`). The step's main scene is `cd_seq_quest_<quest>_<step>_00` (the cabin: `cd_seq_quest_intro_0310_00`); its cinematic has a volume of its own, `_0310_dlc`, entered 0.5 s later independently. Both players' copies of a scene carry the same file-name hash (playData +0x20), the key that matches them.
+- Rule: a player's own entry into a step's main scene waits; while it waits, that step's `_dlc` volume calls wait with it. Other `_dlc` volumes (0300_01_dlc on the way) never wait.
+
+Where it holds:
+- User 2: its 2808s and those sequencers' 2644s are taken in the tunnel's offer (session2.cpp) and offered again, first and in order, on release.
+- The host: its own client starts a scene locally, without the server. The volume delegate 0xE041E0 (called by the frame-event dispatcher 0x29B1DC0) calls 0x6F41E0 at 0xE043E9 (rcx the sequencer object, ref-counted +0x10/+0x14; dl in; r8d kind; r9 the character; [rsp+0x20] u8 facing), a jmp into protected code that posts the 2808 and starts the scene. The hook skips that call (a reference kept on the object; sequencer id at +0x30, character key at +0x60) and replays it from 0x7025DD (right after the frame's event flush, the game thread). Found by RtlVirtualUnwind from PostPacket's entry with the hook's registers (a raw stack scan was useless: stale slots and a protected function's ~32 KB frame).
+
+On screen (Co-op+ layer, coop_story.h, link Activity type 30; the host reads cdmp_story_gate_state / calls cdmp_story_gate_press):
+- The waiting player: "Story: <friend> is not here yet. The scene waits for both of you" + hold {Interact} "Go on alone".
+- The friend elsewhere: "Story: <friend> is waiting for you to start a scene together" + hold {Interact} "Go to <friend>" (the travel go-to).
+- Both there: "Start the scene together"; after a press: "Story: ready. Waiting for <friend>". The story prompt comes before the friend's interaction menu while a wait is up.
+- Going on alone: the scene plays for that player; the friend passes the same scene later at the spot without a wait.
+
+cs8i (2026-11-14 10:10): the whole flow on both games: the host waited (no scene), the guest went to it, both pressed, both released at the same moment, the host's cutscene started 0.4 s later and ran its full 33 s.
+
+Still open: the guest's own cinematic (its client plays none: the missing stage-cinematic flag; when it does, its client needs the same client-side hold, driven from the host's gate); the "go on alone" and "leave the volume" paths in a game test; duplicate story NPCs; a player-facing setting and the full checklist before it can be on by default.
