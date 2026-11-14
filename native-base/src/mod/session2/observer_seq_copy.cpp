@@ -1,4 +1,5 @@
 #include "mod/session2/observer_seq_copy.h"
+#include "mod/session2/story_gate.h"
 #include "mod/session2/child_hold.h"
 
 #include <windows.h>
@@ -101,6 +102,12 @@ bool probe() { return g_mode.load(std::memory_order_relaxed) == osq::Mode::Probe
 
 // The real push (on) or nothing (probe: reported as sent).
 bool push_copy(std::span<const uint8_t> bytes) {
+    // Co-op+ 2026-11-14 (story mode, story_gate=hold): a host's story scene user 2 has its own copy of is not sent
+    // (reported as sent: the copier moves on; its branch / delete copies are skipped below).
+    if (bytes.size() >= 5 + 17 && static_cast<uint16_t>(bytes[0] | bytes[1] << 8) == osq::kOpPrepare &&
+        story_gate_skip_copy(osq::le64(&bytes[5 + 9]))) {
+        return true;
+    }
     if (probe()) return true;
     if (server_epoch() != g_trip_epoch || server_logout_requested()) return false;
     const bool ok = server_push_extra(bytes);
@@ -669,7 +676,7 @@ void observer_seq_copy_sniffed(const uint8_t* packet, size_t size, uint64_t t_us
             // than the last one it got): copied. take_frame saw the native one first, when there was one
             // (the server sends to session 2 inside the same emission; the host's client reads it later).
             const uint64_t h = osq::packet_payload_hash(raw);
-            if (g_copier.host_branch_needs_copy(seq, h)) {
+            if (g_copier.host_branch_needs_copy(seq, h) && !story_gate_skip_copy(seq)) {
                 const bool ok = push_copy(raw);
                 if (ok) g_copier.on_user2_branch(seq, h);
                 note(kNBranch, {seq, ok ? 1u : 0u, probe() ? 1u : 0u});
@@ -679,7 +686,7 @@ void observer_seq_copy_sniffed(const uint8_t* packet, size_t size, uint64_t t_us
             if (fate == osq::Copier::DeleteFate::Cancelled) {
                 g_cancelled.fetch_add(1, std::memory_order_relaxed);
                 note(kNDelete, {seq, static_cast<uint64_t>(fate), 0, probe() ? 1u : 0u});
-            } else if (fate == osq::Copier::DeleteFate::Copy) {
+            } else if (fate == osq::Copier::DeleteFate::Copy && !story_gate_skip_copy(seq)) {
                 const bool ok = push_copy(raw);
                 if (ok) g_deletes_copied.fetch_add(1, std::memory_order_relaxed);
                 note(kNDelete, {seq, static_cast<uint64_t>(fate), ok ? 1u : 0u, probe() ? 1u : 0u}, true);
