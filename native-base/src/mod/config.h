@@ -554,6 +554,9 @@ struct Config {
     // user2_stages_quest = 0 | 1 (Co-op+ 2026-11-13, shared cutscenes): 1 turns schedule+funcnpc into
     // schedule+funcnpc+quest (user 2's armed manager also prepares its own story scenes cd_seq_quest_*).
     bool s2_user2_stages_quest = false;
+    // user2_stages_own_quest = 0 | 1 (Co-op+ 2026-11-13): user2_stages.h user2_stages_set_own_quest.
+    bool s2_user2_stages_own_quest = false;
+    bool s2_branch_probe = false;  // Co-op+ 2026-11-13: user2_funnels_set_branch_probe (read only)
     // user2_npc_control, HOST (session2/user2_stages.h; u0-resultados-s28.md §8.17, U-e): "0" | "probe" | "1". The
     // NPCs born for user 2's armed stages get user 2 as controller (its client runs their AI, not the host's far one);
     // probe: '[would control]' and their reason-42 logouts counted. Acts only with user2_stages=1 armed. S43: its

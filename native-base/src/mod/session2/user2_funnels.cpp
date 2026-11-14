@@ -934,9 +934,28 @@ void funnel_event(uint8_t f, const Frame& fr, uint32_t owner, uint64_t orig, uin
 }
 
 // B: ServerField::vf40(field) -> ServerQuestManager*.
+// Co-op+ 2026-11-13 ([session2] branch_probe=1, read only): the lookups under user 2's stage Reqs / timers.
+std::atomic<bool> g_branch_probe{false};
+constexpr uint32_t kBranchQuestVf40Ret = 0x226F3CA;  // 3663: 0x226F390's call [rax+0x40] (cs5g)
+std::atomic<uint64_t> g_branch_own{0}, g_branch_own_unreadable{0};
+std::atomic<int> g_branch_said{0};
+void branch_line(const char* what, uint16_t op, uintptr_t ret, uint64_t arg, uintptr_t answer) noexcept {
+    if (!g_branch_probe.load(std::memory_order_relaxed)) return;
+    if (op != 2644 && op != 2048 && op != 2654 && op != 2808) return;
+    if (g_branch_said.fetch_add(1, std::memory_order_relaxed) >= 120) return;
+    log::info("User2Funnels [branch probe] op {} | {} from exe+0x{:X} | arg 0x{:X} | answer 0x{:X}", op, what,
+              rva_of(ret), arg, answer);
+}
+
 uintptr_t vf40_detour(uintptr_t field) {
     const Frame fr = t_frame;
     if (!fr.actor) return g_vf40.unsafe_call<uintptr_t>(field);
+    if (g_branch_probe.load(std::memory_order_relaxed)) {
+        uint32_t owner = 0;
+        game::fast_read(field + kFieldOwner, &owner, sizeof owner);
+        branch_line("ServerField::vf40 (quest manager), the field's owner", fr.opcode,
+                    reinterpret_cast<uintptr_t>(_ReturnAddress()), owner, 0);
+    }
     const uintptr_t ret = reinterpret_cast<uintptr_t>(_ReturnAddress());
     u2f::FunnelCounters& c = g_fc[u2f::kVf40];
     c.calls.fetch_add(1, std::memory_order_relaxed);
@@ -946,6 +965,18 @@ uintptr_t vf40_detour(uintptr_t field) {
     // P8 option U, U-1 (user2_stages.h): counted only. By the rule of 2026-10-13 (the guest follows the host's
     // progress) every vf40 of user 2's armed tick keeps the owner's (the host's) ServerQuestManager.
     (void)user2_stages_tick_vf40(fr.opcode, fr.actor, field, rva_of(ret));
+    // Co-op+ 2026-11-13 (shared cutscenes, cs5g): the stage branch's quest step 0x226F390 asks the field at 0x226F3CA;
+    // inside a Troc whose scene is user 2's own (U2-a routed it: scene_mine), with user2_stages_own_quest=1, the
+    // quest manager is user 2's own, so its story steps ITS progress (the owner's quest design).
+    if (rva_of(ret) == kBranchQuestVf40Ret && fr.scene_mine && user2_stages_own_quest_on()) {
+        const auto own = u2f::quest_manager_of(FastMem{}, fr.actor, g_vt_qcomp, g_vt_qmgr);
+        if (own) {
+            g_branch_own.fetch_add(1, std::memory_order_relaxed);
+            branch_line("the stage branch's quest step -> USER 2'S OWN quest manager", fr.opcode, ret, 0, *own);
+            return *own;
+        }
+        g_branch_own_unreadable.fetch_add(1, std::memory_order_relaxed);
+    }
     // quest_policy (user2_funnels_logic.h, the rules of 2026-10-13 / S34): before quest_per_user's decision.
     const auto policy = static_cast<Mode>(g_policy_mode.load(std::memory_order_relaxed));
     const uint32_t ret_rva = rva_of(ret);
@@ -1172,6 +1203,7 @@ uintptr_t vf48_detour(uintptr_t field) {
 // FindUser: counted under a subject (probe only), never changed.
 uintptr_t finduser_detour(uintptr_t mgr, uintptr_t out, uint64_t key, uintptr_t r9) {
     const Frame fr = t_frame;
+    if (fr.actor) branch_line("FindUser, the user key", fr.opcode, reinterpret_cast<uintptr_t>(_ReturnAddress()), key, 0);
     if (fr.actor) {
         u2f::FunnelCounters& c = g_fc[u2f::kFindUser];
         c.calls.fetch_add(1, std::memory_order_relaxed);
@@ -2134,6 +2166,23 @@ bool user2_funnels_vf48_live() noexcept { return g_on.load() && g_subject_on && 
 int32_t user2_funnels_trocs_in_flight() noexcept { return g_u2_trocs.load(std::memory_order_seq_cst); }
 
 bool user2_funnels_vf40_live() noexcept { return g_on.load() && g_subject_on && g_vf40_on; }
+
+bool user2_funnels_branch_probe_in(uint16_t opcode) noexcept {
+    if (!g_branch_probe.load(std::memory_order_relaxed)) return false;
+    const Frame fr = t_frame;
+    return fr.actor && fr.opcode == opcode;
+}
+
+void user2_funnels_set_branch_probe(bool on) {
+    g_branch_probe = on;
+    if (on) log::warn("User2Funnels: [session2] branch_probe=1: the lookups under user 2's stage Reqs are logged (read only, 120 lines)");
+}
+
+uintptr_t user2_funnels_quest_manager_of(uintptr_t actor) noexcept {
+    if (!actor || !g_vt_qcomp || !g_vt_qmgr) return 0;
+    const auto m = u2f::quest_manager_of(FastMem{}, actor, g_vt_qcomp, g_vt_qmgr);
+    return m ? *m : 0;
+}
 
 void user2_funnels_subject_now(uintptr_t& actor, uint16_t& opcode, bool& hooked) noexcept {
     // g_subject_on is written before g_on's store (install), read after its load here.

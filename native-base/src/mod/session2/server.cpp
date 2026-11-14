@@ -55,6 +55,7 @@
 #include "mod/session2/user2_stages.h"
 #include "mod/session2/world_anchor.h"
 #include "mod/session2/fog_share.h"
+#include "mod/session2/user2_funnels.h"
 
 namespace cdmp::session2 {
 namespace {
@@ -181,6 +182,7 @@ MovePhaseTracker g_phase;  // under g_phase_mu
 MoveCloseSequence g_close;
 uintptr_t g_close_session = 0;
 constexpr uint16_t kOpNak = 1013;
+constexpr uint16_t kOpMissionListProbe = 2558;  // Co-op+ 3663: UpdateMissionListAck (branch_probe only)
 constexpr uint16_t kOpRemoveActorAck2516 = 3037;  // RemoveActorAck (world_anchor's probe)
 std::atomic<uint64_t> g_nak{0}, g_nak_after_logout{0};  // Nak 1013 written to session 2 (this epoch)
 
@@ -473,6 +475,26 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
         // here p is still intact).
         if (v->opcode == kOpRemoveActorAck2516 && world_anchor_active() && self == live_session2()) {
             world_anchor_on_user2_out(v->opcode, v->payload);
+        }
+        // Co-op+ 2026-11-13 (shared cutscenes, branch_probe=1, read only): who queues the stage list / mission list
+        // Acks while user 2's StageBranchStateReq is handled (the quest step of its story branch).
+        if ((v->opcode == 2185 || v->opcode == kOpMissionListProbe) && user2_funnels_branch_probe_in(2644)) {
+            static std::atomic<int> said{0};
+            if (said.fetch_add(1, std::memory_order_relaxed) < 12) {
+                void* frames[32] = {};
+                const USHORT n = RtlCaptureStackBackTrace(0, 32, frames, nullptr);
+                const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+                std::string chain;
+                for (USHORT i = 0; i < n; ++i) {
+                    const auto a = reinterpret_cast<uintptr_t>(frames[i]);
+                    if (a >= base && a < base + 0x144E9000) chain += std::format(" exe+0x{:X}", a - base);
+                }
+                const uint32_t who = v->payload.size() >= 5 ? (v->payload[1] | v->payload[2] << 8 | v->payload[3] << 16 |
+                                                               static_cast<uint32_t>(v->payload[4]) << 24)
+                                                            : 0;
+                log::info("User2Funnels [branch probe] op 2644 | {} for 0x{:08X} queued to session 2 | stack:{}",
+                          v->opcode == 2185 ? "UpdateStageListAck 2185" : "UpdateMissionListAck", who, chain);
+            }
         }
         // Co-op+ 2026-11-09 B04 (fog_share.h): the guest's map fog chunks OR the host's, in place.
         if (v->opcode == 2932 && self == live_session2()) fog_share_on_user2_out(std::span<uint8_t>(p));
