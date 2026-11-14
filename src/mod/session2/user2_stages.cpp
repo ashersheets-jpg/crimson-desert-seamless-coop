@@ -205,7 +205,7 @@ constexpr uint8_t kP1Bytes[] = {0x49, 0x8B, 0xD4, 0x41, 0xFF, 0xD2};
 constexpr uint8_t kP2Bytes[] = {0x48, 0x8B, 0xCE, 0xE8, 0x51, 0x2E, 0x0C, 0x00};
 std::atomic<int> g_p_said{0};
 std::atomic<bool> g_own_quest{false}, g_q1_on{false}, g_q2_on{false}, g_q3_on{false};
-std::atomic<uint64_t> g_q3_own{0}, g_q3_unreadable{0}, g_q3_host{0};
+std::atomic<uint64_t> g_q3_own{0}, g_q3_unreadable{0}, g_q3_host{0}, g_near_sched_skipped{0};
 constexpr uintptr_t kQ3 = 0x226F3CA;
 thread_local uint64_t t_q3_at = 0;
 constexpr uint8_t kQ3Bytes[] = {0x48, 0x8B, 0xF8, 0x48, 0x8D, 0x50, 0x08};  // mov rdi,rax ; lea rdx,[rax+8]
@@ -222,6 +222,8 @@ std::atomic<uint64_t> g_evals_u2{0}, g_evals_host{0}, g_eval_u2_ids{0}, g_eval_u
 // What the module's thread knows of the two players (refreshed every second). Keys: the main characters' keys.
 std::atomic<uintptr_t> g_host_char{0}, g_u2_char{0}, g_host_sm{0}, g_u2_sm{0}, g_u2_mgr{0}, g_host_mgr{0};
 std::atomic<uint32_t> g_host_key{0}, g_u2_key{0}, g_host_user{0};
+// Co-op+ 2026-11-14: kThresholds is set at the start (story mode: on_cells 0, user2_stages_own_quest=1).
+u2s::Thresholds kThresholds{};
 std::atomic<uint32_t> g_dist{UINT32_MAX};  // cells, same field only (UINT32_MAX: unknown)
 
 // U-1's state, shared with the server's threads.
@@ -1473,10 +1475,11 @@ void prep_drain(uintptr_t host_mgr, uint32_t ret, bool su2, uint16_t op) noexcep
     u2s::Cell a, b;
     in.cells_known = actor_cell(hc, a) && actor_cell(uc, b);
     in.dist = in.cells_known ? u2s::cheb(a, b) : UINT32_MAX;
-    in.off_cells = u2s::Thresholds{}.off_cells;
+    in.off_cells = kThresholds.off_cells;
     in.trocs_in_flight = user2_funnels_trocs_in_flight();
     u2s::PrepDrain v = u2s::prep_drain_verdict(in);
-    bool act = v == u2s::PrepDrain::Drain && dm == u2s::Mode::On && mgr2;
+    // Co-op+ story mode: no drain at the host's preparation (user 2's own story stages must stay).
+    bool act = v == u2s::PrepDrain::Drain && dm == u2s::Mode::On && mgr2 && !g_own_quest.load(std::memory_order_relaxed);
     if (act) {
         // Review 1: the flag first, then the count again (seq_cst both sides): a Troc of user 2 either is counted here
         // or waits at its entry until the drain is done. S33 review: the flag is taken by CAS and only its owner clears
@@ -2730,6 +2733,16 @@ uintptr_t elem_detour(uintptr_t mgr, uintptr_t res, uintptr_t stage, uintptr_t e
         const bool armed = g_armed.load(std::memory_order_acquire) && !g_aborted.load(std::memory_order_relaxed);
         const bool skip = armed && u2s::skip_element(true, m, armed,
                                                      host_owns(field_of(g_u2_char.load(std::memory_order_relaxed))), el);
+        // Co-op+ story mode: near the host (< 4 cells) user 2's schedule elements are not created (the host's
+        // manager runs the schedules there; only its own story scenes are user 2's).
+        if (el == u2s::Element::Schedule && armed && g_own_quest.load(std::memory_order_relaxed)) {
+            const uint32_t d = g_dist.load(std::memory_order_relaxed);
+            if (d == UINT32_MAX || d < 4) {
+                g_near_sched_skipped.fetch_add(1, std::memory_order_relaxed);
+                put_zero(res);
+                return res;
+            }
+        }
         // U-f2: its schedule element whose stage the host's manager has alive.
         if (el == u2s::Element::Schedule && armed && m == u2s::Mode::On &&
             dup_skip(true, res, elem, static_cast<uint32_t>(a5))) {
@@ -3120,7 +3133,7 @@ void arm_locked(uintptr_t subject, uint16_t op, bool fast) noexcept {
         const uintptr_t hf = field_of(hc), uf = field_of(subject);
         u2s::Cell a, b;
         const bool known = hc && hf && hf == uf && actor_cell(hc, a) && actor_cell(subject, b);
-        if (!known || u2s::cheb(a, b) < u2s::Thresholds{}.on_cells) {
+        if (!known || u2s::cheb(a, b) < kThresholds.on_cells) {
             g_fast_refused.fetch_add(1, std::memory_order_relaxed);
             g_fast_dist_refused.fetch_add(1, std::memory_order_relaxed);
             g_reset_machine.store(true);
@@ -3135,7 +3148,7 @@ void arm_locked(uintptr_t subject, uint16_t op, bool fast) noexcept {
     if (!host_owns(field_of(subject))) return ctl_event(kCtlArmRefused, mgr, st, st, 0, op, kWhyField);
     // Review A2: the distance again, here (the request may be up to a few seconds old).
     const uint32_t d = g_dist.load(std::memory_order_relaxed);
-    if (d == UINT32_MAX || d < u2s::Thresholds{}.on_cells) return ctl_event(kCtlArmRefused, mgr, st, st, 0, op, kWhyDist);
+    if (d == UINT32_MAX || d < kThresholds.on_cells) return ctl_event(kCtlArmRefused, mgr, st, st, 0, op, kWhyDist);
     // Low: the slots the 2043 needs, read before anything is called.
     const uintptr_t net = rdp(g_base + kServerNetSlot), troc = rdp(g_base + kTroc2043Slot);
     const int32_t raw = rdv<int32_t>(g_base + kPeriodSlot);
@@ -5847,7 +5860,6 @@ std::string facts_text(const char* who, const Player& pl) {
 }
 
 u2s::Machine g_machine;
-const u2s::Thresholds kThresholds{};
 std::string g_last_state;
 uint64_t g_last_state_us = 0;
 uintptr_t g_seen_u2_char = 0;
@@ -6915,7 +6927,7 @@ std::string line_of(const p::Event& e) {
                                                                     cause_name(g_last_drain_cause.load())),
                                (v[3] & 0xFF) ? "user 2" : "none (the host's or another)", v[3] >> 8,
                                v[4] == UINT32_MAX ? std::string("unknown") : std::format("{} cells", v[4]),
-                               u2s::Thresholds{}.off_cells, v[5], v[6], cnt(v[7], 0), cnt(v[7], 20), cnt(v[7], 40),
+                               kThresholds.off_cells, v[5], v[6], cnt(v[7], 0), cnt(v[7], 20), cnt(v[7], 40),
                                v[10] == 2   ? std::string("user 2's manager drained now (0x287DA50 + 0x287D4C0): see "
                                                           "'DRAINED now'")
                                : v[10] == 1 ? std::string("probe: nothing called")
@@ -7448,7 +7460,7 @@ void user2_stages_start(const std::string& mode, const std::string& timer_route,
                       "start of the near streak, consecutive samples, same field and character, user 2 still, nothing "
                       "pending, not within {} s of another), confirmed over {} s (far, user 2 still, no load of user 2), "
                       "and queues a one-shot 2043 (+0xB 0, delay {} = {} ms) at that arm; the chain repair stays",
-                      u2s::mode_name(f), u2s::Thresholds{}.off_cells, u2s::Thresholds{}.on_cells,
+                      u2s::mode_name(f), kThresholds.off_cells, kThresholds.on_cells,
                       u2s::Thresholds{}.on_dwell_us / 1'000'000, frm::kHostLoadWindowUs / 1'000'000,
                       frm::kMinGapUs / 1'000'000, frm::kConfirmUs / 1'000'000, frm::kOneShotDelay,
                       frm::delay_ms(frm::kOneShotDelay));
@@ -7531,16 +7543,18 @@ bool user2_stages_q3_recent() noexcept { return t_q3_at && GetTickCount64() - t_
 
 void user2_stages_set_own_quest(bool on) {
     g_own_quest = on;
+    if (on) kThresholds.on_cells = 0;  // story mode: armed at any distance in the host's field
     if (on) log::warn("User2Stages: [session2] user2_stages_own_quest=1: user 2's armed evaluation builds its stages on its OWN quest manager (Q1 / Q2)");
 }
 
 std::string user2_stages_own_quest_text() {
     if (!g_own_quest.load()) return {};
     return std::format(" | own quest (Q1 {} Q2 {} Q3 {}): swapped {}, unreadable {}, owner check passed {} | "
-                       "stage-event quest steps: user 2's own {}, unreadable {}, the host's {}",
+                       "stage-event quest steps: user 2's own {}, unreadable {}, the host's {} | near: schedule "
+                       "elements not created {} (arm at {} cells)",
                        g_q1_on.load() ? "in" : "OUT", g_q2_on.load() ? "in" : "OUT", g_q3_on.load() ? "in" : "OUT",
                        g_q1_swapped.load(), g_q1_unreadable.load(), g_q2_passed.load(), g_q3_own.load(),
-                       g_q3_unreadable.load(), g_q3_host.load());
+                       g_q3_unreadable.load(), g_q3_host.load(), g_near_sched_skipped.load(), kThresholds.on_cells);
 }
 
 void user2_stages_set_names_probe(bool on) {
