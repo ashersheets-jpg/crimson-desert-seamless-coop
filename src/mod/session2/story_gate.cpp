@@ -14,6 +14,7 @@
 #include "mod/log.h"
 #include "mod/net/local_capture.h"
 #include "mod/net/troc_sniffer.h"
+#include "mod/session2/hold_scene_order_logic.h"
 #include "mod/session2/p8_probes.h"
 #include "mod/session2/server.h"
 #include "mod/session2/story_gate_logic.h"
@@ -113,6 +114,41 @@ std::vector<ClientHeld> g_client_replay;  // released calls, played by on_frame 
 std::vector<ClientHeld> g_client_drop;  // the host's held calls of a wait that ended in a load: released on the game thread
 std::vector<uint64_t> g_extra[2];  // each player's held cinematic sequencers (their 2644s wait too)
 
+// User 2's kept step cinematics (story_gate_keep_user2). Under g_mu.
+struct KeptCine {
+    uint64_t id = 0;
+    uint32_t main_hash = 0;  // its step's main scene
+    char name[44] = {};
+    std::vector<std::vector<uint8_t>> packets;
+};
+std::vector<KeptCine> g_kept;
+// The kept cinematics whose step is done for user 2, taken out (pushed by the caller after g_mu).
+std::vector<std::vector<uint8_t>> take_released_cine_locked() {
+    std::vector<std::vector<uint8_t>> out;
+    for (auto it = g_kept.begin(); it != g_kept.end();) {
+        if (g_gate.did(sgl::kUser2, it->main_hash)) {
+            log::info("StoryGate: user 2's step cinematic '{}' (sequencer 0x{:X}) goes to the guest now ({} packet(s))", it->name,
+                      it->id, it->packets.size());
+            for (auto& p : it->packets) out.push_back(std::move(p));
+            it = g_kept.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    return out;
+}
+std::vector<std::vector<uint8_t>> g_cine_out;  // released cinematic packets waiting for their push (after g_mu)
+void push_cine() {
+    std::vector<std::vector<uint8_t>> out;
+    {
+        std::lock_guard lock(g_mu);
+        out.swap(g_cine_out);
+    }
+    for (const auto& p : out) {
+        if (!server_push_extra(p)) log::warn("StoryGate: a released cinematic packet for user 2 could not be queued");
+    }
+}
+
 std::vector<std::vector<uint8_t>> release_locked(int mask, const char* why) {
     std::vector<std::vector<uint8_t>> host;
     for (int w = 0; w < 2; ++w) {
@@ -132,6 +168,9 @@ std::vector<std::vector<uint8_t>> release_locked(int mask, const char* why) {
         g_held[w].clear();
         g_extra[w].clear();
         g_name[w][0] = 0;
+    }
+    if (mask & (1 << sgl::kUser2)) {
+        for (auto& p : take_released_cine_locked()) g_cine_out.push_back(std::move(p));
     }
     return host;
 }
@@ -200,6 +239,10 @@ bool decide(int who, const uint8_t* packet, size_t size) {
                     if (v.in) {
                         const bool was = g_gate.p[who].held;
                         const sgl::Verdict verdict = g_gate.on_enter(who, v.seq, s->hash, linked, GetTickCount64());
+                        if (verdict == sgl::Verdict::Pass && who == sgl::kUser2 && !g_gate.p[who].held) {
+                            g_gate.mark(sgl::kUser2, s->hash);  // its cinematic (kept) goes now
+                            for (auto& p : take_released_cine_locked()) g_cine_out.push_back(std::move(p));
+                        }
                         if (verdict == sgl::Verdict::Pass && !was) {
                             log::info("StoryGate: {} reached the story trigger '{}' (sequencer 0x{:X}): it goes on ({})",
                                       who_name(who), s->name, v.seq,
@@ -234,6 +277,7 @@ bool decide(int who, const uint8_t* packet, size_t size) {
         }
     }
     if (!host.empty()) post_host(std::move(host));
+    push_cine();
     return taken;
 }
 
@@ -691,6 +735,58 @@ bool story_gate_skip_copy(uint64_t host_seq) noexcept {
     return false;
 }
 
+bool story_gate_keep_user2(uint16_t opcode, std::span<const uint8_t> payload, const std::vector<uint8_t>& packet) noexcept {
+    if (g_mode.load(std::memory_order_relaxed) != 2) return false;
+    try {
+        if (opcode == hso::kOpPrepare) {
+            const hso::Prepare pr = hso::parse_prepare(payload);
+            const uint32_t own = server_user2_player_key();
+            if (!pr.ok || !own || pr.owner != own) return false;
+            // Its name by its file-name hash (the host's entries are in the table by now), and its step's main scene.
+            const Slot* cine = nullptr;
+            const Slot* main = nullptr;
+            for (size_t i = 0; i < kSlots && !cine; ++i) {
+                const uint64_t k = g_slots[i].key.load(std::memory_order_acquire);
+                if (k && g_slots[i].hash == pr.hash && sgl::is_cinematic_name(g_slots[i].name)) cine = &g_slots[i];
+            }
+            if (!cine) return false;
+            for (size_t i = 0; i < kSlots && !main; ++i) {
+                const uint64_t k = g_slots[i].key.load(std::memory_order_acquire);
+                if (k && sgl::is_gate_name(g_slots[i].name) && sgl::same_step(g_slots[i].name, cine->name)) main = &g_slots[i];
+            }
+            if (!main) return false;
+            std::lock_guard lock(g_mu);
+            if (g_gate.did(sgl::kUser2, main->hash)) return false;
+            for (KeptCine& k : g_kept) {
+                if (k.id == pr.id) {
+                    k.packets.push_back(packet);
+                    return true;
+                }
+            }
+            KeptCine k;
+            k.id = pr.id;
+            k.main_hash = main->hash;
+            std::memcpy(k.name, cine->name, sizeof k.name);
+            k.packets.push_back(packet);
+            g_kept.push_back(std::move(k));
+            log::info("StoryGate: user 2's step cinematic '{}' (sequencer 0x{:X}) stays on the host until '{}' is released for it",
+                      cine->name, pr.id, main->name);
+            return true;
+        }
+        const auto id = hso::scene_id_t2(opcode, payload);
+        if (!id) return false;
+        std::lock_guard lock(g_mu);
+        for (KeptCine& k : g_kept) {
+            if (k.id == *id) {
+                k.packets.push_back(packet);
+                return true;
+            }
+        }
+    } catch (...) {
+    }
+    return false;
+}
+
 int story_gate_press(int who) noexcept {
     if (g_mode.load() != 2 || (who != sgl::kHost && who != sgl::kUser2)) return 0;
     std::vector<std::vector<uint8_t>> host;
@@ -703,6 +799,7 @@ int story_gate_press(int who) noexcept {
         if (mask) host = release_locked(mask, together ? "both players pressed" : "it went on alone");
     }
     if (!host.empty()) post_host(std::move(host));
+    push_cine();
     return mask;
 }
 
