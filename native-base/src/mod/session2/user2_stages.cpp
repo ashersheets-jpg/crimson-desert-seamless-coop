@@ -199,8 +199,16 @@ std::atomic<bool> g_pt_on[kPtCount] = {};
 SafetyHookMid g_hooks[kPtCount];
 SafetyHookMid g_gate_hook, g_gate2_hook, g_eval_hook;
 // Co-op+ 2026-11-13 (shared cutscenes): user2_stages_own_quest, Q1 / Q2 (user2_stages.h).
-SafetyHookMid g_q1_hook, g_q2_hook;
-std::atomic<bool> g_own_quest{false}, g_q1_on{false}, g_q2_on{false};
+SafetyHookMid g_q1_hook, g_q2_hook, g_q3_hook, g_p1_hook, g_p2_hook;
+constexpr uintptr_t kP1 = 0x226DD77, kP2 = 0x2B39A37;
+constexpr uint8_t kP1Bytes[] = {0x49, 0x8B, 0xD4, 0x41, 0xFF, 0xD2};
+constexpr uint8_t kP2Bytes[] = {0x48, 0x8B, 0xCE, 0xE8, 0x51, 0x2E, 0x0C, 0x00};
+std::atomic<int> g_p_said{0};
+std::atomic<bool> g_own_quest{false}, g_q1_on{false}, g_q2_on{false}, g_q3_on{false};
+std::atomic<uint64_t> g_q3_own{0}, g_q3_unreadable{0}, g_q3_host{0};
+constexpr uintptr_t kQ3 = 0x226F3CA;
+thread_local uint64_t t_q3_at = 0;
+constexpr uint8_t kQ3Bytes[] = {0x48, 0x8B, 0xF8, 0x48, 0x8D, 0x50, 0x08};  // mov rdi,rax ; lea rdx,[rax+8]
 std::atomic<uint64_t> g_q1_swapped{0}, g_q1_unreadable{0}, g_q2_passed{0};
 std::atomic<uintptr_t> g_q1_last_qm{0};
 constexpr uintptr_t kQ1 = 0x2B42964, kQ2 = 0x2BE4070;
@@ -1661,6 +1669,42 @@ void on_q2(safetyhook::Context& ctx) noexcept {
     ctx.rax = (ctx.rax & ~static_cast<uintptr_t>(0xFFFFFFFF)) | static_cast<uint32_t>(ctx.r8);
     g_q2_passed.fetch_add(1, std::memory_order_relaxed);
 }
+
+// Co-op+ Q3 (user2_stages_own_quest=1): the stage event's quest step (0x226F390, rsi = the event, [rsi+8] = its stage
+// manager): for user 2's manager, its own quest manager instead of the field owner's (deferred or not).
+void on_q3(safetyhook::Context& ctx) noexcept {
+    if (!g_own_quest.load(std::memory_order_relaxed)) return;
+    const uintptr_t u2m = g_u2_mgr.load(std::memory_order_relaxed);
+    if (!u2m || rdp(ctx.rsi + 8) != u2m) {
+        g_q3_host.fetch_add(1, std::memory_order_relaxed);
+        return;
+    }
+    const uintptr_t qm = user2_funnels_quest_manager_of(g_u2_char.load(std::memory_order_relaxed));
+    if (!qm) {
+        g_q3_unreadable.fetch_add(1, std::memory_order_relaxed);
+        return;
+    }
+    ctx.rax = qm;
+    g_q3_own.fetch_add(1, std::memory_order_relaxed);
+    t_q3_at = GetTickCount64();
+}
+
+// Co-op+ branch_probe (read only): P1 / P2, which manager the stage branch's event reaches.
+const char* mgr_who(uintptr_t m) noexcept {
+    if (!m) return "null";
+    if (m == g_u2_mgr.load(std::memory_order_relaxed)) return "USER 2's manager";
+    if (m == g_host_mgr.load(std::memory_order_relaxed)) return "the HOST's manager";
+    return "another object";
+}
+void p_line(const char* where, uintptr_t obj, uintptr_t m) noexcept {
+    if (!user2_funnels_branch_probe_in(0) || g_p_said.fetch_add(1, std::memory_order_relaxed) >= 200) return;
+    const uintptr_t actor = m ? rdp(m + 0x18) : 0;
+    log::info("User2Stages [branch probe] {} | object 0x{:X} (vt exe+0x{:X}) | manager 0x{:X} = {} (vt exe+0x{:X}, "
+              "its actor 0x{:08X})", where, obj, obj ? rva_of(rdp(obj)) : 0, m, mgr_who(m), m ? rva_of(rdp(m)) : 0,
+              actor ? rdv<uint32_t>(actor + u2s::kActor_Key) : 0);
+}
+void on_p1(safetyhook::Context& ctx) noexcept { p_line("P1 0x226DD77 the chart event (kind 6) -> [rsi+8]", ctx.rsi, rdp(ctx.rsi + 8)); }
+void on_p2(safetyhook::Context& ctx) noexcept { p_line("P2 0x2B39A37 the event in 0x2B393C0: rsi", ctx.rsi, ctx.rsi); }
 
 // U-a2 at 0x2911435: inside user 2's armed evaluation, the collector's manager guard on its own manager.
 void on_gate2(safetyhook::Context& ctx) noexcept {
@@ -7205,8 +7249,18 @@ void install(std::span<const gad::Section> secs) {
                            "Q2, the collector's owner check 0x2BE4070 for that quest manager (Co-op+)")) {
             g_q2_on.store(true);
         }
+        if (user2_funnels_branch_probe_in(0)) {
+            p8_install_mid(g_base, secs, kP1, sizeof kP1Bytes, kP1Bytes, on_p1, g_p1_hook, "User2Stages",
+                           "P1 (branch probe, read only) 0x226DD77");
+            p8_install_mid(g_base, secs, kP2, sizeof kP2Bytes, kP2Bytes, on_p2, g_p2_hook, "User2Stages",
+                           "P2 (branch probe, read only) 0x2B39A37");
+        }
+        if (p8_install_mid(g_base, secs, kQ3, sizeof kQ3Bytes, kQ3Bytes, on_q3, g_q3_hook, "User2Stages",
+                           "Q3, the stage event's quest step 0x226F3CA for user 2's manager (Co-op+)")) {
+            g_q3_on.store(true);
+        }
         gate += std::string(" | Q1 ") + (g_q1_on.load() ? "hooked" : "REFUSED") + " Q2 " +
-                (g_q2_on.load() ? "hooked" : "REFUSED");
+                (g_q2_on.load() ? "hooked" : "REFUSED") + " Q3 " + (g_q3_on.load() ? "hooked" : "REFUSED");
     }
     // H, log only.
     if (bytes_at(kEvalCtx, kEvalCtxBytes) &&
@@ -7472,6 +7526,7 @@ bool user2_stages_quest_allowed() noexcept {
 }
 
 bool user2_stages_own_quest_on() noexcept { return g_own_quest.load(std::memory_order_relaxed); }
+bool user2_stages_q3_recent() noexcept { return t_q3_at && GetTickCount64() - t_q3_at <= 20; }
 
 void user2_stages_set_own_quest(bool on) {
     g_own_quest = on;
@@ -7480,9 +7535,11 @@ void user2_stages_set_own_quest(bool on) {
 
 std::string user2_stages_own_quest_text() {
     if (!g_own_quest.load()) return {};
-    return std::format(" | own quest (Q1 {} Q2 {}): swapped {}, unreadable {}, owner check passed {}",
-                       g_q1_on.load() ? "in" : "OUT", g_q2_on.load() ? "in" : "OUT", g_q1_swapped.load(),
-                       g_q1_unreadable.load(), g_q2_passed.load());
+    return std::format(" | own quest (Q1 {} Q2 {} Q3 {}): swapped {}, unreadable {}, owner check passed {} | "
+                       "stage-event quest steps: user 2's own {}, unreadable {}, the host's {}",
+                       g_q1_on.load() ? "in" : "OUT", g_q2_on.load() ? "in" : "OUT", g_q3_on.load() ? "in" : "OUT",
+                       g_q1_swapped.load(), g_q1_unreadable.load(), g_q2_passed.load(), g_q3_own.load(),
+                       g_q3_unreadable.load(), g_q3_host.load());
 }
 
 void user2_stages_set_names_probe(bool on) {

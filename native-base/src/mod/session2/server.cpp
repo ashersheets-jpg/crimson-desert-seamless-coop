@@ -56,6 +56,7 @@
 #include "mod/session2/world_anchor.h"
 #include "mod/session2/fog_share.h"
 #include "mod/session2/user2_funnels.h"
+#include "mod/session2/user2_stages.h"
 
 namespace cdmp::session2 {
 namespace {
@@ -478,7 +479,8 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
         }
         // Co-op+ 2026-11-13 (shared cutscenes, branch_probe=1, read only): who queues the stage list / mission list
         // Acks while user 2's StageBranchStateReq is handled (the quest step of its story branch).
-        if ((v->opcode == 2185 || v->opcode == kOpMissionListProbe) && user2_funnels_branch_probe_in(2644)) {
+        if ((v->opcode == 2185 || v->opcode == kOpMissionListProbe) &&
+            (user2_funnels_branch_probe_in(2644) || (user2_funnels_branch_probe_in(0) && user2_stages_q3_recent()))) {
             static std::atomic<int> said{0};
             if (said.fetch_add(1, std::memory_order_relaxed) < 12) {
                 void* frames[32] = {};
