@@ -109,6 +109,8 @@ void user2_stages_set_names_probe(bool on);
 // design). Off: as before (the host's quest manager).
 void user2_stages_set_own_quest(bool on);
 bool user2_stages_own_quest_on() noexcept;  // user2_stages_own_quest=1 (any thread)
+// This thread ran a Q3 own quest step in the last 20 ms (branch_probe's stack capture in server.cpp).
+bool user2_stages_q3_recent() noexcept;
 std::string user2_stages_own_quest_text();  // for the summary line ("" when off)
 void user2_stages_trade_list_breach(uint64_t seq_id, uint32_t hash) noexcept;
 // Review M2: this thread is inside the original 0x288A970 of an element T1 let through (its mark is set).

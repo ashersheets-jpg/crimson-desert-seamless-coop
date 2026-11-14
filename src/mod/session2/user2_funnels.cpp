@@ -2169,6 +2169,7 @@ bool user2_funnels_vf40_live() noexcept { return g_on.load() && g_subject_on && 
 
 bool user2_funnels_branch_probe_in(uint16_t opcode) noexcept {
     if (!g_branch_probe.load(std::memory_order_relaxed)) return false;
+    if (opcode == 0) return true;  // the probe is on (no subject asked)
     const Frame fr = t_frame;
     return fr.actor && fr.opcode == opcode;
 }
