@@ -7095,3 +7095,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   rides 12 s after the host, both go to the horse again before E, and a second E follows 1.5 s later.
 - Not in this build: the Steam presence fault-count fix (steam_join.cpp, committed after the package).
 - One post for this batch. The next post needs the owner's OK.
+
+## Shared cutscenes, continued (2026-11-14, after the 66985463 post)
+
+- The 2644 handler's branch 0x2B54120 -> `jmp 0xE8BD3E0` (protected section, but plain code, readable): it calls the scene lookup 0x21C5750, 0x2C079C0, 0x2D49D10 and, in 0xE8BD660, allocates a 0x330 object and constructs it with 0x227B340(obj, rcx = the stage manager -> obj+0x28, r8): a STAGE EVENT that is queued and run later. Its quest step is 0x226F390(event): [event+8] = the stage manager (0x21C5B80 reads its +0x18 actor for the field), the field's vf40 -> the quest manager (0x226F3CA), then the step. Deferred: not under user 2's subject, so the field's owner (the host) decides. That is why the subject rule fired at the arm (synchronous) and not at the walk.
+- Q3 (native, with user2_stages_own_quest=1): mid hook 0x226F3CA (`mov rdi,rax ; lea rdx,[rax+8]`): [rsi+8] == user 2's manager -> rax := user 2's own ServerQuestManager. Counters in the summary ("stage-event quest steps: user 2's own N ..."). cs5j runs it.
+- Layer built with the Steam presence fix (unit tests pass).
