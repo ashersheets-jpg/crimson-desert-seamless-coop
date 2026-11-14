@@ -4,6 +4,7 @@
 
 #include <atomic>
 #include <cstring>
+#include <algorithm>
 #include <deque>
 #include <format>
 #include <mutex>
@@ -13,6 +14,7 @@
 #include "mod/log.h"
 #include "mod/net/local_capture.h"
 #include "mod/net/troc_sniffer.h"
+#include "mod/session2/p8_probes.h"
 #include "mod/session2/server.h"
 #include "mod/session2/story_gate_logic.h"
 #include "mod/session2/user2_stages.h"
@@ -64,6 +66,7 @@ std::string hex(const uint8_t* p, size_t n) {
 }
 
 const char* who_name(int who) { return who == sgl::kHost ? "the host" : "user 2"; }
+void install_client();  // the host client's volume call (below)
 
 // The hold (mode 2). g_mu is a leaf lock: nothing of the game and no other lock under it.
 std::mutex g_mu;
@@ -91,6 +94,22 @@ bool is_own(int who, uint32_t actor) {
 
 // Releases the players of `mask` (caller holds g_mu): the host's Reqs go to the host client's send queue (posted before
 // its next own Req, sniffer_inject_c2s), user 2's to the tunnel's release list.
+// The host client's own held volume call (hold mode; the hook at 0xE043E9, below): the call's arguments with a
+// reference on the sequencer object; replayed on the game thread after a release (g_replay), or dropped when the host
+// leaves the volume first. Under g_mu.
+struct ClientHeld {
+    uintptr_t seq = 0;
+    uint8_t in = 0;
+    uint32_t kind = 0;
+    uintptr_t chr = 0;
+    uint8_t facing = 0;
+    uint64_t id = 0;
+    bool valid = false;
+};
+std::vector<ClientHeld> g_client_calls;  // the main scene's call first, then the step's cinematic's (in order)
+std::atomic<bool> g_replay{false};
+std::vector<uint64_t> g_extra[2];  // each player's held cinematic sequencers (their 2644s wait too)
+
 std::vector<std::vector<uint8_t>> release_locked(int mask, const char* why) {
     std::vector<std::vector<uint8_t>> host;
     for (int w = 0; w < 2; ++w) {
@@ -98,11 +117,13 @@ std::vector<std::vector<uint8_t>> release_locked(int mask, const char* why) {
         log::info("StoryGate: {}'s story trigger '{}' released ({}; {} Req(s))", who_name(w), g_name[w], why, g_held[w].size());
         if (w == sgl::kHost) {
             for (auto& p : g_held[w]) host.push_back(std::move(p));
+            if (!g_client_calls.empty()) g_replay.store(true);  // the host client's own volume calls: on the game thread
         } else {
             for (auto& p : g_held[w]) g_release_u2.push_back(std::move(p));
             g_release_u2_any.store(!g_release_u2.empty());
         }
         g_held[w].clear();
+        g_extra[w].clear();
         g_name[w][0] = 0;
     }
     return host;
@@ -138,6 +159,16 @@ bool decide(int who, const uint8_t* packet, size_t size) {
                     if (said.fetch_add(1) < 40)
                         log::info("StoryGate: {} entered the story scene '{}' (not a step's main scene): it goes on", who_name(who), s->name);
                 }
+                const bool extra = s && sgl::is_cinematic_name(s->name) && g_gate.p[who].held && sgl::same_step(g_name[who], s->name);
+                if (extra) {
+                    g_held[who].emplace_back(packet, packet + size);
+                    taken = true;
+                    if (std::find(g_extra[who].begin(), g_extra[who].end(), v.seq) == g_extra[who].end()) {
+                        g_extra[who].push_back(v.seq);
+                        log::info("StoryGate: {}'s step cinematic '{}' (sequencer 0x{:X}) waits with '{}'", who_name(who), s->name,
+                                  v.seq, g_name[who]);
+                    }
+                }
                 if (s && sgl::is_gate_name(s->name)) {
                     if (v.in) {
                         const bool was = g_gate.p[who].held;
@@ -162,12 +193,15 @@ bool decide(int who, const uint8_t* packet, size_t size) {
                         log::info("StoryGate: {} left the story trigger '{}' before it started: the wait is off ({} held "
                                   "Req(s) dropped with the exit)", who_name(who), g_name[who], g_held[who].size());
                         g_held[who].clear();
+                        g_extra[who].clear();
                         g_name[who][0] = 0;
                         taken = true;
                     }
                 }
             }
-        } else if (op == kOpStageBranch && g_gate.on_branch(who, rd64(d)) == sgl::Verdict::Hold) {
+        } else if (op == kOpStageBranch &&
+                   (g_gate.on_branch(who, rd64(d)) == sgl::Verdict::Hold ||
+                    std::find(g_extra[who].begin(), g_extra[who].end(), rd64(d)) != g_extra[who].end())) {
             g_held[who].emplace_back(packet, packet + size);
             taken = true;
         }
@@ -182,6 +216,7 @@ void story_gate_set_mode(const std::string& mode) {
     g_mode = mode == "probe" ? 1 : mode == "hold" ? 2 : 0;
     if (g_mode.load() == 1) log::warn("StoryGate: [session2] story_gate=probe: story triggers of both players are logged (read only)");
     if (g_mode.load() == 2) log::warn("StoryGate: [session2] story_gate=hold: the ready check is ON (a story trigger waits for both players)");
+    if (g_mode.load()) install_client();
 }
 
 bool story_gate_on() noexcept { return g_mode.load(std::memory_order_relaxed) != 0; }
@@ -262,7 +297,193 @@ bool after_call(uint64_t a) noexcept {
 }
 }  // namespace
 
-void story_gate_host_stack(const uint8_t* packet, size_t size, uint64_t rsp) noexcept {
+namespace {
+// Up to `cap` caller rips by RtlVirtualUnwind (a frame without unwind data: a leaf, [rsp] is its return address).
+int sg_unwind(uint64_t rip, uint64_t rsp, const uint64_t nv[8], uint64_t* out, int cap) noexcept {
+    int n = 0;
+    __try {
+        CONTEXT c{};
+        c.ContextFlags = CONTEXT_FULL;
+        c.Rip = rip;
+        c.Rsp = rsp;
+        c.Rbx = nv[0]; c.Rbp = nv[1]; c.Rsi = nv[2]; c.Rdi = nv[3];
+        c.R12 = nv[4]; c.R13 = nv[5]; c.R14 = nv[6]; c.R15 = nv[7];
+        for (; n < cap; ++n) {
+            DWORD64 image = 0;
+            PRUNTIME_FUNCTION fe = RtlLookupFunctionEntry(c.Rip, &image, nullptr);
+            if (!fe) {
+                c.Rip = *reinterpret_cast<const uint64_t*>(c.Rsp);
+                c.Rsp += 8;
+            } else {
+                PVOID handler = nullptr;
+                DWORD64 frame = 0;
+                RtlVirtualUnwind(UNW_FLAG_NHANDLER, image, c.Rip, fe, &c, &handler, &frame, nullptr);
+            }
+            if (!c.Rip) break;
+            out[n] = c.Rip;
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    }
+    return n;
+}
+}  // namespace
+
+// The host client's own volume handling (cs8f, RtlVirtualUnwind from the 2808's post): the frame-event dispatcher
+// 0x29B1DC0 calls the delegate 0xE041E0 (a character in / out of a trigger volume), which finds the volume's
+// sequencer (rdi, ref-counted: +0x10 count, +0x14 atomic) and at 0xE043E9 calls 0x6F41E0 (a jmp into protected code)
+// (rcx sequencer, dl in, r8d the volume's kind, r9 the character, [rsp+0x20] u8 facing): it posts the 2808 AND starts
+// the scene locally. 0x7025DD: right after the frame's event flush (0x162E570(.., 0x1C)), on the game thread.
+namespace {
+constexpr uintptr_t kVolCall = 0xE043E9;  // 3663
+constexpr uint8_t kVolCallBytes[] = {0xE8, 0xF2, 0xFD, 0x8E, 0xFF};
+constexpr uintptr_t kFrameAfter = 0x7025DD;  // 3663
+constexpr uint8_t kFrameAfterBytes[] = {0x48, 0x8B, 0x47, 0x08, 0x48, 0x8B, 0x40, 0x60};
+SafetyHookMid g_vol_hook, g_frame_hook;
+struct VolCall {
+    uintptr_t seq = 0;
+    uint8_t in = 0;
+    uint32_t kind = 0;
+    uintptr_t chr = 0;
+    uint8_t facing = 0;
+    bool valid = false;
+};
+thread_local VolCall t_vol;
+std::atomic<uint64_t> g_vol_calls{0}, g_frames{0};
+
+using VolFn = void(__fastcall*)(uintptr_t, uint8_t, uint32_t, uintptr_t, uint8_t);
+thread_local bool t_replaying = false;
+
+// The sequencer object's reference (+0x10 count, +0x14 1 = atomic), as 0xE043F4 releases it. The game thread only.
+bool obj_ref(uintptr_t o, int d) noexcept {
+    __try {
+        auto* count = reinterpret_cast<volatile LONG*>(o + 0x10);
+        const bool atomic = *reinterpret_cast<const uint8_t*>(o + 0x14) != 0;
+        const LONG n = d > 0 ? (atomic ? InterlockedIncrement(count) : ++*count) : (atomic ? InterlockedDecrement(count) : --*count);
+        if (n == 0) {
+            using Dtor = void(__fastcall*)(uintptr_t, uint32_t);
+            (*reinterpret_cast<Dtor* const*>(o))[0](o, 1);
+        }
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+bool call_vol(uintptr_t fn, const ClientHeld& c) noexcept {
+    __try {
+        reinterpret_cast<VolFn>(fn)(c.seq, c.in, c.kind, c.chr, c.facing);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
+void on_vol_call(safetyhook::Context& ctx) {
+    g_vol_calls.fetch_add(1, std::memory_order_relaxed);
+    VolCall v;
+    v.seq = ctx.rdi;
+    v.in = static_cast<uint8_t>(ctx.rdx);
+    v.kind = static_cast<uint32_t>(ctx.r8);
+    v.chr = ctx.r9;
+    sg_read(&v.facing, ctx.rsp + 0x20, 1);
+    v.valid = true;
+    t_vol = v;
+    if (g_mode.load(std::memory_order_relaxed) != 2 || t_replaying) return;
+    // cs8g: the sequencer id at +0x30 of the object, the character's key at +0x60.
+    uint64_t id = 0;
+    uint32_t key = 0;
+    if (!sg_read(&id, v.seq + 0x30, 8) || !sg_read(&key, v.chr + 0x60, 4) || !is_own(sgl::kHost, key)) return;
+    const Slot* s = find(key_of(false, id));
+    if (!s) return;
+    const bool gate = sgl::is_gate_name(s->name);
+    if (!gate && !sgl::is_cinematic_name(s->name)) return;
+    bool skip = false;
+    std::vector<uintptr_t> dropped;
+    {
+        std::lock_guard lock(g_mu);
+        const bool linked = server_user2_present();
+        if (!gate) {
+            // The step's cinematic while the host waits at that step's main scene: held with it (in and out, in order).
+            if (g_gate.p[sgl::kHost].held && sgl::same_step(g_name[sgl::kHost], s->name)) {
+                bool known = false;
+                for (const auto& c : g_client_calls) known = known || c.id == id;
+                if (!known) {
+                    log::info("StoryGate: the host's step cinematic '{}' (sequencer 0x{:X}) waits with '{}' (not started)",
+                              s->name, id, g_name[sgl::kHost]);
+                }
+                obj_ref(v.seq, +1);
+                g_client_calls.push_back(ClientHeld{v.seq, v.in, v.kind, v.chr, v.facing, id, true});
+                skip = true;
+            }
+        } else if (v.in) {
+            const bool was = g_gate.p[sgl::kHost].held;
+            const sgl::Verdict verdict = g_gate.on_enter(sgl::kHost, id, s->hash, linked, GetTickCount64());
+            if (verdict == sgl::Verdict::Hold) {
+                skip = true;
+                if (!was) {
+                    obj_ref(v.seq, +1);
+                    g_client_calls.push_back(ClientHeld{v.seq, v.in, v.kind, v.chr, v.facing, id, true});
+                    std::memcpy(g_name[sgl::kHost], s->name, sizeof g_name[sgl::kHost]);
+                    log::info("StoryGate: the host reached the story trigger '{}' (sequencer 0x{:X}, hash 0x{:08X}): its "
+                              "own client waits (the scene is not started){}", s->name, id, s->hash,
+                              g_gate.together() ? "; both players are here" : " for the friend (or to go on alone)");
+                }
+            } else if (!was) {
+                log::info("StoryGate: the host reached the story trigger '{}' (sequencer 0x{:X}): it goes on ({})", s->name, id,
+                          !linked ? "the friend is not in the world" : g_gate.did(sgl::kHost, s->hash) ? "already passed" : "another wait is on");
+            }
+        } else if (g_gate.on_leave(sgl::kHost, id) == sgl::Verdict::Drop) {
+            skip = true;
+            for (const auto& c : g_client_calls) dropped.push_back(c.seq);
+            g_client_calls.clear();
+            log::info("StoryGate: the host left the story trigger '{}' before it started: the wait is off", g_name[sgl::kHost]);
+            g_held[sgl::kHost].clear();
+            g_extra[sgl::kHost].clear();
+            g_name[sgl::kHost][0] = 0;
+        }
+    }
+    for (uintptr_t o : dropped) obj_ref(o, -1);
+    if (skip) ctx.rip = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)) + kVolCall + sizeof kVolCallBytes;
+}
+
+void on_frame(safetyhook::Context&) {
+    g_frames.fetch_add(1, std::memory_order_relaxed);
+    if (!g_replay.load(std::memory_order_acquire)) return;
+    std::vector<ClientHeld> calls;
+    {
+        std::lock_guard lock(g_mu);
+        g_replay.store(false);
+        calls.swap(g_client_calls);
+    }
+    const uintptr_t fn = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)) + 0x6F41E0;  // 3663: the call's target
+    for (const ClientHeld& c : calls) {
+        t_replaying = true;
+        const bool ok = call_vol(fn, c);
+        t_replaying = false;
+        obj_ref(c.seq, -1);
+        log::info("StoryGate: the host's own volume call ({} sequencer 0x{:X}) played now ({}; thread {})", c.in ? "into" : "out of",
+                  c.id, ok ? "done" : "EXCEPTION", GetCurrentThreadId());
+    }
+}
+
+void install_client() {
+    static bool done = false;
+    if (done) return;
+    done = true;
+    const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    std::vector<gad::Section> secs;
+    if (!p8_exe_sections(base, secs)) {
+        log::error("StoryGate: the exe's sections are not readable: the client hooks are not installed");
+        return;
+    }
+    p8_install_mid(base, secs, kVolCall, sizeof kVolCallBytes, kVolCallBytes, on_vol_call, g_vol_hook, "StoryGate",
+                   "the client's volume call 0xE043E9 (0xE041E0 -> 0x6F41E0)");
+    p8_install_mid(base, secs, kFrameAfter, sizeof kFrameAfterBytes, kFrameAfterBytes, on_frame, g_frame_hook, "StoryGate",
+                   "after the frame's event flush 0x7025DD");
+}
+
+}  // namespace
+
+void story_gate_host_stack(const uint8_t* packet, size_t size, uint64_t rsp, uint64_t rip, const uint64_t nv[8]) noexcept {
     static std::atomic<int> said{0};
     if (!story_gate_on() || size < kHeader + 8 || said.load() >= 8) return;
     const uint16_t op = static_cast<uint16_t>(packet[0] | packet[1] << 8);
@@ -277,20 +498,30 @@ void story_gate_host_stack(const uint8_t* packet, size_t size, uint64_t rsp) noe
     }
     if (said.fetch_add(1) >= 8) return;
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-    thread_local uint64_t words[0x9000 / 8];
-    size_t n = 0;
-    for (size_t k = 0; k < 0x9000 / 0x1000; ++k, n += 0x1000 / 8) {  // page by page: stop at the stack's end
-        if (!sg_read(words + n, rsp + k * 0x1000, 0x1000)) break;
-    }
-    std::string chain;
-    int found = 0;
-    for (size_t i = 0; i < n && found < 40; ++i) {
-        if (words[i] >= base + 0x1000 && words[i] < base + 0x144E9000 && after_call(words[i])) {
-            chain += std::format(" [0x{:X}]exe+0x{:X}", i * 8, words[i] - base);
-            ++found;
+    if (op == kOpTriggerVolume && t_vol.valid) {
+        const VolCall v = t_vol;
+        t_vol.valid = false;
+        const uint64_t id = rd64(d);
+        thread_local uint64_t obj[0x800 / 8];
+        std::string at;
+        if (sg_read(obj, v.seq, sizeof obj)) {
+            for (size_t i = 0; i < 0x800 / 8; ++i) if (obj[i] == id) at += std::format(" +0x{:X}", i * 8);
         }
+        uint32_t key = 0;
+        sg_read(&key, v.chr + 0x60, 4);
+        log::info("StoryGate [client] the volume call before this 2808: sequencer object 0x{:X} (the id 0x{:X} at{}), in {}, "
+                  "kind 0x{:08X}, character 0x{:X} (key +0x60 0x{:08X}), facing {} | volume calls {}, frames {}",
+                  v.seq, id, at.empty() ? " (not found in 0x800 bytes)" : at, v.in, v.kind, v.chr, key, v.facing,
+                  g_vol_calls.load(), g_frames.load());
     }
-    log::info("StoryGate [stack] the host's {} for '{}' | words in the exe from rsp:{}",
+    uint64_t frames[24] = {};
+    const int nf = sg_unwind(rip, rsp, nv, frames, 24);
+    std::string chain;
+    for (int i = 0; i < nf; ++i) {
+        chain += frames[i] >= base && frames[i] < base + 0x144E9000 ? std::format(" exe+0x{:X}", frames[i] - base)
+                                                                    : std::format(" 0x{:X}", frames[i]);
+    }
+    log::info("StoryGate [stack] the host's {} for '{}' | unwound callers:{}",
               op == kOpTriggerVolume ? "SequencerTriggerVolumeInOutReq 2808 (own entry)" : "StageBranchStateReq 2644", s->name, chain);
 }
 

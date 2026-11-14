@@ -111,6 +111,32 @@ inline Shown shown(const Gate& g, int who) {
     return them.held ? Shown::FriendWaiting : Shown::None;
 }
 
+// cs8h: the step's cinematic has a volume of its own (cd_seq_quest_intro_0310_dlc, entered 0.5 s after the step's
+// main scene, independently of it): while a player waits at a step's main scene, that step's cinematic (the same name
+// up to the last '_', ending in _dlc) waits with it and is played after it. Other _dlc volumes (0300_01_dlc on the way)
+// never wait.
+inline bool is_story_name(const char* name);
+inline size_t step_len(const char* name) {
+    size_t n = 0, last = 0;
+    while (name && n < 64 && name[n]) {
+        if (name[n] == '_') last = n + 1;
+        ++n;
+    }
+    return last;
+}
+inline bool is_cinematic_name(const char* name) {
+    if (!is_story_name(name)) return false;
+    size_t n = 0;
+    while (n < 64 && name[n]) ++n;
+    return n >= 17 && name[n - 4] == '_' && name[n - 3] == 'd' && name[n - 2] == 'l' && name[n - 1] == 'c';
+}
+inline bool same_step(const char* a, const char* b) {
+    const size_t la = step_len(a), lb = step_len(b);
+    if (!la || la != lb) return false;
+    for (size_t i = 0; i < la; ++i) if (a[i] != b[i]) return false;
+    return true;
+}
+
 // 2808 on 3663 (cs7c): u64 sequencer | u32 kind (0x2000xxxx) | u8 in (1) / out (0) | u32 actor | ...
 struct Volume {
     uint64_t seq = 0;

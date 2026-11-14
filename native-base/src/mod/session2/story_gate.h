@@ -37,7 +37,9 @@ bool story_gate_take_host(const uint8_t* packet, size_t size) noexcept;
 // stack at PostPacket's entry (rsp, up to 36 KB read: the 2808 sender's frame is ~32 KB) for its own entry into a main
 // story scene or a cinematic and their 2644s; the words that are return addresses into the exe (a call right before
 // them) are logged (a few times).
-void story_gate_host_stack(const uint8_t* packet, size_t size, uint64_t rsp) noexcept;
+// The frames come from RtlVirtualUnwind from PostPacket's entry (rip = the function, the hook's rsp and nonvolatile
+// registers: rbx rbp rsi rdi r12 r13 r14 r15).
+void story_gate_host_stack(const uint8_t* packet, size_t size, uint64_t rsp, uint64_t rip, const uint64_t nv[8]) noexcept;
 // The layer: a player's press (0 the host, 1 user 2); the released players (bit 0 host, bit 1 user 2).
 int story_gate_press(int who) noexcept;
 // The layer: the state (see cdmp_story_gate_state in story_gate.cpp); 0 = off.
