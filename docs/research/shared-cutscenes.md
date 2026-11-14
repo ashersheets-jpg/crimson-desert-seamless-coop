@@ -54,3 +54,12 @@ title); U-1 near the host was never tried; story scenes that spawn the same NPCs
   was spent on class2).
 - So the story class for U-f is the base name prefix `cd_seq_quest_` (and `bgm_cd_seq_quest_`), as the merchants' is
   `cd_seq_funcnpc_`. `cd_seq_quest_intro_trigger` is the likely owner of the cabin's trigger volume (sequencer 0x1BC).
+
+## cs5a - cs5o (2026-11-13 / 14): the joined player's own story steps on its own quest
+
+What it took (all native, off by default, keys in [session2]):
+1. `user2_stages_quest=1`: U-f lets user 2's armed manager prepare `cd_seq_quest_*` (its own story scenes and their trigger volumes).
+2. The port fix (shipped in 66985463): the stage manager's scene table is +8 on 3663, without it no lookup found user 2's scenes.
+3. The shop route's safety latch accepts story scenes (it aborted at the first non-shop scene).
+4. `user2_stages_own_quest=1`: Q1/Q2 build user 2's stages on its own ServerQuestManager; Q3 0x226F3CA: a stage event of user 2's manager takes its own quest manager; nested vf48 of user 2's routed scene Trocs answer its manager; ServerField::vf40 inside any Troc of user 2's own scene (the 2059 deferred delete included) answers its own quest manager.
+Result (cs5o): at its own trigger every Ack names user 2's character and its screen shows the next objective. Open: the scene itself on its screen, the cutscene flag, U-1 arming only when far (the players near each other is the normal case), the ready check, duplicate story NPCs.
