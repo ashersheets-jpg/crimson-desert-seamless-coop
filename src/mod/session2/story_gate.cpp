@@ -74,7 +74,20 @@ std::atomic<bool> g_release_u2_any{false};
 char g_name[2][44] = {};
 bool g_was_linked = false;
 
-uint32_t own_key(int who) { return who == sgl::kHost ? net::capture_own_player_key() : server_user2_player_key(); }
+// cs8a / cs8b: capture_own_player_key() stopped naming the host's character once the guest had joined (the host's own
+// entries were no longer taken). The stage machine's keys first; then, for the host, any player character that is not
+// user 2's.
+bool is_own(int who, uint32_t actor) {
+    if ((actor >> 28) != 0xA) return false;
+    const uint32_t host = user2_stages_host_key(), u2 = user2_stages_user2_key() ? user2_stages_user2_key() : server_user2_player_key();
+    static std::atomic<uint64_t> last{~0ull};
+    static std::atomic<int> said{0};
+    if (const uint64_t now = static_cast<uint64_t>(host) << 32 | u2; last.exchange(now) != now && said.fetch_add(1) < 10)
+        log::info("StoryGate: the players' characters: the host 0x{:08X} (capture 0x{:08X}), user 2 0x{:08X} (server 0x{:08X})",
+                  host, net::capture_own_player_key(), u2, server_user2_player_key());
+    if (who == sgl::kHost) return host ? actor == host : u2 && actor != u2;
+    return u2 && actor == u2;
+}
 
 // Releases the players of `mask` (caller holds g_mu): the host's Reqs go to the host client's send queue (posted before
 // its next own Req, sniffer_inject_c2s), user 2's to the tunnel's release list.
@@ -111,13 +124,14 @@ bool decide(int who, const uint8_t* packet, size_t size) {
     bool taken = false;
     {
         std::lock_guard lock(g_mu);
-        const bool linked = server_user2_in_world();
+        // cs8a: server_user2_in_world() (its move phase Stable) was false at the cabin with both players in the world;
+        // logged in is enough here (a friend who left logs out: unlink below).
+        const bool linked = server_user2_present();
         if (g_was_linked && !linked) host = release_locked(g_gate.unlink(), "the friend left the world");
         g_was_linked = linked;
         if (op == kOpTriggerVolume) {
             sgl::Volume v;
-            const uint32_t own = own_key(who);
-            if (sgl::parse_volume(d, n, v) && own && v.actor == own) {
+            if (sgl::parse_volume(d, n, v) && is_own(who, v.actor)) {
                 const Slot* s = find(key_of(who == sgl::kUser2, v.seq));
                 if (s && sgl::is_story_name(s->name) && !sgl::is_gate_name(s->name) && v.in) {
                     static std::atomic<int> said{0};
@@ -127,7 +141,14 @@ bool decide(int who, const uint8_t* packet, size_t size) {
                 if (s && sgl::is_gate_name(s->name)) {
                     if (v.in) {
                         const bool was = g_gate.p[who].held;
-                        if (g_gate.on_enter(who, v.seq, s->hash, linked, GetTickCount64()) == sgl::Verdict::Hold) {
+                        const sgl::Verdict verdict = g_gate.on_enter(who, v.seq, s->hash, linked, GetTickCount64());
+                        if (verdict == sgl::Verdict::Pass && !was) {
+                            log::info("StoryGate: {} reached the story trigger '{}' (sequencer 0x{:X}): it goes on ({})",
+                                      who_name(who), s->name, v.seq,
+                                      !linked ? "the friend is not in the world"
+                                      : g_gate.did(who, s->hash) ? "already passed" : "another wait is on");
+                        }
+                        if (verdict == sgl::Verdict::Hold) {
                             g_held[who].emplace_back(packet, packet + size);
                             taken = true;
                             if (!was) {
@@ -221,6 +242,56 @@ bool story_gate_take_host(const uint8_t* packet, size_t size) noexcept {
     } catch (...) {
         return false;
     }
+}
+
+namespace {
+bool sg_read(void* dst, uint64_t src, size_t n) noexcept {
+    __try {
+        std::memcpy(dst, reinterpret_cast<const void*>(src), n);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+// A return address: a call ends right at it (e8 rel32; ff /2 with disp32, disp8, or a register).
+bool after_call(uint64_t a) noexcept {
+    uint8_t b[7] = {};
+    if (!sg_read(b, a - 7, 7)) return false;
+    return b[2] == 0xE8 || (b[1] == 0xFF && (b[2] & 0x38) == 0x10) || (b[4] == 0xFF && (b[5] & 0x38) == 0x10) ||
+           (b[5] == 0xFF && (b[6] & 0xF8) == 0xD0);
+}
+}  // namespace
+
+void story_gate_host_stack(const uint8_t* packet, size_t size, uint64_t rsp) noexcept {
+    static std::atomic<int> said{0};
+    if (!story_gate_on() || size < kHeader + 8 || said.load() >= 8) return;
+    const uint16_t op = static_cast<uint16_t>(packet[0] | packet[1] << 8);
+    const uint8_t* d = packet + kHeader;
+    const Slot* s = find(key_of(false, rd64(d)));
+    if (!s || !sgl::is_story_name(s->name)) return;
+    const bool dlc = std::strstr(s->name, "_dlc") != nullptr;
+    if (!sgl::is_gate_name(s->name) && !dlc) return;
+    if (op == kOpTriggerVolume) {
+        sgl::Volume v;
+        if (!sgl::parse_volume(d, size - kHeader, v) || !v.in || !is_own(sgl::kHost, v.actor)) return;
+    }
+    if (said.fetch_add(1) >= 8) return;
+    const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    thread_local uint64_t words[0x9000 / 8];
+    size_t n = 0;
+    for (size_t k = 0; k < 0x9000 / 0x1000; ++k, n += 0x1000 / 8) {  // page by page: stop at the stack's end
+        if (!sg_read(words + n, rsp + k * 0x1000, 0x1000)) break;
+    }
+    std::string chain;
+    int found = 0;
+    for (size_t i = 0; i < n && found < 40; ++i) {
+        if (words[i] >= base + 0x1000 && words[i] < base + 0x144E9000 && after_call(words[i])) {
+            chain += std::format(" [0x{:X}]exe+0x{:X}", i * 8, words[i] - base);
+            ++found;
+        }
+    }
+    log::info("StoryGate [stack] the host's {} for '{}' | words in the exe from rsp:{}",
+              op == kOpTriggerVolume ? "SequencerTriggerVolumeInOutReq 2808 (own entry)" : "StageBranchStateReq 2644", s->name, chain);
 }
 
 bool story_gate_next_release(std::vector<uint8_t>& out) noexcept {
