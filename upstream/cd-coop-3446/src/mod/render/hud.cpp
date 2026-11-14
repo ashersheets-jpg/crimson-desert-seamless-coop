@@ -630,7 +630,11 @@ void hud_draw(float width, float height) {
         const bool menu_open = net::activity_menu_snapshot(menu_t, menu_i, menu_p);
         // Not while we are down ourselves (dp2, 2026-11-11: "R Interact" stood in the middle of the death screen).
         const bool we_are_down = d.local && d.local->health_max > 0 && d.local->health <= 0;
-        if (!menu_open && !we_are_down && d.remote && !d.hide_partner && remote_distance <= 3.0f) {
+        // Co-op+ 2026-11-14 (cs8c): a story wait (coop_story.h: go on alone / start together) comes before the menu on
+        // the friend; both players stand together at the scene, and the hold there must answer the story.
+        const int story_now = net::story_shown();
+        const bool story_first = story_now == 1 || story_now == 2;
+        if (!story_first && !menu_open && !we_are_down && d.remote && !d.hide_partner && remote_distance <= 3.0f) {
             const proto::Vec3 chest{d.remote->pos.x, d.remote->pos.y + 1.1f, d.remote->pos.z};
             if (auto p = game::project(*cam, *cam_world, chest, width, height)) {
                 if (std::fabs(p->x - width * 0.5f) < width * 0.22f && std::fabs(p->y - height * 0.5f) < height * 0.32f) {

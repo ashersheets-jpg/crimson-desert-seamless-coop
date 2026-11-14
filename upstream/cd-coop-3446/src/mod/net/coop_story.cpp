@@ -25,7 +25,7 @@ bool g_looked = false;
 
 std::atomic<int> g_shown{0};          // ours
 std::atomic<int> g_from_host{0};      // the guest: what the host said is ours
-std::atomic<uint32_t> g_from_host_at{0};
+std::atomic<uint64_t> g_from_host_at{0};  // GetTickCount64 (cs8c: `GetTickCount() | 1` was 1 ms ahead: "stale")
 std::atomic<bool> g_answer{false};    // the HUD's hold fired
 std::atomic<bool> g_friend_pressed{false};  // the host: the guest pressed
 
@@ -59,7 +59,7 @@ void story_on_event(const uint8_t* d, size_t n) {
     if (n < 1) return;
     if (d[0] == kOpShown && n >= 2) {
         g_from_host.store(d[1]);
-        g_from_host_at.store(GetTickCount() | 1);
+        g_from_host_at.store(GetTickCount64());
     } else if (d[0] == kOpPress) {
         g_friend_pressed.store(true);
     }
@@ -103,8 +103,8 @@ StoryTick story_tick(bool connected, bool host, const std::string& name, uint32_
             activity_send(kStoryType, {kOpPress});
             log::info("Story: we pressed (sent to the host)");
         }
-        const uint32_t at = g_from_host_at.load();
-        shown = at && GetTickCount() - at < kStaleMs ? g_from_host.load() : 0;
+        const uint64_t at = g_from_host_at.load(), t = GetTickCount64();
+        shown = at && (t <= at || t - at < kStaleMs) ? g_from_host.load() : 0;
     }
     if (shown != g_shown.load()) log::info("Story: our screen now: {}", shown_name(shown));
     g_shown.store(shown);
