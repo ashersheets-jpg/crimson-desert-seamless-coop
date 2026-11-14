@@ -20,6 +20,9 @@ bool install(DrawFn draw);
 // [dev] overlay_no_streamline=1 (before install): Streamline's swap chain class is left unhooked, as if the game did
 // not present through it (a PC without DLSS frame generation): a test of the DXGI fallback on an Nvidia card.
 void dev_no_streamline(int mode);  // 2: and no fallback either (the tester's state, to see what else needs frames)
+// [dev] fps_cap=N (tests only, 0 = off): each Present waits until 1000/N ms after the last one (two test copies on
+// one PC at full frame rate for hours load the graphics card and the power supply hard).
+void dev_fps_cap(int fps);
 
 struct Status {
     bool installed = false;

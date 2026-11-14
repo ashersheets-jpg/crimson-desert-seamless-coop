@@ -74,6 +74,8 @@ std::atomic<uint64_t> g_last_upper_present_ms{0};  // the last Present of a clas
 std::atomic<uint64_t> g_last_any_present_ms{0};    // the last Present through any hooked class
 std::atomic<bool> g_native_tried{false};
 std::atomic<bool> g_streamline_class{false};       // install() hooked Streamline's class (not DXGI's own)
+std::atomic<int> g_dev_fps_cap{0};          // [dev] fps_cap (tests only)
+std::atomic<int64_t> g_cap_last_qpc{0};
 std::atomic<int> g_dev_no_streamline{0};  // [dev] overlay_no_streamline: 1 Streamline's class is left unhooked, 2 and no fallback
 
 std::mutex g_status_mutex;
@@ -440,8 +442,28 @@ void on_present(IDXGISwapChain* sc) {
     draw_frame(sc, desc);
 }
 
+// [dev] fps_cap: wait until the frame interval has passed since the last Present (any hooked class).
+void fps_cap_wait() noexcept {
+    const int cap = g_dev_fps_cap.load(std::memory_order_relaxed);
+    if (cap <= 0) return;
+    static const int64_t freq = [] { LARGE_INTEGER f; QueryPerformanceFrequency(&f); return f.QuadPart; }();
+    const int64_t interval = freq / cap;
+    LARGE_INTEGER now;
+    QueryPerformanceCounter(&now);
+    const int64_t last = g_cap_last_qpc.load(std::memory_order_relaxed);
+    if (last) {
+        const int64_t wait = last + interval - now.QuadPart;
+        if (wait > 0 && wait < freq) {
+            Sleep(static_cast<DWORD>(wait * 1000 / freq));
+            QueryPerformanceCounter(&now);
+        }
+    }
+    g_cap_last_qpc.store(now.QuadPart, std::memory_order_relaxed);
+}
+
 // SEH wrapper: no C++ objects with destructors allowed in this function.
 void guarded_present(IDXGISwapChain* sc) {
+    fps_cap_wait();
     EnterCriticalSection(&g_render_cs);
     DWORD code = 0;
     __try {
@@ -951,6 +973,10 @@ bool install(DrawFn draw) {
 }
 
 void dev_no_streamline(int mode) { g_dev_no_streamline = mode; }
+void dev_fps_cap(int fps) {
+    g_dev_fps_cap = fps > 0 ? std::min(fps, 240) : 0;
+    if (fps > 0) log::warn("Overlay: [dev] fps_cap={}: frames are held to {} a second (a test setting)", fps, g_dev_fps_cap.load());
+}
 
 Status status() {
     hook_frame_generation_proxies();  // a library loaded since (frame generation switched on in the settings)
