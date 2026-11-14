@@ -5,6 +5,18 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
+NOT POSTED YET (next build; it needs the whole checklist on its exact package and the owner's OK to post):
+- **Story scenes together (experimental, off by default; Co-op Settings, host)**: each player gets their own story
+  scenes and steps, and a story scene waits until both players are there. When one of you reaches a story trigger,
+  both screens say so: the friend can hold Interact to go to you, and once you are both there each holds Interact to
+  start it; the waiting player can also hold Interact to go on alone (the friend then plays that scene later, when
+  they get there, without a wait). Tested on one PC with two copies of the game, at the prologue's cabin: both
+  starting together, the host going on alone, the joined player going on alone. Not yet: the joined player's own
+  cinematic camera (their game plays the scene in the world, not as a cutscene), any story scene after the cabin,
+  two PCs.
+- The host's "your friend could not join" card no longer stays up when the friend gets in after a slow join.
+- Steam presence: one Steam error no longer counts three times (the presence switched off too early).
+
 Posted 2026-11-14 01:42 as 0.1.0-alpha+66985463, for game 1.0.0.3663 (checklist pp14 / pp14b-e: all 23 steps, one PC):
 - **A part of the move to 1.0.0.3663 was wrong**: the server stage manager's scene table moved by 8 bytes in that
   game version and the mod still read the old place, so every "is this scene the joined player's?" check found
