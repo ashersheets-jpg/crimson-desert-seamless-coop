@@ -194,6 +194,14 @@ class SceneOrder {
 public:
     explicit SceneOrder(Limits l = {}) : l_(l) {}
 
+    // Co-op+ 2026-11-14 (story mode): a resource hash kept like a trade scene's (user 2's own story scenes; at most 64).
+    void allow_hash(uint32_t hash) {
+        if (!hash || allowed(hash)) return;
+        if (allowed_.size() >= 64) allowed_.erase(allowed_.begin());
+        allowed_.push_back(hash);
+    }
+    bool allowed(uint32_t hash) const { return std::find(allowed_.begin(), allowed_.end(), hash) != allowed_.end(); }
+
     // One packet to user 2's live session, as queued (pushed). own = user 2's character key; holding(key) -> bool: does
     // observer_hold_acks hold that key now. Events go to `out`.
     template <class Holding>
@@ -210,7 +218,7 @@ public:
         }
         if (op == kOpPrepare) {
             const Prepare pr = parse_prepare(p);
-            if (!pr.ok || !own || pr.owner != own || !u2trade::is_trade_hash(pr.hash)) return;
+            if (!pr.ok || !own || pr.owner != own || !(u2trade::is_trade_hash(pr.hash) || allowed(pr.hash))) return;
             std::vector<uint32_t> pending;
             for (const uint32_t k : pr.bound) {
                 if (holding(k)) pending.push_back(k);
@@ -346,6 +354,8 @@ private:
         return e;
     }
 
+    std::vector<uint32_t> allowed_;
+
     Limits l_;
     std::vector<Watch> w_;
 };
@@ -432,6 +442,16 @@ public:
         after_.clear();
     }
 
+    // Co-op+ 2026-11-14 (story mode): user 2's sequencer id of a story scene, kept like a trade scene (at most 64).
+    void allow_id(uint64_t id) {
+        if (!id || allowed_id(id)) return;
+        if (allowed_ids_.size() >= 64) allowed_ids_.erase(allowed_ids_.begin());
+        allowed_ids_.push_back(id);
+    }
+    bool allowed_id(uint64_t id) const {
+        return std::find(allowed_ids_.begin(), allowed_ids_.end(), id) != allowed_ids_.end();
+    }
+
     // One packet to user 2's live session (never a 2005: see announced). own = user 2's character key;
     // holding(key) -> bool: AckHold::withheld (review M1: Holding or Spilled, not Orphan); next_seq() -> u64: the shared order. Held: `packet`
     // moved in. Discarded: drop it (it was a kept scene's or a tombstoned id's). Pass: queue it as usual.
@@ -505,7 +525,7 @@ public:
                 out.push_back(std::move(e));
                 return keep(s_.back(), op, packet, now_us, next_seq, out);
             }
-            if (!pr.ok || !own || pr.owner != own || !u2trade::is_trade_hash(pr.hash)) return Take::Pass;
+            if (!pr.ok || !own || pr.owner != own || !(u2trade::is_trade_hash(pr.hash) || allowed_id(pr.id))) return Take::Pass;
             if (Scene* s = find(pr.id)) return keep(*s, op, packet, now_us, next_seq, out);  // again while kept
             // Review B4: a 2661 sent again with a tombstoned id is decided again as a new one (the tombstone goes): with
             // its NPCs already on the client (none withheld) it passes, else it is kept behind their 2005s.
@@ -676,6 +696,7 @@ public:
     const HoldCounters& counters() const { return c_; }
 
 private:
+    std::vector<uint64_t> allowed_ids_;
     struct Scene {
         uint64_t id = 0;
         uint32_t hash = 0;

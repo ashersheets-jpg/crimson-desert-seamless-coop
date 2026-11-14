@@ -16,6 +16,7 @@
 #include "mod/session2/observer_hold_acks_logic.h"
 #include "mod/session2/p8_probes.h"
 #include "mod/session2/server.h"
+#include "mod/session2/story_gate.h"
 
 namespace cdmp::session2 {
 namespace {
@@ -221,7 +222,19 @@ void observer_hold_scene_order_on_out(uint16_t opcode, std::span<const uint8_t> 
         std::vector<uint32_t> held;
         if (opcode == hso::kOpPrepare) {
             const hso::Prepare pr = hso::parse_prepare(payload);
-            if (!pr.ok || !own || pr.owner != own || !u2trade::is_trade_hash(pr.hash)) return;
+            // Co-op+ 2026-11-14 (story mode): user 2's own story scenes wait for their NPCs too (story_gate.h).
+            const bool story = pr.ok && (story_gate_user2_story(pr.id) || story_gate_story_hash(pr.hash));
+            if (pr.ok && pr.owner == own) {
+                static std::atomic<int> said{0};
+                if (said.fetch_add(1) < 30)
+                    log::info("HoldSceneOrder [story] user 2's own 2661 sequencer 0x{:X} hash@27 0x{:08X}: {} ({} bound NPC(s))", pr.id,
+                              pr.hash, story ? "a story scene: kept like a trade scene" : "not a story scene", pr.bound.size());
+            }
+            if (!pr.ok || !own || pr.owner != own || !(u2trade::is_trade_hash(pr.hash) || story)) return;
+            if (story) {
+                std::lock_guard lock(g_mu);
+                g_order.allow_hash(pr.hash);
+            }
             g_2661_own.fetch_add(1, std::memory_order_relaxed);
             for (const uint32_t k : pr.bound) {
                 if (observer_hold_acks_holding(k)) held.push_back(k);

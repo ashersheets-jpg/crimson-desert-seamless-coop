@@ -44,6 +44,12 @@ void story_gate_host_stack(const uint8_t* packet, size_t size, uint64_t rsp, uin
 // (cd_seq_quest_*) of which user 2's manager prepared its own copy (the same file-name hash), so the host's copy is not
 // sent to the guest (2026-11-14: the guest's game held both copies of the cabin's cinematic and never started its own).
 bool story_gate_skip_copy(uint64_t host_seq) noexcept;
+// observer_hold_scene_order (hold mode): true = `hash` is the file-name hash of a story scene (cd_seq_quest_*) user 2's
+// manager prepared: its 2661 waits for the 2005s of the NPCs it binds like a trade scene's (cs9i: user 2's cabin
+// cinematic went out 330 ms before its comrades reached the guest, and the guest's game never had it).
+bool story_gate_story_hash(uint32_t hash) noexcept;
+// The same by user 2's sequencer id (the 2661's +9; cs9j: the wire's +27 hash did not match): its scene is a story one.
+bool story_gate_user2_story(uint64_t id) noexcept;
 // The layer: a player's press (0 the host, 1 user 2); the released players (bit 0 host, bit 1 user 2).
 int story_gate_press(int who) noexcept;
 // The layer: the state (see cdmp_story_gate_state in story_gate.cpp); 0 = off.
