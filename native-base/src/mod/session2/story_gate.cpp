@@ -213,7 +213,8 @@ bool decide(int who, const uint8_t* packet, size_t size) {
 }  // namespace
 
 void story_gate_set_mode(const std::string& mode) {
-    g_mode = mode == "probe" ? 1 : mode == "hold" ? 2 : 0;
+    g_mode = mode == "probe" ? 1 : mode == "hold" ? 2 : mode == "client_probe" ? 3 : 0;
+    if (g_mode.load() == 3) log::warn("StoryGate: [session2] story_gate=client_probe: this game's volume events of player characters are logged (read only)");
     if (g_mode.load() == 1) log::warn("StoryGate: [session2] story_gate=probe: story triggers of both players are logged (read only)");
     if (g_mode.load() == 2) log::warn("StoryGate: [session2] story_gate=hold: the ready check is ON (a story trigger waits for both players)");
     if (g_mode.load()) install_client();
@@ -226,6 +227,15 @@ void story_gate_note_prepared(uintptr_t mgr, uint64_t id, uint32_t hash, const c
     const uintptr_t u2 = user2_stages_user2_manager();
     const uint64_t key = key_of(u2 && mgr == u2, id);
     if (find(key)) return;
+    // Research (2026-11-14): which story scenes each player's manager prepares (user 2's client never reported the
+    // comrades' scenes nor the cabin's cinematic _0310_dlc).
+    if (n >= 13 && std::memcmp(name, "cd_seq_quest_", 13) == 0) {
+        static std::atomic<int> said[2]{};
+        const int w = u2 && mgr == u2 ? 1 : 0;
+        if (said[w].fetch_add(1) < 80)
+            log::info("StoryGate [prepared] {}'s manager 0x{:X}: sequencer 0x{:X} '{}'", w ? "user 2" : "the host", mgr, id,
+                      std::string(name, n < 40 ? n : 40));
+    }
     size_t i = slot_of(key);
     for (size_t k = 0; k < 32; ++k, i = (i + 1) % kSlots) {
         if (g_slots[i].key.load(std::memory_order_acquire) != 0) continue;
@@ -338,7 +348,12 @@ constexpr uintptr_t kVolCall = 0xE043E9;  // 3663
 constexpr uint8_t kVolCallBytes[] = {0xE8, 0xF2, 0xFD, 0x8E, 0xFF};
 constexpr uintptr_t kFrameAfter = 0x7025DD;  // 3663
 constexpr uint8_t kFrameAfterBytes[] = {0x48, 0x8B, 0x47, 0x08, 0x48, 0x8B, 0x40, 0x60};
-SafetyHookMid g_vol_hook, g_frame_hook;
+SafetyHookMid g_vol_hook, g_frame_hook, g_lookup_hook;
+// 0xE04260 (3663): right after the delegate's sequencer lookup 0xE04460 (rsp+0xE0 the sequencer object or 0, rsp+0xD0
+// the volume's kind, rsp+0x48 the character, r12b in / out). Research: does this game find a sequencer for a player's
+// volume event (the guest's game never reported the cabin's cinematic)?
+constexpr uintptr_t kLookupAfter = 0xE04260;
+constexpr uint8_t kLookupAfterBytes[] = {0x48, 0x8B, 0xBC, 0x24, 0xE0, 0x00, 0x00, 0x00};
 struct VolCall {
     uintptr_t seq = 0;
     uint8_t in = 0;
@@ -445,6 +460,21 @@ void on_vol_call(safetyhook::Context& ctx) {
     if (skip) ctx.rip = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)) + kVolCall + sizeof kVolCallBytes;
 }
 
+void on_lookup(safetyhook::Context& ctx) {
+    static std::atomic<int> said{0};
+    if (said.load(std::memory_order_relaxed) >= 300) return;
+    uintptr_t chr = 0, seq = 0;
+    uint32_t key = 0, kind = 0;
+    if (!sg_read(&chr, ctx.rsp + 0x48, 8) || !chr || !sg_read(&key, chr + 0x60, 4) || (key >> 28) != 0xA) return;
+    sg_read(&seq, ctx.rsp + 0xE0, 8);
+    sg_read(&kind, ctx.rsp + 0xD0, 4);
+    uint64_t id = 0;
+    if (seq) sg_read(&id, seq + 0x30, 8);
+    if (said.fetch_add(1) >= 300) return;
+    log::info("StoryGate [volume] character 0x{:08X} {} a volume of kind 0x{:08X}: {}", key, static_cast<uint8_t>(ctx.r12) ? "in" : "out",
+              kind, seq ? std::format("sequencer 0x{:X} (object 0x{:X})", id, seq) : std::string("NO sequencer found"));
+}
+
 void on_frame(safetyhook::Context&) {
     g_frames.fetch_add(1, std::memory_order_relaxed);
     if (!g_replay.load(std::memory_order_acquire)) return;
@@ -479,6 +509,10 @@ void install_client() {
                    "the client's volume call 0xE043E9 (0xE041E0 -> 0x6F41E0)");
     p8_install_mid(base, secs, kFrameAfter, sizeof kFrameAfterBytes, kFrameAfterBytes, on_frame, g_frame_hook, "StoryGate",
                    "after the frame's event flush 0x7025DD");
+    if (g_mode.load() == 1 || g_mode.load() == 3) {
+        p8_install_mid(base, secs, kLookupAfter, sizeof kLookupAfterBytes, kLookupAfterBytes, on_lookup, g_lookup_hook, "StoryGate",
+                       "after the volume delegate's sequencer lookup 0xE04260 (research)");
+    }
 }
 
 }  // namespace
