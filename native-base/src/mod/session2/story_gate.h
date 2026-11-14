@@ -11,6 +11,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -50,6 +51,12 @@ bool story_gate_skip_copy(uint64_t host_seq) noexcept;
 bool story_gate_story_hash(uint32_t hash) noexcept;
 // The same by user 2's sequencer id (the 2661's +9; cs9j: the wire's +27 hash did not match): its scene is a story one.
 bool story_gate_user2_story(uint64_t id) noexcept;
+// observer_hold_acks' route (every packet to user 2's live session, hold mode): true = kept here (the caller drops
+// it from its queue). User 2's own step cinematic (a cd_seq_quest_*_dlc 2356 whose step has a main scene _00) and the
+// later packets of its id stay on the host until that step is released for user 2 (both pressed, user 2 went on
+// alone, or its entry passed), then go to user 2's queue in order: without the cinematic its game cannot start the
+// scene early (cs9n: the guest's cutscene began the moment it entered, before the presses).
+bool story_gate_keep_user2(uint16_t opcode, std::span<const uint8_t> payload, const std::vector<uint8_t>& packet) noexcept;
 // The layer: a player's press (0 the host, 1 user 2); the released players (bit 0 host, bit 1 user 2).
 int story_gate_press(int who) noexcept;
 // The layer: the state (see cdmp_story_gate_state in story_gate.cpp); 0 = off.

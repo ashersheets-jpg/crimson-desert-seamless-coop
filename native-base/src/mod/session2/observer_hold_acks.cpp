@@ -271,6 +271,8 @@ bool observer_hold_acks_holding(uint32_t key) noexcept {
 AckRoute observer_hold_acks_route(uint16_t opcode, std::span<const uint8_t> payload, std::vector<uint8_t>& packet,
                                   AckPushFn push, AckRouteOut& out) noexcept {
     out = {};
+    // Co-op+ 2026-11-14 (story mode, story_gate.h): user 2's step cinematic stays on the host until its step is released.
+    if (hso::t2_op(opcode) && story_gate_keep_user2(opcode, payload, packet)) return AckRoute::Held;
     auto publication = observer_hold_acks_publication_guard();
     if (!observer_hold_acks_filter_retired(packet)) return AckRoute::Held;
     // La compactación2005 puede cambiar memoria/longitud: nunca reutilizar el span anterior.
