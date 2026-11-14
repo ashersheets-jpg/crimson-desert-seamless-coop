@@ -38,6 +38,12 @@ int main() {
         CHECK(!sgl::is_gate_name("cd_seq_quest_intro_0300"));
         CHECK(!sgl::is_gate_name("cd_seq_quest_intro_trigger"));
         CHECK(!sgl::is_gate_name("cd_seq_contents_x_00"));
+        CHECK(sgl::is_cinematic_name("cd_seq_quest_intro_0310_dlc"));
+        CHECK(!sgl::is_cinematic_name("cd_seq_quest_intro_0310_00"));
+        CHECK(sgl::same_step("cd_seq_quest_intro_0310_00", "cd_seq_quest_intro_0310_dlc"));
+        CHECK(!sgl::same_step("cd_seq_quest_intro_0310_00", "cd_seq_quest_intro_0300_01_dlc"));
+        CHECK(!sgl::same_step("cd_seq_quest_intro_0310_00", "cd_seq_quest_intro_0320_dlc"));
+        CHECK(!sgl::same_step("", "cd_seq_quest_intro_0310_dlc"));
     }
     // Both arrive, both press: the second press releases both; the scene is done for both.
     {
