@@ -56,6 +56,7 @@
 #include "mod/session2/world_anchor.h"
 #include "mod/session2/fog_share.h"
 #include "mod/session2/user2_funnels.h"
+#include "mod/session2/story_gate.h"
 #include "mod/session2/user2_stages.h"
 
 namespace cdmp::session2 {
@@ -1608,6 +1609,7 @@ inj::Outcome inject(std::span<const uint8_t> in, InjectKind kind) {
             return inj::Outcome::Blocked;
         }
     }
+    story_gate_observe(true, v->opcode, v->payload.data(), v->payload.size());  // Co-op+ the ready check (probe)
     uint8_t channel = g_channel[v->opcode];
     // P8 S25 phase B (§3.7): own-save mode lets user 2's 3037 / 2910 reach the server (SavePlayerToSlot remaps them
     // to its own slot 204 or refuses them; never the host's slot) and drops its 2711 / 2178.

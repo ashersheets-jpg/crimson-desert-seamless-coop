@@ -31,6 +31,7 @@
 #include "mod/game/game_fault.h"
 #include "mod/net/local_capture.h"
 #include "mod/net/remote_puppet.h"
+#include "mod/session2/story_gate.h"
 
 namespace cdmp::net {
 namespace {
@@ -277,6 +278,20 @@ void on_post_packet(safetyhook::Context& ctx) {
     }
     const uint32_t packed = 0x80000000u | (static_cast<uint32_t>(flags) << 8) | channel;
     if (op < 4096) g_post_args[op].store(packed, std::memory_order_relaxed);
+    // Co-op+ 2026-11-14 (the ready check, story_gate.h): the host client's own story triggers, logged (probe) or held
+    // (hold: the post is skipped by returning at the function's first instruction; a release posts it again).
+    if ((op == 2808 || op == 2644) && session2::story_gate_on()) {
+        uint16_t size = 0;
+        uint8_t buf[64] = {};
+        if (guarded_copy(&size, reinterpret_cast<const void*>(ctx.rsp + off::kHookArgSizeStackOffset), sizeof size) &&
+            size >= 13 && size <= sizeof buf && guarded_copy(buf, reinterpret_cast<const void*>(ctx.r9), size)) {
+            session2::story_gate_observe(false, op, buf + 5, size - 5u);
+            if (g_ret_stub && session2::story_gate_take_host(buf, size)) {
+                ctx.rip = reinterpret_cast<uintptr_t>(g_ret_stub);
+                return;
+            }
+        }
+    }
     g_post_args_any.store(packed, std::memory_order_relaxed);
 
     // Our own packets go in before this real one, on the same thread.
