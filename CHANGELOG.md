@@ -9,11 +9,10 @@ NOT POSTED YET (next build; it needs the whole checklist on its exact package an
 - **Story scenes together (experimental, off by default; Co-op Settings, host)**: each player gets their own story
   scenes and steps, and a story scene waits until both players are there. When one of you reaches a story trigger,
   both screens say so: the friend can hold Interact to go to you, and once you are both there each holds Interact to
-  start it; the waiting player can also hold Interact to go on alone (the friend then plays that scene later, when
-  they get there, without a wait). Tested on one PC with two copies of the game, at the prologue's cabin: both
-  starting together, the host going on alone, the joined player going on alone. Not yet: the joined player's own
-  cinematic camera (their game plays the scene in the world, not as a cutscene), any story scene after the cabin,
-  two PCs.
+  start it; then BOTH games play the cutscene at the same moment. The waiting player can also hold Interact to go on
+  alone (the friend then plays that scene later, when they get there, without a wait). Tested on one PC with two
+  copies of the game, at the prologue's cabin: starting together (both cutscenes began within a second), the host
+  going on alone, the joined player going on alone. Not yet: any story scene after the cabin, two PCs.
 - The host's "your friend could not join" card no longer stays up when the friend gets in after a slow join.
 - Steam presence: one Steam error no longer counts three times (the presence switched off too early).
 
