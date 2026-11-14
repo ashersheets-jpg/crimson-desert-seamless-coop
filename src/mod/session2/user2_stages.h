@@ -220,6 +220,7 @@ void user2_stages_sniffed(const uint8_t* packet, size_t size, bool server_to_cli
 // U2 (user2_shops.h), any thread: user 2's ServerSequencerStageManager now (its character from the module's last
 // sample; vtable and back pointer re-checked here; 0 = none).
 uintptr_t user2_stages_user2_manager() noexcept;
+uintptr_t user2_stages_user2_character() noexcept;  // Co-op+: user 2's main character (0: not known)
 // U2: the field's owner [field+0x180] is the host's user key (ServerField vtable checked).
 bool user2_stages_host_field(uintptr_t field) noexcept;
 // U2: U-1 has user 2's manager armed now (mode 1, not aborted).

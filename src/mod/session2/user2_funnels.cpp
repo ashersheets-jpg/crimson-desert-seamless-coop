@@ -941,7 +941,7 @@ std::atomic<uint64_t> g_branch_own{0}, g_branch_own_unreadable{0};
 std::atomic<int> g_branch_said{0};
 void branch_line(const char* what, uint16_t op, uintptr_t ret, uint64_t arg, uintptr_t answer) noexcept {
     if (!g_branch_probe.load(std::memory_order_relaxed)) return;
-    if (op != 2644 && op != 2048 && op != 2654 && op != 2808) return;
+    if (op != 2644 && op != 2048 && op != 2654 && op != 2808 && op != 2059) return;
     if (g_branch_said.fetch_add(1, std::memory_order_relaxed) >= 120) return;
     log::info("User2Funnels [branch probe] op {} | {} from exe+0x{:X} | arg 0x{:X} | answer 0x{:X}", op, what,
               rva_of(ret), arg, answer);
@@ -949,6 +949,19 @@ void branch_line(const char* what, uint16_t op, uintptr_t ret, uint64_t arg, uin
 
 uintptr_t vf40_detour(uintptr_t field) {
     const Frame fr = t_frame;
+    // Co-op+ 2026-11-14 (shared cutscenes): inside a Troc of user 2's own scene (U2-a routed it; Reqs and the 2059
+    // deferred delete, whose subject may be none), its own quest manager: the story step is ITS progress.
+    if (fr.scene_mine && user2_stages_own_quest_on()) {
+        const uintptr_t chr = fr.actor ? fr.actor : user2_stages_user2_character();
+        const auto own = u2f::quest_manager_of(FastMem{}, chr, g_vt_qcomp, g_vt_qmgr);
+        if (own) {
+            g_branch_own.fetch_add(1, std::memory_order_relaxed);
+            branch_line("vf40 inside user 2's own scene Troc -> USER 2'S OWN quest manager", fr.scene_op ? fr.scene_op : fr.opcode,
+                        reinterpret_cast<uintptr_t>(_ReturnAddress()), 0, *own);
+            return *own;
+        }
+        g_branch_own_unreadable.fetch_add(1, std::memory_order_relaxed);
+    }
     if (!fr.actor) return g_vf40.unsafe_call<uintptr_t>(field);
     if (g_branch_probe.load(std::memory_order_relaxed)) {
         uint32_t owner = 0;

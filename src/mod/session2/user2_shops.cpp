@@ -59,6 +59,7 @@ std::atomic<uint64_t> g_opens{0}, g_not_own_2916{0}, g_follows{0}, g_stucks{0}, 
 std::atomic<uint64_t> g_last_routed_us{0}, g_last_srv_routed_us{0}, g_last_host_srv_routed_us{0};
 std::atomic<uint64_t> g_3000{0}, g_nak{0}, g_nak_scene{0}, g_host_refused{0};
 std::atomic<uint64_t> g_deletes_mine{0};  // 2054 deferred deletes of user 2's scenes (routed or would)
+std::atomic<uint64_t> g_nested_own{0};    // Co-op+: nested vf48 answered with user 2's manager (own quest mode)
 std::atomic<uint64_t> g_t1_breach{0};      // S46 phase 3: shop scenes of user 2's manager off T1's list (abort)
 std::atomic<uint64_t> g_t1_offlist_outside{0};  // review M2: the same, prepared outside a T1 pass (counted only)
 
@@ -205,6 +206,15 @@ uintptr_t user2_shops_vf48(uint16_t opcode, uint64_t seq_id, uint32_t ret_rva, u
                 e.v[3] = routed;
                 e.v[4] = field;
                 push(kENested, e);
+            }
+            // Co-op+ 2026-11-14 (shared cutscenes, cs5c / cs5l): with user2_stages_own_quest=1 the nested vf48 of user
+            // 2's own scene Troc answer ITS manager too: the story branch's deferred delete (2059) reached the host's
+            // manager through them (exe+0x1CA860C, exe+0x2BFCB1E) and stepped the host's stage list.
+            if (routed && user2_stages_own_quest_on()) {
+                if (const uintptr_t m2 = user2_stages_user2_manager()) {
+                    g_nested_own.fetch_add(1, std::memory_order_relaxed);
+                    return m2;
+                }
             }
         }
         return 0;
@@ -588,8 +598,9 @@ void summary() {
         other += std::format(" [{} exe+0x{:X}{}] x{};", (rows[i].key >> 32) & 0xFFFF, static_cast<uint32_t>(rows[i].key),
                              rows[i].key >> 48 ? " routed Troc" : " would-be Troc", rows[i].count);
     }
+    if (g_nested_own.load()) other += std::format(" answered with its own manager (own quest) x{};", g_nested_own.load());
     log::info("User2Shops summary (user2_shop_route={}{}; may prepare {}, route live {}): scene Reqs by handler:{} | "
-              "server checks (U2-b):{} | nested vf48 of user 2's scene Trocs (the host's manager kept):{} | user 2's "
+              "server checks (U2-b):{} | nested vf48 of user 2's scene Trocs (the host's manager kept unless own quest):{} | user 2's "
               "manager prepared {} (failed {}; shop scenes booked {}; NOT shop scenes {}; name unreadable {}; shop "
               "resources also alive in the host's manager {}) | shop 2916 to user 2: its own {} (followed {}, not "
               "followed {}), not its own {} | deferred deletes (2054) of its scenes {} | S46 T1: shop scenes off the trade list {} (outside a T1 pass, counted only: {}) | drain held {} s (would {} s; too near, drained at once {}; window resets "
