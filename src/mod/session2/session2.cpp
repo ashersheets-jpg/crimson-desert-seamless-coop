@@ -1416,6 +1416,8 @@ bool install(const Options& opt) {
     if (lc.s2_interaction_share && opt.create_session) interaction_share_start();
     // P8 option U, U-0 (research/s25/mundo-escenarios-propios.md): read-only probe of the stage managers.
     const auto key_on = [](const std::string& v) { return !v.empty() && v != "0"; };
+    // Co-op+ 2026-11-14 (research, either PC): story_gate=client_probe logs this game's volume events of players.
+    if (lc.s2_story_gate == "client_probe") story_gate_set_mode(lc.s2_story_gate);
     if (key_on(lc.s2_user2_stages) || key_on(lc.s2_user2_timer_route)) {
         if (!opt.create_session) {
             log::warn("Session2: user2_stages / user2_timer_route need create_session=1; off");

@@ -80,6 +80,7 @@
 #include "mod/session2/lootr.h"
 #include "mod/session2/handle_guard.h"
 #include "mod/session2/shop_twin.h"
+#include "mod/session2/story_gate.h"
 #include "mod/render/dx12_hook.h"
 #include "mod/render/hud.h"
 
@@ -1238,6 +1239,8 @@ DWORD WINAPI worker(LPVOID) {
             session2::npc_category_install(cfg.s2_npc_category_share, cfg.s2_guest);
             session2::npc_category_dialog_share(cfg.s2_npc_dialog_share);
             session2::shop_guest_install(cfg.s2_guest_shop_check, cfg.s2_guest);
+            // Co-op+ 2026-11-14 (research): the guest's game logs its own volume events (story_gate.h client_probe).
+            if (cfg.s2_guest && cfg.s2_story_gate == "client_probe") session2::story_gate_set_mode(cfg.s2_story_gate);
             session2::shop_twin_start(cfg.s2_shop_twin, cfg.s2_guest);
             session2::shop_twin_share_all(cfg.s2_dialog_share_all);
             session2::stage_candidate_guard_start(cfg.s2_stage_candidate_guard);
