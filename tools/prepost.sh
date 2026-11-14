@@ -411,9 +411,11 @@ mounts)
   # 2026-11-14 (pp13 / pp14 / pp14b / pp14c, 4 of 6 failed on the host): both players called and rode at the same
   # moment, so the horses came to the same spot; at 1.4 m from the guest the host's E met the GUEST's "Interact"
   # prompt instead of Ride, and once the horse had walked on after the teleport (pp14c). The test's own timing, not
-  # the mod: the guest now rides 12 s after the host, and both go to the horse again right before E.
-  printf 'pad 0001 700\npad 0401 1300\npad 0400 400\nwait 5000\ntphorse\nwait 2500\ntphorse\nwait 800\nkey 45 200\nwait 5000\nkey 57 3000\nwait 2000\n' > $N/scan/mount_ride.txt
-  printf 'wait 12000\npad 0001 700\npad 0401 1300\npad 0400 400\nwait 5000\ntphorse\nwait 2500\ntphorse\nwait 800\nkey 45 200\nwait 5000\nkey 57 3000\nwait 2000\n' > $N/scan/mount_ride_late.txt
+  # the mod: the guest now rides 12 s after the host, and both go to the horse again right before E. pp14d: the host's
+  # E picked a flower ('peony_01', the horses stand in a flower patch at Nas River): a second E 1.5 s later rides
+  # (on horseback E does nothing harmful; dismount is R).
+  printf 'pad 0001 700\npad 0401 1300\npad 0400 400\nwait 5000\ntphorse\nwait 2500\ntphorse\nwait 800\nkey 45 200\nwait 1500\nkey 45 200\nwait 3500\nkey 57 3000\nwait 2000\n' > $N/scan/mount_ride.txt
+  printf 'wait 12000\npad 0001 700\npad 0401 1300\npad 0400 400\nwait 5000\ntphorse\nwait 2500\ntphorse\nwait 800\nkey 45 200\nwait 1500\nkey 45 200\nwait 3500\nkey 57 3000\nwait 2000\n' > $N/scan/mount_ride_late.txt
   run2 "$BASE -Hold 15 -HostDev pad_sim=1 -GuestDev pad_sim=1 -HostScript $SCAN\\mount_ride.txt -GuestScript $SCAN\\mount_ride_late.txt -GuestKeys w:27000_shot:$NAME-g0_w:3000_shot:$NAME-g1_w:4000_shot:$NAME-g2 -HostKeys w:500_shot:$NAME-h0"; two_player_checks
   for r in host guest; do
     has "$N/$NAME.coopplus.$r.log" "Dev script: teleport beside actor 0xB[0-9A-F]+: \\(" "$r: its called horse was there (the script went to it)"
