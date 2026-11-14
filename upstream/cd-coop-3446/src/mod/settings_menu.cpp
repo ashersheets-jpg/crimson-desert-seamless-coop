@@ -148,6 +148,8 @@ void init(const std::wstring& ini_path, const Config& cfg, float health_2p, floa
     g_items.push_back({"Shared quest credit (same step: done for both)", L"coop", L"shared_quest_credit", on_off(),
                        one_zero(), cfg.coop_shared_quest_credit ? 0 : 1, true,
                        [](int i) { net::lobby_set_shared_quest_credit(i == 0); }});
+    g_items.push_back({"Story scenes together (experimental)", L"coop", L"story_together", on_off(), one_zero(),
+                       cfg.coop_story_together ? 0 : 1, true, [](int i) { net::lobby_set_story_together(i == 0); }});
     g_items.push_back({"Items in the world", L"coop", L"world_items", {"each their own (Lootr)", "first come"},
                        {L"lootr", L"first_come"}, cfg.coop_world_items_lootr ? 0 : 1, true,
                        [](int i) { net::lobby_set_world_items_lootr(i == 0); }});

@@ -74,6 +74,8 @@ LobbyView lobby_view();
 // Render thread: the menu's actions.
 // B10 option 2: [coop] shared_quest_credit, written into the host's native ini at the next co-op launch.
 void lobby_set_shared_quest_credit(bool on);
+// 2026-11-14 (experimental): [coop] story_together, written into the host's native ini at the next co-op launch.
+void lobby_set_story_together(bool on);
 // [coop] world_items (host): lootr (default) writes lootr=1 into the host's native ini at the next co-op launch.
 void lobby_set_world_items_lootr(bool on);
 // dev: [dev] lobby_skip_play (guest: Play is not pressed, once) and lobby_retry (host: the first automatic start is

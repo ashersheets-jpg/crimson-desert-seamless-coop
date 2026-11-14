@@ -213,6 +213,7 @@ const char* seed_for(LobbyPlan p) {
 }
 
 std::atomic<bool> g_shared_quest_credit{false};
+std::atomic<bool> g_story_together{false};  // [coop] story_together (experimental)
 std::atomic<bool> g_world_items_lootr{true};  // [coop] world_items  // B10 option 2 ([coop] shared_quest_credit)
 std::string g_native_extra;                      // dev: [dev] native_extra (set once at start)
 std::atomic<bool> g_native_record{false};        // dev: [dev] native_record
@@ -227,6 +228,7 @@ bool native_write(NativeMode mode, LobbyPlan plan) {
     spec.player_name = g_in.own_name.empty() ? "Player" : g_in.own_name;
     spec.shared_quest_credit = g_shared_quest_credit.load();
     spec.world_items_lootr = g_world_items_lootr.load();
+    spec.story_together = g_story_together.load();
     if (mode == NativeMode::Host) spec.extra = g_native_extra;
     spec.record = g_native_record.load();
     // Over udp the Co-op+ link already has its port (Radmin VPN / Direct IP: 37015): the native tunnel takes the next.
@@ -923,6 +925,7 @@ std::string lobby_difficulty_card() {
 }
 
 void lobby_set_shared_quest_credit(bool on) { g_shared_quest_credit = on; }
+void lobby_set_story_together(bool on) { g_story_together = on; }
 void lobby_set_world_items_lootr(bool on) { g_world_items_lootr = on; }
 bool lobby_native_guest() { return g_native && g_native_now == NativeMode::Guest; }
 

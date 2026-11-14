@@ -1796,6 +1796,15 @@ void test_native_mode_text() {
     CHECK(has(gt, "guest_schedule_load=1") && has(gt, "guest_x_interaction_stage=1"));  // B02 far world (tcB224)
     CHECK(has(gt, "tunnel_compress=1") && has(ht, "tunnel_compress=1"));  // both ends (playtest 2026-11-10)
     CHECK(has(ht, "lootr=1") && !has(gt, "lootr=1"));  // Lootr by default, the host's key
+    // [coop] story_together (2026-11-14, experimental): off by default; on, the host writes story mode + the ready check.
+    CHECK(!has(ht, "story_gate=hold") && !has(ht, "user2_stages_own_quest=1"));
+    NativeModeSpec hs = h;
+    hs.story_together = true;
+    const std::string hst = native_mode_ini_text(hs);
+    CHECK(has(hst, "user2_stages_quest=1") && has(hst, "user2_stages_own_quest=1") && has(hst, "story_gate=hold"));
+    NativeModeSpec gs = g;
+    gs.story_together = true;
+    CHECK(!has(native_mode_ini_text(gs), "story_gate=hold"));  // the host's keys only
     CHECK(has(gt, "transport=udp") && has(gt, "role=guest") && has(gt, "guest=1") && has(gt, "guest_mode=remote"));
     CHECK(has(gt, "peer_host=26.12.34.56session2") && !has(gt, "accept_tunnel=1"));
     CHECK(has(gt, "coop_save_dir=coop_worlds\\guest_of_26_12_34_56") && has(gt, "coop_save_seed=keep"));

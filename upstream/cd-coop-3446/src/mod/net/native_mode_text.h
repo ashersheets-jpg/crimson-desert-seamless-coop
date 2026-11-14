@@ -28,6 +28,7 @@ struct NativeModeSpec {
     std::string player_name = "Player";
     bool shared_quest_credit = false;  // B10 option 2 (host): [session2] quest_shared_credit
     bool world_items_lootr = true;     // user 2026-11-10 (host): [session2] lootr
+    bool story_together = false;       // 2026-11-14 (host, experimental): story mode + [session2] story_gate=hold
     std::string extra;                 // dev: "k=v,k=v" appended to [session2] (config dev_native_extra)
     bool record = false;               // dev: [sniffer] record=1 (config dev_native_record; research runs only)
 };
@@ -138,6 +139,14 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
         // The player's choice ([coop] world_items, Lootr by default): an item or plant one player takes stays for the
         // other, who can take it once too.
         if (s.world_items_lootr) line("lootr=1");
+        // The player's choice ([coop] story_together, experimental, off): each player's own story scenes and steps
+        // (user2_stages_quest: user 2's story scenes prepared; user2_stages_own_quest: on its own quest manager) and the
+        // ready check (story_gate=hold: docs/research/shared-cutscenes.md).
+        if (s.story_together) {
+            line("user2_stages_quest=1");
+            line("user2_stages_own_quest=1");
+            line("story_gate=hold");
+        }
         // dev (research runs): extra keys (only keys the defaults do not write: an ini reader takes the first one).
         for (size_t at = 0; at < s.extra.size();) {
             size_t comma = s.extra.find(',', at);

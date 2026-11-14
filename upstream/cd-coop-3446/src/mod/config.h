@@ -111,6 +111,9 @@ struct Config {
     bool coop_join_beside_host = true;  // Co-op+ 2026-11-11: [coop] join_beside_host: the guest starts at the host's side
     bool coop_downed_pose = true;  // Co-op+ 2026-11-11: [coop] downed_pose: a downed player lies down (shared world)
     bool coop_shared_quest_credit = false;
+    // Co-op+ 2026-11-14 (experimental, off): [coop] story_together: each player's own story steps (the native story mode)
+    // and the ready check (a story scene waits until both players are there and pressed). Host.
+    bool coop_story_together = false;
     // Co-op+ 2026-11-10 (user: "Lootr"): [coop] world_items = lootr (default: every item / plant lying in the world can be
     // taken once by EACH player) | first_come (the game's own: the first one takes it). Host; the native's lootr key.
     bool coop_world_items_lootr = true;  // Co-op+ 2026-11-09 B10 option 2: [coop] shared_quest_credit (host)
