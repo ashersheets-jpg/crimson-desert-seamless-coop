@@ -214,3 +214,8 @@ topic BEFORE testing or guessing about it.
 - The 3663 port fixed the structs whose shift made a run fail. The inventory manager (-0x28, its holder -0x20) made nothing fail: Lootr's chest share, Give and the stash just stopped working quietly, and only the checklist's chest step showed it.
 - Now part of a port: run dispsurvey.py and dispcand.py (build/port3663) right after the address map, and read every candidate line. A read through a moved offset usually does not crash; it returns a plausible wrong number.
 - A feature that reads game data should log once what it read at start (the bag index, the table size), so a wrong offset shows in the first log and not as a silent "0 shares".
+
+## A struct field survey only covers the files that name the function (2026-11-13)
+- dispcand.py checks a source file against the shifts seen in the game functions THAT FILE names. stage_lookup_logic.h mirrors the game's lookup 0x21578E0 but never names it (a test pins it), so its table offsets (+8 on 3663) were not flagged, and every "is this scene in this manager" read was blind on 3663: no crash, a silent fallback to the host's manager. Found only when the shared cutscenes runs needed a lookup to succeed.
+- For a port: every `*_logic.h` that MIRRORS a game function (comments "mirrors 0x...", "as 0x... does") must be diffed against that function's new body (fdiff.py), whether or not the code calls it.
+- A lookup that can only say "not found" needs a positive test in a run: count the hits, and treat 0 hits over a whole session as a failure.
