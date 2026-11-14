@@ -7177,3 +7177,4 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 ## pp15 on 0.1.0-alpha+2269703d (game 1.0.0.3663; story scenes together in it, OFF by default) (2026-11-14 16:44 on)
 - Packaged from outer HEAD 2269703 (both binaries byte-identical to the ones cs8j / cs9p ran). Post text drafted: docs/release/shared-world-playtest/download-2269703d.txt.
 - Batch 1 (static, real, fresh, xess, fsr, display): 156 pass, 0 fail; every game step SAVES OK and 5/5.
+- Batch 2 (lowsave, chest, revive, loot, crime, farfight): 272 pass, 0 fail (46/45/47/46/43/45); every step SAVES OK and 5/5. Batch 3 (farfight2, newsave, solostart, mounts, mountfight, nosave) started 18:22.
