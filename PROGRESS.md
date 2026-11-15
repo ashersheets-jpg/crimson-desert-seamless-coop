@@ -7231,3 +7231,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   3-4 players 40-80 (was 20-40: the base names "user 2" throughout), release 6-10. Total ~135-255 h of work; at the
   observed ~2x overhead, ~270-500 h of running time: about 11-21 days around the clock, ~2-3 weeks. Not counted: a
   new game patch (~1 day each), fixes from tester reports.
+- Batch B: lowsave 46/0, chest 45/0, revive 47/0, loot 46/0, crime 43/0, farfight 45/0, farfight2 44/0, xess (again)
+  42/0 (the tunnel-tick warning did not come back; the report's total still counts the first xess run's fail). SAVES OK
+  and 5/5 on every step. Batch C (mountfight nosave retry stuck mismatch hostrevive) started 23:22.
+- The owner (23:00) adopted three checklist rules (docs/tests/RELEASE-CHECKLIST.md "How a pass is run"): finish a pass
+  past failures; test-kit-only fixes re-run the affected steps + a smoke set; post less often.
+- The owner will play their SOLO save after this post: no game test, install change or save access until they say so.
