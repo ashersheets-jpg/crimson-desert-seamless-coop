@@ -185,12 +185,11 @@ bool blocks_of(uintptr_t x, Blocks& out) noexcept {
     const auto h = game::fast_ptr(x + wsy::kXHolder);
     if (!h || !*h) return false;
     out.holder = *h;
-    const auto a = game::fast_ptr(*h + wsy::kHolderA), b = game::fast_ptr(*h + wsy::kHolderB),
-               c = game::fast_ptr(x + wsy::kXWindObj);  // 3663: block C = the wind object (weather_sync_logic.h)
+    const auto a = game::fast_ptr(*h + wsy::kHolderA), b = game::fast_ptr(*h + wsy::kHolderB);
     if (!a || !*a || !b || !*b) return false;
     out.a = *a;
     out.b = *b;
-    out.c = c ? *c : 0;
+    out.c = *h;  // 3663: block C = the holder itself (its wind direction, weather_sync_logic.h)
     return true;
 }
 uintptr_t block_addr(const Blocks& bl, uintptr_t x, wsy::Block b) {
@@ -558,11 +557,11 @@ bool install_hook() {
                    wsy::kUpdate);
         return false;
     }
-    if (wsy::kUpdateCall &&
-        (!in_code(wsy::kUpdateCall, sizeof wsy::kUpdateCallBytes) || !bytes_at(wsy::kUpdateCall, wsy::kUpdateCallBytes))) {
-        log::error("WeatherSync: its only caller 0x3B10737 is not `call 0x3DC4730` (E8 F4 3F 2B 00); REFUSED, nothing "
-                   "written");
-        return false;
+    if constexpr (wsy::kUpdateCall != 0) {  // 2976 only: on 3663 the update's callers are protected code
+        if (!in_code(wsy::kUpdateCall, sizeof wsy::kUpdateCallBytes) || !bytes_at(wsy::kUpdateCall, wsy::kUpdateCallBytes)) {
+            log::error("WeatherSync: its only caller is not the expected call; REFUSED, nothing written");
+            return false;
+        }
     }
     const auto* b = std::begin(wsy::kUpdateBoundaries);
     const auto* e = std::end(wsy::kUpdateBoundaries);
@@ -658,7 +657,7 @@ void read_all(Reading& r) {
     r.holder = ptr_at(r.x + wsy::kXHolder);
     r.a = ptr_at(r.holder ? r.holder + wsy::kHolderA : 0);
     r.b = ptr_at(r.holder ? r.holder + wsy::kHolderB : 0);
-    r.c = ptr_at(r.x + wsy::kXWindObj);  // 3663: block C = the wind object
+    r.c = r.holder;  // 3663: block C = the holder (its wind direction)
     uint8_t a[wsy::kReadA.size] = {}, c[wsy::kReadC.size] = {}, x[wsy::kReadX.size] = {};
     uint16_t mask = 0;
     if (r.a && game::safe_read(r.a + wsy::kReadA.off, a, sizeof a)) mask |= wsy::kHasA;
@@ -701,7 +700,7 @@ std::string vector_text(const wsy::Snapshot& s) {
                          f(Block::B, 0xD8), f(Block::B, 0xDC), f(Block::B, 0xE0), f(Block::B, 0xE4));
     }
     if (s.mask & wsy::kHasC) {
-        t += std::format(" | wind dir [X+100]+1C4/1C0 ({:.3f}, {:.3f})", f(Block::C, 0x1C4), f(Block::C, 0x1C0));
+        t += std::format(" | wind dir holder+19C/198 ({:.3f}, {:.3f})", f(Block::C, 0x19C), f(Block::C, 0x198));
     }
     if (s.mask & wsy::kHasX) {
         t += std::format(" | scroll X+13C/140 ({:.2f}, {:.2f})", f(Block::X, 0x13C), f(Block::X, 0x140));
@@ -824,7 +823,7 @@ bool build_ok() {
     IMAGE_DOS_HEADER dos{};
     IMAGE_NT_HEADERS64 nt{};
     return g_base == g2976::kImageBase && game::safe_read(g_base, &dos, sizeof dos) &&
-           game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) && nt.FileHeader.TimeDateStamp == g2976::kPeTimestampUnported;
+           game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) && nt.FileHeader.TimeDateStamp == g2976::kPeTimestamp;  // ported to 1.0.0.3663 (2026-11-15)
 }
 
 bool getter_bytes_ok() {
@@ -1063,7 +1062,7 @@ void weather_sync_start(const std::string& raw, bool guest, uint32_t radius_m) {
     if (p.mode == Mode::Off || g_started.exchange(true)) return;
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     if (!build_ok()) {
-        log::error("WeatherSync: unsupported game build (not 1.0.0.2976); weather_sync stays off");
+        log::error("WeatherSync: unsupported game build (not 1.0.0.3663); weather_sync stays off");
         return;
     }
     Mode m = p.mode;

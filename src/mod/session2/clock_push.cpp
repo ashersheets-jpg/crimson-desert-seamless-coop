@@ -7,6 +7,7 @@
 #include <format>
 
 #include "mod/config.h"
+#include "mod/game/offsets.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
 #include "mod/session2/clock_gate.h"
@@ -85,6 +86,15 @@ void sync_epoch_locked() {
     }
 }
 
+// The game build these addresses are for (clock_push_logic.h: 1.0.0.3663): the exe's PE stamp.
+bool clock_build_ok() {
+    const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    IMAGE_DOS_HEADER dos{};
+    IMAGE_NT_HEADERS64 nt{};
+    return game::safe_read(base, &dos, sizeof dos) && game::safe_read(base + dos.e_lfanew, &nt, sizeof nt) &&
+           nt.FileHeader.TimeDateStamp == game::build_2976::kPeTimestamp;
+}
+
 }  // namespace
 
 bool clock_push_configure(const std::string& raw, bool create_session) {
@@ -94,6 +104,10 @@ bool clock_push_configure(const std::string& raw, bool create_session) {
         return false;
     }
     if (p.mode == u2f::Mode::Off) return false;
+    if (!clock_build_ok()) {
+        log::error("Session2: user2_clock_push: unsupported game build (its addresses are 1.0.0.3663's); it stays off");
+        return false;
+    }
     if (!create_session || !clock_gate_active()) {
         log::warn("Session2: user2_clock_push='{}' needs create_session=1 and the clock gate (clock_gate=1, installed); "
                   "it stays off",
@@ -406,6 +420,10 @@ DWORD WINAPI probe_thread(LPVOID) {
 
 void clock_probe_start(bool on, bool guest) {
     if (!on || g_probe_on.load()) return;
+    if (!clock_build_ok()) {
+        log::error("ClockProbe: unsupported game build (its addresses are 1.0.0.3663's); it stays off");
+        return;
+    }
     g_probe_guest = guest;
     g_probe_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     g_probe_on.store(true);
