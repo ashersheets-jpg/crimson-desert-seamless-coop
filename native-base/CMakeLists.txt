@@ -491,7 +491,7 @@ target_link_libraries(cdmp_tests_optd_companion PRIVATE cdmp_common safetyhook::
 add_test(NAME optd_companion COMMAND cdmp_tests_optd_companion)
 # D-53: the child hold's predicate, split, table and release rules on fake game memory.
 add_executable(cdmp_tests_optd_child_hold tests/optd_child_hold_tests.cpp src/mod/session2/child_hold.cpp
-    src/mod/session2/observer_hold_acks.cpp
+    src/mod/session2/observer_hold_acks.cpp tests/story_gate_off_stub.cpp
     src/mod/session2/guest_lifecycle.cpp src/mod/game/safe_memory.cpp src/mod/log.cpp)
 cdmp_strict(cdmp_tests_optd_child_hold)
 target_link_libraries(cdmp_tests_optd_child_hold PRIVATE cdmp_common safetyhook::safetyhook)
@@ -499,7 +499,7 @@ add_test(NAME optd_child_hold COMMAND cdmp_tests_optd_child_hold)
 # S3: the host's observer hold (child_hold.cpp, NPC rules) and the guest's probe logic (guest_s3_logic.h: ring,
 # key sets, update-guard table, 2005 parser on two payloads of the P8 session-4 capture in tests/data).
 add_executable(cdmp_tests_optd_s3 tests/optd_s3_tests.cpp src/mod/session2/child_hold.cpp
-    src/mod/session2/observer_hold_acks.cpp
+    src/mod/session2/observer_hold_acks.cpp tests/story_gate_off_stub.cpp
     src/mod/session2/guest_lifecycle.cpp src/mod/game/safe_memory.cpp src/mod/log.cpp)
 cdmp_strict(cdmp_tests_optd_s3)
 target_link_libraries(cdmp_tests_optd_s3 PRIVATE cdmp_common safetyhook::safetyhook)
@@ -508,7 +508,7 @@ add_test(NAME optd_s3 COMMAND cdmp_tests_optd_s3)
 # P8 character_hold (child_hold.cpp, a user's main character with restore 0) and the holds' thread rule,
 # through the same test seams; observer_hold_acks with a character.
 add_executable(cdmp_tests_optd_character_hold tests/optd_character_hold_tests.cpp src/mod/session2/child_hold.cpp
-    src/mod/session2/observer_hold_acks.cpp
+    src/mod/session2/observer_hold_acks.cpp tests/story_gate_off_stub.cpp
     src/mod/session2/guest_lifecycle.cpp src/mod/game/safe_memory.cpp src/mod/log.cpp)
 cdmp_strict(cdmp_tests_optd_character_hold)
 target_link_libraries(cdmp_tests_optd_character_hold PRIVATE cdmp_common safetyhook::safetyhook)
@@ -761,7 +761,7 @@ add_test(NAME optd_remote_interp COMMAND cdmp_tests_optd_remote_interp)
 # actors and gaps while attached (remote_interp_logic.h), and attach_follow_logic.h (the StartAction layout, the
 # quaternion maths, the tracker, the synthetic 2697/2556 byte by byte, the registry).
 add_executable(cdmp_tests_optd_pets tests/optd_pets_tests.cpp src/mod/session2/child_hold.cpp
-    src/mod/session2/observer_hold_acks.cpp
+    src/mod/session2/observer_hold_acks.cpp tests/story_gate_off_stub.cpp
     src/mod/session2/guest_lifecycle.cpp src/mod/game/safe_memory.cpp src/mod/log.cpp)
 cdmp_strict(cdmp_tests_optd_pets)
 target_link_libraries(cdmp_tests_optd_pets PRIVATE cdmp_common safetyhook::safetyhook)
