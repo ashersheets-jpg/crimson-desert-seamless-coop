@@ -38,6 +38,12 @@ bool is_shop(uint32_t h) { return mul::is_shop_scene(h); }
 // The shop dialog entries: the host's own per NPC (host: collected from its client's 3086s; guest: from state 17).
 std::mutex g_dmu;
 std::unordered_map<uint32_t, std::vector<stl::Dialog>> g_dialogs;
+// dialog_redeliver (guest): the last 3086 payload this client got per NPC (as the host sent it), and the NPCs whose
+// host choices changed after it (under g_dmu).
+std::atomic<bool> g_redeliver{false};
+std::unordered_map<uint32_t, std::vector<uint8_t>> g_last_list;
+std::vector<uint32_t> g_redeliver_due;
+std::atomic<uint64_t> c_redelivered{0}, c_redeliver_marked{0};
 uint64_t g_dialogs_changed_ms = 0;
 std::atomic<uint64_t> c_dialog_frames_out{0}, c_dialog_frames_in{0}, c_dialog_rewritten{0};
 
@@ -60,6 +66,14 @@ void shop_twin_share_all(bool on) {
                  : "only the shop choices are shared");
 }
 
+void shop_twin_redeliver(bool on) {
+    g_redeliver = on;
+    if (on) {
+        log::info("ShopTwin [dialogs] dialog_redeliver=1: a dialog list this client already has gets the host's later "
+                  "choices too (given to the client again)");
+    }
+}
+
 void shop_twin_start(bool on, bool guest) {
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     g_on = on;
@@ -77,10 +91,32 @@ void shop_twin_on_host(std::vector<uint8_t>& packet, std::vector<std::vector<uin
         uint16_t op = 0;
         std::span<const uint8_t> pl;
         if (!stl::split(packet, op, pl)) return;
+        // dialog_redeliver: the lists whose host choices changed since the client got them, again, ahead of this packet.
+        if (g_redeliver.load(std::memory_order_relaxed)) {
+            std::lock_guard lk(g_dmu);
+            for (uint32_t npc : g_redeliver_due) {
+                const auto l = g_last_list.find(npc);
+                const auto d = g_dialogs.find(npc);
+                if (l == g_last_list.end() || d == g_dialogs.end()) continue;
+                if (auto t = stl::with_shop_dialogs(l->second, d->second)) {
+                    before.push_back(stl::frame(stl::kOpQuestDialogAck, *t));
+                    const uint64_t n = c_redelivered.fetch_add(1) + 1;
+                    if (n <= 20)
+                        log::info("ShopTwin [dialogs] NPC 0x{:08X}'s list given to this client again with the host's {} "
+                                  "choice(s) (first group 0x{:X} index 0x{:X}; re-deliveries {})",
+                                  npc, d->second.size(), d->second[0].group, d->second[0].index, n);
+                }
+            }
+            g_redeliver_due.clear();
+        }
         if (op == stl::kOpQuestDialogAck) {  // the host's shop choices for this NPC added to the guest's own list
             uint32_t npc = 0;
             std::vector<stl::Dialog> mine;
             if (!stl::dialogs_of(pl, npc, mine, g_share_all)) return;
+            if (g_redeliver.load(std::memory_order_relaxed)) {
+                std::lock_guard lk(g_dmu);
+                g_last_list[npc].assign(pl.begin(), pl.end());
+            }
             std::vector<stl::Dialog> host;
             {
                 std::lock_guard lk(g_dmu);
@@ -272,7 +308,17 @@ bool shop_twin_guest_on_control(std::span<const uint8_t> payload) {
     try {
         if (auto v = stl::parse_dialog_payload(payload)) {
             std::lock_guard lk(g_dmu);
-            for (auto& e : *v) g_dialogs[e.npc] = std::move(e.dialogs);
+            for (auto& e : *v) {
+                // dialog_redeliver: a list the client already has, whose host choices are new or changed.
+                if (g_redeliver.load(std::memory_order_relaxed) && g_last_list.count(e.npc)) {
+                    const auto old = g_dialogs.find(e.npc);
+                    if (old == g_dialogs.end() || old->second != e.dialogs) {
+                        g_redeliver_due.push_back(e.npc);
+                        c_redeliver_marked.fetch_add(1, std::memory_order_relaxed);
+                    }
+                }
+                g_dialogs[e.npc] = std::move(e.dialogs);
+            }
             if (c_dialog_frames_in.fetch_add(1) == 0)
                 log::info("ShopTwin [dialogs] first host frame: shop choices of {} NPC(s)", v->size());
         }
@@ -284,9 +330,12 @@ bool shop_twin_guest_on_control(std::span<const uint8_t> payload) {
 std::string shop_twin_describe() {
     std::lock_guard lk(g_mu);
     return std::format("ShopTwin ({}): live twins {} | prepared {} deleted {} | requests withheld {} (answered {}, "
-                       "branches {}, last branch {})",
+                       "branches {}, last branch {}) | dialogs: host frames out {} in {}, lists rewritten {}, given "
+                       "again {} (marked {})",
                        g_on ? "on" : "off", g_twins.size(), c_prepared.load(), c_deleted.load(), c_withheld.load(),
-                       c_answered.load(), c_branches.load(), g_last_branch.load());
+                       c_answered.load(), c_branches.load(), g_last_branch.load(), c_dialog_frames_out.load(),
+                       c_dialog_frames_in.load(), c_dialog_rewritten.load(), c_redelivered.load(),
+                       c_redeliver_marked.load());
 }
 
 }  // namespace cdmp::session2

@@ -343,6 +343,7 @@ Config load_config(const std::wstring& ini_path) {
     c.s2_test_greet = read_uint(ini_path, L"session2", L"test_greet", 0) != 0;
     c.s2_shop_twin = read_uint(ini_path, L"session2", L"shop_twin", 0) != 0;
     c.s2_dialog_share_all = read_uint(ini_path, L"session2", L"dialog_share_all", 0) != 0;
+    c.s2_dialog_redeliver = read_uint(ini_path, L"session2", L"dialog_redeliver", 0) != 0;
     c.s2_stage_candidate_guard = read_uint(ini_path, L"session2", L"stage_candidate_guard", 1) != 0;
     c.s2_anti_grief = read_uint(ini_path, L"session2", L"anti_grief", 0) != 0;
     c.s2_lootr_probe = read_uint(ini_path, L"session2", L"lootr_probe", 0) != 0;
