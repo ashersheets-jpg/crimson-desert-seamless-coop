@@ -35,6 +35,13 @@ topic BEFORE testing or guessing about it.
   into the game folder. Solo play recorded every packet to disk (no limit) in every posted build, and my own
   once-a-second request wrote two log lines a second; neither was found by a test.
 
+- A feature a document claims must be checked against what the release ini writes. ROADMAP said "time of day and
+  weather follow the host"; the base's clock push was off ([session2] user2_clock_push=0) in every posted build and
+  its game addresses were still 1.0.0.2976's after two ports (only its opcodes had moved). The friend's sky was 37
+  game minutes off (found by reading the HUD clock in two screenshots, 2026-11-15). When porting, port every
+  module's addresses or mark the module as unported in its header; when calling a row "works", grep the release
+  native ini text (native_mode_text.h) for its key.
+
 ## Explaining a result
 
 - Do not write an explanation as a fact until a test separates it from the alternatives. On 2026-11-11 the far-guest

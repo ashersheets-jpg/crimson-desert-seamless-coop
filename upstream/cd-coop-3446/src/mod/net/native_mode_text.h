@@ -103,7 +103,11 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
     }
     if (host) {
         for (const char* k : {"probe=1", "host_save=sandbox", "create_session=1", "accept_tunnel=1", "share_field=1",
-                              "relay_fix=1", "clock_gate=1", "identity_fix=1", "child_hold=1", "observer_hold=1",
+                              "relay_fix=1", "clock_gate=1",
+                              // 2026-11-15 (cs11a): the friend's time of day follows the host's world clock (a native
+                              // SetFieldTimeAck after each of its loads and when the host's clock is republished;
+                              // ported to 1.0.0.3663 that day: it was 37 game minutes off in cs8j)
+                              "user2_clock_push=1", "identity_fix=1", "child_hold=1", "observer_hold=1",
                               "observer_load_defer=1", "observer_hold_family=1", "observer_hold_acks=1",
                               "character_hold=1", "child_settle_ms=4000", "child_reannounce=1", "observer_seq_copy=1",
                               "observer_seq_copy_2322=1", "observer_milestone=1", "observer_milestone_send=1",

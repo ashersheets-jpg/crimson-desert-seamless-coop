@@ -7251,3 +7251,49 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   upload-staging into window.name, cleared after; File objects on the composer's input; a synthetic paste; Enter).
   No test was running. The OK: the owner's message of 2026-11-14 14:05. The next post needs the owner's OK again.
 - The owner plays their SOLO save now: no game test, install change or save access until they say so.
+
+## 2026-11-15 ~01:50: back to work (the owner finished their solo play: "you can continue working")
+
+- The game is still 1.0.0.3663 (exe 335 440 280 bytes, written 2026-11-13 02:24): no port needed. No game running.
+- cs10a (duplicate story NPCs): a New Co-op Save with the three native lines [coop] story_together=1 writes; both
+  players teleported to the cabin; each game logs the NPCs within 45 m twice (`npcs`): the same variant under two
+  keys = a doubled NPC. Runner: scratchpad cs10.sh, scripts build/native/scan/cs10_host.txt / cs10_guest.txt.
+- FOUND (from cs8j's screenshots): the friend's time of day lags the host's, ~37 game minutes (host 10:39 PM, guest
+  11:16 PM at about the same moment; the friend's join took 4.5 min there). The base has the fix, clock_push
+  (docs/research/noche/clima-hora.md, T1: a native SetFieldTimeAck after each of user 2's LoadingCompleteAcks; T2:
+  when the world clock is republished), but [session2] user2_clock_push is 0 in every build we posted, and its
+  globals were still 1.0.0.2976's (0x6A6D238 / 0x6A6D218): the 3663 port moved only its opcodes. Ported (native,
+  clock_push_logic.h): server clock 0x6F31C98 (= clock_gate.h kWorldTime), client clock 0x6F31C78 (exe+0xD04019C
+  SetFieldTime's store writes one or the other on a flag), world system 0x72451C0 (offsets.h), bias 0x7245468 (probe
+  only; the same value remote_motion.cpp was ported with). Not built yet (cs10a runs). Next: cs11a with
+  user2_clock_push=1 + clock_probe=1 on both; if the clocks agree, the layer writes user2_clock_push=1 in the release
+  native ini.
+- Still on 2976 addresses (survey; both off by default, [session2] combat_follow / weather_sync "0", and the layer
+  never writes them): combat_follow.cpp and weather_sync_logic.h (kClockBase 0x6C8CD68, kClockFrac 0x6C8CD70,
+  kClockBias 0x6D69438; remote_motion.cpp has the 3549+ values 0x71600E8 / 0x71600F0 / 0x7245468). Port before
+  turning either on.
+- cs10a (02:02-02:09, 0.1.0-alpha+2e5db87a binaries, the story lines on): both at the cabin, both prompts "Start
+  together". People (hp >= 40) within 45 m: the host 4, one each of variants C866 / C869 / C86A / C86C (keys
+  0xB0100069-6B, 0xB01000B9); the guest 1, variant C86B (0xB0100208). No variant twice on either game: NO DOUBLED
+  STORY NPC at the cabin step (one PC, two copies). But the guest's screenshot shows riders and comrades at the
+  cabin that its `npcs` list does not have (44 of 57 actors read): the layer's NPC reader does not see every actor on
+  the guest, so the two lists cannot be compared one to one. Left for when a later story step's scene runs.
+  The clocks again: guest 11:11 PM, host 10:40 PM, with the host shot taken after the guest one.
+- Native built with the clock port (cdmp.asi 02:10). optd_clock_push: 3 fails were the test still expecting 2976's
+  opcode 2816; now ckp::kOpSetFieldTimeAck (3145): all pass. Four unit tests (child_hold, s3, character_hold, pets)
+  no longer LINKED since the ready check (observer_hold_acks.cpp calls story_gate_*): tests/story_gate_off_stub.cpp
+  (every story answer "no", as story_gate=0) added to those four targets; to build after cs11a.
+- cs11a running: a Continue, user2_clock_push=1 + clock_probe=1 on both.
+- cs11a (02:13-02:21, Continue; native with the ported clock_push; user2_clock_push=1 + clock_probe=1 on both):
+  THE FRIEND'S CLOCK FOLLOWS THE HOST'S. The probe reads sane clocks at the new addresses. T1 pushed twice (after
+  each of the guest's LoadingCompleteAcks: "2816 for 0xA0100066 QUEUED", world clock day 27 10:11:32.388 x12
+  @112726). From 02:15:12 on the host's client clock, the host's server clock and the guest's client clock have the
+  same t0 (2368139676 ms): difference 0 (criterion in clima-hora.md 9.5: <= 2000 ms). HUD screenshots 1 s apart:
+  both "Day 27 Sat 11:01 AM". SAVES OK, 5/5. (The push's start line still printed 2976's opcodes 2190 / 2952 / 00 0B:
+  text only, now from the constants.)
+  Not the same yet: the WEATHER (guest icon cloud, host sun at the same second): each client simulates its own;
+  the base's research (clima-hora.md 9.6, W2) has no sync for it. Separate task.
+- The layer now writes user2_clock_push=1 for the host (native_mode_text.h, beside clock_gate=1). Native built
+  (ctest: 63/93 pass, 30 fail = the known fixtures still on 2976 opcodes, 33 listed before; optd_clock_push and
+  optd_child_hold pass), layer built (cdmp_tests: all pass). cs11b: the new layer, no override (an extra
+  user2_clock_push=probe, which the default line written first must win over).
