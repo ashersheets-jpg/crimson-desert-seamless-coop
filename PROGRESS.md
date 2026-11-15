@@ -7382,3 +7382,38 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   +0x60..+0xF0 Lerp, +0xF0/+0xF4 Raw; C after its own compare; X+0x13C/+0x140 Accum; [X+0x100]+0x1C0/+0x1C4 Lerp),
   the hook on 0x4143B20's entry (20-byte head, no caller check), the clock constants of remote_motion.cpp. Then
   weather_sync=probe on both (the vectors' host-guest difference), then =1 (the guest's sky = the host's).
+- weather_sync PORTED to 1.0.0.3663 (native 97632b3, 2318f79): the constants above; the vector 55 words (A 15: +4
+  from 0x13C; B 36: +4; C = the holder's wind direction +0x198/+0x19C; X scroll +0x13C/+0x140), wire version 2, the
+  hook on 0x4143B20's entry (20-byte head, no caller check), remote_motion's clock constants, the build check now
+  1.0.0.3663's PE stamp. optd_weather_sync migrated (all pass).
+  * cs16a: weather_sync refused (its build check still wanted 2976; the base's unported modules compare against
+    kPeTimestampUnported, a good guard: the clock push had none, which is how it ran on 2976 addresses). Fixed.
+  * cs16b (03:55-04:14, probe on both): X / vtable / holder / blocks read on both games, server tick readable, sane
+    values, no fault. In the world the two vectors differ as their skies did: cloudiness host 0.85 / guest 0.50,
+    windSpeed 2.59 / 2.00, fog height 1511 / 2000, cloud layers. The scroll accumulators grow. The wind direction
+    read (0, 0) at [X+0x100]+0x1C0/+0x1C4: wrong object; 0x4143CAA sets r8 = holder - 0x28 before the scroll, so it
+    is the holder's +0x198/+0x19C. Fixed.
+  * The clock push and ClockProbe now refuse another game build too (PE stamp), so a game patch switches them off.
+  * cs16c running: weather_sync=1 on both (the guest in viewer mode with the host's values).
+  * cs16c (04:17-04:26, weather_sync=1 both): the host sent NOTHING: its sanity check refused every sample (the
+    wind word at holder+0x198 was garbage, -3.9e29). The update's code says why: rdi = [holder+0x20] = A (0x4143B8E),
+    r8 = A - 0x28, so the wind direction is A+0x198 / +0x19C (2976 A+0x190 / +0x194: +8, like the local sample right
+    after it). Fixed (native 2db8480); block C carries no field on 3663.
+  * cs16d (04:29-04:37): the host sent 1605 sane samples, the guest received 1604 (none bad), but applied 0 frames:
+    "hook NOT in, gate: the local player is not in the world". The world check is the base's game::PlayerReader,
+    which fails on 3663 at "physics object missing" (every 5 s in every log: "Local: unavailable (physics object
+    missing)"): offsets.h kVtPhysicsObject 0x5D00F88 was never ported (not a vtable on 3663; kept through the 3576
+    and 3663 ports). So the base's PlayerReader has failed since 3576, and every module that waits for it never
+    started: weather_sync, tree_bend, docked_gimmicks, remote_rope, catch_seq, rope_probe (all off by default and
+    not written by the layer), local_capture's synthetic moves (the old copy-based co-op), the dev F9/F6 loops.
+    ui_pause has its own world test (no physics hop): not affected.
+  * cs16e: PlayerReader logs the real vtable once on a mismatch: exe+0x614A050 on both games (no RTTI; my first
+    guess, .?AVPhysics@ClientCharacterControlActorComponent 0x59D4450, was wrong). Set. cs16f checks the reader
+    (position / rotation sane) and the mirror. The next full checklist pass must cover the reader change.
+  * cs16f (04:54-05:03, weather_sync=1 both, PlayerReader fixed): THE FRIEND'S WEATHER FOLLOWS THE HOST'S. The
+    reader works on both games ("Local: pos ... check vs game global 0.05 m"). Host: 1585 samples sent, 0 refused.
+    Guest: "mirror: hook in, gate apply", viewer X+0x31 = 1, 13349 frames applied (374 stale, 0 bad), no fault;
+    its cloudiness 0.600 and windSpeed 2.62 = the host's. Screenshots 1 s apart (cs16f-g1 / -h1): the same light and
+    shadows, both HUDs "Day 27 Sat 10:59 / 11:00 AM" with the SAME weather icon (a cloud; before: cloud vs sun).
+    One PC, two copies, Continue; not tried: rain (none fell in any run), a New Co-op Save, the host travelling.
+  * The layer now writes weather_sync=1 for both players (native_mode_text.h). cs16g checks the defaults alone.

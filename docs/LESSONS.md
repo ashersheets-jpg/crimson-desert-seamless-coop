@@ -42,6 +42,12 @@ topic BEFORE testing or guessing about it.
   module's addresses or mark the module as unported in its header; when calling a row "works", grep the release
   native ini text (native_mode_text.h) for its key.
 
+- A port is not done until every vtable the code checks has been re-read on the new build. The base's PlayerReader
+  checked the physics object against 2976's vtable through the 3576 and 3663 ports, so it failed every read
+  ("Local: unavailable (physics object missing)" every 5 s in EVERY log for days, never questioned) and every
+  module waiting for it never started. A repeated "unavailable" line is a finding: read it. A vtable can be read
+  live (log [object] once on a mismatch) or found by its RTTI name (scratchpad vt3663.py).
+
 ## Explaining a result
 
 - Do not write an explanation as a fact until a test separates it from the alternatives. On 2026-11-11 the far-guest
