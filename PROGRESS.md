@@ -7423,3 +7423,10 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     Its ERR lines (User2Stages D/S/F refused, GuestXVeto, GuestS3 first-chance AV, save redirect copy) are all in
     pp18's logs too (known). SAVES OK, 5/5.
 - Next: package this batch (clock push, weather mirror, PlayerReader) and run the whole checklist (pp19).
+
+## pp19 on 0.1.0-alpha+e9c00342 (2026-11-15 ~05:25; the clock push, the weather mirror, the base's PlayerReader)
+- Packaged from outer e9c0034 (both DLLs = the harness's build outputs, sha256 614b65ef / 1952dd42). Batch A started
+  ~05:25 (static real fresh solostart newsave mounts xess fsr display). NO builds until pp19 ends: the harness deploys
+  the build folders' DLLs (prepost.sh static checks they equal the package's).
+- Written meanwhile, NOT built: [session2] dialog_redeliver (guest, default 0; native) and the layer's native_extra
+  split on ',' or '+' (so -GuestDev can pass two native keys). cs17 (scratchpad cs17.sh) tests them after pp19.

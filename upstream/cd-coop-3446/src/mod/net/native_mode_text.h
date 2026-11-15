@@ -156,7 +156,7 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
         }
         // dev (research runs): extra keys (only keys the defaults do not write: an ini reader takes the first one).
         for (size_t at = 0; at < s.extra.size();) {
-            size_t comma = s.extra.find(',', at);
+            size_t comma = s.extra.find_first_of(",+", at);  // ',' or '+' (the harness's -GuestDev splits on ',')
             if (comma == std::string::npos) comma = s.extra.size();
             const std::string kv = s.extra.substr(at, comma - at);
             if (kv.find('=') != std::string::npos) line(kv.c_str());
@@ -178,7 +178,7 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
         }
         // dev (research runs): the guest's extra keys, as the host's above.
         for (size_t at = 0; at < s.extra.size();) {
-            size_t comma = s.extra.find(',', at);
+            size_t comma = s.extra.find_first_of(",+", at);  // ',' or '+' (the harness's -GuestDev splits on ',')
             if (comma == std::string::npos) comma = s.extra.size();
             const std::string kv = s.extra.substr(at, comma - at);
             if (kv.find('=') != std::string::npos) line(kv.c_str());
