@@ -26,7 +26,11 @@ inline constexpr uintptr_t kVtClientActorManager = 0x59C2760;
 inline constexpr uintptr_t kVtControlledActor = 0x5990BF0;  // ClientChildOnlyInGameActor
 inline constexpr uintptr_t kVtCharacterControl = 0x59C1660;
 inline constexpr uintptr_t kVtStatusComponent = 0x5998B60;
-inline constexpr uintptr_t kVtPhysicsObject = 0x5D00F88;
+// Co-op+ 2026-11-15: 0x5D00F88 (kept through the 3576 and 3663 ports) is no vtable on 3663, so read() always failed
+// with "physics object missing". Read live on both games (cs16e, PlayerReader's one-time line): the object at
+// [inner+0x2D0] has vtable 0x614A050 (no RTTI: an engine class). Not .?AVPhysics@ClientCharacterControlActorComponent
+// (0x59D4450), the first guess.
+inline constexpr uintptr_t kVtPhysicsObject = 0x614A050;
 
 // WorldSystem
 inline constexpr uint32_t kWorldSystem_ActorManager = 0x30;
