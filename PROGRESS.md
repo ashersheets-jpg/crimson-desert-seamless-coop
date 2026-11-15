@@ -7237,3 +7237,17 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - The owner (23:00) adopted three checklist rules (docs/tests/RELEASE-CHECKLIST.md "How a pass is run"): finish a pass
   past failures; test-kit-only fixes re-run the affected steps + a smoke set; post less often.
 - The owner will play their SOLO save after this post: no game test, install change or save access until they say so.
+- Batch C: mountfight 45/0, nosave 7/0, retry 45/0, stuck 49/0, mismatch 9/0, hostrevive 49/0; SAVES OK and 5/5 on
+  every step. ALL 23 STEPS PASS on 0.1.0-alpha+2e5db87a (xess on its second run, after the warning list entry).
+
+### POSTED 2026-11-15 00:13: 0.1.0-alpha+2e5db87a in #download-here (game 1.0.0.3663)
+
+- Message 1571392681253281812 (05:13:30 UTC): the text (1987 characters, download-2e5db87a.txt) and both zips, shown
+  as 12.04 MB and 6.57 MB = 12 628 304 / 6 884 741 bytes (the staged copies' sha256 ade5d931... / f2e55459...,
+  identical to dist\; the CDN copies could not be hashed from the page: CORS). The #bug-reports mention resolved.
+- Before posting: #bug-reports (nothing since 11-07), #play-testing-feedback (nothing since Yagiisama 2026-11-13
+  18:22 UTC) and #general (a version question, answered by another player) read.
+- How: as before (the app's browser pane, signed in, no sign-in asked; the zips through the loopback page
+  upload-staging into window.name, cleared after; File objects on the composer's input; a synthetic paste; Enter).
+  No test was running. The OK: the owner's message of 2026-11-14 14:05. The next post needs the owner's OK again.
+- The owner plays their SOLO save now: no game test, install change or save access until they say so.

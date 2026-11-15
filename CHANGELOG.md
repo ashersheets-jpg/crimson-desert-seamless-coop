@@ -5,7 +5,7 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-NOT POSTED YET (next build; it needs the whole checklist on its exact package and the owner's OK to post):
+Posted 2026-11-15 00:13 as 0.1.0-alpha+2e5db87a, for game 1.0.0.3663 (checklist pp18: all 23 steps, one PC):
 - **Story scenes together (experimental, off by default; Co-op Settings, host)**: each player gets their own story
   scenes and steps, and a story scene waits until both players are there. When one of you reaches a story trigger,
   both screens say so: the friend can hold Interact to go to you, and once you are both there each holds Interact to
