@@ -40,7 +40,9 @@ constexpr uint32_t kTickMs = 200;           // the worker: 5 Hz
 constexpr uint64_t kProbeEveryMs = 5000;
 constexpr uint64_t kMinuteMs = 60000;
 constexpr size_t kMaxBacklog = 256 * 1024;  // the host does not add weather to a tunnel this far behind
-constexpr uint64_t kChangeLines = 200, kTargetLines = 300, kEventLines = 400;
+// kTargetLines / kTargetStep: pp19 farfight2 logged every 0.2 s of a cloud ramp (39 lines a minute).
+constexpr uint64_t kChangeLines = 200, kTargetLines = 40, kEventLines = 400;
+constexpr float kTargetStep = 0.05f;  // a target is logged when a value moved this far from the last logged one
 
 std::atomic<uint8_t> g_mode{0};  // wsy::Mode, written once by weather_sync_start (before the thread)
 std::atomic<bool> g_started{false};
@@ -834,6 +836,7 @@ struct Last {
     uintptr_t xa = 0, xb = 0, holder = 0, a = 0, b = 0, c = 0;
     bool any = false;
     float target[3] = {};
+    float logged[3] = {};  // the last target that was logged
     bool have_target = false;
 };
 
@@ -901,14 +904,16 @@ DWORD WINAPI worker_thread(LPVOID) {
             // The targets (P0-d: the 60 s grid). On a guest in viewer mode they are ours: not logged then.
             if (r.snap.mask & wsy::kHasA) {
                 const float t3[3] = {r.snap.f(wsy::kIdxPrecip), r.snap.f(wsy::kIdxCloud), r.snap.f(wsy::kIdxHumid)};
+                if (!last.have_target) std::copy(std::begin(t3), std::end(t3), last.logged);
                 if (last.have_target && !g_applying.load(std::memory_order_relaxed) &&
-                    (std::fabs(t3[0] - last.target[0]) > 1e-6f || std::fabs(t3[1] - last.target[1]) > 1e-6f ||
-                     std::fabs(t3[2] - last.target[2]) > 1e-6f) &&
+                    (std::fabs(t3[0] - last.logged[0]) >= kTargetStep || std::fabs(t3[1] - last.logged[1]) >= kTargetStep ||
+                     std::fabs(t3[2] - last.logged[2]) >= kTargetStep) &&
                     target_lines++ < kTargetLines) {
                     log::info("WeatherSync [{} {}]: target changed: precipitation {:.4f} -> {:.4f} cloudiness {:.4f} -> "
                               "{:.4f} humidity {:.4f} -> {:.4f} | tick {} (%60000 = {})",
-                              wsy::mode_name(m), role(), last.target[0], t3[0], last.target[1], t3[1], last.target[2],
+                              wsy::mode_name(m), role(), last.logged[0], t3[0], last.logged[1], t3[1], last.logged[2],
                               t3[2], r.tick, tmod);
+                    std::copy(std::begin(t3), std::end(t3), last.logged);
                 }
                 std::copy(std::begin(t3), std::end(t3), last.target);
                 last.have_target = true;
