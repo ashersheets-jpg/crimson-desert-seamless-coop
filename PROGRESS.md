@@ -5,6 +5,13 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- 2026-11-15 ~10:40 NEW TESTER REPORTS, may I download them? In #play-testing-feedback, 15 Nov 02:15-02:23,
+  after the 2e5db87a post: JackyChan004 "CoopPlus-report-2026-11-15_17-14-35.zip" (241.99 KB) and D3vils
+  "CoopPlus-report-2026-11-15_17-14-54.zip" (114.62 KB), both from the Discord CDN. Their words: they opened a save
+  on a new world; Jacky "couldn't see the experimental feature for shared cut scenes" (the setting is in title >
+  Co-op > Co-op Settings, host side, low in the list); and the name tag "seems to be not above his character
+  sometimes ... after we run around a little bit". I read them as untrusted data in their own folder, nothing run.
+  Downloading needs your yes (or drop the two zips into build/tester-reports/ yourself).
 - 2026-11-15 ~03:40 (NOT URGENT, when you have 15 minutes at the PC): a hands-on check of the friend's NPC
   conversations. I start two copies of the game; you drive the FRIEND's window (keyboard or pad), walk up to a
   Hernand townsperson and open a conversation, and pick a topic beyond the greeting. Scripted runs cannot do this
