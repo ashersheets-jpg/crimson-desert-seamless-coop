@@ -7297,3 +7297,43 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   (ctest: 63/93 pass, 30 fail = the known fixtures still on 2976 opcodes, 33 listed before; optd_clock_push and
   optd_child_hold pass), layer built (cdmp_tests: all pass). cs11b: the new layer, no override (an extra
   user2_clock_push=probe, which the default line written first must win over).
+- Committed: native 0b41e3d (clock port, test stub), outer 5e795d8 + native-base sync 8764bde; pushed.
+- The friend's WEATHER (research, ~40 min, time-boxed; nothing built): the base's weather_sync (the guest's scene
+  weather system in the game's "Weather Viewer" mode, fed the host's values: docs/research/noche/clima-sincronizar.md;
+  passed its one-PC selftest on 2976, never tried with two players) is still all 2976 addresses. Found on 1.0.0.3663:
+  WeatherSimulatorScriptComponent vtable 0x5A63EB0 (RTTI .?AVWeatherSimulatorScriptComponent@scriptComponent@pa@@),
+  its update vf7 0xE9ECB0 (2976 0xCDCA40): `mov rcx,[exe+0x7160240]; call [[rcx]+0x60]; mov rdx,[rax+0xF70]; cmp
+  byte [rdx+0x31],0; jne` -> module slot 0x7160240 (2976 0x6C8CEC8), X at scene+0xF70 (was +0xF68), viewer flag
+  X+0x31 unchanged. The mixer (2976 0x3DC0340) is 0x413F780 (`cmp byte [rcx+0x31],0; jne` at +0x40); X getters
+  0x4142CC0 / D70 / E20 / EB0. NOT found: X's update (2976 0x3DC4730, the hook point): the 18-byte head is not in
+  3663, nothing calls or points at the mixer from plain code (so the update is in protected code), and the
+  candidates by layout (0x4143990, 0x4144230) are other functions. Next way in: a one-shot stack capture inside the
+  mixer (0x413F7C0) on a running game for its caller's return address. Weather is its own task (shared world row).
+- cs11b (02:27-02:35, the new layer; no push override, an extra user2_clock_push=probe written after the default):
+  "Session2 clock push ON (user2_clock_push=1)" (the layer's default line wins; the start line now prints 2891 /
+  3145), the guest's client clock = the host's server clock (t0 2368080516 ms on both, day 27 10:11:24 x12). SAVES OK,
+  5/5. The friend's time of day: WORKS (Continue, one PC, two copies; New Co-op Save not tried yet: the checklist's
+  newsave step will run on it).
+- [session2] where_probe=<hex rva>:<hex bytes> (native, research, read only; story_gate.cpp where_probe_start): a mid
+  hook that logs the caller chain of its first 6 hits. cs12a: on the weather mixer exe+0x413F7C0, both games.
+- cs12a: the probe REFUSED to hook (my byte string missed a 00: the bytes check did its job); the guest never starts
+  it (wired in the host's start-up only). cs12b repeats with 807931000F858D050000.
+- Weather layout on 3663 from the rain getter 0x4142CC0 (2976 0x3DC3A10): holder [X+0x60]; block A = [holder+0x20]
+  (2976 +0x18), the non-viewer path reads [holder+0x28] (B; 2976 +0x20) and [X+0x100]; viewer mode returns A+0x170
+  raw (2976 A+0x16C). So the blocks moved by 8 and A's fields by +4 at least from 0x16C: every field of the
+  weather vector (weather_sync_logic.h kFields, 2976 offsets) has to be re-derived before weather_sync can be
+  turned on. Getter 0x4142E20 reads A+0x1AC + A+0x138 (viewer) / A+0x15C... (not mapped yet).
+- cs12b: where_probe hooked the mixer (X = 0x3694D5B0000, called on 3 threads) but RtlVirtualUnwind gave garbage
+  (no usable unwind data there). where_probe now also scans the stack (qwords right after a call into the exe).
+- cs12c (02:54): the stack scan, the same chain on every hit and thread: past the mixer's own frame (~0x1C0) the first
+  return address is exe+0x4143B79, inside X'S UPDATE = exe+0x4143B20 (2976 0x3DC4730; mixer + 0x43F0 as on 2976).
+  Its code is 2976's: `mov rax,rsp; push rbx,rbp,rsi,rdi,r12,r14,r15; sub rsp,0x90; ...; vmovaps xmm10,xmm1` (dt),
+  X in rcx, `cmp [rcx+0x31],bpl; je` -> `call` the precipitation derive with [X+0x60]-0x28 (the holder-0x28 trick of
+  2976), then `call` the mixer 0x413F780. Head (20 B, whole instructions at 3,4,5,6,7,9,11,13,20):
+  48 8B C4 53 55 56 57 41 54 41 56 41 57 48 81 EC 90 00 00 00. Nothing in plain code calls it (protected callers),
+  so the port hooks the entry and drops 2976's caller check (kUpdateCall).
+- Weather port, what is left (estimate 4-8 h): re-derive the weather vector's fields (weather_sync_logic.h kFields,
+  ~60 floats of blocks A/B/C, 2976 offsets; on 3663 the blocks are at holder+0x20/+0x28/(+0x30?) and A's fields
+  moved +4 from 0x16C, the local sample +8), the X vtable and the second X path (kClientSlot) for the probe, the
+  clock constants (remote_motion's 3549+ values), then weather_sync=probe on both games, then =1. Parked for now:
+  next is a foundation row with less unknown work.
