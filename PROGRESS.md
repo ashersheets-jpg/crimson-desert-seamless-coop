@@ -7443,3 +7443,14 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   the guest's weather mirror ran in each step (mounts / fresh / solostart: "WeatherSync ON (weather_sync=1, guest)",
   hook in, 9800 / 7019 / 7289 frames applied, no fault) and the base's reader works on the guest ("Local: pos ...").
   Batch B (lowsave chest revive loot crime farfight farfight2) started 06:21.
+- pp19 batch B (06:21-07:24): lowsave 46/0, chest 45/0, revive 47/0, loot 46/0, crime 43/0, farfight 44/1, farfight2
+  43/1 = 314 pass, 2 fail; SAVES OK and 5/5 on every step. The 2 failures:
+  * farfight: "the guest killed at least one enemy far from the host" (kills guest 0). The camp downed the guest
+    first (shot 38b: "Death has found you", our revive screen standing in, 07:12:41); every NPC was still 63/63.
+    pp18 had guest 2 kills on the same script. A COMBAT OUTCOME, not a mod fault: re-run farfight after the pass.
+  * farfight2: "host native: one line repeats 39 times a minute: WeatherSync target changed". REAL: the host logged
+    every 0.2 s step of a cloud ramp (0.5005 -> 0.5006 ...), the 300-line cap in every step (150-300 lines a test).
+    Fixed in native d589c4f (NOT BUILT): logged only when a value moved 0.05 from the last LOGGED target, at most 40.
+    This needs a new package, so e9c00342 cannot be posted as is; pp20 on the next package (with dialog_redeliver
+    and the '+' split) after cs17 / cs18.
+  Batch C (mountfight nosave retry stuck mismatch hostrevive) started 07:26.
