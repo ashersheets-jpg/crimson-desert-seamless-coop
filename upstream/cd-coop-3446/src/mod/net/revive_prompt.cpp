@@ -113,6 +113,8 @@ constexpr float kArrivedM = 3.0f;
 std::mutex g_hop_mutex;
 std::optional<std::array<float, 3>> g_hop_target;  // newly asked
 std::optional<std::array<float, 3>> g_hop_goal;    // in progress
+std::atomic<float> g_arrive_next{kArrivedM};  // the next request's "arrived" radius (revive_teleport_to)
+float g_arrive_m = kArrivedM;                 // the one in progress (network loop only)
 std::array<float, 3> g_hop_last{};                 // where we were at the last hop
 int g_hop_fails = 0;
 uint32_t g_hop_at = 0;
@@ -203,6 +205,7 @@ void hop_tick(uint32_t now_ms) {
         if (g_hop_target) {
             g_hop_goal = g_hop_target;
             g_hop_target.reset();
+            g_arrive_m = g_arrive_next.exchange(kArrivedM);
             g_hop_fails = 0;
             g_hop_at = now_ms;
             g_hop_last = {1e9f, 0.0f, 1e9f};
@@ -303,7 +306,7 @@ void hop_tick(uint32_t now_ms) {
         }
         if (left > kFarM) log::info("Teleport: {:.0f} m in hops (the field is not known{})", left, key ? ", or the request was not sent" : "");
     }
-    if (left <= kArrivedM) {
+    if (left <= g_arrive_m) {
         log::info("Teleport: arrived ({:.0f}, {:.0f})", at->x, at->z);
         if (g_far_used) {
             g_confirm_goal = goal;
@@ -538,8 +541,9 @@ void revive_set_field_key(uint32_t key) {
 }
 uint32_t revive_own_field_key() { return own_field_key(); }
 
-bool revive_teleport_to(float x, float y, float z) {
+bool revive_teleport_to(float x, float y, float z, float arrive_m) {
     if (!capture_own_player_key()) return false;
+    g_arrive_next.store(arrive_m > 0.1f ? arrive_m : kArrivedM);
     request_move(x, y, z);
     return true;
 }

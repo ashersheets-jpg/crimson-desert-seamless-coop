@@ -7204,3 +7204,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   as the world appears (E = interact). Fix: mod.cpp tells coop_worlds when the local reader goes from "no controlled
   actor" to anything else ("control inner missing" comes within 1.5 s of the login, on both games); the press loops
   stop there (measured from the loop's own start). pp16 stops: new package, pp17 = the whole checklist.
+
+## pp17 on 0.1.0-alpha+080f8174 (2026-11-14 20:15)
+- solostart 47/0, newsave 96/0, static 12/0, real 13/0, fresh 41/0; the guest's Play now takes on the FIRST press
+  (newsave 6: the host holds the login until its new game's first save, by design).
+- mounts 44/1: the host's three E did nothing at all. Its tphorse "arrived" without moving: the teleport's arrival
+  radius is 3 m (right for a revive) and it stood 2.98 m from the spot beside the horse, 3.7 m from the horse (out of
+  Ride's reach). Fix (test kit): revive_teleport_to takes an arrival radius; tphorse / tpactor use 0.8 m. New
+  package: pp18 = the whole checklist.

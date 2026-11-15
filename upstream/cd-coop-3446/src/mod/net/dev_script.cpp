@@ -731,7 +731,7 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                         continue;
                     }
                 }
-                if (at) revive_teleport_to(at->x + 1.0f, at->y + 0.5f, at->z);
+                if (at) revive_teleport_to(at->x + 1.0f, at->y + 0.5f, at->z, 0.8f);  // right beside it (pp17)
                 log::info("Dev script: teleport beside actor 0x{:08X}: {}", key,
                           at ? std::format("({:.1f}, {:.1f}, {:.1f})", at->x, at->y, at->z) : std::string("NOT loaded"));
             } else if (st.kind == Step::Teleport) {
