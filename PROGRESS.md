@@ -7475,5 +7475,29 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   player's wheel OFFERS Blackstar (shots g1 / g2: the character wheel with Kliff and Damiane, the dragon bottom left,
   the horse bottom). Both alive, SAVES OK, 5/5. B05 asks more: the other player sees the mount and its rider.
 - Test kit (layer, 08:45): the dev script's "pad <hex> <ms> [rx ry]" can hold the right stick at any position (the
-  simulated pad had only "straight down", bit 0x0400). cdmp_tests pass. cs18b (08:47): the guest calls Blackstar
-  (Up + stick down-left, twice), shots of both sides.
+  simulated pad had only "straight down", bit 0x0400). cdmp_tests pass. cs18b (08:42-08:49): the guest calls Blackstar
+  (Up + stick down-left): THE JOINED PLAYER FLIES BLACKSTAR in the shared world (shots g0 / g2: riding it over the
+  Nas River, prompts Fireball / Fire Breath / Aim / Land / Dismount). The host was 95 m away facing a cliff, so what
+  the host sees is not shown; its log has only NPC riders' MountSync lines. cs18c (08:52-09:00): the two players
+  START 1 m apart in that world (Local pos guest (-10348.5, -3919.6), host (-10349.5, -3919.6); the host's
+  RemoteInterp: the guest's character visible, alpha 1.00). After the call the dragon carried the guest away
+  (50 m at +10 s, 100 m at +25 s, up to y 581). The host's shots came 40 s late: the -HostKeys timeline runs
+  AFTER the -GuestKeys one, and the guest's starts ~20 s after the dev script. cs18d (09:03-09:09): shot g0 = the
+  guest climbing onto Blackstar (the dragon landed beside it, wings up). On the host the guest's character
+  0xA0100066 FOLLOWS it into the air (RemoteInterp: local (-314, 583.6, -3.6) sector (-10,-4) = the guest's own
+  (-10314, 580, -4003), hovering; visible, alpha 1.00). The host's camera faced away (a cliff) in all 12 shots.
+  Whether the host draws the DRAGON under it is the open part. cs18e (09:13): the host also gets pad_sim and
+  sweeps its camera (right stick pushes, "pad 0000 300 16000 0") with a shot every 2 s. (A dev "wait" over 10 s
+  seems cut to 10 s: "wait 25000" called at +10 s.)
+- cs18e (09:12-09:21): the host's pad_sim camera sweep works but turned only ~90 deg in 26 pushes of 300 ms at half
+  stick; no dragon in frame (shots/cs18e-sheet.png). By the logged positions the hovering guest is ~91 m away,
+  ~45 m up (about 26 deg above the horizon) and ~40 deg off the host's facing: above the frame's top edge.
+  cs18f (09:24): the camera tilted up first (stick up 500 ms), then 26 full-stick pushes of 600 ms.
+- cs18f (09:24-09:32): the sweep went round ~2.5 times looking up (shots/cs18f-sheet.png); 11 shots were taken while
+  the guest hovered ~88 m away, 26 m up. No dragon and no rider in any of them (the specks are leaves and the sun).
+  Not proof (960-px shots, 60 deg between shots), but a 15 m dragon at 88 m would fill ~10 deg. LOGS: Blackstar is
+  actor 0xB0100068 (type 5, owner user 2; the guest mounts it through interactions 0xF42E8 / 0xF42C3 on 2663 /
+  2916, not the vehicle vf53 path). The host's server holds it ("child hold: held 0xB0100068 ... released after
+  469 ms after StartActionReq"). The host's CLIENT logs no mount of 0xA0100066 at all.
+  cs18g (09:33): the host lists 0xB actors within 200 m (npcs) and teleports beside 0xB0100068 (tpactor) with a
+  shot every 1 s: is the dragon loaded on the host, where, and drawn?
