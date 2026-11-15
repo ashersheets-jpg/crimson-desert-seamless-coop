@@ -7533,3 +7533,12 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   only). Both package tests pass. The whole checklist, all 23 steps in one run, started ~10:15. NO builds until it ends.
 - Post draft: docs/release/shared-world-playtest/download-f5100d87.txt (1711 characters; adds the checked Blackstar
   line). NOT posted: needs the whole checklist and the owner's OK.
+- Discord read 10:35 (reading only): #bug-reports nothing new since 11-07; #play-testing-feedback has two NEW report
+  zips (JackyChan004, D3vils, 15 Nov 02:15-02:23): see Waiting on the user (download needs the owner's yes).
+- Jacky's name-tag point, from the code (layer render/hud.cpp): the tag was drawn at the friend's last NETWORK
+  position (latest state sample), while the game draws the friend's character through its own remote movement ~200 ms
+  behind (RemoteInterp "game delay 200 ms"). At a run (~6 m/s) the tag leads the body by 1-2 m and jumps per update.
+  Written, NOT BUILT (pp20 running): in the shared world the HUD takes the friend's DRAWN position from its actor
+  (fixed keys: host 0xA0100001, guest 0xA0100066, as coop_give.cpp) when readable and within 25 m of the network
+  position; else the network one. Name tag, chest marker, distance and duel medal all use it. To test after pp20:
+  shots of the tag over a running friend, before / after.

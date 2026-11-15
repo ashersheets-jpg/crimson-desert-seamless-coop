@@ -14,6 +14,7 @@
 
 #include "common/math3d.h"
 #include "common/nameplate.h"
+#include "mod/game/actor_lookup.h"
 #include "mod/game/camera_reader.h"
 #include "mod/game/ui_state.h"
 #include "mod/log.h"
@@ -292,9 +293,24 @@ void hud_draw(float width, float height) {
         cam_world = cam_is_local ? math::add(cam->position, d.local->chunk_origin) : cam->position;
     }
 
+    // The friend's position for the name tag and the markers. Shared world: where the game DRAWS the friend's
+    // character (its actor, fixed key: host 0xA0100001, guest 0xA0100066), which runs ~200 ms behind the network
+    // samples; the network position leads it by 1-2 m at a run (tester report 2026-11-15: "the name tag ... not above
+    // his character sometimes"). Anything odd (not loaded, over 25 m from the network position): the network one.
+    proto::Vec3 partner_at{};
+    if (d.remote) {
+        partner_at = d.remote->pos;
+        if constexpr (kNativeLayer) {
+            const uint32_t key = d.we_host ? 0xA0100066u : 0xA0100001u;
+            if (const auto drawn = game::actor_world_position(key)) {
+                if (math::length(math::sub(*drawn, d.remote->pos)) < 25.0f) partner_at = *drawn;
+            }
+        }
+    }
+
     // ---- status panel
     float remote_distance = 0;
-    if (d.remote && d.local) remote_distance = math::length(math::sub(d.remote->pos, d.local->position));
+    if (d.remote && d.local) remote_distance = math::length(math::sub(partner_at, d.local->position));
     // The Co-op page goes on top of everything, whichever way this function ends.
     struct PageLast {
         float w, h;
@@ -599,7 +615,7 @@ void hud_draw(float width, float height) {
     if (d.remote && plates_visible && !d.hide_partner && nameplate::alpha(remote_distance) > 0.0f) {
         // A downed friend lies on the ground (dp3, 2026-11-11: the name floated at standing head height over a body).
         const bool friend_down = d.remote->health_max > 0 && d.remote->health <= 0;
-        const proto::Vec3 head{d.remote->pos.x, d.remote->pos.y + (friend_down ? 0.75f : kHeadHeight), d.remote->pos.z};
+        const proto::Vec3 head{partner_at.x, partner_at.y + (friend_down ? 0.75f : kHeadHeight), partner_at.z};
         if (auto p = game::project(*cam, *cam_world, head, width, height)) {
             draw_remote_marker(dl, *p, d, remote_distance);
         }
@@ -635,7 +651,7 @@ void hud_draw(float width, float height) {
         const int story_now = net::story_shown();
         const bool story_first = story_now == 1 || story_now == 2;
         if (!story_first && !menu_open && !we_are_down && d.remote && !d.hide_partner && remote_distance <= 3.0f) {
-            const proto::Vec3 chest{d.remote->pos.x, d.remote->pos.y + 1.1f, d.remote->pos.z};
+            const proto::Vec3 chest{partner_at.x, partner_at.y + 1.1f, partner_at.z};
             if (auto p = game::project(*cam, *cam_world, chest, width, height)) {
                 if (std::fabs(p->x - width * 0.5f) < width * 0.22f && std::fabs(p->y - height * 0.5f) < height * 0.32f) {
                     shown = true;
@@ -763,7 +779,7 @@ void hud_draw(float width, float height) {
             ui::hand_medallion(dl, p->x, p->y - size * 0.5f, size, shown, caption, col);
         };
         if (d.remote) {
-            medal(d.remote->pos, d.rps_theirs, d.rps_theirs_picked, d.rps_winner == 2,
+            medal(partner_at, d.rps_theirs, d.rps_theirs_picked, d.rps_winner == 2,
                   d.peer_name.empty() ? std::string("Your friend") : d.peer_name);
         }
         if (d.local) medal(d.local->position, d.rps_ours, d.rps_ours_picked, d.rps_winner == 1, "You");
