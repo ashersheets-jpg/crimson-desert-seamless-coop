@@ -7212,3 +7212,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   radius is 3 m (right for a revive) and it stood 2.98 m from the spot beside the horse, 3.7 m from the horse (out of
   Ride's reach). Fix (test kit): revive_teleport_to takes an arrival radius; tphorse / tpactor use 0.8 m. New
   package: pp18 = the whole checklist.
+
+## pp18 on 0.1.0-alpha+2e5db87a (2026-11-14 21:05)
+- Batch A: mounts 45/0 (the host rode: published Begin 1), solostart 47/0, newsave 96/0, static 12/0, real 13/0,
+  fresh 41/0, fsr 42/0, display 6/0. The guest's Play took 1 press everywhere (newsave 7: the host holds the login
+  until its new game's first save, ~55 s, by design). SAVES OK, user install restored 5/5 on every step.
+- xess 41/1: a host warning kind never listed, "Session2 host tunnel: one tick took 59.8 ms: hold acks". One slow host
+  tick, at the same instant as the minute summary dump; the same line is in 4 earlier host logs (55-74 ms). Listed in
+  tools/known-warnings.txt with its reason; xess runs again at the end of batch B.
