@@ -5,6 +5,11 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- 2026-11-15 17:00 MAY I POST 0.1.0-alpha+0245f27d once its checklist (pp22, running, ~3 h) passes? It answers the
+  two tester reports of 15 Nov: the shared-cutscene setting (and two others) never showed on the Co-op page; the name
+  tag ran up to 1.8 m ahead of a sprinting friend. Also: Give to the friend on New Co-op Saves, weather and time of day
+  follow the host, Blackstar checked. Text: docs/release/shared-world-playtest/download-0245f27d.txt (1617 chars).
+  The build before it, f1028cbc, passed pp21 (864/865; the one fail a Steam-internal fault the mod recovers from).
 - (DONE 10:55: your yes; both tester zips downloaded and read 11:05, findings under "pp20" below.)
 - 2026-11-15 ~03:40 (NOT URGENT, when you have 15 minutes at the PC): a hands-on check of the friend's NPC
   conversations. I start two copies of the game; you drive the FRIEND's window (keyboard or pad), walk up to a
