@@ -7417,3 +7417,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     shadows, both HUDs "Day 27 Sat 10:59 / 11:00 AM" with the SAME weather icon (a cloud; before: cloud vs sun).
     One PC, two copies, Continue; not tried: rain (none fell in any run), a New Co-op Save, the host travelling.
   * The layer now writes weather_sync=1 for both players (native_mode_text.h). cs16g checks the defaults alone.
+  * cs16g (05:06-05:14, the new layer, an extra weather_sync=probe): the host took the default ("WeatherSync ON
+    (weather_sync=1, host)"), the guest the extra ("probe"): on the guest the layer writes dev extras BEFORE its last
+    default block, and the first key wins. A test artifact; the checklist pass (defaults only) shows the guest's line.
+    Its ERR lines (User2Stages D/S/F refused, GuestXVeto, GuestS3 first-chance AV, save redirect copy) are all in
+    pp18's logs too (known). SAVES OK, 5/5.
+- Next: package this batch (clock push, weather mirror, PlayerReader) and run the whole checklist (pp19).

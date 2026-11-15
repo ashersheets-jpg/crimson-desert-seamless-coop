@@ -5,6 +5,18 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
+NOT POSTED YET (next build; it needs the whole checklist on its exact package and the owner's OK to post):
+- **The friend's time of day follows the host's.** The joining player's sky clock fell behind the host's by the
+  length of its own loading (about 37 in-game minutes in one test). The shared world's clock sync was there but
+  switched off and still pointed at an old game version's memory; it is moved to 1.0.0.3663 and on. Tested on one
+  PC with two copies of the game: both HUD clocks read the same minute.
+- **The friend's weather follows the host's** (clouds, rain, wind, fog), within 2 km of the host. Before, each game
+  ran its own weather: sun on one screen, clouds on the other. Tested on one PC: the same cloud cover and light on
+  both screens. Not seen yet: rain falling during a test.
+- The shared-world base could not read the local player's position on 1.0.0.3576 and 1.0.0.3663 (one outdated
+  check); every feature waiting for it never started (the weather above among them). Fixed.
+- The clock and weather sync switch themselves off on a game version they were not made for.
+
 Posted 2026-11-15 00:13 as 0.1.0-alpha+2e5db87a, for game 1.0.0.3663 (checklist pp18: all 23 steps, one PC):
 - **Story scenes together (experimental, off by default; Co-op Settings, host)**: each player gets their own story
   scenes and steps, and a story scene waits until both players are there. When one of you reaches a story trigger,
