@@ -7574,3 +7574,8 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - Built 13:08 with the tester-zip fixes (settings sections, partner actor key for the name tag and Give); unit tests
   pass. Package 0.1.0-alpha+f1028cbc (outer f1028cb). Next: cs20a (Co-op page sections, the host's line naming the
   guest's actor), then the pp21 checklist on f1028cbc. f5100d87 is NOT the one to post (hidden settings).
+- 13:19 cs20a (f1028cbc, test world): the in-world Co-op page now shows "Shared quest credit (same step: done for
+  both)" and "Story scenes together (experimental)" under Saves & Story, and "Items in the world" under World
+  (shots build/native/shots/cs20a-h3.png, -h5.png); no "has no section" error line. The host's resolver: "the
+  friend's character is actor 0xA0100066 (0.5 m from its network position)", right for the test world. SAVES OK, 5/5.
+  Next: cs21a, the host's Give to the guest on 3663 (pad as tcB335), then pp21.
