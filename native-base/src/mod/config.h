@@ -692,6 +692,9 @@ struct Config {
     // clock_probe, HOST and GUEST, read only: every 5 s one 'ClockProbe' line (both clocks, the time manager
     // +0x28..+0x57, the 2188 bias; on the guest the 2816/2762 handed to its client). Default 0.
     bool s2_clock_probe = false;
+    // Co-op+ 2026-11-15 (research, read only): [session2] where_probe=<hex rva>:<hex bytes>: the caller chain of the
+    // first 6 hits of a mid hook there (story_gate.cpp where_probe_start). Empty = off.
+    std::string s2_where_probe;
     // weather_sync, HOST and GUEST (session2/weather_sync.h; research/noche/clima-sincronizar.md "Implementado"):
     // "0" (default) | "probe" (read-only X / vector / tick % 60000 lines) | "selftest" (host alone: the Weather
     // Viewer flag X+0x31 and precipitation 1.0 for 30 s, then put back) | "1" (host sends its vector as tunnel

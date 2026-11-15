@@ -1325,6 +1325,8 @@ DWORD WINAPI worker(LPVOID) {
         if (session2) session2::p8_probes_start({cfg.s2_load_diag, cfg.s2_s1_diag, /*host=*/true});
         // P8 session 25 (noche/clima-hora.md §6): the same read-only clock probe on the host, for the comparison.
         if (session2) session2::clock_probe_start(cfg.s2_clock_probe, /*guest=*/false);
+        // Co-op+ 2026-11-15 (research, read only): a caller chain at an address ([session2] where_probe).
+        if (session2) session2::where_probe_start(cfg.s2_where_probe);
         // P8 session 25 (noche/clima-sincronizar.md): the weather probe / selftest / samples on the host; its own thread.
         if (session2) session2::weather_sync_start(cfg.s2_weather_sync, /*guest=*/false, cfg.s2_weather_sync_radius_m);
         // P8 session 25 (s25/finisher-sigilo.md): the guest's grabs applied on the host's client (the enemies'

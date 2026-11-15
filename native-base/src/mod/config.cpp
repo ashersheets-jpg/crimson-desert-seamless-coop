@@ -389,6 +389,7 @@ Config load_config(const std::wstring& ini_path) {
     c.s2_user2_clock_push = narrow(read_string(ini_path, L"session2", L"user2_clock_push", "0"));
     c.s2_block_guest_weather = read_uint(ini_path, L"session2", L"block_guest_weather", 0) != 0;
     c.s2_clock_probe = read_uint(ini_path, L"session2", L"clock_probe", 0) != 0;
+    c.s2_where_probe = narrow(read_string(ini_path, L"session2", L"where_probe", ""));
     // P8 session 25, weather in viewer mode (research/noche/clima-sincronizar.md "Implementado").
     c.s2_weather_sync = narrow(read_string(ini_path, L"session2", L"weather_sync", "0"));
     c.s2_weather_sync_radius_m = read_uint(ini_path, L"session2", L"weather_sync_radius_m", 2000);

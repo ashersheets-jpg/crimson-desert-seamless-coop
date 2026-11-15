@@ -49,6 +49,9 @@ bool story_gate_skip_copy(uint64_t host_seq) noexcept;
 // manager prepared: its 2661 waits for the 2005s of the NPCs it binds like a trade scene's (cs9i: user 2's cabin
 // cinematic went out 330 ms before its comrades reached the guest, and the guest's game never had it).
 bool story_gate_story_hash(uint32_t hash) noexcept;
+// Co-op+ 2026-11-15 (research, read only): [session2] where_probe=<hex rva>:<hex bytes of whole instructions, >= 5>.
+// A mid hook at exe+rva logs the caller chain (RtlVirtualUnwind, 12 deep) of its first 6 hits, then stays quiet.
+void where_probe_start(const std::string& spec);
 // The same by user 2's sequencer id (the 2661's +9; cs9j: the wire's +27 hash did not match): its scene is a story one.
 bool story_gate_user2_story(uint64_t id) noexcept;
 // observer_hold_acks' route (every packet to user 2's live session, hold mode): true = kept here (the caller drops
