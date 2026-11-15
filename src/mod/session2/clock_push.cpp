@@ -336,12 +336,67 @@ void probe_once(bool& last_unreadable) {
               bias ? std::format("{} ms", *bias) : std::string("unreadable"), extra);
 }
 
+// Co-op+ 2026-11-15 (the weather port's research, read only, with clock_probe=1): the scene weather system X of
+// 1.0.0.3663 = [[[exe+0x7160240]+0x60]+0xF70] (WeatherSimulatorScriptComponent's update 0xE9ECB0 reads it so), its
+// vtable [X], viewer flag X+0x31, X+0x88, holder [X+0x60] and the raw words of [holder+0x18 .. +0x30] (the blocks:
+// on 2976 A/B/C were +0x18/+0x20/+0x28; the 3663 rain getter 0x4142CC0 reads A at +0x20, B at +0x28).
+std::string weather_words(uintptr_t blk, uint32_t from, uint32_t to) {
+    std::string t;
+    if (!blk) return "0";
+    for (uint32_t o = from; o < to; o += 4) {
+        uint32_t w = 0;
+        if (!game::safe_read(blk + o, &w, 4)) return t + " unreadable";
+        float f = 0;
+        std::memcpy(&f, &w, 4);
+        t += (w == 0x7F7FFFFFu)                      ? std::format("{:X}:MAX ", o)
+             : (f > -1e6f && f < 1e6f && f == f)     ? std::format("{:X}:{:.4g} ", o, f)
+                                                     : std::format("{:X}:#{:08X} ", o, w);
+    }
+    return t;
+}
+
+void weather_dump() {
+    const auto pm = game::read_ptr(g_probe_base + 0x7160240);
+    const uintptr_t m = pm ? *pm : 0;
+    const auto ps = m ? game::read_ptr(m + 0x60) : std::nullopt;
+    const uintptr_t sc = ps ? *ps : 0;
+    const auto px = sc ? game::read_ptr(sc + 0xF70) : std::nullopt;
+    const uintptr_t x = px ? *px : 0;
+    if (!x) {
+        log::info("WeatherDump [{}]: no X (module 0x{:X} scene 0x{:X})", g_probe_guest ? "guest" : "host", m, sc);
+        return;
+    }
+    const auto vt = game::read_ptr(x);
+    const auto mvt = game::read_ptr(m);
+    const auto gvf = mvt && *mvt ? game::read_ptr(*mvt + 0x60) : std::nullopt;
+    const auto flag = game::read<uint8_t>(x + 0x31);
+    const auto wc = game::read<uint32_t>(x + 0x88);
+    const auto ph = game::read_ptr(x + 0x60);
+    const uintptr_t h = ph ? *ph : 0;
+    uintptr_t blk[4] = {};
+    for (int i = 0; i < 4; ++i) {
+        const auto p = h ? game::read_ptr(h + 0x18 + 8 * i) : std::nullopt;
+        blk[i] = p ? *p : 0;
+    }
+    const auto rel = [&](uintptr_t p) { return p > g_probe_base && p < g_probe_base + 0x20000000 ? p - g_probe_base : p; };
+    const char* who = g_probe_guest ? "guest" : "host";
+    log::info("WeatherDump [{}]: X 0x{:X} vtable exe+0x{:X} | module vf60 exe+0x{:X} | X+31 {} X+88 {} | holder 0x{:X}: "
+              "+18 0x{:X} +20 0x{:X} +28 0x{:X} +30 0x{:X} | X+120..+130: {}",
+              who, x, vt ? rel(*vt) : 0, gvf ? rel(*gvf) : 0, flag ? *flag : 0xFF, wc ? *wc : 0xFFFFFFFF, h, blk[0],
+              blk[1], blk[2], blk[3], weather_words(x, 0x120, 0x130));
+    for (int i = 0; i < 4; ++i) {
+        if (!blk[i]) continue;
+        log::info("WeatherDump [{}] holder+0x{:X} 0x60..0x200: {}", who, 0x18 + 8 * i, weather_words(blk[i], 0x60, 0x200));
+    }
+}
+
 DWORD WINAPI probe_thread(LPVOID) {
     bool last_unreadable = false;
-    for (;;) {
+    for (uint64_t n = 1;; ++n) {
         Sleep(5000);
         try {
             probe_once(last_unreadable);
+            if (n % 6 == 0) weather_dump();
         } catch (...) {
         }
     }
