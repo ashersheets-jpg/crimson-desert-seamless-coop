@@ -7579,3 +7579,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   (shots build/native/shots/cs20a-h3.png, -h5.png); no "has no section" error line. The host's resolver: "the
   friend's character is actor 0xA0100066 (0.5 m from its network position)", right for the test world. SAVES OK, 5/5.
   Next: cs21a, the host's Give to the guest on 3663 (pad as tcB335), then pp21.
+- 13:28 cs21a (f1028cbc, test world): the host's Give to the guest WORKS on 3663 with the run-time key: the
+  Inventory's Discard on a Ricefish asked "Give to Guest / Discard / Cancel", A -> "Give (whole record): x1 from
+  0xA0100001 to 0xA0100066: stage 5 (5 = moved) err 0" (shot build/native/shots/cs21a-h3.png). First end-to-end
+  Give since the port. SAVES OK, 5/5. pp21 (all 22 steps on f1028cbc) started 13:30.
