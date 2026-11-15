@@ -18,6 +18,8 @@ Role guest: save REDIRECT ON: everything under Q goes to Q ( ## notice: the gues
 Role guest: the ini has no [sessionN] enabled=N guest=N; thi ## step nosave
 SessionN family order: ORPHAN queued for user N: record X (t ## OPEN, rare (1 in 25 runs, pp8-newsave): a record whose parent the guest was not given
 SessionN guest save (PN SN, phase A): guest_own_save=N | use ## notice: the guest plays its own save
+SessionN host tunnel: one tick took N ms: hold acks N ms ## one slow host tick (~60 ms) at the minute summary dump; seen in 4 earlier host logs (pp18-xess)
+SessionN host tunnel: one tick took N ms: hold acks N ms, li ## the same, with the link flush part
 SessionN guest save (PN SN, phase B): guest_own_save=N on th ## notice: the guest plays its own save
 SessionN guest save link: the upload is the root of line NfN ## the first upload of a guest save
 SessionN guest: guest_reload_wait_fix='N' needs guest_actor_ ## a settings notice of the base (every run)

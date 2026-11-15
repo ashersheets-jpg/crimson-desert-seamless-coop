@@ -1,4 +1,4 @@
-**Update: shared world playtest 0.1.0-alpha+080f8174, for game 1.0.0.3663**
+**Update: shared world playtest 0.1.0-alpha+2e5db87a, for game 1.0.0.3663**
 Please use this one instead of 66985463; **both players need the same build** (the title menu tells you if your friend has another one).
 
 New, **experimental and off by default: Story scenes together** (the host turns it on before starting co-op: title screen > Co-op > Co-op Settings > "Story scenes together (experimental)").
@@ -12,7 +12,7 @@ Fixed:
 - The host's "your friend could not join" card stayed up when the friend got in after a slow join.
 - Steam presence could switch itself off after one Steam error.
 
-- `...080f8174-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...2e5db87a-shared-world.zip`: the one you want. Run its installer with the game closed.
 - `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
 
 Tested with two copies of the game on one PC (Nvidia), the full checklist (story scenes together off, as it ships). Not tested: two PCs over the internet with this build, AMD / Intel cards, a real PlayStation controller, an evening-long session. Tell us in <#1567319198206525450> how it goes, with the report zip from both of you (close the game, run **Diagnose Co-op+.cmd**).
