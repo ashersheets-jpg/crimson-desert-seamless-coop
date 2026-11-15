@@ -7501,3 +7501,21 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   469 ms after StartActionReq"). The host's CLIENT logs no mount of 0xA0100066 at all.
   cs18g (09:33): the host lists 0xB actors within 200 m (npcs) and teleports beside 0xB0100068 (tpactor) with a
   shot every 1 s: is the dragon loaded on the host, where, and drawn?
+- cs18g (09:33-09:43): THE HOST'S GAME HAS BLACKSTAR LOADED: tpactor found 0xB0100068 at (-10334.3, 564.5,
+  -3977.1), 29 m up where the guest hovers. The host dropped to the ground below it (535.0); its level camera did not
+  show the dragon straight overhead (shots/cs18g-sheet.png). cs18h (09:46): the guest LANDS it (X) first, then the
+  host teleports beside it, camera tilted up a little.
+- cs18h (09:46-09:54): X held 400 ms did not land Blackstar (the guest stayed at y 577-583); the host teleported to
+  0xB0100068 at (-10323.3, 576.3, -4007.7) (the guest's own spot: the rider is on it) and dropped to 537.6; a slight
+  tilt showed sky and trees, no dragon (it is ~40 m straight up). cs18i (09:56): X held 2 s, camera fully up.
+  NOTE for the dev script: dev script lines are in <name>.coopplus.<role>.log, not <name>.<role>.log.
+  LEAD if the host does not draw it: remote_interp.cpp's visibility guard (the Status flag setter 0x1932980, hide
+  bit 0x100000) only covers key class 0xA (player characters). Its own notes name caller 0x231E018 (0x231DEE0: "a
+  non-local actor linked to another's [comps+0x110] component") as a setter of the hide bit: that could be a
+  mount the remote player rides. Blackstar is 0xB0100068 (class 0xB), so nothing guards it.
+- cs18i (09:56-10:05): B05 BLACKSTAR WORKS BOTH WAYS. The host, teleported under it and looking up, SEES the guest's
+  Blackstar hovering and flapping overhead (shots h10-h20, cs18i-sheet.png; zoom cs18i-h13-zoom.png: the dragon with
+  the "Guest 49 m" tag on its rider). So: the joined player calls Blackstar from its wheel, mounts and flies it, the
+  host's game has it loaded where the guest is and draws it (the lead above is not needed). Not landed by X held
+  2 s (the guest stayed 578-584 m up; the Land button may be another one; not a co-op question). Not covered: other
+  mounts (bear, wolf, wagon: no test save has them), and the HOST's Blackstar seen by the guest.
