@@ -1,0 +1,15 @@
+**Update: shared world playtest 0.1.0-alpha+f5100d87, for game 1.0.0.3663**
+Please use this one instead of 2e5db87a; **both players need the same build** (the title menu tells you if your friend has another one).
+
+New:
+- **The friend's time of day now follows the host's.** The joining player's clock used to fall behind by however long their loading took (over half an hour of in-game time in one test), so one of you could see dusk while the other saw daylight.
+- **The friend's weather now follows the host's**: clouds, wind, fog and rain, while you are within 2 km of each other (further apart, each game keeps its own weather). Before, each game ran its own weather: sun on one screen, clouds on the other.
+- Fixed underneath: the shared-world base could not read your own character's position on this game version, so a few features that wait for it never started (the weather above among them).
+- Checked: **the joining player can call Blackstar** (the dragon on the mount wheel) and fly it, and the host sees the dragon with its rider. If that did not work for you before, please try again and tell us.
+
+Tested with two copies of the game on one PC (Nvidia): both screens showed the same in-game minute, the same clouds and light, and the full checklist passed. Not seen yet: rain falling during a test, two PCs over the internet with this build, AMD / Intel cards.
+
+- `...f5100d87-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tell us in <#1567319198206525450> how it goes, with the report zip from both of you (close the game, run **Diagnose Co-op+.cmd**). Especially: do your skies match?

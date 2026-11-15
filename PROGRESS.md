@@ -7519,3 +7519,10 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   host's game has it loaded where the guest is and draws it (the lead above is not needed). Not landed by X held
   2 s (the guest stayed 578-584 m up; the Land button may be another one; not a co-op question). Not covered: other
   mounts (bear, wolf, wagon: no test save has them), and the HOST's Blackstar seen by the guest.
+
+## pp20 on 0.1.0-alpha+f5100d87 (2026-11-15 ~10:15; pp19's package + the WeatherSync log fix + dialog_redeliver)
+- Packaged from outer f5100d8: native d589c4f (the WeatherSync target log: a 0.05 step, at most 40 lines;
+  dialog_redeliver, default 0) and the layer (the '+' split of native_extra; the dev script's stick press, test kit
+  only). Both package tests pass. The whole checklist, all 23 steps in one run, started ~10:15. NO builds until it ends.
+- Post draft: docs/release/shared-world-playtest/download-f5100d87.txt (1711 characters; adds the checked Blackstar
+  line). NOT posted: needs the whole checklist and the owner's OK.
