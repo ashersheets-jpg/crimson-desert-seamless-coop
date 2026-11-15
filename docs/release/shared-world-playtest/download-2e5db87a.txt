@@ -4,7 +4,7 @@ Please use this one instead of 66985463; **both players need the same build** (t
 New, **experimental and off by default: Story scenes together** (the host turns it on before starting co-op: title screen > Co-op > Co-op Settings > "Story scenes together (experimental)").
 - Each of you gets your own story scenes and quest steps, and a story scene **waits until both of you are there**. When one of you reaches it, both screens say so; the friend can hold **Interact** to go to the one who waits.
 - When you are both there, each of you holds **Interact** to start, and **both games play the cutscene at the same moment**.
-- The one who waits can also hold **Interact** to go on alone; the friend plays that scene later, when they get there.
+- The one who waits can also hold **Interact** to go on alone; the friend plays that scene later.
 - Tested on one PC with two copies of the game, at the prologue's cabin only (both together, the host alone, the joined player alone). Not tried yet: later story scenes, story bosses, two PCs. If you turn it on, please tell us how far it gets.
 
 Fixed:
