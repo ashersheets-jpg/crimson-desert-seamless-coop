@@ -7361,3 +7361,24 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   screen. The guest's teleport landed (inside the shop, next to the NPC, 68 m north of the butcher), the host's did
   not (still at the stall, 72 m away per the HUD); the E presses opened nothing. Scripted conversations are
   unreliable: put on the owner's hands-on list (top of this file). Moving to the weather port (verifiable by probe).
+- cs15a (03:44-03:52, Continue; native with a research WeatherDump in the clock probe: every 30 s X, its vtable,
+  flags, holder and the raw words of the blocks, both games). THE 3663 WEATHER LAYOUT (both games agree):
+  * X = [[[exe+0x7160240]+0x60]+0xF70]; [X] = vtable exe+0x619D3D0 (2976 0x5D51268); the module's vf60 =
+    exe+0x7D7940 (`mov rax,[rcx+0x60]; ret`, 2976 0x6DA0A0); X+0x31 viewer 0; X+0x88 WeatherComponents 60 / 56;
+    holder [X+0x60]; blocks A = [holder+0x20], B = [holder+0x28], C = [holder+0x30] (2976 +0x18/+0x20/+0x28).
+  * A: cloudiness +0x130 (host 0.7, guest 0.5005) and windSpeed +0x138 (2.93 / 2.0) where they were; rain +0x170
+    (+4); the local ClimateTexture sample at +0x1A0.. (+8; 24.75 both); +0x13C..+0x15C all floats (a field was
+    inserted between +0x138 and +0x16C: where exactly is not known; a raw word copy of the range does not need it).
+  * B: +4 from at least +0x88: the RGBA colours at +0xF0/+0xF4 (2976 +0xEC/+0xF0), cloudBaseDensity +0xAC (the
+    guest's 0.4001 = 0.5005 x 0.3 + 0.25, 2976's formula), cloudScrollMultiplier +0xB8, cloudAltitude +0xBC (1500).
+    The sun / moon words +0x64..+0x80 are equal on both games (the clocks agree now).
+  * X's update 0x4143B20 (disassembled): wind = clamp(A+0x138 + A+0x1AC); X+0x13C += wind * [X+0x100]+0x1C4 * dt *
+    B+0xB8; X+0x140 += wind * [X+0x100]+0x1C0 * dt * B+0xB8. So the scroll accumulators are X+0x13C / +0x140 (2976
+    +0x124 / +0x128) and the WIND DIRECTION is no longer in A (2976 A+0x190 / +0x194) but in an object at
+    [X+0x100] (+0x1C0 / +0x1C4), which the mixer reads too.
+  * The field reader (2976 0x41DB60 / 0x1504FC0) is in protected code on 3663 (its error strings, Korean "failed
+    to read _precipitation", have one reference, exe+0xCAFF354). Not needed for a word-range mirror.
+  Port plan: the constants above; the vector as word ranges (A +0x12C..+0x160 Lerp, +0x164..+0x170 Derived; B
+  +0x60..+0xF0 Lerp, +0xF0/+0xF4 Raw; C after its own compare; X+0x13C/+0x140 Accum; [X+0x100]+0x1C0/+0x1C4 Lerp),
+  the hook on 0x4143B20's entry (20-byte head, no caller check), the clock constants of remote_motion.cpp. Then
+  weather_sync=probe on both (the vectors' host-guest difference), then =1 (the guest's sky = the host's).
