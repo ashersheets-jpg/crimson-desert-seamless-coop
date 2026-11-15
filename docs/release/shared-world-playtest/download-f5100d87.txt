@@ -1,3 +1,5 @@
+SUPERSEDED by download-f1028cbc.txt (f5100d87 hides three settings; not posted).
+
 **Update: shared world playtest 0.1.0-alpha+f5100d87, for game 1.0.0.3663**
 Please use this one instead of 2e5db87a; **both players need the same build** (the title menu tells you if your friend has another one).
 

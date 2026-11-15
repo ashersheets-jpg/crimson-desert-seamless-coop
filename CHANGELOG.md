@@ -16,6 +16,18 @@ NOT POSTED YET (next build; it needs the whole checklist on its exact package an
 - The shared-world base could not read the local player's position on 1.0.0.3576 and 1.0.0.3663 (one outdated
   check); every feature waiting for it never started (the weather above among them). Fixed.
 - The clock and weather sync switch themselves off on a game version they were not made for.
+- **Three settings never showed on the Co-op page** (title Co-op Settings and in game): "Story scenes together
+  (experimental)", "Shared quest credit" and "Items in the world" had no section, so the page skipped them; the
+  2e5db87a post pointed players to one of them (tester report, 15 Nov). They are under Saves & Story and World now,
+  and a setting without a section shows under Session instead of vanishing.
+- **Give to the friend on a New Co-op Save**: the host's Give aimed at the joined player's character by a fixed
+  number that is only right in our test world; on a New Co-op Save the friend's character has another one. The mod
+  now finds the friend's character in the world. Tested: Give from the host reached the friend on 1.0.0.3663 (first
+  test since the move to that game version).
+- **The friend's name tag stays over their character** while running: it followed the network position, which runs
+  about 200 ms ahead of where the game draws the friend (1-2 m at a run; tester report, 15 Nov). Not yet checked on screen with the friend running.
+- Steam status ("Join Game" for friends) is set 10 s after Steam is ready: in 3 of 15 test launches Steam faulted
+  when it was set in the first seconds (the mod recovered, but friends saw nothing for 10 s anyway).
 
 Posted 2026-11-15 00:13 as 0.1.0-alpha+2e5db87a, for game 1.0.0.3663 (checklist pp18: all 23 steps, one PC):
 - **Story scenes together (experimental, off by default; Co-op Settings, host)**: each player gets their own story
