@@ -7464,3 +7464,16 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - 08:15 builds: native d589c4f (dialog_redeliver + the WeatherSync log fix), ctest 63/93 (the same 30 known 2976
   fixtures fail; optd_clock_push, optd_weather_sync, optd_shop_twin pass); layer (the '+' split), cdmp_tests all
   pass. cs17a (dialog re-delivery) started 08:20.
+- cs17a (08:20-08:29; dialog_share_all=1 both, dialog_redeliver=1 guest, the '+' split carried both keys): WORKS at
+  the packet level. First host frame 08:26:02; 3 lists got the host's choices on arrival, and 13 lists the guest's
+  client ALREADY had were given to it again with the host's 1-3 choices (NPCs 0xB0100351, ...48, ...45, ...47,
+  ...DB, ...55, then 7 more at 08:26:12). Both alive, SAVES OK, 5/5, no ShopTwin / dialog ERR or WRN (only the
+  known GuestXVeto line), 0 packet logs left in the game folder. Not seen: whether the client SHOWS the added topic
+  when the guest talks to that NPC, and whether the host's server accepts the pick (the hands-on check in Waiting on
+  the user covers both). Stays default 0 until then.
+- cs18a (08:31-08:39; the guest = save wyvern-egg-dragon, D-pad Up held 40 s on the simulated pad): the joined
+  player's wheel OFFERS Blackstar (shots g1 / g2: the character wheel with Kliff and Damiane, the dragon bottom left,
+  the horse bottom). Both alive, SAVES OK, 5/5. B05 asks more: the other player sees the mount and its rider.
+- Test kit (layer, 08:45): the dev script's "pad <hex> <ms> [rx ry]" can hold the right stick at any position (the
+  simulated pad had only "straight down", bit 0x0400). cdmp_tests pass. cs18b (08:47): the guest calls Blackstar
+  (Up + stick down-left, twice), shots of both sides.

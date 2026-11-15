@@ -302,9 +302,16 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
             steps.push_back(st);
             continue;
         }
-        if (kind == "pad") {  // pad <hex buttons (input/pad_input.h)> <ms>: a simulated pad press
+        if (kind == "pad") {  // pad <hex buttons (input/pad_input.h)> <ms> [rx ry]: a simulated pad press, with the
+                              // right stick held at (rx, ry) if given (XInput range, +y up)
             std::string b;
             in >> b >> st.wait_ms;
+            int rx = 0, ry = 0;
+            if (in >> rx >> ry) {
+                st.to[0] = static_cast<float>(rx);
+                st.to[1] = static_cast<float>(ry);
+                st.to[2] = 1.0f;
+            }
             st.kind = Step::Pad;
             st.addr = static_cast<uintptr_t>(std::stoul(b, nullptr, 16));
             steps.push_back(st);
@@ -612,8 +619,15 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
             } else if (st.kind == Step::Watch) {
                 dev_watch_start(st.addr, static_cast<int>(st.to[0]), static_cast<int>(st.to[1]));
             } else if (st.kind == Step::Pad) {
-                input::dev_pad_press(static_cast<uint16_t>(st.addr), st.wait_ms ? st.wait_ms : 150);
-                log::info("Dev script: pad 0x{:04X} for {} ms", st.addr, st.wait_ms);
+                if (st.to[2] != 0.0f) {
+                    input::dev_pad_press(static_cast<uint16_t>(st.addr), st.wait_ms ? st.wait_ms : 150,
+                                         static_cast<int16_t>(st.to[0]), static_cast<int16_t>(st.to[1]));
+                    log::info("Dev script: pad 0x{:04X} for {} ms, right stick ({}, {})", st.addr, st.wait_ms,
+                              static_cast<int>(st.to[0]), static_cast<int>(st.to[1]));
+                } else {
+                    input::dev_pad_press(static_cast<uint16_t>(st.addr), st.wait_ms ? st.wait_ms : 150);
+                    log::info("Dev script: pad 0x{:04X} for {} ms", st.addr, st.wait_ms);
+                }
                 Sleep(st.wait_ms ? st.wait_ms : 150);
             } else if (st.kind == Step::MemScan) {
                 dev_memscan(st.payload);

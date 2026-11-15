@@ -37,6 +37,8 @@ std::atomic<int> g_sony_present{0};         // PlayStation pad readers running
 std::atomic<uint16_t> g_sim{0};        // [dev] simulated presses
 std::atomic<uint64_t> g_sim_until{0};
 std::atomic<int> g_sim_family{0};
+std::atomic<bool> g_sim_stick{false};  // [dev] the press also holds the right stick at (g_sim_rx, g_sim_ry)
+std::atomic<int16_t> g_sim_rx{0}, g_sim_ry{0};
 std::atomic<uint16_t> g_mask{0};
 std::atomic<uint64_t> g_mask_until{0};
 std::atomic<uint16_t> g_press{0};      // press_for_game
@@ -100,6 +102,10 @@ DWORD sim_feed(DWORD i, XINPUT_STATE* st, DWORD r) {
         const uint16_t raw = g_sim.load();
         if (raw & 0x0400) st->Gamepad.sThumbRY = -32768;
         if (raw & 0x0800) st->Gamepad.sThumbLY = 32767;
+        if (g_sim_stick.load()) {
+            st->Gamepad.sThumbRX = g_sim_rx.load();
+            st->Gamepad.sThumbRY = g_sim_ry.load();
+        }
     }
     if (r != ERROR_SUCCESS) st->dwPacketNumber = packet.load();
     else st->dwPacketNumber += packet.load();
@@ -391,6 +397,15 @@ void set_sim(int family) {
 }
 
 void dev_pad_press(uint16_t buttons, uint32_t ms) {
+    g_sim_stick = false;
+    g_sim = buttons;
+    g_sim_until = now64() + ms;
+}
+
+void dev_pad_press(uint16_t buttons, uint32_t ms, int16_t rx, int16_t ry) {
+    g_sim_rx = rx;
+    g_sim_ry = ry;
+    g_sim_stick = true;
     g_sim = buttons;
     g_sim_until = now64() + ms;
 }

@@ -56,5 +56,7 @@ void press_for_game(uint16_t buttons, uint32_t ms);
 // buttons (dev_pad_press). One-PC test without a controller.
 void set_sim(int family);
 void dev_pad_press(uint16_t buttons, uint32_t ms);
+// The same with the right stick held at (rx, ry) (XInput range, +y up) for the press (cs18: a wheel's diagonal slot).
+void dev_pad_press(uint16_t buttons, uint32_t ms, int16_t rx, int16_t ry);
 
 }  // namespace cdmp::input
