@@ -189,7 +189,7 @@ bool blocks_of(uintptr_t x, Blocks& out) noexcept {
     if (!a || !*a || !b || !*b) return false;
     out.a = *a;
     out.b = *b;
-    out.c = *h;  // 3663: block C = the holder itself (its wind direction, weather_sync_logic.h)
+    out.c = 0;  // 3663: no C field (weather_sync_logic.h)
     return true;
 }
 uintptr_t block_addr(const Blocks& bl, uintptr_t x, wsy::Block b) {
@@ -657,7 +657,7 @@ void read_all(Reading& r) {
     r.holder = ptr_at(r.x + wsy::kXHolder);
     r.a = ptr_at(r.holder ? r.holder + wsy::kHolderA : 0);
     r.b = ptr_at(r.holder ? r.holder + wsy::kHolderB : 0);
-    r.c = r.holder;  // 3663: block C = the holder (its wind direction)
+    r.c = 0;  // 3663: no C field
     uint8_t a[wsy::kReadA.size] = {}, c[wsy::kReadC.size] = {}, x[wsy::kReadX.size] = {};
     uint16_t mask = 0;
     if (r.a && game::safe_read(r.a + wsy::kReadA.off, a, sizeof a)) mask |= wsy::kHasA;
@@ -700,7 +700,7 @@ std::string vector_text(const wsy::Snapshot& s) {
                          f(Block::B, 0xD8), f(Block::B, 0xDC), f(Block::B, 0xE0), f(Block::B, 0xE4));
     }
     if (s.mask & wsy::kHasC) {
-        t += std::format(" | wind dir holder+19C/198 ({:.3f}, {:.3f})", f(Block::C, 0x19C), f(Block::C, 0x198));
+        t += std::format(" | wind dir A+19C/198 ({:.3f}, {:.3f})", f(Block::A, 0x19C), f(Block::A, 0x198));
     }
     if (s.mask & wsy::kHasX) {
         t += std::format(" | scroll X+13C/140 ({:.2f}, {:.2f})", f(Block::X, 0x13C), f(Block::X, 0x140));

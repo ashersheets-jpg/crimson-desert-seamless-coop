@@ -64,7 +64,7 @@ void test_field_table() {
     CHECK(wsy::kFields[wsy::index_of(wsy::Block::A, 0x158)].kind == wsy::Kind::Hold);
     CHECK(wsy::kFields[wsy::index_of(wsy::Block::B, 0xF0)].kind == wsy::Kind::Raw);
     CHECK(wsy::kFields[wsy::index_of(wsy::Block::B, 0xF4)].kind == wsy::Kind::Raw);
-    CHECK(wsy::kFields[wsy::index_of(wsy::Block::C, 0x198)].kind == wsy::Kind::Lerp);  // the wind direction
+    CHECK(wsy::kFields[wsy::index_of(wsy::Block::A, 0x198)].kind == wsy::Kind::Lerp);  // the wind direction
     // Review 6: B+0x7C/80/84 (2976's 78/7C/80) are of unknown type: logged, never written.
     for (uint16_t off : {uint16_t{0x7C}, uint16_t{0x80}, uint16_t{0x84}}) {
         const size_t i = wsy::index_of(wsy::Block::B, off);
@@ -77,7 +77,7 @@ void test_field_table() {
     // The rain/snow outputs are sent but never written; the precipitation command is.
     CHECK(!wsy::written(wsy::kIdxRain, wsy::kKnownMask) && !wsy::written(wsy::kIdxSnow, wsy::kKnownMask));
     CHECK(wsy::written(wsy::kIdxPrecip, wsy::kKnownMask));
-    CHECK(wsy::written(wsy::index_of(wsy::Block::C, 0x19C), wsy::kKnownMask));
+    CHECK(wsy::written(wsy::index_of(wsy::Block::A, 0x19C), wsy::kKnownMask));
     CHECK(!wsy::written(wsy::kIdxPrecip, wsy::kHasB | wsy::kHasX));  // A absent
     CHECK(wsy::written(wsy::index_of(wsy::Block::B, 0xEC), wsy::kHasB));
 }
@@ -100,7 +100,7 @@ void test_extract() {
     uint32_t expect = 0;
     std::memcpy(&expect, b + (0xF4 - 0x68), 4);
     CHECK(w[last_b] == expect);
-    CHECK(w[wsy::index_of(wsy::Block::C, 0x198)] == 0x43424140u);
+    CHECK(w[wsy::index_of(wsy::Block::A, 0x198)] == 0x6F6E6D6Cu);  // A+0x198 is 0x6C into the A copy
     CHECK(near(wsy::as_float(w[wsy::kIdxScrollX]), 123.5f) && near(wsy::as_float(w[wsy::kIdxScrollZ]), -7.25f));
     // A missing block leaves zeros.
     wsy::extract(a, nullptr, c, x, w);
@@ -183,7 +183,7 @@ void test_sanity() {
     // Review 8: +-FLT_MAX ("not set") passes and is counted apart.
     s = sample(1, 1000, 10.0f);
     s.w[wsy::kIdxCloudBase] = wsy::kFltMaxBits;
-    s.w[wsy::index_of(wsy::Block::C, 0x198)] = wsy::kNegFltMaxBits;
+    s.w[wsy::index_of(wsy::Block::A, 0x198)] = wsy::kNegFltMaxBits;
     CHECK(wsy::check(s).ok() && wsy::check(s).unset == 2 && wsy::check(s).huge == 0 && wsy::applicable(s));
     CHECK(wsy::check(s).first_bad == -1 && std::strcmp(wsy::field_name(-1), "-") == 0);
     // Out of [0, 1] is counted, not fatal.
@@ -413,7 +413,7 @@ void test_restore_bits() {
     const uint64_t r = wsy::restore_bits(kept, written, /*flag_was_ours=*/true);
     CHECK((r & wsy::field_bit(wsy::kIdxPrecip)) && (r & wsy::field_bit(wsy::kIdxRain)) &&
           (r & wsy::field_bit(wsy::kIdxCloudBase)));
-    CHECK(!(r & wsy::field_bit(wsy::index_of(wsy::Block::C, 0x198))) && !(r & wsy::field_bit(wsy::kIdxScrollX)));
+    CHECK(!(r & wsy::field_bit(wsy::index_of(wsy::Block::B, 0x7C))) && !(r & wsy::field_bit(wsy::kIdxScrollX)));
     const uint64_t r2 = wsy::restore_bits(kept, written, /*flag_was_ours=*/false);
     CHECK(!(r2 & wsy::field_bit(wsy::kIdxRain)) && (r2 & wsy::field_bit(wsy::kIdxPrecip)));
     CHECK(wsy::restore_bits(0, written, true) == 0);

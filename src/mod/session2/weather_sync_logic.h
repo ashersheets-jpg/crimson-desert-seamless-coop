@@ -48,9 +48,8 @@ namespace cdmp::session2::wsy {
 // reads it so and tests X+0x31. [X] = 0x619D3D0 on both games (read live, cs15a). X's update 0x4143B20 (found by a
 // stack scan from the mixer 0x413F780, cs12c) does what 0x3DC4730 did; only protected code calls it, so its caller is
 // not checked any more. The blocks moved: A = [holder+0x20], B = [holder+0x28]; A's fields +4 from 0x13C, B's +4;
-// the wind direction left A for the holder itself (+0x198 / +0x19C: the update's scroll reads (holder-0x28)+0x1C0 /
-// +0x1C4, 0x4143CAA; cs16b), which takes the old block C's place in the vector (C's under-water colours on 2976: not
-// mirrored on 3663).
+// the wind direction is A+0x198 / +0x19C (+8; the update's scroll reads (A-0x28)+0x1C0 / +0x1C4 with A = [holder+0x20]
+// in rdi, 0x4143B8E / 0x4143CAA; cs16c). Block C (2976's under-water colours) carries no field on 3663.
 inline constexpr uintptr_t kModuleSlot = 0x7160240;  // [exe+] -> M; M.vf60 = 0x7D7940 returns [M+0x60] (2976 0x6C8CEC8)
 inline constexpr uint32_t kModuleScene = 0x60;       // S = [M+0x60]
 inline constexpr uint32_t kSceneWeather = 0xF70;     // X = [S+0xF70] (2976 +0xF68)
@@ -65,7 +64,7 @@ inline constexpr uint32_t kXViewer = 0x31;   // u8: 1 = the Weather Viewer's ext
 inline constexpr uint32_t kXHolder = 0x60;
 inline constexpr uint32_t kXWcCount = 0x88;  // u32: WeatherComponents registered with the mixer
 inline constexpr uint32_t kXScroll = 0x13C;  // 2 floats: the cloud scroll accumulators (2976 +0x124)
-inline constexpr uint32_t kHolderA = 0x20, kHolderB = 0x28, kHolderC = 0;  // (2976 0x18 / 0x20 / 0x28); C = the holder
+inline constexpr uint32_t kHolderA = 0x20, kHolderB = 0x28, kHolderC = 0;  // (2976 0x18 / 0x20 / 0x28); C: none
 inline constexpr uint32_t kATempSample = 0x1A0;  // the ClimateTexture sample at the local camera (local, never sent; 2976 0x198)
 
 inline constexpr uintptr_t kUpdate = 0x4143B20;  // (2976 0x3DC4730)
@@ -100,7 +99,7 @@ struct Field {
 // Names: GameGlobalEffectInfo_Weather in 0x1504FC0's read order mapped by 0x41DB60 (clima-sincronizar.md §1.1;
 // the name <-> index pairing is [E]); "?" where the report has no name.
 inline constexpr Field kFields[] = {
-    // A (15). 3663: +4 from 0x13C (rain 0x170: the rain getter 0x4142CC0; windDegree 90 at 0x158, cs15a).
+    // A (17). 3663: +4 from 0x13C (rain 0x170: the rain getter 0x4142CC0; windDegree 90 at 0x158, cs15a).
     {Block::A, 0x12C, Kind::Lerp, "precipitation"},
     {Block::A, 0x130, Kind::Lerp, "cloudiness"},
     {Block::A, 0x134, Kind::Lerp, "humidity"},
@@ -116,6 +115,8 @@ inline constexpr Field kFields[] = {
     {Block::A, 0x168, Kind::Derived, "rainFx168"},
     {Block::A, 0x16C, Kind::Derived, "snow"},
     {Block::A, 0x170, Kind::Derived, "rain"},
+    {Block::A, 0x198, Kind::Lerp, "windDirZ"},  // (2976 A+0x190) the update: X+0x140 += ... * this
+    {Block::A, 0x19C, Kind::Lerp, "windDirX"},  // (2976 A+0x194) the update: X+0x13C += ... * this
     // B (36): +0x68..+0xEC and the two colours +0xF0/+0xF4 (3663: +4; cloudBaseDensity 0xAC, cloudAltitude 0xBC)
     {Block::B, 0x68, Kind::Lerp, "sunDirX"},
     {Block::B, 0x6C, Kind::Lerp, "sunDirY"},
@@ -153,9 +154,6 @@ inline constexpr Field kFields[] = {
     {Block::B, 0xEC, Kind::Hold, "cloudSeed"},
     {Block::B, 0xF0, Kind::Raw, "colourBF0"},
     {Block::B, 0xF4, Kind::Raw, "colourBF4"},
-    // C = the holder on 3663 (2): the update's cloud scroll multiplies X+0x13C by +0x19C and X+0x140 by +0x198
-    {Block::C, 0x198, Kind::Lerp, "windDirZ"},
-    {Block::C, 0x19C, Kind::Lerp, "windDirX"},
     // X (2)
     {Block::X, 0x13C, Kind::Accum, "cloudScrollX"},
     {Block::X, 0x140, Kind::Accum, "cloudScrollZ"},
@@ -184,9 +182,9 @@ static_assert(kIdxPrecip == 0 && kIdxRain == 14 && kIdxSnow == 13 && kIdxScrollZ
 struct Range {
     uint16_t off, size;
 };
-inline constexpr Range kReadA{0x12C, 0x174 - 0x12C};  // +0x12C .. +0x173 (the vector's A fields, 3663)
+inline constexpr Range kReadA{0x12C, 0x1A0 - 0x12C};  // +0x12C .. +0x19F (the vector's A fields, 3663)
 inline constexpr Range kReadB{0x68, 0xF8 - 0x68};     // +0x68 .. +0xF7
-inline constexpr Range kReadC{0x198, 8};              // the holder's wind direction +0x198 .. +0x19F
+inline constexpr Range kReadC{0, 4};                  // 3663: no C field (one dummy word; C is never read)
 inline constexpr Range kReadX{0x13C, 8};
 constexpr Range read_range(Block b) {
     return b == Block::A ? kReadA : b == Block::B ? kReadB : b == Block::C ? kReadC : kReadX;
