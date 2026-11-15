@@ -1,3 +1,5 @@
+SUPERSEDED by download-0245f27d.txt (not posted).
+
 **Update: shared world playtest 0.1.0-alpha+f1028cbc, for game 1.0.0.3663**
 Please use this one instead of 2e5db87a; **both players need the same build** (the title menu tells you if your friend has another one).
 

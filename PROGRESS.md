@@ -7603,3 +7603,10 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   position (the tag follows the drawn one)", every 2 s at most while over 0.75 m. Package 0.1.0-alpha+0245f27d (outer
   0245f27, with the fresh-ISteamFriends Steam change). cs22b running: each side runs 6 s in its own window, the
   other side's log measures the gap.
+- 16:45 cs22b (0245f27d, W only = a walk, ~2 m/s): no gap over 0.75 m. 16:53 cs22c (Shift+W, a sprint, ~6-7 m/s):
+  the watching side logged the friend DRAWN 0.76 / 1.36 / 1.51 m (host watching) and 0.78 / 1.83 / 1.43 m (guest
+  watching) from its network position: the tester's "name tag not above his character after we run around" is the
+  old tag at the network position, 1.4-1.8 m ahead of the body at a sprint. The tag now uses that drawn position.
+- 16:55 pp22 (all 22 steps) started on 0.1.0-alpha+0245f27d: the build to post (tester fixes, Give key, name tag, the
+  fresh ISteamFriends). Post draft docs/release/shared-world-playtest/download-0245f27d.txt (f1028cbc's superseded,
+  never posted); CHANGELOG updated. Posting needs the owner's OK.

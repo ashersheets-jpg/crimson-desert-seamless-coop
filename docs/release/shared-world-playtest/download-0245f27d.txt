@@ -1,0 +1,19 @@
+**Update: shared world playtest 0.1.0-alpha+0245f27d, for game 1.0.0.3663**
+Please use this one instead of 2e5db87a; **both players need the same build** (the title menu tells you if your friend has another one).
+
+Thanks @JackyChan004 and @D3vils for the reports, both are fixed here:
+- **"Story scenes together (experimental)" is now on the Co-op page** (title > Co-op > Co-op Settings > Saves & Story, host side). It and two other settings ("Shared quest credit", "Items in the world") were never shown on that page, sorry.
+- **The friend's name tag stays over their character** when you run around (at a sprint it was drawn up to 1.8 m ahead of them).
+- Also found in your logs: **Give to your friend** (Inventory > Discard next to them) aimed at the wrong character in a New Co-op Save. Fixed.
+
+New:
+- **The friend's time of day now follows the host's** (it fell behind by the length of their loading).
+- **The friend's weather now follows the host's**: clouds, wind, fog and rain, while you are within 2 km of each other.
+- Checked: **the joining player can call Blackstar** and fly it, and the host sees the dragon with its rider.
+
+Tested with two copies of the game on one PC (Nvidia), full checklist. Not seen yet: rain falling during a test, two PCs over the internet with this build, AMD / Intel cards.
+
+- `...0245f27d-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tell us in <#1567319198206525450> how it goes, with the report zip from both of you (close the game, run **Diagnose Co-op+.cmd**).
