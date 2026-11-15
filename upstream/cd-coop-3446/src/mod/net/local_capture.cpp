@@ -1263,12 +1263,27 @@ void partner_actor_update(const proto::Vec3* net_pos, bool we_host) {
         const float dx = at->x - net_pos->x, dy = at->y - net_pos->y, dz = at->z - net_pos->z;
         return std::sqrt(dx * dx + dy * dy + dz * dz);
     };
+    // The name tag follows the drawn character (render/hud.cpp); how far the network position is ahead of it
+    // (2026-11-15, the tester's "name tag not above his character ... after we run around").
+    auto gap_log = [&](uint32_t key) {
+        static uint64_t last_gap_log = 0;
+        const float d = dist(key);
+        const uint64_t t = GetTickCount64();
+        if (d > 0.75f && d < 25.0f && t - last_gap_log >= 2000) {
+            last_gap_log = t;
+            log::info("Name tag: the friend is drawn {:.2f} m from its network position (the tag follows the drawn one)", d);
+        }
+    };
     if (!we_host) {  // the host's character: the first user's, always
         g_partner_key = 0xA0100001u;
+        gap_log(0xA0100001u);
         return;
     }
     const uint32_t cur = g_partner_key.load();
-    if (cur && dist(cur) < 25.0f) return;
+    if (cur && dist(cur) < 25.0f) {
+        gap_log(cur);
+        return;
+    }
     const uint64_t now = GetTickCount64();
     if (last_scan && now - last_scan < 3000) return;
     last_scan = now;
