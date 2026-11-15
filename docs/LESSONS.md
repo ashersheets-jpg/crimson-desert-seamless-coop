@@ -94,6 +94,9 @@ topic BEFORE testing or guessing about it.
 - Script edits with backslashes go through a script FILE written with the Write tool, never a bash heredoc: the
   heredoc turned `\1` into a control byte, `'\r'` into `''`, `\a` into a bell, a C++ `"\r\n"` into a line break (six
   times on 2026-11-11, first noted on 2026-11-06). After any scripted edit: syntax check, grep the changed line.
+- A research run with [dev] native_record=1 writes its packet logs into the GAME folder and nothing moves them out:
+  832 of them (14 GB) had piled up in the owner's bin64 by 2026-11-15. A runner that records packets moves them to
+  build/ at its end; check bin64 for cdmp_packets.*.log after such runs.
 - Never start a test in the same command as an edit of a script the test uses.
 - Every run keeps its exact switches in `build/native/NAME.args`; the checklist report has them too. Use them when
   noting or repeating a run.

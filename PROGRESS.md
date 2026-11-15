@@ -5,6 +5,11 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- 2026-11-15 ~03:40 (NOT URGENT, when you have 15 minutes at the PC): a hands-on check of the friend's NPC
+  conversations. I start two copies of the game; you drive the FRIEND's window (keyboard or pad), walk up to a
+  Hernand townsperson and open a conversation, and pick a topic beyond the greeting. Scripted runs cannot do this
+  reliably (facing, prompts, teleports; cs14a). It answers the open question of B02a: does the host's server accept
+  the friend's pick of a dialog only the host's world offers (dialog_share_all, built 11-09, off in every release).
 - (DONE 2026-11-14 ~14:05: you restarted the PC; no restart pending since, RebootRequired False at 14:10. The active hours 15:00-09:00 still let Windows restart on its own between 09:00 and 15:00 when the next update comes.) 2026-11-14 10:14 WINDOWS UPDATE WILL RESTART THE PC: a restart is pending (RebootRequired) and the active hours are 15:00-09:00, so between 09:00 and 15:00 Windows restarts the PC on its own (its toast: "will restart to update outside of active hours"). That is a system setting, yours to change: Settings > Windows Update > Pause updates (or widen the active hours). Pushed to your phone at 10:14. SINCE 11:37 IT BLOCKS EVERY GAME TEST: the toast ("Restart now / OK", ShellExperienceHost) keeps the foreground, and the test harness refuses to send keys to anything but the game (twice: cs9f, cs9g). I do not click OS dialogs (its "Restart now" button is right there). Dismissing it (OK) or restarting at a moment you choose unblocks the tests.
 - POSTED 2026-11-14 01:42 (06:42 UTC; the owner's OK of 2026-11-13 ~21:10, "Fix build first (Recommended)"): build 0.1.0-alpha+66985463 (game 1.0.0.3663: the stage manager's scene-table port fix) in #download-here, both zips (message 1571052771241623684; text: docs/release/shared-world-playtest/download-66985463.txt). Checklist pp14 / pp14b..e: all 23 steps (one PC). The posting OK is used; the next post needs your OK again.
 - POSTED 2026-11-13 16:53 (21:53 UTC; the owner's OK of the afternoon: "If there is already an update that you made that is compatible with the new crimson desert update you can go ahead and post it as well."): build 0.1.0-alpha+5a81a327 for game 1.0.0.3663 in #download-here, both zips (message 1570919529251475618; text as posted: docs/release/shared-world-playtest/download-5a81a327.txt). Tested on ONE PC with two copies of the game (Nvidia): all 23 checklist steps (pp13, loot and mounts again as pp13b). Waiting for: the testers on the new build (Yagiisama and Jay plan to play this weekend), a real PlayStation pad on the title menu, the first two-PC report. The posting OK is used; the next post needs your OK again.
@@ -7337,3 +7342,22 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   moved +4 from 0x16C, the local sample +8), the X vtable and the second X path (kClientSlot) for the probe, the
   clock constants (remote_motion's 3549+ values), then weather_sync=probe on both games, then =1. Parked for now:
   next is a foundation row with less unknown work.
+- FOUND in the owner's game folder (bin64): 832 packet logs (cdmp_packets.host_* / guest_*, 14 GB) from my research
+  runs of 2026-11-07..11-14 ([dev] native_record=1): nothing moved them out. MOVED (not deleted) to
+  build/packet-logs-archive/ (git-ignored); none left. The other files there are normal (logs rotated to 10, the
+  layer's logs incl. the owner's solo coopplus.log of 00:16, two guest crash dumps of 11-10 / 11-11 tests: left).
+  Research runners that record packets now move them out (scratchpad cs13.sh).
+- cs13a running: the NPC dialog lists (SetQuestDialogAck) host vs guest at the Hernand butcher's street, release
+  defaults (story setting off); cs13b: the same with the story setting on.
+- cs13a (03:05-03:14, release defaults, both at the Hernand butcher's street, packet logs): NPC dialog lists
+  (SetQuestDialogAck) of 15 NPCs with more than the greeting: 6 the same, 9 with extra groups on the host the guest
+  lacks (0xF435B x7, 0xF42B6 x2... per run: 0xF4614 too). Unchanged since 11-09 (B02a open).
+- cs13c (03:16-03:25, dialog_share_all=1 both): the raw packet logs cannot show the sharing (the sniffer records
+  before the rewrite). The guest's first host frame came 8 s after its teleport (14 NPCs) and only ONE later list was
+  rewritten (0xB0100726, 0xF42B6): the guest adds the host's groups only to an NPC's list that arrives AFTER the host
+  frame; lists it already has stay without them. Fix idea (not built): keep the guest's last list per NPC and
+  re-deliver it with the host's groups when a host frame brings new ones.
+- cs14a (03:27-03:35, dialog_share_all=1; both teleported beside NPC 0xB010036D, then E): no conversation on either
+  screen. The guest's teleport landed (inside the shop, next to the NPC, 68 m north of the butcher), the host's did
+  not (still at the stall, 72 m away per the HUD); the E presses opened nothing. Scripted conversations are
+  unreliable: put on the owner's hands-on list (top of this file). Moving to the weather port (verifiable by probe).
