@@ -662,8 +662,21 @@ void on_where(safetyhook::Context& ctx) {
         chain += out[i] >= base && out[i] < base + 0x20000000 ? std::format(" exe+0x{:X}", out[i] - base)
                                                               : std::format(" 0x{:X}", out[i]);
     }
-    log::info("WhereProbe: exe+0x{:X} hit {} (thread {}; rcx 0x{:X} rdx 0x{:X} rbx 0x{:X} rsi 0x{:X}): callers{}",
-              g_where_rva, n + 1, GetCurrentThreadId(), ctx.rcx, ctx.rdx, ctx.rbx, ctx.rsi, chain.empty() ? " none" : chain);
+    // The stack scan (a function without unwind data, cs12b): every qword in the first 0x800 bytes above rsp that points
+    // into the exe right after a call, with its stack offset (the nearest is the direct caller's return address).
+    std::string scan;
+    int found = 0;
+    for (uint64_t off = 0; off < 0x800 && found < 10; off += 8) {
+        uint64_t v = 0;
+        if (!sg_read(&v, ctx.rsp + off, 8)) break;
+        if (v > base + 0x1000 && v < base + 0x20000000 && after_call(v)) {
+            scan += std::format(" +0x{:X}:exe+0x{:X}", off, v - base);
+            ++found;
+        }
+    }
+    log::info("WhereProbe: exe+0x{:X} hit {} (thread {}; rcx 0x{:X} rdx 0x{:X} rbx 0x{:X} rsi 0x{:X}): unwind{} | stack scan{}",
+              g_where_rva, n + 1, GetCurrentThreadId(), ctx.rcx, ctx.rdx, ctx.rbx, ctx.rsi, chain.empty() ? " none" : chain,
+              scan.empty() ? " none" : scan);
 }
 }  // namespace
 
