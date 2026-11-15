@@ -17,6 +17,9 @@ namespace {
 SafetyHookInline g_fg, g_active;
 std::atomic<bool> g_blocked{false}, g_downed{false}, g_pads{false};
 std::atomic<unsigned> g_mode{7};
+std::atomic<uint64_t> g_let_until{0};  // game_input_let_through: the title hold is open until this tick (ms)
+
+bool letting() { return GetTickCount64() < g_let_until.load(std::memory_order_relaxed); }
 uintptr_t g_exe_lo = 0, g_exe_hi = 0;
 
 bool from_game(void* ret) {
@@ -24,7 +27,9 @@ bool from_game(void* ret) {
     return a >= g_exe_lo && a < g_exe_hi;
 }
 
-bool held() { return g_blocked.load(std::memory_order_relaxed) || g_downed.load(std::memory_order_relaxed); }
+bool held() {
+    return (g_blocked.load(std::memory_order_relaxed) && !letting()) || g_downed.load(std::memory_order_relaxed);
+}
 
 HWND WINAPI hooked_foreground() {
     if (held() && (g_mode.load(std::memory_order_relaxed) & 1) && from_game(_ReturnAddress())) return nullptr;
@@ -65,6 +70,13 @@ void set_game_input_blocked(bool on) {
 
 bool game_input_blocked() { return g_blocked.load(std::memory_order_relaxed); }
 
+void game_input_let_through(unsigned ms) {
+    const uint64_t until = GetTickCount64() + ms;
+    uint64_t cur = g_let_until.load(std::memory_order_relaxed);
+    while (cur < until && !g_let_until.compare_exchange_weak(cur, until, std::memory_order_relaxed)) {
+    }
+}
+
 void set_game_input_downed(bool on) {
     if (g_downed.exchange(on) != on) log::info("Input: the game's own input {}", on ? "held (we are down)" : "back (up again)");
 }
@@ -82,32 +94,47 @@ void set_hold_mode(unsigned bits) {
 
 void game_input_block_tick(void* game_window) {
     static bool told_inactive = false;
+    static bool said = false;  // the "told inactive" line: once per hold, not once per let-through
     static uint64_t told_at = 0;
-    static uint32_t sent = 0;
+    static uint32_t sent = 0, lets = 0;
     const HWND w = static_cast<HWND>(game_window);
     if (!w || !IsWindow(w)) return;
     const bool want = held() && (g_mode.load(std::memory_order_relaxed) & 2);
     const uint64_t now = GetTickCount64();
+    // The hold is open for one of the mod's own presses: told active at once (quietly), told inactive again after it.
+    if (!want && told_inactive && g_blocked.load(std::memory_order_relaxed) && letting()) {
+        const bool front = g_fg ? g_fg.stdcall<HWND>() == w : GetForegroundWindow() == w;
+        if (front) {
+            PostMessageW(w, WM_ACTIVATE, WA_ACTIVE, 0);
+            PostMessageW(w, WM_SETFOCUS, 0, 0);
+        }
+        told_inactive = false;
+        ++lets;
+        return;
+    }
     if (want) {
         if (!told_inactive || now - told_at >= 400) {
             PostMessageW(w, WM_ACTIVATE, WA_INACTIVE, 0);
             PostMessageW(w, WM_KILLFOCUS, 0, 0);
-            if (!told_inactive) log::info("Input: the game is told its window is inactive while its input is held");
+            if (!said) log::info("Input: the game is told its window is inactive while its input is held");
+            said = true;
             told_inactive = true;
             told_at = now;
             ++sent;
         }
-    } else if (told_inactive) {
+    } else if (told_inactive || (said && !g_blocked.load(std::memory_order_relaxed) && !letting())) {
         told_inactive = false;
+        said = false;
         // Only a game that really is in front is told so: one in the background hears it from Windows when it comes back.
         const bool front = g_fg ? g_fg.stdcall<HWND>() == w : GetForegroundWindow() == w;
         if (front) {
             PostMessageW(w, WM_ACTIVATE, WA_ACTIVE, 0);
             PostMessageW(w, WM_SETFOCUS, 0, 0);
         }
-        log::info("Input: the game is told its window is active again ({} inactive notices sent{})", sent,
-                  front ? "" : "; it is in the background, Windows tells it");
+        log::info("Input: the game is told its window is active again ({} inactive notices sent, opened {} time(s) for the "
+                  "mod's own keys{})", sent, lets, front ? "" : "; it is in the background, Windows tells it");
         sent = 0;
+        lets = 0;
     }
 }
 

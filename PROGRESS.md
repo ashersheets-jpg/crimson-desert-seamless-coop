@@ -7178,3 +7178,19 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - Packaged from outer HEAD 2269703 (both binaries byte-identical to the ones cs8j / cs9p ran). Post text drafted: docs/release/shared-world-playtest/download-2269703d.txt.
 - Batch 1 (static, real, fresh, xess, fsr, display): 156 pass, 0 fail; every game step SAVES OK and 5/5.
 - Batch 2 (lowsave, chest, revive, loot, crime, farfight): 272 pass, 0 fail (46/45/47/46/43/45); every step SAVES OK and 5/5. Batch 3 (farfight2, newsave, solostart, mounts, mountfight, nosave) started 18:22.
+- Batch 3 (farfight2, newsave, solostart, mounts, mountfight, nosave): 709 pass, 3 FAIL. Every step SAVES OK and 5/5.
+  - newsave, solostart: "guest reached the shared world" False after 4 min (the guest got in at 5.5 min). Cause, in
+    the layer: under its "waiting for the host" screen the guest's game input is held (GetForegroundWindow /
+    GetActiveWindow answer "none" to the game, WM_ACTIVATE inactive every 400 ms), and the hold swallowed the mod's
+    OWN Play presses too. A press only landed when a real focus change slipped between two notices: 12 to 41 presses
+    (1 to 5 min) in pp15, 8 to 11 in pp14 (it was always luck). The lobby meant to open the hold while the mod drives
+    the title (LobbyView::driving), but worlds_lobby_info() returns before it fills `switching` when there is no
+    co-op-worlds partner key, which is always so in the native flow. Fix: game_input_let_through(ms): each key / click
+    the mod sends on the title (coop_worlds.cpp key(), click(), the wheel) opens the title hold for its own length
+    (+200 ms for the game to take the "active" notice), quietly; pads stay idle. Not the whole press loop (6 min,
+    pads too: the PlayStation-pad report of 2026-11-13).
+  - mounts: the host's first E started gathering the peony the horses stand in (about 2 s) and swallowed the second
+    E (a known flake of the TEST, pp14d). tools/prepost.sh: E, E 4 s later, E 1.5 s after that (an E while riding
+    does nothing, pp14e). The dev script's `ridehorse` is no help in the native flow: capture_riding() never sees
+    the rider there (no "Capture: riding" line in any 3663 run).
+  - pp15 stops here: the package changes. pp16 = the whole checklist on the new package.

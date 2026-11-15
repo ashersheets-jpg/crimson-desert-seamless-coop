@@ -12,6 +12,12 @@ namespace cdmp::input {
 bool game_input_block_install();
 // While true the game takes no input (any thread).
 void set_game_input_blocked(bool on);
+// Co-op+ 2026-11-14 (pp15: the guest's own Play press under its "waiting for the host" screen took 12 to 41 presses,
+// 1 to 5 minutes, because the hold swallowed the mod's own keys too; a press only landed when a real focus change slipped
+// between two "inactive" notices). The title hold (set_game_input_blocked, not the downed one) opens for ms from now:
+// the game is told its window is active and gets the real focus answers, so the key the mod presses next is taken.
+// Pads stay idle (set_game_pads_blocked). Called by the mod's own title keys and clicks only.
+void game_input_let_through(unsigned ms);
 bool game_input_blocked();
 // Co-op+ (2026-11-11, tcB382): a second, independent reason: our player is DOWN and waits for a revive. The client is
 // not told about its death (revive_prompt.h), so without this the downed player could still walk and swing. The

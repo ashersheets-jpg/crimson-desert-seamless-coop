@@ -225,3 +225,8 @@ topic BEFORE testing or guessing about it.
 - The client may act before the server: holding a Req at the network level does not stop what the client already does locally (the host's own story scene started 0.5 s after its held Req). Look for the client-side call that both sends and acts, and hold that call (skip it at a mid hook on the call instruction, replay it later on the same thread with the same arguments, keeping a reference on ref-counted arguments).
 - A per-frame point on the game thread for replays: a mid hook right after a frame-level call on the unwound chain (here after the frame's event flush).
 - Python edit scripts: write them with the Write tool (a bash heredoc broke on a quote); files edited by several tools can mix CRLF and LF, so an anchor may need the other line ending.
+
+- An input hold that stops the player's keys reaching the game also stops the keys the mod sends itself, unless it is
+  opened for them on purpose. A flag meant for that (LobbyView::driving) was filled only on a path the native flow never
+  takes, and the auto-Play "worked" by luck for weeks (8 to 41 presses). When an automated press needs many tries,
+  ask what eats the first one.

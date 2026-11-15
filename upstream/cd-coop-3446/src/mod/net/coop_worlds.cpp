@@ -9,6 +9,7 @@
 #include <thread>
 #include <vector>
 
+#include "mod/input/game_input_block.h"
 #include "mod/log.h"
 #include "mod/save_io.h"
 #include "mod/net/troc_sniffer.h"
@@ -92,7 +93,16 @@ bool game_in_front() {
     return pid == GetCurrentProcessId();
 }
 
+// Every key and click below is the mod's own, on the title: the title hold (game_input_block.h) opens for it, else
+// the game, told its window is inactive, drops it (pp15: the guest's Play took 12 to 41 presses).
+constexpr DWORD kLetSettleMs = 200;  // the game takes the "active" notice on its next frames before the key goes down
+void open_hold_for(DWORD ms) {
+    input::game_input_let_through(kLetSettleMs + ms + 400);
+    Sleep(kLetSettleMs);
+}
+
 void key(WORD vk, DWORD hold_ms) {
+    open_hold_for(hold_ms);
     const UINT scan = MapVirtualKeyW(vk, MAPVK_VK_TO_VSC);
     keybd_event(static_cast<BYTE>(vk), static_cast<BYTE>(scan), 0, kOurInput);
     Sleep(hold_ms);
@@ -107,6 +117,7 @@ bool click(int x, int y) {
     const double s = rc.bottom / 1080.0;
     POINT p{static_cast<LONG>(rc.right / 2.0 + (x - 960) * s), static_cast<LONG>(y * s)};
     ClientToScreen(w, &p);
+    open_hold_for(80 + 60);
     SetCursorPos(p.x, p.y);
     Sleep(80);
     mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, kOurInput);
@@ -658,6 +669,7 @@ void worlds_lobby_guest_new(int difficulty) {
                 ClientToScreen(wnd, &c);
                 SetCursorPos(c.x, c.y);
             }
+            open_hold_for(200 * 5);
             for (int i = 0; i < 200; ++i) mouse_event(MOUSEEVENTF_WHEEL, 0, 0, static_cast<DWORD>(-WHEEL_DELTA), kOurInput), Sleep(5);
             Sleep(800);
             key(VK_SPACE, 1600);
