@@ -7595,3 +7595,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   network position), the Continue of that world as 0xA0100066: the old fixed key would have been wrong on the new
   save. Every other step passes (farfight, farfight2, mountfight, stuck included). SAVES OK and 5/5 in every step.
 - cs22a running: name-tag shots on the host while the guest runs in a circle (cs22_guest.txt).
+- 16:34 cs22a (f1028cbc): the tag sits over the friend's head in all host shots (build/native/shots/cs22a-zoom.png),
+  BUT the friend was not running then: the guest's simulated pad moved it ~4 m only while its own window was in front
+  (16:32:34-37); during the host's shots (host window in front) it stood still. A game takes no pad or keys while its
+  window is not in front, and the harness drives one window at a time: one PC cannot show the friend running on the
+  other screen. So the gap is LOGGED now (layer, built): "Name tag: the friend is drawn X m from its network
+  position (the tag follows the drawn one)", every 2 s at most while over 0.75 m. Package 0.1.0-alpha+0245f27d (outer
+  0245f27, with the fresh-ISteamFriends Steam change). cs22b running: each side runs 6 s in its own window, the
+  other side's log measures the gap.
