@@ -90,5 +90,9 @@ void worlds_lobby_guest_new(int difficulty);
 void worlds_lobby_continue();
 // At the title: New Game (held Z) or Play (E), as the lobby's start (its own thread; the game window must be in front).
 void worlds_lobby_press(bool new_game);
+// Co-op+ 2026-11-14: mod.cpp, when the local player's reader goes from "no controlled actor" to anything else (the
+// game made our character: a load began). The title's press loops stop there (in the native flow the layer's own
+// sniffer is off, so sniffer_world_loading() never says so: pp16 pressed Play 5 times where the first took).
+void worlds_note_local_actor();
 
 }  // namespace cdmp::net

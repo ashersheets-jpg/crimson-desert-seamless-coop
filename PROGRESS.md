@@ -7194,3 +7194,13 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     does nothing, pp14e). The dev script's `ridehorse` is no help in the native flow: capture_riding() never sees
     the rider there (no "Capture: riding" line in any 3663 run).
   - pp15 stops here: the package changes. pp16 = the whole checklist on the new package.
+
+## pp16 on 0.1.0-alpha+27148a5f (2026-11-14 19:40)
+- solostart 47/0, newsave 96/0 (with newsavec), mounts 45/0; SAVES OK and 5/5 in each. The guest's login now comes
+  2 s after the host's world is up (solostart, newsavec, mounts; newsave 55 s: the host holds it until its new game's
+  first save, by design). Was 1 to 5 min in pp15.
+- But the layer still pressed Play 5 times (every 8 s until the guest was in the world): its stop test,
+  sniffer_world_loading(), is never true in the native flow (the layer's own sniffer is off there). A late E can land
+  as the world appears (E = interact). Fix: mod.cpp tells coop_worlds when the local reader goes from "no controlled
+  actor" to anything else ("control inner missing" comes within 1.5 s of the login, on both games); the press loops
+  stop there (measured from the loop's own start). pp16 stops: new package, pp17 = the whole checklist.

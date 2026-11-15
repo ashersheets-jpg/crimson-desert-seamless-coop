@@ -255,6 +255,10 @@ public:
         const std::string status = last_ ? "in world" : reader_.last_failure();
         if (status != status_) {
             log::info("Local player: {}", status);
+            // The game made our character (a load began): the title's Play loop stops pressing (coop_worlds.h).
+            if (status_.rfind("no controlled actor", 0) == 0 && status.rfind("no controlled actor", 0) != 0) {
+                net::worlds_note_local_actor();
+            }
             status_ = status;
         }
         if (!last_) return std::nullopt;

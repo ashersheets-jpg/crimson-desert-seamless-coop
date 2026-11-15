@@ -690,6 +690,9 @@ void worlds_lobby_continue() {
     g_sent = WorldStart::Unknown;
 }
 
+std::atomic<uint32_t> g_actor_epoch{0};
+void worlds_note_local_actor() { g_actor_epoch.fetch_add(1); }
+
 void worlds_lobby_press(bool new_game) {
     if (g_switching.exchange(true)) return;
     std::thread([new_game] {
@@ -716,14 +719,18 @@ void worlds_lobby_press(bool new_game) {
         // its slots then, and the six presses had ended 2 s before: the friend sat at the title for ever.
         int presses = 0;
         bool took = false;
+        const uint32_t epoch = g_actor_epoch.load();
+        const auto loading = [epoch] {
+            return sniffer_world_loading() || g_in_world.load() || g_actor_epoch.load() != epoch;
+        };
         for (int attempt = 0; attempt < 45; ++attempt) {
             if (!wait_front("Loading " + label)) return done("Press Play (E) to load.");
             // Already loading or in the world (the player pressed Play, or an earlier press took): no stray E (it is
             // "interact" in the world; tcB184 pressed it 2 min after the host was in).
-            if (sniffer_world_loading() || g_in_world.load()) { took = true; break; }
+            if (loading()) { took = true; break; }
             key('E', 80);
             ++presses;
-            if (wait_for([] { return sniffer_world_loading() || g_in_world.load(); }, 8000)) { took = true; break; }
+            if (wait_for(loading, 8000)) { took = true; break; }
         }
         log::info("Co-op lobby: Play pressed in {} ({} press(es), {})",
                   narrow(save_io::world().empty() ? L"own saves" : save_io::world()), presses,
