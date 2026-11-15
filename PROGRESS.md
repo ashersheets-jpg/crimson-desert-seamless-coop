@@ -7438,3 +7438,8 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     Continue the guest uploads ITS slot103 and the host stages it as slot 204, so -GuestVariant wyvern-egg-dragon
     (copied into the guest test copy's own save folder only) makes the joined player that character. cs18 (after
     pp19): the guest holds D-pad Up 40 s (simulated pad) under screenshots: what its mount wheel offers.
+- pp19 batch A (05:17-06:20): static 12/0, real 13/0, fresh 41/0, solostart 47/0, newsave 96/0, mounts 45/0, xess
+  42/0, fsr 42/0, display 6/0 = 344 pass, 0 fail; SAVES OK and 5/5 on every game step. With the release defaults alone
+  the guest's weather mirror ran in each step (mounts / fresh / solostart: "WeatherSync ON (weather_sync=1, guest)",
+  hook in, 9800 / 7019 / 7289 frames applied, no fault) and the base's reader works on the guest ("Local: pos ...").
+  Batch B (lowsave chest revive loot crime farfight farfight2) started 06:21.
