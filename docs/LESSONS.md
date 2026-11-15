@@ -268,3 +268,10 @@ topic BEFORE testing or guessing about it.
 - A new setting needs its kTags entry (section + help): the title's Co-op page lists settings by section, and an
   untagged one was simply never shown (three settings, one of them announced in a post). Check a new setting on the
   page itself (a shot), not only through the ini.
+- One PC cannot show the friend MOVING on the other player's screen: a game takes no pad or keys while its window is
+  not in front, and the harness drives one window at a time (cs22a: the "running" guest stood still in every host
+  shot). For anything that only shows while the other player moves (name tag, interpolation, animation), log the
+  number on the watching side while the moving side has the focus, and read the log, not the shots.
+- A fix for a rare fault needs its hypothesis tested before it ships as "the fix": the 10 s Steam wait (pp20) rested
+  on "always at +2 s", and the next run faulted at +12 s. Check what the failing call has in common across ALL the
+  logs (here: always the first call on the first interface pointer) before picking the cause.
