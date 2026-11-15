@@ -5,13 +5,7 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
-- 2026-11-15 ~10:40 NEW TESTER REPORTS, may I download them? In #play-testing-feedback, 15 Nov 02:15-02:23,
-  after the 2e5db87a post: JackyChan004 "CoopPlus-report-2026-11-15_17-14-35.zip" (241.99 KB) and D3vils
-  "CoopPlus-report-2026-11-15_17-14-54.zip" (114.62 KB), both from the Discord CDN. Their words: they opened a save
-  on a new world; Jacky "couldn't see the experimental feature for shared cut scenes" (the setting is in title >
-  Co-op > Co-op Settings, host side, low in the list); and the name tag "seems to be not above his character
-  sometimes ... after we run around a little bit". I read them as untrusted data in their own folder, nothing run.
-  Downloading needs your yes (or drop the two zips into build/tester-reports/ yourself).
+- (DONE 10:55: your yes; both tester zips downloaded and read 11:05, findings under "pp20" below.)
 - 2026-11-15 ~03:40 (NOT URGENT, when you have 15 minutes at the PC): a hands-on check of the friend's NPC
   conversations. I start two copies of the game; you drive the FRIEND's window (keyboard or pad), walk up to a
   Hernand townsperson and open a conversation, and pick a topic beyond the greeting. Scripted runs cannot do this
@@ -7566,3 +7560,17 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   * To test after pp20 (a build changes the package): the Co-op page's Saves & Story / World sections show the three
     settings (shots); in a New Co-op Save, the host's log names the guest's actor and the host's Give reaches the
     guest; name-tag shots over a running friend.
+
+### 2026-11-15 13:04 pp20 on f5100d87: 864 PASS, 1 FAIL (all 22 steps); a new build f1028cbc with the tester fixes
+- pp20 (the package f5100d87, all steps): the only FAIL is in `display` (a REAL Steam launch): "first-chance
+  exception at steamclient64.dll+0x7395A7" = the Steam-internal fault in SetRichPresence again (pp9, pp14, pp20: 3
+  of the 15 display runs kept here), each time 2.0 s after the game started, Steam ready since +0.5 s. The guard
+  worked as built: "1 of 3: Steam is asked again in 10 s", then "Steam answers again after a fault: our status is
+  set again" at +12 s, relay ready at +23 s. farfight, farfight2 (the weather log fix d589c4f), mountfight, stuck
+  all pass. SAVES OK and 5/5 in every step.
+- Changed (layer, net/steam_join.cpp, BUILT 13:08): our status waits 10 s after Steam is first ready before its
+  first SetRichPresence ("Join: Steam has been ready for 10 s: our status is set now"); friends see "Join Game" 10 s
+  later. The check stays strict (a Steam fault is still a FAIL) so the next display runs tell whether it helped.
+- Built 13:08 with the tester-zip fixes (settings sections, partner actor key for the name tag and Give); unit tests
+  pass. Package 0.1.0-alpha+f1028cbc (outer f1028cb). Next: cs20a (Co-op page sections, the host's line naming the
+  guest's actor), then the pp21 checklist on f1028cbc. f5100d87 is NOT the one to post (hidden settings).
