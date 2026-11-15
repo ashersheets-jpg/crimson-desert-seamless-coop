@@ -163,6 +163,13 @@ constexpr int kFaultLimit = 3;
 constexpr uint64_t kFaultRetryMs = 10000;
 int g_faults = 0;
 uint64_t g_retry_at = 0;
+// pp20-display (2026-11-15): the same fault in 3 of 15 real Steam launches here (pp9, pp14, pp20), each 2.0 s after
+// the game started, Steam ready since +0.5 s; the retry 10 s later always answered. Our status now waits 10 s after
+// Steam is first ready before its first SetRichPresence (friends see "Join Game" 10 s later); join_presence_lost
+// then asks the caller to say it.
+constexpr uint64_t kPresenceSettleMs = 10000;
+uint64_t g_presence_from = 0;
+bool g_presence_held = false;
 
 void fail(const char* what) {
     if (g_disabled) return;
@@ -216,6 +223,7 @@ void resolve_locked() {
     if (!call(a.frn, a.friends)) return fail("SteamFriends");
     if (!a.frn) return;
     g_resolved = true;
+    if (!g_presence_from) g_presence_from = GetTickCount64() + kPresenceSettleMs;
     g_status = "join: ready";
 }
 
@@ -279,6 +287,10 @@ void set_presence_locked(const char* key, const char* value) {
     // went on with its next keys on the null interface: three "faults" in the same millisecond, and Steam join was
     // off for the whole launch after ONE fault of Steam's. The rest of the keys wait for the retry.
     if (!g_resolved || g_disabled || !g_api.frn) return;
+    if (GetTickCount64() < g_presence_from) {
+        g_presence_held = true;
+        return;
+    }
     bool ok = false;
     if (!call(ok, g_api.set_rich_presence, g_api.frn, key, value)) fail("SetRichPresence");
 }
@@ -323,7 +335,14 @@ void join_presence_guest(uint64_t lobby, const std::string& host_name) {
 bool join_presence_lost() {
     std::lock_guard lock(g_mutex);
     resolve_locked();
-    if (!g_retry_at || !g_resolved || g_disabled) return false;
+    if (!g_resolved || g_disabled) return false;
+    if (g_presence_held && GetTickCount64() >= g_presence_from) {
+        g_presence_held = false;
+        g_retry_at = 0;
+        log::info("Join: Steam has been ready for {} s: our status is set now", kPresenceSettleMs / 1000);
+        return true;
+    }
+    if (!g_retry_at) return false;
     g_retry_at = 0;
     log::info("Join: Steam answers again after a fault: our status is set again");
     return true;
