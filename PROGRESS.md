@@ -7220,3 +7220,14 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - xess 41/1: a host warning kind never listed, "Session2 host tunnel: one tick took 59.8 ms: hold acks". One slow host
   tick, at the same instant as the minute summary dump; the same line is in 4 earlier host logs (55-74 ms). Listed in
   tools/known-warnings.txt with its reason; xess runs again at the end of batch B.
+
+## Time estimate (2026-11-14 22:50, the owner asked "what changed" since 130-240 h on 2026-11-11 23:00)
+- The "5-9 weeks" given earlier tonight was loose (weeks, not from the itemized table) and is withdrawn.
+- 11-14 Nov (~72 h wall clock): ~35-40 h went to listed work (shared cutscenes 25 -> 70% took ~24 h against 8-16 h
+  estimated; mounted combat 30 -> 70%; loot for two; the no-save / both-fresh new co-op save). The rest was not on the
+  list: the 1.0.0.3663 port (~12-15 h), eight checklist passes pp11-pp18 (~3 h each; every fix restarts it), two
+  unexpected PC power-offs and Windows Update restarts.
+- Remaining, re-itemized (hours of work): foundation 44-86, items 6-10, minigames 26-48, combat and safety 12-21,
+  3-4 players 40-80 (was 20-40: the base names "user 2" throughout), release 6-10. Total ~135-255 h of work; at the
+  observed ~2x overhead, ~270-500 h of running time: about 11-21 days around the clock, ~2-3 weeks. Not counted: a
+  new game patch (~1 day each), fixes from tester reports.
