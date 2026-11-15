@@ -255,3 +255,10 @@ topic BEFORE testing or guessing about it.
   opened for them on purpose. A flag meant for that (LobbyView::driving) was filled only on a path the native flow never
   takes, and the auto-Play "worked" by luck for weeks (8 to 41 presses). When an automated press needs many tries,
   ask what eats the first one.
+
+- A research log line that fires "when a value changed" must compare against the last LOGGED value with a real step,
+  not the last read value with 1e-6: a smooth ramp (cloudiness 0.5005 -> 0.5006 ...) then logs every tick, and it
+  turned a feature switched on by default into log spam that failed the checklist (pp19, 2026-11-15). Before a
+  research feature goes on by default, read its log in one default run and count lines a minute.
+- A combat check ("the guest killed / hit an enemy") can fail on the fight's outcome (the camp downed the guest
+  first). Read the shot before calling it a fault, and compare with the same counter in the other steps of the pass.

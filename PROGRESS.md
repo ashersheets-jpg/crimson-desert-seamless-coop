@@ -7454,3 +7454,13 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     This needs a new package, so e9c00342 cannot be posted as is; pp20 on the next package (with dialog_redeliver
     and the '+' split) after cs17 / cs18.
   Batch C (mountfight nosave retry stuck mismatch hostrevive) started 07:26.
+- pp19 batch C (07:26-08:14): mountfight 44/1, nosave 7/0, retry 45/0, stuck 48/1, mismatch 9/0, hostrevive 49/0;
+  SAVES OK and 5/5 on every step. pp19 TOTAL 860 pass, 4 fail over 22 steps (farfight, farfight2 above, and):
+  * stuck: the same WeatherSync target line (31 a minute), fixed in d589c4f.
+  * mountfight: "the mounted guest's blows on enemies were seen" (guest>NPC 0; pp18 4). Shots 38b / g2: the guest
+    mounted in the camp, enemies around, the host downed beside it; its swings landed on nothing this time. Guest
+    blows ARE seen on this build elsewhere (farfight2 43 blows / 7 kills, crime 20). A combat outcome, like farfight.
+  => e9c00342 is NOT posted (the log spam is a real fault of that package). Builds allowed again from 08:14.
+- 08:15 builds: native d589c4f (dialog_redeliver + the WeatherSync log fix), ctest 63/93 (the same 30 known 2976
+  fixtures fail; optd_clock_push, optd_weather_sync, optd_shop_twin pass); layer (the '+' split), cdmp_tests all
+  pass. cs17a (dialog re-delivery) started 08:20.

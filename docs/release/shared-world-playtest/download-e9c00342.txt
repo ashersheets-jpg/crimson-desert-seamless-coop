@@ -1,3 +1,4 @@
+(SUPERSEDED 2026-11-15 08:14: NOT POSTED; pp19 found WeatherSync log spam in this package. The next package gets its own draft.)
 **Update: shared world playtest 0.1.0-alpha+e9c00342, for game 1.0.0.3663**
 Please use this one instead of 2e5db87a; **both players need the same build** (the title menu tells you if your friend has another one).
 
