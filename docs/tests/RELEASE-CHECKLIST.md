@@ -1,5 +1,17 @@
 # Release checklist (run before ANY build is posted)
 
+## How a pass is run
+
+- How the checklist is run (the owner, 2026-11-14 23:00; eight passes in three days cost ~20 h):
+  1. A failing step does not stop the pass: note it and run every remaining step on the same package, so one pass
+     finds every problem. Fix them all, package once, then one final full pass.
+  2. A fix that only touches test-kit code (code that runs only under [dev] switches or in tools/, never for a
+     player) does not restart the pass: re-run the affected steps plus a smoke set (static, fresh, solostart) on the
+     new package, and say so in PROGRESS and the post's test line.
+  3. Post less often: bundle more fixes and features per post (about one full pass per post, not per fix).
+  The full pass on the final package before any post stays (rule 2 is the only exception, and only for test-kit-only
+  changes).
+
 Why this exists: on 2026-11-11 five builds were posted in one morning. Testers hit three faults that every test had
 missed, because the tests did not look like a player's PC:
 
