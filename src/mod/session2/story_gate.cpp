@@ -3,6 +3,7 @@
 #include <windows.h>
 
 #include <atomic>
+#include <cstdlib>
 #include <cstring>
 #include <algorithm>
 #include <deque>
@@ -643,6 +644,52 @@ void install_client() {
 }
 
 }  // namespace
+
+namespace {
+SafetyHookMid g_where_hook;
+std::atomic<int> g_where_hits{0};
+uintptr_t g_where_rva = 0;
+
+void on_where(safetyhook::Context& ctx) {
+    const int n = g_where_hits.fetch_add(1, std::memory_order_relaxed);
+    if (n >= 6) return;
+    const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    const uint64_t nv[8] = {ctx.rbx, ctx.rbp, ctx.rsi, ctx.rdi, ctx.r12, ctx.r13, ctx.r14, ctx.r15};
+    uint64_t out[12] = {};
+    const int k = sg_unwind(base + g_where_rva, ctx.rsp, nv, out, 12);
+    std::string chain;
+    for (int i = 0; i < k; ++i) {
+        chain += out[i] >= base && out[i] < base + 0x20000000 ? std::format(" exe+0x{:X}", out[i] - base)
+                                                              : std::format(" 0x{:X}", out[i]);
+    }
+    log::info("WhereProbe: exe+0x{:X} hit {} (thread {}; rcx 0x{:X} rdx 0x{:X} rbx 0x{:X} rsi 0x{:X}): callers{}",
+              g_where_rva, n + 1, GetCurrentThreadId(), ctx.rcx, ctx.rdx, ctx.rbx, ctx.rsi, chain.empty() ? " none" : chain);
+}
+}  // namespace
+
+void where_probe_start(const std::string& spec) {
+    if (spec.empty() || spec == "0") return;
+    const size_t colon = spec.find(':');
+    std::vector<uint8_t> bytes;
+    if (colon != std::string::npos) {
+        for (size_t i = colon + 1; i + 1 < spec.size(); i += 2) {
+            bytes.push_back(static_cast<uint8_t>(std::strtoul(spec.substr(i, 2).c_str(), nullptr, 16)));
+        }
+    }
+    g_where_rva = std::strtoull(spec.substr(0, colon).c_str(), nullptr, 16);
+    if (!g_where_rva || bytes.size() < 5) {
+        log::warn("WhereProbe: [session2] where_probe='{}' not understood (<hex rva>:<hex bytes, 5 or more>): off", spec);
+        return;
+    }
+    const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    std::vector<gad::Section> secs;
+    if (!p8_exe_sections(base, secs)) {
+        log::error("WhereProbe: the exe's sections are not readable: not installed");
+        return;
+    }
+    p8_install_mid(base, secs, g_where_rva, static_cast<uint32_t>(bytes.size()), bytes, on_where, g_where_hook,
+                   "WhereProbe", "research: the caller chain of the first 6 hits");
+}
 
 void story_gate_host_stack(const uint8_t* packet, size_t size, uint64_t rsp, uint64_t rip, const uint64_t nv[8]) noexcept {
     static std::atomic<int> said{0};
