@@ -102,12 +102,13 @@ bool clock_push_configure(const std::string& raw, bool create_session) {
     }
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     g_mode.store(static_cast<uint8_t>(p.mode), std::memory_order_release);
-    log::info("Session2 clock push {} (user2_clock_push={}): T1 right after every LoadingCompleteAck 2190 queued for "
+    log::info("Session2 clock push {} (user2_clock_push={}): T1 right after every LoadingCompleteAck {} queued for "
               "user 2, T2 when the world clock changes while user 2 is in the world (settled {} ms, at most one every "
-              "{} ms, never during its loads): a native SetFieldTimeAck 2952 (00 0B FF 23 00 | user 2's character | "
-              "FieldTime 31 B) with the server's world clock exe+0x{:X} (two equal reads) {}; world clock now {}",
-              p.mode == u2f::Mode::On ? "ON" : "PROBE", u2f::mode_name(p.mode), g_watch.config().settle_ms,
-              g_watch.config().min_gap_ms, ckp::kServerClock,
+              "{} ms, never during its loads): a native SetFieldTimeAck {} ({:02X} {:02X} FF 23 00 | user 2's character "
+              "| FieldTime 31 B) with the server's world clock exe+0x{:X} (two equal reads) {}; world clock now {}",
+              p.mode == u2f::Mode::On ? "ON" : "PROBE", u2f::mode_name(p.mode), ckp::kOpLoadingCompleteAck,
+              g_watch.config().settle_ms, g_watch.config().min_gap_ms, ckp::kOpSetFieldTimeAck,
+              ckp::kOpSetFieldTimeAck & 0xFF, ckp::kOpSetFieldTimeAck >> 8, ckp::kServerClock,
               p.mode == u2f::Mode::On ? "queued for user 2" : "logged only (WOULD queue), nothing sent", [] {
                   uint8_t mem[ckp::kFieldTimeMem] = {};
                   return read_clock(g_base + ckp::kServerClock, mem, false) ? show(mem) : std::string("unreadable");

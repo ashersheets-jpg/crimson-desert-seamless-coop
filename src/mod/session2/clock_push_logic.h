@@ -34,16 +34,20 @@ inline constexpr size_t kAckPayload = 4 + kFieldTimeWire;   // 35 (0x23)
 inline constexpr size_t kAckPacket = kHeader + kAckPayload;  // 40
 inline constexpr size_t kLoadingAckPayload = 13;
 
-// The game's addresses (exe+, build 2976), read only.
-inline constexpr uintptr_t kServerClock = 0x6A6D238;   // server FieldTime (the host's world clock)
-inline constexpr uintptr_t kClientClock = 0x6A6D218;   // client FieldTime (what this client's sky follows)
-inline constexpr uintptr_t kWorldSystem = 0x6D69190;   // [exe+] -> world system; +0x28 -> the time manager
+// The game's addresses (exe+, build 1.0.0.3663), read only. Co-op+ 2026-11-15: ported (they were 2976's
+// 0x6A6D238 / 0x6A6D218 / 0x6D69190 / 0x6D69438 until now; only the opcodes had moved). exe+0xD04019C (SetFieldTime's
+// store): `vmovups [0x6F31C98], ymm0` (server) or `[0x6F31C78]` (client), on one flag; 0x6F31C98 is clock_gate.h's
+// kWorldTime; the world system slot is offsets.h's kWorldSystemSlot. The bias (2188) is read by the probe only:
+// 0x7245468 = the world system slot + 0x2A8 as in 2976, 138 rip-relative reads; not checked further.
+inline constexpr uintptr_t kServerClock = 0x6F31C98;   // server FieldTime (the host's world clock)
+inline constexpr uintptr_t kClientClock = 0x6F31C78;   // client FieldTime (what this client's sky follows)
+inline constexpr uintptr_t kWorldSystem = 0x72451C0;   // [exe+] -> world system; +0x28 -> the time manager
 inline constexpr uint32_t kWorldTimeMgr = 0x28;
 inline constexpr uint32_t kMgrFlags = 0x28;            // +0x28 active (set by the 2762), +0x29 private calendar,
                                                        // +0x2A its previous value, +0x2B off
 inline constexpr uint32_t kMgrPrivateTime = 0x30;      // FieldTime of the private calendar (+0x30..+0x4F)
 inline constexpr uint32_t kMgrDumpSize = 0x30;         // +0x28 .. +0x57
-inline constexpr uintptr_t kClockBias = 0x6D69438;     // i64: server tick - this client's FrameClock (2188, 0xBDF310)
+inline constexpr uintptr_t kClockBias = 0x7245468;     // i64: server tick - this client's FrameClock (2188; probe only)
 
 struct FieldTime {
     uint32_t day = 0, hour = 0, minute = 0, second = 0, ms = 0;
