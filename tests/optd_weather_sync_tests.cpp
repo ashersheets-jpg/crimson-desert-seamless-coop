@@ -45,40 +45,41 @@ wsy::Snapshot sample(uint32_t seq, uint64_t tick, float base) {
 }
 
 void test_field_table() {
-    static_assert(wsy::kFieldCount == 61);
+    // Co-op+ 2026-11-15: the 1.0.0.3663 layout (weather_sync_logic.h: A +4 from 0x13C, B +4, C = the wind object).
+    static_assert(wsy::kFieldCount == 55);
     CHECK(wsy::kIdxPrecip == 0 && wsy::kFields[wsy::kIdxPrecip].off == 0x12C);
-    CHECK(wsy::kFields[wsy::kIdxRain].off == 0x16C && wsy::kFields[wsy::kIdxSnow].off == 0x168);
-    CHECK(wsy::kFields[wsy::kIdxCloudBase].block == wsy::Block::B && wsy::kFields[wsy::kIdxCloudBase].off == 0xA8);
-    CHECK(wsy::kFields[wsy::kIdxScrollX].kind == wsy::Kind::Accum && wsy::kFields[wsy::kIdxScrollZ].off == 0x128);
-    // Every B word from +0x64 to +0xF0, in order, no gap; the colours and the seed are Raw.
+    CHECK(wsy::kFields[wsy::kIdxRain].off == 0x170 && wsy::kFields[wsy::kIdxSnow].off == 0x16C);
+    CHECK(wsy::kFields[wsy::kIdxCloudBase].block == wsy::Block::B && wsy::kFields[wsy::kIdxCloudBase].off == 0xAC);
+    CHECK(wsy::kFields[wsy::kIdxScrollX].kind == wsy::Kind::Accum && wsy::kFields[wsy::kIdxScrollZ].off == 0x140);
+    // Every B word from +0x68 to +0xF4, in order, no gap; the colours and the seed are Raw.
     size_t b = 0;
     for (size_t i = 0; i < wsy::kFieldCount; ++i) {
         if (wsy::kFields[i].block != wsy::Block::B) continue;
-        CHECK(wsy::kFields[i].off == 0x64 + 4 * b);
+        CHECK(wsy::kFields[i].off == 0x68 + 4 * b);
         ++b;
     }
     CHECK(b == 36);
     // Review 4: the seed and the angle are floats held from the newest sample; only the colours are Raw.
-    CHECK(wsy::kFields[wsy::index_of(wsy::Block::B, 0xE8)].kind == wsy::Kind::Hold);
-    CHECK(wsy::kFields[wsy::index_of(wsy::Block::A, 0x154)].kind == wsy::Kind::Hold);
-    CHECK(wsy::kFields[wsy::index_of(wsy::Block::B, 0xEC)].kind == wsy::Kind::Raw);
-    CHECK(wsy::kFields[wsy::index_of(wsy::Block::C, 0x1B4)].kind == wsy::Kind::Raw);
-    CHECK(wsy::kFields[wsy::index_of(wsy::Block::C, 0x178)].kind == wsy::Kind::Unknown);
-    // Review 6: B+0x78/7C/80 are of unknown type: logged, never written.
-    for (uint16_t off : {uint16_t{0x78}, uint16_t{0x7C}, uint16_t{0x80}}) {
+    CHECK(wsy::kFields[wsy::index_of(wsy::Block::B, 0xEC)].kind == wsy::Kind::Hold);
+    CHECK(wsy::kFields[wsy::index_of(wsy::Block::A, 0x158)].kind == wsy::Kind::Hold);
+    CHECK(wsy::kFields[wsy::index_of(wsy::Block::B, 0xF0)].kind == wsy::Kind::Raw);
+    CHECK(wsy::kFields[wsy::index_of(wsy::Block::B, 0xF4)].kind == wsy::Kind::Raw);
+    CHECK(wsy::kFields[wsy::index_of(wsy::Block::C, 0x1C0)].kind == wsy::Kind::Lerp);  // the wind direction
+    // Review 6: B+0x7C/80/84 (2976's 78/7C/80) are of unknown type: logged, never written.
+    for (uint16_t off : {uint16_t{0x7C}, uint16_t{0x80}, uint16_t{0x84}}) {
         const size_t i = wsy::index_of(wsy::Block::B, off);
         CHECK(wsy::kFields[i].kind == wsy::Kind::Unknown && !wsy::written(i, wsy::kKnownMask) &&
               !wsy::kept_for_release(i));
     }
-    CHECK(wsy::written(wsy::index_of(wsy::Block::A, 0x154), wsy::kHasA));
-    CHECK(wsy::written(wsy::index_of(wsy::Block::B, 0xEC), wsy::kHasB));
-    CHECK(wsy::index_of(wsy::Block::A, 0x140) == wsy::kFieldCount);  // not in the schema
+    CHECK(wsy::written(wsy::index_of(wsy::Block::A, 0x158), wsy::kHasA));
+    CHECK(wsy::written(wsy::index_of(wsy::Block::B, 0xF0), wsy::kHasB));
+    CHECK(wsy::index_of(wsy::Block::A, 0x144) == wsy::kFieldCount);  // not in the schema (2976's gap 0x140)
     // The rain/snow outputs are sent but never written; the precipitation command is.
     CHECK(!wsy::written(wsy::kIdxRain, wsy::kKnownMask) && !wsy::written(wsy::kIdxSnow, wsy::kKnownMask));
     CHECK(wsy::written(wsy::kIdxPrecip, wsy::kKnownMask));
-    CHECK(!wsy::written(wsy::index_of(wsy::Block::C, 0x178), wsy::kKnownMask));
+    CHECK(wsy::written(wsy::index_of(wsy::Block::C, 0x1C4), wsy::kKnownMask));
     CHECK(!wsy::written(wsy::kIdxPrecip, wsy::kHasB | wsy::kHasX));  // A absent
-    CHECK(wsy::written(wsy::index_of(wsy::Block::B, 0xE8), wsy::kHasB));
+    CHECK(wsy::written(wsy::index_of(wsy::Block::B, 0xEC), wsy::kHasB));
 }
 
 void test_extract() {
@@ -90,20 +91,20 @@ void test_extract() {
     std::memcpy(x, scroll, sizeof x);
     uint32_t w[wsy::kFieldCount];
     wsy::extract(a, b, c, x, w);
-    // A+0x12C is the first 4 bytes of the A copy; A+0x16C is 0x40 further.
+    // A+0x12C is the first 4 bytes of the A copy; A+0x170 (rain) is 0x44 further.
     CHECK(w[wsy::kIdxPrecip] == 0x03020100u);
-    CHECK(w[wsy::kIdxRain] == 0x43424140u);
-    // B+0x64 = first word of the B copy; B+0xF0 its last.
-    CHECK(w[wsy::index_of(wsy::Block::B, 0x64)] == 0x83828180u);
-    const size_t last_b = wsy::index_of(wsy::Block::B, 0xF0);
+    CHECK(w[wsy::kIdxRain] == 0x47464544u);
+    // B+0x68 = first word of the B copy; B+0xF4 its last.
+    CHECK(w[wsy::index_of(wsy::Block::B, 0x68)] == 0x83828180u);
+    const size_t last_b = wsy::index_of(wsy::Block::B, 0xF4);
     uint32_t expect = 0;
-    std::memcpy(&expect, b + (0xF0 - 0x64), 4);
+    std::memcpy(&expect, b + (0xF4 - 0x68), 4);
     CHECK(w[last_b] == expect);
-    CHECK(w[wsy::index_of(wsy::Block::C, 0x178)] == 0x43424140u);
+    CHECK(w[wsy::index_of(wsy::Block::C, 0x1C0)] == 0x43424140u);
     CHECK(near(wsy::as_float(w[wsy::kIdxScrollX]), 123.5f) && near(wsy::as_float(w[wsy::kIdxScrollZ]), -7.25f));
     // A missing block leaves zeros.
     wsy::extract(a, nullptr, c, x, w);
-    CHECK(w[wsy::index_of(wsy::Block::B, 0x64)] == 0 && w[wsy::kIdxPrecip] == 0x03020100u);
+    CHECK(w[wsy::index_of(wsy::Block::B, 0x68)] == 0 && w[wsy::kIdxPrecip] == 0x03020100u);
 }
 
 void test_frame_bytes() {
@@ -116,18 +117,18 @@ void test_frame_bytes() {
     s.pos[2] = 0.5f;  // 0x3F000000
     for (size_t i = 0; i < wsy::kFieldCount; ++i) s.w[i] = 0xA0000000u + static_cast<uint32_t>(i);
     const auto f = wsy::frame(s);
-    CHECK(f.size() == 277);
-    // u16 opcode 1 | i8 -1 | u16 272
-    CHECK(f[0] == 0x01 && f[1] == 0x00 && f[2] == 0xFF && f[3] == 0x10 && f[4] == 0x01);
-    // u8 12 | u8 1 | u16 mask 0x001B | u32 seq | u64 tick
-    CHECK(f[5] == 12 && f[6] == 1 && f[7] == 0x1B && f[8] == 0x00);
+    CHECK(f.size() == 253);
+    // u16 opcode 1 | i8 -1 | u16 248
+    CHECK(f[0] == 0x01 && f[1] == 0x00 && f[2] == 0xFF && f[3] == 0xF8 && f[4] == 0x00);
+    // u8 12 | u8 2 | u16 mask 0x001B | u32 seq | u64 tick
+    CHECK(f[5] == 12 && f[6] == 2 && f[7] == 0x1B && f[8] == 0x00);
     CHECK(f[9] == 0x04 && f[10] == 0x03 && f[11] == 0x02 && f[12] == 0x01);
     CHECK(f[13] == 0x88 && f[14] == 0x77 && f[15] == 0x66 && f[16] == 0x55 && f[17] == 0x44 && f[18] == 0x33 &&
           f[19] == 0x22 && f[20] == 0x11);
     CHECK(f[21] == 0x00 && f[22] == 0x00 && f[23] == 0x80 && f[24] == 0x3F);  // pos x
     CHECK(f[25] == 0x00 && f[26] == 0x00 && f[27] == 0x00 && f[28] == 0xC0);  // pos y
     CHECK(f[33] == 0x00 && f[34] == 0x00 && f[35] == 0x00 && f[36] == 0xA0);  // word 0
-    CHECK(f[276] == 0xA0 && f[273] == 60);                                    // word 60
+    CHECK(f[252] == 0xA0 && f[249] == 54);                                    // word 54
     // The tunnel takes it as a whole packet of opcode 1 (troc_frame.h kControlOpcode) in ToGuestClient batches.
     const auto v = troc::parse(f);
     CHECK(v && v->opcode == troc::kControlOpcode && v->slot == -1 && v->payload.size() == wsy::kPayloadSize);
@@ -146,7 +147,7 @@ void test_frame_bytes() {
     bad[5] = 5;  // another state
     CHECK(!wsy::is_frame(bad) && !wsy::decode(bad));
     bad = f;
-    bad[6] = 2;  // another version: still the frame (taken out), not decoded
+    bad[6] = 1;  // another version (2976's): still the frame (taken out), not decoded
     CHECK(wsy::is_frame(bad) && !wsy::decode(bad));
     bad = f;
     bad[8] = 0x01;  // unknown mask bit 0x100
@@ -165,24 +166,24 @@ void test_sanity() {
     s.w[wsy::kIdxCloud] = wsy::as_word(std::numeric_limits<float>::quiet_NaN());
     CHECK(wsy::check(s).nonfinite == 1 && !wsy::applicable(s));
     s = sample(1, 1000, 10.0f);
-    s.w[wsy::index_of(wsy::Block::B, 0xA8)] = wsy::as_word(3.0e8f);
+    s.w[wsy::index_of(wsy::Block::B, 0xAC)] = wsy::as_word(3.0e8f);
     CHECK(wsy::check(s).huge == 1 && !wsy::check(s).ok());
     // A colour word that is a NaN as a float is fine (Raw is not checked), nor are words of unknown type.
     s = sample(1, 1000, 10.0f);
-    s.w[wsy::index_of(wsy::Block::B, 0xEC)] = 0xFFFFFFFFu;
-    s.w[wsy::index_of(wsy::Block::C, 0x178)] = 0xFFFFFFFFu;
+    s.w[wsy::index_of(wsy::Block::B, 0xF0)] = 0xFFFFFFFFu;
+    s.w[wsy::index_of(wsy::Block::B, 0x84)] = 0xFFFFFFFFu;
     s.w[wsy::index_of(wsy::Block::B, 0x7C)] = 0xFFFFFFFFu;
     CHECK(wsy::check(s).ok());
     // Review 4: the Hold floats are checked.
-    s.w[wsy::index_of(wsy::Block::A, 0x154)] = wsy::as_word(std::numeric_limits<float>::quiet_NaN());
-    CHECK(!wsy::check(s).ok() && wsy::check(s).first_bad == static_cast<int>(wsy::index_of(wsy::Block::A, 0x154)));
+    s.w[wsy::index_of(wsy::Block::A, 0x158)] = wsy::as_word(std::numeric_limits<float>::quiet_NaN());
+    CHECK(!wsy::check(s).ok() && wsy::check(s).first_bad == static_cast<int>(wsy::index_of(wsy::Block::A, 0x158)));
     s = sample(1, 1000, 10.0f);
-    s.w[wsy::index_of(wsy::Block::B, 0xE8)] = wsy::as_word(5.0e7f);
+    s.w[wsy::index_of(wsy::Block::B, 0xEC)] = wsy::as_word(5.0e7f);
     CHECK(wsy::check(s).huge == 1 && std::strcmp(wsy::field_name(wsy::check(s).first_bad), "cloudSeed") == 0);
     // Review 8: +-FLT_MAX ("not set") passes and is counted apart.
     s = sample(1, 1000, 10.0f);
     s.w[wsy::kIdxCloudBase] = wsy::kFltMaxBits;
-    s.w[wsy::index_of(wsy::Block::C, 0x1B0)] = wsy::kNegFltMaxBits;
+    s.w[wsy::index_of(wsy::Block::C, 0x1C0)] = wsy::kNegFltMaxBits;
     CHECK(wsy::check(s).ok() && wsy::check(s).unset == 2 && wsy::check(s).huge == 0 && wsy::applicable(s));
     CHECK(wsy::check(s).first_bad == -1 && std::strcmp(wsy::field_name(-1), "-") == 0);
     // Out of [0, 1] is counted, not fatal.
@@ -208,7 +209,7 @@ void test_blend() {
     // Lerp field: cloudiness 0.2 -> 0.4; Raw: the seed differs; Accum: scroll 100 -> 102.
     prev.s.w[wsy::kIdxCloud] = wsy::as_word(0.2f);
     cur.s.w[wsy::kIdxCloud] = wsy::as_word(0.4f);
-    const size_t seed = wsy::index_of(wsy::Block::B, 0xE8);
+    const size_t seed = wsy::index_of(wsy::Block::B, 0xEC);
     prev.s.w[seed] = 0x11111111u;
     cur.s.w[seed] = 0x22222222u;
     prev.s.w[wsy::kIdxScrollX] = wsy::as_word(100.0f);
@@ -262,7 +263,7 @@ void test_blend() {
     b = wsy::blend(&prev, cu, 50410, out);
     CHECK(out[wsy::kIdxCloud] == wsy::kFltMaxBits);
     // Hold: the newest, never mixed (the wind angle 350 -> 10 must not sweep through 180).
-    const size_t deg = wsy::index_of(wsy::Block::A, 0x154);
+    const size_t deg = wsy::index_of(wsy::Block::A, 0x158);
     wsy::Timed ph = prev, ch = cur;
     ph.s.w[deg] = wsy::as_word(350.0f);
     ch.s.w[deg] = wsy::as_word(10.0f);
@@ -400,9 +401,9 @@ void test_restore_bits() {
     // Kept: every holder word that may be written or that 0x382A1A0 rewrites; never the accumulators, never the
     // words of unknown type.
     CHECK(wsy::kept_for_release(wsy::kIdxPrecip) && wsy::kept_for_release(wsy::kIdxRain));
-    CHECK(wsy::kept_for_release(wsy::index_of(wsy::Block::B, 0xEC)) &&
-          wsy::kept_for_release(wsy::index_of(wsy::Block::A, 0x154)));
-    CHECK(!wsy::kept_for_release(wsy::kIdxScrollX) && !wsy::kept_for_release(wsy::index_of(wsy::Block::C, 0x178)));
+    CHECK(wsy::kept_for_release(wsy::index_of(wsy::Block::B, 0xF0)) &&
+          wsy::kept_for_release(wsy::index_of(wsy::Block::A, 0x158)));
+    CHECK(!wsy::kept_for_release(wsy::kIdxScrollX) && !wsy::kept_for_release(wsy::index_of(wsy::Block::B, 0x7C)));
     uint64_t kept = 0, written = 0;
     for (size_t i = 0; i < wsy::kFieldCount; ++i) {
         if (wsy::kept_for_release(i)) kept |= wsy::field_bit(i);
@@ -412,7 +413,7 @@ void test_restore_bits() {
     const uint64_t r = wsy::restore_bits(kept, written, /*flag_was_ours=*/true);
     CHECK((r & wsy::field_bit(wsy::kIdxPrecip)) && (r & wsy::field_bit(wsy::kIdxRain)) &&
           (r & wsy::field_bit(wsy::kIdxCloudBase)));
-    CHECK(!(r & wsy::field_bit(wsy::index_of(wsy::Block::C, 0x1B0))) && !(r & wsy::field_bit(wsy::kIdxScrollX)));
+    CHECK(!(r & wsy::field_bit(wsy::index_of(wsy::Block::C, 0x1C0))) && !(r & wsy::field_bit(wsy::kIdxScrollX)));
     const uint64_t r2 = wsy::restore_bits(kept, written, /*flag_was_ours=*/false);
     CHECK(!(r2 & wsy::field_bit(wsy::kIdxRain)) && (r2 & wsy::field_bit(wsy::kIdxPrecip)));
     CHECK(wsy::restore_bits(0, written, true) == 0);

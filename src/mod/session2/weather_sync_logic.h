@@ -43,33 +43,42 @@ namespace cdmp::session2::wsy {
 
 // ---------------------------------------------------------------- the game (exe+, build 2976)
 
-inline constexpr uintptr_t kModuleSlot = 0x6C8CEC8;  // [exe+] -> M; M.vf60 = 0x6DA0A0 returns [M+0x60]
+// Co-op+ 2026-11-15: ported to 1.0.0.3663 (PROGRESS 2026-11-15, cs12c / cs15a; the 2976 values in brackets).
+// X = [[[exe+0x7160240]+0x60]+0xF70]: WeatherSimulatorScriptComponent's update 0xE9ECB0 (RTTI vtable 0x5A63EB0, vf7)
+// reads it so and tests X+0x31. [X] = 0x619D3D0 on both games (read live, cs15a). X's update 0x4143B20 (found by a
+// stack scan from the mixer 0x413F780, cs12c) does what 0x3DC4730 did; only protected code calls it, so its caller is
+// not checked any more. The blocks moved: A = [holder+0x20], B = [holder+0x28]; A's fields +4 from 0x13C, B's +4;
+// the wind direction left A for the object [X+0x100] (+0x1C0 / +0x1C4: the update's scroll reads it there), which
+// takes the old block C's place in the vector (C's under-water colours on 2976: not mirrored on 3663).
+inline constexpr uintptr_t kModuleSlot = 0x7160240;  // [exe+] -> M; M.vf60 = 0x7D7940 returns [M+0x60] (2976 0x6C8CEC8)
 inline constexpr uint32_t kModuleScene = 0x60;       // S = [M+0x60]
-inline constexpr uint32_t kSceneWeather = 0xF68;     // X = [S+0xF68]
+inline constexpr uint32_t kSceneWeather = 0xF70;     // X = [S+0xF70] (2976 +0xF68)
 inline constexpr uint32_t kVtGetterSlot = 0x60;      // [[M]+0x60] = the getter the simulators call
-inline constexpr uintptr_t kGetterVf60 = 0x6DA0A0;
+inline constexpr uintptr_t kGetterVf60 = 0x7D7940;   // (2976 0x6DA0A0)
 inline constexpr uint8_t kGetterVf60Bytes[5] = {0x48, 0x8B, 0x41, 0x60, 0xC3};  // mov rax,[rcx+0x60]; ret
-inline constexpr uintptr_t kClientSlot = 0x6D69198;  // 0x9ADF61: X_b = [[[exe+0x6D69198]+0x38]+0x38]
+inline constexpr uintptr_t kClientSlot = 0;          // 2976's second path to X (0x6D69198 +0x38 +0x38): not found on 3663
 inline constexpr uint32_t kClientHop1 = 0x38, kClientHop2 = 0x38;
-inline constexpr uintptr_t kVtWeatherSystem = 0x5D51268;  // [X] (VA 0x145D51268)
+inline constexpr uintptr_t kVtWeatherSystem = 0x619D3D0;  // [X] (2976 0x5D51268)
 
 inline constexpr uint32_t kXViewer = 0x31;   // u8: 1 = the Weather Viewer's external values
 inline constexpr uint32_t kXHolder = 0x60;
 inline constexpr uint32_t kXWcCount = 0x88;  // u32: WeatherComponents registered with the mixer
-inline constexpr uint32_t kXScroll = 0x124;  // 2 floats: the cloud scroll accumulators
-inline constexpr uint32_t kHolderA = 0x18, kHolderB = 0x20, kHolderC = 0x28;
-inline constexpr uint32_t kATempSample = 0x198;  // the ClimateTexture sample at the local camera (local, never sent)
+inline constexpr uint32_t kXScroll = 0x13C;  // 2 floats: the cloud scroll accumulators (2976 +0x124)
+inline constexpr uint32_t kXWindObj = 0x100; // the object whose +0x1C0 / +0x1C4 is the wind direction (3663)
+inline constexpr uint32_t kHolderA = 0x20, kHolderB = 0x28, kHolderC = 0;  // (2976 0x18 / 0x20 / 0x28); C: see kXWindObj
+inline constexpr uint32_t kATempSample = 0x1A0;  // the ClimateTexture sample at the local camera (local, never sent; 2976 0x198)
 
-inline constexpr uintptr_t kUpdate = 0x3DC4730;
-inline constexpr uint8_t kUpdateHead[18] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x55, 0x56, 0x57, 0x48,
-                                            0x83, 0xEC, 0x50, 0xC5, 0xF8, 0x29, 0x74, 0x24, 0x40};
-inline constexpr uint32_t kUpdateBoundaries[] = {5, 6, 7, 8, 12, 18};  // whole instructions of kUpdateHead
-inline constexpr uintptr_t kUpdateCall = 0x3B10737;
-inline constexpr uint8_t kUpdateCallBytes[5] = {0xE8, 0xF4, 0x3F, 0x2B, 0x00};  // call 0x3DC4730
+inline constexpr uintptr_t kUpdate = 0x4143B20;  // (2976 0x3DC4730)
+// mov rax,rsp | push rbx | push rbp | push rsi | push rdi | push r12 | push r14 | push r15 | sub rsp,0x90
+inline constexpr uint8_t kUpdateHead[20] = {0x48, 0x8B, 0xC4, 0x53, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41,
+                                            0x56, 0x41, 0x57, 0x48, 0x81, 0xEC, 0x90, 0x00, 0x00, 0x00};
+inline constexpr uint32_t kUpdateBoundaries[] = {3, 4, 5, 6, 7, 9, 11, 13, 20};  // whole instructions of kUpdateHead
+inline constexpr uintptr_t kUpdateCall = 0;  // 2976's one caller 0x3B10737: on 3663 only protected code calls it
+inline constexpr uint8_t kUpdateCallBytes[5] = {0xE8, 0, 0, 0, 0};  // not checked when kUpdateCall is 0
 
 // The server tick as the game's client threads compute it (combat_follow.cpp, remote_motion.cpp): frame ms +
 // frame us / 1000 + the 2188 bias (ServerTimeInfoAck). On the guest it is the host's server tick.
-inline constexpr uintptr_t kClockBase = 0x6C8CD68, kClockFrac = 0x6C8CD70, kClockBias = 0x6D69438;
+inline constexpr uintptr_t kClockBase = 0x71600E8, kClockFrac = 0x71600F0, kClockBias = 0x7245468;  // remote_motion.cpp's (3549+)
 
 // ---------------------------------------------------------------- the vector (v1)
 
@@ -91,74 +100,68 @@ struct Field {
 // Names: GameGlobalEffectInfo_Weather in 0x1504FC0's read order mapped by 0x41DB60 (clima-sincronizar.md §1.1;
 // the name <-> index pairing is [E]); "?" where the report has no name.
 inline constexpr Field kFields[] = {
-    // A (17)
+    // A (15). 3663: +4 from 0x13C (rain 0x170: the rain getter 0x4142CC0; windDegree 90 at 0x158, cs15a).
     {Block::A, 0x12C, Kind::Lerp, "precipitation"},
     {Block::A, 0x130, Kind::Lerp, "cloudiness"},
     {Block::A, 0x134, Kind::Lerp, "humidity"},
-    {Block::A, 0x138, Kind::Lerp, "windSpeed"},
-    {Block::A, 0x13C, Kind::Lerp, "puddleRate"},
-    {Block::A, 0x144, Kind::Lerp, "snowPuddleRate"},
-    {Block::A, 0x148, Kind::Lerp, "snowAmount"},
-    {Block::A, 0x14C, Kind::Lerp, "snowRate"},
-    {Block::A, 0x150, Kind::Lerp, "iceRatio"},
-    {Block::A, 0x154, Kind::Hold, "windDegree"},
-    {Block::A, 0x158, Kind::Lerp, "altitudeWindRatio"},
-    {Block::A, 0x160, Kind::Derived, "rainOut160"},
-    {Block::A, 0x164, Kind::Derived, "rainFx164"},
-    {Block::A, 0x168, Kind::Derived, "snow"},
-    {Block::A, 0x16C, Kind::Derived, "rain"},
-    {Block::A, 0x190, Kind::Lerp, "windDirX"},
-    {Block::A, 0x194, Kind::Lerp, "windDirZ"},
-    // B (36): +0x64..+0xE8 and the two colours +0xEC/+0xF0
-    {Block::B, 0x64, Kind::Lerp, "sunDirX"},
-    {Block::B, 0x68, Kind::Lerp, "sunDirY"},
-    {Block::B, 0x6C, Kind::Lerp, "moonSizeAngle"},
-    {Block::B, 0x70, Kind::Lerp, "moonDirX"},
-    {Block::B, 0x74, Kind::Lerp, "moonDirY"},
-    {Block::B, 0x78, Kind::Unknown, "B78?"},  // not from 0x41DB60: type unknown (review 6), logged only
-    {Block::B, 0x7C, Kind::Unknown, "B7C?"},
+    {Block::A, 0x138, Kind::Lerp, "windSpeed"},  // the update reads it here (0x4143CD9)
+    {Block::A, 0x140, Kind::Lerp, "puddleRate"},
+    {Block::A, 0x148, Kind::Lerp, "snowPuddleRate"},
+    {Block::A, 0x14C, Kind::Lerp, "snowAmount"},
+    {Block::A, 0x150, Kind::Lerp, "snowRate"},
+    {Block::A, 0x154, Kind::Lerp, "iceRatio"},
+    {Block::A, 0x158, Kind::Hold, "windDegree"},
+    {Block::A, 0x15C, Kind::Lerp, "altitudeWindRatio"},
+    {Block::A, 0x164, Kind::Derived, "rainOut164"},
+    {Block::A, 0x168, Kind::Derived, "rainFx168"},
+    {Block::A, 0x16C, Kind::Derived, "snow"},
+    {Block::A, 0x170, Kind::Derived, "rain"},
+    // B (36): +0x68..+0xEC and the two colours +0xF0/+0xF4 (3663: +4; cloudBaseDensity 0xAC, cloudAltitude 0xBC)
+    {Block::B, 0x68, Kind::Lerp, "sunDirX"},
+    {Block::B, 0x6C, Kind::Lerp, "sunDirY"},
+    {Block::B, 0x70, Kind::Lerp, "moonSizeAngle"},
+    {Block::B, 0x74, Kind::Lerp, "moonDirX"},
+    {Block::B, 0x78, Kind::Lerp, "moonDirY"},
+    {Block::B, 0x7C, Kind::Unknown, "B7C?"},  // 2976's B78..B80: type unknown, logged only
     {Block::B, 0x80, Kind::Unknown, "B80?"},
-    {Block::B, 0x84, Kind::Lerp, "mieB84"},
+    {Block::B, 0x84, Kind::Unknown, "B84?"},
     {Block::B, 0x88, Kind::Lerp, "mieB88"},
     {Block::B, 0x8C, Kind::Lerp, "mieB8C"},
-    {Block::B, 0x90, Kind::Lerp, "ozoneB90"},
-    {Block::B, 0x94, Kind::Lerp, "lightB94"},
-    {Block::B, 0x98, Kind::Lerp, "heightFogB98"},
+    {Block::B, 0x90, Kind::Lerp, "mieB90"},
+    {Block::B, 0x94, Kind::Lerp, "ozoneB94"},
+    {Block::B, 0x98, Kind::Lerp, "lightB98"},
     {Block::B, 0x9C, Kind::Lerp, "heightFogB9C"},
     {Block::B, 0xA0, Kind::Lerp, "heightFogBA0"},
     {Block::B, 0xA4, Kind::Lerp, "heightFogBA4"},
-    {Block::B, 0xA8, Kind::Lerp, "cloudBaseDensity"},
-    {Block::B, 0xAC, Kind::Lerp, "cloudBAC"},
+    {Block::B, 0xA8, Kind::Lerp, "heightFogBA8"},
+    {Block::B, 0xAC, Kind::Lerp, "cloudBaseDensity"},
     {Block::B, 0xB0, Kind::Lerp, "cloudBB0"},
-    {Block::B, 0xB4, Kind::Lerp, "cloudScrollMultiplier"},
-    {Block::B, 0xB8, Kind::Lerp, "cloudAltitude"},
-    {Block::B, 0xBC, Kind::Lerp, "cloudBBC"},
+    {Block::B, 0xB4, Kind::Lerp, "cloudBB4"},
+    {Block::B, 0xB8, Kind::Lerp, "cloudScrollMultiplier"},  // the update reads it here (0x4143D11)
+    {Block::B, 0xBC, Kind::Lerp, "cloudAltitude"},
     {Block::B, 0xC0, Kind::Lerp, "cloudBC0"},
     {Block::B, 0xC4, Kind::Lerp, "cloudBC4"},
     {Block::B, 0xC8, Kind::Lerp, "cloudBC8"},
     {Block::B, 0xCC, Kind::Lerp, "cloudBCC"},
     {Block::B, 0xD0, Kind::Lerp, "cloudBD0"},
-    {Block::B, 0xD4, Kind::Lerp, "cloudLayerBD4"},
+    {Block::B, 0xD4, Kind::Lerp, "cloudBD4"},
     {Block::B, 0xD8, Kind::Lerp, "cloudLayerBD8"},
     {Block::B, 0xDC, Kind::Lerp, "cloudLayerBDC"},
     {Block::B, 0xE0, Kind::Lerp, "cloudLayerBE0"},
-    {Block::B, 0xE4, Kind::Lerp, "cloudBE4"},
-    {Block::B, 0xE8, Kind::Hold, "cloudSeed"},  // a float (0x41DB60 compares it with FLT_MAX)
-    {Block::B, 0xEC, Kind::Raw, "colourBEC"},
+    {Block::B, 0xE4, Kind::Lerp, "cloudLayerBE4"},
+    {Block::B, 0xE8, Kind::Lerp, "cloudBE8"},
+    {Block::B, 0xEC, Kind::Hold, "cloudSeed"},
     {Block::B, 0xF0, Kind::Raw, "colourBF0"},
-    // C (6)
-    {Block::C, 0x178, Kind::Unknown, "C178?"},
-    {Block::C, 0x1B0, Kind::Lerp, "underWaterC1B0"},
-    {Block::C, 0x1B4, Kind::Raw, "colourC1B4"},
-    {Block::C, 0x1B8, Kind::Lerp, "underWaterC1B8"},
-    {Block::C, 0x1D4, Kind::Raw, "colourC1D4"},
-    {Block::C, 0x1E0, Kind::Lerp, "extinctionC1E0"},
+    {Block::B, 0xF4, Kind::Raw, "colourBF4"},
+    // C = the wind object [X+0x100] on 3663 (2): the update's cloud scroll multiplies by +0x1C4 (X) and +0x1C0 (Z)
+    {Block::C, 0x1C0, Kind::Lerp, "windDirZ"},
+    {Block::C, 0x1C4, Kind::Lerp, "windDirX"},
     // X (2)
-    {Block::X, 0x124, Kind::Accum, "cloudScrollX"},
-    {Block::X, 0x128, Kind::Accum, "cloudScrollZ"},
+    {Block::X, 0x13C, Kind::Accum, "cloudScrollX"},
+    {Block::X, 0x140, Kind::Accum, "cloudScrollZ"},
 };
 inline constexpr size_t kFieldCount = sizeof(kFields) / sizeof(kFields[0]);
-static_assert(kFieldCount == 61);
+static_assert(kFieldCount == 55);
 
 constexpr size_t index_of(Block b, uint16_t off) {
     for (size_t i = 0; i < kFieldCount; ++i) {
@@ -170,21 +173,21 @@ inline constexpr size_t kIdxPrecip = index_of(Block::A, 0x12C);
 inline constexpr size_t kIdxCloud = index_of(Block::A, 0x130);
 inline constexpr size_t kIdxHumid = index_of(Block::A, 0x134);
 inline constexpr size_t kIdxWind = index_of(Block::A, 0x138);
-inline constexpr size_t kIdxSnow = index_of(Block::A, 0x168);
-inline constexpr size_t kIdxRain = index_of(Block::A, 0x16C);
-inline constexpr size_t kIdxCloudBase = index_of(Block::B, 0xA8);
-inline constexpr size_t kIdxScrollX = index_of(Block::X, 0x124);
-inline constexpr size_t kIdxScrollZ = index_of(Block::X, 0x128);
+inline constexpr size_t kIdxSnow = index_of(Block::A, 0x16C);
+inline constexpr size_t kIdxRain = index_of(Block::A, 0x170);
+inline constexpr size_t kIdxCloudBase = index_of(Block::B, 0xAC);
+inline constexpr size_t kIdxScrollX = index_of(Block::X, 0x13C);
+inline constexpr size_t kIdxScrollZ = index_of(Block::X, 0x140);
 static_assert(kIdxPrecip == 0 && kIdxRain == 14 && kIdxSnow == 13 && kIdxScrollZ == kFieldCount - 1);
 
 // What the reader copies in one guarded read per block: [off, off + size).
 struct Range {
     uint16_t off, size;
 };
-inline constexpr Range kReadA{0x12C, 0x198 - 0x12C};  // +0x12C .. +0x197 (the vector's A fields)
-inline constexpr Range kReadB{0x64, 0xF4 - 0x64};     // +0x64 .. +0xF3
-inline constexpr Range kReadC{0x178, 0x1E4 - 0x178};  // +0x178 .. +0x1E3
-inline constexpr Range kReadX{0x124, 8};
+inline constexpr Range kReadA{0x12C, 0x174 - 0x12C};  // +0x12C .. +0x173 (the vector's A fields, 3663)
+inline constexpr Range kReadB{0x68, 0xF8 - 0x68};     // +0x68 .. +0xF7
+inline constexpr Range kReadC{0x1C0, 8};              // the wind object [X+0x100] +0x1C0 .. +0x1C7
+inline constexpr Range kReadX{0x13C, 8};
 constexpr Range read_range(Block b) {
     return b == Block::A ? kReadA : b == Block::B ? kReadB : b == Block::C ? kReadC : kReadX;
 }
@@ -239,17 +242,17 @@ struct Snapshot {
 };
 
 // Tunnel control packet (troc_frame.h): opcode 1, slot -1, payload
-//   u8 12 | u8 version 1 | u16 mask | u32 seq | u64 tick | f32 pos[3] | u32 words[61]   = 272 bytes.
+//   u8 12 | u8 version 1 | u16 mask | u32 seq | u64 tick | f32 pos[3] | u32 words[55]   = 248 bytes (version 2, 3663).
 // Only in ToGuestClient batches, only to a guest that announced kCapsWeatherSync (an older guest ignores an unknown
 // state). The mod's protocol (protocol.cpp) is untouched: kVersion stays.
 inline constexpr uint16_t kControlOpcode = 1;     // troc_frame.h kControlOpcode
 inline constexpr uint8_t kControlWeather = 12;    // troc_frame.h: 1 ready, 2 dead, 3, 4, 5; 6-11 the guest's save
 inline constexpr uint8_t kCapsWeatherSync = 0x04;  // troc_frame.h kCapsOpcode flags: 0x01 compressed, 0x02 own save
-inline constexpr uint8_t kWireVersion = 1;
+inline constexpr uint8_t kWireVersion = 2;  // 2: the 3663 vector (55 words)
 inline constexpr size_t kHeader = 5;
 inline constexpr size_t kPayloadSize = 28 + 4 * kFieldCount;
 inline constexpr size_t kFrameSize = kHeader + kPayloadSize;
-static_assert(kPayloadSize == 272 && kFrameSize == 277);
+static_assert(kPayloadSize == 248 && kFrameSize == 253);
 
 inline void put16(uint8_t* p, uint16_t v) {
     p[0] = static_cast<uint8_t>(v);
@@ -615,7 +618,7 @@ private:
 
 // The X objects the hook put in viewer mode (and what it found there). An X is written only from the hook, while
 // the game updates THAT X (it is alive then): a record of an X no longer updated is never touched again.
-inline constexpr uint16_t kRestoreA[5] = {0x12C, 0x160, 0x164, 0x168, 0x16C};  // selftest: what 0x382A1A0 / we change
+inline constexpr uint16_t kRestoreA[5] = {0x12C, 0x164, 0x168, 0x16C, 0x170};  // selftest: what 0x382A1A0 / we change
 struct Owned {
     uintptr_t x = 0;
     uint8_t orig_flag = 0;
