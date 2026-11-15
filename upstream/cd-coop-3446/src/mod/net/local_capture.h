@@ -123,4 +123,11 @@ void capture_set_damage_enabled(bool on);
 // kind carries none (WallUp) or the payload is malformed.
 uint64_t event_timestamp(const proto::GameEvent& ev);
 
+// Co-op+ 2026-11-15 (shared world): the friend's character actor. The host's is always 0xA0100001; the guest's
+// varies with the world (0xA0100066 in the test world, others in New Co-op Saves), so the host finds it: the
+// class-0xA actor (not ours) within 10 m of the friend's network position, at most every 3 s, kept while it stays
+// within 25 m of it. Call update from the network loop (net_pos nullptr: no friend); key 0 = not known.
+void partner_actor_update(const proto::Vec3* net_pos, bool we_host);
+uint32_t partner_actor_key();
+
 }  // namespace cdmp::net

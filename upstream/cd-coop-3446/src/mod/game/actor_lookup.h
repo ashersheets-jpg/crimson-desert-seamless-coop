@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <vector>
 
 #include "common/protocol.h"
 
@@ -19,5 +20,8 @@ std::optional<proto::Vec3> actor_world_position(uint32_t key);
 std::optional<proto::Quat> actor_world_rotation(uint32_t key);
 // Both with one actor lookup (the host samples up to 48 enemies twice a second).
 bool actor_world_transform(uint32_t key, proto::Vec3& pos, proto::Quat& rot);
+// Co-op+ 2026-11-15: the keys of the loaded actors of one key class (the top 4 bits, e.g. 0xA = player characters),
+// at most `max`. Walks the whole table: call it seldom (every few seconds).
+std::vector<uint32_t> loaded_actor_keys(uint32_t key_class, size_t max = 256);
 
 }  // namespace cdmp::game

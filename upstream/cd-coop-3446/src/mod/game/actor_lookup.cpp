@@ -3,6 +3,7 @@
 #include <windows.h>
 
 #include <cmath>
+#include <cstring>
 
 #include "mod/game/offsets.h"
 #include "mod/game/safe_memory.h"
@@ -28,6 +29,35 @@ constexpr uint32_t kTransformSync_Rotation = 0xA4;   // quaternion (caballo-coop
 constexpr float kSectorSize = 1000.0f;
 
 }  // namespace
+
+std::vector<uint32_t> loaded_actor_keys(uint32_t key_class, size_t max) {
+    std::vector<uint32_t> out;
+    static const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    if (base != off::kImageBase) return out;
+    auto world = read_ptr(base + off::kWorldSystemSlot);
+    if (!world) return out;
+    auto manager = read_ptr(*world + off::kWorldSystem_ActorManager);
+    if (!manager) return out;
+    auto table = read_ptr(*manager + kManager_Table);
+    if (!table) return out;
+    auto buckets = read<uint32_t>(*table + kTable_BucketCount);
+    if (!buckets || *buckets == 0 || *buckets > (1u << 24)) return out;
+    auto bucket_base = read_ptr(*table + kTable_Buckets);
+    if (!bucket_base) return out;
+    const uint32_t n = *buckets < (1u << 16) ? *buckets : (1u << 16);
+    uint8_t b[kBucketStride];
+    for (uint32_t i = 0; i < n && out.size() < max; ++i) {
+        if (!safe_read(*bucket_base + static_cast<uintptr_t>(i) * kBucketStride, b, sizeof b)) continue;
+        uint32_t count = 0;
+        std::memcpy(&count, b, sizeof count);
+        for (uint32_t j = 0; j < count && j < kBucketMaxEntries && out.size() < max; ++j) {
+            uint32_t k = 0;
+            std::memcpy(&k, b + 8 + j * 8, sizeof k);
+            if (k && (k >> 28) == key_class) out.push_back(k);
+        }
+    }
+    return out;
+}
 
 std::optional<uintptr_t> find_actor(uint32_t key) {
     static const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));

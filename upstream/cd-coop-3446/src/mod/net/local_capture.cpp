@@ -1246,6 +1246,49 @@ uint32_t capture_own_user_key() {
     return g_user_key;
 }
 
+namespace {
+std::atomic<uint32_t> g_partner_key{0};
+}  // namespace
+
+void partner_actor_update(const proto::Vec3* net_pos, bool we_host) {
+    static uint64_t last_scan = 0;
+    static uint32_t logged = 0;
+    if (!net_pos) {
+        g_partner_key = 0;
+        return;
+    }
+    auto dist = [&](uint32_t key) {
+        const auto at = game::actor_world_position(key);
+        if (!at) return 1e9f;
+        const float dx = at->x - net_pos->x, dy = at->y - net_pos->y, dz = at->z - net_pos->z;
+        return std::sqrt(dx * dx + dy * dy + dz * dz);
+    };
+    if (!we_host) {  // the host's character: the first user's, always
+        g_partner_key = 0xA0100001u;
+        return;
+    }
+    const uint32_t cur = g_partner_key.load();
+    if (cur && dist(cur) < 25.0f) return;
+    const uint64_t now = GetTickCount64();
+    if (last_scan && now - last_scan < 3000) return;
+    last_scan = now;
+    const uint32_t me = capture_own_player_key();
+    uint32_t best = 0;
+    float best_d = 10.0f;
+    for (const uint32_t k : game::loaded_actor_keys(0xA)) {
+        if (k == me || k == 0xA0100001u) continue;
+        const float d = dist(k);
+        if (d < best_d) best = k, best_d = d;
+    }
+    g_partner_key = best;
+    if (best && best != logged) {
+        logged = best;
+        log::info("Co-op: the friend's character is actor 0x{:08X} ({:.1f} m from its network position)", best, best_d);
+    }
+}
+
+uint32_t partner_actor_key() { return g_partner_key.load(); }
+
 uint32_t capture_own_player_key() {
     if (kNativeLayer) {
         // Co-op+ on the native base (tc48): there is ONE server, so this client also receives the other player's

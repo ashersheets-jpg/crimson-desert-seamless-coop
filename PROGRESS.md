@@ -7542,3 +7542,27 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   (fixed keys: host 0xA0100001, guest 0xA0100066, as coop_give.cpp) when readable and within 25 m of the network
   position; else the network one. Name tag, chest marker, distance and duel medal all use it. To test after pp20:
   shots of the tag over a running friend, before / after.
+- 11:05 THE TWO TESTER ZIPS (the owner's yes 10:55; downloaded through Discord's own button, its "dangerous
+  download" notice confirmed; unpacked in build/tester-reports/CoopPlus-report-2026-11-15_17-14-35 (JackyChan004,
+  HOST) and _17-14-54 (D3vils, guest); logs and report.txt only, nothing run). Both on 2e5db87a, game 3663, a New
+  Co-op Save at 17:07-17:09 their time, in the world 17:09-17:14, then Leave. Errors: only the known ones (User2Stages
+  D/S/F probes on the host, GuestXVeto and the Leave goodbye on the guest). Link: rtt 75-135 ms, 3-4 lost.
+  * "couldn't see the experimental feature for shared cut scenes": A REAL BUG. Jacky opened Co-op Settings 3 times
+    before starting (17:03-17:06); his ini has no story_together. The title's Co-op page lists each section with
+    settings::page_rows(category), and a setting gets its section only from kTags: "Story scenes together
+    (experimental)", "Shared quest credit (same step: done for both)" and "Items in the world" had NO kTags entry
+    (default category "General", no such section), so the page NEVER showed them. The 2e5db87a post sent players to a
+    setting they could not see. Fixed (layer, not built): the three get tags (Saves & Story, Saves & Story, World),
+    and any untagged setting now goes under Session with an ERR line instead of vanishing.
+  * Name tag: on the real link the guest's character was 0xA010011E, NOT 0xA0100066. The guest's key varies with
+    the world (test world 0xA0100066; New Co-op Saves 0xA0100116 / 117 / 11E / 128 / 12B in our newsave logs); the
+    host's is always 0xA0100001. So the name-tag change above would have fallen back on real saves, and WORSE:
+    coop_give.cpp sends the host's Give to 0xA0100066 = the wrong actor on every New Co-op Save (Give was only ever
+    tested in the test world, tcB304; it is not in the checklist). Fixed (layer, not built): net::partner_actor_update /
+    partner_actor_key (local_capture): the guest takes 0xA0100001; the host finds the class-0xA actor (not its own)
+    within 10 m of the guest's network position (game::loaded_actor_keys walks the actor table, at most every 3 s) and
+    keeps it while it stays within 25 m; logged once ("the friend's character is actor 0x..."). The HUD and the
+    host's Give use it.
+  * To test after pp20 (a build changes the package): the Co-op page's Saves & Story / World sections show the three
+    settings (shots); in a New Co-op Save, the host's log names the guest's actor and the host's Give reaches the
+    guest; name-tag shots over a running friend.

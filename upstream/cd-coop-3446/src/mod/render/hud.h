@@ -17,6 +17,7 @@ struct HudData {
     float loss_pct = -1;      // Co-op+ (T32): packet loss over the last seconds (< 0 = not known yet)
     bool net_hud = false;
     bool we_host = false;
+    uint32_t partner_key = 0;  // Co-op+ 2026-11-15 (shared world): the friend's character actor (0 = not known)
     std::vector<std::string> kill_feed;  // Co-op+ (T36): recent kills, oldest first
     std::vector<bool> kill_feed_ours;
     std::vector<std::string> score_lines;  // Co-op+ (T43): the record vs this friend (panel)

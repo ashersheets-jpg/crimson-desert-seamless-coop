@@ -1356,6 +1356,10 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
             hud.local = local.snapshot();
             hud.local_status = local.status();
             hud.remote = session.remote_state();
+            if constexpr (kNativeLayer) {
+                net::partner_actor_update(hud.remote ? &hud.remote->pos : nullptr, host);
+                hud.partner_key = net::partner_actor_key();
+            }
             hud.peer_problem = session.peer_problem();
             hud.partner_in_menu = connected && net::activity_partner_in_menu();
             hud.revive_line = revive_line;

@@ -77,6 +77,16 @@ constexpr Tag kTags[] = {
     {"Copy my friend's story into my save (guest)", "Saves & Story",
      "As a guest: take the host's story progress into your co-op save with them."},
     {"Let my guest copy my story (host)", "Saves & Story", "As the host: let your guest take your story progress."},
+    // 2026-11-15 (tester report: the title's Co-op Settings did not show these three; an item without a tag has no
+    // section on the Co-op page).
+    {"Shared quest credit (same step: done for both)", "Saves & Story",
+     "A quest step you both have: when one of you finishes it, it counts for both of you."},
+    {"Story scenes together (experimental)", "Saves & Story",
+     "Experimental, the host's choice: each of you gets your own story scenes, and a scene waits until both of you "
+     "are there; then both games play it together. Takes effect at the next co-op start."},
+    {"Items in the world", "World",
+     "Each their own (Lootr): every chest and item lying in the world can be taken once by each of you. First come: "
+     "whoever takes it first."},
     {"Duel ground (when I place it)", "Challenges", "How large the ring is when you start a duel."},
     {"Player colours", "Display", "The colours of the host and the guest on name tags, the map and the party frame."},
     {"My friend's map pin colour", "Display", "The colour of your friend's pin on the map and minimap."},
@@ -230,6 +240,12 @@ void init(const std::wstring& ini_path, const Config& cfg, float health_2p, floa
                 it.category = t.category;
                 it.help = t.help;
             }
+        }
+        // A setting without a tag keeps the default "General", which is no section of the Co-op page (coop_page.cpp
+        // kSections), so it would never be shown there (2026-11-15).
+        if (it.category.empty() || it.category == "General") {
+            log::error("Settings: '{}' has no section (kTags); shown under Session", it.label);
+            it.category = "Session";
         }
     }
     if (kNativeLayer) {

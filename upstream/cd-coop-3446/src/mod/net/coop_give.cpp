@@ -94,7 +94,9 @@ int* on_client_discard(int64_t holder, int* err, int64_t* actor, uint64_t invent
     g_give = g_stash = false;
     const uint32_t me = capture_own_player_key();
     // The give goes to the friend; the stash is on the host's character (the host's own deposit: itself).
-    const uint32_t to = stash ? kHostCharacter : g_host.load() ? kGuestCharacter : kHostCharacter;
+    // The guest's character key varies with the world (2026-11-15: 0xA0100066 only in the test world).
+    const uint32_t guest = partner_actor_key() ? partner_actor_key() : kGuestCharacter;
+    const uint32_t to = stash ? kHostCharacter : g_host.load() ? guest : kHostCharacter;
     const uint32_t item = 0, entry = stash ? kStashDepositEntry : kGiveEntry;
     // ClientDiscard's inventory is an index into the game's inventory table; the request carries that row's key
     // (+8), as the game's own request builder does (exe+0xAC9210 -> exe+0x5560E0 -> exe+0xCDCEF0).

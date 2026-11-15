@@ -262,3 +262,9 @@ topic BEFORE testing or guessing about it.
   research feature goes on by default, read its log in one default run and count lines a minute.
 - A combat check ("the guest killed / hit an enemy") can fail on the fight's outcome (the camp downed the guest
   first). Read the shot before calling it a fault, and compare with the same counter in the other steps of the pass.
+- Actor keys that look fixed in the test world can vary in real worlds: the guest's character is 0xA0100066 only in
+  our test co-op world (0xA0100116 / 11E / 12B ... in New Co-op Saves). Before hard-coding a key, grep it across the
+  logs of several worlds (the newsave steps' logs have them). Find it at run time instead.
+- A new setting needs its kTags entry (section + help): the title's Co-op page lists settings by section, and an
+  untagged one was simply never shown (three settings, one of them announced in a post). Check a new setting on the
+  page itself (a shot), not only through the ini.

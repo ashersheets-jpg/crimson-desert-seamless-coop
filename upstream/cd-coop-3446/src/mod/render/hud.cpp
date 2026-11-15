@@ -294,15 +294,14 @@ void hud_draw(float width, float height) {
     }
 
     // The friend's position for the name tag and the markers. Shared world: where the game DRAWS the friend's
-    // character (its actor, fixed key: host 0xA0100001, guest 0xA0100066), which runs ~200 ms behind the network
+    // character (its actor: net::partner_actor_key, local_capture.h), which runs ~200 ms behind the network
     // samples; the network position leads it by 1-2 m at a run (tester report 2026-11-15: "the name tag ... not above
     // his character sometimes"). Anything odd (not loaded, over 25 m from the network position): the network one.
     proto::Vec3 partner_at{};
     if (d.remote) {
         partner_at = d.remote->pos;
         if constexpr (kNativeLayer) {
-            const uint32_t key = d.we_host ? 0xA0100066u : 0xA0100001u;
-            if (const auto drawn = game::actor_world_position(key)) {
+            if (const auto drawn = d.partner_key ? game::actor_world_position(d.partner_key) : std::nullopt) {
                 if (math::length(math::sub(*drawn, d.remote->pos)) < 25.0f) partner_at = *drawn;
             }
         }
