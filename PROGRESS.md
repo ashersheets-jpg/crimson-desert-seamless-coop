@@ -7430,3 +7430,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   the build folders' DLLs (prepost.sh static checks they equal the package's).
 - Written meanwhile, NOT built: [session2] dialog_redeliver (guest, default 0; native) and the layer's native_extra
   split on ',' or '+' (so -GuestDev can pass two native keys). cs17 (scratchpad cs17.sh) tests them after pp19.
+- Research during pp19 (no game, no builds):
+  * User2Stages' points D / S / F (REFUSED in every run: still 2976 addresses 0x2808D80 / 0x2822D00 / 0x27FBD60) only
+    RECORD (on_delete / on_sched / on_faction -> timer_hit counts and events; nothing is routed): no gameplay lost.
+  * B05 the joining player's other mounts: the testers' "wyvern" is Blackstar (the dragon on the mount wheel; the
+    hatched baby wyvern is a pet only, NOTES/FLAGS.md F7). The test save wyvern-egg-dragon has Blackstar. In a
+    Continue the guest uploads ITS slot103 and the host stages it as slot 204, so -GuestVariant wyvern-egg-dragon
+    (copied into the guest test copy's own save folder only) makes the joined player that character. cs18 (after
+    pp19): the guest holds D-pad Up 40 s (simulated pad) under screenshots: what its mount wheel offers.
