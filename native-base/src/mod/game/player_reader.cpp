@@ -2,11 +2,13 @@
 
 #include <windows.h>
 
+#include <atomic>
 #include <cmath>
 
 #include "common/math3d.h"
 #include "mod/game/offsets.h"
 #include "mod/game/safe_memory.h"
+#include "mod/log.h"
 
 namespace cdmp::game {
 namespace off = build_2976;
@@ -76,8 +78,17 @@ std::optional<PlayerSnapshot> PlayerReader::read() {
     auto inner = read_ptr(*control + off::kControl_Inner);
     if (!inner) return fail("control inner missing");
     auto physics = read_ptr(*inner + off::kControlInner_Physics);
-    if (!physics || !has_vtable(*physics, base_ + off::kVtPhysicsObject))
+    if (!physics || !has_vtable(*physics, base_ + off::kVtPhysicsObject)) {
+        // Co-op+ 2026-11-15: the real vtable once (the constant went stale over two ports unnoticed).
+        static std::atomic<bool> said{false};
+        if (physics && !said.exchange(true)) {
+            if (auto vt = read_ptr(*physics)) {
+                log::warn("PlayerReader: the physics object 0x{:X} has vtable exe+0x{:X}, not exe+0x{:X}", *physics,
+                          *vt - base_, off::kVtPhysicsObject);
+            }
+        }
         return fail("physics object missing");
+    }
 
     auto local = read_vec3(*physics + off::kPhysics_Position);
     auto origin = read_vec3(base_ + off::kChunkOrigin);

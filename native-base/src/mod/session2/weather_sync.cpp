@@ -185,12 +185,11 @@ bool blocks_of(uintptr_t x, Blocks& out) noexcept {
     const auto h = game::fast_ptr(x + wsy::kXHolder);
     if (!h || !*h) return false;
     out.holder = *h;
-    const auto a = game::fast_ptr(*h + wsy::kHolderA), b = game::fast_ptr(*h + wsy::kHolderB),
-               c = game::fast_ptr(*h + wsy::kHolderC);
+    const auto a = game::fast_ptr(*h + wsy::kHolderA), b = game::fast_ptr(*h + wsy::kHolderB);
     if (!a || !*a || !b || !*b) return false;
     out.a = *a;
     out.b = *b;
-    out.c = c ? *c : 0;
+    out.c = 0;  // 3663: no C field (weather_sync_logic.h)
     return true;
 }
 uintptr_t block_addr(const Blocks& bl, uintptr_t x, wsy::Block b) {
@@ -496,8 +495,8 @@ void selftest_pre(uintptr_t x) noexcept {
             g_st_checked = true;
             uint8_t f8 = 0;
             bool r = game::fast_read(x + wsy::kXViewer, &f8, 1);
-            const uint32_t p = rd32(bl.a + 0x12C, r), rain = rd32(bl.a + 0x16C, r), snow = rd32(bl.a + 0x168, r),
-                           fx = rd32(bl.a + 0x164, r), temp = rd32(bl.a + wsy::kATempSample, r);
+            const uint32_t p = rd32(bl.a + 0x12C, r), rain = rd32(bl.a + 0x170, r), snow = rd32(bl.a + 0x16C, r),
+                           fx = rd32(bl.a + 0x168, r), temp = rd32(bl.a + wsy::kATempSample, r);  // 3663 (+4)
             if (r) push_event(kEvStCheck, {x, f8, p, rain, snow, fx, temp});
         }
     }
@@ -553,15 +552,16 @@ bool install_hook() {
                gad::in_real_code(secs, static_cast<uint32_t>(rva), static_cast<uint32_t>(n));
     };
     if (!in_code(wsy::kUpdate, sizeof wsy::kUpdateHead) || !bytes_at(wsy::kUpdate, wsy::kUpdateHead)) {
-        log::error("WeatherSync: 0x3DC4730 (exe+0x{:X}) is not build 2976's .rsrc entry 48 89 5C 24 10 55 56 57 48 83 EC "
-                   "50 C5 F8 29 74 24 40; REFUSED, nothing written",
+        log::error("WeatherSync: X's update exe+0x{:X} is not 1.0.0.3663's entry 48 8B C4 53 55 56 57 41 54 41 56 41 57 "
+                   "48 81 EC 90 00 00 00; REFUSED, nothing written",
                    wsy::kUpdate);
         return false;
     }
-    if (!in_code(wsy::kUpdateCall, sizeof wsy::kUpdateCallBytes) || !bytes_at(wsy::kUpdateCall, wsy::kUpdateCallBytes)) {
-        log::error("WeatherSync: its only caller 0x3B10737 is not `call 0x3DC4730` (E8 F4 3F 2B 00); REFUSED, nothing "
-                   "written");
-        return false;
+    if constexpr (wsy::kUpdateCall != 0) {  // 2976 only: on 3663 the update's callers are protected code
+        if (!in_code(wsy::kUpdateCall, sizeof wsy::kUpdateCallBytes) || !bytes_at(wsy::kUpdateCall, wsy::kUpdateCallBytes)) {
+            log::error("WeatherSync: its only caller is not the expected call; REFUSED, nothing written");
+            return false;
+        }
     }
     const auto* b = std::begin(wsy::kUpdateBoundaries);
     const auto* e = std::end(wsy::kUpdateBoundaries);
@@ -592,9 +592,9 @@ bool install_hook() {
         return false;
     }
     g_hook_on.store(true);
-    log::info("WeatherSync: exe+0x3DC4730 (X's update, one caller 0x3B10737) hooked at its entry ({} bytes patched); "
-              "{}",
-              patched,
+    log::info("WeatherSync: exe+0x{:X} (X's update; 1.0.0.3663, called from protected code) hooked at its entry ({} "
+              "bytes patched); {}",
+              wsy::kUpdate, patched,
               mode() == Mode::Selftest
                   ? "selftest: 15 s from now X+0x31 = 1 and A+0x12C = 1.0 for 30 s (it should RAIN at once), then both "
                     "back (the weather returns)"
@@ -638,7 +638,7 @@ void read_all(Reading& r) {
     r.xa = ptr_at(r.s ? r.s + wsy::kSceneWeather : 0);
     const uintptr_t vt = ptr_at(r.m);
     r.getter_ok = vt && ptr_at(vt + wsy::kVtGetterSlot) == g_base + wsy::kGetterVf60;
-    const uintptr_t gc = ptr_at(g_base + wsy::kClientSlot);
+    const uintptr_t gc = wsy::kClientSlot ? ptr_at(g_base + wsy::kClientSlot) : 0;  // 3663: no second path
     const uintptr_t h1 = ptr_at(gc ? gc + wsy::kClientHop1 : 0);
     r.xb = ptr_at(h1 ? h1 + wsy::kClientHop2 : 0);
     r.x = r.xa ? r.xa : r.xb;
@@ -657,7 +657,7 @@ void read_all(Reading& r) {
     r.holder = ptr_at(r.x + wsy::kXHolder);
     r.a = ptr_at(r.holder ? r.holder + wsy::kHolderA : 0);
     r.b = ptr_at(r.holder ? r.holder + wsy::kHolderB : 0);
-    r.c = ptr_at(r.holder ? r.holder + wsy::kHolderC : 0);
+    r.c = 0;  // 3663: no C field
     uint8_t a[wsy::kReadA.size] = {}, c[wsy::kReadC.size] = {}, x[wsy::kReadX.size] = {};
     uint16_t mask = 0;
     if (r.a && game::safe_read(r.a + wsy::kReadA.off, a, sizeof a)) mask |= wsy::kHasA;
@@ -684,28 +684,26 @@ std::string vector_text(const wsy::Snapshot& s) {
     using wsy::Block;
     std::string t;
     if (s.mask & wsy::kHasA) {
-        t += std::format("precipitation {:.3f} cloudiness {:.3f} humidity {:.3f} windSpeed {:.2f} | rain(16C) {:.3f} "
-                         "snow(168) {:.3f} 160 {:.3f} 164 {:.3f} | puddleRate {:.3f} snowAmount {:.3f} iceRatio {:.3f} "
-                         "windDegree {:.1f} windDir ({:.3f}, {:.3f})",
+        t += std::format("precipitation {:.3f} cloudiness {:.3f} humidity {:.3f} windSpeed {:.2f} | rain(170) {:.3f} "
+                         "snow(16C) {:.3f} 164 {:.3f} 168 {:.3f} | puddleRate {:.3f} snowAmount {:.3f} iceRatio {:.3f} "
+                         "windDegree {:.1f}",
                          f(Block::A, 0x12C), f(Block::A, 0x130), f(Block::A, 0x134), f(Block::A, 0x138),
-                         f(Block::A, 0x16C), f(Block::A, 0x168), f(Block::A, 0x160), f(Block::A, 0x164),
-                         f(Block::A, 0x13C), f(Block::A, 0x148), f(Block::A, 0x150), f(Block::A, 0x154),
-                         f(Block::A, 0x190), f(Block::A, 0x194));
+                         f(Block::A, 0x170), f(Block::A, 0x16C), f(Block::A, 0x164), f(Block::A, 0x168),
+                         f(Block::A, 0x140), f(Block::A, 0x14C), f(Block::A, 0x154), f(Block::A, 0x158));
     }
     if (s.mask & wsy::kHasB) {
-        t += std::format(" | B: sunDir ({:.3f}, {:.3f}) cloudBaseDensity(A8) {:.4f} cloudScrollMultiplier(B4) {:.3f} "
-                         "cloudAltitude(B8) {:.1f} cloudSeed(E8) {:.3f} heightFog(98..A4) {:.3f} {:.3f} {:.3f} {:.3f} "
-                         "layers(D4..E0) {:.3f} {:.3f} {:.3f} {:.3f}",
-                         f(Block::B, 0x64), f(Block::B, 0x68), f(Block::B, 0xA8), f(Block::B, 0xB4), f(Block::B, 0xB8),
-                         f(Block::B, 0xE8), f(Block::B, 0x98), f(Block::B, 0x9C), f(Block::B, 0xA0), f(Block::B, 0xA4),
-                         f(Block::B, 0xD4), f(Block::B, 0xD8), f(Block::B, 0xDC), f(Block::B, 0xE0));
+        t += std::format(" | B: sunDir ({:.3f}, {:.3f}) cloudBaseDensity(AC) {:.4f} cloudScrollMultiplier(B8) {:.3f} "
+                         "cloudAltitude(BC) {:.1f} cloudSeed(EC) {:.3f} heightFog(9C..A8) {:.3f} {:.3f} {:.3f} {:.3f} "
+                         "layers(D8..E4) {:.3f} {:.3f} {:.3f} {:.3f}",
+                         f(Block::B, 0x68), f(Block::B, 0x6C), f(Block::B, 0xAC), f(Block::B, 0xB8), f(Block::B, 0xBC),
+                         f(Block::B, 0xEC), f(Block::B, 0x9C), f(Block::B, 0xA0), f(Block::B, 0xA4), f(Block::B, 0xA8),
+                         f(Block::B, 0xD8), f(Block::B, 0xDC), f(Block::B, 0xE0), f(Block::B, 0xE4));
     }
     if (s.mask & wsy::kHasC) {
-        t += std::format(" | C: 1B0 {:.3f} 1B8 {:.3f} 1E0 {:.3f}", f(Block::C, 0x1B0), f(Block::C, 0x1B8),
-                         f(Block::C, 0x1E0));
+        t += std::format(" | wind dir A+19C/198 ({:.3f}, {:.3f})", f(Block::A, 0x19C), f(Block::A, 0x198));
     }
     if (s.mask & wsy::kHasX) {
-        t += std::format(" | scroll X+124/128 ({:.2f}, {:.2f})", f(Block::X, 0x124), f(Block::X, 0x128));
+        t += std::format(" | scroll X+13C/140 ({:.2f}, {:.2f})", f(Block::X, 0x13C), f(Block::X, 0x140));
     }
     return t;
 }
@@ -825,7 +823,7 @@ bool build_ok() {
     IMAGE_DOS_HEADER dos{};
     IMAGE_NT_HEADERS64 nt{};
     return g_base == g2976::kImageBase && game::safe_read(g_base, &dos, sizeof dos) &&
-           game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) && nt.FileHeader.TimeDateStamp == g2976::kPeTimestampUnported;
+           game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) && nt.FileHeader.TimeDateStamp == g2976::kPeTimestamp;  // ported to 1.0.0.3663 (2026-11-15)
 }
 
 bool getter_bytes_ok() {
@@ -1064,7 +1062,7 @@ void weather_sync_start(const std::string& raw, bool guest, uint32_t radius_m) {
     if (p.mode == Mode::Off || g_started.exchange(true)) return;
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     if (!build_ok()) {
-        log::error("WeatherSync: unsupported game build (not 1.0.0.2976); weather_sync stays off");
+        log::error("WeatherSync: unsupported game build (not 1.0.0.3663); weather_sync stays off");
         return;
     }
     Mode m = p.mode;
