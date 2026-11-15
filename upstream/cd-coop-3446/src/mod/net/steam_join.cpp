@@ -163,13 +163,10 @@ constexpr int kFaultLimit = 3;
 constexpr uint64_t kFaultRetryMs = 10000;
 int g_faults = 0;
 uint64_t g_retry_at = 0;
-// pp20-display (2026-11-15): the same fault in 3 of 15 real Steam launches here (pp9, pp14, pp20), each 2.0 s after
-// the game started, Steam ready since +0.5 s; the retry 10 s later always answered. Our status now waits 10 s after
-// Steam is first ready before its first SetRichPresence (friends see "Join Game" 10 s later); join_presence_lost
-// then asks the caller to say it.
-constexpr uint64_t kPresenceSettleMs = 10000;
-uint64_t g_presence_from = 0;
-bool g_presence_held = false;
+// pp20 / pp21-display (2026-11-15): the same fault in 4 of 16 real Steam launches here (pp9, pp14, pp20, pp21), on
+// the FIRST SetRichPresence, at +2 s and (with a 10 s wait, pp21) at +12 s alike; the retry, after the interface was
+// fetched again, always answered. So the interface taken at the first resolve is suspect, not the time: our status
+// is set through an ISteamFriends fetched again right before (refresh_friends_locked).
 
 void fail(const char* what) {
     if (g_disabled) return;
@@ -223,7 +220,6 @@ void resolve_locked() {
     if (!call(a.frn, a.friends)) return fail("SteamFriends");
     if (!a.frn) return;
     g_resolved = true;
-    if (!g_presence_from) g_presence_from = GetTickCount64() + kPresenceSettleMs;
     g_status = "join: ready";
 }
 
@@ -282,15 +278,25 @@ bool join_open_invite(uint64_t lobby) {
 }
 
 namespace {
+// ISteamFriends fetched again (see the pp21 note above); false when Steam does not answer.
+bool refresh_friends_locked() {
+    if (!g_resolved || g_disabled) return false;
+    void* frn = nullptr;
+    if (!call(frn, g_api.friends)) {
+        fail("SteamFriends");
+        return false;
+    }
+    if (!frn) return false;
+    if (frn != g_api.frn) log::info("Join: Steam's friends interface moved ({} -> {})", g_api.frn, frn);
+    g_api.frn = frn;
+    return true;
+}
+
 void set_presence_locked(const char* key, const char* value) {
     // pp14-display (2026-11-14): after a fault fail() drops the interface (frn = null) and waits 10 s, but the caller
     // went on with its next keys on the null interface: three "faults" in the same millisecond, and Steam join was
     // off for the whole launch after ONE fault of Steam's. The rest of the keys wait for the retry.
     if (!g_resolved || g_disabled || !g_api.frn) return;
-    if (GetTickCount64() < g_presence_from) {
-        g_presence_held = true;
-        return;
-    }
     bool ok = false;
     if (!call(ok, g_api.set_rich_presence, g_api.frn, key, value)) fail("SetRichPresence");
 }
@@ -299,7 +305,7 @@ void set_presence_locked(const char* key, const char* value) {
 void join_presence_hosting(uint64_t lobby, int members, int max_members, bool joinable) {
     std::lock_guard lock(g_mutex);
     resolve_locked();
-    if (!g_resolved || g_disabled || !lobby) return;
+    if (!g_resolved || g_disabled || !lobby || !refresh_friends_locked()) return;
     char connect[64], group[32], size[16], status[96];
     std::snprintf(connect, sizeof connect, "+connect_lobby %llu", static_cast<unsigned long long>(lobby));
     std::snprintf(group, sizeof group, "%llu", static_cast<unsigned long long>(lobby));
@@ -316,7 +322,7 @@ void join_presence_hosting(uint64_t lobby, int members, int max_members, bool jo
 void join_presence_guest(uint64_t lobby, const std::string& host_name) {
     std::lock_guard lock(g_mutex);
     resolve_locked();
-    if (!g_resolved || g_disabled) return;
+    if (!g_resolved || g_disabled || !refresh_friends_locked()) return;
     char group[32], status[128];
     std::snprintf(group, sizeof group, "%llu", static_cast<unsigned long long>(lobby));
     std::snprintf(status, sizeof status, "Co-op+: in %s's world", host_name.empty() ? "a friend" : host_name.c_str());
@@ -335,14 +341,7 @@ void join_presence_guest(uint64_t lobby, const std::string& host_name) {
 bool join_presence_lost() {
     std::lock_guard lock(g_mutex);
     resolve_locked();
-    if (!g_resolved || g_disabled) return false;
-    if (g_presence_held && GetTickCount64() >= g_presence_from) {
-        g_presence_held = false;
-        g_retry_at = 0;
-        log::info("Join: Steam has been ready for {} s: our status is set now", kPresenceSettleMs / 1000);
-        return true;
-    }
-    if (!g_retry_at) return false;
+    if (!g_retry_at || !g_resolved || g_disabled) return false;
     g_retry_at = 0;
     log::info("Join: Steam answers again after a fault: our status is set again");
     return true;

@@ -7583,3 +7583,15 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   Inventory's Discard on a Ricefish asked "Give to Guest / Discard / Cancel", A -> "Give (whole record): x1 from
   0xA0100001 to 0xA0100066: stage 5 (5 = moved) err 0" (shot build/native/shots/cs21a-h3.png). First end-to-end
   Give since the port. SAVES OK, 5/5. pp21 (all 22 steps on f1028cbc) started 13:30.
+
+### 2026-11-15 16:25 pp21 on f1028cbc: 864 PASS, 1 FAIL (all 22 steps)
+- The one FAIL is the Steam-internal fault in `display` again (steamclient64.dll+0x7395A7 in SetRichPresence). The
+  10 s wait did NOT help: "Steam has been ready for 10 s: our status is set now" and the fault in the same ms (+12 s);
+  "Steam answers again after a fault" 10 s later, relay ready, as before. 4 of 16 real Steam launches now (pp9, pp14,
+  pp20, pp21), always the FIRST SetRichPresence, always fine after the interface is fetched again. Next build (source
+  changed, NOT built, steam_join.cpp): ISteamFriends fetched again right before our status is set; the 10 s wait
+  removed. In f1028cbc the 10 s wait stays (harmless: "Join Game" shows 10 s later).
+- newsave: the host's resolver found the guest's character on the New Co-op Save as **0xA0100125** (0.5 m from its
+  network position), the Continue of that world as 0xA0100066: the old fixed key would have been wrong on the new
+  save. Every other step passes (farfight, farfight2, mountfight, stuck included). SAVES OK and 5/5 in every step.
+- cs22a running: name-tag shots on the host while the guest runs in a circle (cs22_guest.txt).
