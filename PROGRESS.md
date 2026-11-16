@@ -8150,3 +8150,13 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   of the guest ... (a hit|a kill)"). Re-judged on the files: pp25 PASS (17 per-hit lines), pp25b still FAIL (none).
   The package is unchanged, so (rule 2) only the step runs again: pp25c started 15:21; then cs38 (where photo mode
   is, B16) and cs37 (B18: the friend fights by the watching host, shots of both screens).
+- 15:27 pp25c (mountfight, the fixed check): 45/45, SAVES OK and 5/5. => 74bb83c3's checklist PASSED (pp25 863/864,
+  the one fail the check's own gap, fixed in tools/ and passed as pp25c). CHANGELOG and the waiting list say so; the
+  post still needs the owner's OK.
+- 15:35 cs38a (B16): Esc opens the menu on Inventory; E and Q do NOT change its tabs (all shots Inventory). Next: the
+  pad (Start, RB through the tabs, as cs20) in cs38b.
+- 15:43 cs37a (B18): the guest fought at the camp (3 kills in its feed, 27 of its hits on the host's server), but the
+  harness runs GuestKeys before HostKeys, so the host's shots came after, and the host, standing still as the
+  bandits' quest owner, was dead by then (all 12 shots "Death has found you"). Keys need the window in front, so the
+  two windows cannot act at once; cs37b captures the host's window WITHOUT focus (scratchpad pwshot.ps1,
+  PrintWindow with PW_RENDERFULLCONTENT) while the guest swings.
