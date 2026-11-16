@@ -7993,3 +7993,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   lost message. trigger_share SHELVED (never committed; build/shelved/), since it does not change the HUD and makes
   the guest's client report trigger entries the host's already does. B07 has no finding yet: it needs a real boss
   fight (a save at a boss). The native build folder is back to 7cb93cd's code (rebuilt next).
+- 08:48 cs30a (B05; scratchpad cs30.sh: the guest on usercopy, the sandbox copy of the owner's save of 11-07, D-pad
+  Up held 40 s): SAVES OK, 5/5, both alive. Its wheel offers the horse only (with the characters Kliff and Damiane):
+  no test save, the owner's copy included, has a bear / wolf / raptor or a wagon / skiff / mech. The wagon at the
+  Nas River start is a prop (grabbable with Axiom Force, ax7a), not a vehicle. Those mounts go on the hands-on list
+  (a save that has them). cs32a (08:52; scratchpad cs32.sh): the reverse of cs18i, the HOST on wyvern-egg-dragon
+  (-HostChoice 2) calls Blackstar and flies; the guest teleports to the host's character, looks up, shots every 1 s.
