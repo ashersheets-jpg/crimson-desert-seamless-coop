@@ -8160,3 +8160,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   bandits' quest owner, was dead by then (all 12 shots "Death has found you"). Keys need the window in front, so the
   two windows cannot act at once; cs37b captures the host's window WITHOUT focus (scratchpad pwshot.ps1,
   PrintWindow with PW_RENDERFULLCONTENT) while the guest swings.
+- 16:02 cs38b: the pad keys did nothing (no -GuestScript pad.txt, which cs36 had; the menu never opened). cs37b: the
+  guest fought again (3 kills, 32 hits seen), but pwshot read the FIRST launch's pid from the .pids file and the game
+  restarts into co-op with new pids: no capture. Fixed in the scratchpad (pwshot takes the game window that is not
+  in front; cs38 passes pad.txt); cs38c and cs37c started 16:05.
