@@ -5,7 +5,7 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-NOT POSTED YET: 0.1.0-alpha+430fe6be, for game 1.0.0.3663 (checklist pp24 running; answers the testers' reports of
+NOT POSTED YET: 0.1.0-alpha+430fe6be, for game 1.0.0.3663 (checklist passed: pp24 + the crime re-run pp24b; answers the testers' reports of
 16 Nov on the experimental "Story scenes together"):
 - **No black screen after a shared cutscene.** With story scenes together, the mod still copied the host's story
   scenes into the friend's game when the friend had not reached that step yet; the host's next cutscene, copied

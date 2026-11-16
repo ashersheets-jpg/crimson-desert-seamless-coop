@@ -5,8 +5,8 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
-- 2026-11-16 04:50 MAY I POST 0.1.0-alpha+430fe6be once its checklist (pp24, all 22 steps, started 04:49, ~3 h)
-  passes? It answers the testers' cutscene reports of 16 Nov: no host story scene copied into the friend's game (the
+- 2026-11-16 07:57 MAY I POST 0.1.0-alpha+430fe6be? Its checklist PASSED (pp24: 863 pass, 1 fail = crime,
+  chance; crime re-run pp24b 43/43; SAVES OK and 5/5 every step). It answers the testers' cutscene reports of 16 Nov: no host story scene copied into the friend's game (the
   black screen), a message when the friend is busy with an NPC, the friend's panel moved off the game's region panel.
   Text: docs/release/shared-world-playtest/download-430fe6be.txt (1765 chars). Not posted; a post needs your OK.
 - 2026-11-16 03:45 A DESIGN QUESTION (not urgent; I go on with other work meanwhile): story scenes that start from a
@@ -7952,3 +7952,14 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   crime"), the pp22 pattern: the bandits reached the guest only at 06:36 (NPC>guest 16 in the last minute), the
   guest's client sent 0 guest>NPC blows, so there was no guest crime to skip (the 3 crimes seen were the host's,
   type 1). Chance of where the bandits stand, not the build. pp24b re-runs crime (07:50).
+- 07:57 pp24b (crime re-run on 430fe6be): 43 pass, 0 fail, SAVES OK, user install restored 5/5. So 430fe6be's
+  checklist is clean: pp24 + pp24b = every step passed. Not posted (needs the user's OK; top of the waiting list).
+- 07:58 FOUND in the owner's game folder (bin64) again: 854 packet records (cdmp_packets.host_* / guest_*.bin, 29 GB,
+  11-07..11-15) of my research runs; the 11-15 move took the .log files only. Moved (not deleted) to
+  build/packet-logs-archive/ like the last time. cs31's runner moves its own records out after the run.
+- 07:58 Native, dev only: [session2] sniffer_record=1 = [sniffer] record=1 (the layer's native_extra writes
+  [session2] keys only), so a two-copy run can record both games' packets. cs31 (scratchpad cs31.sh): cs27c again
+  (both at Fort Windridge, the Balthazar boss arena; cs27c: only the host's HUD had the boss bar) with both games
+  recording: which server messages give the host its boss bar (B07). Candidates from the decomp:
+  ActivateContentsPhaseGamePlayTriggerInfoAck, SetContentsPhaseModeEnabledAck; the bar's view
+  (UIGamePlayControlRootBossNameTag) follows an actor's phase fields.
