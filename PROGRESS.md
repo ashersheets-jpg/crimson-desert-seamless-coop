@@ -7947,3 +7947,8 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   skill): joins the hands-on list. Parked; B04 stays [~].
 - 04:49 Package 0.1.0-alpha+430fe6be (native 9160d19 = the copy fix + busy count + knowledge_grant OFF; layer: busy
   toast, frame top left, npcs fix). pp24 (all 22 steps) started on it.
+- 07:50 pp24 (full checklist, 22 steps, on 0.1.0-alpha+430fe6be, 04:49-07:46): 863 pass, 1 fail. Every step
+  SAVES OK and user install restored 5/5. The fail: crime (42/43, "a guest's hit on a bandit was not booked as a
+  crime"), the pp22 pattern: the bandits reached the guest only at 06:36 (NPC>guest 16 in the last minute), the
+  guest's client sent 0 guest>NPC blows, so there was no guest crime to skip (the 3 crimes seen were the host's,
+  type 1). Chance of where the bandits stand, not the build. pp24b re-runs crime (07:50).
