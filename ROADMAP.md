@@ -205,13 +205,14 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   cutscenes) and host-only missions.
 
 **Items** (decomp: the bag's item transaction, docs/research/reverse-engineering-3576.md "Items")
-- [~] **B11 — Item gifting and trading** (confirm step, no duplication, a log, controller). (2026-11-10: the inventory's
+- [x] **B11 — Item gifting and trading** (confirm step, no duplication, a log, controller). (2026-11-10: the inventory's
   Discard next to the friend asks Give to <name> / Discard / Cancel, pad and keyboard, tcB299; the give reaches the
   host's server both ways, tcB300; 2026-11-10 tcB321: host -> guest give WORKS through the game's own whole-record
   move (the same-user check passed for the mod's own moves only); hidden behind [coop] item_sharing until the guest
   side is seen. 2026-11-15/16 on 3663: host -> guest cs21a, guest -> host cs34a, both "stage 5 moved", on by
-  default (the layer's built-in [coop] item_sharing=1); cs34b: the item arrives in the other bag on screen. Left: a
-  two-sided trade (each offers, both confirm) in the interaction menu, which has "Give an item" now.)
+  default (the layer's built-in [coop] item_sharing=1); cs34b: the item arrives in the other bag on screen. Trade (2026-11-16 cs35b): each
+  offers a stack ("Offer in a trade" on the same question), both accept a card, each game gives its own; both moves
+  "stage 5" on the host's server. One PC only; two PCs with the testers.)
 - [~] **B12 — Shared stash.** (user 2026-11-10: the host's own warehouse once the story unlocks it; built, the
   page and card follow the warehouse state; same move as the give; untested with an unlocked warehouse.)
 
