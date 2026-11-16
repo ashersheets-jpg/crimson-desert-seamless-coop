@@ -302,3 +302,6 @@ topic BEFORE testing or guessing about it.
   pwshot.ps1, cs37c). Pick the window by "not the foreground one": the game restarts into co-op with new pids, so
   the harness's .pids file is stale by then.
 - The pause menu's tabs move with the pad's RB / LB (pad_sim + a GuestScript, e.g. scan\pad.txt), not with E / Q.
+- A probe that drives the game into a state must PROVE the state in a screenshot before its data is read. cs39c /
+  cs39d / cs41a sampled "photo mode" that never opened (a shortened menu path) and two of them produced convincing
+  false candidates (2026-11-16).

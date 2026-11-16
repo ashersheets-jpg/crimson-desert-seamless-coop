@@ -8261,3 +8261,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   pa::uiCommonScript::UIGamePlayControlPhotoMode vtable exe+0x5B08898. New dev command `vtscan <vtable rva>`
   (dev_memscan.cpp): globals that point at such an object, directly or one pointer deeper. cs41a: vtscan in play,
   in photo mode, in play after. (The writable sections on 3663: '.sxdata' 8.8 MB and '.xcode' 560 bytes.)
+- 18:20 cs41a: vtscan found nothing in any stage, BUT photo mode never opened (shot g1: plain play, HUD up). The
+  shorter menu path (Start, RB x3, Down, Right, A without the shots between) used since cs39c does not reach it, so
+  cs39c's and cs39d's "photo" samples were not photo mode either (cs39d-g1: no photo sliders): their results do not
+  count. The path of cs38d/e/f (with its shots and the six Downs, then Up, Up, Right) does. cs41b uses it.
