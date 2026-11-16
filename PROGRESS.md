@@ -8273,3 +8273,14 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   global pointing at UIPhaseData_PhotoMode or UIGamePlayControlPhotoMode within two hops, in any stage. Also seen:
   photo mode's keyboard Capture key is R, our Interact hold key (one more reason to hide our prompt there).
   cs39e: the long-sample .data diff again, now really in photo mode (Esc + mouse, no pad).
+- 18:49 cs39e (B16, Esc + mouse, photo mode PROVEN by shot g1; 21 play / 2 menu / 12 photo / 2 menu / 35 play
+  samples): steady candidates at last. exe+0x72AF852 is 0x40 in all 59 other samples and 0x20 in all 12 photo ones;
+  exe+0x75C5EF3 is 0xC1 elsewhere, 0x41 in photo mode (bit 7). Layer: photo_mode_active() = both agree
+  (kPhotoModeState == 0x20 and kPhotoModeCheck bit 7 clear), held 4 reads either way. Built 18:52. cs38g checks it.
+- 18:52 B18 aggression, a FIGHT rule for the AI hand-over (native, built 18:52, default OFF: [session2]
+  ai_handoff_fight=1, host): anti_grief's blow tally now also keeps, per NPC, when the host's character and the other
+  player last hit it (anti_grief_last_hits). Once a second on the server thread: an NPC the other player hit in the
+  last 4 s, that the host has not hit for 6 s, with that player within 20 m and nearer than the host, goes to that
+  player's client (the existing hand-over: controller key, the game's AI restart steps, the private 2660 notice);
+  the same back to the host. One hand-over per NPC in 10 s. The orphan (distance) rule stays as it was (ai_handoff=0
+  by default). Next: cs40e, the guest fights with the rule on.

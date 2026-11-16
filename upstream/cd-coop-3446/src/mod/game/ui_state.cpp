@@ -65,9 +65,9 @@ bool photo_mode_active() {
     // The raw bit, held for 4 reads in a row before it counts either way (one frame's blip does not flip it).
     static bool shown = false;
     static int same = 0;
-    uint8_t v = 0;
-    if (!safe_read(base + off::kPhotoModeBits, &v, 1)) return false;
-    const bool raw = (v & 0x40) && !(v & 0x01);
+    uint8_t st = 0, chk = 0;
+    if (!safe_read(base + off::kPhotoModeState, &st, 1) || !safe_read(base + off::kPhotoModeCheck, &chk, 1)) return false;
+    const bool raw = st == 0x20 && !(chk & 0x80);
     if (raw == shown) {
         same = 0;
     } else if (++same >= 4) {

@@ -155,10 +155,12 @@ inline constexpr uintptr_t kCameraSlot = 0x71602A8;  // 3549:0x70DA028, 2/2
 inline constexpr uintptr_t kStaticPlayerPos = 0x7253E60;  // 3549:0x71CD0B0, 2/2
 inline constexpr uintptr_t kChunkOrigin = 0x7231330;  // 3549:0x71AA150, 8/8
 inline constexpr uintptr_t kCutscenePlaying = 0x7160116;  // 3549:0x70D9F14, 2/2
-// Co-op+ (2026-11-16, cs39c: diffs of every writable section, 3 samples in play, 2 in the menu, 4 in Photo Mode,
-// 2 in the menu after, 3 in play after): u8 0x41 in play and in the menu, 0x40 in all four Photo Mode samples.
-// Bit 0 clear (with bit 6 set) = Photo Mode. (cs39b's one-sample pair 0x72A6C24 / 0x72AE3FC was noise.)
-inline constexpr uintptr_t kPhotoModeBits = 0x72880A7;
+// Co-op+ (2026-11-16, cs39e: diffs of every writable section, ~1 a second: 21 in play, 2 in the menu, 12 in Photo
+// Mode (proven by a shot), 2 in the menu, 35 in play): kPhotoModeState is 0x40 in all 59 other samples and 0x20 in
+// all 12 photo ones; kPhotoModeCheck has bit 7 set (0xC1) elsewhere and clear (0x41) in photo mode. Both must agree.
+// (cs39b / cs39c / cs39d never reached photo mode: the pad steps re-ran their dev script; their bytes were timers.)
+inline constexpr uintptr_t kPhotoModeState = 0x72AF852;
+inline constexpr uintptr_t kPhotoModeCheck = 0x75C5EF3;
 inline constexpr uintptr_t kFieldTimeClient = 0x6F31C78;  // 3549:0x6EAB998, 6/6
 inline constexpr uintptr_t kMiniGameRoot = 0x7245218;  // 3549:0x71BDF48, 8/8
 inline constexpr uintptr_t kClientClockGlobal = 0x71600AD;  // 3549:0x70D9E3D, 8/8 cmp sites
