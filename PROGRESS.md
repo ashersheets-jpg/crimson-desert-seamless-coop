@@ -8099,7 +8099,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   Done: you gave Ricefish for Ricefish" (shots cs35b-sheet.png). SAVES OK, 5/5, both alive. Layer unit tests 2/2.
   Not in a package yet. Known edges: a declined card ends the trade for both (B = Decline, as the menu's Back);
   if one side's give fails after both accepted, the other's still goes (logged "NOT sent"; the server checks each).
-- 11:14 B15 WAGER built (layer, not committed until tested): from a challenge's invite on, the Discard question
+- 11:13 B15 WAGER built (layer, not committed until tested): from a challenge's invite on, the Discard question
   (friend close) adds "Stake on the challenge" (the trade's dry run records the stack; Activity type 31 op 11). When
   the match ends (its Victory / Defeat), if both staked, the loser's game gives its stake to the winner (the Give's
   request); one-sided or a challenge ended without a result: nothing changes hands. cs36a (scratchpad cs36.sh):
