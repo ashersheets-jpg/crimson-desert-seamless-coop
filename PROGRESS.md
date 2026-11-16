@@ -7827,7 +7827,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   Next (after the owner's play, game tests allowed again): reproduce bug 3 on one PC (the host talks on into the next
   scene while the guest's cinematic plays), and look at the restore substitution inside the guest's own cinematic.
 - 03:00 THE OWNER IS DONE PLAYING ("the PC is all yours"): game tests allowed again. Next: the two cutscene leads from the 16 Nov tester zips (the host-scene copy, the restore substitution), then a one-PC repro.
-- 03:30 THE TESTER ZIPS, SECOND READ (corrections to 00:40):
+- 03:05 THE TESTER ZIPS, SECOND READ (corrections to 00:40):
   * Bug 3 (black screen) is the host's NEXT step's cinematic: at 14:07:02-03 the host's copy sent user 2 its
     'cd_seq_quest_intro_0100_dlc' (0x241, 26 NPCs) with 0x248 / 0x249 / 0x24A (0100_01_dlc / _02 / _03); the guest's
     own cinematic (14:05:54-14:07:05) ended 2 s later, while the host's 0100 cinematic played (14:07:02-14:07:30):
@@ -7849,7 +7849,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     ids' 2981s and 2810 are skipped too; the non-story host scenes copied are named in the log. Built (cdmp_mod ok).
   Next: package, then cs28 (the cabin ready check with guest + host shots every 4 s through the cinematic) on
   0245f27d (baseline: are the NPCs static here too?) and on the new package.
-- 03:50 BUG 2 (no NPC interaction while the host is in a cutscene), from the guest's zip: the guest sent the same
+- 03:15 BUG 2 (no NPC interaction while the host is in a cutscene), from the guest's zip: the guest sent the same
   InteractionPreemptionStepReq 2642 to NPC 0xB01000AC (interaction 0xA8) 11 times at 14:04:12-14:04:33 and got 11
   InteractionPreemptionStepFailAck 2946 (native error 0x58C8345D, the code the shop research saw for a busy NPC).
   0xB01000AC is bound in BOTH players' 0340 scenes (the host's 0x22 'cd_seq_quest_intro_0340_dlc', user 2's 0x1DB),
@@ -7859,7 +7859,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   talk to 0xB0100111 at 14:01:47 went through (2308). The check is in Denuvo's .xtls (never hooked). Options: (a) the
   guest is told "your friend is talking to them, wait" and its talk is retried when the NPC is free; (b) per-player
   copies of story NPCs (big). (a) first, after the cutscene tests.
-- 04:20 cs28a (03:07-03:22; scratchpad cs28.sh: the cabin ready check, shots through the cinematics): SAVES OK, user
+- 03:24 cs28a (03:07-03:22; scratchpad cs28.sh: the cabin ready check, shots through the cinematics): SAVES OK, user
   install restored 5/5, test co-op world back identical, no game left. NOT the baseline it was meant to be: the
   harness copies cdmp.asi from upstream/cdmp-native/build (twocopy.ps1 line 76), which my 03:3x compile had already
   replaced, so cs28a ran the FIX (781dba6) with the posted layer. The fix works in it: every host story scene was
@@ -7870,11 +7870,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   (the harness runs the guest's keys to the end before the host's, and the cinematics start at the host's press);
   cs28b shoots the guest from a watcher after the host's press. The host's shots: its cabin "cutscene" plays in the
   world (subtitles, no camera cut), comrades too far to judge.
-- 04:20 Bug 2 message (native e87acb2, layer 55cf22a, built): the sniffer counts this client's 2946 refusals with the
+- 03:24 Bug 2 message (native e87acb2, layer 55cf22a, built): the sniffer counts this client's 2946 refusals with the
   busy-NPC error (other errors logged, 20), cdmp_interaction_refused; the layer shows "They are busy with <friend>
   right now. Try again when <friend> is done" (5 s, at most every 10 s) and logs each refusal. Not tested in a game
   yet (synthetic input cannot open an NPC talk: the hands-on list).
-- 04:45 cs28b (03:24-03:36; DLLs: native e87acb2 = the copy fix + the busy count, layer 55cf22a = the busy toast;
+- 03:38 cs28b (03:24-03:36; DLLs: native e87acb2 = the copy fix + the busy count, layer 55cf22a = the busy toast;
   ini of a3e59c66): SAVES OK, user install restored 5/5, test co-op world back identical, no game left. Both cabin
   cinematics played (host 03:34:44-03:35:17, guest 03:34:45-03:35:18); every host story scene again not copied.
   The guest was shot 12 times by the watcher (03:34:50-03:35:21, 10 inside its cinematic): the comrades beside it
@@ -7883,3 +7883,10 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   Not proven: whether the testers' static NPCs came from the host's cabin cinematic copied into the guest's game
   beside its own (gone with the fix) or from a later, talk-started scene (not reachable with synthetic input).
   So bug 1 and bug 3 wait for a hands-on or tester check on a build with the fix; bug 2 now has a message.
+- 03:40 cs27d READ (Fort Windridge, npcs 60 on both, 00:03-00:06): the host listed 50-63 NPCs within 60 m (nearest
+  14 printed: soldiers 0xC7F-0xC83 / 0xCC54-55 at 9-19 m, a 500-HP 0x7E56), the guest 4-18 (nearest at 22.8 m), and
+  no key was in both printed lists. BUT the guest's list is a measuring gap, not (yet) a world difference: the layer's
+  table (enemy_loaded_variants) keeps a 2005 only when the packet holds ONE record of type 3/6; the host's server
+  sends the guest batched 2005s (the observer hold family releases, e.g. 0xB01003B8's members at 00:03:57), which it
+  skipped. Layer fix (committed): npcs takes every announced 0xB key of an NPC record type too (counted only when the
+  game has the actor: its position reads) and logs all keys in range on one line. cs27e (03:39) re-measures.
