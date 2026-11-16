@@ -8085,3 +8085,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   its own offer to the other with the same give request as Give (both "moved" on the host's server). Decline, a lost
   link or 120 s cancel it; a new offer asks both again. The co-op menu's entry is now "Give or trade an item".
   cs35a (scratchpad cs35.sh): the guest offers its Ricefish, the host offers its own and accepts, the guest accepts.
+- 10:59 cs35a: SAVES OK, 5/5, both alive. OFFERS WORK BOTH WAYS: guest "Trade: our offer x1 from inventory 1 (key 2)
+  slot 57 (item index 0x59A)", the host "the friend offers ..."; the host's own offer likewise, and the host's card
+  opened at once (both offers in). The test's next key was B (to close the inventory), which is the card's Back =
+  Decline: "we declined", the guest "the friend cancelled". Nothing given (as it should). Fixes: the item names
+  were empty ("item 0x59A": the name lookup answers on the UI thread's next tick; now resolved on the spot), and the
+  test presses A on the card first. cs35b (10:59).
