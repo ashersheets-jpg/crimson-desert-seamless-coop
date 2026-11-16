@@ -1,5 +1,5 @@
 **Update: shared world playtest 0.1.0-alpha+74bb83c3, for game 1.0.0.3663**
-Please use this one instead of 0245f27d; **both players need the same build** (the title menu tells you if not).
+Use this instead of 0245f27d; **both players need the same build** (the title menu tells you if not).
 
 Thanks @JackyChan004 and @D3vils for the cutscene reports and zips. For **"Story scenes together (experimental)"**:
 - **Black screen after a cutscene, fixed:** when the host had moved on to the next story scene, the mod copied that scene into the friend's game, and when the friend's own cutscene ended their game was left on the host's scene. Story scenes are no longer copied between you: each game plays its own.
