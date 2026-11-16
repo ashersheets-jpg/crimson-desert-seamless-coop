@@ -7684,3 +7684,10 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - 21:20 B09 past the cabin: cs25a (scratchpad cs25.sh) = cs8j's ready check at the cabin on 0245f27d (story switches
   as in cs8j), then both games watched ~3 min after both pressed (shots every 20 s): how long the cabin scene runs,
   what the story asks next, whether a second story trigger comes up and what the gate says there. Measurement only.
+- 21:30 cs25a (0245f27d, story switches as cs8j): the ready check at the cabin worked again on both games (wait ->
+  both here -> guest pressed -> host pressed -> both cinematics, host 21:24:41-21:25:14, guest 21:24:42-21:25:15;
+  user 2's step cinematic 'cd_seq_quest_intro_0310_dlc' went to the guest with the release). After it, both games
+  show the next objective "Speak with your comrades standing in front of the grave" (~20 m ahead, the minimap
+  marker); nothing else triggered in 3 min with nobody moving. SAVES OK, 5/5, test co-op world back.
+  Next: cs25b (scratchpad cs25b.sh, started 21:33): after the scene the host walks ~20 m and presses E toward the
+  comrades: is the grave talk a story trigger, and does the gate hold it for the friend?
