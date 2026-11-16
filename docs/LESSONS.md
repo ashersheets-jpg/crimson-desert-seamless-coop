@@ -297,3 +297,8 @@ topic BEFORE testing or guessing about it.
 - A check that reads a periodic summary line (once a minute) misses whatever happens after the last one: the run
   can end first. Count the per-event lines too, or log a summary at the end (2026-11-16, pp25 mountfight: 17 real
   hits, the check saw none).
+- Two game windows cannot both take keys at once (keys need the window in front), but the window that is NOT in front
+  can still be captured with PrintWindow(hwnd, dc, PW_RENDERFULLCONTENT=2): real frames, no focus change (scratchpad
+  pwshot.ps1, cs37c). Pick the window by "not the foreground one": the game restarts into co-op with new pids, so
+  the harness's .pids file is stale by then.
+- The pause menu's tabs move with the pad's RB / LB (pad_sim + a GuestScript, e.g. scan\pad.txt), not with E / Q.

@@ -8185,3 +8185,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     "Got locked into the radmin co-op session until I uninstalled the mod". w▲ri asked again (19:24 UTC) "Is this
     person someone from this group?" (the article question). Not replied to.
   * #bug-reports: nothing since 11-07.
+- 16:11 cs38c (B16): FOUND photo mode: pad Start opens the menu on Inventory; RB steps Journal, Skills, Others; the
+  Others tab is a grid: Save | Load, Settings | Photo Mode, Add-ons | Credits, Title Screen | Exit. cs38d (16:30)
+  opens Photo Mode with the host beside the guest: are our tags / frames out of the shot?
+- 16:19 cs37c: the focus-free capture WORKS (pwshot ok=True x16, 16:18:38-47): the host's real frames while the
+  guest's keys swing in the guest's window. This makes simultaneous two-window checks possible (B18, B20 visuals).
+  This run's host frames show the host's own fight; the guest was 12 m away, off screen.
