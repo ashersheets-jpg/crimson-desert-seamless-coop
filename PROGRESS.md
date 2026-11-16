@@ -7723,3 +7723,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   aim, so the reach / facing may be what is missing, not the key. Also seen: at 22:44:21 the host's walk sent a
   2808 for 'cd_seq_quest_intro_0320_dlc' AND user 2's copy of that sequencer got one naming the host's character
   (0xA0100001); the gate let both go. cs25g (22:50): a step right toward Oongka (D 1.3 s), E held 0.8 s, then the pad.
+- 23:03 cs25g: cabin ready check worked (8th of 8 tonight). The host stepped right (D 1.3 s) and faced the grave,
+  E held 0.8 s, then the pad presses (waitfile found 23:00:05): no conversation, no interaction Req after the scene
+  (the 2642 / 2304 at 22:59:27-30 are the cabin cinematic's own NPC interactions). Oongka still ~3 m off at the
+  screen edge (h14). Five runs (cs25c-g) could not line up a talk by script; B09 past the cabin stays with the
+  hands-on check in "Waiting on the user" (the user walks the host to Oongka and talks). Scripts kept: scratchpad
+  cs25.sh .. cs25g.sh, build/native/scan/cs25e_host.txt (waitfile + pad).
