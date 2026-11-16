@@ -7978,3 +7978,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   (default) | 1, HOST: each 2542 / 3136 the host's client gets for its own character is copied to user 2 with
   user 2's character key in its place (server_push_extra, while user 2 is in the world); a log line per copy (12)
   and a minute-probe count. Built clean. cs31b (08:13) = cs31a with trigger_share=1.
+- 08:24 cs31b (trigger_share=1): SAVES OK, 5/5, test co-op world back, both alive. TriggerShare saw the host's 2542 +
+  3136 at 08:17:2x, but the guest joined 08:18:06: "guest not in the world 2", nothing copied (the server sends them
+  once, when the host arrives). Changed: the host's packets are kept (last 64) and replayed in order when the guest
+  enters the world (trigger_share_tick on the network thread; per session epoch). Built clean; cs31c (08:27).
