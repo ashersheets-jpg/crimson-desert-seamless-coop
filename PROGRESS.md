@@ -7997,5 +7997,5 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   Up held 40 s): SAVES OK, 5/5, both alive. Its wheel offers the horse only (with the characters Kliff and Damiane):
   no test save, the owner's copy included, has a bear / wolf / raptor or a wagon / skiff / mech. The wagon at the
   Nas River start is a prop (grabbable with Axiom Force, ax7a), not a vehicle. Those mounts go on the hands-on list
-  (a save that has them). cs32a (08:52; scratchpad cs32.sh): the reverse of cs18i, the HOST on wyvern-egg-dragon
+  (a save that has them). cs32a (08:49; scratchpad cs32.sh): the reverse of cs18i, the HOST on wyvern-egg-dragon
   (-HostChoice 2) calls Blackstar and flies; the guest teleports to the host's character, looks up, shots every 1 s.
