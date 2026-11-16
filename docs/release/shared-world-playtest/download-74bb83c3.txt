@@ -11,7 +11,7 @@ Also: **the friend's health panel moved to the top left corner.** It covered the
 
 Also new: **trading** (inventory, Discard on an item with your friend close: "Offer in a trade"; both accept, the items swap) and **wagers** (once a challenge is sent: "Stake on the challenge"; the loser's stake goes to the winner).
 
-Tested with two copies of the game on one PC (Nvidia): full checklist, one step re-run after a fix to the test itself. Not seen yet: two PCs over the internet with this build, AMD / Intel cards.
+Tested with two copies of the game on one PC (Nvidia): full checklist (one step re-run after fixing the test). Not seen yet: two PCs, AMD / Intel cards.
 
 - `...74bb83c3-shared-world.zip`: the one you want. Run its installer with the game closed.
 - `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.

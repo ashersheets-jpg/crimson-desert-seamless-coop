@@ -5,7 +5,7 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-NOT POSTED YET: 0.1.0-alpha+74bb83c3, for game 1.0.0.3663 (checklist passed: pp25 863/864; its one fail, the mounted fight, was the check missing real blows: fixed in the test kit, the step passed as pp25c): everything in 430fe6be below,
+POSTED 2026-11-16 16:23: 0.1.0-alpha+74bb83c3, for game 1.0.0.3663 (checklist passed: pp25 863/864; its one fail, the mounted fight, was the check missing real blows: fixed in the test kit, the step passed as pp25c): everything in 430fe6be below,
 plus:
 - **Trade with your friend.** In your inventory, Discard on an item with your friend close now also offers "Offer
   in a trade". When you have both offered something, both of you get "Accept: your <item> for <their item>" or

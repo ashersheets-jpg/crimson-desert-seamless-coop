@@ -5,7 +5,7 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
-- 2026-11-16 15:45 MAY I POST 0.1.0-alpha+74bb83c3? ITS CHECKLIST PASSED (pp25 863/864, then pp25c; 12:09-15:27).
+- 2026-11-16 16:23 DONE: 74bb83c3 POSTED in #download-here (owner's "Go ahead", 16:12). The next post needs a new OK. (Was: MAY I POST 74bb83c3? ITS CHECKLIST PASSED (pp25 863/864, then pp25c; 12:09-15:27).
   It is 430fe6be (checklist passed: the black-screen fix, the busy-NPC message, the panel move) plus
   trading, wagers on challenges, the friend's Give seen on 3663, and a fix for the inventory during rock-paper-
   scissors. It replaces the 430fe6be question. Text: docs/release/shared-world-playtest/download-74bb83c3.txt
@@ -8164,3 +8164,24 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   guest fought again (3 kills, 32 hits seen), but pwshot read the FIRST launch's pid from the .pids file and the game
   restarts into co-op with new pids: no capture. Fixed in the scratchpad (pwshot takes the game window that is not
   in front; cs38 passes pad.txt); cs38c and cs37c started 16:05.
+
+### POSTED 2026-11-16 16:23: 0.1.0-alpha+74bb83c3 in #download-here (game 1.0.0.3663)
+- Message 1571999073089626142 (21:23:05 UTC): the text (download-74bb83c3.txt, 1958 characters; trimmed 42 from the
+  2000 draft because the mentions grow on send and Discord showed the Nitro limit) and both zips, 12.10 MB / 6.60 MB
+  (staged copies' sha256 077f8005... / 4e97f9e2..., identical to dist\). @JackyChan004 resolved to a mention,
+  @D3vils stayed plain text (his user name differs from the text); left as is.
+- How: as before (the app's browser pane, signed in; upload-staging into window.name, cleared after; File objects on
+  the composer's input). NEW: with the Claude window minimized, keys did not reach the composer and a second paste
+  doubled the text; the composer was rewritten through its Slate editor object (React fiber props .editor,
+  remove_node / insert_node), then a synthetic Enter keydown sent it. The probes had finished; no test ran.
+- Read before posting:
+  * #play-testing-feedback, Borque 12:57 UTC (07:57 here), "tested on latest version", with a client and a host
+    report zip: from the guest's side enemies take about twice the hits to kill as from the host's; enemies are much
+    less aggressive to the guest (rarely strike); some strikes hit the guest without touching it; an open-world
+    mission NPC stuck under a cart (orange map icon) was missing for the guest; a boar the guest killed lay 3 m to
+    the right of where the host saw it; sometimes the other player's run animation looks frozen while it moves.
+    B18 / B02 material. The zips are NOT downloaded (needs the owner's yes).
+  * #general: mudai 16:20-16:34 UTC: "the game won't even start up now", "the radmin stuff is kinda broken rn",
+    "Got locked into the radmin co-op session until I uninstalled the mod". w▲ri asked again (19:24 UTC) "Is this
+    person someone from this group?" (the article question). Not replied to.
+  * #bug-reports: nothing since 11-07.
