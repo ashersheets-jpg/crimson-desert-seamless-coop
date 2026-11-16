@@ -8038,5 +8038,5 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   the call, the HOST FLEW Blackstar (its own list 13 s after the call from (-8993, 512, -5008), 33 m up; host shots:
   riding it over Trembling Gorge). The focus explanation holds (2 of 2 with focus, 0 of 2 without). The guest's
   shots (camera at the ground, its window in the background when its own camera step ran) show only trees: what
-  the guest sees of the flying host is still open. cs32f (09:52): the guest teleports to the host 62 s into its
+  the guest sees of the flying host is still open. cs32f (09:51): the guest teleports to the host 62 s into its
   script, after the watcher has put its window in front, then turns its camera up; 40 guest shots.
