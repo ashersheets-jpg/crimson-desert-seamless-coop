@@ -7974,7 +7974,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   * Both got their own ActivateContentsPhaseGamePlayTriggerInfoListAck 2786 (trigger 0xF4341, each its own key).
   So the server gives the arena's trigger states to the host's character only; the guest's client, without them,
   never enters the triggers and never starts the boss fight's HUD.
-- 08:20 B07 first fix, native (not committed yet): session2/trigger_share.{h,cpp}, [session2] trigger_share = 0
+- 08:14 B07 first fix, native (not committed yet): session2/trigger_share.{h,cpp}, [session2] trigger_share = 0
   (default) | 1, HOST: each 2542 / 3136 the host's client gets for its own character is copied to user 2 with
   user 2's character key in its place (server_push_extra, while user 2 is in the world); a log line per copy (12)
-  and a minute-probe count. Built clean. cs31b (08:20) = cs31a with trigger_share=1.
+  and a minute-probe count. Built clean. cs31b (08:13) = cs31a with trigger_share=1.
