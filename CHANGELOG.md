@@ -5,7 +5,9 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-NOT POSTED YET (next build; it needs the whole checklist on its exact package and the owner's OK to post):
+Posted 2026-11-15 20:43 as 0.1.0-alpha+0245f27d, for game 1.0.0.3663 (checklist pp22: all 22 steps, one PC,
+862/864; the two fails, both bandit fights, passed on re-runs of the same package: mountfight pp22b, crime
+pp22c + pp22d; the crime step depends on a bandit not yet fighting standing by the guest):
 - **The friend's time of day follows the host's.** The joining player's sky clock fell behind the host's by the
   length of its own loading (about 37 in-game minutes in one test). The shared world's clock sync was there but
   switched off and still pointed at an old game version's memory; it is moved to 1.0.0.3663 and on. Tested on one

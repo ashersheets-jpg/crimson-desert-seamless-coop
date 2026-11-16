@@ -11,7 +11,7 @@ New:
 - **The friend's weather now follows the host's**: clouds, wind, fog and rain, while you are within 2 km of each other.
 - Checked: **the joining player can call Blackstar** and fly it, and the host sees the dragon with its rider.
 
-Tested with two copies of the game on one PC (Nvidia), full checklist. Not seen yet: rain falling during a test, two PCs over the internet with this build, AMD / Intel cards.
+Tested with two copies of the game on one PC (Nvidia), full checklist (two bandit-fight steps passed on a second run: the bandits do not always stand in the same place). Not seen yet: rain falling during a test, two PCs over the internet with this build, AMD / Intel cards.
 
 - `...0245f27d-shared-world.zip`: the one you want. Run its installer with the game closed.
 - `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.

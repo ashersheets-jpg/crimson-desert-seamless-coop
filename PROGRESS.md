@@ -5,8 +5,10 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
-- 2026-11-15 19:15 ANSWERED: the owner said "Yes" (post 0245f27d to #download-here if pp22 passes). One post, this
-  build only. pp22 crime failed once (the bandits went for the host, the guest hit nothing): crime re-run first.
+- 2026-11-15 20:43 DONE: 0245f27d posted in #download-here (owner's "Yes" of 19:10). The next post needs a new OK.
+- 2026-11-15 20:40 FOR YOU (not answered by me): in #general, ByJunter (16:55 UTC) asked "Is this person someone from
+  this group?" and squidbots32 linked a Spanish article (evelongames.com, "mod cooperativo crimson desert 2026") and
+  asked whether they are passing the mod off as their own. Not opened, not replied to.
 - 2026-11-15 17:00 MAY I POST 0.1.0-alpha+0245f27d once its checklist (pp22, running, ~3 h) passes? It answers the
   two tester reports of 15 Nov: the shared-cutscene setting (and two others) never showed on the Co-op page; the name
   tag ran up to 1.8 m ahead of a sprinting friend. Also: Give to the friend on New Co-op Saves, weather and time of day
@@ -7658,3 +7660,19 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   Steam "Join" lines the same (1 each side); the only new behaviour in the layer logs is "Name tag:" (8-13 lines a
   run, the read-only lookup). No mechanism found. pp22c + pp22d (two more crime runs on 0245f27d, 20:22) to tell
   chance from a fault before anything else.
+- 20:40 pp22c PASS 43/43 and pp22d PASS 43/43 (guest assassinates 0xB0100361 / 0xB010038B, crime type 5 skipped).
+  0245f27d 2/4 on the crime step, f1028cbc 2/2: chance (where the bandits stand when the guest's keys start), not the
+  build. Every pp22 fail has passed on a re-run of the same package. Test-kit follow-up: make the crime step not
+  depend on a bandit standing by the guest (e.g. walk the guest to a bandit that is not fighting yet, or repeat).
+
+### POSTED 2026-11-15 20:43: 0.1.0-alpha+0245f27d in #download-here (game 1.0.0.3663)
+
+- Message 1571702144938156112 (01:43:12 UTC 16 Nov): the text (1715 characters, download-0245f27d.txt with the
+  checklist line made exact: "two bandit-fight steps passed on a second run") and both zips, 12 653 009 / 6 899 641
+  bytes (staged copies' sha256 43783bfa... / db6d720f..., identical to dist\). @JackyChan004 and @D3vils resolved
+  to mentions.
+- Before posting: #bug-reports (nothing since 11-07), #play-testing-feedback (the two 15 Nov reports this build
+  fixes, nothing after), #general (the article question above, for the owner) read.
+- How: as before (the app's browser pane, signed in, no sign-in asked; upload-staging into window.name, cleared
+  after; File objects on the composer's input; a synthetic paste; Enter). No test was running. The OK: the owner's
+  "Yes" of 19:10. The next post needs the owner's OK again.
