@@ -184,7 +184,12 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
 - [-] **B08 — Join mid-fight, boss, cutscene or loading screen.** DROPPED (user 2026-11-07: "Being able to join
   mid-game is not a priority ... people can only join parties from the main menu screen"). Joining is from the title
   screen only (B01's join flow).
-- [ ] **B09 — Shared cutscenes on 3576** (the guest sees the host's boss cutscenes; late1's old crash).
+- [~] **B09 — Shared cutscenes on 3576** (the guest sees the host's boss cutscenes; late1's old crash).
+  (2026-11-14/15: the READY CHECK, experimental "Story scenes together": the cabin scene waits for both and plays in
+  both games, testers saw it work 16 Nov. 2026-11-16 from their zips: no host story scene is copied to the guest any
+  more (the black screen after the host's next cinematic; native 781dba6), the NPCs move in the guest's cabin scene
+  (cs28b shots), a message when the friend is busy with the NPC (one talk at a time, the server's rule). Left: the
+  scenes that start from a TALK (design question to the user), a hands-on / tester check of the fix.)
 - [~] **B10 — Quest sharing on by default** (live quest steps, co-op save per friend: out of experimental).
   (2026-11-09: quest_route -- option 3 LIVE in tcB198: the guest's game events go to its OWN quest manager instead
   of the host's; option 2 = quest_shared_credit, built, untested. A guest quest step advancing still to be shown.)
