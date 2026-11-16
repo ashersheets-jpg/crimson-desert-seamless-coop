@@ -8104,3 +8104,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   the match ends (its Victory / Defeat), if both staked, the loser's game gives its stake to the winner (the Give's
   request); one-sided or a challenge ended without a result: nothing changes hands. cs36a (scratchpad cs36.sh):
   rock-paper-scissors with both staking a Ricefish, [dev] rps_test hands chosen so both games agree the host wins.
+- 11:23 cs36a: SAVES OK, 5/5, both alive; no challenge happened: on the native layer Shift+F5 opens nothing (the
+  challenge opens by holding Interact on the friend), and the S meant for the menu walked the host 7 m away. Test kit
+  only. cs36b (11:24): hold R on the friend, S S, Space (rock-paper-scissors, third after arm wrestling and duel);
+  the guest's accept: hold R on the host, Space.
