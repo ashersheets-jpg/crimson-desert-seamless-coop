@@ -210,7 +210,8 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   host's server both ways, tcB300; 2026-11-10 tcB321: host -> guest give WORKS through the game's own whole-record
   move (the same-user check passed for the mod's own moves only); hidden behind [coop] item_sharing until the guest
   side is seen. 2026-11-15/16 on 3663: host -> guest cs21a, guest -> host cs34a, both "stage 5 moved", on by
-  default (the layer's built-in [coop] item_sharing=1). Left: trading in the interaction menu, the arriving item seen in the other bag.)
+  default (the layer's built-in [coop] item_sharing=1); cs34b: the item arrives in the other bag on screen. Left: a
+  two-sided trade (each offers, both confirm) in the interaction menu, which has "Give an item" now.)
 - [~] **B12 — Shared stash.** (user 2026-11-10: the host's own warehouse once the story unlocks it; built, the
   page and card follow the warehouse state; same move as the give; untested with an unlocked warehouse.)
 
