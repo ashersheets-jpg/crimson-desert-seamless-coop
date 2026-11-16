@@ -7963,3 +7963,18 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   recording: which server messages give the host its boss bar (B07). Candidates from the decomp:
   ActivateContentsPhaseGamePlayTriggerInfoAck, SetContentsPhaseModeEnabledAck; the bar's view
   (UIGamePlayControlRootBossNameTag) follows an actor's phase fields.
+- 08:10 cs31a (Fort Windridge, both teleported in, both games' packets recorded; DLLs native 7cb93cd): SAVES OK, user
+  install restored 5/5, test co-op world back identical, both alive at the end. As in cs27c: the host's HUD has the
+  boss bar "Balthazar, the Wyvernflame" (h0), the guest's never (g0-g3), even while the wyvern burns it (g3, then
+  "Death has found you" g4). Packets (captures/cs31a, scratchpad pktcmp.py / pktbin.py):
+  * S>C only to the host: ChangeGamePlayTriggerStateAck 2542 (once, t 69.9, as the host arrived; payload u8 4 |
+    u32 0xA0100001 | 67 x {u32 trigger 0xF42xx-0xF44xx, u8 1}) and UpdateForbiddenCharacterListAck 3136 (once).
+  * C>S only from the host: GamePlayTriggerInfoEnterReq 3119 (56; its character 0xA0100001 and NPCs entering
+    trigger 0xF424F etc.), ChangeBattleStateReq 2704, AggroRelationListReq, SequencerTriggerVolumeInOutReq ...
+  * Both got their own ActivateContentsPhaseGamePlayTriggerInfoListAck 2786 (trigger 0xF4341, each its own key).
+  So the server gives the arena's trigger states to the host's character only; the guest's client, without them,
+  never enters the triggers and never starts the boss fight's HUD.
+- 08:20 B07 first fix, native (not committed yet): session2/trigger_share.{h,cpp}, [session2] trigger_share = 0
+  (default) | 1, HOST: each 2542 / 3136 the host's client gets for its own character is copied to user 2 with
+  user 2's character key in its place (server_push_extra, while user 2 is in the world); a log line per copy (12)
+  and a minute-probe count. Built clean. cs31b (08:20) = cs31a with trigger_share=1.
