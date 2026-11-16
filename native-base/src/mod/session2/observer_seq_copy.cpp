@@ -102,10 +102,10 @@ bool probe() { return g_mode.load(std::memory_order_relaxed) == osq::Mode::Probe
 
 // The real push (on) or nothing (probe: reported as sent).
 bool push_copy(std::span<const uint8_t> bytes) {
-    // Co-op+ 2026-11-14 (story mode, story_gate=hold): a host's story scene user 2 has its own copy of is not sent
+    // Co-op+ 2026-11-14 / 16 (story mode, story_gate=hold): a host story scene is not sent (story_gate_skip_copy)
     // (reported as sent: the copier moves on; its branch / delete copies are skipped below).
-    if (bytes.size() >= 5 + 17 && static_cast<uint16_t>(bytes[0] | bytes[1] << 8) == osq::kOpPrepare &&
-        story_gate_skip_copy(osq::le64(&bytes[5 + 9]))) {
+    if (bytes.size() >= 5 + 31 && static_cast<uint16_t>(bytes[0] | bytes[1] << 8) == osq::kOpPrepare &&
+        story_gate_skip_copy(osq::le64(&bytes[5 + 9]), osq::le32(&bytes[5 + 27]))) {
         return true;
     }
     if (probe()) return true;

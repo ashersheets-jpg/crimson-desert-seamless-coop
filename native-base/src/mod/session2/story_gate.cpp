@@ -778,21 +778,61 @@ bool story_gate_user2_story(uint64_t id) noexcept {
     return s && sgl::is_story_name(s->name);
 }
 
-bool story_gate_skip_copy(uint64_t host_seq) noexcept {
-    if (g_mode.load(std::memory_order_relaxed) != 2) return false;
-    const Slot* s = find(key_of(false, host_seq));
-    if (!s || !sgl::is_story_name(s->name) || !s->hash) return false;
-    for (size_t i = 0; i < kSlots; ++i) {
-        const uint64_t k = g_slots[i].key.load(std::memory_order_acquire);
-        if (k && (k >> 63) && g_slots[i].hash == s->hash) {
-            static std::atomic<int> said{0};
-            if (said.fetch_add(1) < 40)
-                log::info("StoryGate: the host's story scene '{}' (sequencer 0x{:X}) is not copied to the guest: user 2 has its own "
-                          "(sequencer 0x{:X})", s->name, host_seq, k & 0x7FFFFFFFFFFFFFFFull);
-            return true;
+// The host's sequencers the copy skipped (hold mode): their 2981s and 2810 are skipped too, by id. Under g_skip_mu.
+std::mutex g_skip_mu;
+std::vector<uint64_t> g_skipped;
+
+bool story_gate_skip_copy(uint64_t host_seq, uint32_t hash) noexcept {
+    if (g_mode.load(std::memory_order_relaxed) != 2 || !host_seq) return false;
+    try {
+        {
+            std::lock_guard lock(g_skip_mu);
+            if (std::find(g_skipped.begin(), g_skipped.end(), host_seq) != g_skipped.end()) return true;
         }
+        const Slot* s = find(key_of(false, host_seq));
+        const Slot* story = s && sgl::is_story_name(s->name) ? s : nullptr;
+        // Its name by the 2661's hash when the id is not in the table yet (the capture can come before the host
+        // client's own preparation): any player's prepared story scene of that file-name hash.
+        if (!story && hash) {
+            for (size_t i = 0; i < kSlots && !story; ++i) {
+                const uint64_t k = g_slots[i].key.load(std::memory_order_acquire);
+                if (k && g_slots[i].hash == hash && sgl::is_story_name(g_slots[i].name)) story = &g_slots[i];
+            }
+        }
+        if (!story) {
+            // Not a story scene (or not known): copied as before. Its name, to learn which host scenes reach the guest.
+            if (hash) {
+                static std::atomic<int> said{0};
+                if (said.fetch_add(1) < 60)
+                    log::info("StoryGate: the host's scene '{}' (sequencer 0x{:X}, hash 0x{:08X}) is copied to the guest (not a story scene)",
+                              s ? s->name : "(name not known yet)", host_seq, hash);
+            }
+            return false;
+        }
+        // User 2's own copy of it, for the log.
+        uint64_t own = 0;
+        for (size_t i = 0; i < kSlots && !own; ++i) {
+            const uint64_t k = g_slots[i].key.load(std::memory_order_acquire);
+            if (k && (k >> 63) && story->hash && g_slots[i].hash == story->hash) own = k & 0x7FFFFFFFFFFFFFFFull;
+        }
+        {
+            std::lock_guard lock(g_skip_mu);
+            if (g_skipped.size() >= 4096) g_skipped.erase(g_skipped.begin(), g_skipped.begin() + 2048);
+            g_skipped.push_back(host_seq);
+        }
+        static std::atomic<int> said{0};
+        if (said.fetch_add(1) < 60) {
+            if (own)
+                log::info("StoryGate: the host's story scene '{}' (sequencer 0x{:X}) is not copied to the guest: user 2 has its own "
+                          "(sequencer 0x{:X})", story->name, host_seq, own);
+            else
+                log::info("StoryGate: the host's story scene '{}' (sequencer 0x{:X}) is not copied to the guest: story scenes are "
+                          "each player's own (user 2 has not reached it)", story->name, host_seq);
+        }
+        return true;
+    } catch (...) {
+        return false;
     }
-    return false;
 }
 
 bool story_gate_keep_user2(uint16_t opcode, std::span<const uint8_t> payload, const std::vector<uint8_t>& packet) noexcept {
