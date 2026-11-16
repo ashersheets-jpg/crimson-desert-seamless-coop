@@ -7713,3 +7713,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   (kind 0x20000022) and '..._0310_dlc'; the gate lets them go (not a step's main scene). 0320 is the next step's
   cinematic: if it is started by the talk, the gate's "main scene" test decides whether it waits for the friend.
   Every run: SAVES OK, 5/5, the test co-op world back identical.
+- 22:32 cs25e (the talk by the pad, build/native/scan/cs25e_host.txt: waitfile scan\cs25e_talk.flag, then pad A
+  0x1000 300 / A 1000 / X 0x4000 300 / A 300): cabin ready check worked (6th); the pad steps never ran: my watcher
+  (touch the flag when shot h12 appears) gave up after ~10 min, before h12 (22:28:50). Test-driver slip, not the
+  mod. cs25f (22:35): the same with a 30 min watcher.
