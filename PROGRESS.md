@@ -7772,7 +7772,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   * the guest's HUD shows NO boss bar (g1 / g2: only the party frame "Host"), the host's does;
   * people within 40 m: host 40-41, guest 4-6 (the guest's reader misses actors, see cs10a / cs27b, but 40 vs 5
     is a lot: check by eye whether the guest sees the fort's soldiers);
-  * the guest's HUD clock 10:59-11:05 vs the host's 11:12-11:18 in the same minute: ~13 game minutes behind again
-    (the clock push is on? check its lines in this run).
+  * (not a fault) the guest's HUD clock 10:59-11:05 vs the host's 11:12-11:18: the guest's shots are taken ~90 s
+    BEFORE the host's (GuestAfterWalkKeys run first), = ~18 game minutes at scale 12.
   SAVES OK, 5/5, test co-op world back. Next: the boss with both alive (arrive apart from the soldiers, or with
-  revive), screenshots from the guest toward the soldiers, and the clock lines.
+  revive), screenshots from the guest toward the soldiers.
