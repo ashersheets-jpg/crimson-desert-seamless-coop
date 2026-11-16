@@ -7982,3 +7982,14 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   3136 at 08:17:2x, but the guest joined 08:18:06: "guest not in the world 2", nothing copied (the server sends them
   once, when the host arrives). Changed: the host's packets are kept (last 64) and replayed in order when the guest
   enters the world (trigger_share_tick on the network thread; per session epoch). Built clean; cs31c (08:27).
+- 08:36 cs31c (trigger_share=1 with the replay): SAVES OK, 5/5, test co-op world back, both alive. The replay worked
+  (the guest's client got 2542 / 3136 with its own key and then sent 71 GamePlayTriggerInfoEnterReq, 0 before), but
+  its HUD still had no "Balthazar" line. Zoomed (shots/cs31c-region-zoom.png): that line is NOT a boss bar but the
+  game's REGION panel (the fort's holder "Balthazar, the Wyvernflame" over "100.00% / Fort Windridge"); the guest's
+  panel has the same 100.00% / Fort Windridge, only without the holder's name. cs27c's "boss bar" reading was MY
+  MISTAKE. Both games get the same faction data (UpdateFactionConquerData / LeaderData / FactionData, same sizes, each
+  its own key). Most likely the holder's name is each character's own knowledge (the host's windridge save has met
+  Balthazar, the guest's rps save has not): per-player progress, which knowledge sharing (B04) would cover, not a
+  lost message. trigger_share SHELVED (never committed; build/shelved/), since it does not change the HUD and makes
+  the guest's client report trigger entries the host's already does. B07 has no finding yet: it needs a real boss
+  fight (a save at a boss). The native build folder is back to 7cb93cd's code (rebuilt next).
