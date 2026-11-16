@@ -8265,3 +8265,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   shorter menu path (Start, RB x3, Down, Right, A without the shots between) used since cs39c does not reach it, so
   cs39c's and cs39d's "photo" samples were not photo mode either (cs39d-g1: no photo sliders): their results do not
   count. The path of cs38d/e/f (with its shots and the six Downs, then Up, Up, Right) does. cs41b uses it.
+- 18:30 cs41b: photo mode did not open again, and now I know why: a harness `pad:` step writes scan\pad.txt and
+  presses the dev-script hotkey, which RE-RUNS the loaded script. With a custom GuestScript (cs39 / cs41) every pad
+  press restarted that script ("waitfile ... found" twice) and no press reached the game. So cs39b, cs39c, cs39d,
+  cs41a and cs41b never had photo mode. cs41c: Esc and mouse clicks (Others tab, Photo Mode tile), no pad.

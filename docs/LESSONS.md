@@ -305,3 +305,6 @@ topic BEFORE testing or guessing about it.
 - A probe that drives the game into a state must PROVE the state in a screenshot before its data is read. cs39c /
   cs39d / cs41a sampled "photo mode" that never opened (a shortened menu path) and two of them produced convincing
   false candidates (2026-11-16).
+- Harness `pad:HEX:ms` steps only work when the loaded dev script IS scan\pad.txt: the step rewrites pad.txt and
+  presses the dev-script hotkey (Ctrl+Shift+F6), which re-runs whatever script is loaded. A test that needs its own
+  dev script must drive menus with keys and the mouse (`at:x:y`, `click:L`), not the pad (2026-11-16, cs39 / cs41).
