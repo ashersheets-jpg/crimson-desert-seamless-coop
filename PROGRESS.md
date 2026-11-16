@@ -8074,3 +8074,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   0xA0100066 to 0xA0100001: stage 5 (5 = moved) err 0". The guest's bag on screen: the Ricefish gone, 66/99 -> 65/99
   (shots cs34a-sheet.png). SAVES OK, 5/5, both alive. With cs21a, the Give works both ways on 3663. Not seen: the
   fish arriving in the host's bag on screen (the server's move tells both clients; the host's bag shot is next time).
+- 10:45 cs34b (cs34a + the host's bag shown after the give): SAVES OK, 5/5, both alive. Same give ("stage 5 moved"),
+  and THE FISH ARRIVED in the host's bag on screen: before (cs21a-h2, the same test world) Ricefish x1; after
+  (cs34b-h2) a Ricefish stack of 2, first in the date sort, the bag still 66/99 (it joined the stack; shots
+  cs34b-cmp.png). So B11's give is seen end to end both ways on 3663 (the sending bag loses it, the other gains it).
