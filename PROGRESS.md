@@ -7796,6 +7796,33 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   3. the joined player in a cutscene, the host moves on to another cutscene: if the host is still in that one when
      the joined player's ends, the joined player is left on a black screen ("doesn't know where to put" them);
   4. "desyncing nametags has been improved" (the 0245f27d fix, so they were on 0245f27d).
-  Not downloaded yet: downloading needs the owner's OK (the 15 Nov OK covered two other zips). Nothing replied.
+  (00:27: downloaded with the owner's "Yes, download both"; see the 00:40 entry.) Nothing replied.
   In one-PC tests the cabin scene played for both 8 of 8 tonight, but no test looked at the NPCs INSIDE the guest's
   cinematic (static vs animated), or at a second scene starting for the host while the guest's plays.
+- 00:40 THE 16 NOV TESTER ZIPS (owner's "Yes, download both" 00:20; fetched from the two attachment links into
+  build/tester-reports/CoopPlus-report-2026-11-16_14-10-53 (JackyChan004, HOST, 509 306 B) and _14-11-03 (D3vils,
+  guest, 229 761 B); logs and report.txt only, nothing run). Both 0.1.0-alpha+0245f27d, game 3663, story_together=1
+  on the host; a New Co-op Save, in the world ~13:58-14:10 their time.
+  * The cabin ready check WORKED for them: wait / both here / guest pressed 14:01:21 / host pressed 14:01:30 / both
+    cinematics (host 14:01:30-14:02:15, guest 14:01:31-14:02:00).
+  * After the cabin the gate held NOTHING more: the host went on through the grave talk and the next steps
+    (0340_01 / 0340 / 0360_01 / 0360 / 0330 at 14:04-14:05, 0010 / 0100 / 0110 prepared 14:06:51) and its game
+    played 8 more cutscenes alone (14:06:00-14:09:34). The gate only holds "a step's main scene" at a story
+    trigger volume; scenes started by a TALK (or a step's later parts) are not held. So "story scenes together"
+    really covers the first scene only. (B09: the talk-started scenes need the ready check too.)
+  * Bug 3 (guest left on a black screen): ObserverSeqCopy SENT the host's own live sequencer 0x23F (bound to the
+    host's character 0xA0100001) to user 2's queue at 14:06:03; the guest's GuestSeqRoute routed 34 such host
+    PrepareSequencerAcks ("foreign delivered 34"). The guest's game played a cutscene 14:05:54-14:07:05 while the
+    host's played 14:06:00-14:06:43 and 14:07:02-14:07:30: the guest was playing (part of) the HOST's scene, whose
+    end hands control back to a character the guest's game does not drive. Lead: with story_together on, the
+    host's step scenes must not be copied to the guest (the guest has its own) -- the copy only skips sequencers
+    for which "user 2 has its own" was matched, and 0x23F was not matched.
+  * Bug 1 (static NPCs in the shared scene): the guest's GuestSeqRestore (seq_actor_restore=1) SUBSTITUTED the
+    restore of 32 actors with an idle wait ("actors touched 32: 0xB01001F4 ... all NOT on this client"), 63 layers
+    changed to wait. Idle-waiting scene actors = standing still. Lead: the restore substitution should not touch a
+    cinematic the guest's own game plays (it was made for the observer copy of the host's scenes).
+  * Bug 2 (no NPC interaction while the host is in a cutscene): not looked at yet (the guest's GuestXInter
+    redirected 617 interactions; to read).
+  * Name tags "improved": the 0245f27d fix seen by the testers.
+  Next (after the owner's play, game tests allowed again): reproduce bug 3 on one PC (the host talks on into the next
+  scene while the guest's cinematic plays), and look at the restore substitution inside the guest's own cinematic.
