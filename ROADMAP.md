@@ -173,7 +173,10 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   (2026-11-09: fog_share built -- the guest's map fog at its login OR-ed with the host's on the host's server; live
   test next. Knowledge: not started.)
 - [ ] **B05 — Other mounts and vehicles** (bears, wolves, raptors...; wagon, skiff, mech) seen and ridden.
-- [ ] **B06 — Mounted combat damage** on shared enemies.
+- [~] **B06 — Mounted combat damage** on shared enemies. (2026-11-15, from the checklist's mountfight logs: the
+  guest's blows from the saddle hurt and kill the host's enemies -- pp22: 16 blows, 0xB01000D2 63 -> 14 -> 0 and
+  0xB010031A / 0xB010048A to 0 on the host, 4 kills in the guest's kill feed; pp19 2, pp20 3. Left: the host
+  fighting from the saddle with the guest watching, and the guest's own "we hurt" capture, silent when mounted.)
 - [ ] **B07 — Boss mechanics for two** (grabs, finishers, phase triggers, arena locks).
 - [-] **B08 — Join mid-fight, boss, cutscene or loading screen.** DROPPED (user 2026-11-07: "Being able to join
   mid-game is not a priority ... people can only join parties from the main menu screen"). Joining is from the title

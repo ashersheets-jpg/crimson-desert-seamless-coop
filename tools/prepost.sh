@@ -439,6 +439,7 @@ mountfight)
   has "$H" "blows from the guest's client: guest>NPC [1-9]" "the mounted guest's blows on enemies were seen"
   hurt=$(grep "Local:.*hp" $N/$NAME.coopplus.guest.log 2>/dev/null | grep -vc "hp 300.0/300.0")
   [ "${hurt:-0}" -gt 0 ] && ok "the mounted guest lost health ($hurt samples below full)" || bad "the mounted guest never lost health (not exercised: were the enemies there?)"
+  info "mounted guest's kills (its kill feed): $(grep -c 'Kill feed: we took down' $N/$NAME.coopplus.guest.log 2>/dev/null) (pp19-pp22: 0-4; B06)"
   info "LOOK: $NAME-g1 / -g2 must show the guest IN THE SADDLE (prompt Dismount) with enemies around; the logs cannot tell mounted from on foot"
   ;;
 nosave)

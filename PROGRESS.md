@@ -7729,3 +7729,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   screen edge (h14). Five runs (cs25c-g) could not line up a talk by script; B09 past the cabin stays with the
   hands-on check in "Waiting on the user" (the user walks the host to Oongka and talks). Scripts kept: scratchpad
   cs25.sh .. cs25g.sh, build/native/scan/cs25e_host.txt (waitfile + pad).
+- 23:10 B06 (mounted combat damage), from the mountfight logs already on disk: the mounted guest's blows DO hurt and
+  kill the shared enemies. pp22-mountfight: the guest's client 16 blows (0xB01000D2 x7, 0xB01004D9 x5, 0xB010031A
+  x2, ...); on the host (npcs every 9 s) 0xB01000D2 63/63 -> 14 -> 0, 0xB010031A 54 -> 0, 0xB010048A 63 -> 31 -> 0;
+  the guest's kill feed "we took down" 0xB01004D9, 0xB01000D2, 0xB01004E1, 0xB010048B. Kills by the guest in
+  earlier passes: pp19 2, pp20 3 (pp18 / pp21 / pp22b 0: fewer blows landed). Gaps: the guest's capture never logs
+  "we hurt enemy" from the saddle (it does on foot); the guest's `npcs` reads its position as (0, 1.3, 0.7) while
+  mounted (local to the horse), so its list is empty there; the host fighting mounted is not in any test.
+  ROADMAP B06 -> [~]; the mountfight step now reports the guest's kill count (info).
