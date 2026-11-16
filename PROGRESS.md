@@ -8108,3 +8108,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   challenge opens by holding Interact on the friend), and the S meant for the menu walked the host 7 m away. Test kit
   only. cs36b (11:24): hold R on the friend, S S, Space (rock-paper-scissors, third after arm wrestling and duel);
   the guest's accept: hold R on the host, Space.
+- 11:34 cs36b: SAVES OK, 5/5, both alive. The host's hold R focused a peony next to it, not the guest (no menu); the
+  guest's hold R opened the Co-op menu (Duel first away from the inn) and its Space sent a duel invite instead of an
+  accept. Useful anyway: the guest's STAKE worked from the invite ("Wager: we stake Ricefish"; the host "the friend
+  stakes Ricefish") and the wager ended with the lapsed invite ("off (the challenge ended without a result)").
+  cs36c (11:35): the guest invites (R, S, Space) and stakes; the host accepts with Shift+F5 bound for the test
+  ([keys] Challenge through -HostDev) and stakes; then the rounds.
