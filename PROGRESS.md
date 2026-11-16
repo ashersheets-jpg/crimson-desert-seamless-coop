@@ -7626,3 +7626,15 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   guest stood 10 m away swinging at air (pp22-crime-g0/g1; the guest's client sent 0 guest>NPC blows; pp15-pp21 had
   20-59). 0245f27d's only changes from f1028cbc (crime passed in pp21) are the Steam call and a log line. The crime
   step is re-run alone on the same package after pp22; a pass there counts it as test variance.
+- 19:49 pp22 done on 0245f27d: 862 pass, 2 fail, 22 steps, SAVES OK and install restored 5/5 in every step. Display
+  (real Steam): 6/6, no Steam fault this launch (one clean launch; the fault was 4 in 16 before). The fails, both
+  fights in the bandit test world:
+  - crime (above).
+  - mountfight: "guest: mounted (its mount was published to the host)". The guest's ride request reached the host's
+    server and was granted (2642 -> 2308 success, MountReserve of horse 0xB0100068 at 19:07:28), but the guest's own
+    ride never began (no MountBegin for 0xA0100066; pp21: Begin 1 Commit 1). pp22-mountfight-g0: the guest beside the
+    horse with its "Ride" prompt still up, bandits around it, hp 266/300 (it had been hit). A hit stagger cancels a
+    ride in the game; nothing in the mount or fight code changed since pp21 (f1028cbc -> 0245f27d: Steam call + a
+    log line).
+  Re-run of both steps on the same package as pp22b (19:52). Both passing = test variance and the post goes out
+  (owner OK 19:10); a repeat = a real fault, no post.
