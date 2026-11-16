@@ -294,3 +294,6 @@ topic BEFORE testing or guessing about it.
 - Simulated pad input (the dev script's "pad", [dev] pad_sim) acts only in the game window that is in FRONT. The
   host's Blackstar call worked once in four runs: the one where a screenshot watcher kept bringing the host's window
   forward during the press. Before a pad step, focus that copy (an actpid shot does it) and keep it in front.
+- A check that reads a periodic summary line (once a minute) misses whatever happens after the last one: the run
+  can end first. Count the per-event lines too, or log a summary at the end (2026-11-16, pp25 mountfight: 17 real
+  hits, the check saw none).

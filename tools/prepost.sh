@@ -436,7 +436,14 @@ mountfight)
   H=$N/$NAME.host.log
   has "$N/$NAME.coopplus.guest.log" "Dev script: teleport beside actor 0xB[0-9A-F]+: \\(" "guest: its called horse was there"
   has "$N/$NAME.guest.log" "MountSync summary .* published Begin [1-9][0-9]* Commit [1-9]" "guest: mounted (its mount was published to the host)"
-  has "$H" "blows from the guest's client: guest>NPC [1-9]" "the mounted guest's blows on enemies were seen"
+  # 2026-11-16 (pp25): the tally above is logged once a minute and the run can end before the next one; pp25's guest
+  # hit 17 times and killed 2 in its last 40 s, none of it in a tally. The host's per-hit lines count too.
+  gb=$(grep -cE "AntiGrief: crime type [0-9]+ of the guest .* \\(a (hit|kill)\\)" "$H" 2>/dev/null)
+  if grep -qE "blows from the guest's client: guest>NPC [1-9]" "$H" 2>/dev/null || [ "${gb:-0}" -gt 0 ]; then
+    ok "the mounted guest's blows on enemies were seen (tally or $gb per-hit lines)"
+  else
+    bad "the mounted guest's blows on enemies were seen   [no guest>NPC in a tally and no per-hit line in $NAME.host.log]"
+  fi
   hurt=$(grep "Local:.*hp" $N/$NAME.coopplus.guest.log 2>/dev/null | grep -vc "hp 300.0/300.0")
   [ "${hurt:-0}" -gt 0 ] && ok "the mounted guest lost health ($hurt samples below full)" || bad "the mounted guest never lost health (not exercised: were the enemies there?)"
   info "mounted guest's kills (its kill feed): $(grep -c 'Kill feed: we took down' $N/$NAME.coopplus.guest.log 2>/dev/null) (pp19-pp22: 0-4; B06)"

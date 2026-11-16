@@ -8139,3 +8139,14 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - 15:06 pp25 (74bb83c3, all 22 steps, 12:09-15:06): 863 pass, 1 fail. SAVES OK and 5/5 on every step. The fail:
   mountfight "the mounted guest's blows on enemies were seen" (guest>NPC 0; its hits on the camp NPCs were seen as
   crimes, 5), the same combat outcome as pp19 (its swings landed on nothing). Re-running mountfight as pp25b 15:08.
+- 15:16 pp25b (mountfight again): 44/1, the same check. 15:20 WHY, from the logs: the check reads the host's
+  once-a-minute fight tally only, and the run can end before the next one. pp25: the guest's hits on the camp's
+  bandits are on the host's server as 17 per-hit lines (14:24:29-14:24:45) and its kill feed has 2 kills (14:24:45),
+  all after the last tally (14:24:25); the log ends 14:25:22. So pp25 was the check missing real blows. pp25b: no
+  per-hit line and no kill at all; shots g1 / g2: the guest in the saddle among the bandits, then on foot (knocked
+  out of the saddle), the host down: the scene's luck, as in pp19. pp22b passed with 1 blow, pp24 with 3: the step
+  is marginal by design.
+  FIX (test kit only, tools/prepost.sh): the check also counts the host's per-hit lines of the guest ("crime type N
+  of the guest ... (a hit|a kill)"). Re-judged on the files: pp25 PASS (17 per-hit lines), pp25b still FAIL (none).
+  The package is unchanged, so (rule 2) only the step runs again: pp25c started 15:21; then cs38 (where photo mode
+  is, B16) and cs37 (B18: the friend fights by the watching host, shots of both screens).
