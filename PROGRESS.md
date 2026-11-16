@@ -7696,3 +7696,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   of 'cd_seq_quest_intro_0310_dlc' again; the gate logged no hold (not a story trigger it knows as a step's main
   scene). The E presses came before any prompt; 20 s later (h13) the host stood 3 m from the marker with "E Talk:
   Oongka" up. SAVES OK, 5/5. cs25c (21:47): the same walk, then E pressed after a 1.5 s stop, three times, shots.
+- 22:00 cs25c: cabin ready check worked (4th time; released 21:56:05, both cinematics 33 s). At the grave the host
+  stood with "E Talk: Oongka" up (h13-h16) but three E taps (150 ms) opened no conversation; the gate saw only the
+  volumes 0320_dlc / 0310_dlc again at 21:57:03 (no hold). Short E taps opened no talk in cs14a either; the steps that
+  work hold E 1.2 s. cs25d (22:02): the same with E held 0.7 / 1.5 / 0.7 s.
