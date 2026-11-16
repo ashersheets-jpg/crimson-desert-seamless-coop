@@ -8059,3 +8059,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - 10:15 cs33b (scratchpad cs33b.sh): the guest at the table spot, the host 8 m away; the guest turns its camera in 12
   steps of ~30 deg (mouse moves through actpid, its window in front), holds R after each (shot), Esc after: which
   step offers "Try arm wrestling" and whether the host's server accepts the guest's interaction.
+- 10:24 cs33b: SAVES OK, 5/5, both alive. 12 camera steps with R: no "Try arm wrestling" prompt at any (shots
+  cs33b-sheet.png; the Esc after each opened the inventory when nothing was open, so every other try was in a menu).
+  Not pursued by script: the guest's own arm wrestling with the table's NPC joins the hands-on list (the table's
+  people are there on both games, T21's bug, cs33a).
