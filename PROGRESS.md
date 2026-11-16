@@ -8114,3 +8114,10 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   stakes Ricefish") and the wager ended with the lapsed invite ("off (the challenge ended without a result)").
   cs36c (11:35): the guest invites (R, S, Space) and stakes; the host accepts with Shift+F5 bound for the test
   ([keys] Challenge through -HostDev) and stakes; then the rounds.
+- 11:45 cs36c: SAVES OK, 5/5, both alive. The challenge ran: the guest invited rock-paper-scissors and staked, the
+  host accepted (Shift+F5 bound for the test) and the match ended "we won (2 - 1)" on the host; but the wager was
+  "one-sided, nothing given": the host never staked. CAUSE (a real bug, not the kit): while a rock-paper-scissors
+  match waits for hands, the layer hides the pad's X / Y / B from the game (they are the hands), also inside the
+  inventory, so the host's Discard (X) and Close (B) never reached the game and counted as hands (scissors, rock).
+  Fixed: the hands (and that masking) are off while a game menu is open (a player can open the inventory mid-match
+  and stake). cs36d (11:46).
