@@ -8136,3 +8136,6 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   layer = 430fe6be's + trade, wagers, the RPS hands off in game menus). pp25 (all 22 steps) started 12:09. CHANGELOG
   "NOT POSTED YET: 74bb83c3" and the draft post (download-74bb83c3.txt, 1999 chars) written; the waiting list's post
   question now names 74bb83c3.
+- 15:06 pp25 (74bb83c3, all 22 steps, 12:09-15:06): 863 pass, 1 fail. SAVES OK and 5/5 on every step. The fail:
+  mountfight "the mounted guest's blows on enemies were seen" (guest>NPC 0; its hits on the camp NPCs were seen as
+  crimes, 5), the same combat outcome as pp19 (its swings landed on nothing). Re-running mountfight as pp25b 15:08.
