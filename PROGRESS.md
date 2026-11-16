@@ -7788,3 +7788,14 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   identical, no game running. Its lists are read below (no game needed).
 - 2026-11-16 00:07 THE OWNER PLAYS on this PC (asked at 00:01 when the PC is free): NO game test, no install change,
   no save access until they say they are done. Non-game work only (logs, code reading, notes).
+- 00:15 NEW TESTER FEEDBACK (#play-testing-feedback, 2026-11-16 04:11-04:15 UTC, JackyChan004 + D3vils, report
+  zips CoopPlus-report-2026-11-16_14-10-53.zip (497 KB, Jacky) and _14-11-03.zip (224 KB, D3vils); build not stated,
+  posted 2.5 h after 0245f27d). D3vils' summary, about the EXPERIMENTAL "Story scenes together" (off by default):
+  1. both play the same cutscene: the joined player sees static NPCs in it;
+  2. the joined player cannot interact with NPCs while the host is in a cutscene;
+  3. the joined player in a cutscene, the host moves on to another cutscene: if the host is still in that one when
+     the joined player's ends, the joined player is left on a black screen ("doesn't know where to put" them);
+  4. "desyncing nametags has been improved" (the 0245f27d fix, so they were on 0245f27d).
+  Not downloaded yet: downloading needs the owner's OK (the 15 Nov OK covered two other zips). Nothing replied.
+  In one-PC tests the cabin scene played for both 8 of 8 tonight, but no test looked at the NPCs INSIDE the guest's
+  cinematic (static vs animated), or at a second scene starting for the host while the guest's plays.
