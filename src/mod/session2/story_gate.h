@@ -42,9 +42,13 @@ bool story_gate_take_host(const uint8_t* packet, size_t size) noexcept;
 // registers: rbx rbp rsi rdi r12 r13 r14 r15).
 void story_gate_host_stack(const uint8_t* packet, size_t size, uint64_t rsp, uint64_t rip, const uint64_t nv[8]) noexcept;
 // The observer copy (observer_seq_copy.cpp), hold mode: true = the host's sequencer `host_seq` is a story scene
-// (cd_seq_quest_*) of which user 2's manager prepared its own copy (the same file-name hash), so the host's copy is not
-// sent to the guest (2026-11-14: the guest's game held both copies of the cabin's cinematic and never started its own).
-bool story_gate_skip_copy(uint64_t host_seq) noexcept;
+// (cd_seq_quest_*; by its id's prepared name, or by `hash`, the 2661's file-name hash @27, when a player's manager
+// prepared a story scene of that hash), so the host's copy is not sent to the guest (its 2981s and 2810 neither).
+// 2026-11-14: only when user 2 had its own copy (the guest's game held both copies of the cabin's cinematic and never
+// started its own). 2026-11-16 (the testers' zips): ANY host story scene -- with story scenes together each player
+// plays their own; the host's next step's cinematic (cd_seq_quest_intro_0100_dlc) copied to the guest while the
+// guest's own cinematic played left the guest on a black screen when its own ended.
+bool story_gate_skip_copy(uint64_t host_seq, uint32_t hash = 0) noexcept;
 // observer_hold_scene_order (hold mode): true = `hash` is the file-name hash of a story scene (cd_seq_quest_*) user 2's
 // manager prepared: its 2661 waits for the 2005s of the NPCs it binds like a trade scene's (cs9i: user 2's cabin
 // cinematic went out 330 ms before its comrades reached the guest, and the guest's game never had it).
