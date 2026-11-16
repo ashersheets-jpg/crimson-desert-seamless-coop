@@ -7758,3 +7758,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   world (both at the bandits save's start, -10350 / -3919); no event, no fight. SAVES OK, 5/5. cs27b (23:35):
   -HostChoice 2 (Start From My Solo Progress = the host's windridge save), the test co-op world backed up and put
   back as the checklist's hostrevive step does.
+- 23:43 cs27b (-HostChoice 2): the windridge save starts at Trembling Gorge, Wells Estate (-9005, 479, -5064), not
+  at the fort (~2.4 km); no event. Side finding for B02 / T12: there the host's `npcs 40` listed 8 (3 small animals
+  hp 5, 5 deer hp 20-ish, 13-40 m) and the guest's, 1 m from the host, 0 of 76. The guest's reader is known to miss
+  actors (cs10a: 44 of 57 read), so not proof the deer are missing on the guest: check by eye (a guest shot toward
+  the deer) in a later run. SAVES OK, 5/5, test co-op world back. cs27c (23:46): both teleport to the fort first
+  (tp -6649 502 -5519).
