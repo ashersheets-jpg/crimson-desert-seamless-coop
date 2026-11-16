@@ -7907,3 +7907,10 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   at 0 by 03:47:20; AntiGrief: NPC>guest 5, NPC>host 5 blows); both lay ~90 m lower (y 408.8, the fall) until the
   end, "alive" by the revive screen. So at the fort the enemies are shared and fight both (B02 / B03 evidence).
   Still open at the fort: the boss bar on the guest's HUD (cs27c lead), the event itself (no "world event" line).
+- 04:10 THE PARTNER FRAME COVERED A GAME WIDGET (cs27e shots): at Fort Windridge the game shows a region widget
+  ("Balthazar, the Wyvernflame / 100.00% / Fort Windridge", the host; the guest's without the name) at ~53-61 % of
+  the height, exactly where the partner frame stood (55.5 %), on both screens -- cs27c's "boss bar on the host only"
+  was that widget, not a boss bar. Layer (committed): the frame goes to the top left corner (7 % of the height), the
+  chat lines under it. cs27f (03:55-04:04, same fort test; SAVES OK, user install restored 5/5, test co-op world back
+  identical, no game left): h0 / g0 show the frame top left and the game's widget clear on both. The guest's widget
+  lacks the boss's name: probably knowledge only the host has (B04 knowledge, not started).
