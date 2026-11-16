@@ -8019,6 +8019,6 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - 09:12 cs32b: SAVES OK, 5/5, test co-op world back. The host's watcher shots (shots/cs32b-sheet.png): the host's
   wheel offers BLACKSTAR (Kliff, Damiane, the horse, the dragon), and after the 8 s hold the down-left press called
   it: the host mounts and FLIES Blackstar in the shared world (hw-12..16). cs32a's single press without the hold did
-  not register. The guest got no shots (the run's 100 s hold ended first). cs32c (09:15; scratchpad cs32c.sh, Hold
+  not register. The guest got no shots (the run's 100 s hold ended first). cs32c (09:13; scratchpad cs32c.sh, Hold
   240): the guest teleports to the host's character 75 s into its script (after the host's take-off) three times,
   camera up, with a watcher shooting each window every second.
