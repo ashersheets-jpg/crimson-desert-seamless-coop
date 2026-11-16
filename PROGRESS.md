@@ -8237,3 +8237,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     fighting, yet the bandits' blows went 27 to the idle host and 3 to the guest; cs40a 25 / 6. The camp's bandits
     belong to the host's quest, which may be why; a camp that is nobody's quest would tell.
   cs40c (both teleport on a key marker, the host fights) and cs39c started 17:25.
+- 17:30 cs40c (both teleport on a key marker; the HOST fights): 31 blows on NPCs, 487 HP off (six bandits 63 -> 0,
+  two nearly), 5 kills: 15.7 HP per blow, against the guest's 6.7 in cs40b. Borque's "the client needs about double
+  the hits" is REAL in our runs too (x2.3). Caveat: the guest plays the 'rps' test save, the host
+  'coop-test-bandits'; a weaker character would explain it. cs40d: the guest on the host's own save.
+- 17:39 cs39c (B16, 3 / 2 / 4 / 2 / 3 samples): candidates that hold in all four photo samples and never elsewhere
+  include exe+0x72880A7 (0x41 in play and menu, 0x40 in photo: one bit), exe+0x71F1E23/24 and exe+0x7493BF1-3
+  (pointer-like). Layer: photo_mode_active() = bit 0 clear with bit 6 set at exe+0x72880A7, held 4 reads in a row
+  either way; the cs39b pair removed. Built 17:42. cs38f checks it (with a shot 5 s into photo mode).

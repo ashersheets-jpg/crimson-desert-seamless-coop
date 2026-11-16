@@ -62,9 +62,19 @@ uintptr_t minigame_gauge_address() {
 bool photo_mode_active() {
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     if (base != off::kImageBase) return false;
-    uint8_t on = 0, off_flag = 1;
-    if (!safe_read(base + off::kPhotoMode, &on, 1) || !safe_read(base + off::kPhotoModeOff, &off_flag, 1)) return false;
-    return on == 1 && off_flag == 0;
+    // The raw bit, held for 4 reads in a row before it counts either way (one frame's blip does not flip it).
+    static bool shown = false;
+    static int same = 0;
+    uint8_t v = 0;
+    if (!safe_read(base + off::kPhotoModeBits, &v, 1)) return false;
+    const bool raw = (v & 0x40) && !(v & 0x01);
+    if (raw == shown) {
+        same = 0;
+    } else if (++same >= 4) {
+        shown = raw;
+        same = 0;
+    }
+    return shown;
 }
 
 std::optional<bool> cutscene_playing() {
