@@ -7638,3 +7638,17 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     log line).
   Re-run of both steps on the same package as pp22b (19:52). Both passing = test variance and the post goes out
   (owner OK 19:10); a repeat = a real fault, no post.
+- 20:09 pp22b: mountfight PASS (45/45), crime FAIL again (42/43, same check). NOT POSTED. The crime step had passed
+  in every pass since pp8b (pp10-pp21, 12 runs); two fails in a row on 0245f27d, so the build is suspect until shown
+  otherwise. What the logs show:
+  - In pp21 the guest's held E was an ASSASSINATE on an unaware "Bleed Bandit" (0xB01003E9) standing beside it
+    (pp21-crime-g1: "E Assassinate"; guest log "Capture: we hurt enemy 0xB01003E9" every 2.2 s from 4 s into its
+    keys); each was booked as crime type 5 and skipped. In pp22 / pp22b no bandit stood by the guest: the bandits had
+    already gone for the host (NPC>host blows from 25 s after its teleport) and killed it; the guest's swings landed
+    nothing (guest client guest>NPC 0, no "we hurt enemy"). The check needs a hit on a bandit that is not yet
+    fighting: the step depends on where the bandits are when the guest starts.
+  - 0245f27d vs f1028cbc: only coopplus.asi differs (cdmp.asi identical; coopplus.ini differs only in its version
+    line). The layer's code change: the Steam status call and, on the guest each frame, one read-only position lookup
+    (game::actor_world_position: hash-table reads, no game call). Nothing that can steer the bandits' AI.
+  - A/B test cs23 (20:15): the crime step on f1028cbc's coopplus.asi (the build folder's file swapped for the
+    package's, restored after). A fail there too = the test's setup has changed (bandit positions), not 0245f27d.
