@@ -8202,3 +8202,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   in the shot: the partner frame (top left, "Host 1 m"), the name tag over the host, and the "Interact" prompt. The
   game's "gameplay input" flag stays on in photo mode, so ui_menu_open() does not see it. cs39a (16:40): gsnap / gdiff
   of the guest's .data in play, menu, photo mode (twice), menu, play, to find a photo-mode flag.
+- 16:50 mudai's "locked into the radmin co-op session until I uninstalled the mod" / "the game won't even start up"
+  (#general 16:20-16:34 UTC), from the code, no logs yet: a co-op launch is set in the native base's mode file and
+  the layer puts the next launch back to Solo in lobby_native_init (coop_lobby.cpp: no fresh restart marker ->
+  Solo). That runs only when `kNativeLayer && in_game && build_ok && cfg.coop_enabled` (mod.cpp:2299). So a player
+  who switches Co-op+ off (or a game build the layer refuses) keeps the native base starting in the last co-op role
+  (Host / Guest, direct address) on EVERY launch; nothing else resets it, and uninstalling removes the mode file.
+  A likely way to "locked in". Fix idea (not built yet): do the stale-mode reset whatever coop_enabled / build_ok
+  say (it only touches our own mode file). Their report zip would confirm it; asking them needs the owner's OK.
