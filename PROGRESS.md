@@ -8025,5 +8025,5 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - 09:25 cs32c: SAVES OK, 5/5, test co-op world back, both alive. The guest's three teleports put it under the flying
   host (host 40 m up at (-8984, 510, -4972)) in Trembling Woods; its camera up showed only the tree canopy (30 watcher
   shots), and its actor list within 80 m (18 of 61 loaded) had no dragon (its reader misses actors: not proof).
-  Inconclusive. cs32d (09:27): the guest stays at the open start spot beside the host, a watcher shoots it from the
+  Inconclusive. cs32d (09:26): the guest stays at the open start spot beside the host, a watcher shoots it from the
   host's call (the dragon lands by its caller first), and both games list actors within 40-80 m after the take-off.
