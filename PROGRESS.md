@@ -8227,3 +8227,13 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   stage is not enough. The build folder's layer flickers the overlay now (NOT packaged; 74bb83c3 is not affected).
   cs39c (next): several gdiffs per stage (3 play, 2 menu, 4 photo, 2 menu, 3 play), a candidate must hold one value
   in all four photo samples and never that value elsewhere. Meanwhile cs40a / cs40b (B18 damage, below) run.
+- 17:20 cs40a / cs40b (B18, Borque's report; scratchpad cs40.sh + hp_per_blow.py: one player fights the camp, the
+  other stands 4 m away; the fighter's `npcs` list every 1.5 s gives hp; the host's server tallies the blows):
+  * cs40b, the GUEST fights: 26 blows on NPCs, 173 HP taken off (0xB01000D3 63 -> 0, 0xB01003D4 63 -> 4,
+    0xB010034A 54 -> 3): 6.7 HP per blow, ~9-10 blows for a 63-HP bandit; 1 kill.
+  * cs40a, the host fights: NOT MEASURED: it teleported at its world entry, stood ~45 s among the bandits until the
+    guest came and the keys began, and was dead (shot h1 "Death has found you"); its tally shows 0 host blows.
+  * AGGRESSION (Borque: "enemies seem a lot less aggressive to the guest"): SEEN. In cs40b the guest did all the
+    fighting, yet the bandits' blows went 27 to the idle host and 3 to the guest; cs40a 25 / 6. The camp's bandits
+    belong to the host's quest, which may be why; a camp that is nobody's quest would tell.
+  cs40c (both teleport on a key marker, the host fights) and cs39c started 17:25.
