@@ -140,6 +140,9 @@ Config load_config(const std::wstring& ini_path) {
     // limit, about 1 GB an hour) is a research tool; a player's game must never do it unasked. Solo mode's ini had
     // no [sniffer] section, so solo play with the mod installed recorded.
     c.sniffer_record = read_uint(ini_path, L"sniffer", L"record", 0) != 0;
+    // 2026-11-16, dev: [session2] sniffer_record=1 does the same (the layer's [dev] native_extra only writes
+    // [session2] keys, so a two-copy research run can record both games' packets). Default 0.
+    if (read_uint(ini_path, L"session2", L"sniffer_record", 0) != 0) c.sniffer_record = true;
     c.dev_clone_hotkeys = read_uint(ini_path, L"dev", L"clone_hotkeys", 0) != 0;
     c.dev_mirror_delay_ms = std::min(read_uint(ini_path, L"dev", L"mirror_delay_ms", 300), 5000u);
     c.dev_mirror_offset_m = read_metres(ini_path, L"dev", L"mirror_offset_m", c.dev_mirror_offset_m);
