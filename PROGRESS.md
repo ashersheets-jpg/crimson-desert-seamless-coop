@@ -8121,3 +8121,8 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   inventory, so the host's Discard (X) and Close (B) never reached the game and counted as hands (scissors, rock).
   Fixed: the hands (and that masking) are off while a game menu is open (a player can open the inventory mid-match
   and stake). cs36d (11:46).
+- 11:56 cs36d (the menu fix): SAVES OK, 5/5, both alive. BOTH STAKED now (the host's Discard reached the game in
+  the inventory mid-match: "Wager: we stake Ricefish" on both). The host's match: "we won (2 - 1)" -> "Wager: we won;
+  the friend gives Ricefish". The guest's game did not finish its match (1 - 1): the host's second B, pressed after
+  its inventory had closed, counted as a rock and reached the guest as a real hand. Test kit only (each game decides
+  the match from both real hands; real hands agree). cs36e (11:57): one B to close the inventory.
