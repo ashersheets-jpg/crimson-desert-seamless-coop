@@ -7744,3 +7744,13 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   (the test teleport does not move a rider) -- needs a scripted ride with a known heading. Parked: the host fighting
   mounted is the host's own game against its own server (single-player code); what B06 adds is the guest SEEING it,
   which the guest's npcs HP lists already show for any damage. SAVES OK, 5/5.
+- 23:25 B03 research (a read-only agent over the repo): world events here are stages started by PrepareSequencerAck
+  2356 ("Activity: a world event started here: <name> (stage N)", coop_activity.cpp; 519 names in event_names.inc:
+  Activity at / Reinforcements / Pursuers / Bounty hunters; one siege name, "Activity at Outpost (MuMusketSiege)").
+  "Reinforcements at Rodbel Fishing Dock" (stage 1047000) starts in ~25 checklist runs and BOTH games log it
+  (pp22-loot: host 18:30:11.9, guest 0.2 s later): the bandit-camp fights are that event, and the guest fights and
+  kills in it with the host near (B06 numbers). Native routing for user 2: 2356 / 3130 / 2693 / 2585 / 2606 / 2753
+  are owner-only writers in the base (owner_fanout is a probe); user 2's own faction stages are skipped by U-1
+  (user2_stages_logic.h:456-470). Unknown: an event started by the guest alone; quest-gauge / camp-clear credit for
+  the guest; a second event spot. cs27a (scratchpad cs27.sh, 23:27): the windridge save at Wind Cliff Fort
+  ("Reinforcements at Wind Cliff Fort", 0xF4CCD, never captured), both there ~2.5 min, npcs 40 every 9 s.
