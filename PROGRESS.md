@@ -8040,3 +8040,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   shots (camera at the ground, its window in the background when its own camera step ran) show only trees: what
   the guest sees of the flying host is still open. cs32f (09:51): the guest teleports to the host 62 s into its
   script, after the watcher has put its window in front, then turns its camera up; 40 guest shots.
+- 10:03 cs32f: SAVES OK, 5/5, test co-op world back, both alive. The host flew again (with focus). The guest's
+  teleports came before its window was in front, so its camera stayed level, in the Trembling Woods canopy (40 shots of
+  branches). But the LOGS settle it: the host's Blackstar is actor 0xB0100003 (type 5, owner host); the host's server
+  held it from user 2 for 468 ms at the call and released it ("after StartActionReq"); the GUEST's game loaded it
+  ("Capture: horse template (horse 0xB0100003)", 09:59:36) and its MountSync observer logged the host's MountBegin and
+  MountCommit on 0xB0100003 (09:59:45): the guest's game puts the host on its Blackstar. With cs18i (the host SAW the
+  guest's Blackstar fly), Blackstar works both ways in the shared world (the guest's view of the host's flight by log,
+  not by shot: trees each time). B05 left: the other mounts / vehicles, which no save of ours has (hands-on list).

@@ -177,7 +177,10 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   test next. Knowledge: 2026-11-16 knowledge_grant built (native 9160d19, [session2] knowledge_grant, default 0):
   a learn by one player is learned by the other through the game's own learn entry; installs cleanly on 3663,
   no learn happened in cs29a / cs28c to prove it -- needs a moment where the game teaches a knowledge.)
-- [ ] **B05 — Other mounts and vehicles** (bears, wolves, raptors...; wagon, skiff, mech) seen and ridden.
+- [~] **B05 — Other mounts and vehicles** (bears, wolves, raptors...; wagon, skiff, mech) seen and ridden.
+  (2026-11-15/16: Blackstar works both ways in the shared world -- the guest calls and flies it and the host sees
+  it (cs18i); the host calls and flies it and the guest's game loads it and seats the host on it (cs32e/f, by log).
+  Left: bear / wolf / raptor / wagon / skiff / mech, which no test save has, the owner's copy included: hands-on.)
 - [~] **B06 — Mounted combat damage** on shared enemies. (2026-11-15, from the checklist's mountfight logs: the
   guest's blows from the saddle hurt and kill the host's enemies -- pp22: 16 blows, 0xB01000D2 63 -> 14 -> 0 and
   0xB010031A / 0xB010048A to 0 on the host, 4 kills in the guest's kill feed; pp19 2, pp20 3. Left: the host
