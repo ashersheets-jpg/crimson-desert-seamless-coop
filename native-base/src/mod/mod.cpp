@@ -74,6 +74,7 @@
 #include "mod/session2/stage_candidate_guard.h"
 #include "mod/session2/quest_route.h"
 #include "mod/session2/fog_share.h"
+#include "mod/session2/knowledge_grant.h"
 #include "mod/session2/ai_handoff.h"
 #include "mod/session2/damage_range.h"
 #include "mod/session2/anti_grief.h"
@@ -1254,6 +1255,7 @@ DWORD WINAPI worker(LPVOID) {
             session2::lootr_set_kill_hits(cfg.s2_guest ? 0 : cfg.s2_lootr_kill_hits);
             session2::handle_guard_start();  // both roles (tcB342)
             session2::fog_share_start(cfg.s2_fog_share, cfg.s2_guest);
+            session2::knowledge_grant_start(cfg.s2_knowledge_grant, cfg.s2_guest);
             session2::quest_route_start(cfg.s2_quest_own_progress, cfg.s2_quest_shared_credit, cfg.s2_guest);
             session2::merchant_unhide_start(cfg.s2_merchant_unhide != 0, cfg.s2_guest, cfg.s2_merchant_unhide == 2 ||
                                                 cfg.s2_merchant_unhide == 3,

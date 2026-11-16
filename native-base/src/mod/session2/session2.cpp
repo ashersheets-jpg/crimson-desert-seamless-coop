@@ -1,6 +1,7 @@
 #include "mod/session2/session2.h"
 #include "mod/session2/shop_twin.h"
 #include "mod/session2/fog_share.h"
+#include "mod/session2/knowledge_grant.h"
 #include "mod/session2/ai_handoff.h"
 #include "mod/session2/damage_range.h"
 #include "mod/session2/anti_grief.h"
@@ -197,6 +198,7 @@ DWORD WINAPI probe_thread(LPVOID) {
                       net::puppet_guard_describe(), net::horse_diag_describe());
         }
         if (clock_gate_active()) log::info("Session2 probe (minute {}): {}", minute, clock_gate_describe());
+        if (const std::string k = knowledge_grant_describe(); !k.empty()) log::info("Session2 probe (minute {}): {}", minute, k);
         if (identity_probe_active()) log::info("Session2 probe (minute {}): {}", minute, identity_probe_describe());
         if (identity_fix_wanted()) log::info("Session2 probe (minute {}): {}", minute, identity_fix_describe());
         if (guest_save_mode() != gsv::Mode::Off) {

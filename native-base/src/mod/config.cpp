@@ -356,6 +356,7 @@ Config load_config(const std::wstring& ini_path) {
     c.s2_damage_range_players = read_uint(ini_path, L"session2", L"damage_range_players", 1) != 0;
     c.s2_stash_inventory = static_cast<int>(read_uint(ini_path, L"session2", L"stash_inventory", 0xFFFF));
     c.s2_fog_share = read_uint(ini_path, L"session2", L"fog_share", 0) != 0;
+    c.s2_knowledge_grant = read_uint(ini_path, L"session2", L"knowledge_grant", 0) != 0;
     c.s2_quest_own_progress = read_uint(ini_path, L"session2", L"quest_own_progress", 0) != 0;
     c.s2_quest_shared_credit = read_uint(ini_path, L"session2", L"quest_shared_credit", 0) != 0;
     c.s2_npc_dialog_share = read_uint(ini_path, L"session2", L"npc_dialog_share", 0) != 0;
