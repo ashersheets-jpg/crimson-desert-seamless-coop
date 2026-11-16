@@ -299,6 +299,18 @@ void lobby_native_init(const std::wstring& coopplus_ini, const std::wstring& bin
 }
 
 
+void lobby_native_reset_stale(const std::wstring& coopplus_ini, const std::wstring& bin_dir) {
+    const NativeMode now = native_mode_current(bin_dir);
+    const NativeResume r = native_resume_read(coopplus_ini);
+    if (now == NativeMode::Solo && r.mode == NativeMode::Solo) return;
+    NativeModeSpec solo;
+    const bool ok = native_mode_write(bin_dir, solo);
+    native_resume_clear(coopplus_ini);
+    log::warn("Co-op lobby: co-op is off (or this game build is not supported) and the native base was set to "
+              "start as the {}: the next launch is Solo{}",
+              native_mode_name(now), ok ? "" : " (the mode file could not be written)");
+}
+
 void lobby_tick(const LobbyInput& in) {
     const WorldsLobbyInfo w = worlds_lobby_info();
     const bool save_ready = !w.enabled || (w.active && !w.switching);

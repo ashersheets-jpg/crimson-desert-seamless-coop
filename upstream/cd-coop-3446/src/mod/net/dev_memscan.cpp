@@ -285,9 +285,6 @@ void dev_dwatch(int hits) {
 // ---- gsnap / gdiff (2026-11-05): the exe's whole .data section, before and after -------------------------------
 namespace cdmp::net {
 namespace {
-std::vector<uint8_t> g_gsnap;
-uintptr_t g_gdata = 0;
-size_t g_gsize = 0;
 
 bool data_section(uintptr_t& at, size_t& size) {
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
@@ -379,38 +376,62 @@ void dev_clockscan() {
     for (size_t i = 0; i < hits.size() && i < 40; ++i) log::info("Dev clockscan: {}", hits[i].line);
 }
 
+// 2026-11-16 (cs39a): the 1.0.0.3663 exe has no section named ".data", so gsnap / gdiff now cover EVERY writable,
+// non-executable section (as clockscan does). gdiff N writes "exe offset, value at the last gsnap / gdiff, value now".
+namespace {
+struct GRegion {
+    uintptr_t at;
+    std::vector<uint8_t> bytes;
+};
+std::vector<GRegion> g_gregions;
+}  // namespace
+
 void dev_gsnap() {
-    if (!data_section(g_gdata, g_gsize)) {
-        log::warn("Dev gsnap: no .data section");
-        return;
+    const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
+    const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(base + dos->e_lfanew);
+    const IMAGE_SECTION_HEADER* sec = IMAGE_FIRST_SECTION(nt);
+    g_gregions.clear();
+    size_t total = 0;
+    for (WORD i = 0; i < nt->FileHeader.NumberOfSections; ++i, ++sec) {
+        if (!(sec->Characteristics & IMAGE_SCN_MEM_WRITE) || (sec->Characteristics & IMAGE_SCN_MEM_EXECUTE)) continue;
+        GRegion r{base + sec->VirtualAddress, {}};
+        read_pages(r.at, sec->Misc.VirtualSize, r.bytes);
+        total += r.bytes.size();
+        char name[9] = {};
+        std::memcpy(name, sec->Name, 8);
+        log::info("Dev gsnap: section '{}' at exe+0x{:X}, {} bytes", name, sec->VirtualAddress, r.bytes.size());
+        g_gregions.push_back(std::move(r));
     }
-    read_pages(g_gdata, g_gsize, g_gsnap);
-    log::info("Dev gsnap: {} bytes of .data at exe+0x{:X}", g_gsize,
-              g_gdata - reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)));
+    if (g_gregions.empty()) log::warn("Dev gsnap: no writable section");
+    log::info("Dev gsnap: {} bytes in {} writable sections", total, g_gregions.size());
 }
 
 void dev_gdiff(int tag) {
-    if (g_gsnap.empty()) {
+    if (g_gregions.empty()) {
         log::warn("Dev gdiff: no gsnap");
         return;
     }
-    std::vector<uint8_t> now;
-    read_pages(g_gdata, g_gsize, now);
     wchar_t exe[MAX_PATH] = {};
     GetModuleFileNameW(nullptr, exe, MAX_PATH);
     std::wstring path(exe);
-    path = path.substr(0, path.find_last_of(L"\/") + 1) + L"cdmp_gdiff_" + std::to_wstring(tag) + L".txt";
+    path = path.substr(0, path.find_last_of(L"\\/") + 1) + L"cdmp_gdiff_" + std::to_wstring(tag) + L".txt";
     FILE* f = _wfopen(path.c_str(), L"w");
     const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     size_t changed = 0;
-    for (size_t i = 0; i < g_gsize; ++i) {
-        if (now[i] == g_gsnap[i]) continue;
-        ++changed;
-        if (f) std::fprintf(f, "%llX %02X %02X\n", static_cast<unsigned long long>(g_gdata - base + i), g_gsnap[i], now[i]);
+    for (auto& r : g_gregions) {
+        std::vector<uint8_t> now;
+        read_pages(r.at, r.bytes.size(), now);
+        for (size_t i = 0; i < now.size(); ++i) {
+            if (now[i] == r.bytes[i]) continue;
+            ++changed;
+            if (f) std::fprintf(f, "%llX %02X %02X\n", static_cast<unsigned long long>(r.at - base + i), r.bytes[i], now[i]);
+        }
+        r.bytes.swap(now);  // the next gdiff is against this moment
     }
     if (f) std::fclose(f);
-    log::info("Dev gdiff {}: {} bytes of .data changed since gsnap (file cdmp_gdiff_{}.txt)", tag, changed, tag);
-    g_gsnap.swap(now);  // the next gdiff is against this moment
+    log::info("Dev gdiff {}: {} bytes of the writable sections changed since the last gsnap / gdiff (file cdmp_gdiff_{}.txt)",
+              tag, changed, tag);
 }
 
 }  // namespace cdmp::net

@@ -44,6 +44,11 @@ void lobby_tick(const LobbyInput& in);
 // into the native shared world (host first, then the guest), then both start together. `coopplus_ini` keeps the
 // restart's state ([native_resume]); `bin_dir` holds the native cdmp.ini. Call once at start, before the first tick.
 void lobby_native_init(const std::wstring& coopplus_ini, const std::wstring& bin_dir);
+// Co-op+ (2026-11-16, mudai: "locked into the radmin co-op session until I uninstalled the mod"): when co-op is
+// switched off (or this game build is refused), lobby_native_init does not run, and nothing set the native base
+// back to Solo: every launch started in the last co-op role. This only does that reset: a co-op mode without
+// a fresh restart becomes Solo for the next launch, the restart state is dropped. Nothing else.
+void lobby_native_reset_stale(const std::wstring& coopplus_ini, const std::wstring& bin_dir);
 // Shared world: this game was started as the GUEST of a co-op session (the native mode file says so).
 bool lobby_native_guest();
 

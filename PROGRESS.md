@@ -8210,3 +8210,8 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   (Host / Guest, direct address) on EVERY launch; nothing else resets it, and uninstalling removes the mode file.
   A likely way to "locked in". Fix idea (not built yet): do the stale-mode reset whatever coop_enabled / build_ok
   say (it only touches our own mode file). Their report zip would confirm it; asking them needs the owner's OK.
+- 16:42 cs39a: "Dev gsnap: no .data section": the 3663 exe has no section of that name, nothing was diffed. Layer
+  change (dev only): gsnap / gdiff cover every writable, non-executable section (dev_memscan.cpp). Also written: the
+  radmin-lock fix (lobby_native_reset_stale: with co-op off or the build refused, a co-op mode without a fresh
+  restart is set back to Solo for the next launch; mod.cpp / coop_lobby.cpp). Layer built 16:58 (known warnings
+  only). cs39b started 17:00.
