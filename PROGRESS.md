@@ -5,6 +5,12 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- 2026-11-16 16:30 MAY I DOWNLOAD Borque's two report zips? #play-testing-feedback, 12:57 UTC today, "tested on latest
+  version": CoopPlus-report-2026-11-16_13-51-01-client.zip and CoopPlus-report-2026-11-16_13-51-47-host.zip (sizes
+  not shown in the channel). The report: the guest needs about twice the hits to kill an enemy; enemies rarely attack
+  the guest; some blows hit the guest without touching it; a mission NPC under a cart was missing for the guest; a
+  killed boar lay 3 m apart in the two games; run animations sometimes look frozen. Their logs would show the damage
+  numbers of both sides (B18).
 - 2026-11-16 16:23 DONE: 74bb83c3 POSTED in #download-here (owner's "Go ahead", 16:12). The next post needs a new OK. (Was: MAY I POST 74bb83c3? ITS CHECKLIST PASSED (pp25 863/864, then pp25c; 12:09-15:27).
   It is 430fe6be (checklist passed: the black-screen fix, the busy-NPC message, the panel move) plus
   trading, wagers on challenges, the friend's Give seen on 3663, and a fix for the inventory during rock-paper-
