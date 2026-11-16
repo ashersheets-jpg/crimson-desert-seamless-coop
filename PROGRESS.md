@@ -7717,3 +7717,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   0x1000 300 / A 1000 / X 0x4000 300 / A 300): cabin ready check worked (6th); the pad steps never ran: my watcher
   (touch the flag when shot h12 appears) gave up after ~10 min, before h12 (22:28:50). Test-driver slip, not the
   mod. cs25f (22:35): the same with a 30 min watcher.
+- 22:47 cs25f: cabin ready check worked (7th). The pad steps ran (waitfile found 22:44:25; A 300 ms, A 1000 ms,
+  X 300 ms, A 300 ms) with "E Talk: Oongka" up: no conversation, no interaction Req from the host after them. Seen in
+  the shots: the host stands ~5 m from Oongka FACING AWAY (toward the cabin); the Talk prompt follows the camera's
+  aim, so the reach / facing may be what is missing, not the key. Also seen: at 22:44:21 the host's walk sent a
+  2808 for 'cd_seq_quest_intro_0320_dlc' AND user 2's copy of that sequencer got one naming the host's character
+  (0xA0100001); the gate let both go. cs25g (22:50): a step right toward Oongka (D 1.3 s), E held 0.8 s, then the pad.
