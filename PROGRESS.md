@@ -7737,3 +7737,10 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   "we hurt enemy" from the saddle (it does on foot); the guest's `npcs` reads its position as (0, 1.3, 0.7) while
   mounted (local to the horse), so its list is empty there; the host fighting mounted is not in any test.
   ROADMAP B06 -> [~]; the mountfight step now reports the guest's kill count (info).
+- 23:14 cs26a (scratchpad cs26.sh: mountfight with the roles swapped): NOT EXERCISED. The host's horse call ran
+  (pad lines) but "tphorse: our horse 0xB0100002 is 489 m away (it did not come)", and the bandits woke for the host
+  at once (they belong to its quest) and downed it (h1: "Guest can revive you"). The guest-mounted test works only
+  because the bandits sleep until the host comes. For the host in the saddle: mount away from the camp and ride in
+  (the test teleport does not move a rider) -- needs a scripted ride with a known heading. Parked: the host fighting
+  mounted is the host's own game against its own server (single-player code); what B06 adds is the guest SEEING it,
+  which the guest's npcs HP lists already show for any damage. SAVES OK, 5/5.
