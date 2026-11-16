@@ -7776,3 +7776,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     BEFORE the host's (GuestAfterWalkKeys run first), = ~18 game minutes at scale 12.
   SAVES OK, 5/5, test co-op world back. Next: the boss with both alive (arrive apart from the soldiers, or with
   revive), screenshots from the guest toward the soldiers.
+- 00:05 cs27c, the NPC lists at Fort Windridge (B02 lead, NOT settled): host 40-41 people within 40 m of 93-198
+  loaded, guest 4-6 of 32-83 loaded. Same-variant soldiers carry different keys and stand at different spots (e.g.
+  F425C: host 0xB010039E at (-6660, -5504), guest 0xB01003A0 at (-6668, -5499)); only 0xB01004B0 / 4B1 are in both
+  lists. 0xB01003A0 stood ~31 m from the host (inside its 40 m) and is in NONE of the host's 17 lists: the guest's
+  game holds at least one fort soldier the host's game does not list. The host's 500-hp 0xB01003AB (variant 7E56,
+  the wyvern?) is in none of the guest's. Either the readers miss actors (known on the guest) or the fort's people
+  differ between the two games (a hard blocker if so). cs27d (00:07): the same with npcs 60 on both for a fuller
+  comparison.
