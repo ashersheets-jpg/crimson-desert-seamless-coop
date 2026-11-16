@@ -7784,3 +7784,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   the wyvern?) is in none of the guest's. Either the readers miss actors (known on the guest) or the fort's people
   differ between the two games (a hard blocker if so). cs27d (00:07): the same with npcs 60 on both for a fuller
   comparison.
+- 00:07 cs27d done (npcs 60 on both at Fort Windridge): SAVES OK, user install restored 5/5, test co-op world back
+  identical, no game running. Its lists are read below (no game needed).
+- 2026-11-16 00:07 THE OWNER PLAYS on this PC (asked at 00:01 when the PC is free): NO game test, no install change,
+  no save access until they say they are done. Non-game work only (logs, code reading, notes).
