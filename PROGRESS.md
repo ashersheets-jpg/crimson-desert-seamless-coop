@@ -15,6 +15,11 @@ test save Out, shipped cdmp.ini restored.
   follow the host, Blackstar checked. Text: docs/release/shared-world-playtest/download-0245f27d.txt (1617 chars).
   The build before it, f1028cbc, passed pp21 (864/865; the one fail a Steam-internal fault the mod recovers from).
 - (DONE 10:55: your yes; both tester zips downloaded and read 11:05, findings under "pp20" below.)
+- 2026-11-15 22:20 (NOT URGENT, joins the check below, same 15 minutes): the next shared story step after the cabin.
+  I start two copies on a New Co-op Save with the story switches on; the cabin scene plays together (works by script,
+  4 of 4 tonight); then you drive the HOST's window to the comrades at the grave and talk to Oongka ("E Talk" is up
+  there). Scripted keys cannot open an NPC conversation in this game (cs25c/d: taps and holds of E with the prompt up
+  sent no interaction to the server; cs14a the same), so whether the grave talk waits for the friend needs a hand.
 - 2026-11-15 ~03:40 (NOT URGENT, when you have 15 minutes at the PC): a hands-on check of the friend's NPC
   conversations. I start two copies of the game; you drive the FRIEND's window (keyboard or pad), walk up to a
   Hernand townsperson and open a conversation, and pick a topic beyond the greeting. Scripted runs cannot do this
@@ -7700,3 +7705,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   stood with "E Talk: Oongka" up (h13-h16) but three E taps (150 ms) opened no conversation; the gate saw only the
   volumes 0320_dlc / 0310_dlc again at 21:57:03 (no hold). Short E taps opened no talk in cs14a either; the steps that
   work hold E 1.2 s. cs25d (22:02): the same with E held 0.7 / 1.5 / 0.7 s.
+- 22:15 cs25d: cabin ready check worked (5th; released 22:11:08). At the grave, E held 0.7 / 1.5 / 0.7 s with
+  "E Talk: Oongka" up: no conversation, and no interaction Req at all in the host's log (its sniffer logs the host's
+  2642s: 8 in pp22-mounts). So the game takes the synthetic E for Ride / Assassinate but not for Talk (cs14a: the
+  same with a townsperson). B09 past the cabin is blocked on a hand at the keyboard (added to "Waiting on the user").
+  What IS known: on the walk to the grave the host's client enters the volumes of 'cd_seq_quest_intro_0320_dlc'
+  (kind 0x20000022) and '..._0310_dlc'; the gate lets them go (not a step's main scene). 0320 is the next step's
+  cinematic: if it is started by the talk, the gate's "main scene" test decides whether it waits for the friend.
+  Every run: SAVES OK, 5/5, the test co-op world back identical.
