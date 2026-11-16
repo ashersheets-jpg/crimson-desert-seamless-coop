@@ -8063,3 +8063,8 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   cs33b-sheet.png; the Esc after each opened the inventory when nothing was open, so every other try was in a menu).
   Not pursued by script: the guest's own arm wrestling with the table's NPC joins the hands-on list (the table's
   people are there on both games, T21's bug, cs33a).
+- 10:30 B13 / B15 reading: versus arm wrestling (D35, a shared gauge while both are at their own tables), the
+  scoreboard and titles (T43) and rematch (T42) already exist in the layer from before the native world; re-checking
+  them needs real arm-wrestling matches (hands-on). B15's wagers ride on the Give (B11), whose guest -> host side
+  was never seen on 3663 (3576 tcB335: both ways; 3663 cs21a: host -> guest). cs34a (scratchpad cs34.sh): cs21a with
+  the roles swapped, the guest's Give to the host on 3663.
