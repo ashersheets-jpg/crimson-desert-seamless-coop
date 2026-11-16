@@ -275,3 +275,9 @@ topic BEFORE testing or guessing about it.
 - A fix for a rare fault needs its hypothesis tested before it ships as "the fix": the 10 s Steam wait (pp20) rested
   on "always at +2 s", and the next run faulted at +12 s. Check what the failing call has in common across ALL the
   logs (here: always the first call on the first interface pointer) before picking the cause.
+
+- Two fails in a row on a new build, after a long run of passes, are not proof against it: the crime step failed
+  twice on 0245f27d (12 passes before), passed on the old layer (cs23), then passed twice more on 0245f27d. Its
+  check needed a bandit not yet fighting beside the guest, which depended on how long the host stood there first.
+  When the change cannot plausibly reach what failed, take more samples of BOTH builds before blaming one, and fix
+  the step's dependence on chance (here: the host now arrives 40 s later).

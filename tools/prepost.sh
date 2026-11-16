@@ -307,7 +307,10 @@ crime)
   head_step "fight at the bandit camp: guest hits count and are no crime, host fights too"
   GA=""; for i in $(seq 1 12); do GA="${GA}click:L:90_w:350_kd:E_w:1200_ku:E_w:500_"; done
   HA=""; for i in $(seq 1 6); do HA="${HA}kd:E_w:2200_ku:E_w:1200_click:L:90_w:300_"; done
-  run2 "$BASE -Hold 10 -HostScript $SCAN\\tp_dock_host.txt -GuestScript $SCAN\\tp_dock_guest.txt -GuestKeys w:2000_shot:$NAME-g0_${GA}shot:$NAME-g1 -HostKeys w:1000_shot:$NAME-h0_${HA}shot:$NAME-h1 -GuestAfterWalkKeys w:1000_shot:$NAME-g2_${GA}shot:$NAME-g3"; two_player_checks
+  # The host comes to the camp 40 s after its script starts (crime_host_late.txt), about when the guest's keys start:
+  # the guest's held E has to meet a bandit that is not fighting yet (an assassinate, crime type 5). With the host
+  # there first, the bandits went for it and killed it before the guest's keys (pp22, pp22b: 2 of 4 runs on 0245f27d).
+  run2 "$BASE -Hold 10 -HostScript $SCAN\\crime_host_late.txt -GuestScript $SCAN\\tp_dock_guest.txt -GuestKeys w:2000_shot:$NAME-g0_${GA}shot:$NAME-g1 -HostKeys w:1000_shot:$NAME-h0_${HA}shot:$NAME-h1 -GuestAfterWalkKeys w:1000_shot:$NAME-g2_${GA}shot:$NAME-g3"; two_player_checks
   H=$N/$NAME.host.log
   has "$H" "AntiGrief: crime type [0-9]+ of the guest .* skipped" "a guest's hit on a bandit was not booked as a crime"
   # Only the hit and kill paths: the same function also gets the game's property crimes (type 1 Vandalism: a swing
