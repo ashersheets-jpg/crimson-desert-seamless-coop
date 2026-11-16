@@ -169,6 +169,7 @@ add_library(cdmp_mod SHARED
     src/mod/session2/stage_candidate_guard.cpp
     src/mod/session2/quest_route.cpp
     src/mod/session2/fog_share.cpp
+    src/mod/session2/knowledge_grant.cpp
     src/mod/session2/anti_grief.cpp
     src/mod/session2/lootr.cpp
     src/mod/session2/far_travel.cpp
