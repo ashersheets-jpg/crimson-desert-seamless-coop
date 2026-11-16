@@ -5,6 +5,29 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
+NOT POSTED YET: 0.1.0-alpha+430fe6be, for game 1.0.0.3663 (checklist pp24 running; answers the testers' reports of
+16 Nov on the experimental "Story scenes together"):
+- **No black screen after a shared cutscene.** With story scenes together, the mod still copied the host's story
+  scenes into the friend's game when the friend had not reached that step yet; the host's next cutscene, copied
+  while the friend's own played, was what the friend's game fell into when its own ended (their report zips:
+  'cd_seq_quest_intro_0100_dlc' sent 2 s before the friend's scene ended). No host story scene is copied now;
+  each game plays its own (other host scenes, weather and the like, still are). Tested on one PC: both cabin
+  scenes play, every host story scene is skipped.
+- **NPCs in the friend's cutscene**: the host's cabin scene sat in the friend's game beside its own; gone with the
+  fix above. Screenshots inside the friend's cabin scene show its people moving. Not proven to be the testers'
+  case (theirs may have been a later scene).
+- **A message when the friend is busy with an NPC.** The game's server lets one player at a time talk to a person;
+  the friend's talk to the person the host was talking to was refused 11 times without a word (their zips). Now
+  "They are busy with <friend> right now. Try again when <friend> is done". Not seen in a test (scripted input
+  cannot open a talk).
+- **The friend's health panel moved to the top left corner**: at 55 % of the screen height it covered the game's
+  own region panel ("Balthazar, the Wyvernflame 100.00%" at Fort Windridge) on both screens.
+- Dev: the npcs test command counts every NPC the server announced (it missed the batched announcements the
+  joined player gets, which made one fort test look like 4-18 people against the host's 50-63; by key both games
+  have the same people).
+- Built but OFF (not in the release settings): knowledge one player learns is learned by the other (B04); no test
+  has made the game teach a knowledge yet.
+
 Posted 2026-11-15 20:43 as 0.1.0-alpha+0245f27d, for game 1.0.0.3663 (checklist pp22: all 22 steps, one PC,
 862/864; the two fails, both bandit fights, passed on re-runs of the same package: mountfight pp22b, crime
 pp22c + pp22d; the crime step depends on a bandit not yet fighting standing by the guest):

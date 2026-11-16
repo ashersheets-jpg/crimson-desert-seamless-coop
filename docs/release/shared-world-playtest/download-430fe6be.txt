@@ -1,0 +1,17 @@
+**Update: shared world playtest 0.1.0-alpha+430fe6be, for game 1.0.0.3663**
+Please use this one instead of 0245f27d; **both players need the same build** (the title menu tells you if your friend has another one).
+
+Thanks @JackyChan004 and @D3vils for the cutscene reports and both report zips. For **"Story scenes together (experimental)"**:
+- **Black screen after a cutscene, fixed:** when the host had moved on to the next story scene, the mod copied that scene into the friend's game, and when the friend's own cutscene ended their game was left on the host's scene. Story scenes are no longer copied between you: each game plays its own.
+- **NPCs standing still in the shared cutscene:** in our tests the people in the friend's cabin scene now move. Tell us if you still see it, and in which scene.
+- **Can't talk to an NPC while the host is in a cutscene:** the game lets only one player at a time talk to a person, so the person the host is talking to is busy. You now get a message when that is why your talk did not open.
+- Still to come: the scenes that start when you talk to someone do not wait for both of you yet (only the first scene of a story step does).
+
+Also: **the friend's health panel moved to the top left corner.** It covered the game's own region panel (the one showing who holds a fort).
+
+Tested with two copies of the game on one PC (Nvidia), full checklist. Not seen yet: two PCs over the internet with this build, AMD / Intel cards.
+
+- `...430fe6be-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tell us in <#1567319198206525450> how it goes, with the report zip from both of you (close the game, run **Diagnose Co-op+.cmd**).
