@@ -5,7 +5,7 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
-- 2026-11-16 12:10 MAY I POST 0.1.0-alpha+74bb83c3 once its checklist (pp25, all 22 steps, started 12:09, ~3 h)
+- 2026-11-16 12:09 MAY I POST 0.1.0-alpha+74bb83c3 once its checklist (pp25, all 22 steps, started 12:09, ~3 h)
   passes? It is 430fe6be (checklist passed: the black-screen fix, the busy-NPC message, the panel move) plus
   trading, wagers on challenges, the friend's Give seen on 3663, and a fix for the inventory during rock-paper-
   scissors. It replaces the 430fe6be question. Text: docs/release/shared-world-playtest/download-74bb83c3.txt
