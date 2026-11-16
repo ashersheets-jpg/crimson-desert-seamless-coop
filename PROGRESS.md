@@ -8126,3 +8126,8 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   the friend gives Ricefish". The guest's game did not finish its match (1 - 1): the host's second B, pressed after
   its inventory had closed, counted as a rock and reached the guest as a real hand. Test kit only (each game decides
   the match from both real hands; real hands agree). cs36e (11:57): one B to close the inventory.
+- 12:07 cs36e: B15 WAGER WORKS (layer of 11:46, one PC). The guest invited rock-paper-scissors and staked its Ricefish,
+  the host accepted and staked its own; the guest lost 0 - 2 ("match: they won") -> "Wager: we lost; our Ricefish
+  (inventory key 2 slot 57 item 0x59A) to 0xA0100001", the host's server "Give (whole record): x1 from 0xA0100066 to
+  0xA0100001: stage 5"; the host won 2 - 0 -> "Wager: we won; the friend gives Ricefish". SAVES OK, 5/5, both alive.
+  Committed with the trade's follow-ups (the hands off while a game menu is open).

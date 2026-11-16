@@ -220,7 +220,10 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
 - [ ] **B13 — Real PvP minigames** (arm wrestling on each other's live gauge; shot contests, boxing, spear duel, cards).
 - [~] **B14 — The empty arm-wrestling table** (T21). (2026-11-16 cs33a: on native both games list the same 15
   people at the Hernand inn table and both screens show them; left: the guest's own "Try arm wrestling" there.)
-- [ ] **B15 — Duel extras and scoreboard** (wagers, arenas, spectator camera, rematch, titles).
+- [~] **B15 — Duel extras and scoreboard** (wagers, arenas, spectator camera, rematch, titles). (Rematch T42,
+  scoreboard and titles T43 exist. 2026-11-16 wagers: from a challenge's invite on, "Stake on the challenge" on the
+  inventory's Discard question; when the match ends the loser's game gives its stake to the winner (cs36e, one PC).
+  Left: arenas, a spectator camera (needs a third player: B21).)
 - [ ] **B16 — Emotes and group photo mode.**
 
 - [~] **B16b — Player interaction menu (user 2026-11-09).** (2026-11-09: built and seen working on the guest,

@@ -51,4 +51,11 @@ TradeTick trade_tick(bool connected);
 void trade_on_event(const uint8_t* data, size_t n);
 void trade_answer(bool accept);
 
+// B15 wager (2026-11-16): while a challenge is on, the same question offers "Stake on the challenge" (answer 5, the
+// trade's dry run). When the match ends (its Victory / Defeat), if both staked, the loser's game gives its stake to
+// the winner. Same Activity type 31: op 11 stake (as an offer), 13 withdrawn.
+void give_set_challenge(bool on);  // network loop: a challenge is on (the stake is offered; off ends the wager)
+bool give_offer_stake();
+void wager_match_end(bool won);    // the match's result, once
+
 }  // namespace cdmp::net

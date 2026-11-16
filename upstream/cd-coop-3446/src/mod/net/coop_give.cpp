@@ -173,6 +173,11 @@ bool clear_wait(int64_t* root, uintptr_t base) noexcept {
 // ---------------------------------------------------------------- B11 trade (2026-11-16)
 constexpr uint64_t kTradeMs = 120000;  // an offer lapses after this
 std::mutex g_tmu;  // leaf lock
+struct Wager {
+    Offer mine, theirs;
+};
+Wager g_wager;  // guarded by g_tmu
+std::atomic<bool> g_challenge{false};
 struct Trade {
     Offer mine, theirs;
     bool my_ok = false, their_ok = false, card = false;
@@ -200,6 +205,36 @@ void trade_reset_locked() {
 
 }  // namespace
 
+std::vector<uint8_t> offer_bytes(uint8_t op, const Offer& o) {
+    std::vector<uint8_t> b{op, static_cast<uint8_t>(o.hint), static_cast<uint8_t>(o.hint >> 8)};
+    for (int i = 0; i < 8; ++i) b.push_back(static_cast<uint8_t>(o.n >> (8 * i)));
+    const std::string nm = o.name.substr(0, 60);
+    b.push_back(static_cast<uint8_t>(nm.size()));
+    b.insert(b.end(), nm.begin(), nm.end());
+    return b;
+}
+bool offer_from(const uint8_t* d, size_t n, Offer& o) {
+    if (n < 12) return false;
+    o = Offer{};
+    o.on = true;
+    o.hint = static_cast<uint16_t>(d[1] | d[2] << 8);
+    for (int i = 0; i < 8; ++i) o.n |= static_cast<uint64_t>(d[3 + i]) << (8 * i);
+    const size_t len = d[11];
+    if (n >= 12 + len) o.name.assign(reinterpret_cast<const char*>(d + 12), len);
+    return true;
+}
+
+void wager_stake_made(const Offer& o) {
+    std::lock_guard lk(g_tmu);
+    g_wager.mine = o;
+    g_trade.out.push_back(offer_bytes(11, o));
+    g_trade.toasts.push_back(g_wager.theirs.on
+                                 ? "Wager\nYour " + braces(label(o)) + " against their " + braces(label(g_wager.theirs)) +
+                                       ": the loser's stake goes to the winner"
+                                 : "Wager\nYou stake " + braces(label(o)) + ". It counts once {} stakes something too");
+    log::info("Wager: we stake {} (item index 0x{:X})", label(o), o.hint);
+}
+
 void trade_offer_made(uint16_t inv, uint16_t slot, uint16_t hint, uint64_t n, const std::string& name) {
     std::lock_guard lk(g_tmu);
     g_trade.mine = {true, inv, slot, hint, n, name};
@@ -220,6 +255,23 @@ void trade_offer_made(uint16_t inv, uint16_t slot, uint16_t hint, uint64_t n, co
 void trade_on_event(const uint8_t* d, size_t n) {
     if (n < 1) return;
     std::lock_guard lk(g_tmu);
+    if (d[0] == 11) {  // B15: the friend's stake on the running challenge
+        Offer o;
+        if (!offer_from(d, n, o)) return;
+        g_wager.theirs = o;
+        g_trade.toasts.push_back(g_wager.mine.on
+                                     ? "Wager\nYour " + braces(label(g_wager.mine)) + " against their " +
+                                           braces(label(o)) + ": the loser's stake goes to the winner"
+                                     : "Wager\n{} stakes " + braces(label(o)) +
+                                           " on this challenge. Stake something back: Discard on an item, Stake on the challenge");
+        log::info("Wager: the friend stakes {} (item index 0x{:X})", label(o), o.hint);
+        return;
+    }
+    if (d[0] == 13) {
+        g_wager = Wager{};
+        log::info("Wager: the friend's wager is off");
+        return;
+    }
     if (d[0] == 1 && n >= 12) {
         Offer o;
         o.on = true;
@@ -263,9 +315,46 @@ void trade_answer(bool accept) {
     }
 }
 
+void give_set_challenge(bool on) {
+    const bool was = g_challenge.exchange(on);
+    if (was && !on) {  // the challenge ended (a result settles the wager first, wager_match_end)
+        std::lock_guard lk(g_tmu);
+        if (g_wager.mine.on || g_wager.theirs.on) {
+            g_trade.toasts.push_back("Wager\nThe challenge ended without a result: nothing changes hands");
+            log::info("Wager: off (the challenge ended without a result)");
+        }
+        g_wager = Wager{};
+    }
+}
+bool give_offer_stake() { return g_challenge.load() && g_near.load(); }
+
+void wager_match_end(bool won) {
+    std::lock_guard lk(g_tmu);
+    const Wager w = g_wager;
+    g_wager = Wager{};
+    if (!w.mine.on && !w.theirs.on) return;
+    if (!w.mine.on || !w.theirs.on) {
+        g_trade.toasts.push_back("Wager\nOnly one of you staked: nothing changes hands");
+        log::info("Wager: one-sided, nothing given");
+        return;
+    }
+    if (won) {
+        g_trade.toasts.push_back("Wager\nYou won the wager: {} gives you " + braces(label(w.theirs)));
+        log::info("Wager: we won; the friend gives {}", label(w.theirs));
+        return;
+    }
+    const uint32_t me = capture_own_player_key(), to = friend_key();
+    const bool ok = send_move(me, to, w.mine.inv, w.mine.slot, w.mine.hint, w.mine.n, kGiveEntry);
+    g_trade.toasts.push_back(ok ? "Wager\nYou lost the wager: your " + braces(label(w.mine)) + " goes to {}"
+                                : std::string("Wager\nYour stake could not be sent"));
+    log::info("Wager: we lost; our {} (inventory key {} slot {} item 0x{:X}) to 0x{:08X} (giver 0x{:08X}){}",
+              label(w.mine), w.mine.inv, w.mine.slot, w.mine.hint, to, me, ok ? "" : " NOT sent");
+}
+
 TradeTick trade_tick(bool connected) {
     TradeTick t;
     std::lock_guard lk(g_tmu);
+    if (!connected) g_wager = Wager{};
     const bool any = g_trade.mine.on || g_trade.theirs.on;
     if (any && !connected) {
         g_trade.toasts.push_back("Trade\nThe trade is off: {} left");
@@ -380,7 +469,7 @@ void give_ui_tick() {
     g_pass = true;
     g_give = answer == 1;
     g_stash = answer == 3;
-    g_probe = answer == 4;
+    g_probe = answer == 4 || answer == 5;
     g_probed = Offer{};
     bool unlocked = true;
     const uint64_t r = hook.call<uint64_t>(p.root, p.count, uint64_t{0}, uint64_t{0});
@@ -388,22 +477,31 @@ void give_ui_tick() {
     if (g_give || g_stash || g_probe) {
         g_give = g_stash = g_probe = false;
         log::info("Give: the game did not reach its discard (nothing given)");
-    } else if (answer == 1 || answer == 3 || answer == 4) {
+    } else if (answer == 1 || answer == 3 || answer == 4 || answer == 5) {
         // The handler now waits for the server's answer to a discard that was never sent ("Processing the previous
         // request" on the next action). Its own error path's clean-up: no pending action, the waiting state hidden.
         unlocked = clear_wait(p.root, base);
     }
     log::info("Give: {} done, the handler returned {}{}",
-              answer == 1 ? "give" : answer == 3 ? "stash" : answer == 4 ? "trade offer" : "discard", r & 0xFF,
+              answer == 1   ? "give"
+              : answer == 3 ? "stash"
+              : answer == 4 ? "trade offer"
+              : answer == 5 ? "stake"
+                            : "discard",
+              r & 0xFF,
               unlocked ? "" : " (the inventory's wait could not be cleared)");
-    if (answer == 4 && g_probed.on) {
+    if ((answer == 4 || answer == 5) && g_probed.on) {
         Offer o = g_probed;
         o.name = stash_item_name(o.hint);
         if (o.name.empty()) {  // asked now: resolved by the stash's name tick, which runs on this (the UI) thread
             stash_ui_tick();
             o.name = stash_item_name(o.hint);
         }
-        trade_offer_made(o.inv, o.slot, o.hint, o.n, o.name);
+        if (answer == 5) {
+            wager_stake_made(o);
+        } else {
+            trade_offer_made(o.inv, o.slot, o.hint, o.n, o.name);
+        }
     }
 }
 

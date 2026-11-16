@@ -188,7 +188,7 @@ std::atomic<int> g_menu_step{0};       // arrow presses it caught (-1 left, +1 r
 // Shared world (2026-11-10): the interaction menu while a challenge is sent, received or on -- its answers instead of
 // the game list ("Accept", "Decline", "End the challenge", "Leave"). Under g_mutex.
 enum CtxCode : int { kCtxLeave = 0, kCtxGo = 1, kCtxDecline = 2, kCtxGive = 3, kCtxDiscard = 4, kCtxStash = 5,
-                     kCtxTrade = 6, kCtxTradeYes = 7, kCtxTradeNo = 8 };
+                     kCtxTrade = 6, kCtxTradeYes = 7, kCtxTradeNo = 8, kCtxStake = 9 };
 struct CtxMenu {
     bool open = false;
     uint32_t since = 0;
@@ -524,7 +524,9 @@ void pad_tick() {
     }
     static input::Edge mash, scissors, paper, rock, skip;
     if (mash(input::action_down(input::Action::Mash, false)) && g_match_on.load()) g_e_presses.fetch_add(1);
-    const bool rps = g_rps_hold.load() && GetTickCount64() - g_hold_seen.load() < 500;
+    // Not while a game menu is open (2026-11-16 cs36c: the picks masked the pad's X / B from the inventory, so a
+    // stake's Discard and the menu's Close never reached the game, and they counted as hands).
+    const bool rps = g_rps_hold.load() && GetTickCount64() - g_hold_seen.load() < 500 && !game::ui_menu_open();
     if (rps) input::mask_from_game(input::kPadX | input::kPadY | input::kPadB, 150);
     const bool s = scissors(input::action_down(input::Action::RpsScissors, false));
     const bool p = paper(input::action_down(input::Action::RpsPaper, false));
@@ -678,6 +680,7 @@ void challenge_tick(ActivityTick& out, bool connected, bool focused, std::option
             g_ctx.items.clear();
             if (give_offer_give()) g_ctx.items.push_back({"Give to " + who, kCtxGive});
             if (give_offer_give()) g_ctx.items.push_back({"Offer in a trade", kCtxTrade});
+            if (give_offer_stake()) g_ctx.items.push_back({"Stake on the challenge", kCtxStake});
             if (give_offer_stash()) g_ctx.items.push_back({"Put in the shared stash", kCtxStash});
             g_ctx.items.push_back({"Discard", kCtxDiscard});
             g_ctx.items.push_back({"Cancel", kCtxLeave});
@@ -690,6 +693,11 @@ void challenge_tick(ActivityTick& out, bool connected, bool focused, std::option
     }
     // B11 trade (net/coop_give): its messages out, its notices, and the Accept / Decline card when both offered.
     {
+        {
+            std::lock_guard lock(g_mutex);
+            // B15: the wager's "Stake on the challenge" (from the invite on) and its end
+            give_set_challenge(g_ch.state == kChOn || g_ch.state == kChSent || g_ch.state == kChReceived);
+        }
         TradeTick tt = trade_tick(connected);
         for (const auto& m : tt.send) send(kTrade, m.data(), m.size());
         if (!tt.toasts.empty()) {
@@ -781,6 +789,7 @@ void challenge_tick(ActivityTick& out, bool connected, bool focused, std::option
                                 : code == kCtxDiscard ? 2
                                 : code == kCtxStash   ? 3
                                 : code == kCtxTrade   ? 4
+                                : code == kCtxStake   ? 5
                                                       : 0);
                 if (g_ctx.trade) trade_answer(code == kCtxTradeYes);
                 if (code == kCtxGo) pressed = true;
@@ -1422,6 +1431,7 @@ ActivityTick activity_tick(bool connected, bool host, bool focused, std::optiona
                 g_match_subtitle = std::format("{} vs {}   {} - {}", name, who, g_ch.ours, g_ch.theirs);
                 g_match_won = won;
                 g_match_at = GetTickCount();
+                wager_match_end(won);  // B15: the loser's stake to the winner (net/coop_give; its own leaf lock)
                 summary_note(won ? SummaryStat::MatchWon : SummaryStat::MatchLost);
                 log::info("Activity: the {} is over ({} {} - {})", name, won ? "we won" : "they won", g_ch.ours,
                           g_ch.theirs);
