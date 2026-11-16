@@ -8245,3 +8245,13 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   include exe+0x72880A7 (0x41 in play and menu, 0x40 in photo: one bit), exe+0x71F1E23/24 and exe+0x7493BF1-3
   (pointer-like). Layer: photo_mode_active() = bit 0 clear with bit 6 set at exe+0x72880A7, held 4 reads in a row
   either way; the cs39b pair removed. Built 17:42. cs38f checks it (with a shot 5 s into photo mode).
+- 17:50 cs40d (the GUEST fights on the host's own save, coop-test-bandits): 482 HP off, 5 kills, from 40 swings;
+  the host's cs40c: 487 HP, 5 kills, from 40 swings. SAME DAMAGE PER SWING (12.0 vs 12.2 HP). The "blows" tallies
+  differ (guest 64, host 31) because the guest's client reports ~2 frame events per swing, the host's ~0.8: the
+  earlier "6.7 vs 15.7 per blow" compared different units. cs40b's guest (the 'rps' save) took 173 HP in 40 swings:
+  that character is weaker. => In our runs the guest's damage follows its CHARACTER, not its role; the host's server
+  applies the guest's own stats. Borque's friend plays its own character (gear / level), which can explain "double
+  the hits"; not proven for their game (their zips would show both characters' stats). B18 damage: no bug found.
+  The aggression difference (cs40a / b: bandits mostly hit the host) stands.
+- 17:58 cs38f: the cs39c bit (exe+0x72880A7) is a TIMER too: the layer logged it "open" for 6 s every 30 s from
+  17:52 on, photo mode or not. cs39d: long stages (20 s play, menu, 10 s photo, menu, 32 s play, ~1 sample/s).
