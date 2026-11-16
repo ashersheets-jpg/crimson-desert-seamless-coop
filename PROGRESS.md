@@ -7764,3 +7764,15 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   actors (cs10a: 44 of 57 read), so not proof the deer are missing on the guest: check by eye (a guest shot toward
   the deer) in a later run. SAVES OK, 5/5, test co-op world back. cs27c (23:46): both teleport to the fort first
   (tp -6649 502 -5519).
+- 23:55 cs27c (both teleported to (-6649, 502, -5519) = "Fort Windridge", Dewhaven Territory): NOT a world event
+  there (no "world event" line on either game) but a BOSS ARENA: the host's HUD has the boss bar "Balthazar, the
+  Wyvernflame" and a wyvern flies over the fort on both screens. The same enemies hit BOTH players (0xB01003D1 x5 on
+  each, 0xB01003D3 x2 on each, 0xB01003CF x3 on the host); the host died early (h1 "Death has found you"), the guest
+  took hits (red vignette). B07 leads (boss mechanics for two), first ever capture of a boss with the guest there:
+  * the guest's HUD shows NO boss bar (g1 / g2: only the party frame "Host"), the host's does;
+  * people within 40 m: host 40-41, guest 4-6 (the guest's reader misses actors, see cs10a / cs27b, but 40 vs 5
+    is a lot: check by eye whether the guest sees the fort's soldiers);
+  * the guest's HUD clock 10:59-11:05 vs the host's 11:12-11:18 in the same minute: ~13 game minutes behind again
+    (the clock push is on? check its lines in this run).
+  SAVES OK, 5/5, test co-op world back. Next: the boss with both alive (arrive apart from the soldiers, or with
+  revive), screenshots from the guest toward the soldiers, and the clock lines.
