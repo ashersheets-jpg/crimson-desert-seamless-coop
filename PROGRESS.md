@@ -7691,3 +7691,8 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   marker); nothing else triggered in 3 min with nobody moving. SAVES OK, 5/5, test co-op world back.
   Next: cs25b (scratchpad cs25b.sh, started 21:33): after the scene the host walks ~20 m and presses E toward the
   comrades: is the grave talk a story trigger, and does the gate hold it for the friend?
+- 21:45 cs25b: the cabin ready check again worked on both (released 21:41:12, both cinematics ~33 s). The host then
+  walked ~20 m: at 21:42:10 its client entered the volume of 'cd_seq_quest_intro_0320_dlc' (kind 0x20000022) and
+  of 'cd_seq_quest_intro_0310_dlc' again; the gate logged no hold (not a story trigger it knows as a step's main
+  scene). The E presses came before any prompt; 20 s later (h13) the host stood 3 m from the marker with "E Talk:
+  Oongka" up. SAVES OK, 5/5. cs25c (21:47): the same walk, then E pressed after a 1.5 s stop, three times, shots.
