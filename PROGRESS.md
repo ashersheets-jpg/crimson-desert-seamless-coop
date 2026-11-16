@@ -7907,10 +7907,24 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   at 0 by 03:47:20; AntiGrief: NPC>guest 5, NPC>host 5 blows); both lay ~90 m lower (y 408.8, the fall) until the
   end, "alive" by the revive screen. So at the fort the enemies are shared and fight both (B02 / B03 evidence).
   Still open at the fort: the boss bar on the guest's HUD (cs27c lead), the event itself (no "world event" line).
-- 04:10 THE PARTNER FRAME COVERED A GAME WIDGET (cs27e shots): at Fort Windridge the game shows a region widget
+- 04:05 THE PARTNER FRAME COVERED A GAME WIDGET (cs27e shots): at Fort Windridge the game shows a region widget
   ("Balthazar, the Wyvernflame / 100.00% / Fort Windridge", the host; the guest's without the name) at ~53-61 % of
   the height, exactly where the partner frame stood (55.5 %), on both screens -- cs27c's "boss bar on the host only"
   was that widget, not a boss bar. Layer (committed): the frame goes to the top left corner (7 % of the height), the
   chat lines under it. cs27f (03:55-04:04, same fort test; SAVES OK, user install restored 5/5, test co-op world back
   identical, no game left): h0 / g0 show the frame top left and the game's widget clear on both. The guest's widget
   lacks the boss's name: probably knowledge only the host has (B04 knowledge, not started).
+- 04:18 B04 KNOWLEDGE RESEARCH (a read-only agent over build/decomp, which is of 3576, and the 3663 exe by byte
+  patterns; nothing run):
+  * AcquireKnowledgeReq 2285 learns NOTHING (its worker checks the comp, gathers up to 5 {u16,u16} and returns); the
+    learn is the entry thunk 0x2E16BC0 (3663 0x2E7E1F0 -> .xtls): (comp, &err, &key, level, a5, fromType, a7) posts
+    TrocTrPushKnowledgeOnceTimer 0x7FB to the comp's actor, whose handler runs FUN_142e14a50 -> FUN_142e14c20 (3663
+    0x2E7C040 / 0x2E7C210), the learn itself (a "reward type 4" transaction). NormalLearnKnowledgeListAck 2711 =
+    u8 | u32 actor | u8 | N x 18 B {u32 key, u32 level, u8, u64 time, u8}, sent to the actor's own user.
+  * ShareKnowledgeDataList* / ShareKnowledgeSeed / FollowLearn* are NPC friendship and "learn by watching", not a
+    player-to-player share; LearnKnowledgeByCheatReq is parse-only. Nothing natively shares knowledge between players.
+  * The knowledge comp: [[character+0x68]+0x150]; its +8 the actor; +0x18 entries of 0x18 bytes by key, level at +0.
+  Built (native, not compiled yet: a test runs): knowledge_grant ([session2] knowledge_grant, host, default 0): a hook
+  at 0x2E7C210's entry; after a learn by one player's character whose level rose, the other player's character
+  (SAM::FindActor, as user2_stages) gets the same level through the learn entry when its own is lower (never twice;
+  first bytes of all three functions checked before hooking). Lines "KnowledgeGrant: ... GRANTED", a minute summary.
