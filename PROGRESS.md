@@ -7652,3 +7652,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     (game::actor_world_position: hash-table reads, no game call). Nothing that can steer the bandits' AI.
   - A/B test cs23 (20:15): the crime step on f1028cbc's coopplus.asi (the build folder's file swapped for the
     package's, restored after). A fail there too = the test's setup has changed (bandit positions), not 0245f27d.
+- 20:20 cs23 (f1028cbc's layer): crime PASS 43/43 (guest assassinate on 0xB0100367 at 20:18:40, crime type 5
+  skipped). Build folder back to 0245f27d's coopplus.asi (sha e95f3fc4..., = the package). Tally on this step:
+  0245f27d 0/2, f1028cbc 2/2. Compared: the host is attacked 16-26 s after its teleport in pp22b and cs23 alike;
+  Steam "Join" lines the same (1 each side); the only new behaviour in the layer logs is "Name tag:" (8-13 lines a
+  run, the read-only lookup). No mechanism found. pp22c + pp22d (two more crime runs on 0245f27d, 20:22) to tell
+  chance from a fault before anything else.
