@@ -8078,7 +8078,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   and THE FISH ARRIVED in the host's bag on screen: before (cs21a-h2, the same test world) Ricefish x1; after
   (cs34b-h2) a Ricefish stack of 2, first in the date sort, the bag still 66/99 (it joined the stack; shots
   cs34b-cmp.png). So B11's give is seen end to end both ways on 3663 (the sending bag loses it, the other gains it).
-- 10:50 B11 TRADE built (layer, not committed until tested): net/coop_give + coop_activity. The inventory's Discard
+- 10:49 B11 TRADE built (layer, not committed until tested): net/coop_give + coop_activity. The inventory's Discard
   question (friend close) adds "Offer in a trade": a dry run of the game's own discard records the stack (inventory
   key, slot, item index, count; nothing sent) and the offer goes to the friend (Activity type 31). When both have
   offered, each gets the card "Accept: your <item> for <their item>" / "Decline"; when both accepted, each game sends
