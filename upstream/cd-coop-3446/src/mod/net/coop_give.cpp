@@ -4,6 +4,9 @@
 
 #include <atomic>
 #include <cstring>
+#include <format>
+#include <mutex>
+#include <string>
 #include <vector>
 
 #include <safetyhook.hpp>
@@ -47,6 +50,14 @@ struct Pending {
     uint64_t since = 0;
 } g_pending;
 bool g_pass = false;  // our own call of a handler: no question
+bool g_probe = false;  // ... and ClientDiscard only records what it would give (the trade's offer)
+struct Offer {
+    bool on = false;
+    uint16_t inv = 0, slot = 0, hint = 0xFFFF;  // the request's inventory key, slot and item index
+    uint64_t n = 0;
+    std::string name;
+};
+Offer g_probed;  // UI thread: the dry run's result
 bool g_give = false;  // ... and ClientDiscard becomes the give
 bool g_stash = false;  // ... or the deposit into the shared stash (B12)
 
@@ -88,23 +99,9 @@ uint64_t on_discard(int which, int64_t* root, int64_t count, uint64_t a3, uint64
 uint64_t on_discard_bag(int64_t* root, int64_t count, uint64_t a3, uint64_t a4) { return on_discard(0, root, count, a3, a4); }
 uint64_t on_discard_list(int64_t* root, int64_t count, uint64_t a3, uint64_t a4) { return on_discard(1, root, count, a3, a4); }
 
-int* on_client_discard(int64_t holder, int* err, int64_t* actor, uint64_t inventory, int16_t slot, int64_t count) {
-    if (!g_give && !g_stash) return g_client_hook.call<int*>(holder, err, actor, inventory, slot, count);
-    const bool stash = g_stash;
-    g_give = g_stash = false;
-    const uint32_t me = capture_own_player_key();
-    // The give goes to the friend; the stash is on the host's character (the host's own deposit: itself).
-    // The guest's character key varies with the world (2026-11-15: 0xA0100066 only in the test world).
-    const uint32_t guest = partner_actor_key() ? partner_actor_key() : kGuestCharacter;
-    const uint32_t to = stash ? kHostCharacter : g_host.load() ? guest : kHostCharacter;
-    const uint32_t item = 0, entry = stash ? kStashDepositEntry : kGiveEntry;
-    // ClientDiscard's inventory is an index into the game's inventory table; the request carries that row's key
-    // (+8), as the game's own request builder does (exe+0xAC9210 -> exe+0x5560E0 -> exe+0xCDCEF0).
-    const uint16_t sl = static_cast<uint16_t>(slot);
-    const uint16_t inv = inventory_key(static_cast<uint32_t>(inventory & 0xFFFF));
-    // The item the client sees in that slot: the server finds it by this when its slot numbers differ.
-    const uint16_t hint = slot_item(holder, static_cast<int16_t>(inventory & 0xFFFF), slot);
-    const uint64_t n = count > 0 ? static_cast<uint64_t>(count) : 1;
+// The give request (MoveItemInventoryToOtherInventoryReq with the native's give / stash entry), injected.
+bool send_move(uint32_t me, uint32_t to, uint16_t inv, uint16_t sl, uint16_t hint, uint64_t n, uint32_t entry) {
+    const uint32_t item = 0;
     std::vector<uint8_t> pkt(5 + 30);
     const uint16_t len = 30;
     std::memcpy(&pkt[0], &kOpMoveItem, 2);
@@ -118,7 +115,38 @@ int* on_client_discard(int64_t holder, int* err, int64_t* actor, uint64_t invent
     std::memcpy(p + 22, &inv, 2);
     std::memcpy(p + 24, &sl, 2);
     std::memcpy(p + 26, &entry, 4);
-    const bool ok = me && inv != 0xFFFF && sniffer_inject_c2s(std::move(pkt));
+    return me && inv != 0xFFFF && sniffer_inject_c2s(std::move(pkt));
+}
+
+uint32_t friend_key() {
+    // The guest's character key varies with the world (2026-11-15: 0xA0100066 only in the test world).
+    const uint32_t guest = partner_actor_key() ? partner_actor_key() : kGuestCharacter;
+    return g_host.load() ? guest : kHostCharacter;
+}
+
+int* on_client_discard(int64_t holder, int* err, int64_t* actor, uint64_t inventory, int16_t slot, int64_t count) {
+    if (!g_give && !g_stash && !g_probe) return g_client_hook.call<int*>(holder, err, actor, inventory, slot, count);
+    const bool stash = g_stash, probe = g_probe;
+    g_give = g_stash = g_probe = false;
+    const uint32_t me = capture_own_player_key();
+    // The give goes to the friend; the stash is on the host's character (the host's own deposit: itself).
+    const uint32_t to = stash ? kHostCharacter : friend_key();
+    const uint32_t entry = stash ? kStashDepositEntry : kGiveEntry;
+    // ClientDiscard's inventory is an index into the game's inventory table; the request carries that row's key
+    // (+8), as the game's own request builder does (exe+0xAC9210 -> exe+0x5560E0 -> exe+0xCDCEF0).
+    const uint16_t sl = static_cast<uint16_t>(slot);
+    const uint16_t inv = inventory_key(static_cast<uint32_t>(inventory & 0xFFFF));
+    // The item the client sees in that slot: the server finds it by this when its slot numbers differ.
+    const uint16_t hint = slot_item(holder, static_cast<int16_t>(inventory & 0xFFFF), slot);
+    const uint64_t n = count > 0 ? static_cast<uint64_t>(count) : 1;
+    if (probe) {  // the trade's offer: recorded, nothing sent yet
+        g_probed = {inv != 0xFFFF, inv, sl, hint, n, {}};
+        log::info("Trade: our offer x{} from inventory {} (key {}) slot {} (item index 0x{:X})", n, inventory & 0xFFFF,
+                  inv, slot, hint);
+        if (err) *err = 0;
+        return err;
+    }
+    const bool ok = send_move(me, to, inv, sl, hint, n, entry);
     log::info("Give: {}x{} from inventory {} (key {}) slot {} (item index 0x{:X}) to 0x{:08X} (giver 0x{:08X}){}",
               stash ? "into the shared stash " : "", n,
               inventory & 0xFFFF, inv, slot, hint, to, me,
@@ -142,7 +170,133 @@ bool clear_wait(int64_t* root, uintptr_t base) noexcept {
     }
 }
 
+// ---------------------------------------------------------------- B11 trade (2026-11-16)
+constexpr uint64_t kTradeMs = 120000;  // an offer lapses after this
+std::mutex g_tmu;  // leaf lock
+struct Trade {
+    Offer mine, theirs;
+    bool my_ok = false, their_ok = false, card = false;
+    uint64_t since = 0;
+    std::vector<std::vector<uint8_t>> out;
+    std::vector<std::string> toasts;
+} g_trade;  // guarded by g_tmu
+
+std::string braces(const std::string& s) {  // a name inside a toast that goes through std::vformat
+    std::string o;
+    for (const char c : s) {
+        o += c;
+        if (c == '{' || c == '}') o += c;
+    }
+    return o;
+}
+std::string label(const Offer& o) {
+    const std::string n = o.name.empty() ? std::format("item 0x{:X}", o.hint) : o.name;
+    return o.n > 1 ? std::format("{} x{}", n, o.n) : n;
+}
+void trade_reset_locked() {
+    g_trade.mine = g_trade.theirs = Offer{};
+    g_trade.my_ok = g_trade.their_ok = g_trade.card = false;
+}
+
 }  // namespace
+
+void trade_offer_made(uint16_t inv, uint16_t slot, uint16_t hint, uint64_t n, const std::string& name) {
+    std::lock_guard lk(g_tmu);
+    g_trade.mine = {true, inv, slot, hint, n, name};
+    g_trade.my_ok = g_trade.their_ok = g_trade.card = false;
+    g_trade.since = GetTickCount64();
+    std::vector<uint8_t> b{1, static_cast<uint8_t>(hint), static_cast<uint8_t>(hint >> 8)};
+    for (int i = 0; i < 8; ++i) b.push_back(static_cast<uint8_t>(n >> (8 * i)));
+    const std::string nm = name.substr(0, 60);
+    b.push_back(static_cast<uint8_t>(nm.size()));
+    b.insert(b.end(), nm.begin(), nm.end());
+    g_trade.out.push_back(std::move(b));
+    g_trade.toasts.push_back(g_trade.theirs.on ? std::string("Trade\nBoth offers are in: accept or decline")
+                                               : "Trade\nYou offer " + braces(label(g_trade.mine)) +
+                                                     ". Waiting for {} to offer something back");
+    log::info("Trade: we offer {} (item index 0x{:X})", label(g_trade.mine), hint);
+}
+
+void trade_on_event(const uint8_t* d, size_t n) {
+    if (n < 1) return;
+    std::lock_guard lk(g_tmu);
+    if (d[0] == 1 && n >= 12) {
+        Offer o;
+        o.on = true;
+        o.hint = static_cast<uint16_t>(d[1] | d[2] << 8);
+        for (int i = 0; i < 8; ++i) o.n |= static_cast<uint64_t>(d[3 + i]) << (8 * i);
+        const size_t len = d[11];
+        if (n >= 12 + len) o.name.assign(reinterpret_cast<const char*>(d + 12), len);
+        g_trade.theirs = o;
+        g_trade.my_ok = g_trade.their_ok = g_trade.card = false;  // a new offer asks both again
+        g_trade.since = GetTickCount64();
+        g_trade.toasts.push_back(
+            g_trade.mine.on ? "Trade\n{} offers " + braces(label(o)) + ": accept or decline"
+                            : "Trade\n{} offers " + braces(label(o)) +
+                                  ". To trade, use Discard on an item in your inventory and pick Offer in a trade");
+        log::info("Trade: the friend offers {} (item index 0x{:X})", label(o), o.hint);
+    } else if (d[0] == 2) {
+        if (!g_trade.theirs.on) return;
+        g_trade.their_ok = true;
+        if (!g_trade.my_ok) g_trade.toasts.push_back("Trade\n{} accepted the trade");
+        log::info("Trade: the friend accepted");
+    } else if (d[0] == 3) {
+        if (g_trade.mine.on || g_trade.theirs.on) g_trade.toasts.push_back("Trade\n{} cancelled the trade");
+        trade_reset_locked();
+        log::info("Trade: the friend cancelled");
+    }
+}
+
+void trade_answer(bool accept) {
+    std::lock_guard lk(g_tmu);
+    if (!g_trade.mine.on || !g_trade.theirs.on) return;
+    if (accept) {
+        g_trade.my_ok = true;
+        g_trade.out.push_back({2});
+        if (!g_trade.their_ok) g_trade.toasts.push_back("Trade\nAccepted. Waiting for {}");
+        log::info("Trade: we accepted");
+    } else {
+        g_trade.out.push_back({3});
+        g_trade.toasts.push_back("Trade\nYou declined the trade");
+        trade_reset_locked();
+        log::info("Trade: we declined");
+    }
+}
+
+TradeTick trade_tick(bool connected) {
+    TradeTick t;
+    std::lock_guard lk(g_tmu);
+    const bool any = g_trade.mine.on || g_trade.theirs.on;
+    if (any && !connected) {
+        g_trade.toasts.push_back("Trade\nThe trade is off: {} left");
+        trade_reset_locked();
+    } else if (any && GetTickCount64() - g_trade.since > kTradeMs) {
+        g_trade.out.push_back({3});
+        g_trade.toasts.push_back("Trade\nThe trade lapsed");
+        trade_reset_locked();
+        log::info("Trade: lapsed");
+    }
+    if (g_trade.mine.on && g_trade.theirs.on && !g_trade.card && !g_trade.my_ok) {
+        g_trade.card = true;
+        t.card = true;
+        t.mine = label(g_trade.mine);
+        t.theirs = label(g_trade.theirs);
+    }
+    if (g_trade.mine.on && g_trade.theirs.on && g_trade.my_ok && g_trade.their_ok) {
+        // Both accepted: each game gives its own offer to the other (the other side does the same now).
+        const Offer m = g_trade.mine;
+        const uint32_t me = capture_own_player_key(), to = friend_key();
+        const bool ok = send_move(me, to, m.inv, m.slot, m.hint, m.n, kGiveEntry);
+        log::info("Trade: both accepted: our {} (inventory key {} slot {} item 0x{:X}) to 0x{:08X} (giver 0x{:08X}){}",
+                  label(m), m.inv, m.slot, m.hint, to, me, ok ? "" : " NOT sent");
+        g_trade.toasts.push_back(ok ? "Trade\nDone: you gave " + braces(label(m)) + " for " + braces(label(g_trade.theirs))
+                                    : std::string("Trade\nYour side could not be sent: nothing given"));
+        trade_reset_locked();
+    }
+    t.send.swap(g_trade.out);
+    t.toasts.swap(g_trade.toasts);
+    return t;
+}
 
 std::atomic<bool> g_enabled{false};
 void give_set_enabled(bool on) { g_enabled = on; }
@@ -226,19 +380,31 @@ void give_ui_tick() {
     g_pass = true;
     g_give = answer == 1;
     g_stash = answer == 3;
+    g_probe = answer == 4;
+    g_probed = Offer{};
     bool unlocked = true;
     const uint64_t r = hook.call<uint64_t>(p.root, p.count, uint64_t{0}, uint64_t{0});
     g_pass = false;
-    if (g_give || g_stash) {
-        g_give = g_stash = false;
+    if (g_give || g_stash || g_probe) {
+        g_give = g_stash = g_probe = false;
         log::info("Give: the game did not reach its discard (nothing given)");
-    } else if (answer == 1 || answer == 3) {
+    } else if (answer == 1 || answer == 3 || answer == 4) {
         // The handler now waits for the server's answer to a discard that was never sent ("Processing the previous
         // request" on the next action). Its own error path's clean-up: no pending action, the waiting state hidden.
         unlocked = clear_wait(p.root, base);
     }
-    log::info("Give: {} done, the handler returned {}{}", answer == 1 ? "give" : answer == 3 ? "stash" : "discard", r & 0xFF,
+    log::info("Give: {} done, the handler returned {}{}",
+              answer == 1 ? "give" : answer == 3 ? "stash" : answer == 4 ? "trade offer" : "discard", r & 0xFF,
               unlocked ? "" : " (the inventory's wait could not be cleared)");
+    if (answer == 4 && g_probed.on) {
+        Offer o = g_probed;
+        o.name = stash_item_name(o.hint);
+        if (o.name.empty()) {  // asked now: resolved by the stash's name tick, which runs on this (the UI) thread
+            stash_ui_tick();
+            o.name = stash_item_name(o.hint);
+        }
+        trade_offer_made(o.inv, o.slot, o.hint, o.n, o.name);
+    }
 }
 
 }  // namespace cdmp::net

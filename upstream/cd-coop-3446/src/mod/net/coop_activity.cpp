@@ -57,7 +57,7 @@ constexpr uint16_t kOpStartActionReq = 2431;      // our client also sends the N
 constexpr float kNearM = 100.0f;                   // the user's rule: cutscenes are shared within 100 m
 constexpr uint32_t kSkipTestDelayMs = 6000;
 
-enum Type : uint8_t { kCutsceneOn = 1, kCutsceneOff = 2, kSkip = 3, kGameOn = 4, kGameOff = 5, kVersus = 6, kRps = 10, kChallenge = 11, kDuel = 12, kQuest = 13, kHunt = 14, kMenu = 16, kLooted = 17, kReviveYou = 18, kWanted = 19, kTravel = 20, kEvent = 21, kChat = 22, kKill = 23, kRace = 24, kTitle = 25, kHide = 26, kFish = 27, kBye = 28, kStash = 29, kStory = 30 };
+enum Type : uint8_t { kCutsceneOn = 1, kCutsceneOff = 2, kSkip = 3, kGameOn = 4, kGameOff = 5, kVersus = 6, kRps = 10, kChallenge = 11, kDuel = 12, kQuest = 13, kHunt = 14, kMenu = 16, kLooted = 17, kReviveYou = 18, kWanted = 19, kTravel = 20, kEvent = 21, kChat = 22, kKill = 23, kRace = 24, kTitle = 25, kHide = 26, kFish = 27, kBye = 28, kStash = 29, kStory = 30, kTrade = 31 };
 std::atomic<bool> g_bye{false};  // the host is ending the session (tcB291)
 
 // Co-op+ (T22): world events (reinforcements, bounty hunters, camp and outpost activity) are stages our server starts
@@ -187,12 +187,14 @@ std::atomic<bool> g_menu_hold{false};  // the picker is open: the keyboard hook 
 std::atomic<int> g_menu_step{0};       // arrow presses it caught (-1 left, +1 right, summed)
 // Shared world (2026-11-10): the interaction menu while a challenge is sent, received or on -- its answers instead of
 // the game list ("Accept", "Decline", "End the challenge", "Leave"). Under g_mutex.
-enum CtxCode : int { kCtxLeave = 0, kCtxGo = 1, kCtxDecline = 2, kCtxGive = 3, kCtxDiscard = 4, kCtxStash = 5 };
+enum CtxCode : int { kCtxLeave = 0, kCtxGo = 1, kCtxDecline = 2, kCtxGive = 3, kCtxDiscard = 4, kCtxStash = 5,
+                     kCtxTrade = 6, kCtxTradeYes = 7, kCtxTradeNo = 8 };
 struct CtxMenu {
     bool open = false;
     uint32_t since = 0;
     size_t pick = 0;
     bool give = false;  // B11: the inventory's "Give / Discard / Cancel" question (net/coop_give)
+    bool trade = false;  // B11 trade: "Accept / Decline" once both offers are in (net/coop_give)
     std::vector<std::pair<std::string, int>> items;
 } g_ctx;
 // [dev] challenge_test: 1 = a simulated other player accepts our invites; 2 = they also challenge us to a duel once.
@@ -670,13 +672,36 @@ void challenge_tick(ActivityTick& out, bool connected, bool focused, std::option
         if (give_take_question()) {
             std::lock_guard lock(g_mutex);
             if (g_ctx.open && g_ctx.give) give_answer(0);
+            if (g_ctx.open && g_ctx.trade) trade_answer(false);
             g_ctx = CtxMenu{};
             g_ctx.give = true;
             g_ctx.items.clear();
             if (give_offer_give()) g_ctx.items.push_back({"Give to " + who, kCtxGive});
+            if (give_offer_give()) g_ctx.items.push_back({"Offer in a trade", kCtxTrade});
             if (give_offer_stash()) g_ctx.items.push_back({"Put in the shared stash", kCtxStash});
             g_ctx.items.push_back({"Discard", kCtxDiscard});
             g_ctx.items.push_back({"Cancel", kCtxLeave});
+            g_ctx.open = true;
+            g_ctx.since = now;
+            g_ctx.pick = 0;
+            g_menu_step = 0;
+            g_menu_select = g_menu_cancel = false;
+        }
+    }
+    // B11 trade (net/coop_give): its messages out, its notices, and the Accept / Decline card when both offered.
+    {
+        TradeTick tt = trade_tick(connected);
+        for (const auto& m : tt.send) send(kTrade, m.data(), m.size());
+        if (!tt.toasts.empty()) {
+            std::lock_guard lock(g_mutex);
+            for (auto& s : tt.toasts) g_toasts.push_back(std::move(s));
+        }
+        if (tt.card) {
+            std::lock_guard lock(g_mutex);
+            if (g_ctx.open && g_ctx.give) give_answer(0);
+            g_ctx = CtxMenu{};
+            g_ctx.trade = true;
+            g_ctx.items = {{"Accept: your " + tt.mine + " for " + tt.theirs, kCtxTradeYes}, {"Decline", kCtxTradeNo}};
             g_ctx.open = true;
             g_ctx.since = now;
             g_ctx.pick = 0;
@@ -742,15 +767,22 @@ void challenge_tick(ActivityTick& out, bool connected, bool focused, std::option
             const auto n = static_cast<int>(g_ctx.items.size());
             g_ctx.pick = static_cast<size_t>(((static_cast<int>(g_ctx.pick) + step) % n + n) % n);
             if (step) g_ctx.since = now;
-            const bool gone = g_ctx.give ? !connected || !game::ui_menu_open()
-                                         : c.state != kChSent && c.state != kChReceived && c.state != kChOn;
+            const bool gone = g_ctx.trade  ? !connected
+                              : g_ctx.give ? !connected || !game::ui_menu_open()
+                                           : c.state != kChSent && c.state != kChReceived && c.state != kChOn;
             if (g_menu_cancel.exchange(false) || gone || now - g_ctx.since > kPickMs) {
                 if (g_ctx.give) give_answer(0);
+                if (g_ctx.trade) trade_answer(false);
                 g_ctx.open = false;
             } else if (g_menu_select.exchange(false)) {
                 const int code = g_ctx.items[g_ctx.pick].second;
                 if (g_ctx.give)
-                    give_answer(code == kCtxGive ? 1 : code == kCtxDiscard ? 2 : code == kCtxStash ? 3 : 0);
+                    give_answer(code == kCtxGive    ? 1
+                                : code == kCtxDiscard ? 2
+                                : code == kCtxStash   ? 3
+                                : code == kCtxTrade   ? 4
+                                                      : 0);
+                if (g_ctx.trade) trade_answer(code == kCtxTradeYes);
                 if (code == kCtxGo) pressed = true;
                 if (code == kCtxDecline) declined = true;
                 g_ctx.open = false;
@@ -763,7 +795,7 @@ void challenge_tick(ActivityTick& out, bool connected, bool focused, std::option
                 if (sel == kMenuLeave) {
                     declined = true;
                 } else if (sel == kMenuTrade) {
-                    toast = "To give an item, use Discard on it in your inventory while your friend is close";
+                    toast = "To give or trade an item, use Discard on it in your inventory while your friend is close";
                 } else {
                     pressed = true;
                 }
@@ -1120,6 +1152,7 @@ void activity_on_event(const std::vector<uint8_t>& p) {
     if (p[4] == kTitle) scoreboard_on_event(p.data() + 5, p.size() - 5);  // scoreboard.h
     if (p[4] == kStory) story_on_event(p.data() + 5, p.size() - 5);       // coop_story.h (the ready check)
     if (p[4] == kStash) stash_on_event(p.data() + 5, p.size() - 5);       // coop_stash.h (records only)
+    if (p[4] == kTrade) trade_on_event(p.data() + 5, p.size() - 5);       // coop_give.h (B11 trade; its own lock)
 }
 
 ActivityTick activity_tick(bool connected, bool host, bool focused, std::optional<std::array<float, 3>> me,
@@ -1453,7 +1486,7 @@ bool activity_menu_snapshot(std::string& title, std::vector<std::string>& items,
     items.clear();
     for (const uint32_t o : g_ch.options) {
         if (o == kMenuTrade) {
-            items.push_back("Give an item");
+            items.push_back("Give or trade an item");
             continue;
         }
         if (o == kMenuLeave) {

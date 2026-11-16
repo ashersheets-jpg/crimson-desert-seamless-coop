@@ -8091,3 +8091,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   Decline: "we declined", the guest "the friend cancelled". Nothing given (as it should). Fixes: the item names
   were empty ("item 0x59A": the name lookup answers on the UI thread's next tick; now resolved on the spot), and the
   test presses A on the card first. cs35b (10:59).
+- 11:10 cs35b: B11 TRADE WORKS END TO END (layer of 10:59, one PC). The guest offered its Ricefish ("Offer in a
+  trade" on the Discard question), the host offered its own: the host's notice "Trade: Both offers are in: accept or
+  decline" and card "Accept: your Ricefish for Ricefish" / "Decline"; the host accepted (11:08:11), the guest saw the
+  same card and accepted (11:08:21); both games sent their give and the host's server moved both: "x1 from
+  0xA0100001 to 0xA0100066: stage 5" and "x1 from 0xA0100066 to 0xA0100001: stage 5"; the guest's notice "Trade:
+  Done: you gave Ricefish for Ricefish" (shots cs35b-sheet.png). SAVES OK, 5/5, both alive. Layer unit tests 2/2.
+  Not in a package yet. Known edges: a declined card ends the trade for both (B = Decline, as the menu's Back);
+  if one side's give fails after both accepted, the other's still goes (logged "NOT sent"; the server checks each).
