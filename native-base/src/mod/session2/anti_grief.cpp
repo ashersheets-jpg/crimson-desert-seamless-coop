@@ -13,6 +13,7 @@
 #include <mutex>
 #include <utility>
 #include <vector>
+#include <unordered_map>
 #include <unordered_set>
 
 #include <safetyhook.hpp>
@@ -37,11 +38,21 @@ std::atomic<uint64_t> c_dropped{0}, c_hits_seen{0}, c_stripped{0}, c_freed{0};
 constexpr uint32_t kHostCharacterKey = 0xA0100001;
 std::map<std::pair<uint32_t, uint32_t>, uint32_t> g_tally[2];  // g_mu
 std::atomic<uint64_t> c_kills[2];                              // crimes of the kill path: [0] the host's, [1] the guest's
+// 2026-11-16 (B18): NPC key -> when the host's character / the other player last hit it (ms), for ai_handoff's
+// fight rule. g_mu.
+std::unordered_map<uint32_t, std::pair<uint64_t, uint64_t>> g_last_hit;
 void tally_locked(int src, std::span<const uint8_t> payload) {
     if (payload.size() < 5) return;
     const uint32_t attacker = agl::rd32(payload.data() + 1);
+    const bool by_player = (attacker >> 28) == 0xA;
+    const uint64_t now = by_player ? GetTickCount64() : 0;
     for (const uint32_t t : agl::targets(payload)) {
         if (g_tally[src].size() < 4000 || g_tally[src].count({attacker, t})) ++g_tally[src][{attacker, t}];
+        if (by_player && (t >> 28) == 0xB) {
+            if (g_last_hit.size() > 8000) g_last_hit.clear();
+            auto& h = g_last_hit[t];
+            (attacker == kHostCharacterKey ? h.first : h.second) = now;
+        }
     }
 }
 std::string tally_text_locked(int src) {
@@ -328,6 +339,20 @@ bool anti_grief_drop_user2_req(uint16_t opcode, std::span<const uint8_t> payload
     } catch (...) {
     }
     return false;
+}
+
+bool anti_grief_last_hits(uint32_t npc_key, uint64_t& host_ms, uint64_t& guest_ms) noexcept {
+    host_ms = guest_ms = 0;
+    try {
+        std::lock_guard lk(g_mu);
+        const auto it = g_last_hit.find(npc_key);
+        if (it == g_last_hit.end()) return false;
+        host_ms = it->second.first;
+        guest_ms = it->second.second;
+        return true;
+    } catch (...) {
+        return false;
+    }
 }
 
 std::string anti_grief_describe() {

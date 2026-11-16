@@ -1,6 +1,8 @@
 // Co-op+ (2026-11-11, build 1.0.0.3576): ai_handoff.h.
 #include "mod/session2/ai_handoff.h"
 
+#include "mod/session2/anti_grief.h"
+
 #include <windows.h>
 
 #include <atomic>
@@ -24,6 +26,7 @@ namespace {
 enum class Mode : uint8_t { Off, Probe, On };
 Mode g_mode = Mode::Off;
 bool g_guest = false;
+bool g_fight = false;  // the fight rule (ai_handoff.h)
 
 constexpr uint32_t kHostCharacter = 0xA0100001;
 constexpr uint16_t kOpChangeAiControlAck = 2152;
@@ -38,9 +41,12 @@ constexpr float kSector = 0.015625f;             // 1 / 64 m
 constexpr float kFarM = 60.0f, kNearM = 30.0f;   // controller farther than kFarM, another player within kNearM
 constexpr int kNeedChecks = 2;                   // the same answer on two checks in a row (about 2 s)
 constexpr int kMaxPerTick = 48;
+constexpr float kFightM = 20.0f;                   // the fight rule: the fighter within 20 m of the NPC
+constexpr uint64_t kFightRecentMs = 4000, kFightQuietMs = 6000, kFightCooldownMs = 10000;
 
 std::atomic<uint64_t> c_ticks{0}, c_npcs{0}, c_orphans{0}, c_handed{0}, c_would{0}, c_failed{0}, c_back{0};
 std::atomic<uint64_t> c_client_took{0}, c_client_gave{0}, c_client_unknown{0}, c_client_dropped{0};
+std::atomic<uint64_t> c_fight_out{0}, c_fight_back{0}, c_fight_seen{0};
 std::atomic<uint32_t> g_local_user{0};
 
 struct PlayerAt {
@@ -60,6 +66,13 @@ struct Cand {
     uint32_t key = 0, from = 0, to = 0;
     uint8_t type = 0;
     float x = 0, z = 0;
+};
+// The fight rule's view of an NPC near a player: who drives it, how far the host and the other player are.
+struct Fight {
+    uintptr_t actor = 0;
+    uint32_t key = 0, ctrl = 0, other_user = 0;
+    uint8_t type = 0;
+    float x = 0, z = 0, d_host = 1e9f, d_other = 1e9f;
 };
 
 int sector(float v) { return static_cast<int>(std::floor(v * kSector)); }
@@ -91,9 +104,10 @@ bool actor_xz(uintptr_t base, uintptr_t actor, float& x, float& z) noexcept {
 
 // The server's actor list: the players (out) and every NPC nobody who controls it can see while another player can.
 // Plain data only (SEH). Returns the number of candidates; n_players and n_npcs are filled.
-int scan(PlayerAt* pl, int pl_cap, int& n_players, Cand* out, int cap, int& n_npcs, int& n_orphans) noexcept {
+int scan(PlayerAt* pl, int pl_cap, int& n_players, Cand* out, int cap, int& n_npcs, int& n_orphans, Fight* fout,
+         int fcap, int& n_fight) noexcept {
     int n = 0;
-    n_players = n_npcs = n_orphans = 0;
+    n_players = n_npcs = n_orphans = n_fight = 0;
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     __try {
         const uintptr_t slot = *reinterpret_cast<uintptr_t*>(base + kServerActorMgrSlot);
@@ -122,7 +136,7 @@ int scan(PlayerAt* pl, int pl_cap, int& n_players, Cand* out, int cap, int& n_np
             if (p.user) pl[n_players++] = p;
         }
         if (n_players < 2) return 0;
-        for (uint32_t i = 0; i < cnt && n < cap; ++i) {  // pass 2: the NPCs
+        for (uint32_t i = 0; i < cnt; ++i) {  // pass 2: the NPCs
             const uintptr_t e = *reinterpret_cast<uintptr_t*>(arr + 8ull * i);
             const uintptr_t actor = e ? *reinterpret_cast<uintptr_t*>(e + 8) : 0;
             if (!actor) continue;
@@ -146,6 +160,27 @@ int scan(PlayerAt* pl, int pl_cap, int& n_players, Cand* out, int cap, int& n_np
             float x = 0, z = 0;
             if (!actor_xz(base, actor, x, z)) continue;
             ++n_npcs;
+            if (n_fight < fcap) {  // the fight rule (ai_handoff.h): every NPC with a player within kFightM
+                Fight f;
+                for (int k = 0; k < n_players; ++k) {
+                    const float d = std::sqrt((x - pl[k].x) * (x - pl[k].x) + (z - pl[k].z) * (z - pl[k].z));
+                    if (pl[k].key == kHostCharacter) {
+                        f.d_host = d;
+                    } else if (d < f.d_other) {
+                        f.d_other = d;
+                        f.other_user = pl[k].user;
+                    }
+                }
+                if ((f.d_host <= kFightM || f.d_other <= kFightM) && f.other_user) {
+                    f.actor = actor;
+                    f.key = key;
+                    f.ctrl = ctrl;
+                    f.type = type;
+                    f.x = x;
+                    f.z = z;
+                    fout[n_fight++] = f;
+                }
+            }
             // ff4 (2026-11-11): the sector rule was wrong as a test of "driven": the host's client still moves NPCs two
             // sectors (105-119 m) away. What matters to players is WHO the NPC's AI plays against: it runs on the
             // controller's client, around that client's own character. So: the controller's character is far from
@@ -162,7 +197,7 @@ int scan(PlayerAt* pl, int pl_cap, int& n_players, Cand* out, int cap, int& n_np
                     b = k;
                 }
             }
-            if (a >= 0 || b < 0) continue;  // its controller is near enough, or nobody else is close
+            if (a >= 0 || b < 0 || n >= cap) continue;  // its controller is near enough, or nobody else is close
             ++n_orphans;
             Cand c;
             c.actor = actor;
@@ -289,9 +324,14 @@ int client_apply(uintptr_t actor, uint32_t key, uint32_t now_ctrl, uint32_t me) 
 
 }  // namespace
 
-void ai_handoff_start(std::string_view mode, bool guest) {
+void ai_handoff_start(std::string_view mode, bool guest, bool fight) {
     g_mode = mode == "1" ? Mode::On : mode == "probe" ? Mode::Probe : Mode::Off;
     g_guest = guest;
+    g_fight = fight && !guest;
+    if (g_fight)
+        log::info("AiHandoff: the fight rule is ON (ai_handoff_fight=1): an enemy the other player fights (hit in the "
+                  "last 4 s, the host not for 6 s, that player within 20 m and nearer) runs on that player's game; "
+                  "the same back for the host; one hand-over per enemy in 10 s");
     log::info("AiHandoff {} (ai_handoff={}{}): {}", g_mode == Mode::On ? "ON" : g_mode == Mode::Probe ? "probe" : "off",
               mode, guest ? ", guest" : "",
               g_mode == Mode::Off ? "an NPC keeps the controller it was born with"
@@ -301,7 +341,7 @@ void ai_handoff_start(std::string_view mode, bool guest) {
 }
 
 void ai_handoff_tick() noexcept {
-    if ((g_mode == Mode::Off && !damage_range_on()) || g_guest) return;
+    if ((g_mode == Mode::Off && !damage_range_on() && !g_fight) || g_guest) return;
     try {
         static uint64_t next = 0;
         const uint64_t now = GetTickCount64();
@@ -317,14 +357,17 @@ void ai_handoff_tick() noexcept {
 }
 
 void ai_handoff_server_tick() noexcept {
-    if ((g_mode == Mode::Off && !damage_range_on()) || g_guest) return;
+    if ((g_mode == Mode::Off && !damage_range_on() && !g_fight) || g_guest) return;
     try {
         static std::unordered_map<uint32_t, std::pair<uint32_t, int>> pending;  // actor key -> (to, checks in a row)
         static std::unordered_map<uint32_t, uint32_t> born;                     // actor key -> its first controller
         PlayerAt pl[4];
         static Cand cand[512];
-        int n_players = 0, n_npcs = 0, n_orphans = 0;
-        const int n = scan(pl, 4, n_players, cand, 512, n_npcs, n_orphans);
+        static Fight fights[256];
+        static std::unordered_map<uint32_t, uint64_t> moved;  // actor key -> when it was last handed over (ms)
+        int n_players = 0, n_npcs = 0, n_orphans = 0, n_fight = 0;
+        const int n_all = scan(pl, 4, n_players, cand, 512, n_npcs, n_orphans, fights, 256, n_fight);
+        const int n = g_mode == Mode::Off ? 0 : n_all;  // the distance rule only with ai_handoff = probe / 1
         {  // damage_range.h: where the users' characters are now
             float xyz[4 * 3];
             for (int k = 0; k < n_players && k < 4; ++k) {
@@ -334,7 +377,7 @@ void ai_handoff_server_tick() noexcept {
             }
             damage_range_players(xyz, n_players);
         }
-        if (g_mode == Mode::Off) return;
+        if (g_mode == Mode::Off && !g_fight) return;
         c_ticks.fetch_add(1);
         c_npcs.store(static_cast<uint64_t>(n_npcs));
         c_orphans.store(static_cast<uint64_t>(n_orphans));
@@ -349,7 +392,7 @@ void ai_handoff_server_tick() noexcept {
         // Facts, every 10 s (the first 40 times): the 10 NPCs nearest to the other player, as the server has them.
         static uint64_t next_dump = 0;
         static int dumps = 0;
-        if (const uint64_t now = GetTickCount64(); now >= next_dump && dumps < 40) {
+        if (const uint64_t now = GetTickCount64(); g_mode != Mode::Off && now >= next_dump && dumps < 40) {
             next_dump = now + 10000;
             ++dumps;
             float hx = 0, hz = 0;
@@ -400,6 +443,7 @@ void ai_handoff_server_tick() noexcept {
                 continue;
             }
             ++done;
+            moved[c.key] = GetTickCount64();
             uint8_t priv[12];
             std::memcpy(priv, &kPrivateMagic, 4);
             std::memcpy(priv + 4, &c.key, 4);
@@ -424,6 +468,51 @@ void ai_handoff_server_tick() noexcept {
         }
         pending.swap(still);
         if (born.size() > 20000) born.clear();
+        // The fight rule (ai_handoff.h, 2026-11-16, B18).
+        if (g_fight) {
+            const uint64_t now = GetTickCount64();
+            if (moved.size() > 8000) moved.clear();
+            for (int i = 0; i < n_fight && done < kMaxPerTick; ++i) {
+                const Fight& f = fights[i];
+                uint64_t hm = 0, gm = 0;
+                if (!anti_grief_last_hits(f.key, hm, gm)) continue;
+                c_fight_seen.fetch_add(1);
+                const bool g_recent = gm && now - gm < kFightRecentMs, h_recent = hm && now - hm < kFightRecentMs;
+                const bool g_quiet = !gm || now - gm >= kFightQuietMs, h_quiet = !hm || now - hm >= kFightQuietMs;
+                uint32_t to = 0;
+                if (f.ctrl == host_user && g_recent && h_quiet && f.d_other <= kFightM && f.d_other < f.d_host)
+                    to = f.other_user;
+                else if (f.ctrl == f.other_user && h_recent && g_quiet && f.d_host <= kFightM && f.d_host < f.d_other)
+                    to = host_user;
+                if (!to) continue;
+                if (const auto it = moved.find(f.key); it != moved.end() && now - it->second < kFightCooldownMs) continue;
+                if (!hand_over(f.actor, f.key, f.ctrl, to)) {
+                    const uint64_t fl = c_failed.fetch_add(1) + 1;
+                    if (fl <= 10) log::warn("AiHandoff: fight rule: NPC 0x{:08X}: the hand-over did not go through", f.key);
+                    continue;
+                }
+                ++done;
+                moved[f.key] = now;
+                uint8_t priv[12];
+                std::memcpy(priv, &kPrivateMagic, 4);
+                std::memcpy(priv + 4, &f.key, 4);
+                std::memcpy(priv + 8, &to, 4);
+                uint8_t real[4];
+                std::memcpy(real, &f.key, 4);
+                for (int k = 0; k < n_players; ++k) {
+                    if (pl[k].user != to) tell(pl[k].user, host_user, priv);
+                }
+                tell(to, host_user, priv);
+                tell(to, host_user, real);
+                const bool back = to == host_user;
+                const uint64_t h = (back ? c_fight_back : c_fight_out).fetch_add(1) + 1;
+                if (h <= 60 || h % 100 == 0)
+                    log::info("AiHandoff: fight rule: NPC 0x{:08X} (type {}) -> {} (0x{:08X} -> 0x{:08X}; host {:.0f} m, "
+                              "other player {:.0f} m; last hits: host {} ms ago, other player {} ms ago)",
+                              f.key, f.type, back ? "back to the host" : "the other player", f.ctrl, to, f.d_host, f.d_other,
+                              hm ? now - hm : 0, gm ? now - gm : 0);
+            }
+        }
     } catch (...) {
     }
 }
@@ -469,7 +558,12 @@ bool ai_handoff_client_recv(const uint8_t* packet, size_t size) noexcept {
 }
 
 std::string ai_handoff_describe() {
-    if (g_mode == Mode::Off && !c_client_took.load() && !c_client_gave.load() && !c_client_unknown.load()) return {};
+    if (g_mode == Mode::Off && !g_fight && !c_client_took.load() && !c_client_gave.load() && !c_client_unknown.load())
+        return {};
+    if (g_mode == Mode::Off && g_fight)
+        return std::format("AiHandoff: fight rule on | server checks {} | fought NPCs looked at {} | to the other player {} "
+                           "back to the host {} failed {}",
+                           c_ticks.load(), c_fight_seen.load(), c_fight_out.load(), c_fight_back.load(), c_failed.load());
     return std::format("AiHandoff: {} | server checks {} | NPCs looked at {} (controller far, another player close: {}) | "
                        "handed over {} (of them back to the first controller {}) would {} failed {} | this client: took {} "
                        "noted {} not loaded {} notices dropped {}",

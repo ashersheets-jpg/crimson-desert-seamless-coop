@@ -21,5 +21,9 @@ bool anti_grief_drop_user2_req(uint16_t opcode, std::span<const uint8_t> payload
 // enemies); empty when nothing is to remove or every target is protected (then the drop above decides).
 std::vector<uint8_t> anti_grief_strip_user2_req(uint16_t opcode, std::span<const uint8_t> payload) noexcept;
 std::string anti_grief_describe();
+// Co-op+ (2026-11-16, B18, ai_handoff.h's fight rule): when the host's character and the other player's last hit
+// this NPC (GetTickCount64 ms, 0 = never), from the same blow tally as the log. False when neither ever did. The
+// tally runs while anti_grief is on.
+bool anti_grief_last_hits(uint32_t npc_key, uint64_t& host_ms, uint64_t& guest_ms) noexcept;
 
 }  // namespace cdmp::session2

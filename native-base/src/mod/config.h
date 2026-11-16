@@ -524,6 +524,10 @@ struct Config {
     // Co-op+ 2026-11-11 (session2/ai_handoff.h): "0" | "probe" | "1". An NPC whose controller's player cannot see
     // it any more goes to the player who can (its client then runs its AI).
     std::string s2_ai_handoff = "0";
+    // Co-op+ 2026-11-16 (B18, ai_handoff.h): ai_handoff_fight = 0 | 1, HOST. An enemy the other player is fighting
+    // (and the host is not) runs its AI on that player's game, so it fights back at that player; the reverse for the
+    // host. Needs anti_grief (its blow tally).
+    bool s2_ai_handoff_fight = false;
     // Co-op+ 2026-11-11 (session2/damage_range.h): a hit counts when the victim is in range of ANY player's
     // character, not only the host's (the game zeroes damage 80 m or more from the field owner's character).
     bool s2_damage_range_players = true;

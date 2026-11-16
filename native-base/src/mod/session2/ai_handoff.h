@@ -25,7 +25,12 @@ namespace cdmp::session2 {
 
 // [session2] ai_handoff = 0 | probe | 1. probe: counted and logged as "would", nothing written. The client part (the
 // receive hook's answer to the private 2660) is on in both roles whenever the mode is not 0.
-void ai_handoff_start(std::string_view mode, bool guest);
+// fight (2026-11-16, B18, [session2] ai_handoff_fight): the FIGHT rule, on its own or with the mode above. Measured
+// (cs40a / cs40b): the host's quest bandits are driven by the host's client and go for the host, even while only the
+// guest fights them (27 blows on the idle host, 3 on the guest). So: an NPC the other player hit in the last 4 s,
+// that the host has not hit for 6 s, with that player within 20 m and nearer than the host, goes to that player;
+// the same the other way back. At most one hand-over per NPC in 10 s.
+void ai_handoff_start(std::string_view mode, bool guest, bool fight = false);
 // Any thread, the host: asks for the server-thread check once a second while a second player is in the world.
 void ai_handoff_tick() noexcept;
 // The SERVER thread (trade_probe's entry 0xC0DE0008, the host's own request).
