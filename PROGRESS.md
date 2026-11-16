@@ -7935,3 +7935,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   identical, both alive. "KnowledgeGrant ON" (the three functions' first bytes as expected), no fault, but learns 0 in
   7 minutes: teleporting to places learns no knowledge. cs28c (the cabin ready check, New Co-op Save, story scenes)
   runs with knowledge_grant=1 to find a learn.
+- 04:50 cs28c (the cabin ready check, New Co-op Save, knowledge_grant=1; DLLs native 9160d19): SAVES OK, user install
+  restored 5/5, test co-op world back identical; both cabin cinematics played (host 04:45:57-04:46:30, guest
+  04:45:58-04:46:31). KnowledgeGrant ON, but again 0 calls of the learn (0x2E7C210) in the whole run, any actor.
+  So neither the prologue's story scenes nor touring places learn knowledge here; the grant is UNVERIFIED (default
+  0, not in the release ini). It needs a moment where the game teaches a knowledge (a talk, a book, an observed
+  skill): joins the hands-on list. Parked; B04 stays [~].

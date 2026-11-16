@@ -172,7 +172,9 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
 - [ ] **B03 — World events and sieges** joinable by the guest.
 - [~] **B04 — Shared map and knowledge** (fog / visited zones, knowledge learned by one counts for both).
   (2026-11-09: fog_share built -- the guest's map fog at its login OR-ed with the host's on the host's server; live
-  test next. Knowledge: not started.)
+  test next. Knowledge: 2026-11-16 knowledge_grant built (native 9160d19, [session2] knowledge_grant, default 0):
+  a learn by one player is learned by the other through the game's own learn entry; installs cleanly on 3663,
+  no learn happened in cs29a / cs28c to prove it -- needs a moment where the game teaches a knowledge.)
 - [ ] **B05 — Other mounts and vehicles** (bears, wolves, raptors...; wagon, skiff, mech) seen and ridden.
 - [~] **B06 — Mounted combat damage** on shared enemies. (2026-11-15, from the checklist's mountfight logs: the
   guest's blows from the saddle hurt and kill the host's enemies -- pp22: 16 blows, 0xB01000D2 63 -> 14 -> 0 and
