@@ -7874,3 +7874,12 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   busy-NPC error (other errors logged, 20), cdmp_interaction_refused; the layer shows "They are busy with <friend>
   right now. Try again when <friend> is done" (5 s, at most every 10 s) and logs each refusal. Not tested in a game
   yet (synthetic input cannot open an NPC talk: the hands-on list).
+- 04:45 cs28b (03:24-03:36; DLLs: native e87acb2 = the copy fix + the busy count, layer 55cf22a = the busy toast;
+  ini of a3e59c66): SAVES OK, user install restored 5/5, test co-op world back identical, no game left. Both cabin
+  cinematics played (host 03:34:44-03:35:17, guest 03:34:45-03:35:18); every host story scene again not copied.
+  The guest was shot 12 times by the watcher (03:34:50-03:35:21, 10 inside its cinematic): the comrades beside it
+  and the people at the cabin CHANGE POSES from shot to shot (crowd crop: 3 500-7 600 changed pixels between shots 6 s
+  apart; scratchpad cs28b_crowd.png): on one PC with the fix, the NPCs in the guest's cabin cinematic are NOT static.
+  Not proven: whether the testers' static NPCs came from the host's cabin cinematic copied into the guest's game
+  beside its own (gone with the fix) or from a later, talk-started scene (not reachable with synthetic input).
+  So bug 1 and bug 3 wait for a hands-on or tester check on a build with the fix; bug 2 now has a message.
