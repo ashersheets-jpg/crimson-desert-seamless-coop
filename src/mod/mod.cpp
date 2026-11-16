@@ -1247,7 +1247,7 @@ DWORD WINAPI worker(LPVOID) {
             session2::shop_twin_redeliver(cfg.s2_dialog_redeliver);
             session2::stage_candidate_guard_start(cfg.s2_stage_candidate_guard);
             session2::anti_grief_start(cfg.s2_anti_grief, cfg.s2_guest);
-            session2::ai_handoff_start(cfg.s2_ai_handoff, cfg.s2_guest);
+            session2::ai_handoff_start(cfg.s2_ai_handoff, cfg.s2_guest, cfg.s2_ai_handoff_fight);
             session2::damage_range_start(cfg.s2_damage_range_players, cfg.s2_guest);
             session2::lootr_set_chests(cfg.s2_lootr_chests);
             session2::lootr_set_body_share(cfg.s2_lootr_body_share);
