@@ -5,6 +5,8 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- 2026-11-15 19:15 ANSWERED: the owner said "Yes" (post 0245f27d to #download-here if pp22 passes). One post, this
+  build only. pp22 crime failed once (the bandits went for the host, the guest hit nothing): crime re-run first.
 - 2026-11-15 17:00 MAY I POST 0.1.0-alpha+0245f27d once its checklist (pp22, running, ~3 h) passes? It answers the
   two tester reports of 15 Nov: the shared-cutscene setting (and two others) never showed on the Co-op page; the name
   tag ran up to 1.8 m ahead of a sprinting friend. Also: Give to the friend on New Co-op Saves, weather and time of day
@@ -7615,3 +7617,12 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - 16:55 pp22 (all 22 steps) started on 0.1.0-alpha+0245f27d: the build to post (tester fixes, Give key, name tag, the
   fresh ISteamFriends). Post draft docs/release/shared-world-playtest/download-0245f27d.txt (f1028cbc's superseded,
   never posted); CHANGELOG updated. Posting needs the owner's OK.
+- 19:10 the owner OK'd the post if pp22 passes, and asked whether pp22 had to run under the 14 Nov checklist rules:
+  yes. 0245f27d changed the mod itself (the Steam status call every player makes, a log in the friend update), not
+  only test-kit code, so rule 2 (affected steps + smoke) does not apply; rule 1 was followed (pp21 ran to the end,
+  its one finding fixed, one final full pass).
+- 18:41 pp22 crime FAIL (42/43): "a guest's hit on a bandit was not booked as a crime". Not the mod, as far as the logs
+  show: this time the bandits ran at the host first and killed it (pp22-crime-h0: "Death has found you") while the
+  guest stood 10 m away swinging at air (pp22-crime-g0/g1; the guest's client sent 0 guest>NPC blows; pp15-pp21 had
+  20-59). 0245f27d's only changes from f1028cbc (crime passed in pp21) are the Steam call and a log line. The crime
+  step is re-run alone on the same package after pp22; a pass there counts it as test variance.
