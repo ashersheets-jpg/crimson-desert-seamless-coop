@@ -9,7 +9,7 @@ test save Out, shipped cdmp.ini restored.
   chance; crime re-run pp24b 43/43; SAVES OK and 5/5 every step). It answers the testers' cutscene reports of 16 Nov: no host story scene copied into the friend's game (the
   black screen), a message when the friend is busy with an NPC, the friend's panel moved off the game's region panel.
   Text: docs/release/shared-world-playtest/download-430fe6be.txt (1765 chars). Not posted; a post needs your OK.
-- 2026-11-16 08:55 B16 QUESTION (not urgent; I go on meanwhile): the game has NO emotes or gestures (no gesture /
+- 2026-11-16 08:50 B16 QUESTION (not urgent; I go on meanwhile): the game has NO emotes or gestures (no gesture /
   emote strings, packets or UI in the exe; its photo mode is camera only: aperture, depth of field, FOV, roll, no
   poses). Options: (1) B16 = group photo only: both characters in the game's photo mode with no Co-op+ tags or
   frames in the shot (I check that next); (2) also emotes made from the game's own animations (a short list such
@@ -8005,7 +8005,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   Nas River start is a prop (grabbable with Axiom Force, ax7a), not a vehicle. Those mounts go on the hands-on list
   (a save that has them). cs32a (08:49; scratchpad cs32.sh): the reverse of cs18i, the HOST on wyvern-egg-dragon
   (-HostChoice 2) calls Blackstar and flies; the guest teleports to the host's character, looks up, shots every 1 s.
-- 08:55 B16 research (no game): the exe has a photo mode (UIGamePlayControlPhotoMode, sub-phase PhotoMode; controls
+- 08:50 B16 research (no game): the exe has a photo mode (UIGamePlayControlPhotoMode, sub-phase PhotoMode; controls
   Aperture / BokehKernelSize / CameraRoll / DOF / FocalLength / FOV) and no emote, gesture or pose system ("emote"
   hits are all "remote"). Co-op+'s tags and partner frame already hide when the game's gameplay input is off
   (ui_state.cpp, ui_menu_open), which photo mode most likely sets: to check in a run. The design question (emotes
