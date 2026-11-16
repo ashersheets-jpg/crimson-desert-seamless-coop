@@ -8048,3 +8048,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   MountCommit on 0xB0100003 (09:59:45): the guest's game puts the host on its Blackstar. With cs18i (the host SAW the
   guest's Blackstar fly), Blackstar works both ways in the shared world (the guest's view of the host's flight by log,
   not by shot: trees each time). B05 left: the other mounts / vehicles, which no save of ours has (hands-on list).
+- 10:13 cs33a (B14, scratchpad cs33.sh: both teleported to the Hernand inn cellar's arm-wrestling table, the usual
+  test co-op world, 430fe6be's DLLs = native 7cb93cd): SAVES OK, 5/5, both alive. THE TABLE IS NOT EMPTY ON THE GUEST:
+  both games list the same 15 people within 15 m (0xB0100381-386, 3B2, 3B4, 3B5, 42E, 433, 438, 439, 43A, 43B: same
+  keys, same positions within 0.4 m; the host 16 with 0xB010036E upstairs), and both screens show the patrons (shots
+  cs33a-sheet.png). tcB13 (11-07, before the native world) had the guest's cellar empty. The guest's R, facing the
+  host, opened Co-op+'s interaction menu (Arm wrestling, Duel, Rock paper scissors, Hunting contest, Race, Hide and
+  seek, Fishing contest, Give an item, Leave); the host's R started a talk with a patron ("Stranger: Out with it,
+  then."). Left for B14: the guest's own "Try arm wrestling" on the table's NPC (its camera has to face that NPC).

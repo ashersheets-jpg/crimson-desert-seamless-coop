@@ -215,7 +215,8 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
 
 **Minigames and challenges**
 - [ ] **B13 — Real PvP minigames** (arm wrestling on each other's live gauge; shot contests, boxing, spear duel, cards).
-- [ ] **B14 — The empty arm-wrestling table** (T21).
+- [~] **B14 — The empty arm-wrestling table** (T21). (2026-11-16 cs33a: on native both games list the same 15
+  people at the Hernand inn table and both screens show them; left: the guest's own "Try arm wrestling" there.)
 - [ ] **B15 — Duel extras and scoreboard** (wagers, arenas, spectator camera, rematch, titles).
 - [ ] **B16 — Emotes and group photo mode.**
 
