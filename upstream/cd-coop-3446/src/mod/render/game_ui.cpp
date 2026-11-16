@@ -465,11 +465,17 @@ void kill_feed(float sw, float sh, const std::vector<std::string>& lines, const 
     }
 }
 
+// 2026-11-16 (cs27e shots at Fort Windridge): the partner frame stood at 55.5 % of the height, the slot of the game's
+// own region widget ("Balthazar, the Wyvernflame 100.00%") with the quest tracker just under it, and covered it on
+// both screens. The top left corner is empty in every shot we have: the frame goes there, the chat lines under it.
+constexpr float kFrameTop = 0.07f;
+
 void chat_log(float sw, float sh, const std::vector<std::string>& lines) {
     ImDrawList* dl = ImGui::GetForegroundDrawList();
     const float k = std::max(0.6f, sh / 1080.0f);
     const float x = 34 * k, ls = 17 * k;
-    float y = sh * 0.555f - 14 * k - ls * 1.3f * static_cast<float>(lines.size());
+    // 2026-11-16: under the partner frame in the top left corner (kFrameTop), not above it at 55 % of the height.
+    float y = sh * kFrameTop + 86 * k;
     (void)sw;
     for (const auto& l : lines) {
         text(dl, g_serif, ls, x + 1, y + 1, IM_COL32(0, 0, 0, 200), l);
@@ -482,7 +488,7 @@ void party_frame(float sw, float sh, const std::string& name, float hp, float st
                  double t) {
     ImDrawList* dl = ImGui::GetForegroundDrawList();
     const float k = std::max(0.6f, sh / 1080.0f);
-    const float x = 34 * k, y = sh * 0.555f, w = 230 * k, ns = 20 * k, bh = 7 * k, sth = 3 * k;
+    const float x = 34 * k, y = sh * kFrameTop, w = 230 * k, ns = 20 * k, bh = 7 * k, sth = 3 * k;
     const bool low = hp >= 0.0f && hp < 0.25f;
     // Backing: a soft dark wash so it reads on bright ground, like the game's own corner texts.
     dl->AddRectFilledMultiColor(ImVec2(x - 14 * k, y - 6 * k), ImVec2(x + w + 18 * k, y + ns + bh + sth + 34 * k),

@@ -68,10 +68,11 @@ unsigned int partner_colour();
 // Co-op+ (T36): the kill feed, right-aligned under the top right corner; the friend's lines in their colour.
 void kill_feed(float screen_w, float screen_h, const std::vector<std::string>& lines, const std::vector<bool>& ours);
 
-// Co-op+ (T24): recent chat lines on the left, above the partner frame, in the game's serif with a soft shadow.
+// Co-op+ (T24): recent chat lines on the left, under the partner frame, in the game's serif with a soft shadow.
 void chat_log(float screen_w, float screen_h, const std::vector<std::string>& lines);
 
-// Co-op+ (T14): the partner frame on the left edge (above the game's date and place text): a gold diamond and the
+// Co-op+ (T14): the partner frame in the top left corner (2026-11-16: it covered the game's region widget at 55 %
+// of the height): a gold diamond and the
 // name, a red health bar and a thin stamina bar under it, a status line ("in a menu", distance). Below 25 % health
 // the frame's edge pulses red and the status says so. hp / stamina < 0 = unknown (no bar).
 void party_frame(float screen_w, float screen_h, const std::string& name, float hp, float stamina,
