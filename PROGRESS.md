@@ -7899,3 +7899,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   sends the guest batched 2005s (the observer hold family releases, e.g. 0xB01003B8's members at 00:03:57), which it
   skipped. Layer fix (committed): npcs takes every announced 0xB key of an NPC record type too (counted only when the
   game has the actor: its position reads) and logs all keys in range on one line. cs27e (03:39) re-measures.
+- 03:55 cs27e (03:39-03:50, Fort Windridge, npcs 60 on both with the measuring fix; DLLs: native e87acb2, layer
+  with the npcs fix): SAVES OK, user install restored 5/5, test co-op world back identical, no game left.
+  THE SAME NPCs IN BOTH GAMES at the fort: by key, 55 of 55 (03:46:56 / :59), 59 of 60 (:05 / :08), 62 of 64 (:14 /
+  :17); the few left over are at the 60 m edge between scans 3 s apart. cs27d's "4-18 against 50-63" was the
+  measuring gap. Then the fort's soldiers killed BOTH players (host HP 268 -> 162 -> 16 -> down 03:47:26, the guest
+  at 0 by 03:47:20; AntiGrief: NPC>guest 5, NPC>host 5 blows); both lay ~90 m lower (y 408.8, the fall) until the
+  end, "alive" by the revive screen. So at the fort the enemies are shared and fight both (B02 / B03 evidence).
+  Still open at the fort: the boss bar on the guest's HUD (cs27c lead), the event itself (no "world event" line).

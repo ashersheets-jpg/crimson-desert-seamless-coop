@@ -153,7 +153,8 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   Far shops FIXED and on by default (2026-11-09 night, interaction_share: the game removed an NPC's shop
   interaction by key when one player's scene closed; tcB242 near-host shop, tcB243 / tcB245 shop with the host
   409 m away, tcB245 on plain release defaults). Open: a hand check in more towns; a far guest that then meets the
-  host at the same shop in one run.)
+  host at the same shop in one run. 2026-11-16 cs27e: Fort Windridge, the same NPCs in both games by key (55/55, 59/60, 62/64 within 60 m;
+  cs27d's gap was the dev script missing batched 2005s), and its soldiers fought and downed both players.)
   - [~] **B02a — The guest talks to NPCs on its own progress** (2026-11-08: greeting works, tcB88/89/91; npc_category).
   - [~] **B02b — Merchants for the guest (user 2026-11-08):** the guest opens a merchant, buys and sells with its own
     money and stock, and starts and finishes the merchants' quests on its own, without the host at that step.
