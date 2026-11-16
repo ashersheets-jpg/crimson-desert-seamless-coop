@@ -8056,3 +8056,6 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   host, opened Co-op+'s interaction menu (Arm wrestling, Duel, Rock paper scissors, Hunting contest, Race, Hide and
   seek, Fishing contest, Give an item, Leave); the host's R started a talk with a patron ("Stranger: Out with it,
   then."). Left for B14: the guest's own "Try arm wrestling" on the table's NPC (its camera has to face that NPC).
+- 10:17 cs33b (scratchpad cs33b.sh): the guest at the table spot, the host 8 m away; the guest turns its camera in 12
+  steps of ~30 deg (mouse moves through actpid, its window in front), holds R after each (shot), Esc after: which
+  step offers "Try arm wrestling" and whether the host's server accepts the guest's interaction.
