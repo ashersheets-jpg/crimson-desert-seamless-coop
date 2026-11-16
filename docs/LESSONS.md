@@ -285,3 +285,9 @@ topic BEFORE testing or guessing about it.
   build-native-layer), not the package named by -PackageIni (only its coopplus.ini). A "baseline on the posted
   package" needs that package's DLLs put in the build folders first, and any compile in between changes what the
   next test runs. Say in PROGRESS which DLLs a run had (cs28a ran a fix that was meant to be absent).
+- Name a HUD element only after zooming in on it. cs27c called the line "Balthazar, the Wyvernflame" over a green
+  bar a "boss bar"; it was the region panel's fort holder (with "100.00% / Fort Windridge" under it). That label cost
+  three test runs and a module (trigger_share, shelved) aimed at the wrong thing. Crop both players' shots at the
+  same spot side by side and read every line before deciding what differs.
+- Packet records go to the game's bin64 folder. A research runner must move its own records out after the run, .bin
+  AND .log (the 11-15 move took only the .log files and left 29 GB behind).
