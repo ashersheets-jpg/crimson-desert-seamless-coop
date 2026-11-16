@@ -8027,3 +8027,10 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   shots), and its actor list within 80 m (18 of 61 loaded) had no dragon (its reader misses actors: not proof).
   Inconclusive. cs32d (09:26): the guest stays at the open start spot beside the host, a watcher shoots it from the
   host's call (the dragon lands by its caller first), and both games list actors within 40-80 m after the take-off.
+- 09:38 cs32d: SAVES OK, 5/5, test co-op world back, both alive. The host's call failed again (it stayed at
+  (-9005, 479, -5064) in all three lists after it; the guest's 30 shots show it standing beside the guest). The one
+  success, cs32b, is the one run whose watcher kept the HOST's window in front during the hold and call: simulated
+  pad input most likely reaches the focused game only (cs18b's guest call ran with the guest's window in front).
+  Lesson noted. Side check: both games list the same animals at the start spot (deer 0xB01000E3-E7, iguana, oriole,
+  lancehead at the same positions; the guest's reader shows no variant names). cs32e (09:39): the watcher shoots the
+  host's window from its hold to 14 s after the call, then the guest's.
