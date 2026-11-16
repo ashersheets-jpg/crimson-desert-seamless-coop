@@ -7928,3 +7928,10 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   at 0x2E7C210's entry; after a learn by one player's character whose level rose, the other player's character
   (SAM::FindActor, as user2_stages) gets the same level through the learn entry when its own is lower (never twice;
   first bytes of all three functions checked before hooking). Lines "KnowledgeGrant: ... GRANTED", a minute summary.
+- 04:25 pp23s (smoke on a9245e2b = the copy fix + busy message + frame move + npcs fix): static 12/0, fresh 41/0,
+  solostart 47/0 (100 pass, 0 fail), SAVES OK, user install restored 5/5.
+- 04:36 cs29a (scratchpad cs29.sh: windridge host, guest on its solo progress touring the fort / Trembling Gorge /
+  the dock; knowledge_grant=1; DLLs native 9160d19): SAVES OK, user install restored 5/5, test co-op world back
+  identical, both alive. "KnowledgeGrant ON" (the three functions' first bytes as expected), no fault, but learns 0 in
+  7 minutes: teleporting to places learns no knowledge. cs28c (the cabin ready check, New Co-op Save, story scenes)
+  runs with knowledge_grant=1 to find a learn.
