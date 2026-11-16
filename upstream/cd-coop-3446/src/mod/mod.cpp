@@ -980,6 +980,37 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
                 toast = std::move(t);
                 toast_until = now + 8000;
             }
+            // Co-op+ 2026-11-16 (the testers' bug 2): the server lets one player at a time talk to an NPC. When ours
+            // is refused because the friend is busy with that NPC (cdmp.asi counts those refusals), say so.
+            {
+                using RefusedFn = int (*)(uint32_t*, uint32_t*);
+                static RefusedFn refused = nullptr;
+                static bool looked = false;
+                static int seen = -1;
+                static uint32_t said_at = 0;
+                if (!looked) {
+                    looked = true;
+                    if (HMODULE m = GetModuleHandleW(L"cdmp.asi"))
+                        refused = reinterpret_cast<RefusedFn>(GetProcAddress(m, "cdmp_interaction_refused"));
+                }
+                if (refused) {
+                    uint32_t npc = 0, err = 0;
+                    const int n = refused(&npc, &err);
+                    if (seen < 0 || !linked) {
+                        seen = n;
+                    } else if (n != seen) {
+                        seen = n;
+                        log::info("Co-op: our interaction with NPC 0x{:08X} was refused: busy with another player (error 0x{:08X}, {} so far)",
+                                  npc, err, n);
+                        if (!said_at || now - said_at >= 10000) {
+                            said_at = now;
+                            const std::string who = session.peer_name().empty() ? std::string("Your friend") : session.peer_name();
+                            toast = std::format("Co-op\nThey are busy with {} right now. Try again when {} is done", who, who);
+                            toast_until = now + 5000;
+                        }
+                    }
+                }
+            }
             // Co-op+ co-op worlds: a save per friend; switched to when a session starts (coop_worlds.h).
             {
                 net::WorldsInput wi;
