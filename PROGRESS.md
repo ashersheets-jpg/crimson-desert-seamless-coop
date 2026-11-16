@@ -8068,3 +8068,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   them needs real arm-wrestling matches (hands-on). B15's wagers ride on the Give (B11), whose guest -> host side
   was never seen on 3663 (3576 tcB335: both ways; 3663 cs21a: host -> guest). cs34a (scratchpad cs34.sh): cs21a with
   the roles swapped, the guest's Give to the host on 3663.
+- 10:34 cs34a (430fe6be's DLLs, test world): the GUEST'S GIVE TO THE HOST WORKS ON 3663. The guest's Inventory, Discard
+  on a Ricefish -> "Co-op: Host / Give to Host / Discard / Cancel" -> A; its layer "Give: x1 from inventory 1 (key 2)
+  slot 57 (item index 0x59A) to 0xA0100001 (giver 0xA0100066)"; the host's server "Give (whole record): x1 from
+  0xA0100066 to 0xA0100001: stage 5 (5 = moved) err 0". The guest's bag on screen: the Ricefish gone, 66/99 -> 65/99
+  (shots cs34a-sheet.png). SAVES OK, 5/5, both alive. With cs21a, the Give works both ways on 3663. Not seen: the
+  fish arriving in the host's bag on screen (the server's move tells both clients; the host's bag shot is next time).
