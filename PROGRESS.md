@@ -5,10 +5,11 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
-- 2026-11-16 07:57 MAY I POST 0.1.0-alpha+430fe6be? Its checklist PASSED (pp24: 863 pass, 1 fail = crime,
-  chance; crime re-run pp24b 43/43; SAVES OK and 5/5 every step). It answers the testers' cutscene reports of 16 Nov: no host story scene copied into the friend's game (the
-  black screen), a message when the friend is busy with an NPC, the friend's panel moved off the game's region panel.
-  Text: docs/release/shared-world-playtest/download-430fe6be.txt (1765 chars). Not posted; a post needs your OK.
+- 2026-11-16 12:10 MAY I POST 0.1.0-alpha+74bb83c3 once its checklist (pp25, all 22 steps, started 12:09, ~3 h)
+  passes? It is 430fe6be (checklist passed: the black-screen fix, the busy-NPC message, the panel move) plus
+  trading, wagers on challenges, the friend's Give seen on 3663, and a fix for the inventory during rock-paper-
+  scissors. It replaces the 430fe6be question. Text: docs/release/shared-world-playtest/download-74bb83c3.txt
+  (1999 chars). Not posted; a post needs your OK.
 - 2026-11-16 08:50 B16 QUESTION (not urgent; I go on meanwhile): the game has NO emotes or gestures (no gesture /
   emote strings, packets or UI in the exe; its photo mode is camera only: aperture, depth of field, FOV, roll, no
   poses). Options: (1) B16 = group photo only: both characters in the game's photo mode with no Co-op+ tags or
@@ -8131,3 +8132,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   (inventory key 2 slot 57 item 0x59A) to 0xA0100001", the host's server "Give (whole record): x1 from 0xA0100066 to
   0xA0100001: stage 5"; the host won 2 - 0 -> "Wager: we won; the friend gives Ricefish". SAVES OK, 5/5, both alive.
   Committed with the trade's follow-ups (the hands off while a game menu is open).
+- 12:09 Package 0.1.0-alpha+74bb83c3 (outer 74bb83c: native 7cb93cd = 430fe6be's + the dev-only sniffer_record key;
+  layer = 430fe6be's + trade, wagers, the RPS hands off in game menus). pp25 (all 22 steps) started 12:09. CHANGELOG
+  "NOT POSTED YET: 74bb83c3" and the draft post (download-74bb83c3.txt, 1999 chars) written; the waiting list's post
+  question now names 74bb83c3.

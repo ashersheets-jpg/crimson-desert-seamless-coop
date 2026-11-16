@@ -5,7 +5,24 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-NOT POSTED YET: 0.1.0-alpha+430fe6be, for game 1.0.0.3663 (checklist passed: pp24 + the crime re-run pp24b; answers the testers' reports of
+NOT POSTED YET: 0.1.0-alpha+74bb83c3, for game 1.0.0.3663 (checklist pp25 running): everything in 430fe6be below,
+plus:
+- **Trade with your friend.** In your inventory, Discard on an item with your friend close now also offers "Offer
+  in a trade". When you have both offered something, both of you get "Accept: your <item> for <their item>" or
+  "Decline"; when you both accept, the two items swap bags (the host's game moves each one, as with Give). A decline,
+  leaving, or 2 minutes without an answer calls it off. Tested on one PC: Ricefish for Ricefish, both moves done.
+- **Giving works both ways on this game version.** The friend's "Give to <host>" is tested now too, and the item
+  shows up in the other bag (before, only the host's give had been seen on 1.0.0.3663).
+- **Wagers on challenges.** From the moment a challenge is sent, the same Discard question offers "Stake on the
+  challenge". If you both staked, the loser's item goes to the winner when the match ends; if only one of you
+  staked, or the challenge ends without a result, nothing changes hands. Tested on one PC with rock, paper,
+  scissors.
+- **Fixed: during rock, paper, scissors your inventory's buttons did nothing.** The match takes the pad's X / Y / B
+  as hands and hid them from the game, even with the inventory open; it no longer does while a game menu is open
+  (and a press there is no longer counted as a hand).
+- The co-op menu's entry is now "Give or trade an item".
+
+NOT POSTED (superseded by 74bb83c3): 0.1.0-alpha+430fe6be, for game 1.0.0.3663 (checklist passed: pp24 + the crime re-run pp24b; answers the testers' reports of
 16 Nov on the experimental "Story scenes together"):
 - **No black screen after a shared cutscene.** With story scenes together, the mod still copied the host's story
   scenes into the friend's game when the friend had not reached that step yet; the host's next cutscene, copied
