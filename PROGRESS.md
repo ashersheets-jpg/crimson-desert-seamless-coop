@@ -7754,3 +7754,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   (user2_stages_logic.h:456-470). Unknown: an event started by the guest alone; quest-gauge / camp-clear credit for
   the guest; a second event spot. cs27a (scratchpad cs27.sh, 23:27): the windridge save at Wind Cliff Fort
   ("Reinforcements at Wind Cliff Fort", 0xF4CCD, never captured), both there ~2.5 min, npcs 40 every 9 s.
+- 23:33 cs27a: did not reach the fort: Start Co-op's default choice 1 (Continue Our Co-op Save) loaded the test co-op
+  world (both at the bandits save's start, -10350 / -3919); no event, no fight. SAVES OK, 5/5. cs27b (23:35):
+  -HostChoice 2 (Start From My Solo Progress = the host's windridge save), the test co-op world backed up and put
+  back as the checklist's hostrevive step does.
