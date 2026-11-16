@@ -7859,3 +7859,18 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   talk to 0xB0100111 at 14:01:47 went through (2308). The check is in Denuvo's .xtls (never hooked). Options: (a) the
   guest is told "your friend is talking to them, wait" and its talk is retried when the NPC is free; (b) per-player
   copies of story NPCs (big). (a) first, after the cutscene tests.
+- 04:20 cs28a (03:07-03:22; scratchpad cs28.sh: the cabin ready check, shots through the cinematics): SAVES OK, user
+  install restored 5/5, test co-op world back identical, no game left. NOT the baseline it was meant to be: the
+  harness copies cdmp.asi from upstream/cdmp-native/build (twocopy.ps1 line 76), which my 03:3x compile had already
+  replaced, so cs28a ran the FIX (781dba6) with the posted layer. The fix works in it: every host story scene was
+  "not copied to the guest: story scenes are each player's own (user 2 has not reached it)" (0310_00 / _dlc /
+  _01 / _06 / _11 / _15, 0320, 0340, 0360, 0300_01, trigger, weather), the non-story ones still copied (bgm_*,
+  cd_seq_contents_weather_*). Both cabin cinematics played (host 03:17:55-03:18:28, guest 03:17:56-03:18:30), so
+  dropping the host's cabin snapshot copy did not stop the guest's own. The guest's shots missed its cinematic again
+  (the harness runs the guest's keys to the end before the host's, and the cinematics start at the host's press);
+  cs28b shoots the guest from a watcher after the host's press. The host's shots: its cabin "cutscene" plays in the
+  world (subtitles, no camera cut), comrades too far to judge.
+- 04:20 Bug 2 message (native e87acb2, layer 55cf22a, built): the sniffer counts this client's 2946 refusals with the
+  busy-NPC error (other errors logged, 20), cdmp_interaction_refused; the layer shows "They are busy with <friend>
+  right now. Try again when <friend> is done" (5 s, at most every 10 s) and logs each refusal. Not tested in a game
+  yet (synthetic input cannot open an NPC talk: the hands-on list).

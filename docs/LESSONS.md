@@ -281,3 +281,7 @@ topic BEFORE testing or guessing about it.
   check needed a bandit not yet fighting beside the guest, which depended on how long the host stood there first.
   When the change cannot plausibly reach what failed, take more samples of BOTH builds before blaming one, and fix
   the step's dependence on chance (here: the host now arrives 40 s later).
+- The two-copy harness runs the DLLs of the BUILD folders (cdmp.asi from upstream/cdmp-native/build, the layer from
+  build-native-layer), not the package named by -PackageIni (only its coopplus.ini). A "baseline on the posted
+  package" needs that package's DLLs put in the build folders first, and any compile in between changes what the
+  next test runs. Say in PROGRESS which DLLs a run had (cs28a ran a fix that was meant to be absent).
