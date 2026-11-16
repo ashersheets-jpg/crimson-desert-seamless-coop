@@ -169,12 +169,34 @@ uint64_t now_us() {
 // this client's interaction packets, one line each, to compare with the host's own (PreemptionStep 3008 / 2120 / 3100,
 // DoStep 3073 / 2794, DoInteraction 2980, Reset 2887 / 2369). Rare (an E press); 400 lines at most.
 std::atomic<uint32_t> g_ia_lines{0};
+// Co-op+ 2026-11-16 (the testers' bug 2): this client's InteractionPreemptionStepFailAck 2946 with the busy-NPC error
+// (0x58C8345D: the server lets one player at a time preempt an NPC, .xtls 0xE401150; the guest's 11 refusals at the
+// NPC the host was talking to). The layer reads the count (cdmp_interaction_refused) and says why.
+constexpr uint32_t kBusyNpcError = 0x58C8345D;
+std::atomic<int> g_refused{0};
+std::atomic<uint32_t> g_refused_npc{0}, g_refused_err{0};
 void interaction_line(Dir dir, const uint8_t* pkt, uint16_t size) {
     uint16_t op = 0;
     if (!guarded_copy(&op, pkt, 2)) return;
     switch (op) {
         case 2642: case 2304: case 2751: case 2308: case 2946: case 2363: case 2160: case 2930: break;
         default: return;
+    }
+    // 2946: u16 op | i8 | u16 len | u32 requester | u32 NPC | u32 interaction | u32 native error @12 (shop_probe_logic.h)
+    if (op == 2946 && dir == Dir::ServerToClient && size >= 5 + 16) {
+        uint32_t f[4] = {};
+        if (guarded_copy(f, pkt + 5, sizeof f)) {
+            if (f[3] == kBusyNpcError) {
+                g_refused_npc.store(f[1], std::memory_order_relaxed);
+                g_refused_err.store(f[3], std::memory_order_relaxed);
+                g_refused.fetch_add(1, std::memory_order_release);
+            } else {
+                static std::atomic<int> said{0};
+                if (said.fetch_add(1) < 20)
+                    log::info("Sniffer: an interaction refused with another error: NPC 0x{:08X} interaction 0x{:X} error 0x{:08X}",
+                              f[1], f[2], f[3]);
+            }
+        }
     }
     if (g_ia_lines.fetch_add(1, std::memory_order_relaxed) >= 400) return;
     uint8_t b[48] = {};
@@ -952,7 +974,20 @@ bool sniffer_install(const std::wstring& dir, HANDLE stop, bool record) {
     return true;
 }
 
+int interaction_refused(uint32_t* npc, uint32_t* err) {
+    const int n = g_refused.load(std::memory_order_acquire);
+    if (npc) *npc = g_refused_npc.load(std::memory_order_relaxed);
+    if (err) *err = g_refused_err.load(std::memory_order_relaxed);
+    return n;
+}
+
 }  // namespace cdmp::net
+
+// Co-op+ 2026-11-16: how many of this client's interactions the server refused because the NPC was busy with another
+// player (the last one's NPC and error); the layer tells the player.
+extern "C" __declspec(dllexport) int cdmp_interaction_refused(uint32_t* npc, uint32_t* err) {
+    return cdmp::net::interaction_refused(npc, err);
+}
 
 // Co-op+ on the native base: the Co-op+ layer (coopplus.asi, its own sniffer off) asks this sniffer to send a client
 // request (5-byte header + payload) the way it used to ask its own (revive, duel hits, give-backs). The same queue
