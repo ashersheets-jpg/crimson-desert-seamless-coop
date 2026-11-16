@@ -8016,3 +8016,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   at Trembling Gorge (-9004, -5064) beside the guest in every guest shot after it (08:57:51-08:58:16, "Host 1 m").
   The same press called Blackstar for the guest in cs18b. cs32b (09:03): the host holds Up 8 s alone first, with a
   watcher shooting the host's window every second from its pad line (what its wheel offers), then the call.
+- 09:12 cs32b: SAVES OK, 5/5, test co-op world back. The host's watcher shots (shots/cs32b-sheet.png): the host's
+  wheel offers BLACKSTAR (Kliff, Damiane, the horse, the dragon), and after the 8 s hold the down-left press called
+  it: the host mounts and FLIES Blackstar in the shared world (hw-12..16). cs32a's single press without the hold did
+  not register. The guest got no shots (the run's 100 s hold ended first). cs32c (09:15; scratchpad cs32c.sh, Hold
+  240): the guest teleports to the host's character 75 s into its script (after the host's take-off) three times,
+  camera up, with a watcher shooting each window every second.
