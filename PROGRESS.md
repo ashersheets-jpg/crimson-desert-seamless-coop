@@ -8215,3 +8215,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   radmin-lock fix (lobby_native_reset_stale: with co-op off or the build refused, a co-op mode without a fresh
   restart is set back to Solo for the next launch; mod.cpp / coop_lobby.cpp). Layer built 16:58 (known warnings
   only). cs39b started 17:00.
+- 16:52 cs39b (B16): FOUND the photo-mode flag. gdiff over every writable section at six stages; two bytes follow
+  Photo Mode exactly: exe+0x72A6C24 (00 play, 00 menu, 01 photo, 01 photo, 00 menu after, 00 play after) and its
+  inverse exe+0x72AE3FC (01 / 01 / 00 / 00 / 01 / 01). Layer: game::photo_mode_active() reads both (they must
+  disagree), offsets_3663.h kPhotoMode / kPhotoModeOff; hud_draw draws nothing while it is on (partner frame, name
+  tag, hold prompt; the prompt's input is not read there either) and logs "Hud: the game's Photo Mode opened /
+  closed". Built 17:05. cs38e checks it.

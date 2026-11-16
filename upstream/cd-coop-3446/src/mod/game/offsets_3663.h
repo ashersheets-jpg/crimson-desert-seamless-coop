@@ -155,6 +155,10 @@ inline constexpr uintptr_t kCameraSlot = 0x71602A8;  // 3549:0x70DA028, 2/2
 inline constexpr uintptr_t kStaticPlayerPos = 0x7253E60;  // 3549:0x71CD0B0, 2/2
 inline constexpr uintptr_t kChunkOrigin = 0x7231330;  // 3549:0x71AA150, 8/8
 inline constexpr uintptr_t kCutscenePlaying = 0x7160116;  // 3549:0x70D9F14, 2/2
+// Co-op+ (2026-11-16, cs39b: .data diffs in play / menu / photo mode / menu / play): u8 1 only while the pause
+// menu's Photo Mode is open; kPhotoModeOff holds the inverse (0 only then). Read together, they must disagree.
+inline constexpr uintptr_t kPhotoMode = 0x72A6C24;
+inline constexpr uintptr_t kPhotoModeOff = 0x72AE3FC;
 inline constexpr uintptr_t kFieldTimeClient = 0x6F31C78;  // 3549:0x6EAB998, 6/6
 inline constexpr uintptr_t kMiniGameRoot = 0x7245218;  // 3549:0x71BDF48, 8/8
 inline constexpr uintptr_t kClientClockGlobal = 0x71600AD;  // 3549:0x70D9E3D, 8/8 cmp sites

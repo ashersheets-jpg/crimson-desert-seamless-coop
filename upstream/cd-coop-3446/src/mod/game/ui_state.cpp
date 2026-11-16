@@ -59,6 +59,14 @@ uintptr_t minigame_gauge_address() {
     return a;
 }
 
+bool photo_mode_active() {
+    const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    if (base != off::kImageBase) return false;
+    uint8_t on = 0, off_flag = 1;
+    if (!safe_read(base + off::kPhotoMode, &on, 1) || !safe_read(base + off::kPhotoModeOff, &off_flag, 1)) return false;
+    return on == 1 && off_flag == 0;
+}
+
 std::optional<bool> cutscene_playing() {
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     if (base != off::kImageBase) return std::nullopt;

@@ -272,6 +272,19 @@ void hud_draw(float width, float height) {
         }
         problem_fresh = g_problem_changed && GetTickCount64() - g_problem_changed < 15000;
     }
+    // Co-op+ (B16, 2026-11-16, cs38d): the game's Photo Mode keeps gameplay input on, and our partner frame, name
+    // tag and hold prompt were in the photo. Nothing of ours is drawn while it is open (the hold prompt's input is
+    // not read either, so a photo-mode press cannot open our menu).
+    {
+        static bool photo_was = false;
+        const bool photo = game::photo_mode_active();
+        if (photo != photo_was) {
+            photo_was = photo;
+            log::info("Hud: the game's Photo Mode {}: our overlay {}", photo ? "opened" : "closed",
+                      photo ? "hides" : "shows again");
+        }
+        if (photo) return;
+    }
     if (!plates_init) {
         plates_visible = opt.nameplates;
         plates_init = true;
