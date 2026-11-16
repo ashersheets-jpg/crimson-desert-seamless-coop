@@ -50,11 +50,24 @@ static std::vector<NpcRow> npcs_near(float radius, float from, std::optional<pro
     me = game::actor_world_position(capture_own_player_key());
     if (!me) return rows;
     const auto exe = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-    for (const auto& [key, variant] : enemy_loaded_variants()) {
+    // cs27d (2026-11-16): the single-record 2005s only (enemy_loaded_variants) missed the host server's batched records
+    // on the guest; every announced 0xB key is a candidate too (variant 0 when not known), counted only when the game
+    // has the actor (its position reads).
+    std::vector<std::pair<uint32_t, uint32_t>> cands = enemy_loaded_variants();
+    {
+        std::vector<uint32_t> have;
+        have.reserve(cands.size());
+        for (const auto& c : cands) have.push_back(c.first);
+        std::sort(have.begin(), have.end());
+        for (const uint32_t k : enemy_announced_world_keys()) {
+            if (!std::binary_search(have.begin(), have.end(), k)) cands.emplace_back(k, 0u);
+        }
+    }
+    for (const auto& [key, variant] : cands) {
         if ((key >> 28) != 0xB) continue;
-        ++loaded;
         const auto at = game::actor_world_position(key);
         if (!at) continue;
+        ++loaded;
         const float dx = at->x - me->x, dy = at->y - me->y, dz = at->z - me->z;
         const float d = std::sqrt(dx * dx + dy * dy + dz * dz);
         if (d > radius || d < from) continue;
@@ -148,6 +161,10 @@ static void log_npcs_near(float radius, float from) {
         log::info("Dev script: npc 0x{:08X} variant 0x{:08X}{}{} | {:.1f} m | hp {:.0f}/{:.0f} | at ({:.1f}, {:.1f}, {:.1f})",
                   r.key, r.variant, animal ? " " : "", animal ? animal : "", r.d, r.hp, r.hp_max, r.at.x, r.at.y, r.at.z);
     }
+    // Every key in range on one line (the two games' sets compared by key), 120 at most.
+    std::string all;
+    for (size_t i = 0; i < rows.size() && i < 120; ++i) all += std::format("{}{:X}", i ? " " : "", rows[i].key);
+    log::info("Dev script: npc keys {:.0f}-{:.0f} m ({}): {}", from, radius, rows.size(), all);
 }
 namespace {
 

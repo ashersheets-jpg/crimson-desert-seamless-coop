@@ -1121,6 +1121,16 @@ std::vector<std::pair<uint32_t, uint32_t>> enemy_loaded_variants() {
     return out;
 }
 
+std::vector<uint32_t> enemy_announced_world_keys() {
+    std::lock_guard lock(g_mutex);
+    std::vector<uint32_t> out;
+    out.reserve(g_known.size());
+    for (const auto& [key, type] : g_known) {
+        if ((key >> 28) == 0xB && (type == 3 || type == 6)) out.push_back(key);  // the NPC record types (as g_loads)
+    }
+    return out;
+}
+
 uint32_t enemy_copy_of(uint32_t key) {
     std::lock_guard lock(g_mutex);
     auto c = g_sent.find(key);
