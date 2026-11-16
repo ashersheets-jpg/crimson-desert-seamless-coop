@@ -8011,3 +8011,8 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   (ui_state.cpp, ui_menu_open), which photo mode most likely sets: to check in a run. The design question (emotes
   from the game's own animations, or group photo only) is on the waiting list. Also found: the layer already draws a
   boss bar for the guest (hud.cpp boss_bar, from before the native world); B07 still needs a run at a real boss.
+- 09:01 cs32a (the host on wyvern-egg-dragon, -HostChoice 2): SAVES OK, 5/5, test co-op world back, both alive. The
+  host's call did NOT happen: its pad press (Up + stick down-left 2.5 s, 08:57:24, pad_sim on) left it on the ground
+  at Trembling Gorge (-9004, -5064) beside the guest in every guest shot after it (08:57:51-08:58:16, "Host 1 m").
+  The same press called Blackstar for the guest in cs18b. cs32b (09:10): the host holds Up 8 s alone first, with a
+  watcher shooting the host's window every second from its pad line (what its wheel offers), then the call.
