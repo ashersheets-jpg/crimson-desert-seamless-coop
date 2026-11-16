@@ -8197,3 +8197,8 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - 16:19 cs37c: the focus-free capture WORKS (pwshot ok=True x16, 16:18:38-47): the host's real frames while the
   guest's keys swing in the guest's window. This makes simultaneous two-window checks possible (B18, B20 visuals).
   This run's host frames show the host's own fight; the guest was 12 m away, off screen.
+- 16:32 cs38d (B16): Photo Mode OPENS by pad (Others -> Photo Mode, A) and shows both characters side by side, with
+  the game's own controls (Hide UI, Capture, focal length, aperture, depth of field...). BUT three of OUR overlays stay
+  in the shot: the partner frame (top left, "Host 1 m"), the name tag over the host, and the "Interact" prompt. The
+  game's "gameplay input" flag stays on in photo mode, so ui_menu_open() does not see it. cs39a (16:40): gsnap / gdiff
+  of the guest's .data in play, menu, photo mode (twice), menu, play, to find a photo-mode flag.
