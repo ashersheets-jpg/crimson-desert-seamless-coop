@@ -8034,3 +8034,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   Lesson noted. Side check: both games list the same animals at the start spot (deer 0xB01000E3-E7, iguana, oriole,
   lancehead at the same positions; the guest's reader shows no variant names). cs32e (09:39): the watcher shoots the
   host's window from its hold to 14 s after the call, then the guest's.
+- 09:51 cs32e: SAVES OK, 5/5, test co-op world back, both alive. With the host's window in front during the hold and
+  the call, the HOST FLEW Blackstar (its own list 13 s after the call from (-8993, 512, -5008), 33 m up; host shots:
+  riding it over Trembling Gorge). The focus explanation holds (2 of 2 with focus, 0 of 2 without). The guest's
+  shots (camera at the ground, its window in the background when its own camera step ran) show only trees: what
+  the guest sees of the flying host is still open. cs32f (09:52): the guest teleports to the host 62 s into its
+  script, after the watcher has put its window in front, then turns its camera up; 40 guest shots.
