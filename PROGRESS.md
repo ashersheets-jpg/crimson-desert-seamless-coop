@@ -7826,3 +7826,26 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   * Name tags "improved": the 0245f27d fix seen by the testers.
   Next (after the owner's play, game tests allowed again): reproduce bug 3 on one PC (the host talks on into the next
   scene while the guest's cinematic plays), and look at the restore substitution inside the guest's own cinematic.
+- 03:00 THE OWNER IS DONE PLAYING ("the PC is all yours"): game tests allowed again. Next: the two cutscene leads from the 16 Nov tester zips (the host-scene copy, the restore substitution), then a one-PC repro.
+- 03:30 THE TESTER ZIPS, SECOND READ (corrections to 00:40):
+  * Bug 3 (black screen) is the host's NEXT step's cinematic: at 14:07:02-03 the host's copy sent user 2 its
+    'cd_seq_quest_intro_0100_dlc' (0x241, 26 NPCs) with 0x248 / 0x249 / 0x24A (0100_01_dlc / _02 / _03); the guest's
+    own cinematic (14:05:54-14:07:05) ended 2 s later, while the host's 0100 cinematic played (14:07:02-14:07:30):
+    exactly the testers' "the host is still in another one when ours ends". story_gate_skip_copy skipped a host story
+    scene only when user 2's manager had prepared its own copy (it skipped 0310_00 / _dlc, 0340, 0360, 0330, 0010 ...);
+    user 2 was one step behind and had no 0100 yet, so it was copied. (0x23F, 14:06:03, is not a story scene by name:
+    no '[prepared]' line; it binds only the host's character.) The "Boss: the host entered a stage cinematic" lines in
+    the guest's log are the guest's OWN cinematic (same moments as "Activity: our cutscene started").
+  * Also: the host's cabin cinematic 0x1CB was copied to the guest as a SNAPSHOT at 14:00:54 (before user 2 prepared
+    its own at 14:01:18), so the guest's X held the host's cabin cinematic beside its own.
+  * Bug 1 (static NPCs) lead: user 2's own cabin cinematic 0x1CE binds user 2's OWN comrade instances 0xB01001F4 /
+    F5 / F6 (the host's binds 0xB0100115 / 116 ...). They were announced to the guest at 14:01:18 in the middle of a
+    seq_bodyanim action, before the guest's cinematic was released (14:01:30), so GuestSeqRestore gave them the idle
+    wait (the 3 substitutions at 14:01). They are controlled by the host's user (0x90100000), whose game has no such
+    scene. Not known yet: whether the guest's cinematic animates them when it plays (no one-PC shot was ever taken
+    INSIDE the guest's cabin cinematic: cs25a-g the last guest shots are 3 s before it starts).
+  * Fix 1 (native 781dba6, outer 6648412): with story scenes together (story_gate=hold), NO host story scene
+    (cd_seq_quest_*) is copied to the guest, by the id's prepared name or by the 2661's file-name hash; the skipped
+    ids' 2981s and 2810 are skipped too; the non-story host scenes copied are named in the log. Built (cdmp_mod ok).
+  Next: package, then cs28 (the cabin ready check with guest + host shots every 4 s through the cinematic) on
+  0245f27d (baseline: are the NPCs static here too?) and on the new package.
