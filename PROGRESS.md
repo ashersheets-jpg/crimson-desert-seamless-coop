@@ -7849,3 +7849,13 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     ids' 2981s and 2810 are skipped too; the non-story host scenes copied are named in the log. Built (cdmp_mod ok).
   Next: package, then cs28 (the cabin ready check with guest + host shots every 4 s through the cinematic) on
   0245f27d (baseline: are the NPCs static here too?) and on the new package.
+- 03:50 BUG 2 (no NPC interaction while the host is in a cutscene), from the guest's zip: the guest sent the same
+  InteractionPreemptionStepReq 2642 to NPC 0xB01000AC (interaction 0xA8) 11 times at 14:04:12-14:04:33 and got 11
+  InteractionPreemptionStepFailAck 2946 (native error 0x58C8345D, the code the shop research saw for a busy NPC).
+  0xB01000AC is bound in BOTH players' 0340 scenes (the host's 0x22 'cd_seq_quest_intro_0340_dlc', user 2's 0x1DB),
+  and the host was in that step's talk / scenes then (its 0340_01 / 0340 at 14:04:08-14:04:31). The server lets one
+  player at a time preempt an NPC (.xtls 0xE401150, docs/research/s25/s46-datos/nativo.md section 3: the second gets
+  the fail while the first has not finished) -- so it is "the NPC the host is talking to", not every NPC: the guest's
+  talk to 0xB0100111 at 14:01:47 went through (2308). The check is in Denuvo's .xtls (never hooked). Options: (a) the
+  guest is told "your friend is talking to them, wait" and its talk is retried when the NPC is free; (b) per-player
+  copies of story NPCs (big). (a) first, after the cutscene tests.
