@@ -5,6 +5,10 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- 2026-11-16 05:05 MAY I POST 0.1.0-alpha+430fe6be once its checklist (pp24, all 22 steps, started 05:05, ~3 h)
+  passes? It answers the testers' cutscene reports of 16 Nov: no host story scene copied into the friend's game (the
+  black screen), a message when the friend is busy with an NPC, the friend's panel moved off the game's region panel.
+  Text: docs/release/shared-world-playtest/download-430fe6be.txt (1765 chars). Not posted; a post needs your OK.
 - 2026-11-16 03:45 A DESIGN QUESTION (not urgent; I go on with other work meanwhile): story scenes that start from a
   TALK. The testers' run showed the ready check only waits at the first scene of a step (walking into it); after the
   cabin the host talked on and played 8 more scenes alone. Extending the wait to talks meets a rule of the game's
@@ -7941,3 +7945,5 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   So neither the prologue's story scenes nor touring places learn knowledge here; the grant is UNVERIFIED (default
   0, not in the release ini). It needs a moment where the game teaches a knowledge (a talk, a book, an observed
   skill): joins the hands-on list. Parked; B04 stays [~].
+- 05:05 Package 0.1.0-alpha+430fe6be (native 9160d19 = the copy fix + busy count + knowledge_grant OFF; layer: busy
+  toast, frame top left, npcs fix). pp24 (all 22 steps) started on it.
