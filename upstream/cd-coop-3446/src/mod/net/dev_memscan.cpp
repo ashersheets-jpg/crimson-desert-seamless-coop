@@ -436,6 +436,58 @@ void dev_gdiff(int tag) {
 
 }  // namespace cdmp::net
 
+// ---- vtscan (2026-11-16, B16: where does the game keep its current UI phase, e.g. UIPhaseData_PhotoMode?) --------
+namespace cdmp::net {
+namespace {
+bool rd8(uintptr_t a, uint64_t& v) noexcept {
+    __try {
+        v = *reinterpret_cast<const uint64_t*>(a);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+bool plausible(uint64_t p) { return p >= 0x10000 && p < 0x7FFFFFFFFFFFull && (p & 7) == 0; }
+}  // namespace
+
+void dev_vtscan(uint32_t vtable_rva) {
+    const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    const uint64_t vt = base + vtable_rva;
+    const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
+    const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(base + dos->e_lfanew);
+    const IMAGE_SECTION_HEADER* sec = IMAGE_FIRST_SECTION(nt);
+    int direct = 0, deep = 0;
+    size_t looked = 0;
+    for (WORD s = 0; s < nt->FileHeader.NumberOfSections; ++s, ++sec) {
+        if (!(sec->Characteristics & IMAGE_SCN_MEM_WRITE) || (sec->Characteristics & IMAGE_SCN_MEM_EXECUTE)) continue;
+        const uintptr_t at = base + sec->VirtualAddress;
+        std::vector<uint8_t> bytes;
+        read_pages(at, sec->Misc.VirtualSize, bytes);
+        for (size_t i = 0; i + 8 <= bytes.size(); i += 8) {
+            uint64_t p = 0;
+            std::memcpy(&p, bytes.data() + i, 8);
+            if (!plausible(p)) continue;
+            ++looked;
+            uint64_t v = 0;
+            if (!rd8(p, v)) continue;
+            if (v == vt) {
+                if (++direct <= 40) log::info("Dev vtscan: exe+0x{:X} -> object 0x{:X} (vtable exe+0x{:X})", at - base + i, p, vtable_rva);
+                continue;
+            }
+            for (uint32_t f = 0; f < 0x400; f += 8) {
+                uint64_t q = 0, w = 0;
+                if (!rd8(p + f, q) || !plausible(q) || !rd8(q, w) || w != vt) continue;
+                if (++deep <= 40)
+                    log::info("Dev vtscan: exe+0x{:X} -> 0x{:X} +0x{:X} -> object 0x{:X} (vtable exe+0x{:X})", at - base + i, p, f, q,
+                              vtable_rva);
+            }
+        }
+    }
+    log::info("Dev vtscan exe+0x{:X}: {} direct, {} through one more pointer ({} plausible pointers looked at)", vtable_rva,
+              direct, deep, looked);
+}
+}  // namespace cdmp::net
+
 // ---- ptrscan (2026-11-05): which globals point at an actor (or its component table) -----------------------------
 #include "mod/game/actor_lookup.h"
 #include "mod/game/offsets.h"

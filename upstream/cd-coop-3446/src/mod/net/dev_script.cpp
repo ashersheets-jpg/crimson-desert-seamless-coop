@@ -169,7 +169,7 @@ static void log_npcs_near(float radius, float from) {
 namespace {
 
 struct Step {
-    enum Kind { C2S, S2C, Wait, Teleport, Poke, Time, Watch, Day, Pad, KillGame, KillAll, MemScan, MemDiff, MemWatch, Advance, FScan, FFilter, FWatch, WaitFile, DScan, DFilter, DWatch, GSnap, GDiff, PtrScan, WatchStatus, Key, ClockScan, RideHorse, PrologueDone, GrantXp, GuestHit, DumpItemMove, TpActor, Npcs, KillNear, LootLast } kind;
+    enum Kind { C2S, S2C, Wait, Teleport, Poke, Time, Watch, Day, Pad, KillGame, KillAll, MemScan, MemDiff, MemWatch, Advance, FScan, FFilter, FWatch, WaitFile, DScan, DFilter, DWatch, GSnap, GDiff, VtScan, PtrScan, WatchStatus, Key, ClockScan, RideHorse, PrologueDone, GrantXp, GuestHit, DumpItemMove, TpActor, Npcs, KillNear, LootLast } kind;
     uintptr_t addr = 0;
     float to[3] = {};
     uint16_t op = 0;
@@ -463,6 +463,14 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
             steps.push_back(st);
             continue;
         }
+        if (kind == "vtscan") {  // vtscan <hex vtable rva>: globals pointing at such an object (dev_memscan.h)
+            std::string a;
+            in >> a;
+            st.kind = Step::VtScan;
+            st.addr = static_cast<uintptr_t>(std::stoull(a, nullptr, 16));
+            steps.push_back(st);
+            continue;
+        }
         if (kind == "memdiff") {  // memdiff: which bytes around the memscan matches changed since
             st.kind = Step::MemDiff;
             steps.push_back(st);
@@ -699,6 +707,8 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                 dev_gsnap();
             } else if (st.kind == Step::GDiff) {
                 dev_gdiff(static_cast<int>(st.wait_ms));
+            } else if (st.kind == Step::VtScan) {
+                dev_vtscan(static_cast<uint32_t>(st.addr));
             } else if (st.kind == Step::MemDiff) {
                 dev_memdiff();
             } else if (st.kind == Step::MemWatch) {

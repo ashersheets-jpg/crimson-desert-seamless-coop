@@ -37,6 +37,9 @@ void dev_gsnap();
 // Co-op+ dev: where the game keeps its client clock: writable data that advances like a clock (logged).
 void dev_clockscan();
 void dev_gdiff(int tag);
+// vtscan <hex vtable rva> (2026-11-16, B16): which globals (every writable, non-executable section) point at an
+// object with this vtable, directly or through one more pointer (object fields 0..0x400). Log only.
+void dev_vtscan(uint32_t vtable_rva);
 // Every 8-aligned qword in .data equal to the actor of `key` (or its component table), logged as exe offsets.
 void dev_ptrscan(uint32_t key);
 // Hardware write watch (dev_watch.h) on our own player's status component + offset.

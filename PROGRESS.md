@@ -8255,3 +8255,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   The aggression difference (cs40a / b: bandits mostly hit the host) stands.
 - 17:58 cs38f: the cs39c bit (exe+0x72880A7) is a TIMER too: the layer logged it "open" for 6 s every 30 s from
   17:52 on, photo mode or not. cs39d: long stages (20 s play, menu, 10 s photo, menu, 32 s play, ~1 sample/s).
+- 18:09 cs39d (20 s play, 10 s photo, 32 s play, ~1 sample/s): NO steady byte in the exe's writable sections follows
+  photo mode; the 19 survivors are bytes of pointers. The state lives in heap objects. The exe's RTTI is intact
+  (scratchpad rtti_vtable.py on the 3663 exe): pa::UIPhaseData_PhotoMode vtable exe+0x599C3A8,
+  pa::uiCommonScript::UIGamePlayControlPhotoMode vtable exe+0x5B08898. New dev command `vtscan <vtable rva>`
+  (dev_memscan.cpp): globals that point at such an object, directly or one pointer deeper. cs41a: vtscan in play,
+  in photo mode, in play after. (The writable sections on 3663: '.sxdata' 8.8 MB and '.xcode' 560 bytes.)
