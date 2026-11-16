@@ -9,7 +9,7 @@ test save Out, shipped cdmp.ini restored.
 - 2026-11-15 20:40 FOR YOU (not answered by me): in #general, ByJunter (16:55 UTC) asked "Is this person someone from
   this group?" and squidbots32 linked a Spanish article (evelongames.com, "mod cooperativo crimson desert 2026") and
   asked whether they are passing the mod off as their own. Not opened, not replied to.
-- 2026-11-15 17:00 MAY I POST 0.1.0-alpha+0245f27d once its checklist (pp22, running, ~3 h) passes? It answers the
+- (ANSWERED 19:10, POSTED 20:43) 2026-11-15 17:00 MAY I POST 0.1.0-alpha+0245f27d once its checklist (pp22, running, ~3 h) passes? It answers the
   two tester reports of 15 Nov: the shared-cutscene setting (and two others) never showed on the Co-op page; the name
   tag ran up to 1.8 m ahead of a sprinting friend. Also: Give to the friend on New Co-op Saves, weather and time of day
   follow the host, Blackstar checked. Text: docs/release/shared-world-playtest/download-0245f27d.txt (1617 chars).
@@ -7681,3 +7681,6 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   x4 / tp -10239 546 -3957 / wait 3000): the host reaches the camp ~40 s after its script, about when the guest's
   keys start. cs24a/b/c on 0245f27d: 43/43 each, guest crimes booked and skipped 22 / 33 / 24 (pp15-pp21: 18-26).
   The package is unchanged, so no smoke set.
+- 21:20 B09 past the cabin: cs25a (scratchpad cs25.sh) = cs8j's ready check at the cabin on 0245f27d (story switches
+  as in cs8j), then both games watched ~3 min after both pressed (shots every 20 s): how long the cabin scene runs,
+  what the story asks next, whether a second story trigger comes up and what the gate says there. Measurement only.
