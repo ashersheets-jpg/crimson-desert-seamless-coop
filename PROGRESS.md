@@ -8221,3 +8221,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   disagree), offsets_3663.h kPhotoMode / kPhotoModeOff; hud_draw draws nothing while it is on (partner frame, name
   tag, hold prompt; the prompt's input is not read there either) and logs "Hud: the game's Photo Mode opened /
   closed". Built 17:05. cs38e checks it.
+- 17:03 cs38e: the cs39b "flag" is NOISE. The layer logged ~880 open / close flips of the byte pair, every ~25 ms,
+  from the guest's loading on (16:58:35); during Photo Mode it read closed from 17:01:59 on, and shot g13 (still in
+  photo mode) shows the partner frame and the name tag again (g12 happened to catch an "open" moment). One sample per
+  stage is not enough. The build folder's layer flickers the overlay now (NOT packaged; 74bb83c3 is not affected).
+  cs39c (next): several gdiffs per stage (3 play, 2 menu, 4 photo, 2 menu, 3 play), a candidate must hold one value
+  in all four photo samples and never that value elsewhere. Meanwhile cs40a / cs40b (B18 damage, below) run.
