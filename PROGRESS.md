@@ -5,6 +5,15 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- 2026-11-16 03:45 A DESIGN QUESTION (not urgent; I go on with other work meanwhile): story scenes that start from a
+  TALK. The testers' run showed the ready check only waits at the first scene of a step (walking into it); after the
+  cabin the host talked on and played 8 more scenes alone. Extending the wait to talks meets a rule of the game's
+  server: only ONE player at a time can talk to an NPC (the friend's talk to the NPC you are talking to is refused;
+  the testers' "can't interact during the host's cutscene"; the next build says so on screen). So a talk scene cannot
+  play for both at once. Choices: (1) the talk waits for both, then the host talks and the friend gets that step done
+  with it (shared credit, the friend does not see the talk); (2) the talk waits for both, the host talks first, then
+  the friend talks to the same person themselves (each sees it, one after the other; a prompt tells the friend when);
+  (3) leave talks as they are (each player talks in turn, no waiting). I would pick (2).
 - 2026-11-15 20:43 DONE: 0245f27d posted in #download-here (owner's "Yes" of 19:10). The next post needs a new OK.
 - 2026-11-15 20:40 FOR YOU (not answered by me): in #general, ByJunter (16:55 UTC) asked "Is this person someone from
   this group?" and squidbots32 linked a Spanish article (evelongames.com, "mod cooperativo crimson desert 2026") and
