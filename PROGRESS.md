@@ -7676,3 +7676,8 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - How: as before (the app's browser pane, signed in, no sign-in asked; upload-staging into window.name, cleared
   after; File objects on the composer's input; a synthetic paste; Enter). No test was running. The OK: the owner's
   "Yes" of 19:10. The next post needs the owner's OK again.
+- 20:45-21:13 crime step, test kit only (tools/prepost.sh 0707823): the host's script is now
+  build/native/scan/crime_host_late.txt (4 x wait 10000, then the same teleport; build/ is not in git, so: wait 10000
+  x4 / tp -10239 546 -3957 / wait 3000): the host reaches the camp ~40 s after its script, about when the guest's
+  keys start. cs24a/b/c on 0245f27d: 43/43 each, guest crimes booked and skipped 22 / 33 / 24 (pp15-pp21: 18-26).
+  The package is unchanged, so no smoke set.
