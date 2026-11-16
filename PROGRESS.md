@@ -8269,3 +8269,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   presses the dev-script hotkey, which RE-RUNS the loaded script. With a custom GuestScript (cs39 / cs41) every pad
   press restarted that script ("waitfile ... found" twice) and no press reached the game. So cs39b, cs39c, cs39d,
   cs41a and cs41b never had photo mode. cs41c: Esc and mouse clicks (Others tab, Photo Mode tile), no pad.
+- 18:39 cs41c: photo mode OPENED by Esc + mouse (shot g1: the photo sliders, keyboard prompts). vtscan still found no
+  global pointing at UIPhaseData_PhotoMode or UIGamePlayControlPhotoMode within two hops, in any stage. Also seen:
+  photo mode's keyboard Capture key is R, our Interact hold key (one more reason to hide our prompt there).
+  cs39e: the long-sample .data diff again, now really in photo mode (Esc + mouse, no pad).
