@@ -8583,7 +8583,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   the tick; (4) a 0.15 s key window. Swings go through ClientFrameEventSoundEvent with none of these (why they play).
   Next, after pp28 (no builds now): a read-only probe of those fields on the partner vs the local player (3663
   offsets to re-find), then the fix (give the partner the local player's ground material, or tick it ourselves).
-- 09:30 B20 probe written (native remote_interp.cpp, NOT built: pp28 runs): "RemoteInterp [footsteps]" every 10 s for
+- 09:22 B20 probe written (native remote_interp.cpp, NOT built: pp28 runs): "RemoteInterp [footsteps]" every 10 s for
   the first 3 min, the other player's character vs the local player: X+0x1FC, actor+0x108, X+0x17C, [X+0x140]+0x4A4,
   H+0xE8/+0xEC (3576 offsets; X = [[actor+0x68]+0x40]). After pp28: build, cs42-style run with the guest walking by
   the host, read the line.
