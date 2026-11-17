@@ -8353,3 +8353,15 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   * Estimate: 80-160 h (N server sessions with a user index in the tag, a per-user state table, every user-2 caller
     looping over users, per-user saves / identity, N peers in both transports, N partner frames, activity design).
     ROADMAP says B21 comes only once two-player play is stable; that is not the case yet (testers' reports open).
+- 23:02 pp26 (all 22 steps, f61f9fec): 862 pass, 2 fail, SAVES OK and 5/5 restored in every step.
+  * farfight and mountfight FAIL: the guest's blows never landed (guest>NPC 0 both clients; NPC>guest 13). Shot g1
+    of farfight: the guest swinging at the air with the bandits beside and behind it, as in cs40e. The fight rule
+    did nothing in either ("fought NPCs looked at 0": no NPC qualified), so it is not the cause. farfight2 passed.
+  * A REAL BUG the checks did not catch: "Hud: the game's Photo Mode opened" in EVERY step, 2-5 times per side,
+    without photo mode: while loading, ~10 s after the opening cutscene, while the friend's character arrives,
+    in some knock-downs / after a revive (2-17 s each). Our overlay hid then. The mode id 0xCB0A77 is not
+    photo-only (cs38i's guest log had one too, at the cutscene; I missed it).
+- 23:05 Fix (layer, built 23:06): the id counts only when it comes up as the pause menu closes (the menu open in the
+  last 2 s and closed now) and no cutscene in the last 3 s; otherwise it is ignored until it goes away, logged
+  "the photo-mode id came up outside the pause menu (...)". Photo mode is opened from the pause menu (Others).
+  cs38j: the pad photo path again on it.
