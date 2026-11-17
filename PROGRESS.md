@@ -8574,3 +8574,12 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   hours 15-9). FULL CHECKLIST pp28 started 08:56 (22 steps, ~5.5 h, to ~14:30): static real fresh newsave mounts
   xess fsr display lowsave chest revive loot crime farfight farfight2 mountfight nosave retry stuck mismatch
   hostrevive solostart. No builds, no harness edits, no focus-stealing while it runs; Discord by JS only.
+- 09:3x B20 footsteps, static research (research agent on the private 3576 decompile; build/decomp/notes_footsteps_remote.md,
+  never publish): footsteps are per-animation FootStepSound keys, ticked per frame (0x99FC50 -> 0x9451E0 -> 0x945CC0
+  -> ticker 0xB63F90 -> poster 0xB61BF0 -> 0x3B577D0 -> 0x3B56AF0 -> AK::SoundEngine::PostEvent). Gates: (1) the
+  poster drops a step whose ground material is 0 ([[X+0x140]+0x4A4], copied each frame from X+0x17C by 0x976B70,
+  which only runs when X+0x1FC != 1 and actor+0x108 > 0; X = [[actor+0x68]+0x40]): a network-placed character that
+  never runs its own ground probe would stay at 0 = silent; (2) a 30/60/100 m distance gate; (3) X+0x1FC == 1 skips
+  the tick; (4) a 0.15 s key window. Swings go through ClientFrameEventSoundEvent with none of these (why they play).
+  Next, after pp28 (no builds now): a read-only probe of those fields on the partner vs the local player (3663
+  offsets to re-find), then the fix (give the partner the local player's ground material, or tick it ourselves).
