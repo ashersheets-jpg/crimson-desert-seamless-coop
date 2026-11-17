@@ -8561,3 +8561,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   offsets and its synthetic MoveActorAck builder ported (native, built, not committed). cs45e: the cs45c run again.
   To check after: horse_follow / attach_follow are idle on 3663 for the same reason (whether they are on in the
   release and matter).
+- 08:53 cs45e B18 FIXED (combat_follow v2 ported, on the host; remote_interp_combat=1 on the guest; SAVES OK, 5/5):
+  moving enemies on the guest's screen 0.48 m / 0.22 s behind standing, 0.57 m / 0.31 s fighting (were 2.5-2.7 m
+  / 1.1 s); still ones 0.00-0.06 m. The stream: 29659 samples made, 0 refused, every size right (239 / 729), its
+  stamps within 20 ms of the real ones in 94 % (the clock port checks out); guest D mostly 120-200 ms, 2.1 % frames
+  with no sample ahead. Cost: tunnel 17.0 MB vs 14.2 MB compressed over the run (+20 %), backlog 0; errors as baseline.
+  Committed: native 8512218 (synced), layer ac99edc (release ini: host combat_follow=1 + combat_follow_v2=1, guest
+  remote_interp_combat=1). Test kit: crime checks the stream (made > 0, no wrong sizes); the MountSync self-check
+  known-warning line dropped (fixed in 9b0e3bf). Next: package with 9b0e3bf + 8512218 + ac99edc, full checklist.

@@ -321,7 +321,12 @@ crime)
   # (the host gets them too, tcB384) and are left alone on purpose; they are listed, not failed.
   hasnot "$H" "AntiGrief: crime type [0-9]+ of the guest .* on 0xB[0-9A-F]+ from exe\\+0x[0-9A-F]+ \\(a (hit|kill)\\).*(left to the game|punished too)" "no guest hit on an NPC at the bandit camp was booked as a crime"
   info "property crimes of the guest with an owner (the game's own rule, not a hit): $(grep -cE 'AntiGrief: crime type [0-9]+ of the guest .* on 0xB[0-9A-F]+ from exe\+0x[0-9A-F]+ \(another path\)' "$H")"
-  info "AntiGrief last summary: $(grep -h 'AntiGrief' "$H" | grep -v 'crime type' | tail -1 | cut -d']' -f3- | cut -c1-260)" ;;
+  info "AntiGrief last summary: $(grep -h 'AntiGrief' "$H" | grep -v 'crime type' | tail -1 | cut -d']' -f3- | cut -c1-260)"
+  # B18 (2026-11-17, cs45a-e): the combat stream sends the enemies fighting near the friend (they were ~1.1 s behind on
+  # its screen); on 3663 a MoveActorAck is 239 bytes (2976's 235 dropped every one, silently).
+  has "$H" "CombatFollow summary \\[1, v2\\].* made [1-9]" "B18: the combat stream sent the enemies near the friend"
+  hasnot "$H" "sizes to user 2: MoveActorAck [0-9]+ \\(not 239 B: [1-9]" "B18: every MoveActorAck to the friend has 3663's size"
+  info "B18 stream: $(grep -h 'CombatFollow summary' "$H" | tail -1 | grep -o 'decisions \[[^]]*\]' | cut -c1-200)" ;;
 farfight)
   # 2026-11-17 (pp26: farfight and mountfight, the guest swung at the air with the bandits beside and behind it;
   # 7 of 35 fight checks since pp11 failed that way): a mouse turn every 3 swings sweeps the guest around.
