@@ -8543,3 +8543,13 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   (MoveActorAck 3008, StartActionAck 2800, AttackTargetAck 2519, NotifyHandleDeadAck 2316, RemoveActorAck 3037: the
   by-name table build/port3663/troc_3576_3663.json); only its three clock addresses are 2976's. cs46a (08:2x): hardware
   write watches on the 3663 candidates 0x71600F0 / 0x71600E8 (frame clock, "3549" in ui_pause) and 0x7245468 (bias).
+- 08:19 cs46a: exe+0x71600F0 is the frame clock on 3663 (written once a frame by exe+0xC1668D, u64 us, +~24000 a
+  frame at the 40 fps cap); 0x71600E8 no writes in 30 s (the base). combat_follow's clocks ported (native, not
+  committed yet): 0x71600E8 / 0x71600F0 / 0x7245468.
+- 08:25 Discord: nothing new to answer (no feedback on 8a65cf2d yet; #general / #find-a-co-op-partner: players
+  arranging sessions). Next check ~11:30.
+- 08:30 cs45c (combat_follow=1 + v2=1 on the host, remote_interp_combat=1 on the guest; SAVES OK, 5/5): the stream
+  ran (v2 timer 33 ms, high resolution) but SENT NOTHING: "real samples of followed enemies 0", "no anchor yet
+  3311". Offsets unchanged (moving 1.9-2.3 m, lag ~1.05 s). Its parser takes a MoveActorAck only at exactly 235 B
+  and a StartActionAck at 725 B (2976's sizes; attach_follow / horse_follow assume the same). cs45d: the same with
+  counters of the sizes that reach user 2.
