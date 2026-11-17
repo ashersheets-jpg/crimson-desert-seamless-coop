@@ -8469,3 +8469,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   leaving the ground. Test causes, not the mod: the 12 m override (-GuestDev [coop]) never reached the ini the
   layer reads (no duel_ring_m in it), so the default 20 m held; and the guest walked 15 m in 8 s (about 2 m/s), never
   past 20 m (the rule wants 10 s outside in a row). cs43b: the same with a 25 s walk (about 50 m).
+- 06:27 cs43b (25 s walk; SAVES OK, 5/5): B15 DUEL GROUND WORKS. Both layers at the same ms: round 1 at
+  (-10349.4, 535.5, -3918.7) r 20 m; the guest "lost round 1 (out of the duel ground)" 26 s in (10 s outside in a
+  row); round 2 placed half way between the two (-10373.9, ..., -3915.7); the guest, standing 24 m from it, lost
+  round 2 after 10 s; "the Duel is over (we won 2 - 0)" / "(they won 0 - 2)". Note (small, mine to decide later): two
+  players over 40 m apart start the next round outside the ground and have 10 s (the on-screen countdown) to walk
+  in; fine for now. Test-kit note: -GuestDev [coop] keys do not reach the layer's ini (the 12 m override).
