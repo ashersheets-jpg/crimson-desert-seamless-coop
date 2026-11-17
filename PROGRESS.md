@@ -8311,3 +8311,8 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - 19:49 cs40g (fight rule, the guest fights, then the host): 8 hand-overs to the guest again, 0 failed, both fine;
   the way back NOT exercised: the host fought bandits 22-32 m from the guest's (its idle spot), not those. cs40h: the
   host teleports beside the guest (tpactor A0100066) when the guest's fight ends, then fights.
+- 19:59 cs40h (the guest fights, then the host teleports beside it and fights): THE WAY BACK WORKS. 7 hand-overs to
+  the guest, then "NPC 0xB01000D8 -> back to the host (host 0 m, other player 11 m; last hits: host 31 ms ago, other
+  player 44219 ms ago)" and the host's client "now runs NPC 0xB01000D8". 0 failed, both alive, SAVES OK, 5/5.
+  => ai_handoff_fight ON BY DEFAULT (native, built 20:01, synced to native-base). It needs a full checklist before
+  any post. Kills: host 4, guest 6.
