@@ -12,13 +12,9 @@ test save Out, shipped cdmp.ini restored.
   world and both of you are taken there (the "Go to my friend" travel), which needs places picked by eye on the map;
   (3) drop arenas. I would pick (1) now, (2) after the release if you want it. The spectator camera needs a third
   player (B21).
-- 2026-11-16 23:36 MAY I POST 0.1.0-alpha+8a65cf2d once its checklist (pp27: stopped at 23:54 for the owner's play,
-  4 of 22 steps done; to be resumed) passes?
-  It replaces f61f9fec (never posted: its checklist found our overlay hiding at loading, after cutscenes and when
-  the friend arrived, a false photo-mode signal; fixed and checked in cs38l). It is 74bb83c3 plus: enemies fight the
-  joining friend too (the AI hand-over fight rule, Borque's report), group photos without our tags or panels, and
-  the stuck-co-op-launch fix. Text: docs/release/shared-world-playtest/download-8a65cf2d.txt. Not posted; a post
-  needs your OK.
+- 2026-11-17 02:40 STANDING OK (owner, 02:3x): no OK needed to download testers' files from Discord, to post new
+  playtest builds to Discord (still only after the full checklist passes), or to download and reverse engineer
+  Nexus mods. So 8a65cf2d is posted by me once pp27 passes; no question waits on it.
 - 2026-11-16 23:54 DONE: Borque's two report zips downloaded (owner's "Yes, download both"; standing OK for
   tester reports from now on unless there is evidence of malware). Logs only. Reading them is under way.
 - 2026-11-16 16:23 DONE: 74bb83c3 POSTED in #download-here (owner's "Go ahead", 16:12). The next post needs a new OK. (Was: MAY I POST 74bb83c3? ITS CHECKLIST PASSED (pp25 863/864, then pp25c; 12:09-15:27).
@@ -8380,3 +8376,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   logs and report.txt only. They ran 0245f27d (older than 74bb83c3), scaling x1.50 (default). Host tally at the end:
   guest>NPC 282 blows, 10 kills; host>NPC 17, 2 kills; NPC>host 40 vs NPC>guest 9 (enemies ignoring the friend:
   the fight rule in 8a65cf2d is for that). The damage per blow is next.
+- 02:40 2026-11-17 Owner done playing; PC free. pp27 solostart's 1 FAIL was the harness: "game lost focus before
+  shot:pp27-solostart-g0" at 23:53 (the owner at the PC getting ready to play), so the end-of-run alive line never
+  printed. Not the mod; solostart runs again. Applied the fight-step sweep (a mouse turn every 3 guest swings in
+  farfight/farfight2/mountfight; 7 of 35 fight checks since pp11 failed with the guest swinging at the air).
+  pp27 resumed: newsave mounts xess fsr display lowsave chest revive loot crime farfight farfight2 mountfight
+  nosave retry stuck mismatch hostrevive solostart (~2 h 50 min).

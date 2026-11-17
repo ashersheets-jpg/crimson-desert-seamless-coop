@@ -323,13 +323,15 @@ crime)
   info "property crimes of the guest with an owner (the game's own rule, not a hit): $(grep -cE 'AntiGrief: crime type [0-9]+ of the guest .* on 0xB[0-9A-F]+ from exe\+0x[0-9A-F]+ \(another path\)' "$H")"
   info "AntiGrief last summary: $(grep -h 'AntiGrief' "$H" | grep -v 'crime type' | tail -1 | cut -d']' -f3- | cut -c1-260)" ;;
 farfight)
+  # 2026-11-17 (pp26: farfight and mountfight, the guest swung at the air with the bandits beside and behind it;
+  # 7 of 35 fight checks since pp11 failed that way): a mouse turn every 3 swings sweeps the guest around.
   head_step "a guest fights 108 m from the host: the host draws its bandits to the dock and leaves, the guest stays and swings"
   # The guest STANDS among the bandits for 24 s before it swings (it is at the dock 2 s after its script starts).
   # Until pp11 it swung after 7 s, and every swing steps forward: in pp8 and pp11 fifty swings carried it 58-60 m
   # out of the camp, three bandits dead and no blow taken, and "the guest lost health" failed on the scene's luck
   # (2 of 6 runs). What the step has to show is that a far NPC's blow takes the guest's health; standing still shows
   # it whatever the swings do afterwards.
-  GA=""; for i in $(seq 1 50); do GA="${GA}click:L:90_w:800_"; done
+  GA=""; for i in $(seq 1 50); do GA="${GA}click:L:90_w:800_"; [ $((i % 3)) -eq 0 ] && GA="${GA}move:350:0:10_w:200_"; done
   run2 "$BASE -Hold 10 -HostScript $SCAN\\ff_host_lure.txt -GuestScript $SCAN\\ff_guest_watch40.txt -GuestKeys w:26000_shot:$NAME-g0_${GA}shot:$NAME-g1_w:20000_shot:$NAME-g2 -HostKeys w:500_shot:$NAME-h0"; two_player_checks
   H=$N/$NAME.host.log
   has "$H" "DamageRange ON" "host: the damage range hook is in"
@@ -343,7 +345,7 @@ farfight2)
   # 2026-11-12 (of1-of3): the first far-fight fix read two registers of the wrong actor and still passed the 108 m
   # step, because the host stood 36 m away along one map axis. This placement differs along both axes.
   printf 'tp -10239 546 -3957\nwait 9000\nnpcs 40\nwait 9000\nnpcs 40\nwait 8000\nnpcs 40\ntp -10665 634.5 -3701\nwait 5000\nnpcs 30\n' > $N/scan/ff_host_lure430.txt
-  GA=""; for i in $(seq 1 50); do GA="${GA}click:L:90_w:800_"; done
+  GA=""; for i in $(seq 1 50); do GA="${GA}click:L:90_w:800_"; [ $((i % 3)) -eq 0 ] && GA="${GA}move:350:0:10_w:200_"; done
   run2 "$BASE -Hold 10 -HostScript $SCAN\\ff_host_lure430.txt -GuestScript $SCAN\\ff_guest_watch40.txt -GuestKeys w:26000_shot:$NAME-g0_${GA}shot:$NAME-g1_w:20000_shot:$NAME-g2 -HostKeys w:500_shot:$NAME-h0"; two_player_checks
   H=$N/$NAME.host.log
   has "$H" "DamageRange: on .* counted because another player was in range [1-9]" "hits 484 m from the host counted because the guest was in range"
@@ -429,12 +431,14 @@ mounts)
     has "$N/$NAME.$r.log" "MountSync summary .* published Begin [1-9][0-9]* Commit [1-9]" "$r: mounted (its mount was published to the other player)"
   done ;;
 mountfight)
+  # 2026-11-17 (pp26: farfight and mountfight, the guest swung at the air with the bandits beside and behind it;
+  # 7 of 35 fight checks since pp11 failed that way): a mouse turn every 3 swings sweeps the guest around.
   head_step "a mounted guest fights: it mounts at the dock while the bandits sleep, the host arrives and wakes them"
   # 2026-11-12 (mc1-mc4). The test's teleport does not move a mounted rider, so the guest mounts where the enemies
   # are before the host (whose quest they belong to) comes. Screenshots g1 / g2: the guest in the saddle in the fight.
   { printf 'tp -10243 546 -3955\nwait 2500\npad 0001 700\npad 0401 1300\npad 0400 400\nwait 5000\ntphorse\nwait 2500\nkey 45 200\nwait 5000\nnpcs 30\n'; for i in 1 2 3 4 5 6; do printf 'wait 9000\nnpcs 30\n'; done; } > $N/scan/mc4_guest.txt
   { printf 'wait 10000\nwait 10000\nwait 10000\nwait 10000\nwait 5000\ntp -10239 546 -3957\nwait 3000\nnpcs 30\n'; for i in 1 2 3 4 5 6; do printf 'wait 9000\nnpcs 30\n'; done; } > $N/scan/mc4_host.txt
-  GA=""; for i in $(seq 1 40); do GA="${GA}click:L:90_w:800_"; done
+  GA=""; for i in $(seq 1 40); do GA="${GA}click:L:90_w:800_"; [ $((i % 3)) -eq 0 ] && GA="${GA}move:350:0:10_w:200_"; done
   run2 "$BASE -Hold 10 -GuestDev pad_sim=1 -HostScript $SCAN\\mc4_host.txt -GuestScript $SCAN\\mc4_guest.txt -GuestKeys w:19000_shot:$NAME-g0_w:9000_shot:$NAME-g1_${GA}shot:$NAME-g2_w:2000_shot:$NAME-g3 -HostKeys shot:$NAME-h0"; two_player_checks
   H=$N/$NAME.host.log
   has "$N/$NAME.coopplus.guest.log" "Dev script: teleport beside actor 0xB[0-9A-F]+: \\(" "guest: its called horse was there"
