@@ -328,7 +328,14 @@ crime)
   # its screen); on 3663 a MoveActorAck is 239 bytes (2976's 235 dropped every one, silently).
   has "$H" "CombatFollow summary \\[1, v2\\].* made [1-9]" "B18: the combat stream sent the enemies near the friend"
   hasnot "$H" "sizes to user 2: MoveActorAck [0-9]+ \\(not 239 B: [1-9]" "B18: every MoveActorAck to the friend has 3663's size"
-  info "B18 stream: $(grep -h 'CombatFollow summary' "$H" | tail -1 | grep -o 'decisions \[[^]]*\]' | cut -c1-200)" ;;
+  info "B18 stream: $(grep -h 'CombatFollow summary' "$H" | tail -1 | grep -o 'decisions \[[^]]*\]' | cut -c1-200)"
+  # 2026-11-17 (cs52-cs55): the host's layer took the guest's character load for its own (one server: the guest's load
+  # reaches the host's client too), and the party scaling ("Enemy health with a guest") then followed the guest's
+  # blows only, and its "fighting us" gate (the relay's, off here) let 2 of 10 through.
+  HL=$N/$NAME.coopplus.host.log
+  has "$HL" "Capture: the character load of 0xA01000[0-9A-F]+ .* is the other player's, not ours \\(0xA0100001\\)" "host layer: the guest's character load is not taken for the host's own"
+  hasnot "$HL" "Capture: user template \\(user 0x[0-9A-F]+, player 0xA0100066" "host layer: its own character stays 0xA0100001"
+  has "$HL" "Scaling: x1\\.50 \\| gave back [1-9]" "host: enemy health with a guest is applied to the players' blows (heal-back)" ;;
 farfight)
   # 2026-11-17 (pp26: farfight and mountfight, the guest swung at the air with the bandits beside and behind it;
   # 7 of 35 fight checks since pp11 failed that way): a mouse turn every 3 swings sweeps the guest around.

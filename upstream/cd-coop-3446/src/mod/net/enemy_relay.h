@@ -50,6 +50,9 @@ uint32_t enemy_original_of(uint32_t copy);
 // H1, H6: never townsfolk, merchants, quest NPCs or allies), and not one we
 // hold out of our client (native_suppress.h). Any thread.
 bool enemy_hostile_in_combat(uint32_t key);
+// Shared world (2026-11-17): a hostile kind only (its load's faction is set: not an animal or a civilian), without
+// enemy_hostile_in_combat's "aimed at us lately", whose tracking is part of the relay (off on the native base).
+bool enemy_is_hostile_kind(uint32_t key);
 // Host: the guest may hit this enemy: fighting one of us (above), or a zone
 // enemy we relay a copy of (the same predicate the copy was sent by), so the
 // guest can start a fight (copias-sin-dano-7oct.md). An accepted blow marks

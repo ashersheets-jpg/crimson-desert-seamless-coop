@@ -714,7 +714,13 @@ void capture_observe_s2c(const uint8_t* packet, size_t size) {
                 const uint32_t own = g_equip_key.load();
                 // Co-op+ party scaling (party_scaling.h): our blows, native or injected.
                 // Takes only its own lock, never g_actors_mutex.
-                scaling_observe_hp(key, before, hp, own && source == own);
+                // Shared world (2026-11-17, cs52): there is one server and the host's game sees EVERY blow, so the
+                // toughness with a guest ("Enemy health with a guest") applies to both players' blows here (the
+                // guest's layer does not scale). Before, only the blows of the character the host took for its own
+                // counted, and that was the GUEST's (see the user template below): enemies took the host's blows in
+                // full and the guest's at 1/1.5 (Borque, 2026-11-16: "the client needs about double the hits").
+                const uint32_t partner = kNativeLayer ? partner_actor_key() : 0;
+                scaling_observe_hp(key, before, hp, own && (source == own || (partner && source == partner)));
                 if (own && source == own && hp < before && e.type && g_damage_enabled) {
                     Bytes b(proto::kDamageEventSize);
                     // Where it spawned (same in both worlds); else where it is.
@@ -822,6 +828,14 @@ void capture_observe_s2c(const uint8_t* packet, size_t size) {
             return;
         }
     }
+    // Shared world (2026-11-17, cs52 / pp28): the host's client also receives the GUEST's character load, which came
+    // last and became "our" template, so the host's layer took the guest's character (0xA0100066) for its own: its
+    // blows, its damage and the party scaling followed the wrong player. Our character is the one this game
+    // controls. Read before g_mutex is taken (capture_own_player_key may take it).
+    uint32_t own_player = 0;
+    if (kNativeLayer && keys::is_class(key, keys::kClassUser) && keys::is_class(u32_at(payload, 0x0E), keys::kClassPlayer)) {
+        own_player = capture_own_player_key();
+    }
     std::lock_guard lock(g_mutex);
     // The kind byte follows the mount's slot in the user's container: the horse in slot 2 is kind 5, the STARTER horse
     // in slot 1 is kind 4 (3576 two-copy run hk3: 0xB0100002 kind 4; Plitos found the slot-1 horse from the copy's
@@ -854,6 +868,14 @@ void capture_observe_s2c(const uint8_t* packet, size_t size) {
                 log::info("Capture: ignoring the default character load at (0, 1000, 0)");
                 return;
             }
+        }
+        if (own_player && actor != own_player) {
+            static int said = 0;
+            if (said++ < 5) {
+                log::info("Capture: the character load of 0x{:08X} (user 0x{:08X}) is the other player's, not ours "
+                          "(0x{:08X}): left alone", actor, key, own_player);
+            }
+            return;
         }
         g_user = std::move(payload);
         g_user_key = key;

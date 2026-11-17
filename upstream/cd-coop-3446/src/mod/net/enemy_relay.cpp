@@ -1160,6 +1160,13 @@ bool enemy_hostile_in_combat(uint32_t key) {
     return a != g_at_us.end() && now - a->second < kAimedMs;
 }
 
+bool enemy_is_hostile_kind(uint32_t key) {
+    if (suppress_is_hidden(key)) return false;
+    std::lock_guard lock(g_mutex);
+    auto l = g_loads.find(key);
+    return l != g_loads.end() && l->second.size() >= 0x20 && l->second[2] == 3 && u32_at(l->second.data() + 0x1C) != 0;
+}
+
 bool enemy_guest_may_hit(uint32_t key) {
     if (enemy_hostile_in_combat(key)) return true;
     if (suppress_is_hidden(key)) return false;

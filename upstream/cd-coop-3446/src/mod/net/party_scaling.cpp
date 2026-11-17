@@ -35,7 +35,7 @@ std::deque<GiveBack> g_pending;
 std::atomic<bool> g_enabled{false};  // fast path for the sniffer thread
 std::atomic<int> g_players{1};
 std::atomic<bool> g_host{false};
-uint64_t g_given = 0, g_given_hp = 0, g_skipped_ours = 0, g_dropped = 0, g_failed = 0;
+uint64_t g_given = 0, g_given_hp = 0, g_skipped_ours = 0, g_dropped = 0, g_failed = 0, g_not_hostile = 0;
 
 float multiplier_locked(bool boss = false) {
     return g_host.load() ? scaling::health_multiplier(scaling::for_boss(g_settings, boss), g_players.load()) : 1.0f;
@@ -140,7 +140,13 @@ void scaling_tick() {
         // Only hostile enemies that are fighting: never the animals, civilians or
         // guards the host happens to hit. Checked here, on the network thread, so the
         // sniffer thread never waits on the relay's locks.
-        if (!enemy_hostile_in_combat(g.enemy)) continue;
+        // On the native base (2026-11-17, cs54) the "fighting us" half of that check is the relay's, which is off: it let
+        // 2 of 10 player blows through. There a player's blow on a hostile kind is the fight itself.
+        if (!(kNativeLayer ? enemy_is_hostile_kind(g.enemy) : enemy_hostile_in_combat(g.enemy))) {
+            std::lock_guard lock(g_mutex);
+            ++g_not_hostile;
+            continue;
+        }
         const bool ok = sniffer_inject_c2s(cheat_packet(g.enemy, g.hp));
         std::lock_guard lock(g_mutex);
         if (!ok) {
@@ -162,8 +168,9 @@ std::string scaling_hud_text() {
 
 std::string scaling_describe() {
     std::lock_guard lock(g_mutex);
-    return std::format("Scaling: x{:.2f} | gave back {} times, {} HP | guest blows skipped {} | dropped {} failed {}",
-                       multiplier_locked(), g_given, g_given_hp, g_skipped_ours, g_dropped, g_failed);
+    return std::format("Scaling: x{:.2f} | gave back {} times, {} HP | guest blows skipped {} | not a hostile enemy {} | "
+                       "dropped {} failed {}",
+                       multiplier_locked(), g_given, g_given_hp, g_skipped_ours, g_not_hostile, g_dropped, g_failed);
 }
 
 }  // namespace cdmp::net
