@@ -8662,3 +8662,16 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   ("Enemy health with a guest", 1.5x by heal-back): the host's and the guest's blows from the saddle skip it, so
   mounted players kill faster than on foot. Layer diagnostic (capped 40 lines): the source of every enemy HP loss
   that is not ours. cs52 = the mountfight step with it.
+- 15:12 cs52 (the mountfight step, 47/0, with the source diagnostic): THE HOST'S LAYER TAKES THE GUEST'S CHARACTER FOR
+  ITS OWN. Its "user template" lines: 0xA0100001 twice, then 0xA0100066 (the guest's load reaches the host's client
+  too, one server) -- the same in every pp28 step. The guest's layer sees only its own. Effects found: the party
+  scaling ("Enemy health with a guest", x1.5 by heal-back on the host) counted the GUEST's blows as the host's and
+  never the host's own (pp28-loot: the host killed ten bandits, 0 heal-backs; cs52: 3, all the guest's). So enemies
+  took the host's blows in full and the guest's at 1/1.5: Borque's "the client needs about double the hits" (I told
+  him on 17 Nov both get x1.5; that was wrong for the host's blows). The saddle was NOT the cause: "we hurt" is a
+  two-worlds-only line (damage mirror off), and the guest's blows from the saddle carry its own key.
+- 15:14 Fix (layer local_capture.cpp, built, tests 2/2): (1) a character load that is not the character this game
+  controls (capture_own_player_key: the controlled actor, the tc48 reader) is the other player's and no longer
+  replaces ours; (2) DECIDED BY ME (small): on the host in the shared world both players' blows count for the
+  toughness (the host's game sees every blow; the guest's layer does not scale). Diagnostic removed. cs53 = crime +
+  loot with it (expect: no 0xA0100066 template on the host, heal-backs for the host's own blows too).
