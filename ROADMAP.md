@@ -223,7 +223,9 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
 - [~] **B15 — Duel extras and scoreboard** (wagers, arenas, spectator camera, rematch, titles). (Rematch T42,
   scoreboard and titles T43 exist. 2026-11-16 wagers: from a challenge's invite on, "Stake on the challenge" on the
   inventory's Discard question; when the match ends the loser's game gives its stake to the winner (cs36e, one PC).
-  Left: arenas, a spectator camera (needs a third player: B21).)
+  2026-11-17: arenas = the duel ground (decided; named arenas after the release); cs43b: leaving the ground 10 s
+  loses the round, two rounds and the 2-0 result the same on both games. Left: a spectator camera (needs a third
+  player: B21).)
 - [~] **B16 — Emotes and group photo mode.** (2026-11-16: the game has no emotes; its Photo Mode (pause menu,
   Others) shows both characters. Our partner frame, name tag and hold prompt were in the shot and are now hidden
   while it is open (the mode id at exe+0x72AF864 / 0x72AF898, cs39e / cs38h / cs38i, pad and mouse). That id also shows while loading, after cutscenes and when the friend
@@ -249,12 +251,17 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   enemies preferred the host (cs40b: 27 blows on the idle host, 3 on the fighting guest): the host's client runs
   their AI. Fix: the AI hand-over's fight rule ([session2] ai_handoff_fight, native 81f184c, default off): an
   enemy the guest fights runs on the guest's game; cs40f: 9 hand-overs, 0 failed, blows on the guest 3 -> 10.
-  Left: the way back to the host, then on by default; knockback / status effects / lock-on by eye.)
+  The hand-over is on in 8a65cf2d. 2026-11-17 cs45a-e: moving enemies were ~1.1 s / 2.5 m behind on the
+  friend's screen (the misses, "hits without touching"); the combat stream (combat_follow v2) ported to 3663
+  (239-byte MoveActorAck) and on: 0.5 m / 0.2-0.3 s, in ada1800c. Left: knockback / status effects / lock-on
+  by eye.)
 - [~] **B19 — Anti-grief protections** (quest NPCs, the host's story items; setting). (2026-11-10: hits on protected
   people taken out of a swing that also hits enemies; an NPC the host fights is fair game. User 2026-11-10: world items
   are per player instead of protected ("Lootr", built and seen working both ways for gathered items, tcB329/332;
   setting "Items in the world"); chests / bodies / across sessions still to do.)
-- [ ] **B20 — Partner audio** (footsteps, combat sounds, voice lines, distance falloff).
+- [~] **B20 — Partner audio** (footsteps, combat sounds, voice lines, distance falloff). (2026-11-17 cs42a: the
+  host's game plays the friend's swings (peaks to 553 vs ~120 ambient); the friend's footsteps not heard. Left:
+  footsteps (whether the game plays any for a remote character), voices, falloff.)
 
 **Last (needs the rest stable)**
 - [ ] **B21 — 3-4 player co-op**, only if two-player play stays stable.
