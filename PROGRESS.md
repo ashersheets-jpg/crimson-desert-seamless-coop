@@ -8297,3 +8297,10 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - 19:19 cs40e (ai_handoff_fight=1, the guest fights): NOT EXERCISED: the guest's swings landed almost never this time
   (the host's server saw 2 of its hit requests, 432 of 488 NPC readings at full health; cs40d had 75), so no NPC
   qualified ("fought NPCs looked at 0"). Both games fine, SAVES OK, 5/5. cs40f: the same again.
+- 19:30 cs40f (ai_handoff_fight=1, the guest fights on the host's save): THE FIGHT RULE WORKS. From 19:28:40, as the
+  guest's blows landed, 9 NPCs (8 bandits, 1 horse) went to the guest ("controller 0x90100000 -> 0x90100065; host
+  8-16 m, other player 1-12 m; last hits: host never, other player 79-891 ms ago"); the guest's client "now runs NPC
+  ..." for each; 0 failed; both games alive, SAVES OK, 5/5. The bandits' blows: on the guest 10 (8 reported by its
+  own client), on the host 9; without the rule (cs40d) 3 and 8, cs40b 3 and 27. Guest: 50 blows, 342 HP, 4 kills.
+  Layer built 19:31 with the photo-mode id. Next: cs38i (photo mode by pad, the id) and cs40g (the guest fights, then
+  the host fights the same camp: do the bandits come back to the host?).
