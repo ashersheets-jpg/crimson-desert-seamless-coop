@@ -8491,3 +8491,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   released together, host cinematic 06:46:18-06:46:51; SAVES OK, 5/5, test world back). The talk half never ran:
   the h8 watcher inside the script never set the flag (a watcher started inside the test script dies; cs25f's
   worked as a separate command). cs44b (07:00): the same with the watcher as its own background command.
+- 07:15 cs44b (SAVES OK, 5/5, world back): cabin ready check worked (10th); the host was teleported onto Marius
+  (0xB01000AC, entered the 0340_dlc / 0360_dlc volumes) but the held E opened no talk: the camera faced away from
+  the NPCs, no "Talk" prompt (the cs25 problem). The grave step IS "Speak with Marius" (testers' journal: Head to
+  the cabin FFFFF4D1, Speak with Marius FFFFF4D0, Speak with Ross FFFFF4CF, Enter the cabin FFFFF4CE). Also from the
+  testers' log: the guest's own 0320 scene started at the moment its client SENT its 2654 (not at the server's
+  answer), so branch-armed scenes too start inside the client; a hold has to be client-side on both games (like
+  the volume hold), driven by the host's gate. cs44c (07:16): the dev script's "advance" moves Marius and Ross on
+  after the cabin (no talks), then shots every 20 s: does 0320 arm, what starts it, what the gate sees.
