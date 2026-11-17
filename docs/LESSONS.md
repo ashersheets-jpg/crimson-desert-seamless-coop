@@ -327,3 +327,6 @@ topic BEFORE testing or guessing about it.
   enemies where they really are, the farfight guest, made to stand 26 s among five bandits, was down before its
   first swing (12 blows instead of 5). When a step fails right after a gameplay fix, look at its first shot before
   suspecting the build or the check, and re-time the scene to the new behaviour (2026-11-17, pp28).
+- "Not heard" from loudness needs an A/B inside one run: switching the sound off in alternate windows and
+  comparing those windows. Comparing phases (stand vs walk) or runs mixes in wind and birds that change more than a
+  footstep adds: cs42a called the friend's steps silent; cs48c showed every step played and heard (2026-11-17).

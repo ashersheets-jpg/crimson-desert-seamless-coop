@@ -260,8 +260,11 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   are per player instead of protected ("Lootr", built and seen working both ways for gathered items, tcB329/332;
   setting "Items in the world"); chests / bodies / across sessions still to do.)
 - [~] **B20 — Partner audio** (footsteps, combat sounds, voice lines, distance falloff). (2026-11-17 cs42a: the
-  host's game plays the friend's swings (peaks to 553 vs ~120 ambient); the friend's footsteps not heard. Left:
-  footsteps (whether the game plays any for a remote character), voices, falloff.)
+  host's game plays the friend's swings (peaks to 553 vs ~120 ambient). cs47-cs48c: the friend's FOOTSTEPS are
+  played too (every step reaches the game's sound player, ~115 in a 50 s walk) and heard: muting them in
+  alternate 4 s windows drops the host's loudness after a step from median 14.1 to 11.7 (= no step). cs42a's "not
+  heard" was ambient noise. Falloff: the sounds play at the friend's character (quieter as it walks away).
+  Left: voices (effort / hurt sounds) checked the same way.)
 
 **Last (needs the rest stable)**
 - [ ] **B21 — 3-4 player co-op**, only if two-player play stays stable.

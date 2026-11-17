@@ -8613,3 +8613,12 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   posts a step sound only when the distance gate passed (it measures from the movement component's position).
 - 12:35 cs47c: inline hooks count both gates' answers and the poster's calls for the other player vs the local
   player (detours call the game's code unchanged; research only, not for a release).
+- 12:45 cs47c (gate counters): on the host, the other player's character passes the distance gate every frame
+  (11897 yes, 0 no) and its steps reach the poster (117 calls in the walk; the guest's own game: 133 for itself).
+- 12:57 cs48a (+ PlayEvent counts, host audio): 113 of the other player's steps played by the host's game, all
+  accepted (non-zero). 13:08 cs48b (step times vs audio): walking stretches louder, one stretch with steps flat:
+  inconclusive (ambient, distance). 13:19 cs48c (A/B: its steps muted in odd 4 s windows): loudness 0-300 ms after a
+  step: open median 14.1 / peak p90 88, muted 11.7 / 57, no step near 11.5. THE FRIEND'S FOOTSTEPS ARE PLAYED AND
+  HEARD; cs42a's "not heard" was the ambient. No fix needed. Probe removed from the source (diff kept privately in
+  build/decomp/b20_probe_3663.diff), clean native rebuilt 13:20. SAVES OK and 5/5 restored in all six runs.
+  Next for B20: voices (effort / hurt sounds), the same A/B way if they go through a path we can count.
