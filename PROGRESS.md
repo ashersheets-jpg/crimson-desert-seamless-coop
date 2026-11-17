@@ -8338,7 +8338,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   writes its loudness every 100 ms. Checked on a running copy: works; the game does NOT go silent in the background
   (5 s, mean RMS 48). cs42.sh (after pp26): the host stands still, its audio alone is recorded; the guest stands 10 s
   beside it, walks circles, swings at the air, stands 10 s; audio_phases.py compares the loudness per phase.
-- 20:20 B21 (3-4 players) sizing, from a read of both codebases (no code changed): LARGE.
+- 20:10 B21 (3-4 players) sizing, from a read of both codebases (no code changed): LARGE.
   * Native base: ONE hand-made extra session (server.cpp: g_session2, one Send vtable, one outgoing / inject queue,
     the "COPDSES2" tag without a user index), user-2 state as single variables (g_user2_userkey, g_user2_player,
     logout / final save / move phase), server_user2*() used by ~42 feature files (~4,600 "user2" mentions), three-way
