@@ -1,0 +1,13 @@
+**Update: shared world playtest 0.1.0-alpha+ada1800c, for game 1.0.0.3663**
+Use this instead of 8a65cf2d; **both players need the same build** (the title menu tells you if not).
+
+Thanks @Borque, your "hits without touching" was real:
+- **Enemies are where they really are, on the friend's screen too.** The joining friend saw every moving enemy about a second late, 2.5 m behind where it really was (up to 9 m on a running bandit). So the friend's swings missed enemies that looked close, and their blows landed from 3 m away. The host's game now sends the friend every enemy in a fight nearby 30 times a second: moving enemies are 0.5 m behind now, standing ones exactly in place.
+- **Fixed:** the friend riding a bandit camp's horse could put the mount handling into its older mode for the rest of the session.
+
+Tested with two copies of the game on one PC (Nvidia): full checklist. Not seen yet: two PCs, AMD / Intel cards. Tell us how fights feel now for the joining player.
+
+- `...ada1800c-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tell us in <#1567319198206525450> how it goes, with the report zip from both of you (close the game, run **Diagnose Co-op+.cmd**).

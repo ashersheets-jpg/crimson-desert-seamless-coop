@@ -5,6 +5,17 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
+NOT POSTED YET: 0.1.0-alpha+ada1800c, for game 1.0.0.3663 (checklist pp28 running): everything in 8a65cf2d below,
+plus:
+- **Enemies are where they really are, on the friend's screen too.** The friend saw every moving enemy about a
+  second late: 2.5 m behind where the host's game had it (up to 9 m on a running bandit). So the friend's swings
+  missed enemies that looked close, and enemy blows landed from 3 m away ("hits without touching"; reported by
+  Borque). The host's game now sends the friend every enemy in a fight nearby 30 times a second: moving enemies
+  are 0.5 m / 0.2-0.3 s behind now, standing ones exactly in place. Measured on one PC, two copies of the game.
+- **Fixed: riding a camp horse.** When the friend rode a riderless horse the host's game controls (a bandit
+  camp's), a safety check took the host's own horse AI for a fault and switched the dismount handling to its
+  older mode for the rest of the session.
+
 POSTED 2026-11-17 05:54: 0.1.0-alpha+8a65cf2d, for game 1.0.0.3663 (checklist passed: pp27 static/real/fresh,
 pp27b 832/833 over 19 steps; its one fail, crime, was a self-check counting the host's own AI requests for a
 camp horse the friend rode, listed as an open known warning, the step passed as pp27c 45/0; replaces f61f9fec,
