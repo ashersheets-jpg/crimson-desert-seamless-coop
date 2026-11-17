@@ -313,3 +313,8 @@ topic BEFORE testing or guessing about it.
   knock-downs) and cs38i's own guest log already showed one; I read only the photo window. After adding a state
   detector, grep every log of the next checklist for its line and add a prepost check that it is silent outside
   the step that triggers it (2026-11-16, pp26).
+- Stopping a checklist inside newsave or solostart leaves the step's NEW co-op world in coop_worlds (the test world
+  is set aside as with_127_0_0_1_old_*): the step's own restore never runs. After such a stop, run
+  `bash coopworld.sh restore <name>` in build/native before anything else; run_pp.sh now refuses to start a step
+  while an _old_ world exists. A resumed pass gets a new pass name (pp27b), so the report file holds each step once
+  (2026-11-17: newsave refused to back up, and mounts began in the new story world).
