@@ -5,6 +5,10 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- 2026-11-16 20:10 MAY I POST 0.1.0-alpha+f61f9fec once its checklist (pp26, started 20:03, ~3 h) passes? It is
+  74bb83c3 plus: enemies fight the joining friend too (the AI hand-over fight rule, Borque's report), group photos
+  without our tags or panels, and the stuck-co-op-launch fix. Text: docs/release/shared-world-playtest/
+  download-f61f9fec.txt (1599 chars). Not posted; a post needs your OK.
 - 2026-11-16 16:30 MAY I DOWNLOAD Borque's two report zips? #play-testing-feedback, 12:57 UTC today, "tested on latest
   version": CoopPlus-report-2026-11-16_13-51-01-client.zip and CoopPlus-report-2026-11-16_13-51-47-host.zip (sizes
   not shown in the channel). The report: the guest needs about twice the hits to kill an enemy; enemies rarely attack
