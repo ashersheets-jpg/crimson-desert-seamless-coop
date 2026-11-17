@@ -8553,3 +8553,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   3311". Offsets unchanged (moving 1.9-2.3 m, lag ~1.05 s). Its parser takes a MoveActorAck only at exactly 235 B
   and a StartActionAck at 725 B (2976's sizes; attach_follow / horse_follow assume the same). cs45d: the same with
   counters of the sizes that reach user 2.
+- 08:41 cs45d FOUND IT: every MoveActorAck to user 2 is 239 B (17009 of 17009) and every StartActionAck 729 B
+  (11572 of 11572); combat_follow (and attach_follow / horse_follow, same exact-size checks) expected 2976's 235 /
+  725 and silently dropped them all. The 3460+ layout is known from the layer's port (wire_layout.h, port-3460.md):
+  MoveData grew by 4 and was reordered, Path first (parent 0x44, ts 0xD4, rotation 0xB4, position 0xC4; Ack: + u8
+  at 0xE2 + 12 B tail; StartActionAck: + u8 at 0x8E, so parent 0xCF, ts 0x15F, target 0x171). combat_follow's sizes,
+  offsets and its synthetic MoveActorAck builder ported (native, built, not committed). cs45e: the cs45c run again.
+  To check after: horse_follow / attach_follow are idle on 3663 for the same reason (whether they are on in the
+  release and matter).
