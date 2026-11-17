@@ -1,0 +1,12 @@
+**Update: shared world playtest 0.1.0-alpha+1c6453e1, for game 1.0.0.3663**
+Use this instead of ada1800c; **both players need the same build** (the title menu tells you if not).
+
+- **"Enemy health with a guest" now works for both of you.** With a friend in, enemies get more health (x1.5 by default; Co-op Settings, Combat & Loot). In the shared world it barely worked: the host's game counted only the friend's blows, and only about 2 in 10 of those. Now every blow from either player counts, so you both need the same number of hits. If you liked the easier fights, set it to x1.0.
+- @Borque: correction to what I wrote this morning: your client's hits were NOT scaled the same as the host's. This was part of it (weaker gear can still add to it). Tell us if the two of you still need very different numbers of hits.
+
+Tested with two copies of the game on one PC (Nvidia): full checklist. Not seen yet: two PCs, AMD / Intel cards.
+
+- `...1c6453e1-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tell us in <#1567319198206525450> how it goes, with the report zip from both of you (close the game, run **Diagnose Co-op+.cmd**).

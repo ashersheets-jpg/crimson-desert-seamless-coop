@@ -5,6 +5,15 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
+NOT POSTED YET: 0.1.0-alpha+1c6453e1, for game 1.0.0.3663 (checklist pp29 running): everything in ada1800c below,
+plus:
+- **"Enemy health with a guest" works in the shared world, for both players' blows.** The setting (Co-op Settings,
+  Combat & Loot; x1.5 by default) makes enemies tougher while a friend is in. In the shared world it barely worked:
+  the host's game took the friend's character for the host's own, so it counted only the friend's blows, and a
+  check left over from the older two-worlds mode let about 2 in 10 of those through. Now every blow from either
+  player on an enemy counts (an animal or a civilian never), so both of you need the same number of hits. Tested on
+  one PC: a 13-point blow, then 4 given back, every time.
+
 POSTED 2026-11-17 12:08: 0.1.0-alpha+ada1800c, for game 1.0.0.3663 (checklist pp28: 22 steps, the two test-kit
 fails fixed and re-run): everything in 8a65cf2d below,
 plus:

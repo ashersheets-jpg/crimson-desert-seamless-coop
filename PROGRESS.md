@@ -8675,3 +8675,16 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   replaces ours; (2) DECIDED BY ME (small): on the host in the shared world both players' blows count for the
   toughness (the host's game sees every blow; the guest's layer does not scale). Diagnostic removed. cs53 = crime +
   loot with it (expect: no 0xA0100066 template on the host, heal-backs for the host's own blows too).
+- 15:34 cs53 (crime + loot, 95/0): the host keeps 0xA0100001 ("the character load of 0xA0100066 ... is the other
+  player's ... left alone"), but heal-backs still 0. 15:44 cs54 (crime + a source line per enemy HP change): 10
+  player blows (6 guest, 4 host) on the host's client, only 2 healed back: the scaling's gate enemy_hostile_in_combat
+  needs the relay's "aimed at us lately", off on the native base. Fix: on the native base the gate is a hostile
+  kind only (the load's faction set, not an animal / civilian; enemy_is_hostile_kind). 15:56 cs55 (crime, 47/0):
+  every player blow on a bandit healed back by the server within ~15 ms (-13.0, then +4.0 = 1/1.5); 1-HP blows give
+  back 0 (rounded). Research line removed. Test kit (crime): the host keeps its own character, heal-back > 0.
+- 15:57 Committed 1c6453e (layer). PACKAGE 0.1.0-alpha+1c6453e1 (shared-world 12.4 MB): ada1800c + the host's own
+  character + enemy health with a guest on the native base + the dev extras first (599370f). test-install-fake: all
+  passed. No update restart pending (RebootRequired false; active hours 15-9). FULL CHECKLIST pp29 started 15:59
+  (22 steps, to ~21:30). No builds, no harness edits, Discord by JS only while it runs.
+  CHANGELOG: 1c6453e1 NOT POSTED YET; draft docs/release/shared-world-playtest/download-1c6453e1.txt (corrects what I
+  told Borque this morning about the client's hits).
