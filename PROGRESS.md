@@ -8420,3 +8420,16 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     channel if it persists. Owner answered BionicFreak (custom characters) at 03:02. w▲ri's question to ByJunter
     about the article: left (theirs / the owner's).
   Next Discord check: when pp27b ends (~05:40), with the 8a65cf2d post if it passes.
+- 05:43 pp27b ENDED: 832 pass, 1 fail over 19 steps (every step SAVES OK, user install 5/5 OK). newsave 100/0,
+  solostart 49/0 (the 23:53 focus fail gone), farfight/farfight2/mountfight all pass with the new sweep. The 1 fail:
+  crime, a new warning kind "MountSync self-check ... SENT a StartActionReq 2202 for the remote horse 0xB01000D5".
+  Cause: the guest's held E met a riderless bandit-camp horse (type 5, controller 0x90100000 = the host) and the
+  guest rode it for 20 s (on, E again = off/on, a normal RideOff at the end; fine on the guest). The self-check is
+  made for the OTHER player's horse and counted the host's own native AI requests for its NPC (8 lines), putting fix
+  B in its degraded (S17) dismount mode for the rest of the session. First time in any log. Not a player-felt fault
+  seen; added to tools/known-warnings.txt as OPEN, and re-running crime alone as pp27c (test-kit-only change).
+  Native fix written (not built yet, a test is running): self_check skips a horse whose controller is not the
+  remote rider's (a world horse), counted in the summary as "world horse requests". Goes in the next build with a
+  step where the guest rides a camp horse on purpose.
+  Discord check 05:40: Failord thanked us under the Borque reply ("So much work, ty for this!"), no reply needed;
+  #general: nobody stuck (Burns and BionicFreak explaining radmin). Next check ~08:40.
