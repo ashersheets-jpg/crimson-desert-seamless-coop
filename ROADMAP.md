@@ -226,8 +226,9 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   Left: arenas, a spectator camera (needs a third player: B21).)
 - [~] **B16 — Emotes and group photo mode.** (2026-11-16: the game has no emotes; its Photo Mode (pause menu,
   Others) shows both characters. Our partner frame, name tag and hold prompt were in the shot and are now hidden
-  while it is open (the mode id at exe+0x72AF864 / 0x72AF898, cs39e / cs38h / cs38i, pad and mouse). Built, not
-  packaged. Emotes made from the game's own animations: the owner's call (waiting list).)
+  while it is open (the mode id at exe+0x72AF864 / 0x72AF898, cs39e / cs38h / cs38i, pad and mouse). That id also shows while loading, after cutscenes and when the friend
+  arrives (pp26); since 8a65cf2 it counts only when it starts as the pause menu closes (cs38l). In 8a65cf2d,
+  checklist pp27 running. Emotes made from the game's own animations: the owner's call (waiting list).)
 
 - [~] **B16b — Player interaction menu (user 2026-11-09).** (2026-11-09: built and seen working on the guest,
   tcB209: the hold-R prompt 'Interact' on the other player opens the shop-style menu with every challenge, a greyed
