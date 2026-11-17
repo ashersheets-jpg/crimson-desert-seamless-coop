@@ -8499,3 +8499,8 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   answer), so branch-armed scenes too start inside the client; a hold has to be client-side on both games (like
   the volume hold), driven by the host's gate. cs44c (07:16): the dev script's "advance" moves Marius and Ross on
   after the cabin (no talks), then shots every 20 s: does 0320 arm, what starts it, what the gate sees.
+- 07:30 cs44c (SAVES OK, 5/5, world back): the dev script's "advance FFFFF4D0 / FFFFF4CF" did nothing: "Live quests:
+  step ... not advanced (quest data not found here)". quest_advance.cpp's kMissionTable (0x7248520) was never
+  ported to 3663 (the layer's Live quests are off on 3663); porting it is a detour (no copy of the table address
+  for 3663 anywhere). cs44d (07:31): back to the real talks, with the aim fixed by a camera sweep: after each
+  teleport 8 turns of ~45 deg with E held 1.2 s at each stop, then Space through the dialog.
