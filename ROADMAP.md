@@ -224,7 +224,10 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   scoreboard and titles T43 exist. 2026-11-16 wagers: from a challenge's invite on, "Stake on the challenge" on the
   inventory's Discard question; when the match ends the loser's game gives its stake to the winner (cs36e, one PC).
   Left: arenas, a spectator camera (needs a third player: B21).)
-- [ ] **B16 — Emotes and group photo mode.**
+- [~] **B16 — Emotes and group photo mode.** (2026-11-16: the game has no emotes; its Photo Mode (pause menu,
+  Others) shows both characters. Our partner frame, name tag and hold prompt were in the shot and are now hidden
+  while it is open (the mode id at exe+0x72AF864 / 0x72AF898, cs39e / cs38h / cs38i, pad and mouse). Built, not
+  packaged. Emotes made from the game's own animations: the owner's call (waiting list).)
 
 - [~] **B16b — Player interaction menu (user 2026-11-09).** (2026-11-09: built and seen working on the guest,
   tcB209: the hold-R prompt 'Interact' on the other player opens the shop-style menu with every challenge, a greyed
@@ -239,7 +242,13 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
 **Combat and safety**
 - [~] **B17 — Teammate revive rework** (2026-11-09: revive by interacting -- hold E next to the downed friend --
   works, tcB208; the bleed-out timer, progress line and credit notices were there; Q / U kept. User check left.) (bleed-out timer, revive by interacting, progress and credit; Q/U kept).
-- [ ] **B18 — Combat feedback for both** (status effects, knockback, damage numbers, per-player lock-on).
+- [~] **B18 — Combat feedback for both** (status effects, knockback, damage numbers, per-player lock-on).
+  (2026-11-16, Borque's report: damage measured (cs40c / cs40d): on the SAME save the guest and the host take the
+  same HP per swing (12.0 / 12.2; the guest's character stats are used); the weaker test save takes less. The
+  enemies preferred the host (cs40b: 27 blows on the idle host, 3 on the fighting guest): the host's client runs
+  their AI. Fix: the AI hand-over's fight rule ([session2] ai_handoff_fight, native 81f184c, default off): an
+  enemy the guest fights runs on the guest's game; cs40f: 9 hand-overs, 0 failed, blows on the guest 3 -> 10.
+  Left: the way back to the host, then on by default; knockback / status effects / lock-on by eye.)
 - [~] **B19 — Anti-grief protections** (quest NPCs, the host's story items; setting). (2026-11-10: hits on protected
   people taken out of a swing that also hits enemies; an NPC the host fights is fair game. User 2026-11-10: world items
   are per player instead of protected ("Lootr", built and seen working both ways for gathered items, tcB329/332;
