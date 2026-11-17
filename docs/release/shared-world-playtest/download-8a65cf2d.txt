@@ -3,7 +3,7 @@ Use this instead of 74bb83c3; **both players need the same build** (the title me
 
 Thanks @Borque for the combat report:
 - **Enemies ignored the joining friend:** confirmed. The host's game ran the enemies, and they went for the host even while only the friend fought them (our test: 27 blows on the idle host, 3 on the friend). Now an enemy the friend is fighting runs on the friend's game and fights back; when the host takes over, it goes back to the host.
-- **"Double the hits" for the friend:** on the same character both of you do the same damage per swing (we measured it). Each of you brings your own character, so weaker gear or level means more hits; that is the game's rule. If you still see it with equal characters, tell us.
+- **"Double the hits" for the friend:** on the same character both of you do the same damage per swing (we measured it). With a friend in, enemies also have 1.5x health for both of you (Co-op Settings, Combat & Loot, "Enemy health with a guest"). Each of you brings your own character, so weaker gear or level means more hits. Still twice? Tell us.
 - Still to look at: the boar lying 3 m apart, the mission NPC under the cart, the frozen run animation.
 
 Also: **group photos.** The game's Photo Mode (pause menu, Others) now has no Co-op+ name tags or panels in the shot.

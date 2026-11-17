@@ -5,8 +5,10 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-NOT POSTED YET: 0.1.0-alpha+8a65cf2d, for game 1.0.0.3663 (checklist pp27 running; replaces f61f9fec, whose
-checklist pp26 found the overlay hiding outside photo mode): everything in 74bb83c3 below,
+POSTED 2026-11-17 05:54: 0.1.0-alpha+8a65cf2d, for game 1.0.0.3663 (checklist passed: pp27 static/real/fresh,
+pp27b 832/833 over 19 steps; its one fail, crime, was a self-check counting the host's own AI requests for a
+camp horse the friend rode, listed as an open known warning, the step passed as pp27c 45/0; replaces f61f9fec,
+whose checklist pp26 found the overlay hiding outside photo mode): everything in 74bb83c3 below,
 plus:
 - **Enemies fight the friend too.** Until now the enemies of the host's world mostly went for the host, even while
   only the friend was fighting them (a test: 27 blows on the host standing still, 3 on the friend doing all the
@@ -16,6 +18,8 @@ plus:
 - **Damage: no difference found.** On the same character, the friend's swings take exactly as much health as the
   host's (12.0 and 12.2 per swing in our test). Each of you plays your own character, so a weaker character (gear,
   level) does less; that is the game's own rule.
+  With a friend in, enemies have 1.5x health for both of you (Co-op Settings, Combat & Loot, "Enemy health with
+  a guest").
 - **Group photos.** The game's Photo Mode (pause menu, Others) shows both of you; our name tag, the friend's health
   panel and the "Interact" prompt no longer show in the photo (they were in the shot before; R, the photo's Capture
   key on a keyboard, no longer starts our hold prompt either).

@@ -5,6 +5,11 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- 2026-11-17 05:56 QUESTION (not urgent): the public GitHub playtest release (crimson-desert-coop-playtest,
+  releases/latest) is still 22e8f365 from 10 Nov; your OK then was for that one release. Discord has had 8a65cf2d
+  since 05:54. Should each build that is posted to Discord also go to GitHub (same zips, same notes), or leave
+  GitHub as it is? Until you say, I leave GitHub alone.
+- 2026-11-17 05:54 DONE: 8a65cf2d POSTED in #download-here by me (standing OK; checklist passed).
 - 2026-11-17 02:45 DECIDED BY ME (owner's "be as independent as you can"; say so to change it): B15 = (1),
   the duel ground counts as the arenas; named arenas (2) after the release. Was: B15 ARENAS QUESTION (not urgent; I go on meanwhile). What exists: the duel ground. Whoever sends
   the duel places it between the two of you; its size is a Co-op setting ("Duel ground": 12 / 20 / 35 m); stepping
@@ -8433,3 +8438,16 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   step where the guest rides a camp horse on purpose.
   Discord check 05:40: Failord thanked us under the Borque reply ("So much work, ty for this!"), no reply needed;
   #general: nobody stuck (Burns and BionicFreak explaining radmin). Next check ~08:40.
+- 05:52 pp27c crime (same package, known-warnings entry added): 45 pass, 0 fail, SAVES OK, 5/5. Checklist for
+  8a65cf2d COMPLETE: pp27 static/real/fresh + pp27b 832/833 + pp27c.
+### POSTED 2026-11-17 05:54: 0.1.0-alpha+8a65cf2d in #download-here (game 1.0.0.3663)
+- Message 1572203245261033604: the text (download-8a65cf2d.txt, 1683 characters; the damage bullet now also names
+  the 1.5x enemy health with a guest, as told to Borque) and both zips, 12.70 MB / 6.93 MB (staged copies' sha256
+  dd1ccba5... / c7861c67..., identical to dist\). @Borque resolved to a mention. Feedback pointer: #bug-reports, as in
+  the earlier posts.
+- How: as before (the app's browser pane, signed in, no sign-in asked; upload-staging into window.name, cleared
+  after; File objects on the composer's input; a synthetic paste; a synthetic Enter). No test was running. No clicks.
+- GitHub release NOT updated (its OK was for 22e8f365 only): question at the top.
+- Next: build the world-horse self-check fix (native) with a test step where the guest rides a camp horse on
+  purpose (does the host see the horse go where the guest steers?); cs42 (B20 audio), cs43 (B15 duel ground); talk
+  scenes wait for both (decided (2)).
