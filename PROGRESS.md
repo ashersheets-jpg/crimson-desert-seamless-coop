@@ -8451,3 +8451,8 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - Next: build the world-horse self-check fix (native) with a test step where the guest rides a camp horse on
   purpose (does the host see the horse go where the guest steers?); cs42 (B20 audio), cs43 (B15 duel ground); talk
   scenes wait for both (decided (2)).
+- 06:05 native 9b0e3bf built (ctest 63/93, the same 30 known 2976-opcode fixtures; optd_mount_sync's 2 fails are
+  self_check_hit's old-opcode packet, untouched): the self-check leaves a horse whose controller is not the remote
+  rider's alone (own horses checked: both PCs give rider and horse the same controller, pp27b mounts/mountfight).
+  native-base synced. WHEN THE NEXT PACKAGE IS BUILT: drop the "MountSync self-check" line from
+  tools/known-warnings.txt (with the fix a self-check line is a real fault again), and add the camp-horse ride step.
