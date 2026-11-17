@@ -5,7 +5,8 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-NOT POSTED YET: 0.1.0-alpha+f61f9fec, for game 1.0.0.3663 (checklist pp26 running): everything in 74bb83c3 below,
+NOT POSTED YET: 0.1.0-alpha+8a65cf2d, for game 1.0.0.3663 (checklist pp27 running; replaces f61f9fec, whose
+checklist pp26 found the overlay hiding outside photo mode): everything in 74bb83c3 below,
 plus:
 - **Enemies fight the friend too.** Until now the enemies of the host's world mostly went for the host, even while
   only the friend was fighting them (a test: 27 blows on the host standing still, 3 on the friend doing all the

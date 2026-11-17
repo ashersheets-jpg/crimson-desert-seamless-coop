@@ -12,10 +12,12 @@ test save Out, shipped cdmp.ini restored.
   world and both of you are taken there (the "Go to my friend" travel), which needs places picked by eye on the map;
   (3) drop arenas. I would pick (1) now, (2) after the release if you want it. The spectator camera needs a third
   player (B21).
-- 2026-11-16 20:04 MAY I POST 0.1.0-alpha+f61f9fec once its checklist (pp26, started 20:03, ~3 h) passes? It is
-  74bb83c3 plus: enemies fight the joining friend too (the AI hand-over fight rule, Borque's report), group photos
-  without our tags or panels, and the stuck-co-op-launch fix. Text: docs/release/shared-world-playtest/
-  download-f61f9fec.txt (1599 chars). Not posted; a post needs your OK.
+- 2026-11-16 23:36 MAY I POST 0.1.0-alpha+8a65cf2d once its checklist (pp27, started 23:36, ~3 h 20 min) passes?
+  It replaces f61f9fec (never posted: its checklist found our overlay hiding at loading, after cutscenes and when
+  the friend arrived, a false photo-mode signal; fixed and checked in cs38l). It is 74bb83c3 plus: enemies fight the
+  joining friend too (the AI hand-over fight rule, Borque's report), group photos without our tags or panels, and
+  the stuck-co-op-launch fix. Text: docs/release/shared-world-playtest/download-8a65cf2d.txt. Not posted; a post
+  needs your OK.
 - 2026-11-16 16:30 MAY I DOWNLOAD Borque's two report zips? #play-testing-feedback, 12:57 UTC today, "tested on latest
   version": CoopPlus-report-2026-11-16_13-51-01-client.zip and CoopPlus-report-2026-11-16_13-51-47-host.zip (sizes
   not shown in the channel). The report: the guest needs about twice the hits to kill an enemy; enemies rarely attack
@@ -8365,3 +8367,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   last 2 s and closed now) and no cutscene in the last 3 s; otherwise it is ignored until it goes away, logged
   "the photo-mode id came up outside the pause menu (...)". Photo mode is opened from the pause menu (Others).
   cs38j: the pad photo path again on it.
+- 23:35 cs38j (the first gate) REJECTED real photo mode too: the menu flag still reads open for a few frames after
+  photo mode starts. Changed: the id may come up while a menu is open; it counts once the menu closes within 1.5 s.
+  cs38k: the Start press was missed (no pause menu; shot g10 plain play), false cases ignored. cs38l: real photo mode
+  by pad "opened" at the A press, "closed" at B, shot g12 with no partner frame or name tag; every false case
+  (menu stayed open while loading, cutscene just ended, no menu just closed) ignored on both sides. Committed
+  8a65cf2. New prepost check: no step's layer log may say "Photo Mode opened".
+- 23:36 Package 0.1.0-alpha+8a65cf2d (outer 8a65cf2; native unchanged 0e0c221). f61f9fec is not posted and is
+  replaced. pp27 (all 22 steps) started 23:36, ~3 h 20 min. No builds or harness edits until it ends.
