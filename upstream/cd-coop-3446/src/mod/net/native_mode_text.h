@@ -137,7 +137,12 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
                               // run (tcB226: 193 of 196 driven, 3 late -> run-wide abort). Family / road control stay
                               // off (their descriptor offsets are not verified on 3576).
                               "npc_activation=1", "npc_action_evidence=1", "npc_containment_guard=1",
-                              "npc_degradation=1", "publication_gate=1"}) {
+                              "npc_degradation=1", "publication_gate=1",
+                              // B18 (2026-11-17, cs45a-e): the enemies on the friend's screen were ~1.1 s behind
+                              // the host's (2.5 m off when moving: blows that miss, "hits without touching"). The
+                              // combat stream (combat_follow v2, ported to 3663: 239-byte MoveActorAck, clocks) sends
+                              // every enemy in combat near the friend at 30 Hz: 0.5 m / 0.2-0.3 s now.
+                              "combat_follow=1", "combat_follow_v2=1"}) {
             line(k);
         }
         // B10 option 2, the player's choice ([coop] shared_quest_credit): an objective one player completes also
@@ -173,7 +178,9 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
                               // NPCs U-e gives it (without it: no first action in 5 s, U-e's abort, and the near shop
                               // not opening with the far-shop keys); the interaction stage lookup (C1) and the restore
                               // guard of every working far-world / shop run (tcB194 / 201 / 216 / 223)
-                              "guest_schedule_load=1", "guest_x_interaction_stage=1", "seq_actor_restore=1"}) {
+                              "guest_schedule_load=1", "guest_x_interaction_stage=1", "seq_actor_restore=1",
+                              // B18: the host's combat stream's other half, a short delay for enemies in combat
+                              "remote_interp_combat=1"}) {
             line(k);
         }
         // dev (research runs): the guest's extra keys, as the host's above.
