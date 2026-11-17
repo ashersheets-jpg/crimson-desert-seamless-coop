@@ -8289,3 +8289,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   not photo mode itself. New dev setting [dev] watch_bytes=<hex>/<hex>/... (layer, logs each change once a frame);
   cs38h: the pad path with the ten likeliest cs39e bytes watched. Then cs40e: the guest fights with
   ai_handoff_fight=1.
+- 19:11 cs38h (photo mode by PAD, [dev] watch_bytes on ten cs39e bytes): exe+0x72AF852 never moved (mouse-only).
+  What switched EXACTLY at photo entry (19:09:50.28, the A press) and exit (19:09:59.43, the B press): the bytes
+  +4..+6 of exe+0x72AF860 and of exe+0x72AF894 (exe+0x72AF864-66 and 0x72AF898-9A): 19 7B 9E -> 77 0A CB -> back.
+  The same values were cs39e's (mouse) photo samples: an id of the current mode, not a timer. Layer (source, built
+  next): photo mode = both slots' low 24 bits read 0xCB0A77, held 4 reads.
+- 19:19 cs40e (ai_handoff_fight=1, the guest fights): NOT EXERCISED: the guest's swings landed almost never this time
+  (the host's server saw 2 of its hit requests, 432 of 488 NPC readings at full health; cs40d had 75), so no NPC
+  qualified ("fought NPCs looked at 0"). Both games fine, SAVES OK, 5/5. cs40f: the same again.

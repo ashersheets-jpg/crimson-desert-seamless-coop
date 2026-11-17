@@ -159,8 +159,13 @@ inline constexpr uintptr_t kCutscenePlaying = 0x7160116;  // 3549:0x70D9F14, 2/2
 // Mode (proven by a shot), 2 in the menu, 35 in play): kPhotoModeState is 0x40 in all 59 other samples and 0x20 in
 // all 12 photo ones; kPhotoModeCheck has bit 7 set (0xC1) elsewhere and clear (0x41) in photo mode. Both must agree.
 // (cs39b / cs39c / cs39d never reached photo mode: the pad steps re-ran their dev script; their bytes were timers.)
-inline constexpr uintptr_t kPhotoModeState = 0x72AF852;
-inline constexpr uintptr_t kPhotoModeCheck = 0x75C5EF3;
+// cs38h (pad, [dev] watch_bytes): those two did NOT react when photo mode was opened by pad (0x72AF852 stayed
+// 0x40; 0x75C5EF3 flickers). What switched exactly at photo-mode entry and exit, by pad here AND by mouse in
+// cs39e: the 3 bytes at +4..+6 of these two slots, 19 7B 9E in play / menu, 77 0A CB in photo mode (an id, not
+// a timer). Photo mode = both read 0xCB0A77 (u32 & 0xFFFFFF, little-endian).
+inline constexpr uintptr_t kPhotoModeIdA = 0x72AF864;
+inline constexpr uintptr_t kPhotoModeIdB = 0x72AF898;
+inline constexpr uint32_t kPhotoModeId = 0xCB0A77;
 inline constexpr uintptr_t kFieldTimeClient = 0x6F31C78;  // 3549:0x6EAB998, 6/6
 inline constexpr uintptr_t kMiniGameRoot = 0x7245218;  // 3549:0x71BDF48, 8/8
 inline constexpr uintptr_t kClientClockGlobal = 0x71600AD;  // 3549:0x70D9E3D, 8/8 cmp sites
