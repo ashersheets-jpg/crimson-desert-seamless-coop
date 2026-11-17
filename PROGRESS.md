@@ -8284,3 +8284,8 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   player's client (the existing hand-over: controller key, the game's AI restart steps, the private 2660 notice);
   the same back to the host. One hand-over per NPC in 10 s. The orphan (distance) rule stays as it was (ai_handoff=0
   by default). Next: cs40e, the guest fights with the rule on.
+- 19:00 cs38g: photo mode opened by PAD (pad prompts), and the cs39e bytes did NOT react (no "Photo Mode" line, our
+  overlay in the photo). cs39e entered by mouse; those bytes may follow the keyboard / mouse form of the photo UI,
+  not photo mode itself. New dev setting [dev] watch_bytes=<hex>/<hex>/... (layer, logs each change once a frame);
+  cs38h: the pad path with the ten likeliest cs39e bytes watched. Then cs40e: the guest fights with
+  ai_handoff_fight=1.

@@ -4,6 +4,8 @@
 
 #include <cstdint>
 #include <cstring>
+#include <string>
+#include <vector>
 
 #include "mod/game/offsets.h"
 #include "mod/game/safe_memory.h"
@@ -75,6 +77,47 @@ bool photo_mode_active() {
         same = 0;
     }
     return shown;
+}
+
+namespace {
+struct Watched {
+    uintptr_t off = 0;
+    int last = -1;
+};
+std::vector<Watched> g_watch;
+int g_watch_lines = 0;
+}  // namespace
+
+void dev_watch_bytes_set(const std::string& list) {
+    g_watch.clear();
+    size_t i = 0;
+    while (i < list.size() && g_watch.size() < 64) {
+        const size_t j = list.find('/', i);
+        const std::string part = list.substr(i, j == std::string::npos ? std::string::npos : j - i);
+        if (!part.empty()) {
+            try {
+                g_watch.push_back({static_cast<uintptr_t>(std::stoull(part, nullptr, 16)), -1});
+            } catch (...) {
+            }
+        }
+        if (j == std::string::npos) break;
+        i = j + 1;
+    }
+    if (!g_watch.empty()) log::info("Dev watch_bytes: {} byte(s) watched", g_watch.size());
+}
+
+void dev_watch_bytes_tick() {
+    if (g_watch.empty() || g_watch_lines > 4000) return;
+    const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    for (auto& w : g_watch) {
+        uint8_t v = 0;
+        if (!safe_read(base + w.off, &v, 1)) continue;
+        if (w.last != v) {
+            if (w.last >= 0 && ++g_watch_lines <= 4000)
+                log::info("Dev watch: exe+0x{:X} {:02X} -> {:02X}", w.off, w.last, v);
+            w.last = v;
+        }
+    }
 }
 
 std::optional<bool> cutscene_playing() {

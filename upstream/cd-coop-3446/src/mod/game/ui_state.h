@@ -2,6 +2,7 @@
 // Co-op+: is the game showing a full-screen menu (map, inventory, journal, pause...)?
 
 #include <optional>
+#include <string>
 
 namespace cdmp::game {
 
@@ -13,6 +14,9 @@ bool ui_menu_open();
 // game keeps gameplay input on there, so ui_menu_open() is false; our overlay hides for the photo with this.
 // False when not known.
 bool photo_mode_active();
+// Co-op+ dev ([dev] watch_bytes): set the exe offsets to watch; the tick logs each change (present thread).
+void dev_watch_bytes_set(const std::string& list);
+void dev_watch_bytes_tick();
 
 // Co-op+: true while a cutscene (sequencer) plays; nullopt when the flag cannot be read.
 std::optional<bool> cutscene_playing();

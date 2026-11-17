@@ -69,6 +69,9 @@ struct Config {
     bool dev_minimap_cycle = false;
     // [dev] native_extra: k=v,k=v appended to the native ini's [session2] the lobby writes (research runs only).
     std::string dev_native_extra;
+    // Co-op+ dev (2026-11-16, B16): [dev] watch_bytes = exe offsets in hex joined by "/" (e.g. 72AF852/75C5EF3):
+    // every change of those bytes is logged, checked once a frame on the present thread (game/ui_state.h).
+    std::string dev_watch_bytes;
     bool dev_native_record = false;  // [dev] native_record: the native base records every packet (research runs)
     // Ctrl+F5: an enemy targets the other player's copy (aggro_test.h).
     bool dev_aggro_test = false;

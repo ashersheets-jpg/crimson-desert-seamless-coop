@@ -276,6 +276,7 @@ void hud_draw(float width, float height) {
     // tag and hold prompt were in the photo. Nothing of ours is drawn while it is open (the hold prompt's input is
     // not read either, so a photo-mode press cannot open our menu).
     {
+        game::dev_watch_bytes_tick();
         static bool photo_was = false;
         const bool photo = game::photo_mode_active();
         if (photo != photo_was) {
