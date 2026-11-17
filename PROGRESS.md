@@ -8456,3 +8456,16 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   rider's alone (own horses checked: both PCs give rider and horse the same controller, pp27b mounts/mountfight).
   native-base synced. WHEN THE NEXT PACKAGE IS BUILT: drop the "MountSync self-check" line from
   tools/known-warnings.txt (with the fix a self-check line is a real fault again), and add the camp-horse ride step.
+- 06:08 cs42a (B20 partner audio, 8a65cf2d, the host's process audio only; SAVES OK, 5/5): loudness per 100 ms on
+  the HOST while the friend: stood (median 21.9, peak 124) | walked circles round the host (median 15.6, peak 119,
+  1 bucket over 2x median) | swung at the air 10 times (median 20.0, PEAK 553, 7 buckets over 2x) | stood (11.0).
+  So the friend's SWINGS are heard on the host; the friend's FOOTSTEPS are not (walking is no louder than standing).
+  Likely tied to Borque's "frozen run animation": footstep sounds come from the walk animation's events; if the
+  remote character's locomotion is not played as an animation on the other game, its steps are silent. Next for
+  B20: read the remote locomotion path (RemoteInterp) for whether the run animation plays, and count footstep
+  sound events for the remote actor.
+- 06:17 cs43a (B15 duel ground, 8a65cf2d; SAVES OK, 5/5): the guest's invite, the host's accept, "round 1 at
+  (-10349.4, 535.5, -3918.7), radius 20 m" and "fight" on BOTH at the same ms. Not seen: the guest losing for
+  leaving the ground. Test causes, not the mod: the 12 m override (-GuestDev [coop]) never reached the ini the
+  layer reads (no duel_ring_m in it), so the default 20 m held; and the guest walked 15 m in 8 s (about 2 m/s), never
+  past 20 m (the rule wants 10 s outside in a row). cs43b: the same with a 25 s walk (about 50 m).
