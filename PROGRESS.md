@@ -5,7 +5,7 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
-- 2026-11-17 03:00 DECIDED BY ME (owner's "be as independent as you can"; say so to change it): B15 = (1),
+- 2026-11-17 02:45 DECIDED BY ME (owner's "be as independent as you can"; say so to change it): B15 = (1),
   the duel ground counts as the arenas; named arenas (2) after the release. Was: B15 ARENAS QUESTION (not urgent; I go on meanwhile). What exists: the duel ground. Whoever sends
   the duel places it between the two of you; its size is a Co-op setting ("Duel ground": 12 / 20 / 35 m); stepping
   out of it for a few seconds loses the round. Options: (1) count that as the arenas (I check the ground on the
@@ -23,14 +23,14 @@ test save Out, shipped cdmp.ini restored.
   trading, wagers on challenges, the friend's Give seen on 3663, and a fix for the inventory during rock-paper-
   scissors. It replaces the 430fe6be question. Text: docs/release/shared-world-playtest/download-74bb83c3.txt
   (1999 chars). Not posted; a post needs your OK.
-- 2026-11-17 03:00 DECIDED BY ME (as above): B16 = (1), group photo only (done in 8a65cf2d); emotes from
+- 2026-11-17 02:45 DECIDED BY ME (as above): B16 = (1), group photo only (done in 8a65cf2d); emotes from
   the game's animations (2) after the release. Was: B16 QUESTION (not urgent; I go on meanwhile): the game has NO emotes or gestures (no gesture /
   emote strings, packets or UI in the exe; its photo mode is camera only: aperture, depth of field, FOV, roll, no
   poses). Options: (1) B16 = group photo only: both characters in the game's photo mode with no Co-op+ tags or
   frames in the shot (I check that next); (2) also emotes made from the game's own animations (a short list such
   as wave, bow, cheer, sit, picked from what the characters already play; the other player sees them), a bigger
   piece of research; (3) drop B16. I would pick (1) now and (2) after the release.
-- 2026-11-17 03:00 DECIDED BY ME (as above): talk scenes = (2), the talk waits for both, the host talks
+- 2026-11-17 02:45 DECIDED BY ME (as above): talk scenes = (2), the talk waits for both, the host talks
   first, then a prompt sends the friend to the same person. Was: A DESIGN QUESTION (not urgent; I go on with other work meanwhile): story scenes that start from a
   TALK. The testers' run showed the ready check only waits at the first scene of a step (walking into it); after the
   cabin the host talked on and played 8 more scenes alone. Extending the wait to talks meets a rule of the game's
@@ -8397,14 +8397,14 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   "hits without touching"). Kept for B18; the aggression fix in 8a65cf2d is the real change. The mission NPC under
   the cart: not identifiable from the logs (no name; ~65 host sequencer actors 'NOT in this client', normal for
   far groups).
-- 03:00 The 23:54 stop cut newsave before its restore: the NEW story world stayed in coop_worlds
+- 02:45 The 23:54 stop cut newsave before its restore: the NEW story world stayed in coop_worlds
   (with_127_0_0_1_old_20261116-235536 = the test world). So pp27's resumed newsave refused to back up (1 FAIL,
   "could not be backed up: step not run") and mounts began in the new world: stopped again (loop and prepost only;
   the run restores the install). Next: coopworld.sh restore, then the rest as pp27b. run_pp.sh refuses a step while
   an _old_ world exists; LESSONS has it. Decided the three waiting design questions myself (B15 (1), B16 (1), talk
   scenes (2)), the owner's standing "be as independent as you can".
-- 03:1x Test co-op world restored (coopworld.sh restore: identical to the backup; the stray new world kept as
+- 02:49 Test co-op world restored (coopworld.sh restore: identical to the backup; the stray new world kept as
   build/native/pp27-newsave-stopped-new-world). The mounts run that began in it ended with SAVES OK and 5/5.
   pp27b started (newsave .. hostrevive + solostart, ~2 h 50 min); pp27's static, real and fresh count with it.
-  The ~03:00 network drop (no DNS, 1.1.1.1 unreachable) was short; pushes work again. Owner: small design calls
+  The ~02:45 network drop (no DNS, 1.1.1.1 unreachable) was short; pushes work again. Owner: small design calls
   like the three above are mine to make; important ones wait for them.
