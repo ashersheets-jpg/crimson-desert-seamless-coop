@@ -173,8 +173,10 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   Rodbel dock's "Reinforcements" starts in ~25 checklist runs and BOTH games log it, the guest fighting in it;
   Fort Windridge: the same NPCs in both games and its soldiers fight both players (cs27e). Left: a siege.)
 - [~] **B04 — Shared map and knowledge** (fog / visited zones, knowledge learned by one counts for both).
-  (2026-11-09: fog_share built -- the guest's map fog at its login OR-ed with the host's on the host's server; live
-  test next. Knowledge: 2026-11-16 knowledge_grant built (native 9160d19, [session2] knowledge_grant, default 0):
+  (2026-11-09: fog_share built -- the guest's map fog at its login OR-ed with the host's on the host's server, on in
+  the release. 2026-11-17 SEEN: a less explored friend (save m101) opens its map in the host's world: with fog share
+  it shows the host's explored land (cs50d), without it only its own (cs50e); docs/drafts/b04-fog-share-2026-11-17.png.
+  A brand-new character has no map yet (it unlocks in the story). Knowledge: 2026-11-16 knowledge_grant built (native 9160d19, [session2] knowledge_grant, default 0):
   a learn by one player is learned by the other through the game's own learn entry; installs cleanly on 3663,
   no learn happened in cs29a / cs28c to prove it -- needs a moment where the game teaches a knowledge.)
 - [~] **B05 — Other mounts and vehicles** (bears, wolves, raptors...; wagon, skiff, mech) seen and ridden.

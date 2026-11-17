@@ -8641,3 +8641,14 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   fight, distance, a clip) and again where the cart NPC was; told him the enemy lag fix is in ada1800c. #general: the
   owner answered BionicFreak (players invisible to each other with "Custom Characters"; the owner thinks that mod
   breaks it; plans for our own custom characters). Noted as a compatibility item to look at (Nexus RE is OK'd).
+- 14:14-14:50 B04 fog share, the visual proof (scratchpad cs50.sh: the test co-op world as host, a guest save; both
+  open the map with M, zoomed out with the wheel):
+  * cs50a (guest newgame, as the lowsave step): a new character has NO map yet (M does nothing, its menu has only
+    Others); the lowsave step's "g2-map" shot never showed a map. Its log check (bytes changed) stays the check.
+  * cs50b / cs50d (guest m101, Lv 17.9; host Lv 32.6): the guest's map opens; "2481 bytes changed" by fog share.
+  * cs50c: -HostNativeExtra fog_share=0 did NOTHING: the layer wrote the dev extras AFTER the release defaults and
+    the native takes the first copy of a key. Layer fix (native_mode_text.h): the extras now come first under
+    [session2] (empty in a release, so no release change in behaviour); layer tests 2/2.
+  * cs50e (fog_share=0 really off, "FogShare off"): the guest's map shows only its own explored patch; cs50d (on)
+    shows a much larger area (north-west round the lake and more): docs/drafts/b04-fog-share-2026-11-17.png.
+    B04's map part is SEEN working. SAVES OK and 5/5 restored in all five. Left for B04: knowledge (needs a learn).

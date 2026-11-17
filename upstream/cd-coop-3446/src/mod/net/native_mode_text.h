@@ -96,6 +96,16 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
     line("enabled=0");
     line("[session2]");
     line("enabled=1");
+    // dev (research runs, empty in a release): extra keys, written FIRST so that they override the defaults below (the
+    // native's ini reader takes the first copy of a key). 2026-11-17: they used to come after the defaults, so a
+    // research run could not switch a default off (cs50c: fog_share=0 stayed 1).
+    for (size_t at = 0; at < s.extra.size();) {
+        size_t comma = s.extra.find_first_of(",+", at);  // ',' or '+' (the harness's -GuestDev splits on ',')
+        if (comma == std::string::npos) comma = s.extra.size();
+        const std::string kv = s.extra.substr(at, comma - at);
+        if (kv.find('=') != std::string::npos) line(kv.c_str());
+        at = comma + 1;
+    }
     line("save_guard=redirect");
     if (!s.coop_save_dir.empty()) {
         line("coop_save_dir=" + native_ini_value(s.coop_save_dir));
@@ -159,14 +169,6 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
             line("user2_stages_own_quest=1");
             line("story_gate=hold");
         }
-        // dev (research runs): extra keys (only keys the defaults do not write: an ini reader takes the first one).
-        for (size_t at = 0; at < s.extra.size();) {
-            size_t comma = s.extra.find_first_of(",+", at);  // ',' or '+' (the harness's -GuestDev splits on ',')
-            if (comma == std::string::npos) comma = s.extra.size();
-            const std::string kv = s.extra.substr(at, comma - at);
-            if (kv.find('=') != std::string::npos) line(kv.c_str());
-            at = comma + 1;
-        }
     } else {
         for (const char* k : {"guest=1", "guest_mode=remote", "guest_crash_dump=1", "guest_layer_guard=1",
                               "guest_remote_update_guard=1", "guest_update_guard=1", "guest_reload_wait_fix=1",
@@ -182,14 +184,6 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
                               // B18: the host's combat stream's other half, a short delay for enemies in combat
                               "remote_interp_combat=1"}) {
             line(k);
-        }
-        // dev (research runs): the guest's extra keys, as the host's above.
-        for (size_t at = 0; at < s.extra.size();) {
-            size_t comma = s.extra.find_first_of(",+", at);  // ',' or '+' (the harness's -GuestDev splits on ',')
-            if (comma == std::string::npos) comma = s.extra.size();
-            const std::string kv = s.extra.substr(at, comma - at);
-            if (kv.find('=') != std::string::npos) line(kv.c_str());
-            at = comma + 1;
         }
     }
     // tunnel_compress (both ends; p8-tunel-rendimiento.md: x9.5 on a town's burst): the host compresses the tunnel's

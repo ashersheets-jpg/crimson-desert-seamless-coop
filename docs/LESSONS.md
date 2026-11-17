@@ -330,3 +330,6 @@ topic BEFORE testing or guessing about it.
 - "Not heard" from loudness needs an A/B inside one run: switching the sound off in alternate windows and
   comparing those windows. Comparing phases (stand vs walk) or runs mixes in wind and birds that change more than a
   footstep adds: cs42a called the friend's steps silent; cs48c showed every step played and heard (2026-11-17).
+- Check that a research switch really switched before reading its result: the run's own log line ("FogShare off")
+  is the proof, not the harness argument. -HostNativeExtra could add keys but never override a release default
+  (the native's ini takes the first copy; the extras were written last) until 2026-11-17 (cs50c).
