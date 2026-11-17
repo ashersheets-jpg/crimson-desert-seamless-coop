@@ -8382,3 +8382,15 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   farfight/farfight2/mountfight; 7 of 35 fight checks since pp11 failed with the guest swinging at the air).
   pp27 resumed: newsave mounts xess fsr display lowsave chest revive loot crime farfight farfight2 mountfight
   nosave retry stuck mismatch hostrevive solostart (~2 h 50 min).
+- 02:55 Borque's report (0245f27d, 13:34-13:50, scaling x1.50), the damage question ("from the guest's side enemies
+  take about twice the hits"): both PCs log the SAME enemy HP after each guest blow (100 'Capture: we hurt' lines
+  each, identical values, the host ~0.8 s ahead by clock), so the guest's blows reach the host's server in full and
+  HP stays in sync. A guest swing takes ~12-17 HP (a hit of 12-15 plus two 1-HP ticks; the boar 85 -> 0 in 5
+  swings). Both characters have 300 max HP. Scaling gave HP back on 16 blows (4-5 HP each, a third: x1.50 working),
+  only on bandits already fighting (13:43-13:45); the first blows on an unaware bandit are not scaled (as designed:
+  enemy_hostile_in_combat). NO doubling in the numbers; the guest's 10 kills vs the host's 2 fit the guest doing
+  most of the fighting. What the logs cannot show: swings that missed. Likely part of the feel: enemies have x1.5
+  health in co-op (vs solo), plus misses from the enemy's position on the guest's screen (Borque's corpse 3 m off,
+  "hits without touching"). Kept for B18; the aggression fix in 8a65cf2d is the real change. The mission NPC under
+  the cart: not identifiable from the logs (no name; ~65 host sequencer actors 'NOT in this client', normal for
+  far groups).
