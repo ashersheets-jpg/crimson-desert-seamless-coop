@@ -8316,3 +8316,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   player 44219 ms ago)" and the host's client "now runs NPC 0xB01000D8". 0 failed, both alive, SAVES OK, 5/5.
   => ai_handoff_fight ON BY DEFAULT (native, built 20:01, synced to native-base). It needs a full checklist before
   any post. Kills: host 4, guest 6.
+- 20:05 The radmin-lock fix (lobby_native_reset_stale) has no clean live test here: the harness writes both
+  copies' mode files (cdmp.host.ini / cdmp.guest.ini) before every run, and the fix acts only with co-op switched
+  off. It mirrors lobby_native_init's own reset (run in every launch). Built, code-checked, NOT live-tested.
+- 20:06 Package 0.1.0-alpha+f61f9fec (outer f61f9fe; native 0e0c221 = 7cb93cd + the fight rule, on by default;
+  layer: the photo-mode hide, the stale-mode reset, dev-only gsnap / vtscan / watch_bytes). pp26 (all 22 steps)
+  started 20:06, ~3 h. No builds or harness edits until it ends.
