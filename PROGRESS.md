@@ -8487,3 +8487,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   Our New Co-op Save has the same comrade keys (0xB01000AC / B1 bound by sequencers 0x22 / 0x24 in cs25g).
   cs44a (06:50): cabin ready check, then the host teleported onto Marius, E held, Space through the talk; then Ross;
   then 90 s of shots while 0320 arms. Measurement only.
+- 06:53 cs44a: the cabin ready check worked again (wait alone -> both here -> guest pressed -> host pressed ->
+  released together, host cinematic 06:46:18-06:46:51; SAVES OK, 5/5, test world back). The talk half never ran:
+  the h8 watcher inside the script never set the flag (a watcher started inside the test script dies; cs25f's
+  worked as a separate command). cs44b (07:00): the same with the watcher as its own background command.
