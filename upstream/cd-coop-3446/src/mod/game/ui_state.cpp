@@ -64,19 +64,50 @@ uintptr_t minigame_gauge_address() {
 bool photo_mode_active() {
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     if (base != off::kImageBase) return false;
-    // The raw bit, held for 4 reads in a row before it counts either way (one frame's blip does not flip it).
-    static bool shown = false;
+    // The mode id reads 0xCB0A77 in photo mode, but ALSO while loading, for ~10 s after a cutscene, while the friend's
+    // character arrives and in some knock-downs (pp26, 2026-11-16). Photo mode is opened from the pause menu, so the id
+    // only counts when it comes up as the menu closes: when it comes up, a menu was open in the last 2 s (or still is),
+    // no cutscene in the last 3 s, and the menu is closed within 1.5 s of it (the menu flag lags photo mode's start by
+    // a few frames, cs38j). An id that comes up any other way is ignored until it goes away again. The raw id is held
+    // for 4 reads in a row before it counts either way (one frame's blip does not flip it).
+    enum class St { Off, Pending, Shown, Rejected };
+    static St st = St::Off;
     static int same = 0;
+    static uint64_t menu_ms = 0, cutscene_ms = 0, rise_ms = 0;
+    const uint64_t now = GetTickCount64();
+    const bool menu = ui_menu_open();
+    if (menu) menu_ms = now;
+    if (cutscene_playing().value_or(false)) cutscene_ms = now;
     uint32_t a = 0, b = 0;
     if (!safe_read(base + off::kPhotoModeIdA, &a, 4) || !safe_read(base + off::kPhotoModeIdB, &b, 4)) return false;
     const bool raw = (a & 0xFFFFFF) == off::kPhotoModeId && (b & 0xFFFFFF) == off::kPhotoModeId;
-    if (raw == shown) {
+    auto reject = [&](const char* why) {
+        st = St::Rejected;
+        static int rejects = 0;
+        if (++rejects <= 50)
+            log::info("Hud: the photo-mode id came up outside the pause menu ({}): not photo mode, the overlay stays", why);
+    };
+    const bool on = st != St::Off;
+    if (raw == on) {
         same = 0;
     } else if (++same >= 4) {
-        shown = raw;
         same = 0;
+        if (!raw) {
+            st = St::Off;
+        } else if (cutscene_ms && now - cutscene_ms <= 3000) {
+            reject("a cutscene just ended");
+        } else if (!menu && !(menu_ms && now - menu_ms <= 2000)) {
+            reject("no menu just closed");
+        } else {
+            st = St::Pending;
+            rise_ms = now;
+        }
     }
-    return shown;
+    if (st == St::Pending && raw) {
+        if (!menu) st = St::Shown;
+        else if (now - rise_ms > 1500) reject("a menu stayed open");
+    }
+    return st == St::Shown;
 }
 
 namespace {
