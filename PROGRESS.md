@@ -8622,3 +8622,13 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   HEARD; cs42a's "not heard" was the ambient. No fix needed. Probe removed from the source (diff kept privately in
   build/decomp/b20_probe_3663.diff), clean native rebuilt 13:20. SAVES OK and 5/5 restored in all six runs.
   Next for B20: voices (effort / hurt sounds), the same A/B way if they go through a path we can count.
+- 13:32-13:52 Borque's "the other player's run animation sometimes looks frozen while it moves" (scratchpad cs49.sh:
+  the guest sprints by the still host; the HOST's window captured focus-free by pwshot.ps1; the footstep probe
+  re-applied as a timer of every step on both games, NOT in the source). Steps are the animation signal: a frozen
+  run plays no footstep keys.
+  * cs49a: 40 shots; the guest ran out of view in 2 s; the stride poses it showed differ shot to shot.
+  * cs49b: it ran ~60 m away (past the 30-60 m footstep range): the host's gaps there prove nothing.
+  * cs49c (out and back, Shift + W 2.5 s / S 2.5 s x5, then walking): the host played 144 of the guest's 163 steps at
+    the same cadence (4.5 / s). FIVE gaps of 0.9-1.5 s where the guest's own game stepped 3-6 times and the host's
+    copy did not, each in the second before a turn-round (W <-> S). Next: cs49d, host shots every ~150 ms over the
+    turn-rounds, to see what the copy does there (slides? holds a pose?).
