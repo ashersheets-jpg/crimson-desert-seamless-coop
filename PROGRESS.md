@@ -8688,3 +8688,13 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   (22 steps, to ~21:30). No builds, no harness edits, Discord by JS only while it runs.
   CHANGELOG: 1c6453e1 NOT POSTED YET; draft docs/release/shared-world-playtest/download-1c6453e1.txt (corrects what I
   told Borque this morning about the client's hits).
+- 16:00 (pp29 running; static work only):
+  * The dev `advance` (quest_advance.cpp): kSetMissionState, kAdvance, kTriggerHandler and the XP timer all match
+    3663 (their comments are stale); only kMissionTable (0x7248520) is still 3576's (3663's code reads that address
+    as another object, +0x50/+0x54). A pattern scan (global, then [+8] and [+0x58]) does not find it even on 3576:
+    porting it needs a proper research pass. Not done.
+  * Discord: Borque (19:13 UTC) will test again today or tomorrow; the stuck NPC is "Hernand Requests: Man Crushed
+    by a Wagon", by the Hernand river just below the Greymanes camp (his video link's title). B02 lead; coordinates
+    still to find. Replied (tagged): we'll compare both games' people there; the new build comes when it passes.
+  * cs56.sh written for after pp29 (B10 on release defaults: New Co-op Save, the guest teleported to the cabin;
+    does ITS tracker move past "Return to your comrades").
