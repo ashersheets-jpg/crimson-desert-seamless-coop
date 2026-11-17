@@ -8569,3 +8569,8 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   Committed: native 8512218 (synced), layer ac99edc (release ini: host combat_follow=1 + combat_follow_v2=1, guest
   remote_interp_combat=1). Test kit: crime checks the stream (made > 0, no wrong sizes); the MountSync self-check
   known-warning line dropped (fixed in 9b0e3bf). Next: package with 9b0e3bf + 8512218 + ac99edc, full checklist.
+- 08:59 PACKAGE 0.1.0-alpha+ada1800c (shared-world 12.4 MB): 8a65cf2d + the world-horse self-check fix (9b0e3bf) + B18
+  the combat stream (8512218, ac99edc). Layer tests 2/2. No update restart pending (RebootRequired false; active
+  hours 15-9). FULL CHECKLIST pp28 started 08:59 (22 steps, ~5.5 h, to ~14:30): static real fresh newsave mounts
+  xess fsr display lowsave chest revive loot crime farfight farfight2 mountfight nosave retry stuck mismatch
+  hostrevive solostart. No builds, no harness edits, no focus-stealing while it runs; Discord by JS only.
