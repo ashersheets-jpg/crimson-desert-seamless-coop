@@ -8652,3 +8652,13 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   * cs50e (fog_share=0 really off, "FogShare off"): the guest's map shows only its own explored patch; cs50d (on)
     shows a much larger area (north-west round the lake and more): docs/drafts/b04-fog-share-2026-11-17.png.
     B04's map part is SEEN working. SAVES OK and 5/5 restored in all five. Left for B04: knowledge (needs a learn).
+- 15:02 cs51a (B04 knowledge: both characters NEW (host newgame + Start From My Solo Progress, guest newgame), both
+  sent to the dock camp, knowledge_grant=1 via the now-working extras): "KnowledgeGrant ON", learns 0 in 7 minutes
+  again. In the new world it was night at the dock with no bandits in sight and the host's swings ran only after the
+  guest's keys: no fight, nothing taught. The knowledge share stays UNSEEN and off; it needs a talk / book / observed
+  skill (hands-on list). Test co-op world restored identical, SAVES OK, 5/5.
+- 15:05 B06 gap: the layer's capture counts a blow as OURS only when the enemy's VaryHPAck source is our character's
+  key; from the saddle it never is ("we hurt" silent, 23:10 on 11-16). That flag also drives the party scaling
+  ("Enemy health with a guest", 1.5x by heal-back): the host's and the guest's blows from the saddle skip it, so
+  mounted players kill faster than on foot. Layer diagnostic (capped 40 lines): the source of every enemy HP loss
+  that is not ours. cs52 = the mountfight step with it.
