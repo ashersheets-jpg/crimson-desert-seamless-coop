@@ -5,7 +5,7 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
-- 2026-11-16 20:15 B15 ARENAS QUESTION (not urgent; I go on meanwhile). What exists: the duel ground. Whoever sends
+- 2026-11-16 20:07 B15 ARENAS QUESTION (not urgent; I go on meanwhile). What exists: the duel ground. Whoever sends
   the duel places it between the two of you; its size is a Co-op setting ("Duel ground": 12 / 20 / 35 m); stepping
   out of it for a few seconds loses the round. Options: (1) count that as the arenas (I check the ground on the
   shared world in the next free test slot); (2) also NAMED arenas: the duel invite offers a few fixed places in the
