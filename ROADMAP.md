@@ -185,8 +185,11 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   Left: bear / wolf / raptor / wagon / skiff / mech, which no test save has, the owner's copy included: hands-on.)
 - [~] **B06 — Mounted combat damage** on shared enemies. (2026-11-15, from the checklist's mountfight logs: the
   guest's blows from the saddle hurt and kill the host's enemies -- pp22: 16 blows, 0xB01000D2 63 -> 14 -> 0 and
-  0xB010031A / 0xB010048A to 0 on the host, 4 kills in the guest's kill feed; pp19 2, pp20 3. Left: the host
-  fighting from the saddle with the guest watching, and the guest's own "we hurt" capture, silent when mounted.)
+  0xB010031A / 0xB010048A to 0 on the host, 4 kills in the guest's kill feed; pp19 2, pp20 3. 2026-11-17 cs52: the
+  silent "we hurt" was a two-worlds-only line, not the saddle (the guest's blows from the saddle carry its own key);
+  found with it: the host's layer took the guest's character for its own and "Enemy health with a guest" barely
+  worked in the shared world -- fixed in 1c6453e1 (both players' blows, cs55). Left: the host fighting from the
+  saddle with the guest watching (cs26a could not script the host's ride).)
 - [ ] **B07 — Boss mechanics for two** (grabs, finishers, phase triggers, arena locks).
 - [-] **B08 — Join mid-fight, boss, cutscene or loading screen.** DROPPED (user 2026-11-07: "Being able to join
   mid-game is not a priority ... people can only join parties from the main menu screen"). Joining is from the title
