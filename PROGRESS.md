@@ -8304,3 +8304,10 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   own client), on the host 9; without the rule (cs40d) 3 and 8, cs40b 3 and 27. Guest: 50 blows, 342 HP, 4 kills.
   Layer built 19:31 with the photo-mode id. Next: cs38i (photo mode by pad, the id) and cs40g (the guest fights, then
   the host fights the same camp: do the bandits come back to the host?).
+- 19:40 cs38i (B16, photo mode by pad, the layer's mode-id check): "Hud: the game's Photo Mode opened: our overlay
+  hides" at the A press (19:38:51.24), "closed ... shows again" at the B press (19:39:00.34), nothing else all run;
+  the id read B3 / 7D / 34 / 19 while loading and 0x77 only in photo mode. Shot g12: photo mode with both
+  characters and NO partner frame, name tag or prompt of ours. B16's group photo WORKS (build folder; not packaged).
+- 19:49 cs40g (fight rule, the guest fights, then the host): 8 hand-overs to the guest again, 0 failed, both fine;
+  the way back NOT exercised: the host fought bandits 22-32 m from the guest's (its idle spot), not those. cs40h: the
+  host teleports beside the guest (tpactor A0100066) when the guest's fight ends, then fights.
