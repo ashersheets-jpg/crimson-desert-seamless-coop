@@ -12,18 +12,15 @@ test save Out, shipped cdmp.ini restored.
   world and both of you are taken there (the "Go to my friend" travel), which needs places picked by eye on the map;
   (3) drop arenas. I would pick (1) now, (2) after the release if you want it. The spectator camera needs a third
   player (B21).
-- 2026-11-16 23:36 MAY I POST 0.1.0-alpha+8a65cf2d once its checklist (pp27, started 23:36, ~3 h 20 min) passes?
+- 2026-11-16 23:36 MAY I POST 0.1.0-alpha+8a65cf2d once its checklist (pp27: stopped at 23:54 for the owner's play,
+  4 of 22 steps done; to be resumed) passes?
   It replaces f61f9fec (never posted: its checklist found our overlay hiding at loading, after cutscenes and when
   the friend arrived, a false photo-mode signal; fixed and checked in cs38l). It is 74bb83c3 plus: enemies fight the
   joining friend too (the AI hand-over fight rule, Borque's report), group photos without our tags or panels, and
   the stuck-co-op-launch fix. Text: docs/release/shared-world-playtest/download-8a65cf2d.txt. Not posted; a post
   needs your OK.
-- 2026-11-16 16:30 MAY I DOWNLOAD Borque's two report zips? #play-testing-feedback, 12:57 UTC today, "tested on latest
-  version": CoopPlus-report-2026-11-16_13-51-01-client.zip and CoopPlus-report-2026-11-16_13-51-47-host.zip (sizes
-  not shown in the channel). The report: the guest needs about twice the hits to kill an enemy; enemies rarely attack
-  the guest; some blows hit the guest without touching it; a mission NPC under a cart was missing for the guest; a
-  killed boar lay 3 m apart in the two games; run animations sometimes look frozen. Their logs would show the damage
-  numbers of both sides (B18).
+- 2026-11-16 23:54 DONE: Borque's two report zips downloaded (owner's "Yes, download both"; standing OK for
+  tester reports from now on unless there is evidence of malware). Logs only. Reading them is under way.
 - 2026-11-16 16:23 DONE: 74bb83c3 POSTED in #download-here (owner's "Go ahead", 16:12). The next post needs a new OK. (Was: MAY I POST 74bb83c3? ITS CHECKLIST PASSED (pp25 863/864, then pp25c; 12:09-15:27).
   It is 430fe6be (checklist passed: the black-screen fix, the busy-NPC message, the panel move) plus
   trading, wagers on challenges, the friend's Give seen on 3663, and a fix for the inventory during rock-paper-
@@ -8375,3 +8372,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   8a65cf2. New prepost check: no step's layer log may say "Photo Mode opened".
 - 23:36 Package 0.1.0-alpha+8a65cf2d (outer 8a65cf2; native unchanged 0e0c221). f61f9fec is not posted and is
   replaced. pp27 (all 22 steps) started 23:36, ~3 h 20 min. No builds or harness edits until it ends.
+- 23:54 pp27 STOPPED at the owner's request (they play now): static, real, fresh passed; solostart 48 pass, 1 FAIL
+  ("both games still running at the end": no "host alive=True guest alive=True" line; to look at). The loop and the
+  newsave step's second run were stopped; its first run finished at 00:05 with SAVES OK, 5/5 restored, no game
+  running. To resume: newsave and the 17 steps after it, plus solostart again.
+- 23:54 Borque's report zips downloaded (owner OK, 23:5x; standing OK for tester reports unless malware evidence):
+  logs and report.txt only. They ran 0245f27d (older than 74bb83c3), scaling x1.50 (default). Host tally at the end:
+  guest>NPC 282 blows, 10 kills; host>NPC 17, 2 kills; NPC>host 40 vs NPC>guest 9 (enemies ignoring the friend:
+  the fight rule in 8a65cf2d is for that). The damage per blow is next.
