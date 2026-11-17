@@ -318,3 +318,8 @@ topic BEFORE testing or guessing about it.
   `bash coopworld.sh restore <name>` in build/native before anything else; run_pp.sh now refuses to start a step
   while an _old_ world exists. A resumed pass gets a new pass name (pp27b), so the report file holds each step once
   (2026-11-17: newsave refused to back up, and mounts began in the new story world).
+- Discord in the app's browser pane during a two-copy test: a `computer` click in the pane moves the OS focus to the
+  Claude app (fg went CrimsonDesert -> claude at 03:08), and the harness fails a step when the game is not in front
+  at a shot. Reading (get_page_text, javascript) and navigate keep the game in front. Post with javascript only:
+  focus the [role="textbox"], dispatch a ClipboardEvent('paste') with the text, then a KeyboardEvent('keydown',
+  Enter). Raw <@userid> mentions resolve; user ids come from the avatar URLs (avatars/<id>/) (2026-11-17).

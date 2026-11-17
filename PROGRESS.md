@@ -8408,3 +8408,15 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   pp27b started (newsave .. hostrevive + solostart, ~2 h 50 min); pp27's static, real and fresh count with it.
   The ~02:45 network drop (no DNS, 1.1.1.1 unreachable) was short; pushes work again. Owner: small design calls
   like the three above are mine to make; important ones wait for them.
+- 03:10 DISCORD (owner: reply to playtest feedback with a tag, skim #general, redirect feedback, check every few
+  hours). Posted, no clicks (javascript paste + Enter, the game kept the focus):
+  * #play-testing-feedback 03:09 to @JackyChan004 @D3vils: their 15/16 Nov cutscene reports and what 74bb83c3
+    fixed (black screen, host's cabin scene in the guest's game, the busy-NPC message, the setting's place);
+    asked for zips if static NPCs come back; talk-started scenes next.
+  * #play-testing-feedback 03:10 to @Borque (after the owner's 03:03 "fixing these now"): aggression fix in the
+    next build; damage lands in full, enemies have x1.5 health with a guest; the misses / boar / run animation
+    noted; asked where the cart NPC was.
+  * #general 03:08 to @mudai: the radmin lock's cause and the fix in the next build; Diagnose zip to the feedback
+    channel if it persists. Owner answered BionicFreak (custom characters) at 03:02. w▲ri's question to ByJunter
+    about the article: left (theirs / the owner's).
+  Next Discord check: when pp27b ends (~05:40), with the 8a65cf2d post if it passes.
