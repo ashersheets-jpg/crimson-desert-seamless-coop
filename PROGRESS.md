@@ -12,7 +12,8 @@ test save Out, shipped cdmp.ini restored.
   releases/latest) is still 22e8f365 from 10 Nov; your OK then was for that one release. Discord has had 8a65cf2d
   since 05:54. Should each build that is posted to Discord also go to GitHub (same zips, same notes), or leave
   GitHub as it is? Until you say, I leave GitHub alone.
-- 2026-11-17 05:54 DONE: 8a65cf2d POSTED in #download-here by me (standing OK; checklist passed).
+- 2026-11-17 12:08 DONE: ada1800c POSTED in #download-here by me (standing OK; checklist pp28 passed after two
+  test-kit fixes): enemies in place on the friend's screen (B18), the camp-horse fix. Replaces 8a65cf2d.
 - 2026-11-17 02:45 DECIDED BY ME (owner's "be as independent as you can"; say so to change it): B15 = (1),
   the duel ground counts as the arenas; named arenas (2) after the release. Was: B15 ARENAS QUESTION (not urgent; I go on meanwhile). What exists: the duel ground. Whoever sends
   the duel places it between the two of you; its size is a Co-op setting ("Duel ground": 12 / 20 / 35 m); stepping
@@ -8598,3 +8599,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     lethal, as in solo play. DECIDED BY ME (test design): it stands 12 s now. pp28b farfight re-run started 11:59.
 - 11:58 Discord check: nothing needs a reply (Failord thanked us under the Borque reply; #general: a new member,
   Burns explained Radmin to someone; #bug-reports quiet).
+- 12:08 pp28b farfight (guest stands 12 s): 47 pass, 0 fail; the guest killed 3 (guest>NPC 37 on its client), SAVES
+  OK, 5/5 restored. pp28 is a PASS: 22 steps, the loot re-judge and farfight re-run clean.
+- 12:08 POSTED 0.1.0-alpha+ada1800c in #download-here (both zips, thanks <@Borque>, 1296 chars; JS upload, window.name
+  cleared, staging server stopped). CHANGELOG: POSTED. Next: build the B20 footstep probe, run cs47.sh.

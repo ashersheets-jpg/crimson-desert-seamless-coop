@@ -5,7 +5,8 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-NOT POSTED YET: 0.1.0-alpha+ada1800c, for game 1.0.0.3663 (checklist pp28 running): everything in 8a65cf2d below,
+POSTED 2026-11-17 12:08: 0.1.0-alpha+ada1800c, for game 1.0.0.3663 (checklist pp28: 22 steps, the two test-kit
+fails fixed and re-run): everything in 8a65cf2d below,
 plus:
 - **Enemies are where they really are, on the friend's screen too.** The friend saw every moving enemy about a
   second late: 2.5 m behind where the host's game had it (up to 9 m on a running bandit). So the friend's swings
