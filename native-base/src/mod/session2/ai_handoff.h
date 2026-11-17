@@ -25,7 +25,7 @@ namespace cdmp::session2 {
 
 // [session2] ai_handoff = 0 | probe | 1. probe: counted and logged as "would", nothing written. The client part (the
 // receive hook's answer to the private 2660) is on in both roles whenever the mode is not 0.
-// fight (2026-11-16, B18, [session2] ai_handoff_fight): the FIGHT rule, on its own or with the mode above. Measured
+// fight (2026-11-16, B18, [session2] ai_handoff_fight, default 1): the FIGHT rule, on its own or with the mode above. Measured
 // (cs40a / cs40b): the host's quest bandits are driven by the host's client and go for the host, even while only the
 // guest fights them (27 blows on the idle host, 3 on the guest). So: an NPC the other player hit in the last 4 s,
 // that the host has not hit for 6 s, with that player within 20 m and nearer than the host, goes to that player;
