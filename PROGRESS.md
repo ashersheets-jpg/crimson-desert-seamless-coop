@@ -8475,3 +8475,15 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   round 2 after 10 s; "the Duel is over (we won 2 - 0)" / "(they won 0 - 2)". Note (small, mine to decide later): two
   players over 40 m apart start the next round outside the ground and have 10 s (the on-screen countdown) to walk
   in; fine for now. Test-kit note: -GuestDev [coop] keys do not reach the layer's ini (the 12 m override).
+- 06:50 B09 PAST THE CABIN, from the testers' 16 Nov logs (research agent, read only): the 7 scenes the host played
+  alone after the cabin were NOT talk-started. The two talks (Marius 0xB01000AC, Ross 0xB01000B1, interaction 0xA8;
+  2642 then 2304, then a cd_seq_quest_*_dlc 2644 30-40 ms later) are dialog scenes. The step cinematics (0320_dlc
+  "Enter the cabin", 0100_02 / 0100_01_dlc / 0100_03 "Help Oongka / Naira / Yann") were ARMED by the host's first
+  story 2644 (state 1) 1.8-28 s before, and STARTED ~10 ms after the server's state-2 ack (after the host's 2654
+  StageBranchStateDelayEndReq). One (0x3DB) came from the server with no Req of the host (a server-side hold would
+  be needed). The gate holds only a step's main _00 scene at a volume, so it held none. Plan: hold a story step
+  cinematic at its first 2644 like a main scene (the owner's rule, "a story trigger waits for both"; my scoped call:
+  the same ready check, one more kind of trigger), if holding the host's 2644 / 2654 stops its scene (unknown).
+  Our New Co-op Save has the same comrade keys (0xB01000AC / B1 bound by sequencers 0x22 / 0x24 in cs25g).
+  cs44a (06:50): cabin ready check, then the host teleported onto Marius, E held, Space through the talk; then Ross;
+  then 90 s of shots while 0320 arms. Measurement only.
