@@ -73,6 +73,9 @@ overlay_checks() {  # layer log, who
   hasnot "$1" "Overlay disabled"         "$2: overlay never disabled"
   atleast "$1" "Overlay: installed true" "drawn" 100 "$2: overlay draws"
   hasnot "$1" "\] ERR "                  "$2: no error line in the layer log"
+  # No step opens the game's photo mode: the overlay must never hide for it (pp26: a false photo-mode id hid it in
+  # every step, at loading, after cutscenes and when the friend arrived).
+  hasnot "$1" "Hud: the game's Photo Mode opened" "$2: the overlay never hid for photo mode (no step opens it)"
   # Warnings. "Crash log: exception ... at cdmp.asi+0x..." lines are first-chance exceptions; the base's own guarded
   # reads raise some on purpose and catch them (fast_read, guest_seq_route's rd). Each faulting address is named from
   # the build's .pdb (tools/symaddr.py): a known guarded read is INFO, anything else is a FAIL to look into.
