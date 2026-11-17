@@ -63,10 +63,15 @@ inline constexpr uint16_t kOpMoveActorAck = 3008;
 inline constexpr uint16_t kOpStartActionAck = 2800;
 inline constexpr uint16_t kOpAttackTargetAck = 2519;  // PostProcessAttackResult_AttackTargetAck
 inline constexpr size_t kHeader = 5;
-inline constexpr size_t kMoveAck = 235;
-inline constexpr size_t kStartAck = 725;
-inline constexpr size_t kMoveParent = 0x8C, kMoveTs = 0xD5;
-inline constexpr size_t kStartParent = 0x117, kStartTs = 0x160, kStartTarget = 0x16D;
+// Co-op+ 2026-11-17: the 1.0.0.3460+ layout (3663 too; cs45d: every MoveActorAck to user 2 was 239 B and every
+// StartActionAck 729 B, so the 2976 sizes 235 / 725 dropped them all and the stream never had an anchor). From the
+// Co-op+ layer's wire_layout.h / docs/research/port-3460.md (the client's own parser, confirmed on captures): MoveData
+// grew by 4 and is reordered, Path first. MoveActorAck = the Req's first 0xE2 bytes + an inserted u8 + 12 B tail;
+// StartActionAck = the Req with one u8 inserted at MoveData 0x8E (offsets from there on +1). 2976 values in comments.
+inline constexpr size_t kMoveAck = 239;      // 2976: 235
+inline constexpr size_t kStartAck = 729;     // 2976: 725
+inline constexpr size_t kMoveParent = 0x44, kMoveTs = 0xD4;                         // 2976: 0x8C, 0xD5
+inline constexpr size_t kStartParent = 0xCF, kStartTs = 0x15F, kStartTarget = 0x171;  // 2976: 0x117, 0x160, 0x16D
 inline constexpr size_t kAttackMin = 8;
 // Liveness (review 2026-10-10) [V layouts, session 9 G1]: NotifyHandleDeadAck 2530 (19 B, +0x00 the dead actor,
 // +0x04 the killer); RemoveActorAck 2516 (10 B, `04 00 00 00 00 xx` then the key at +0x06; 8342 of 8342).
@@ -471,26 +476,25 @@ inline std::array<uint8_t, kPacketSize> make_move_ack(uint32_t key, const float 
     const float ident[4] = {0, 0, 0, 1};
     const float scale[3] = {1, 1, 1};
     put(p, 0x00, &key, 4);
+    // 3460+ MoveData (2976 offsets in brackets): Path.local = the world pose, scale 1 [0x4C]
     put(p, 0x04, pos, 12);
     put(p, 0x10, quat, 16);
-    // +0x20 u32 0; +0x24 Transform identity
-    put(p, 0x30, ident, 16);
-    put(p, 0x40, scale, 12);
-    // +0x4C Path.local = the world pose, scale 1
-    put(p, 0x4C, pos, 12);
-    put(p, 0x58, quat, 16);
+    put(p, 0x20, scale, 12);
+    put(p, 0x2C, vel, 12);           // velocity [0x74]; +0x38 vec3 0 [0x80]
+    std::memset(p + 0x44, 0xFF, 8);  // parent -1 [0x8C]
+    // +0x4C Path.world: pos 0, quat identity, scale 1 [0x94]; +0x74, +0x80 vec3 0 [0xBC, 0xC8]
+    put(p, 0x58, ident, 16);
     put(p, 0x68, scale, 12);
-    put(p, 0x74, vel, 12);
-    // +0x80 vec3 0
-    std::memset(p + 0x8C, 0xFF, 8);  // parent -1
-    // +0x94 Path.world: pos 0, quat identity, scale 1
-    put(p, 0xA0, ident, 16);
-    put(p, 0xB0, scale, 12);
-    // +0xBC, +0xC8 vec3 0; +0xD4 u8 0
-    put(p, 0xD5, &ts, 8);
-    // +0xDD u8 0, +0xDE u8 0, +0xDF f32 0, f32 0
+    // +0x8C Transform identity: pos 0, quat identity, scale 1 [0x24]
+    put(p, 0x98, ident, 16);
+    put(p, 0xA8, scale, 12);
+    put(p, 0xB4, quat, 16);          // the actor's rotation [0x10]
+    put(p, 0xC4, pos, 12);           // the actor's position [0x04]
+    // +0xD0 u32 0 [0x20]
+    put(p, 0xD4, &ts, 8);            // [0xD5]
+    // +0xDC u32 0 (new in 3460), +0xE0 u8 0, +0xE1 u8 0; +0xE2 the Ack's u8 0; +0xE3 f32 0, +0xE7 f32 0
     const float speed = std::sqrt(vel[0] * vel[0] + vel[1] * vel[1] + vel[2] * vel[2]);
-    put(p, 0xE7, &speed, 4);
+    put(p, 0xEB, &speed, 4);         // [0xE7]
     return pk;
 }
 
