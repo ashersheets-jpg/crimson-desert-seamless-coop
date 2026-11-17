@@ -308,3 +308,8 @@ topic BEFORE testing or guessing about it.
 - Harness `pad:HEX:ms` steps only work when the loaded dev script IS scan\pad.txt: the step rewrites pad.txt and
   presses the dev-script hotkey (Ctrl+Shift+F6), which re-runs whatever script is loaded. A test that needs its own
   dev script must drive menus with keys and the mouse (`at:x:y`, `click:L`), not the pad (2026-11-16, cs39 / cs41).
+- A new detector is proven only when it stays QUIET in runs where the thing does not happen, not just when it fires
+  where it does. The photo-mode id fired in every pp26 step (loading, after cutscenes, the friend's arrival,
+  knock-downs) and cs38i's own guest log already showed one; I read only the photo window. After adding a state
+  detector, grep every log of the next checklist for its line and add a prepost check that it is silent outside
+  the step that triggers it (2026-11-16, pp26).
