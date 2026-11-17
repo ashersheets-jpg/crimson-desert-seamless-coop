@@ -5,6 +5,9 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- 2026-11-17 07:45 HANDS-ON (about 10 min, when you have time): B09 past the cabin. A script cannot aim a talk
+  (7 tries). I need you to play the host in a two-copy run I set up, through the Marius and Ross talks to "Enter the
+  cabin"; a probe logs which game code starts that scene, so the ready check can hold it for both players.
 - 2026-11-17 05:56 QUESTION (not urgent): the public GitHub playtest release (crimson-desert-coop-playtest,
   releases/latest) is still 22e8f365 from 10 Nov; your OK then was for that one release. Discord has had 8a65cf2d
   since 05:54. Should each build that is posted to Discord also go to GitHub (same zips, same notes), or leave
@@ -8504,3 +8507,17 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   ported to 3663 (the layer's Live quests are off on 3663); porting it is a detour (no copy of the table address
   for 3663 anywhere). cs44d (07:31): back to the real talks, with the aim fixed by a camera sweep: after each
   teleport 8 turns of ~45 deg with E held 1.2 s at each stop, then Space through the dialog.
+- 07:45 cs44d (SAVES OK, 5/5, world back): cabin ready check worked (11th). The sweep did not find Marius either:
+  after 8 turns with E held the host faced a tree by the cabin, objective marker 14 m off, no 2642 to 0xB01000AC.
+  STOPPED this line (7 scripted tries, cs25c-g + cs44b/d, never one talk). B09 PAST THE CABIN, where it stands:
+  * The scenes the friend missed are branch-armed step cinematics (0320_dlc, 0100_*), started inside each game's
+    client at its own 2654 (StageBranchStateDelayEndReq), ~10 ms before the server's state 2; one (0x3DB) is
+    pushed by the server with no Req. The gate never sees them (it holds a step's main _00 scene at a volume).
+  * The fix: hold the first story 2644 of a step cinematic like a main scene (same ready check), with a CLIENT-SIDE
+    hold of the scene start on both games (like the volume hold at 0xE043E9), driven by the host's gate; a 2644
+    right after the same player's talk Req (a dialog) is not held (only one talker per NPC: host first, then the
+    friend is sent there, the decided option 2).
+  * Needed: the client function that starts a branch-armed scene (its 2654 sender's caller chain), which needs one
+    real run past Marius and Ross. Hands-on: the owner plays host to "Enter the cabin" with story_gate=hold and a
+    stack probe on 2654; ~10 min. Put in "Waiting on the user".
+  Next: B18 (the guest's misses / position offsets), measurable on one PC.
