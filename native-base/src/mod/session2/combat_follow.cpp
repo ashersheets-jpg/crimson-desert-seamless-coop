@@ -31,9 +31,13 @@ using cfl::Skip;
 
 // The host client's game clock as its threads read it (remote_motion.cpp, divergence_probe): frame ms + us/1000
 // + the client->server bias. Only differences of it are used (the anchor), so the bias cancels out.
-constexpr uintptr_t kClockBase = 0x6C8CD68;
-constexpr uintptr_t kClockFrac = 0x6C8CD70;
-constexpr uintptr_t kClockBias = 0x6D69438;
+// Co-op+ 2026-11-17: ported to 1.0.0.3663 (were 2976's 0x6C8CD68 / 0x6C8CD70 / 0x6D69438; only the opcodes had
+// moved). cs46a: 0x71600F0 is written once a frame by exe+0xC1668D (u64 us, +dt*1e6); 0x71600E8 is not written in
+// 30 s (the base); 0x7245468 = the world system slot 0x72451C0 + 0x2A8 as in 2976 (clock_push_logic.h). The
+// summary's offset histogram (our stamp vs the real Acks') checks them in a live run.
+constexpr uintptr_t kClockBase = 0x71600E8;
+constexpr uintptr_t kClockFrac = 0x71600F0;
+constexpr uintptr_t kClockBias = 0x7245468;
 // Client actor -> components (+0x68) -> TransformSync (+0x1A0): quat +0xA4, pos +0xB4 (sector-local), sector
 // i16 x/z +0xC0 (actor_lookup.cpp); the control state byte [actor+0xC8] (mirror-ack-formats.md §5: 1/2 =
 // simulated by this client, 0 = remote).
@@ -591,11 +595,29 @@ bool combat_follow_start(const std::string& raw, const std::string& raw_v2) {
 
 bool combat_follow_active() { return g_mode.load(std::memory_order_relaxed) != 0; }
 
+// Co-op+ 2026-11-17 (the 3663 port, cs45c: 'real samples 0'): what the exact-size parsers saw. Per opcode
+// (MoveActorAck, StartActionAck): packets, of them not the size read_out wants, and the last such size.
+std::atomic<uint64_t> c_sz_move{0}, c_sz_move_bad{0}, c_sz_start{0}, c_sz_start_bad{0};
+std::atomic<uint32_t> g_sz_move_last{0}, g_sz_start_last{0};
+
 void combat_follow_on_out(uint16_t opcode, std::span<const uint8_t> payload) noexcept {
     if (!combat_follow_active()) return;
     if (opcode != cfl::kOpMoveActorAck && opcode != cfl::kOpStartActionAck && opcode != cfl::kOpAttackTargetAck &&
         opcode != cfl::kOpNotifyHandleDeadAck && opcode != cfl::kOpRemoveActorAck) {
         return;
+    }
+    if (opcode == cfl::kOpMoveActorAck) {
+        c_sz_move.fetch_add(1, std::memory_order_relaxed);
+        if (payload.size() != cfl::kMoveAck) {
+            c_sz_move_bad.fetch_add(1, std::memory_order_relaxed);
+            g_sz_move_last.store(static_cast<uint32_t>(payload.size()), std::memory_order_relaxed);
+        }
+    } else if (opcode == cfl::kOpStartActionAck) {
+        c_sz_start.fetch_add(1, std::memory_order_relaxed);
+        if (payload.size() != cfl::kStartAck) {
+            c_sz_start_bad.fetch_add(1, std::memory_order_relaxed);
+            g_sz_start_last.store(static_cast<uint32_t>(payload.size()), std::memory_order_relaxed);
+        }
     }
     const auto v2 = static_cast<Mode>(g_v2.load(std::memory_order_acquire));
     const cfl::Seen s = cfl::read_out(opcode, payload, server_user2_player_key());
@@ -674,6 +696,9 @@ std::string combat_follow_describe() {
         s += std::format(" | v2 timer: every {} ms, high resolution {}, late ticks {}", cfl::kTickV2Ms,
                          g_hires.load() ? "yes" : "NO", c_late_ticks.load());
     }
+    s += std::format(" | sizes to user 2: MoveActorAck {} (not {} B: {}, last {}), StartActionAck {} (not {} B: {}, last {})",
+                     c_sz_move.load(), cfl::kMoveAck, c_sz_move_bad.load(), g_sz_move_last.load(), c_sz_start.load(),
+                     cfl::kStartAck, c_sz_start_bad.load(), g_sz_start_last.load());
     return s;
 }
 
