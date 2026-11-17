@@ -8632,3 +8632,12 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     the same cadence (4.5 / s). FIVE gaps of 0.9-1.5 s where the guest's own game stepped 3-6 times and the host's
     copy did not, each in the second before a turn-round (W <-> S). Next: cs49d, host shots every ~150 ms over the
     turn-rounds, to see what the copy does there (slides? holds a pose?).
+- 14:01 cs49d (host shots every ~125 ms over the turn-rounds): in the step gaps (0.8-1.3 s, 5 of them) the host's
+  copy of the guest RUNS with its legs alternating shot by shot (frames 95-102 at 8-13 m), then turns round. NOT a
+  frozen run: in four runs on one PC the copy never froze. The only defect: ~12 % of its footstep SOUNDS are skipped
+  around turn-rounds (148 of 169), minor. Probe out of the source again, clean native rebuilt 14:02 (scripts kept in
+  build/decomp: cs49.sh, b18_steps_cmp.py). SAVES OK and 5/5 restored in all four.
+- 14:03 Discord: asked Borque (tagged, #play-testing-feedback) when the frozen run happens (sprint / dodge / horse /
+  fight, distance, a clip) and again where the cart NPC was; told him the enemy lag fix is in ada1800c. #general: the
+  owner answered BionicFreak (players invisible to each other with "Custom Characters"; the owner thinks that mod
+  breaks it; plans for our own custom characters). Noted as a compatibility item to look at (Nexus RE is OK'd).
