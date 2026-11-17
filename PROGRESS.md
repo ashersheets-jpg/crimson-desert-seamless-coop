@@ -8603,3 +8603,13 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   OK, 5/5 restored. pp28 is a PASS: 22 steps, the loot re-judge and farfight re-run clean.
 - 12:08 POSTED 0.1.0-alpha+ada1800c in #download-here (both zips, thanks <@Borque>, 1296 chars; JS upload, window.name
   cleared, staging server stopped). CHANGELOG: POSTED. Next: build the B20 footstep probe, run cs47.sh.
+- 12:21 B20 cs47a (probe, 3576 offsets): the line ran 12:16-12:19 and the guest walked 12:19-12:20 (missed it), and
+  [X+0x140]+0x4A4 read 0 on the LOCAL player too: offsets. Ported (build/port3663/portmap.py): 3663's poster 0xB98DB0
+  and ground copy 0x9A55B0 use [X+0x140]+0x4B4 (3576: +0x4A4); X+0x17C 0xB01B4445 is the meadow's material.
+- 12:33 cs47b (+0x4B4, 40 lines): the material guess is WRONG. The other player's character on the host's game has
+  the full update (X+0x1FC 0), move time > 0, a ground material that follows its walk (0xB01B4445 -> 0x78963827 ->
+  0x1DB8911E) copied to +0x4B4, and footstep keys whose cursor moves while it walks (H+0xE8 1-4 of 2-4). So the
+  ticker runs for it. Left: the ticker runs when the DISTANCE gate 0xB9AF90 or the EFFECTS gate 0xB9B480 passes, but
+  posts a step sound only when the distance gate passed (it measures from the movement component's position).
+- 12:35 cs47c: inline hooks count both gates' answers and the poster's calls for the other player vs the local
+  player (detours call the game's code unchanged; research only, not for a release).
