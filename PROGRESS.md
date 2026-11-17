@@ -8403,3 +8403,8 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   the run restores the install). Next: coopworld.sh restore, then the rest as pp27b. run_pp.sh refuses a step while
   an _old_ world exists; LESSONS has it. Decided the three waiting design questions myself (B15 (1), B16 (1), talk
   scenes (2)), the owner's standing "be as independent as you can".
+- 03:1x Test co-op world restored (coopworld.sh restore: identical to the backup; the stray new world kept as
+  build/native/pp27-newsave-stopped-new-world). The mounts run that began in it ended with SAVES OK and 5/5.
+  pp27b started (newsave .. hostrevive + solostart, ~2 h 50 min); pp27's static, real and fresh count with it.
+  The ~03:00 network drop (no DNS, 1.1.1.1 unreachable) was short; pushes work again. Owner: small design calls
+  like the three above are mine to make; important ones wait for them.
