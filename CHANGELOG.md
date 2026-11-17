@@ -5,6 +5,22 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
+NOT POSTED YET: 0.1.0-alpha+f61f9fec, for game 1.0.0.3663 (checklist pp26 running): everything in 74bb83c3 below,
+plus:
+- **Enemies fight the friend too.** Until now the enemies of the host's world mostly went for the host, even while
+  only the friend was fighting them (a test: 27 blows on the host standing still, 3 on the friend doing all the
+  fighting; reported by Borque). An enemy the friend is fighting now runs on the friend's game and fights back at
+  the friend; when the host takes over the fight it goes back to the host. Tested on one PC: 9 enemies handed over
+  in a fight, the way back too, nothing failed.
+- **Damage: no difference found.** On the same character, the friend's swings take exactly as much health as the
+  host's (12.0 and 12.2 per swing in our test). Each of you plays your own character, so a weaker character (gear,
+  level) does less; that is the game's own rule.
+- **Group photos.** The game's Photo Mode (pause menu, Others) shows both of you; our name tag, the friend's health
+  panel and the "Interact" prompt no longer show in the photo (they were in the shot before; R, the photo's Capture
+  key on a keyboard, no longer starts our hold prompt either).
+- **Fixed: a co-op launch could stick.** If Co-op+ was switched off (or the game updated) right after a co-op
+  session, the next launches still started in that session's co-op role. They start in solo now.
+
 POSTED 2026-11-16 16:23: 0.1.0-alpha+74bb83c3, for game 1.0.0.3663 (checklist passed: pp25 863/864; its one fail, the mounted fight, was the check missing real blows: fixed in the test kit, the step passed as pp25c): everything in 430fe6be below,
 plus:
 - **Trade with your friend.** In your inventory, Discard on an item with your friend close now also offers "Offer

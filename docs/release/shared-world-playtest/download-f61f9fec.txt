@@ -1,0 +1,17 @@
+**Update: shared world playtest 0.1.0-alpha+f61f9fec, for game 1.0.0.3663**
+Use this instead of 74bb83c3; **both players need the same build** (the title menu tells you if not).
+
+Thanks @Borque for the combat report:
+- **Enemies ignored the joining friend:** confirmed. The host's game ran the enemies, and they went for the host even while only the friend fought them (our test: 27 blows on the idle host, 3 on the friend). Now an enemy the friend is fighting runs on the friend's game and fights back; when the host takes over, it goes back to the host.
+- **"Double the hits" for the friend:** on the same character both of you do the same damage per swing (we measured it). Each of you brings your own character, so weaker gear or level means more hits; that is the game's rule. If you still see it with equal characters, tell us.
+- Still to look at: the boar lying 3 m apart, the mission NPC under the cart, the frozen run animation.
+
+Also: **group photos.** The game's Photo Mode (pause menu, Others) now has no Co-op+ name tags or panels in the shot.
+And a fix: switching Co-op+ off (or a game update) right after a co-op session no longer leaves the game starting in co-op.
+
+Tested with two copies of the game on one PC (Nvidia): full checklist. Not seen yet: two PCs, AMD / Intel cards.
+
+- `...f61f9fec-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tell us in <#1567319198206525450> how it goes, with the report zip from both of you (close the game, run **Diagnose Co-op+.cmd**).
