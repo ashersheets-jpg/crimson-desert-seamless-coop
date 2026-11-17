@@ -8536,3 +8536,10 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     enemies in combat, on the ported remote_interp hooks): try now. cs45b: the same with (b) on the guest.
   * Test-kit note: -GuestDev [coop] keys never reached the layer (appended after the package's ini, a second
     [coop] section is not read); [dev] keys do.
+- 08:09 cs45b (the same with remote_interp_combat=1 on the guest; SAVES OK, 5/5): engaged enemies got D <= 400 ms
+  (808 class frames), but only 1 bandit counted as engaged and the 1-1.5 s update gaps stay: moving NPCs 2.0 m off
+  (was 2.5), lag 0.98 s (was 1.1). The guest half alone is not the fix; the research's "flujo de combate" needs the
+  HOST half, combat_follow v2 (a 30 Hz stream of every enemy in combat near user 2). Its opcodes are already 3663's
+  (MoveActorAck 3008, StartActionAck 2800, AttackTargetAck 2519, NotifyHandleDeadAck 2316, RemoveActorAck 3037: the
+  by-name table build/port3663/troc_3576_3663.json); only its three clock addresses are 2976's. cs46a (08:2x): hardware
+  write watches on the 3663 candidates 0x71600F0 / 0x71600E8 (frame clock, "3549" in ui_pause) and 0x7245468 (bias).
