@@ -207,7 +207,7 @@ std::atomic<uint64_t> c_vf53{0}, c_vf53_client{0}, c_vf53_other{0}, c_vf53_direc
 // P8 S18: the gate detour's verdicts; the dispatch probe of the remote rider; the self-check.
 std::atomic<uint64_t> c_gate_verdict[static_cast<size_t>(msl::GateVerdict::Count)] = {}, c_gate_drop{0}, c_gate_force_bit{0},
     c_m7_2991{0}, c_m7_rejected{0}, c_m7_taken{0}, c_m7_unlocked{0}, c_probe_lines{0}, c_gate_lines{0}, c_learned{0},
-    c_self_req_rider{0}, c_self_req_horse{0}, c_self_req_withheld{0}, c_native_gone{0}, c_native_fallback{0},
+    c_self_req_rider{0}, c_self_req_horse{0}, c_self_req_withheld{0}, c_self_req_world{0}, c_native_gone{0}, c_native_fallback{0},
     c_native_lost{0};
 // P8 S21: the seat (mount_seat) and its release; the empty-buffer hold (ride_hold_pos, ParallelTaskWorker threads).
 std::atomic<uint64_t> c_seat_seated{0}, c_seat_already{0}, c_seat_refused{0}, c_seat_failed{0}, c_seat_probe{0},
@@ -2466,9 +2466,22 @@ namespace {
 // `withheld`: the guest (mode 1) does not forward it to the host. True: it named the remote rider or its horse.
 bool self_check(const uint8_t* packet, size_t size, bool withheld) noexcept {
     if (mode() == Mode::Off) return false;
-    const uint8_t hit = msl::self_check_hit(packet, size, remote_key(), g_remote_horse.load(std::memory_order_relaxed));
+    const uint32_t rider_key = remote_key(), horse_key = g_remote_horse.load(std::memory_order_relaxed);
+    const uint8_t hit = msl::self_check_hit(packet, size, rider_key, horse_key);
     if (!hit) return false;
     const bool is_horse = hit == 2;
+    // 2026-11-17 (pp27b-crime): the guest rode a riderless camp horse; its controller is the host (0x90100000), so the
+    // host's own client drives that NPC's actions (2202) the native way. The rule is about the OTHER player's horse:
+    // a horse whose controller is not the remote rider's is a world horse and is left alone (counted, no line, no
+    // degrade, never withheld). Unknown controllers (an actor not found) keep the old rule.
+    if (is_horse) {
+        const uintptr_t ra = find_actor(rider_key), ha = find_actor(horse_key);
+        const uint32_t rc = ra ? rdv<uint32_t>(ra + kActorCtrl) : 0, hc = ha ? rdv<uint32_t>(ha + kActorCtrl) : 0;
+        if (rc && hc && rc != hc) {
+            c_self_req_world.fetch_add(1, std::memory_order_relaxed);
+            return false;
+        }
+    }
     const uint64_t n = (is_horse ? c_self_req_horse : c_self_req_rider).fetch_add(1, std::memory_order_relaxed) + 1;
     if (withheld) c_self_req_withheld.fetch_add(1, std::memory_order_relaxed);
     // Review (4): not only detected: fix B reacts at the first one (ride_filter rewrites the dismounts again).
@@ -2651,7 +2664,7 @@ std::string mount_sync_describe() {
                                  : "", gate_verdicts_text(), c_gate_drop.load(), c_gate_force_bit.load(),
         c_m7_2991.load(), c_m7_rejected.load(), c_m7_taken.load(), c_m7_unlocked.load(), c_native_gone.load(),
         c_native_fallback.load(), c_native_lost.load(), c_learned.load(), c_self_req_rider.load(), c_self_req_horse.load(),
-        c_self_req_withheld.load()) + seat_hold_text();
+        c_self_req_withheld.load()) + std::format(" | world horse requests (not the other player's horse) {}", c_self_req_world.load()) + seat_hold_text();
 }
 
 }  // namespace cdmp::session2
