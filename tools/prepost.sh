@@ -50,7 +50,9 @@ growth() {  # log, who, limit per minute
   local top cnt
   # (not the base's horse diagnostics: capped at 400 lines a session by its own counter, horse_diag.cpp kMaxLines;
   # not its stage-creation lines: capped at 300 a session since pp7, user2_stages.cpp kMaxCreateLines, checked below)
-  top=$(grep -v "HorseDiag \|User2Stages \[create\]" "$f" | cut -c29- | sed -E 's/0x[0-9A-Fa-f]+/N/g; s/[0-9]+/N/g' | cut -c1-60 | sort | uniq -c | sort -rn | head -1)
+  # (not the loot probe either: the loot step switches it on for the test, pp28-loot had the host's own
+  # ChangeAIStateReq at 32 a minute in it; the growth count above leaves it out for the same reason)
+  top=$(grep -v "HorseDiag \|User2Stages \[create\]\|Lootr probe" "$f" | cut -c29- | sed -E 's/0x[0-9A-Fa-f]+/N/g; s/[0-9]+/N/g' | cut -c1-60 | sort | uniq -c | sort -rn | head -1)
   cnt=$(echo "$top" | awk '{print $1}')
   local tper=$(( ${cnt:-0} * 60 / secs ))
   [ $tper -le 30 ] && ok "$2: no line repeats more than 30 times a minute (the most repeated: $tper a minute)" || bad "$2: one line repeats $tper times a minute: $(echo "$top" | cut -c1-90)"
@@ -336,8 +338,10 @@ farfight)
   # out of the camp, three bandits dead and no blow taken, and "the guest lost health" failed on the scene's luck
   # (2 of 6 runs). What the step has to show is that a far NPC's blow takes the guest's health; standing still shows
   # it whatever the swings do afterwards.
+  # 2026-11-17 pp28: with the combat stream (B18) the bandits' blows land where they really are; standing 26 s the guest
+  # took 12 blows and was down before its first swing (pp27b: 5 blows, still up). It stands 12 s now.
   GA=""; for i in $(seq 1 50); do GA="${GA}click:L:90_w:800_"; [ $((i % 3)) -eq 0 ] && GA="${GA}move:350:0:10_w:200_"; done
-  run2 "$BASE -Hold 10 -HostScript $SCAN\\ff_host_lure.txt -GuestScript $SCAN\\ff_guest_watch40.txt -GuestKeys w:26000_shot:$NAME-g0_${GA}shot:$NAME-g1_w:20000_shot:$NAME-g2 -HostKeys w:500_shot:$NAME-h0"; two_player_checks
+  run2 "$BASE -Hold 10 -HostScript $SCAN\\ff_host_lure.txt -GuestScript $SCAN\\ff_guest_watch40.txt -GuestKeys w:12000_shot:$NAME-g0_${GA}shot:$NAME-g1_w:20000_shot:$NAME-g2 -HostKeys w:500_shot:$NAME-h0"; two_player_checks
   H=$N/$NAME.host.log
   has "$H" "DamageRange ON" "host: the damage range hook is in"
   has "$H" "DamageRange: on .* counted because another player was in range [1-9]" "hits far from the host counted because the guest was in range"

@@ -8587,3 +8587,14 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   the first 3 min, the other player's character vs the local player: X+0x1FC, actor+0x108, X+0x17C, [X+0x140]+0x4A4,
   H+0xE8/+0xEC (3576 offsets; X = [[actor+0x68]+0x40]). After pp28: build, cs42-style run with the guest walking by
   the host, read the line.
+- 11:55 pp28 (all 22 steps, ada1800c): 902 pass, 2 fail; SAVES OK and 5/5 restored in every step. Both fails are the
+  test kit, not the build:
+  * loot: "one line repeats 32 times a minute" = the loot probe's own "C>S 2766" lines (2766 = ChangeAIStateReq, the
+    host's game; 25-229 per run since pp20). The probe is switched on by the step; the growth count already left it
+    out, the repeat check now does too. Re-judged on the same logs (JUDGE_ONLY): pass.
+  * farfight: "the guest killed an enemy" failed: shot g0 (26 s, before the first swing) shows the guest DOWN. It took
+    10-12 bandit blows in its first minute standing (pp27b: 5, standing at g0; pp26's same fail was the guest swinging
+    at the air). The combat stream makes the bandits' blows land where they are; standing 26 s among five is now
+    lethal, as in solo play. DECIDED BY ME (test design): it stands 12 s now. pp28b farfight re-run started 11:59.
+- 11:58 Discord check: nothing needs a reply (Failord thanked us under the Borque reply; #general: a new member,
+  Burns explained Radmin to someone; #bug-reports quiet).

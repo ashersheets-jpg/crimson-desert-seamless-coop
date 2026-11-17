@@ -323,3 +323,7 @@ topic BEFORE testing or guessing about it.
   at a shot. Reading (get_page_text, javascript) and navigate keep the game in front. Post with javascript only:
   focus the [role="textbox"], dispatch a ClipboardEvent('paste') with the text, then a KeyboardEvent('keydown',
   Enter). Raw <@userid> mentions resolve; user ids come from the avatar URLs (avatars/<id>/) (2026-11-17).
+- A fix that makes the game more correct can break a test's SCENE, not a check: after the combat stream (B18) put
+  enemies where they really are, the farfight guest, made to stand 26 s among five bandits, was down before its
+  first swing (12 blows instead of 5). When a step fails right after a gameplay fix, look at its first shot before
+  suspecting the build or the check, and re-time the scene to the new behaviour (2026-11-17, pp28).
