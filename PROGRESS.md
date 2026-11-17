@@ -8326,7 +8326,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - 20:03 Package 0.1.0-alpha+f61f9fec (outer f61f9fe; native 0e0c221 = 7cb93cd + the fight rule, on by default;
   layer: the photo-mode hide, the stale-mode reset, dev-only gsnap / vtscan / watch_bytes). pp26 (all 22 steps)
   started 20:03, ~3 h. No builds or harness edits until it ends.
-- 20:20 B20 (partner audio), prepared while pp26 runs: scratchpad proccap\proccap.exe records ONE process's audio
+- 20:06 B20 (partner audio), prepared while pp26 runs: scratchpad proccap\proccap.exe records ONE process's audio
   (Windows process loopback, ActivateAudioInterfaceAsync with PROCESS_LOOPBACK, include the target's tree) and
   writes its loudness every 100 ms. Checked on a running copy: works; the game does NOT go silent in the background
   (5 s, mean RMS 48). cs42.sh (after pp26): the host stands still, its audio alone is recorded; the guest stands 10 s
