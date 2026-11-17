@@ -8521,3 +8521,18 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     real run past Marius and Ross. Hands-on: the owner plays host to "Enter the cabin" with story_gate=hold and a
     stack probe on 2654; ~10 min. Put in "Waiting on the user".
   Next: B18 (the guest's misses / position offsets), measurable on one PC.
+- 07:57 B18 MEASURED (cs45a, 8a65cf2d; scratchpad cs45.sh + b18_interp.py; SAVES OK, 5/5): both at the dock camp,
+  both games dump NPCs within 40 m every 1 s for 100 s; the guest stands 30 s, then swings 30 times. The same NPC,
+  host track interpolated to the guest sample's time (one PC, one clock):
+  * NPCs standing still: the same place on both (median 0.08 m, p90 1.0-1.3).
+  * MOVING NPCs: 2.5-2.7 m off on the guest's screen (p90 4.4, worst 8-9 m on running bandits); offset / speed
+    = 1.1 s: the guest sees moving enemies ~1.1 s behind the host's game. That is Borque's "hits without touching",
+    the misses and the boar 3 m off.
+  * Why (guest's RemoteInterp summary): the host's game sends NPC positions only every 1.0-1.5 s (gaps <=1500 ms:
+    13145 of 20575), and the guest's delay = max(last 3 gaps) + 150 -> mostly 1.0-1.6 s.
+  * The base author's fix exists (docs/research/noche/combate-retardo.md section 6), both halves OFF: (a) host,
+    combat_follow v2 (a dense 30 Hz stream of every enemy in combat near user 2): still on 2976 opcodes and
+    clocks (kOpMoveActorAck 3008 etc.), needs a port; (b) guest, remote_interp_combat=1 (delay 120-400 ms for
+    enemies in combat, on the ported remote_interp hooks): try now. cs45b: the same with (b) on the guest.
+  * Test-kit note: -GuestDev [coop] keys never reached the layer (appended after the package's ini, a second
+    [coop] section is not read); [dev] keys do.
