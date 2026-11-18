@@ -174,6 +174,7 @@ struct Step {
     float to[3] = {};
     uint16_t op = 0;
     std::vector<uint8_t> payload;
+    uint32_t variant = 0;  // tpanimal: only this variant (0 = any wild animal)
     uint32_t wait_ms = 0;
 };
 
@@ -587,6 +588,17 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
             steps.push_back(std::move(st));
             continue;
         }
+        if (kind == "tpanimal") {  // tpanimal [radius] [hex variant]: 1 m beside the nearest living wild animal (the
+            st.kind = Step::TpActor;  // catch rule's test, 2026-11-18: a partridge is variant F454C)
+            st.addr = 0xFFFFFFFDu;
+            float r = 40.0f;
+            std::string v;
+            in >> r >> v;
+            st.to[0] = r > 0 ? r : 40.0f;
+            if (!v.empty()) st.variant = static_cast<uint32_t>(std::strtoul(v.c_str(), nullptr, 16));
+            steps.push_back(std::move(st));
+            continue;
+        }
         if (kind == "tphorse") {  // tphorse: 1 m beside the horse the layer counts as ours (after a horse call)
             st.kind = Step::TpActor;
             st.addr = 0xFFFFFFFFu;
@@ -745,7 +757,7 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                 log_npcs_near(st.to[0], st.to[1]);
             } else if (st.kind == Step::TpActor) {
                 uint32_t key = st.addr == 0xFFFFFFFFu ? capture_horse_present()
-                               : st.addr == 0xFFFFFFFEu ? 0
+                               : st.addr == 0xFFFFFFFEu || st.addr == 0xFFFFFFFDu ? 0
                                : st.addr                ? static_cast<uint32_t>(st.addr)
                                                         : hunt_dev_last_kill();
                 if (st.addr == 0xFFFFFFFEu) {  // tpnear: the n-th nearest living person
@@ -760,6 +772,21 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                         break;
                     }
                     if (!key) log::info("Dev script: tpnear: no living person within {:.0f} m", st.to[0]);
+                }
+                if (st.addr == 0xFFFFFFFDu) {  // tpanimal: the nearest living wild animal (of that variant)
+                    std::optional<proto::Vec3> me;
+                    int loaded = 0;
+                    for (const NpcRow& r : npcs_near(st.to[0], 0.5f, me, loaded)) {
+                        const char* name = hunt_animal_name(r.variant);
+                        if (!name || r.hp <= 0.0f || (st.variant && r.variant != st.variant)) continue;
+                        key = r.key;
+                        log::info("Dev script: tpanimal: 0x{:08X} {} variant 0x{:08X}, {:.1f} m, hp {:.0f}/{:.0f}", r.key, name,
+                                  r.variant, r.d, r.hp, r.hp_max);
+                        break;
+                    }
+                    if (!key)
+                        log::info("Dev script: tpanimal: no living wild animal{} within {:.0f} m ({} NPC actors loaded)",
+                                  st.variant ? std::format(" of variant 0x{:X}", st.variant) : std::string(), st.to[0], loaded);
                 }
                 auto at = key ? game::actor_world_position(key) : std::nullopt;
                 // mc1 (2026-11-11): "our horse" can be a horse that never came (the host's stood 430 m away in a
