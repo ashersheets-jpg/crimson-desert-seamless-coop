@@ -51,39 +51,44 @@ inline constexpr uint16_t kOpMoveActorReq = 2790;
 inline constexpr uint16_t kOpMoveActorAck = 3008;
 inline constexpr uint16_t kOpStartActionReq = 2431;
 inline constexpr uint16_t kOpStartActionAck = 2800;
-inline constexpr size_t kMoveReqSize = 514;
-inline constexpr size_t kMoveAckSize = 235;
-inline constexpr size_t kActionSize = 725;  // Req and Ack
+inline constexpr size_t kMoveReqSize = 518;  // 2976: 514
+inline constexpr size_t kMoveAckSize = 239;  // 2976: 235
+inline constexpr size_t kActionSize = 729;  // Req and Ack; 2976: 725
 inline constexpr size_t kHeader = 5;        // u16 opcode | i8 slot | u16 payload_len
 
-// MoveActor (Req and Ack share these).
+// MoveActor (Req and Ack share these). 2026-11-18: the 1.0.0.3460+ layout (3663; horse_follow_logic.h,
+// wire_layout.h): MoveData reordered, Path first.
 inline constexpr size_t kMKey = 0x00;
-inline constexpr size_t kMPos = 0x04;
-inline constexpr size_t kMQuat = 0x10;
-inline constexpr size_t kMAux = 0x20;
-inline constexpr size_t kMLocalPos = 0x4C;
-inline constexpr size_t kMLocalQuat = 0x58;
-inline constexpr size_t kMLocalScale = 0x68;
-inline constexpr size_t kMParent = 0x8C;
-inline constexpr size_t kMWorldPos = 0x94;
-inline constexpr size_t kMWorldEnd = 0xD4;
-inline constexpr size_t kMTs = 0xD5;
-inline constexpr size_t kMReqHistory = 0xEA;  // Req only: 10 x {u32, u64, u64, u64}
+inline constexpr size_t kMPos = 0xC4;         // 2976: 0x04
+inline constexpr size_t kMQuat = 0xB4;        // 2976: 0x10
+inline constexpr size_t kMAux = 0xD0;         // 2976: 0x20
+inline constexpr size_t kMLocalPos = 0x04;    // 2976: 0x4C
+inline constexpr size_t kMLocalQuat = 0x10;   // 2976: 0x58
+inline constexpr size_t kMLocalScale = 0x20;  // 2976: 0x68
+inline constexpr size_t kMParent = 0x44;      // 2976: 0x8C
+inline constexpr size_t kMWorldPos = 0x4C;    // 2976: 0x94
+inline constexpr size_t kMWorldQuat = 0x58;   // 2976: 0xA0
+inline constexpr size_t kMWorldEnd = 0x8C;    // 2976: 0xD4
+inline constexpr size_t kMTs = 0xD4;          // 2976: 0xD5
+inline constexpr size_t kMReqHistory = 0xEE;  // 2976: 0xEA  // Req only: 10 x {u32, u64, u64, u64}
 
 // StartAction: block B (MoveData first, = MoveActor +0x04..+0xDD) at Req +0x8E / Ack +0x8F, so a Move
 // offset X >= 4 is Req X + 0x8A / Ack X + 0x8B. The action hash: +0x08 (kHash0 below).
+// 2026-11-18 (3663, Borque's floating catches): the action's target after MoveData (Move offset 0xE6 = 0xE2 + 4).
+inline constexpr size_t kMActionTarget = 0xE6;  // 2976: 0xE2
 struct ActionLayout {
     size_t pos, quat, local_pos, local_quat, parent, world_pos, world_quat, ts, target;
 };
 inline constexpr size_t kReqShift = 0x8A, kAckShift = 0x8B;
 inline constexpr ActionLayout layout(size_t shift) {
     return {kMPos + shift,      kMQuat + shift,    kMLocalPos + shift, kMLocalQuat + shift, kMParent + shift,
-            kMWorldPos + shift, 0xA0 + shift,      kMTs + shift,       0xE2 + shift};
+            kMWorldPos + shift, kMWorldQuat + shift, kMTs + shift,     kMActionTarget + shift};
 }
-inline constexpr ActionLayout kReq = layout(kReqShift);  // parent +0x116, ts +0x15F, target +0x16C
-inline constexpr ActionLayout kAck = layout(kAckShift);  // parent +0x117, local +0xD7, ts +0x160, target +0x16D
-static_assert(kReq.parent == 0x116 && kAck.parent == 0x117 && kAck.local_pos == 0xD7 && kAck.ts == 0x160 &&
-              kReq.target == 0x16C && kAck.pos == 0x8F);
+inline constexpr ActionLayout kReq = layout(kReqShift);  // parent +0xCE, ts +0x15E, target +0x170 (2976: 0x116, 0x15F, 0x16C)
+inline constexpr ActionLayout kAck = layout(kAckShift);  // parent +0xCF, local +0x8F, ts +0x15F, target +0x171 (2976: 0x117, 0xD7, 0x160, 0x16D)
+// 3663 (wire_layout.h, combat_follow_logic.h kStartParent 0xCF / kStartTs 0x15F / kStartTarget 0x171):
+static_assert(kReq.parent == 0xCE && kAck.parent == 0xCF && kAck.local_pos == 0x8F && kAck.ts == 0x15F &&
+              kReq.target == 0x170 && kAck.target == 0x171 && kAck.pos == 0x14F);
 // The action's hash [V, session 8 host capture]: u32 at +0x08 in every Req and Ack of the pets
 // (0xA497102C 29 times, 0xBC77AF45 29, 0x8276C0C5 28); the Req repeats it at +0x04. +0x04 is read too.
 inline constexpr size_t kHash0 = 0x08, kHash1 = 0x04;

@@ -602,7 +602,8 @@ uintptr_t __fastcall common_detour(uintptr_t vc, int32_t* res, uintptr_t rider, 
     const msl::PairState after = read_pair(rider, horse, vc, seat);
     const bool ok = msl::controller_commit_ok(before, after, rk, hk, seat, r);
     // 2026-11-18 (the ride rule, ai_handoff.h): the host's SERVER realm seated a rider on an NPC mount / vehicle.
-    if (!client && r == 0 && after.cur_vehicle == hk) ai_handoff_note_ride(rk, hk, true);
+    // Seat 0 only (the saddle / the driver's seat): a passenger in an NPC's cart leaves the cart to its driver.
+    if (!client && r == 0 && seat == 0 && after.cur_vehicle == hk) ai_handoff_note_ride(rk, hk, true);
     if (pub) {
         ev.kind = msl::EvKind::Commit;
         ev.result = static_cast<uint32_t>(r);
