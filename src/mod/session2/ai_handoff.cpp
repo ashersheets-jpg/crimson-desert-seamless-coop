@@ -5,6 +5,7 @@
 
 #include <windows.h>
 
+#include <array>
 #include <atomic>
 #include <cmath>
 #include <cstring>
@@ -48,6 +49,17 @@ std::atomic<uint64_t> c_ticks{0}, c_npcs{0}, c_orphans{0}, c_handed{0}, c_would{
 std::atomic<uint64_t> c_client_took{0}, c_client_gave{0}, c_client_unknown{0}, c_client_dropped{0};
 std::atomic<uint64_t> c_fight_out{0}, c_fight_back{0}, c_fight_seen{0};
 std::atomic<uint32_t> g_local_user{0};
+// The ride rule's table (ai_handoff_note_ride): (mount key << 32) | rider key, 0 = free. Lock-free, any thread.
+constexpr size_t kRides = 8;
+std::array<std::atomic<uint64_t>, kRides> g_rides{};
+std::atomic<uint64_t> c_ride_noted{0}, c_ride_out{0}, c_ride_full{0};
+uint32_t ridden_by(uint32_t mount_key) noexcept {
+    for (const auto& r : g_rides) {
+        const uint64_t v = r.load(std::memory_order_relaxed);
+        if (v && static_cast<uint32_t>(v >> 32) == mount_key) return static_cast<uint32_t>(v);
+    }
+    return 0;
+}
 
 struct PlayerAt {
     uint32_t key = 0, user = 0;
@@ -468,12 +480,49 @@ void ai_handoff_server_tick() noexcept {
         }
         pending.swap(still);
         if (born.size() > 20000) born.clear();
+        // The ride rule (ai_handoff.h, 2026-11-18): a ridden NPC runs on its rider's game.
+        {
+            const uint64_t now = GetTickCount64();
+            for (int i = 0; i < n_fight && done < kMaxPerTick; ++i) {
+                const Fight& f = fights[i];
+                const uint32_t rider = ridden_by(f.key);
+                if (!rider) continue;
+                uint32_t to = 0;
+                for (int k = 0; k < n_players; ++k) {
+                    if (pl[k].key == rider) to = pl[k].user;
+                }
+                if (!to || to == f.ctrl) continue;
+                if (!hand_over(f.actor, f.key, f.ctrl, to)) {
+                    const uint64_t fl = c_failed.fetch_add(1) + 1;
+                    if (fl <= 10) log::warn("AiHandoff: ride rule: NPC 0x{:08X}: the hand-over did not go through", f.key);
+                    continue;
+                }
+                ++done;
+                moved[f.key] = now;
+                uint8_t priv[12];
+                std::memcpy(priv, &kPrivateMagic, 4);
+                std::memcpy(priv + 4, &f.key, 4);
+                std::memcpy(priv + 8, &to, 4);
+                uint8_t real[4];
+                std::memcpy(real, &f.key, 4);
+                for (int k = 0; k < n_players; ++k) {
+                    if (pl[k].user != to) tell(pl[k].user, host_user, priv);
+                }
+                tell(to, host_user, priv);
+                tell(to, host_user, real);
+                const uint64_t h = c_ride_out.fetch_add(1) + 1;
+                if (h <= 60 || h % 100 == 0)
+                    log::info("AiHandoff: ride rule: NPC 0x{:08X} (type {}) ridden by 0x{:08X} -> its game (0x{:08X} -> "
+                              "0x{:08X}; {} so far)", f.key, f.type, rider, f.ctrl, to, h);
+            }
+        }
         // The fight rule (ai_handoff.h, 2026-11-16, B18).
         if (g_fight) {
             const uint64_t now = GetTickCount64();
             if (moved.size() > 8000) moved.clear();
             for (int i = 0; i < n_fight && done < kMaxPerTick; ++i) {
                 const Fight& f = fights[i];
+                if (ridden_by(f.key)) continue;  // the ride rule's
                 uint64_t hm = 0, gm = 0;
                 if (!anti_grief_last_hits(f.key, hm, gm)) continue;
                 c_fight_seen.fetch_add(1);
@@ -557,19 +606,52 @@ bool ai_handoff_client_recv(const uint8_t* packet, size_t size) noexcept {
     return false;
 }
 
+void ai_handoff_note_ride(uint32_t rider_key, uint32_t mount_key, bool on) noexcept {
+    if (g_guest || !mount_key || (mount_key >> 28) != 0xB) return;
+    if (!on) {
+        for (auto& r : g_rides) {
+            uint64_t v = r.load(std::memory_order_relaxed);
+            if (v && static_cast<uint32_t>(v >> 32) == mount_key) r.compare_exchange_strong(v, 0);
+        }
+        return;
+    }
+    if ((rider_key >> 28) != 0xA || rider_key == kHostCharacter) return;  // the other player's character only
+    const uint64_t want = (static_cast<uint64_t>(mount_key) << 32) | rider_key;
+    for (auto& r : g_rides) {  // the same mount again: the new rider
+        uint64_t v = r.load(std::memory_order_relaxed);
+        if (v && static_cast<uint32_t>(v >> 32) == mount_key) {
+            r.store(want, std::memory_order_relaxed);
+            c_ride_noted.fetch_add(1);
+            return;
+        }
+    }
+    for (auto& r : g_rides) {
+        uint64_t zero = 0;
+        if (r.compare_exchange_strong(zero, want)) {
+            c_ride_noted.fetch_add(1);
+            return;
+        }
+    }
+    c_ride_full.fetch_add(1);
+}
+
 std::string ai_handoff_describe() {
     if (g_mode == Mode::Off && !g_fight && !c_client_took.load() && !c_client_gave.load() && !c_client_unknown.load())
         return {};
     if (g_mode == Mode::Off && g_fight)
         return std::format("AiHandoff: fight rule on | server checks {} | fought NPCs looked at {} | to the other player {} "
                            "back to the host {} failed {}",
-                           c_ticks.load(), c_fight_seen.load(), c_fight_out.load(), c_fight_back.load(), c_failed.load());
+                           c_ticks.load(), c_fight_seen.load(), c_fight_out.load(), c_fight_back.load(), c_failed.load()) +
+               std::format(" | ride rule: rides noted {} handed to the rider {} table full {}", c_ride_noted.load(),
+                           c_ride_out.load(), c_ride_full.load());
     return std::format("AiHandoff: {} | server checks {} | NPCs looked at {} (controller far, another player close: {}) | "
                        "handed over {} (of them back to the first controller {}) would {} failed {} | this client: took {} "
                        "noted {} not loaded {} notices dropped {}",
                        g_mode == Mode::On ? "on" : g_mode == Mode::Probe ? "probe" : "client part only", c_ticks.load(), c_npcs.load(), c_orphans.load(), c_handed.load(),
                        c_back.load(), c_would.load(), c_failed.load(), c_client_took.load(), c_client_gave.load(),
-                       c_client_unknown.load(), c_client_dropped.load());
+                       c_client_unknown.load(), c_client_dropped.load()) +
+           std::format(" | ride rule: rides noted {} handed to the rider {} table full {}", c_ride_noted.load(),
+                       c_ride_out.load(), c_ride_full.load());
 }
 
 }  // namespace cdmp::session2

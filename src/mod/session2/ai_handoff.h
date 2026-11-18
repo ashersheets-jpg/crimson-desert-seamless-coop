@@ -38,6 +38,12 @@ void ai_handoff_server_tick() noexcept;
 // The client's packet thread, both roles, before the game reads a server packet (the sniffer's OnRecvPacket hook, the
 // mod's own injected packets included). True = the game must not see this packet.
 bool ai_handoff_client_recv(const uint8_t* packet, size_t size) noexcept;
+// The RIDE rule (2026-11-18, Borque: the joined player's horse-taming minigame never ends; its cart is not seen by
+// the host): an NPC mount or vehicle (no owner user) that a player rides runs on that player's game while ridden, as
+// the server accepts a mount's AI / movement requests from its controller only. mount_sync calls this from the host's
+// SERVER-realm vf53 / RideOff (any thread; atomics only): on = mounted (rider's character key, the NPC's key), off =
+// the rider left it. The host's server tick hands the NPC over; the fight rule leaves a ridden NPC alone.
+void ai_handoff_note_ride(uint32_t rider_key, uint32_t mount_key, bool on) noexcept;
 std::string ai_handoff_describe();
 
 }  // namespace cdmp::session2
