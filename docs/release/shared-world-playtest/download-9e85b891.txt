@@ -1,5 +1,5 @@
 **Update: shared world playtest 0.1.0-alpha+9e85b891, for game 1.0.0.3663**
-Use this instead of 1c6453e1; **both players need the same build**. Fixes from @Borque's session (thank you):
+Use this instead of 1c6453e1; **both players need the same build**. Fixes from <@224953308010381312>'s session (thank you):
 
 - **The friend's progress is kept again on a PC with several Steam accounts.** Before, the friend's save was switched off there and nothing the friend earned was kept.
 - **A failed horse taming no longer locks the friend** (the game never told the friend's game the taming was over).

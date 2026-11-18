@@ -8753,3 +8753,15 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   the host's first process, before the lobby restart (pp30-farfight2.coopplus.host.before.log 22:54:02): the false
   trigger of 2026-11-12 again, not to be whitelisted; look at dx12_hook.cpp:919. Left: mountfight nosave retry stuck
   mismatch hostrevive solostart, then farfight2 again. No game tests or builds while the user plays.
+- 04:30 After the user's PC restart: no game running, the player's install 5/5, SAVES OK, the game not updated
+  (exe of 13 Nov). Discord (JS only): nothing new since 19:07 in #play-testing-feedback, #general, #bug-reports.
+- 04:3x Overlay watcher (layer fc68f95, not built): the farfight2 warning made the throwaway swap chain with
+  sl.dlss_g.dll loaded (the double-hook guard then found the class already hooked; frames came 2 s later). With the
+  plugin loaded the watcher now waits 20 s / 400 batches, as trigger 2 does; 4 s elsewhere (latehook unaffected).
+- 04:5x Jay (via the owner; an older build): small animation hitches of the other player on both screens. ROADMAP
+  P1, with the running freeze.
+- 05:37 pp30b (farfight2 mountfight nosave retry stuck mismatch hostrevive solostart): 307 pass, 0 fail. With pp30:
+  all 22 steps pass on 9e85b891.
+- 05:40 POSTED 0.1.0-alpha+9e85b891 in #download-here (standing OK after the checklist): message
+  1572562012284784691, both zips (12 719 069 / 6 939 074 bytes, the zip checked file by file against the tested
+  folder, 25/25), Borque tagged, text as posted: docs/release/shared-world-playtest/download-9e85b891.txt.

@@ -5,7 +5,7 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-NOT POSTED YET: 0.1.0-alpha+9e85b891, for game 1.0.0.3663 (checklist pp30 running): everything in 1c6453e1 below,
+POSTED 2026-11-18 05:40: 0.1.0-alpha+9e85b891, for game 1.0.0.3663 (checklist pp30 + pp30b: all 22 steps pass, 952 checks; pp30's first farfight2 had one overlay-watcher warning, explained, fixed in the next build): everything in 1c6453e1 below,
 plus (from Borque's two-PC session of 17 Nov):
 - **The friend's progress is kept on a PC with several Steam accounts.** If the host's save folder had folders for
   more than one Steam account, the friend's own save was switched off and the friend played on a copy that was
