@@ -292,6 +292,11 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   - [ ] Carryable animals (kiwis, goats) are not synced.
   - [ ] The running "animation freeze" happens almost all the time out of town (his theory: different FPS on the two
     PCs; our runs have the same FPS on both). The host's FPS drops.
+  - [ ] Jay (via the owner, 2026-11-17 23:20; an older build, not played for a few versions): small "desync
+    hitches" in the other player's animations, seen by both players; polish, not a blocker. Likely the same family
+    as the running freeze: when testing that one, also measure short stalls of the remote character's animation
+    on both screens (gaps in the remote samples, a pose held for a frame or two), and tell Jay when there is a
+    build to try.
 - [ ] **B21 — 3-4 player co-op**, only if two-player play stays stable.
 - [ ] **B22 — Release**: package, two-copy regression, the user's OK (GPL native code), GitHub and Discord.
   - [~] **B22a — Save protection and installer (Plitos, required for the release; user 2026-11-08: "add this part to
