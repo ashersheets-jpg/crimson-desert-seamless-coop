@@ -272,6 +272,23 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   Left: voices (effort / hurt sounds) checked the same way.)
 
 **Last (needs the rest stable)**
+- [~] **P1 — Playtest findings (Borque's two-PC session, 2026-11-17, ada1800c).** Each fixed and tested before the
+  release (the ship rule: the guest sees and uses what the host does).
+  - [~] The guest's progress was not kept: the host's PC has 3 Steam accounts' save folders and guest_own_save was
+    forced off. Fixed (native af4cdfb: Steam's ActiveUser picks the folder). Not yet run with several folders.
+  - [~] A failed horse taming (minigame 0x4242) left the guest with no input: the server sent the 2292 of the
+    guest's own taming scene to the HOST's character, so the guest's scene never ended. Fixed (observer_seq_copy:
+    the host's client's 2292 of a scene of user 2's own is copied to user 2 naming its character). Not yet tested.
+  - [~] Horses: the host sees the guest's horse invisible, the guest sees the host's away from the host.
+    horse_follow / horse_follow_reverse were still on the 2976 MoveActorAck layout (235 B): every Ack was "bad size",
+    none made, in our runs too. Ported to 239 B / the 3460+ offsets. Not yet tested.
+  - [ ] The guest sees city NPCs sitting on benches in a T-pose (the guest only).
+  - [ ] The guest's "interact" opens the NPC's menu but the NPC keeps walking (the host's NPCs stop and look).
+  - [ ] The host's armour dye is not seen by the guest.
+  - [ ] A tree the guest cuts down is duplicated for the host.
+  - [ ] Carryable animals (kiwis, goats) are not synced.
+  - [ ] The running "animation freeze" happens almost all the time out of town (his theory: different FPS on the two
+    PCs; our runs have the same FPS on both). The host's FPS drops.
 - [ ] **B21 — 3-4 player co-op**, only if two-player play stays stable.
 - [ ] **B22 — Release**: package, two-copy regression, the user's OK (GPL native code), GitHub and Discord.
   - [~] **B22a — Save protection and installer (Plitos, required for the release; user 2026-11-08: "add this part to
