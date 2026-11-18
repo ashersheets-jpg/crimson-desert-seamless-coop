@@ -1,5 +1,7 @@
 #include "mod/session2/mount_sync.h"
 
+#include "mod/session2/ai_handoff.h"
+
 #include <windows.h>
 
 #include <intrin.h>
@@ -599,6 +601,8 @@ uintptr_t __fastcall common_detour(uintptr_t vc, int32_t* res, uintptr_t rider, 
     const int32_t r = res ? rdv<int32_t>(reinterpret_cast<uintptr_t>(res), -1) : -1;
     const msl::PairState after = read_pair(rider, horse, vc, seat);
     const bool ok = msl::controller_commit_ok(before, after, rk, hk, seat, r);
+    // 2026-11-18 (the ride rule, ai_handoff.h): the host's SERVER realm seated a rider on an NPC mount / vehicle.
+    if (!client && r == 0 && after.cur_vehicle == hk) ai_handoff_note_ride(rk, hk, true);
     if (pub) {
         ev.kind = msl::EvKind::Commit;
         ev.result = static_cast<uint32_t>(r);
@@ -661,6 +665,7 @@ uintptr_t __fastcall rideoff_detour(int32_t* res, uintptr_t horse, uint32_t* rid
     const uintptr_t ret = g_h_rideoff.unsafe_call<uintptr_t>(res, horse, rider_key, p4, flag_slot);
     const int32_t r = res ? rdv<int32_t>(reinterpret_cast<uintptr_t>(res), -1) : -1;
     const msl::PairState after = client ? read_pair(rider, horse, vc_of(horse), 0) : msl::PairState{};
+    if (!client && r == 0) ai_handoff_note_ride(rk, hk, false);  // the ride rule: the server realm's RideOff
     uint32_t tr = 0;
     if (pub) {
         tr = msl::arm_transition(armed);
@@ -1160,7 +1165,8 @@ void seat_rider(const msl::Txn& t, msl::Outcome commit, uintptr_t rider, uintptr
     const msl::PairState p = read_pair(rider, horse, vc, t.seat);
     const msl::SeatState pre = read_seat(rider, horse);
     msl::SeatJudge j = msl::seat_judge(seat_mode(), p, pre, t.horse, t.seat, t.rider,
-                                         g_local_key.load(std::memory_order_relaxed));
+                                         g_local_key.load(std::memory_order_relaxed),
+                                         g_on_actreq.load(std::memory_order_acquire));
     if (j.verdict == msl::SeatVerdict::Apply && (g_apply_off.load() || g_seat_off.load() || !g_on_vf54.load())) {
         j = {msl::SeatVerdict::Refused, msl::SeatWhy::Off};
     }
@@ -1478,6 +1484,22 @@ msl::RiderNow rider_now(uint32_t remote) noexcept {
     return rn;
 }
 
+// 2026-11-18 (cs63a, Borque: the joined player's horse never shows on the host): on 3663 a StartActionAck is 729 B
+// with the parent at +0xCF and the target at +0x171 (combat_follow_logic.h kStartAck; 2976: 725, +0x117, +0x16D).
+// The 2976 size check below dropped every 3663 dispatch, so no committed mount was ever applied on either client
+// (judges [none], every remote mount "cancelled" after 3 s). mount_sync reads the 3663 layout itself; ride_filter
+// keeps its 2976 one. A0 / A1 are not read (their 3663 offsets are not verified): rfl::classify then says None and
+// the 725-byte fallback rewrite never runs on a 3663 packet.
+constexpr size_t kAck3663 = 729, kAckParent3663 = 0xCF, kAckTarget3663 = 0x171;
+rfl::Ack read_ack_3663(const uint8_t* p) noexcept {
+    rfl::Ack a;
+    a.ok = true;
+    std::memcpy(&a.key, p, 4);
+    std::memcpy(&a.parent, p + kAckParent3663, 8);
+    std::memcpy(&a.target, p + kAckTarget3663, 4);
+    return a;
+}
+
 DispatchNote on_dispatch(uintptr_t pkt) noexcept {
     DispatchNote dn;
     c_dispatch.fetch_add(1, std::memory_order_relaxed);
@@ -1485,15 +1507,15 @@ DispatchNote on_dispatch(uintptr_t pkt) noexcept {
     ctl_watch(now);
     geo_sample(now);
     const uintptr_t buf = rdp(pkt + kPktBuffer);
-    if (!buf || rdv<uint16_t>(buf + 3) != rfl::kAckSize) return dn;
+    if (!buf || rdv<uint16_t>(buf + 3) != kAck3663) return dn;
     const uintptr_t payload = buf + rfl::kHeader;
     const uint32_t key = rdv<uint32_t>(payload);
     const uint32_t remote = remote_key();
     // The remote rider's own action: read first, so that its on-foot / mounted state counts at THIS dispatch,
     // before its handler (an observed Detach is retired before the first on-foot action runs, review (4)).
-    uint8_t copy[rfl::kAckSize];
+    uint8_t copy[kAck3663];
     const bool mine = remote && key == remote && game::fast_read(payload, copy, sizeof copy);
-    const rfl::Ack ack = mine ? rfl::read_ack(copy, sizeof copy) : rfl::Ack{};
+    const rfl::Ack ack = mine ? read_ack_3663(copy) : rfl::Ack{};
     const bool on_foot = ack.parent == ~0ull;
     if (mine) {
         const bool mounted = !on_foot && msl::is_b(static_cast<uint32_t>(ack.parent));

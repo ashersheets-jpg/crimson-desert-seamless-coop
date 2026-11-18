@@ -435,7 +435,9 @@ inline constexpr size_t kGeoNotLinked = 0, kGeoLinked = 1, kGeoSeated = 2, kGeoL
 // [[CC+0x100]+8] (see "seat the remote rider" below). [V Ghidra/capstone, S22] 9 is "not attached": the info reset
 // 0x9E990E0 (thunk 0xA65170) starts `mov byte [rcx],9`, the CC constructor 0x85CB00 builds it that way and every detach
 // (0xA65960, 0xA6A120) writes it back; 0xA651E0 skips the hierarchy parent for 9. Type 0 is never written.
-inline constexpr uint8_t kAttachNone = 9, kAttachSeat = 4;
+// 2026-11-18 (cs63b, 3663): "none" is 12 here (2976: 9); every vf54 seat logged on 3663 went 12 -> 4 (184 times in
+// our runs, NPC riders included), and the seat judge refused the remote rider's type 12 as "already attached".
+inline constexpr uint8_t kAttachNone = 12, kAttachSeat = 4;
 inline size_t geo_link(bool linked, uint8_t attach_type) {
     return attach_type == kAttachSeat ? kGeoSeated : linked ? kGeoLinked : kGeoNotLinked;
 }
@@ -1324,8 +1326,11 @@ struct SeatJudge {
 };
 // After vf53 left (or found) the rider's Link to `horse` / `seat`. Apply only for seat 0 of a horse 0xA462B0 seats,
 // a player rider with a readable attach struct of type 9 "none" (S22); already type 4 under this horse = AlreadySeated.
+// actreq_veto: the riding action request's veto (0xA45AC0, S23) is installed. Its only job is to drop vf54's riding
+// action for the other player's character; with it in place a "local user" answer of the rider's vf178 (the host's
+// process runs the server too: on the host every character reads as a local user, cs63b) no longer refuses the seat.
 inline SeatJudge seat_judge(Mode m, const PairState& p, const SeatState& s, uint32_t horse, uint8_t seat,
-                            uint32_t rider_key = 0, uint32_t local_key = 0) {
+                            uint32_t rider_key = 0, uint32_t local_key = 0, bool actreq_veto = false) {
     if (m == Mode::Off) return {SeatVerdict::Refused, SeatWhy::Off};
     // S21/S22 reviews: never while the local key is unknown (every character starts at 9, the local one too).
     if (rider_key == 0 || local_key == 0 || rider_key == local_key) return {SeatVerdict::Refused, SeatWhy::Local};
@@ -1340,7 +1345,7 @@ inline SeatJudge seat_judge(Mode m, const PairState& p, const SeatState& s, uint
     if (!s.has_parent || s.parent_key != 0) return {SeatVerdict::Refused, SeatWhy::ParentSet};
     if (s.cc228 != 1) return {SeatVerdict::Refused, SeatWhy::NotInit};
     // S22: the remote player's character reads +0x94 = 1 (both PCs); what counts is its vf178's answer.
-    if (seat_local_user(s)) return {SeatVerdict::Refused, SeatWhy::LocalCtl};
+    if (!actreq_veto && seat_local_user(s)) return {SeatVerdict::Refused, SeatWhy::LocalCtl};
     // S23 review: only a remote copy here (C8 0, read; 1 / 2 are controlled here, 0xFF unreadable), rider and horse.
     if (s.rider_c8 != 0 || s.horse_c8 != 0) return {SeatVerdict::Refused, SeatWhy::Controlled};
     if (s.rider_type != kActorPlayer) return {SeatVerdict::Refused, SeatWhy::RiderType};
