@@ -891,8 +891,12 @@ void native_fallback_watch() {
             t0 = now;
             continue;
         }
-        if (now - t0 < 4000) continue;
-        if (e - e0 >= 80) {
+        // 2026-11-18 (pp30-farfight2): with the plugin loaded, a window that could be seen still presented nothing
+        // for 4 s at start-up (199 batches, 0 frames; frames came 2 s later), and the trigger made the throwaway
+        // swap chain the plugin is dangerous with (the double hook guard below kept it from hooking twice). Where
+        // the plugin is loaded the watcher waits 20 s, as trigger 2 does; 4 s elsewhere (the tester's AMD card).
+        if (now - t0 < (dlss_g ? 20000u : 4000u)) continue;
+        if (e - e0 >= (dlss_g ? 400u : 80u)) {
             if (!g_native_tried.exchange(true))
                 hook_dxgi_class(std::format("{} batches of drawing commands in {:.1f} s and no frame through a hooked "
                                             "swap chain class ({} frames before that)",
