@@ -8698,3 +8698,17 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     still to find. Replied (tagged): we'll compare both games' people there; the new build comes when it passes.
   * cs56.sh written for after pp29 (B10 on release defaults: New Co-op Save, the guest teleported to the cabin;
     does ITS tracker move past "Return to your comrades").
+- 18:57 pp29 on 1c6453e1: 907 pass, 0 fail, 22 steps (SAVES OK, user install restored 5/5 OK each step).
+  POSTED to #download-here 18:59 (both zips, draft download-1c6453e1.txt; the Borque correction tagged).
+- 19:00 Borque's new session (ada1800c, 18:27; both report zips in build/tester/borque-1118, read):
+  * FOUND + FIXED (native af4cdfb): the host's save folder has 3 Steam accounts' folders, so guest_own_save was
+    forced OFF ("exactly one is needed") and the client's progress was NOT kept. Now the folder of Steam's
+    ActiveUser (HKCU\Software\Valve\Steam\ActiveProcess) is used. Built, ctest 63/93 (baseline). Not yet tested
+    with several folders in a run.
+  * His list (all new leads): host FPS drop; guest sees city NPCs on benches in T-pose; guest "interact" opens
+    the menu but the NPC keeps walking; host's dye not seen by the guest; a tree the guest cuts is duplicated for
+    the host; horse minigame fail (guest, 00:17 "minigame 0x4242") leaves the guest with no input (resync did not
+    help; session ended); carryable animals (kiwis, goats) not synced; horses: the host sees the guest's horse
+    invisible, the guest sees the host's not at its real place; the running "animation freeze" happens almost
+    all the time out of town (his theory: different FPS on the two PCs). Combat on the client is much better.
+  * Replied (tagged) 19:07: the save bug and fix, the list taken, the posted build does not have these yet.

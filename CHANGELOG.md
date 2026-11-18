@@ -5,7 +5,7 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-NOT POSTED YET: 0.1.0-alpha+1c6453e1, for game 1.0.0.3663 (checklist pp29 running): everything in ada1800c below,
+POSTED 2026-11-17 18:59: 0.1.0-alpha+1c6453e1, for game 1.0.0.3663 (checklist pp29: 907 pass, 0 fail, 22 steps): everything in ada1800c below,
 plus:
 - **"Enemy health with a guest" works in the shared world, for both players' blows.** The setting (Co-op Settings,
   Combat & Loot; x1.5 by default) makes enemies tougher while a friend is in. In the shared world it barely worked:
