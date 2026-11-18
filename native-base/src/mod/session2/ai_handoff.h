@@ -44,6 +44,12 @@ bool ai_handoff_client_recv(const uint8_t* packet, size_t size) noexcept;
 // SERVER-realm vf53 / RideOff (any thread; atomics only): on = mounted (rider's character key, the NPC's key), off =
 // the rider left it. The host's server tick hands the NPC over; the fight rule leaves a ridden NPC alone.
 void ai_handoff_note_ride(uint32_t rider_key, uint32_t mount_key, bool on) noexcept;
+// The catch rule (2026-11-18, Borque: "catching small animals plays the animation but catches nothing"): the host's
+// server accepted the other player's catch interaction (2671 result 0, shop_probe's C point) on an NPC. In single
+// player the catcher's own game runs the animal while it is caught; with its AI left on the host the guest's catch
+// never ends. The next server tick hands that NPC to the catcher's game for kCatchMs (the fight rule leaves it alone
+// meanwhile). Host role only; the other player's character and the catch interactions only.
+void ai_handoff_note_catch(uint32_t catcher_key, uint32_t npc_key, uint32_t interaction) noexcept;
 std::string ai_handoff_describe();
 
 }  // namespace cdmp::session2

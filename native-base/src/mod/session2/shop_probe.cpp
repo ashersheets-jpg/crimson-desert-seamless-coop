@@ -1,4 +1,5 @@
 #include "mod/session2/shop_probe.h"
+#include "mod/session2/ai_handoff.h"
 
 #include <windows.h>
 
@@ -290,6 +291,8 @@ void on_c(safetyhook::Context& ctx) noexcept {
     g_2671[static_cast<size_t>(w)].fetch_add(1, std::memory_order_relaxed);
     if (result) g_2671_fail[static_cast<size_t>(w)].fetch_add(1, std::memory_order_relaxed);
     if (w == Who::Host) user2_shops_host_2671(result);  // U2: the HostRefused criterion
+    if (w == Who::User2 && result == 0)  // the catch rule (ai_handoff.h): a caught animal runs on the catcher's game
+        ai_handoff_note_catch(requester, rdv<uint32_t>(ctx.rbp + kC_Npc), rdv<uint32_t>(ctx.rbp + kC_Interaction));
     if (w != Who::User2 && !g_book.take(book_key(0x2671, static_cast<uint8_t>(0x30 | static_cast<uint8_t>(w))), 16)) {
         return;
     }
