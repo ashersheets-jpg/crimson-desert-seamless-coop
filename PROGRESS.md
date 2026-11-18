@@ -8848,3 +8848,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   20/40, as the 17 Nov cs60a-c said. Screenshot bursts did not catch the runner (no camera aim in the dev script;
   the bursts and the run were not in step). So the freeze is in the animation, not the position: asked Borque for
   a 10-20 s clip (12:05), host or client, FPS on each.
+- 12:08-12:15 cs63a (Borque's item 3, the client's horse invisible for the host): the checklist's mounts flow, the
+  host's camera then shot 17 times (the pan did not turn it, but the guest was in view, 5 m): REPRODUCED. On its own
+  screen the guest rides its horse 0xB0100068 ("Dismount R", g2); on the host's at the same time the guest stands on
+  foot, no horse, in every shot (12:14:11-12:14:29). The other way works (pp31-mounts-g1: the guest sees both
+  mounted). Host log: the server realm's vf53 committed the guest's mount (Link cur 0xB0100068/0), but the host
+  CLIENT's RideOn::Enter of the remote rider found "Link 0" (attach type 12); MountSync judges [none], seat 0,
+  dispatches 197 (guest 548340). The checklist's mounts step only checks the logs (published Begin/Commit), and its
+  host shot looks down at the host: it could not see this. An agent reads mount_sync.cpp for the cause and the fix.
