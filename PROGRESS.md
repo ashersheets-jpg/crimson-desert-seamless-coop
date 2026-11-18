@@ -8913,3 +8913,14 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     server accepted the stage (result 2): the client's own prompt check, not the server or the wanted state.
   * Host FPS: 72-74 alone, 39-44 with the client, 30-37 after 13:38 when the server's actors went ~480 -> ~900.
   Plan: post 569720a2 after pp33 (mounts / vendors / ride rule); catch rule + crash fix in the next batch.
+- 16:25 Borque's HOST CRASH found (agent, build/decomp/notes_host_unload_crash_3663.md, private; I checked the bytes):
+  the server's 2808 handler (SequencerTriggerVolumeInOutReq, exe+0x2C53BB0) asks the subject's field (vf48) for its
+  owner's stage manager and locks it with no null test; during the host's load (its stages closing, "unload at the
+  owner's load") vf48 answered 0 for a 2808 most likely of the joined player's character -> null read at
+  exe+0x2C53DE8. The scanned cdmp.asi frames were stale. Not our code freeing anything; the same kind as the 3576
+  timer crash, which the timer guard (2047/2049/2050) covers, but not 2808. Native 12c9bc8 (not built):
+  SceneReqGuard, a mid hook at the vf48 return site 0x2C53DBE: answer 0 -> the handler's own not-attached exit
+  0x2C53D7E (byte checks on all three places; a WRN per drop; a per-minute count). 10 other scene Req handlers have
+  the same unchecked vf48 (2644 2654 3141 2672 2678 2563 2313 2546 2924 2125; addresses in the notes): not checked.
+  * Next batch (after 569720a2 is posted): catch rule 8e38f6a, SceneReqGuard 12c9bc8, tpanimal (layer 78b0ceb);
+    tests cs65 (the guest catches a partridge) + the full checklist (SceneReqGuard ON line, 0 drops in normal play).
