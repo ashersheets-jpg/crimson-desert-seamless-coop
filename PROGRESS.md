@@ -8748,3 +8748,8 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   0x9F37E1E) maps to 3663 0xCBC240B, whose block has one more qword; candidates 0x7419180 (layout) and 0x7419188
   (instruction order), checked at run time (count +8, info array +0x58, key +8), the chosen one logged.
 - 21:07 Discord (JS only): nothing new in #play-testing-feedback, #general, #bug-reports since 19:07.
+- 23:03 pp30 stopped after 15 of 22 steps (the user wanted the PC for another game): 645 pass, 1 fail. The fail
+  (farfight2): the overlay watcher's "199 batches of drawing commands in 4.0 s and no frame (0 frames before)" in
+  the host's first process, before the lobby restart (pp30-farfight2.coopplus.host.before.log 22:54:02): the false
+  trigger of 2026-11-12 again, not to be whitelisted; look at dx12_hook.cpp:919. Left: mountfight nosave retry stuck
+  mismatch hostrevive solostart, then farfight2 again. No game tests or builds while the user plays.
