@@ -245,6 +245,54 @@ void set_dest(safetyhook::Context& c, Site s, uint32_t v) noexcept {
 // sector words (0x5AC810 on 3549, as 2976); the buffer's newest sample position (+0x00 of a 0xA0 sample).
 std::atomic<uintptr_t> g_remote_char{0}, g_remote_char_mc{0}, g_npc_actor{0};
 std::atomic<uint32_t> g_remote_char_key{0}, g_npc_key{0};
+// Co-op+ 2026-11-18 (Borque's running "animation freeze", Jay's hitches): how often the other player's character
+// stands still on this screen while it is moving. Per frame (update position of the 0xA actor): T = now - the game's
+// delay is past the newest sample that arrived, while samples were arriving (the newest less than 1.5 s old) -- the
+// game does not extrapolate, so the character holds its pose. Runs of such frames, and the gaps between the samples'
+// arrivals (set position of the 0xA actor). Log only.
+std::atomic<uint64_t> g_ch_frames{0}, g_ch_held{0}, g_ch_runs100{0}, g_ch_runs300{0}, g_ch_run_max{0};
+std::atomic<uint64_t> g_ch_run_start{0}, g_ch_last_insert{0}, g_ch_last_arrival{0};
+std::array<std::atomic<uint64_t>, 6> g_ch_gap{};  // arrival gaps <=50, <=100, <=200, <=400, <=1000, >1000 ms
+std::atomic<uint64_t> g_ch_gap_max{0};
+void note_char_frame(uintptr_t buf, uint64_t now, uint32_t gd) noexcept {
+    g_ch_frames.fetch_add(1, std::memory_order_relaxed);
+    const rip::LastSample last = rip::last_sample(FastMem{}, buf, false);
+    const bool moving = last.ok && last.count && now >= last.ts && now - last.ts < 1500;
+    const bool held = moving && rip::no_sample_ahead(now, gd, last.ts);
+    const uint64_t start = g_ch_run_start.load(std::memory_order_relaxed);
+    if (held) {
+        g_ch_held.fetch_add(1, std::memory_order_relaxed);
+        if (!start) g_ch_run_start.store(now, std::memory_order_relaxed);
+    } else if (start) {
+        g_ch_run_start.store(0, std::memory_order_relaxed);
+        const uint64_t run = now > start ? now - start : 0;
+        if (run > 100) g_ch_runs100.fetch_add(1, std::memory_order_relaxed);
+        if (run > 300) g_ch_runs300.fetch_add(1, std::memory_order_relaxed);
+        if (run > g_ch_run_max.load(std::memory_order_relaxed)) g_ch_run_max.store(run, std::memory_order_relaxed);
+    }
+}
+void note_char_insert(uintptr_t buf) noexcept {
+    const rip::LastSample last = rip::last_sample(FastMem{}, buf, false);
+    if (!last.ok || !last.count) return;
+    const uint64_t prev = g_ch_last_insert.exchange(last.ts, std::memory_order_relaxed);
+    if (!prev || last.ts <= prev) return;
+    const uint64_t gap = last.ts - prev;
+    if (gap > 5000) return;  // a pause (stood still, a menu): not a cadence
+    const size_t b = gap <= 50 ? 0 : gap <= 100 ? 1 : gap <= 200 ? 2 : gap <= 400 ? 3 : gap <= 1000 ? 4 : 5;
+    g_ch_gap[b].fetch_add(1, std::memory_order_relaxed);
+    if (gap > g_ch_gap_max.load(std::memory_order_relaxed)) g_ch_gap_max.store(gap, std::memory_order_relaxed);
+}
+void remote_character_stalls_line() noexcept {
+    const uint64_t frames = g_ch_frames.load(), held = g_ch_held.load();
+    if (!frames) return;
+    log::info("RemoteInterp [remote character stalls] 0x{:08X}: frames {} | held its pose while moving {} ({:.1f}%) | "
+              "runs > 100 ms {}, > 300 ms {}, longest {} ms | samples' arrival gaps [<=50 {}, <=100 {}, <=200 {}, "
+              "<=400 {}, <=1000 {}, >1000 {}] longest {} ms | game delay {} ms",
+              g_remote_char_key.load(), frames, held, 100.0 * static_cast<double>(held) / static_cast<double>(frames),
+              g_ch_runs100.load(), g_ch_runs300.load(), g_ch_run_max.load(), g_ch_gap[0].load(), g_ch_gap[1].load(),
+              g_ch_gap[2].load(), g_ch_gap[3].load(), g_ch_gap[4].load(), g_ch_gap[5].load(), g_ch_gap_max.load(),
+              game_delay());
+}
 // The visibility guard's counters (on_flag_setter below).
 std::atomic<uint64_t> g_vis_stripped{0}, g_vis_added{0}, g_vis_calls{0};
 std::atomic<uintptr_t> g_vis_last_caller{0};
@@ -406,6 +454,10 @@ void on_delay_read(safetyhook::Context& c) noexcept {
                               ? owned_of(*slot, r.actor, now)
                               : rip::kOwnedUnknown;
     if (hs.site == Site::SetPos) observe_insert(c, buf, cls, slot, r.key, owned, owned_cap, cmode != Mode::Off);
+    if (cls == KeyClass::Character) {
+        if (hs.site == Site::SetPos) note_char_insert(buf);
+        else if (hs.site == Site::UpdPos) note_char_frame(buf, now, gd);
+    }
     if (hs.site == Site::UpdPos && slot) {
         // P8 mount ride: a horse its rider (0xA, which always reads the game's value) rides now targets gd.
         uint32_t pair_delay = 0;
@@ -926,6 +978,7 @@ DWORD WINAPI interp_thread(LPVOID) {
         if (now - last >= kSummaryMs) {
             last = now;
             summary();
+            remote_character_stalls_line();
         }
     }
 }
