@@ -8891,3 +8891,25 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - 16:03 pp33 running on 569720a2 (full pass, crime second so the fix is seen early; ~3.5 h). The ride-rule change is
   mod code, so the full pass, not steps + smoke. Draft post renamed download-569720a2.txt.
 
+- 16:13 pp33 crime PASSES with the tpnear fix (51/51; guest hits seen 76, was 2-6 when it failed; crimes skipped for
+  the guest 14).
+- 16:05-16:15 Borque's HOST zip from the 18 Nov 13:xx session (build/tester/borque-1118c, his reply to our ask; 9e85b891,
+  Windows 10). Read by an agent against the client's zip (borque-1118b); client clock ~2.7 s ahead of the host's.
+  * The session ended in a HOST GAME CRASH at 13:46:51 (null read at exe+0x2C53DE8 during a burst of user 2 stage
+    closes "unload at the owner's load"); cdmp.asi+0x3C91F7 on the scanned stack is stale (owed_tick's epilogue,
+    after __security_check_cookie). An agent is reading the 3663 exe for the crash (notes: build/decomp, private).
+  * (4) taming / (9) cart driving: the server gave the client the horse / cart (ctrl 0x90100065 for the cart), the
+    host never seated it ("RideOn::Enter ... Link 0", "detach of an unapplied transaction"): the 725-byte mount bug,
+    fixed in 569720a2; the wild horse's AI also stayed on the host (the ride rule in 569720a2 hands it over). Untested
+    on a wild horse / cart.
+  * (9) passenger: boarding an NPC cart as passenger at 13:36:09 -> fight rule handed cart + driver to the client
+    (a guest "hit" 219 ms before) and the driver got hurt -> wanted. Not changed yet (the game's own hijack crime?).
+  * (7) catching small animals: the server accepted the client's catches (0xF42BE / 0xF42CD) but the animal's AI
+    stayed on the host (moved 1-1.5 s later only by chance, fight rule). Native 8e38f6a (not built): the CATCH RULE,
+    the 2671 accepted for user 2 on a catch interaction hands the animal to the catcher's game for 30 s.
+  * (8) the host's catches / grabs float on the client: attach_follow is off; f9791c4's port + non-user children.
+  * (6) fishing, (5) mining: nothing in either log; need sniffer recordings of a host-only session.
+  * (2) talk greyed: at 13:40 in the pub every redirect was "refused: no prompt" on the CLIENT while the host's
+    server accepted the stage (result 2): the client's own prompt check, not the server or the wanted state.
+  * Host FPS: 72-74 alone, 39-44 with the client, 30-37 after 13:38 when the server's actors went ~480 -> ~900.
+  Plan: post 569720a2 after pp33 (mounts / vendors / ride rule); catch rule + crash fix in the next batch.
