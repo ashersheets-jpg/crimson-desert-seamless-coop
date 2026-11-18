@@ -8723,3 +8723,16 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     (was 0). Not yet seen on screen (the host's view looks down).
   * cs57a also showed the guest's own save still stages and loads with one account folder (af4cdfb).
   * Dye and T-pose leads in ROADMAP P1. Next: cs58a (both in Hernand, shots, T-pose), cs56a (B10).
+- 20:35 more Borque items (native c3b4db5, package 36e85eaf):
+  * NPC keeps walking while the guest talks to it: the host's client drives the NPC and its MoveActorAck /
+    StartActionAck reached user 2. Now held off user 2 while a scene of user 2's own binds that NPC (types 4/5,
+    at most 5 min; log "is in a scene of user 2's own"). cs59a could not trigger a talk by script (E beside a
+    standing group: no interaction Req) -- needs a hands-on check or a scripted interaction.
+  * cs58a (both in Hernand's square, shots both ways): no T-pose in view; 5 idle substitutes (GuestSeqRestore) in
+    the run, those NPCs not on screen. Lead kept.
+  * B10 cs56b: the guest's step is "Speak with your comrades standing in front of the grave" (a talk at the grave
+    marker, 15 m from the cabin); the script's E beside comrades at the cabin reached no one. QuestRoute sent 154
+    events to the guest's own manager after its hop (new: 0 before). Hands-on.
+  * Tree duplicated for the host: nothing in the logs; needs a repro (an axe, a tree).
+  * Running freeze: Borque's remote-player sample stats match ours (99 % of gaps <= 100 ms, ~2 gaps > 1 s a
+    minute). cs60a/b/c (sprint by the still host, FPS 40/40, guest 20, host 20) compare them now.
