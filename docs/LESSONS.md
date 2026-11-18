@@ -348,3 +348,10 @@ The crime step failed twice on 62f49d19 and passed on "9e85b891" -- but the harn
 binaries with an ini that differed in the version line: the pass proved test variance, not a fix. Look at the
 first screenshot of the failing runs before bisecting: here the guest's held E (for the assassinate) mounted a horse
 standing at its teleport spot. A key meant for an NPC can take the nearest prompt (a horse, a door, a seat).
+
+## Search PROGRESS.md for the test before writing it; never reuse a scratch test's name (2026-11-18)
+I wrote "cs60" for the vendors and "cs61" for the running freeze without searching PROGRESS: cs60 already existed
+(17 Nov: the FPS-cap runs 40/40, 40/20, 20/40 of the running freeze) and I overwrote its script, then nearly ran the
+same FPS comparison again. Before a new test: `grep -n "<topic>" PROGRESS.md | tail`, and `ls scratchpad/csNN*` before
+taking a number. The 17 Nov conclusion was the useful part: position samples show no freeze; the next probe is the
+copy's animation.
