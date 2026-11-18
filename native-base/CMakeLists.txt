@@ -161,6 +161,7 @@ add_library(cdmp_mod SHARED
     src/mod/render/hud.cpp
     src/mod/session2/child_hold.cpp
     src/mod/session2/clock_gate.cpp
+    src/mod/session2/scene_req_guard.cpp
     src/mod/session2/clock_push.cpp
     src/mod/session2/weather_sync.cpp
     src/mod/session2/npc_category.cpp

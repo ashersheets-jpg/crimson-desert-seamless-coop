@@ -76,6 +76,7 @@
 #include "mod/session2/story_gate.h"
 #include "mod/session2/user2_funnels_logic.h"
 #include "mod/session2/world_anchor.h"
+#include "mod/session2/scene_req_guard.h"
 
 namespace cdmp::session2 {
 namespace {
@@ -200,6 +201,7 @@ DWORD WINAPI probe_thread(LPVOID) {
                       net::puppet_guard_describe(), net::horse_diag_describe());
         }
         if (clock_gate_active()) log::info("Session2 probe (minute {}): {}", minute, clock_gate_describe());
+        log::info("Session2 probe (minute {}): {}", minute, scene_req_guard_describe());
         if (const std::string k = knowledge_grant_describe(); !k.empty()) log::info("Session2 probe (minute {}): {}", minute, k);
         if (identity_probe_active()) log::info("Session2 probe (minute {}): {}", minute, identity_probe_describe());
         if (identity_fix_wanted()) log::info("Session2 probe (minute {}): {}", minute, identity_fix_describe());
@@ -961,6 +963,9 @@ bool install(const Options& opt) {
                    "clock (reloj.md); option D stays off");
         return false;
     }
+    // 2026-11-18 (Borque's host crash, scene_req_guard.h): the 2808 handler's unchecked stage manager. Not fatal
+    // when it cannot hook (another game build): the crash stays possible, nothing else changes.
+    if (opt.create_session) (void)scene_req_guard_install();
     if (!opt.clock_gate && opt.create_session) {
         log::warn("Session2: clock_gate=0: user 2's login will freeze the world clock (reloj.md)");
     }
