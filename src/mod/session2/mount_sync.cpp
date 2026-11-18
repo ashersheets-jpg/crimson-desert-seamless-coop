@@ -1165,7 +1165,8 @@ void seat_rider(const msl::Txn& t, msl::Outcome commit, uintptr_t rider, uintptr
     const msl::PairState p = read_pair(rider, horse, vc, t.seat);
     const msl::SeatState pre = read_seat(rider, horse);
     msl::SeatJudge j = msl::seat_judge(seat_mode(), p, pre, t.horse, t.seat, t.rider,
-                                         g_local_key.load(std::memory_order_relaxed));
+                                         g_local_key.load(std::memory_order_relaxed),
+                                         g_on_actreq.load(std::memory_order_acquire));
     if (j.verdict == msl::SeatVerdict::Apply && (g_apply_off.load() || g_seat_off.load() || !g_on_vf54.load())) {
         j = {msl::SeatVerdict::Refused, msl::SeatWhy::Off};
     }

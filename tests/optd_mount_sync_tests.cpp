@@ -826,7 +826,7 @@ void test_seat_judge() {
     CHECK(judged(seat_judge(Mode::On, p, s, kHHorse, 0, kHRider, 0), SeatVerdict::Refused, SeatWhy::Local));
     // S22 [V]: type 9 is "none" (S21 refused it as busy); 0 is never written by the game.
     s = free_rider();
-    CHECK(kAttachNone == 9 && judged(seat_judge(Mode::On, p, s, kHHorse, 0, kHRider, kGRider), SeatVerdict::Apply));
+    CHECK(kAttachNone == 12 && judged(seat_judge(Mode::On, p, s, kHHorse, 0, kHRider, kGRider), SeatVerdict::Apply));
     s.attach_type = 0;
     CHECK(judged(seat_judge(Mode::On, p, s, kHHorse, 0, kHRider, kGRider), SeatVerdict::Refused, SeatWhy::AttachBusy));
     s = free_rider();
@@ -854,6 +854,8 @@ void test_seat_judge() {
     s = free_rider();
     s.rider_user = 0;  // unread
     CHECK(judged(seat_judge(Mode::On, p, s, kHHorse, 0, kHRider, kGRider), SeatVerdict::Refused, SeatWhy::LocalCtl));
+    // 2026-11-18 (cs63b): with the riding action veto installed, a "local user" answer no longer refuses the seat.
+    CHECK(judged(seat_judge(Mode::On, p, s, kHHorse, 0, kHRider, kGRider, true), SeatVerdict::Apply));
     s = free_rider();
     s.vf178 = kVf178User;  // +0x94 alone (the account/server realm's)
     CHECK(judged(seat_judge(Mode::On, p, s, kHHorse, 0, kHRider, kGRider), SeatVerdict::Refused, SeatWhy::LocalCtl));
