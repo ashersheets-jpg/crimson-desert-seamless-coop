@@ -60,6 +60,21 @@ uint32_t ridden_by(uint32_t mount_key) noexcept {
     }
     return 0;
 }
+// The catch rule's table (ai_handoff_note_catch): (NPC key << 32) | catcher key, and when it was noted (ms).
+// Borque 18 Nov (host log): interactions 0xF42BE / 0xF42CD on small animals, accepted for user 2, the animal's AI
+// still on the host 1-1.5 s later.
+constexpr uint32_t kCatchInteractions[] = {0xF42BE, 0xF42CD};
+constexpr uint64_t kCatchMs = 30000;
+std::array<std::atomic<uint64_t>, kRides> g_catches{}, g_catch_ms{};
+std::atomic<uint64_t> c_catch_noted{0}, c_catch_out{0}, c_catch_full{0};
+uint32_t caught_by(uint32_t npc_key, uint64_t now) noexcept {
+    for (size_t i = 0; i < kRides; ++i) {
+        const uint64_t v = g_catches[i].load(std::memory_order_acquire);
+        if (v && static_cast<uint32_t>(v >> 32) == npc_key && now - g_catch_ms[i].load(std::memory_order_relaxed) < kCatchMs)
+            return static_cast<uint32_t>(v);
+    }
+    return 0;
+}
 
 struct PlayerAt {
     uint32_t key = 0, user = 0;
@@ -485,7 +500,8 @@ void ai_handoff_server_tick() noexcept {
             const uint64_t now = GetTickCount64();
             for (int i = 0; i < n_fight && done < kMaxPerTick; ++i) {
                 const Fight& f = fights[i];
-                const uint32_t rider = ridden_by(f.key);
+                uint32_t rider = ridden_by(f.key);
+                const bool caught = !rider && (rider = caught_by(f.key, now)) != 0;
                 if (!rider) continue;
                 uint32_t to = 0;
                 for (int k = 0; k < n_players; ++k) {
@@ -510,10 +526,11 @@ void ai_handoff_server_tick() noexcept {
                 }
                 tell(to, host_user, priv);
                 tell(to, host_user, real);
-                const uint64_t h = c_ride_out.fetch_add(1) + 1;
+                const uint64_t h = (caught ? c_catch_out : c_ride_out).fetch_add(1) + 1;
                 if (h <= 60 || h % 100 == 0)
-                    log::info("AiHandoff: ride rule: NPC 0x{:08X} (type {}) ridden by 0x{:08X} -> its game (0x{:08X} -> "
-                              "0x{:08X}; {} so far)", f.key, f.type, rider, f.ctrl, to, h);
+                    log::info("AiHandoff: {} rule: NPC 0x{:08X} (type {}) {} 0x{:08X} -> its game (0x{:08X} -> "
+                              "0x{:08X}; {} so far)", caught ? "catch" : "ride", f.key, f.type,
+                              caught ? "caught by" : "ridden by", rider, f.ctrl, to, h);
             }
         }
         // The fight rule (ai_handoff.h, 2026-11-16, B18).
@@ -522,7 +539,7 @@ void ai_handoff_server_tick() noexcept {
             if (moved.size() > 8000) moved.clear();
             for (int i = 0; i < n_fight && done < kMaxPerTick; ++i) {
                 const Fight& f = fights[i];
-                if (ridden_by(f.key)) continue;  // the ride rule's
+                if (ridden_by(f.key) || caught_by(f.key, now)) continue;  // the ride / catch rule's
                 uint64_t hm = 0, gm = 0;
                 if (!anti_grief_last_hits(f.key, hm, gm)) continue;
                 c_fight_seen.fetch_add(1);
@@ -606,6 +623,35 @@ bool ai_handoff_client_recv(const uint8_t* packet, size_t size) noexcept {
     return false;
 }
 
+void ai_handoff_note_catch(uint32_t catcher_key, uint32_t npc_key, uint32_t interaction) noexcept {
+    if (g_guest || !npc_key || (npc_key >> 28) != 0xB) return;
+    if ((catcher_key >> 28) != 0xA || catcher_key == kHostCharacter) return;  // the other player's character only
+    bool is_catch = false;
+    for (uint32_t c : kCatchInteractions) is_catch = is_catch || c == interaction;
+    if (!is_catch) return;
+    const uint64_t now = GetTickCount64();
+    const uint64_t want = (static_cast<uint64_t>(npc_key) << 32) | catcher_key;
+    size_t slot = kRides;
+    for (size_t i = 0; i < kRides && slot == kRides; ++i) {  // the same NPC again, else a free or expired slot
+        const uint64_t v = g_catches[i].load(std::memory_order_relaxed);
+        if (v && static_cast<uint32_t>(v >> 32) == npc_key) slot = i;
+    }
+    for (size_t i = 0; i < kRides && slot == kRides; ++i) {
+        const uint64_t v = g_catches[i].load(std::memory_order_relaxed);
+        if (!v || now - g_catch_ms[i].load(std::memory_order_relaxed) >= kCatchMs) slot = i;
+    }
+    if (slot == kRides) {
+        c_catch_full.fetch_add(1);
+        return;
+    }
+    g_catch_ms[slot].store(now, std::memory_order_relaxed);
+    g_catches[slot].store(want, std::memory_order_release);
+    const uint64_t n = c_catch_noted.fetch_add(1) + 1;
+    if (n <= 40 || n % 100 == 0)
+        log::info("AiHandoff: catch rule: the other player's 0x{:08X} catches NPC 0x{:08X} (interaction 0x{:X}): it goes "
+                  "to the catcher's game at the next server check ({} so far)", catcher_key, npc_key, interaction, n);
+}
+
 void ai_handoff_note_ride(uint32_t rider_key, uint32_t mount_key, bool on) noexcept {
     if (g_guest || !mount_key || (mount_key >> 28) != 0xB) return;
     if (!on) {
@@ -643,7 +689,9 @@ std::string ai_handoff_describe() {
                            "back to the host {} failed {}",
                            c_ticks.load(), c_fight_seen.load(), c_fight_out.load(), c_fight_back.load(), c_failed.load()) +
                std::format(" | ride rule: rides noted {} handed to the rider {} table full {}", c_ride_noted.load(),
-                           c_ride_out.load(), c_ride_full.load());
+                           c_ride_out.load(), c_ride_full.load()) +
+               std::format(" | catch rule: catches noted {} handed to the catcher {} table full {}", c_catch_noted.load(),
+                           c_catch_out.load(), c_catch_full.load());
     return std::format("AiHandoff: {} | server checks {} | NPCs looked at {} (controller far, another player close: {}) | "
                        "handed over {} (of them back to the first controller {}) would {} failed {} | this client: took {} "
                        "noted {} not loaded {} notices dropped {}",
