@@ -292,6 +292,9 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   - [ ] Carryable animals (kiwis, goats) are not synced.
   - [ ] The running "animation freeze" happens almost all the time out of town (his theory: different FPS on the two
     PCs; our runs have the same FPS on both). The host's FPS drops.
+  - [~] JackyChan004 / D3vils (2026-11-18, 9e85b891): after "Enter the cabin" the friend's 2644 reset the host's
+    stage manager (F4 off in the release): no bear fight for the host, the friend's stages off for the run, NPCs
+    idle on the friend's screen. Fix: user2_revive_manager=1 (layer, not built yet); then the testers retry.
   - [ ] Jay (via the owner, 2026-11-17 23:20; an older build, not played for a few versions): small "desync
     hitches" in the other player's animations, seen by both players; polish, not a blocker. Likely the same family
     as the running freeze: when testing that one, also measure short stalls of the remote character's animation

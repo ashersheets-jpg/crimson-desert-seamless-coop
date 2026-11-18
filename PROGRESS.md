@@ -8765,3 +8765,23 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - 05:40 POSTED 0.1.0-alpha+9e85b891 in #download-here (standing OK after the checklist): message
   1572562012284784691, both zips (12 719 069 / 6 939 074 bytes, the zip checked file by file against the tested
   folder, 25/25), Borque tagged, text as posted: docs/release/shared-world-playtest/download-9e85b891.txt.
+- 05:42 Discord: asked Borque how the client cut the tree and what happened with the kiwis / goats (to script both).
+- 05:45-06:30 Dev `advance` on 3663 (cs44e-g): the mission table is still exe+0x7248520, with a new layout (the
+  game's getter exe+0x4FFA10: +0x28 count, +0x20 entries of 0x18, info* at +8; key at info +8): "6872 missions,
+  6436 loaded" (cs44g). The 17 Nov candidates 0x7419180/88 were zero at run time (cs44f). The advance still did
+  nothing: the quest server hooks (the manager from the state hook) were never installed in the native layer (live
+  quests forced off there); a run with a [dev] script now installs them (mod.cpp). cs44h stopped at "game lost
+  focus" (my Discord post during its lobby); cs44i running.
+- 06:35 JackyChan004 (host) and D3vils (guest), already on 9e85b891, report zips in build/tester/jacky-devils-1118
+  (downloaded, standing OK; both tagged in a reply at 06:36). D3vils: black screen for the joined player entering
+  the cabin, static NPCs, the host's quest did not go on to the bear fight. Found (log agent, checked by me):
+  * jacky cdmp 21:13:05.342 ERR "User2Funnels revive F4 (user2_revive_manager=0) ... Req 2644 of user 2 ... the
+    field owner's manager +0x6A0 is reset by a Req of user 2": the friend's StageBranchStateReq at the end of its
+    cabin scene reset the HOST's stage manager to state 0 (stayed 0 to the end); no host scene prepared after it
+    (the 0110 / bear fight never armed); 21:13:27 User2Stages [ABORT], U-1 off for the run. The same ERR is in the
+    16 Nov zip (14:07:11). Not in our cs44 runs (no 2644 of user 2 in the host's field there).
+  * Fix (DECIDED BY ME, small): user2_revive_manager=1 in the host's native settings (native_mode_text.h, not built
+    yet): F4 answers such a Req with user 2's own manager. With 0 the host's manager is always reset, so 1 can only
+    help; to test that F4 installs and acts, then ask the testers to retry the cabin.
+  * Static NPCs there: 29 bear-camp NPCs bound by the host's 0100 scenes got an idle wait on the guest
+    (GuestSeqRestore): the guest has neither the host's scenes nor its own (its stages dead after the reset).

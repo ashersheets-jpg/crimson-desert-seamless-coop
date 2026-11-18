@@ -152,7 +152,12 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
                               // the host's (2.5 m off when moving: blows that miss, "hits without touching"). The
                               // combat stream (combat_follow v2, ported to 3663: 239-byte MoveActorAck, clocks) sends
                               // every enemy in combat near the friend at 30 Hz: 0.5 m / 0.2-0.3 s now.
-                              "combat_follow=1", "combat_follow_v2=1"}) {
+                              "combat_follow=1", "combat_follow_v2=1",
+                              // B09 (2026-11-18, JackyChan004 / D3vils on 9e85b891): the friend's StageBranchStateReq
+                              // 2644 at the end of its cabin scene reached the reload setter in the host's field, which
+                              // reset the HOST's stage manager (+0x6A0 -> state 0): the host's next scenes (the bear
+                              // fight) never armed and U-1 aborted. F4 answers such a Req with the friend's own manager.
+                              "user2_revive_manager=1"}) {
             line(k);
         }
         // B10 option 2, the player's choice ([coop] shared_quest_credit): an objective one player completes also

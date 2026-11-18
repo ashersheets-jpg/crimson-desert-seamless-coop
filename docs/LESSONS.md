@@ -333,3 +333,11 @@ topic BEFORE testing or guessing about it.
 - Check that a research switch really switched before reading its result: the run's own log line ("FogShare off")
   is the proof, not the harness argument. -HostNativeExtra could add keys but never override a release default
   (the native's ini takes the first copy; the extras were written last) until 2026-11-17 (cs50c).
+- To port a data global, start from the code that CONSUMES it in the new exe (the call that uses the value, then the
+  getter it calls), not from its static initializer. The mission table (2026-11-17/18): following 3576's initializer
+  gave two 3663 candidates that were zero at run time (cs44f); the index argument of the 3663 advance call led to
+  the getter exe+0x4FFA10 in two minutes: same global, new layout (+0x28 count, +0x20 entries of 0x18). When a
+  port "finds nothing", dump what the candidate holds at run time before searching further.
+- Discord in the browser pane during a game test is safe only as reads. A page reload plus a paste-and-send at the
+  moment of a lobby screenshot took the foreground from the game: cs44h stopped at "game lost focus" two minutes in
+  (2026-11-18). Post to Discord between runs, not during one.

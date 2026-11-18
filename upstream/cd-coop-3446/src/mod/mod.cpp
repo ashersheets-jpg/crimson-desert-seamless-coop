@@ -2334,6 +2334,10 @@ DWORD WINAPI worker(LPVOID) {
             net::story_configure(cfg.coop_share_story, cfg.dev_story_slot);
             net::story_startup();
             net::quest_live_configure(cfg.coop_live_quests, cfg.dev_live_quests_any_world);
+            // Co-op+ dev (2026-11-18, cs44g): the dev script's `advance` needs the quest server hooks (the manager
+            // comes from the state hook), and the native layer turns live quests off, so they were never installed
+            // there. A run with a [dev] script installs them itself; players never have one.
+            if (kNativeLayer && !cfg.dev_script.empty()) net::quest_advance_install();
             net::prologue_configure(cfg.coop_solo_prologue, cfg.coop_prologue_missions);  // Co-op+ (2026-11-07)
             net::xp_share_configure(cfg.coop_shared_xp);  // Co-op+ shared XP (xp_share.h)
             net::slowmo_configure(cfg.coop_block_slowmo, cfg.dev_block_slowmo_always);
