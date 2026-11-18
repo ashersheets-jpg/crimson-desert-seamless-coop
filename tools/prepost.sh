@@ -315,8 +315,13 @@ crime)
   # The host comes to the camp 40 s after its script starts (crime_host_late.txt), about when the guest's keys start:
   # the guest's held E has to meet a bandit that is not fighting yet (an assassinate, crime type 5). With the host
   # there first, the bandits went for it and killed it before the guest's keys (pp22, pp22b: 2 of 4 runs on 0245f27d).
-  run2 "$BASE -Hold 10 -HostScript $SCAN\\crime_host_late.txt -GuestScript $SCAN\\tp_dock_guest.txt -GuestKeys w:2000_shot:$NAME-g0_${GA}shot:$NAME-g1 -HostKeys w:1000_shot:$NAME-h0_${HA}shot:$NAME-h1 -GuestAfterWalkKeys w:1000_shot:$NAME-g2_${GA}shot:$NAME-g3"; two_player_checks
+  # 2026-11-18 (pp31, pp31b, pp32 failed, pp31c passed, same binaries): the guest's swings hit only when a bandit
+  # happened to come to it (37-55 hits seen when it passed, 2-6 when it failed). Both scripts now step beside a bandit
+  # every few seconds (tpnear: the nearest living person, all bandits within 30 m of the dock): the guest the nearest,
+  # the host the second nearest once it arrives.
+  run2 "$BASE -Hold 10 -HostScript $SCAN\\crime_host_near.txt -GuestScript $SCAN\\crime_guest_near.txt -GuestKeys w:2000_shot:$NAME-g0_${GA}shot:$NAME-g1 -HostKeys w:1000_shot:$NAME-h0_${HA}shot:$NAME-h1 -GuestAfterWalkKeys w:1000_shot:$NAME-g2_${GA}shot:$NAME-g3"; two_player_checks
   H=$N/$NAME.host.log
+  has "$N/$NAME.coopplus.guest.log" "Dev script: tpnear: 0xB" "the guest's script stood beside a bandit (tpnear)"
   has "$H" "AntiGrief: crime type [0-9]+ of the guest .* skipped" "a guest's hit on a bandit was not booked as a crime"
   # Only the hit and kill paths: the same function also gets the game's property crimes (type 1 Vandalism: a swing
   # broke something that belongs to an NPC; the "victim" is the owner). Those are the game's own rule for any player
