@@ -682,6 +682,25 @@ void observer_seq_copy_sniffed(const uint8_t* packet, size_t size, uint64_t t_us
                 note(kNBranch, {seq, ok ? 1u : 0u, probe() ? 1u : 0u});
             }
         } else if (seen == osq::HostSeen::Deleted || seen == osq::HostSeen::DeleteUnknown) {
+            // User 2's own scene deleted with the host's character as the target (Co-op+ 2026-11-17): user 2 gets a
+            // copy naming its own character (u32 actor | u64 sequencer | ...), or its client stays in that scene.
+            if (seen == osq::HostSeen::DeleteUnknown && raw.size() >= 5 + 12 && g_copier.take_user2_own_delete(seq)) {
+                const uint32_t me = server_user2_player_key();
+                bool ok = false;
+                if (me && !probe() && !server_logout_requested()) {
+                    std::vector<uint8_t> pk(raw.begin(), raw.end());
+                    const uint32_t was = osq::le32(&pk[5]);
+                    for (int i = 0; i < 4; ++i) pk[5 + i] = static_cast<uint8_t>(me >> (8 * i));
+                    ok = server_push_extra(pk);
+                    static std::atomic<uint32_t> sent{0};
+                    const uint32_t n = sent.fetch_add(1, std::memory_order_relaxed) + 1;
+                    if (n <= 50 || n % 100 == 0) {
+                        log::info("ObserverSeqCopy [own 2292] user 2's own scene 0x{:X} was deleted with 0x{:08X} as "
+                                  "the target (the host's client got it, user 2 did not): a copy naming 0x{:08X} {} "
+                                  "({} so far)", seq, was, me, ok ? "SENT to user 2's queue" : "NOT sent", n);
+                    }
+                }
+            }
             const auto fate = g_copier.on_host_deleted(seq);
             if (fate == osq::Copier::DeleteFate::Cancelled) {
                 g_cancelled.fetch_add(1, std::memory_order_relaxed);
@@ -821,6 +840,7 @@ void observer_seq_copy_on_out(uint16_t opcode, std::span<const uint8_t> payload,
                 std::vector<Rebind> rebind;
                 {
                     std::lock_guard lock(g_mu);
+                    g_copier.on_user2_own_delete_native(seq);
                     refresh = g_copier.on_user2_own_deleted_refresh(seq, g_ledger);
                     for (const uint32_t k : refresh) {
                         uint64_t hs = 0;

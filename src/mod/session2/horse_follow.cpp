@@ -83,7 +83,7 @@ bool horse_follow_configure(const std::string& raw) {
     if (p.mode == Mode::Off) return false;
     log::info("HorseFollow ON ({}): {}", hfl::mode_name(p.mode),
               p.mode == Mode::On
-                  ? "every rider's MoveActorAck 3094 to user 2 (parent +0x8C an 0xB key, world transform +0x94) is "
+                  ? "every rider's MoveActorAck 3008 to user 2 (239 B: parent +0x44 an 0xB key, world transform +0x4C) is "
                     "followed by a synthetic 2697 of that horse (pos/quat from the rider's Path, parent -1, the same ts), "
                     "never for a horse user 2 controls; user 2's own riding (the other direction) is only measured"
                   : "probe: riders' Acks to user 2, their horses' own Acks and user 2's riding Reqs counted, nothing "

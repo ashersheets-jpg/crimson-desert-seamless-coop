@@ -384,18 +384,18 @@ std::vector<uint8_t> rider_ack(uint32_t rider, uint64_t parent, uint64_t ts) {
     const float local[3] = {0.0f, 1.6f, 0.57f};
     std::memcpy(x + hfl::kLocalPos, local, 12);
     const float vel[3] = {3.0f, 0.0f, 0.0f};
-    std::memcpy(x + 0x74, vel, 12);
+    std::memcpy(x + 0x2C, vel, 12);  // 3460+ layout (2976: 0x74)
     std::memcpy(x + hfl::kParent, &parent, 8);
     const float hpos[3] = {10.0f, 1.0f, 19.5f};
     const float hq[4] = {0.0f, 0.518f, 0.0f, 0.855f};
     std::memcpy(x + hfl::kWorldPos, hpos, 12);
     std::memcpy(x + hfl::kWorldQuat, hq, 16);
     const float wscale[3] = {1.0f, 1.0f, 1.0f};
-    std::memcpy(x + 0xB0, wscale, 12);
+    std::memcpy(x + hfl::kWorldPos + 28, wscale, 12);
     std::memcpy(x + hfl::kTs, &ts, 8);
-    x[0xDE] = 1;
+    x[0xE2] = 1;  // the Ack's inserted u8 (2976: 0xDE), then the tail
     const float tail[3] = {0.25f, 0.5f, 7.5f};
-    std::memcpy(x + 0xDF, tail, 12);
+    std::memcpy(x + 0xE3, tail, 12);
     return p;
 }
 
@@ -409,7 +409,7 @@ void test_horse() {
     std::vector<uint8_t> h;
     CHECK(hfl::make_horse_ack(pkt, h));
     CHECK(h.size() == pkt.size());
-    CHECK(std::memcmp(h.data(), pkt.data(), hfl::kHeader) == 0);  // same opcode, slot, length 235
+    CHECK(std::memcmp(h.data(), pkt.data(), hfl::kHeader) == 0);  // same opcode, slot, length 239
     const uint8_t* y = h.data() + hfl::kHeader;
     const uint8_t* x = pkt.data() + hfl::kHeader;
     uint32_t k = 0;
@@ -425,12 +425,13 @@ void test_horse() {
     float sc[3] = {};
     std::memcpy(sc, y + hfl::kLocalScale, 12);
     CHECK(sc[0] == 1.0f && sc[1] == 1.0f && sc[2] == 1.0f);
-    CHECK(std::memcmp(y + 0x74, x + 0x74, 0x8C - 0x74) == 0);  // velocity and the vec3 after it: the rider's
+    CHECK(std::memcmp(y + 0x2C, x + 0x2C, hfl::kParent - 0x2C) == 0);  // velocity and the vec3 after it: the rider's
     uint64_t par = 0;
     std::memcpy(&par, y + hfl::kParent, 8);
     CHECK(par == ~0ull);
     for (size_t i = hfl::kWorldPos; i < hfl::kWorldEnd; ++i) CHECK(y[i] == 0);
-    CHECK(std::memcmp(y + hfl::kWorldEnd, x + hfl::kWorldEnd, hfl::kAckSize - hfl::kWorldEnd) == 0);  // u8, ts, tail
+    CHECK(std::memcmp(y + hfl::kWorldEnd, x + hfl::kWorldEnd, hfl::kQuat - hfl::kWorldEnd) == 0);  // the rider's
+    CHECK(std::memcmp(y + hfl::kTs, x + hfl::kTs, hfl::kAckSize - hfl::kTs) == 0);  // ts, u8, tail
     // The horse's Ack is a horse on foot: the follower would never chain on it.
     CHECK(hfl::read_move(std::span<const uint8_t>(h.data() + hfl::kHeader, hfl::kAckSize), hfl::kAckSize).shape ==
           hfl::Shape::OnFoot);

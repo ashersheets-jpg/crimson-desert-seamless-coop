@@ -583,6 +583,7 @@ public:
     void clear_server() {
         clear();
         own_.clear();
+        own_deleted_.clear();
     }
 
     // User 2's MoveFieldAck went to its queue. observer: the field's owner (as the server wrote it)
@@ -638,6 +639,19 @@ public:
     // A 2661 to user 2's queue naming user 2's own character: its own scene (the C>S filter lets its Reqs pass).
     void on_user2_own(uint64_t seq) {
         if (own_.size() < l_.max_own) own_.insert(seq);
+    }
+    // User 2's own scene `seq` got its DeleteSequencerAck 2292 natively (its queue).
+    void on_user2_own_delete_native(uint64_t seq) {
+        if (own_.count(seq) && own_deleted_.size() < l_.max_own) own_deleted_.insert(seq);
+    }
+    // Co-op+ 2026-11-17 (playtest: the guest's horse taming failed and its client stayed in the scene, no input): the
+    // server addressed the 2292 of user 2's OWN scene to the host's character, so only the host's client got it.
+    // True once per scene when the host's client gets the 2292 of one of user 2's own scenes that user 2 has not
+    // got: the caller sends user 2 a copy naming its own character.
+    bool take_user2_own_delete(uint64_t seq) {
+        if (!own_.count(seq) || own_deleted_.count(seq) || own_deleted_.size() >= l_.max_own) return false;
+        own_deleted_.insert(seq);
+        return true;
     }
     // Co-op+ (2026-11-09, tcB225/226) conflict hold: user 2's OWN live scenes (U-1's, prepared while it was far) and
     // the NPCs they bind (types 4 / 5). A copy of the host's scene requiring one of those NPCs stays pending until
@@ -990,6 +1004,7 @@ private:
     std::vector<Pending> pending_;                        // ascending order (the ledger's)
     std::map<uint64_t, uint64_t> delivered_;              // seq -> when its 2661 copy went (this trip)
     std::unordered_set<uint64_t> own_;                    // user 2's own sequencer ids (this server)
+    std::unordered_set<uint64_t> own_deleted_;            // ... whose 2292 user 2 got (natively or a copy)
     uint64_t trips_ = 0, observer_trips_ = 0, filtered_ = 0, pending_full_ = 0, copied_ = 0, copied_branches_ = 0,
              milestones_ = 0, cancelled_ = 0, vanished_ = 0, refused_ = 0, bound_removed_ = 0, announced_overflow_ = 0,
              gate_by_timeout_ = 0, delivered_evicted_ = 0, purged_ = 0;

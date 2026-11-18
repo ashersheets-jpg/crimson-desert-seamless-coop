@@ -7,7 +7,7 @@
 // ~36 Hz with the horse's world transform in its Path (+0x94 pos, +0xA0 quat) and the horse as parent
 // (+0x8C, u64); the horse itself sends only ~1 Hz. On the observing client (mode 2) the parent is never
 // applied: the rider glides smoothly and the horse follows in jumps, behind.
-// With 1, for every MoveActorAck 2697 (235 B) of a rider that goes to user 2's session (take_frame), a
+// With 1, for every MoveActorAck 2697 (239 B on 3663) of a rider that goes to user 2's session (take_frame), a
 // synthetic 2697 of the horse is queued right after it, built from it (caballo-coop.md §4's recipe):
 //   +0x00 horse key | +0x04 = rider[+0x94..+0xA0) | +0x10 = rider[+0xA0..+0xB0) | +0x20 = 0
 //   +0x4C Path.local = the same pos and quat, scale (1,1,1) | +0x8C parent = -1 | +0x94..+0xD4 = 0
@@ -37,22 +37,27 @@ using u2f::parse_mode;
 
 inline constexpr uint16_t kOpMoveActorReq = 2790;
 inline constexpr uint16_t kOpMoveActorAck = 3008;
-inline constexpr size_t kReqSize = 514;  // payload
-inline constexpr size_t kAckSize = 235;  // payload; any other length is dropped by the client in silence
+// Co-op+ 2026-11-17: the 1.0.0.3460+ layout (3663 too). The 2976 sizes (514 / 235) matched no packet, so every rider's
+// Ack counted as "bad size" and no horse sample was ever made (playtest: the guest saw the host's horse away from the
+// host). From the Co-op+ layer's wire_layout.h (the client's own parser, confirmed on captures; as combat_follow):
+// MoveData grew by 4 and is reordered, Path first; the Ack = the Req's first 0xE2 bytes + an inserted u8 + 12 B tail.
+// 2976 values in comments.
+inline constexpr size_t kReqSize = 518;  // payload; 2976: 514
+inline constexpr size_t kAckSize = 239;  // payload; any other length is dropped by the client in silence; 2976: 235
 inline constexpr size_t kHeader = 5;     // u16 opcode | i8 slot | u16 payload_len
 
 inline constexpr size_t kKey = 0x00;         // u32
-inline constexpr size_t kPos = 0x04;         // vec3 world
-inline constexpr size_t kQuat = 0x10;        // quat
-inline constexpr size_t kAux = 0x20;         // u32 (sometimes a key)
-inline constexpr size_t kLocalPos = 0x4C;    // Path.local Transform: pos 12, quat 16, scale 12
-inline constexpr size_t kLocalQuat = 0x58;
-inline constexpr size_t kLocalScale = 0x68;
-inline constexpr size_t kParent = 0x8C;      // u64 parent / mount key, all ones = none
-inline constexpr size_t kWorldPos = 0x94;    // Path.world Transform (the parent's: the horse's)
-inline constexpr size_t kWorldQuat = 0xA0;
-inline constexpr size_t kWorldEnd = 0xD4;    // world Transform + the two vec3 after it
-inline constexpr size_t kTs = 0xD5;          // u64 ms
+inline constexpr size_t kPos = 0xC4;         // vec3 world; 2976: 0x04
+inline constexpr size_t kQuat = 0xB4;        // quat; 2976: 0x10
+inline constexpr size_t kAux = 0xD0;         // u32 (sometimes a key); 2976: 0x20
+inline constexpr size_t kLocalPos = 0x04;    // Path.local Transform: pos 12, quat 16, scale 12; 2976: 0x4C
+inline constexpr size_t kLocalQuat = 0x10;   // 2976: 0x58
+inline constexpr size_t kLocalScale = 0x20;  // 2976: 0x68
+inline constexpr size_t kParent = 0x44;      // u64 parent / mount key, all ones = none; 2976: 0x8C
+inline constexpr size_t kWorldPos = 0x4C;    // Path.world Transform (the parent's: the horse's); 2976: 0x94
+inline constexpr size_t kWorldQuat = 0x58;   // 2976: 0xA0
+inline constexpr size_t kWorldEnd = 0x8C;    // world Transform + the two vec3 after it; 2976: 0xD4
+inline constexpr size_t kTs = 0xD4;          // u64 ms; 2976: 0xD5
 
 inline uint32_t rd32(std::span<const uint8_t> p, size_t at) {
     uint32_t v = 0;
@@ -103,7 +108,7 @@ inline Move read_move(std::span<const uint8_t> payload, size_t expected) {
     return m;
 }
 
-// The horse's 2697 from its rider's (whole packet: header + 235 bytes), written into `out` (at least
+// The horse's 2697 from its rider's (whole packet: header + 239 bytes), written into `out` (at least
 // kHeader + kAckSize bytes; no allocation: the host client's OnRecvPacket hook uses it, P8 mount ride).
 // False: not a rider's Ack (nothing written).
 inline bool make_horse_ack_into(std::span<const uint8_t> rider_packet, uint8_t* out, size_t cap) {
@@ -129,7 +134,7 @@ inline bool make_horse_ack_into(std::span<const uint8_t> rider_packet, uint8_t* 
     return true;
 }
 
-// The horse's 2697 from its rider's (whole packet: header + 235 bytes). False: not a rider's Ack.
+// The horse's 2697 from its rider's (whole packet: header + 239 bytes). False: not a rider's Ack.
 inline bool make_horse_ack(std::span<const uint8_t> rider_packet, std::vector<uint8_t>& out) {
     uint8_t buf[kHeader + kAckSize];
     if (!make_horse_ack_into(rider_packet, buf, sizeof buf)) return false;
@@ -138,9 +143,9 @@ inline bool make_horse_ack(std::span<const uint8_t> rider_packet, std::vector<ui
 }
 
 // P8 session 9, M1 (guest_horse_probe; pendientes/p8-impl-s9-movimiento.md §4): the horse's 2556 from its rider's
-// MoveActorReq payload (514 B), the same recipe as make_horse_ack plus the Req's 10-entry history (+0xEA..)
-// zeroed; the tail (+0xDE..+0xEA: f32, f32, speed) is the rider's. BUILT AND CHECKED ONLY: never sent.
-inline constexpr size_t kReqHistory = 0xEA;
+// MoveActorReq payload (518 B; 2976: 514), the same recipe as make_horse_ack plus the Req's 10-entry history (+0xEE..;
+// 2976: +0xEA) zeroed; the tail (+0xE2..+0xEE: f32, f32, speed) is the rider's. BUILT AND CHECKED ONLY: never sent.
+inline constexpr size_t kReqHistory = 0xEE;
 inline bool make_horse_req(std::span<const uint8_t> rider_payload, std::vector<uint8_t>& out) {
     const Move m = read_move(rider_payload, kReqSize);
     if (m.shape != Shape::Ridden || m.world_zero) return false;
