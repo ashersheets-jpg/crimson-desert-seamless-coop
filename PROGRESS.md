@@ -8736,3 +8736,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   * Tree duplicated for the host: nothing in the logs; needs a repro (an axe, a tree).
   * Running freeze: Borque's remote-player sample stats match ours (99 % of gaps <= 100 ms, ~2 gaps > 1 s a
     minute). cs60a/b/c (sprint by the still host, FPS 40/40, guest 20, host 20) compare them now.
+- 21:00 cs60a/b/c (the guest sprints out and back by the still host; FPS caps host/guest 40/40, 40/20, 20/40): the
+  remote player's sample gaps and emptied buffers barely differ (guest at 20 fps: half the samples, a few more
+  100-600 ms gaps); no freeze seen in the numbers. The running freeze stays open (needs visual evidence or a
+  probe of the copy's animation, not its position).
+- 21:00 Dye share (native 6f9d261): the host client's DyeItemListByEquipSlotAck (2463; the client applies it to the
+  character its key names, 0xCEE3D0) is copied to user 2. Untested (no scripted dye).
+- 21:02 Package 9e85b891 (all of today's native fixes); full checklist pp30 running (ends ~00:00). CHANGELOG entry
+  and the post draft (docs/release/shared-world-playtest/download-9e85b891.txt) written.

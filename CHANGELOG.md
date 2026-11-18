@@ -5,6 +5,21 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
+NOT POSTED YET: 0.1.0-alpha+9e85b891, for game 1.0.0.3663 (checklist pp30 running): everything in 1c6453e1 below,
+plus (from Borque's two-PC session of 17 Nov):
+- **The friend's progress is kept on a PC with several Steam accounts.** If the host's save folder had folders for
+  more than one Steam account, the friend's own save was switched off and the friend played on a copy that was
+  thrown away. Now the folder of the Steam account logged in is used. Tested on one PC with one account.
+- **A failed horse taming no longer locks the friend.** The game sent "the scene is over" for the friend's taming
+  to the host's character, so the friend's game stayed in it with no input. The host now passes it on to the
+  friend. Not yet tested in the game (we cannot script a taming); tell us if it happens again.
+- **Horses follow their riders on the other screen.** The horse relay was still reading an older game version's
+  message layout, so it did nothing: the friend saw the host's horse away from the host, and the host could not see
+  the friend's horse. Fixed both ways (tested: 1311 horse updates to the friend, 736 to the host in one ride).
+- **An NPC the friend talks to stops walking** (on the friend's screen; the host's game keeps it moving). Not yet
+  seen in a test.
+- **The host's armour dye shows for the friend.** Not yet seen in a test (we cannot script a dye).
+
 POSTED 2026-11-17 18:59: 0.1.0-alpha+1c6453e1, for game 1.0.0.3663 (checklist pp29: 907 pass, 0 fail, 22 steps): everything in ada1800c below,
 plus:
 - **"Enemy health with a guest" works in the shared world, for both players' blows.** The setting (Co-op Settings,

@@ -1,0 +1,15 @@
+**Update: shared world playtest 0.1.0-alpha+9e85b891, for game 1.0.0.3663**
+Use this instead of 1c6453e1; **both players need the same build**. Fixes from @Borque's session (thank you):
+
+- **The friend's progress is kept again on a PC with several Steam accounts.** Before, the friend's save was switched off there and nothing the friend earned was kept.
+- **A failed horse taming no longer locks the friend** (the game never told the friend's game the taming was over).
+- **Horses follow their riders on both screens.** The horse relay did nothing before: the host's horse was away from the host on the friend's screen, and the friend's horse was invisible to the host.
+- **An NPC the friend talks to stops walking** on the friend's screen.
+- **The host's armour dye shows for the friend.**
+
+Tested with two copies of the game on one PC (Nvidia): full checklist. Not seen in a test yet: the taming, the talking NPC and the dye (we cannot script them), two PCs, AMD / Intel cards. Still open: T-pose on benches, the cut tree, kiwis/goats, the running freeze.
+
+- `...9e85b891-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tell us in <#1567319198206525450> how it goes, with the report zip from both of you (close the game, run **Diagnose Co-op+.cmd**).
