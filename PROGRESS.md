@@ -8823,3 +8823,10 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - 10:47 POSTED 0.1.0-alpha+62f49d19 in #download-here (standing OK; checklist pp31 + pp31c): message
   1572639519856005231, both zips (12 719 201 / 6 937 000 bytes), JackyChan004 and D3vils tagged (retry the cabin);
   text as posted: docs/release/shared-world-playtest/download-62f49d19.txt. #general: nothing new since 17 Nov.
+- 10:55-11:05 cs44k (the build outputs: 62f49d19 + the vendor lists): Marius, Ross, then 60 s later the dev advance
+  of "Enter the cabin" FFFFF4CE: all three advanced (result 0), the host's manager stayed at state 2, no [ABORT],
+  both alive, SAVES OK, 5/5. The host's quest went on past the cabin ("Speak with your comrades standing in front
+  of the grave", shot cs44k-s9). F4 never had to act: user 2 owns its own field in our two-copy runs (the testers'
+  friend was in the host's field), so the testers' retry of the cabin is still the real check.
+- 10:5x Native 7f58ad0 (vendor lists, unit test passes), native-base synced (3d2de1f), pushed.
+- 11:06 cs60a running: both go to the dye vendor (-10420 538 -4108) and then the goblin broker (-10430 541 -4301).
