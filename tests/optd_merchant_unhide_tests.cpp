@@ -27,6 +27,12 @@ int main() {
     CHECK(mul::is_shop_scene(0x0591B85Bu));   // clothes
     CHECK(mul::is_shop_scene(0x6EA4BC4Eu));   // leather
     CHECK(mul::is_shop_scene(0xE2EB7F12u));   // smuggler
+    CHECK(mul::is_shop_scene(0x5FCC0360u));   // dye (2026-11-18)
+    CHECK(mul::is_shop_scene(0x25C5EC9Bu));   // goblin broker (2026-11-18)
+    CHECK(!mul::is_shop_scene(u2trade::dict_hash("cd_seq_funcnpc_craftsmith")));  // unhide only, no twin
+    CHECK(mul::is_unhide_scene(u2trade::dict_hash("cd_seq_funcnpc_craftsmith")));
+    CHECK(mul::is_unhide_scene(0x5FCC0360u));
+    CHECK(!mul::is_unhide_scene(0x4F70088Bu));
     CHECK(!mul::is_shop_scene(0x4F70088Bu));  // Yann's scene (not a shop)
     CHECK(!mul::is_shop_scene(0x94FEA6AEu));  // the tavern crowd
     CHECK(!mul::is_shop_scene(0));

@@ -197,7 +197,7 @@ bool rd(uintptr_t a, T& v) {
 void note(uintptr_t raw) {
     uint16_t len = 0;
     uint32_t scene = 0;
-    if (!rd(raw + 3, len) || !rd(raw + kHeader + kResourceAt, scene) || !mul::is_shop_scene(scene)) return;
+    if (!rd(raw + 3, len) || !rd(raw + kHeader + kResourceAt, scene) || !mul::is_unhide_scene(scene)) return;
     std::lock_guard lk(g_mu);
     for (uint32_t o = kBindingsAt; o + kBindingSize <= len; o += kBindingSize) {
         uint32_t key = 0;
@@ -401,7 +401,7 @@ void merchant_unhide_start(bool on, bool guest, bool diag_only, bool guard) {
     std::thread(worker).detach();
     log::info("MerchantUnhide ON (merchant_unhide=1, {}): NPCs bound to the {} shop scenes keeping hide bit 0x200 for "
               "{} ms are unhidden with the game's setter 0x{:X}{}",
-              guest ? "guest" : "host", mul::kShopScenes.size(), mul::kStuckMs, kSetter,
+              guest ? "guest" : "host", mul::kShopScenes.size() + mul::kUnhideOnlyScenes.size(), mul::kStuckMs, kSetter,
               guest ? " (bindings from guest_seq_route's 2380 point)" : " (own hook of the 2380 point 0xD6CBFE)");
 }
 
