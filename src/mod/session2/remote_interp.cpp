@@ -301,10 +301,12 @@ void note_char_insert(uintptr_t buf, uint32_t gd) noexcept {
     if (g_ch_last_insert.exchange(t1, std::memory_order_relaxed) == t1) return;  // the same sample again
     const uint64_t gap = t1 - t0;
     if (gap > 10000) return;
-    if (dist3(p1, p0) / (static_cast<float>(gap) / 1000.0f) <= 1.0f) {
+    const float speed = dist3(p1, p0) / (static_cast<float>(gap) / 1000.0f);
+    if (speed <= 1.0f) {
         g_ch_still_gaps.fetch_add(1, std::memory_order_relaxed);
         return;
     }
+    if (speed > 30.0f) return;  // a teleport (a dev tp, fast travel), not a run
     const size_t b = gap <= 50 ? 0 : gap <= 100 ? 1 : gap <= 200 ? 2 : gap <= 400 ? 3 : gap <= 1000 ? 4 : 5;
     g_ch_gap[b].fetch_add(1, std::memory_order_relaxed);
     if (gap > g_ch_gap_max.load(std::memory_order_relaxed)) g_ch_gap_max.store(gap, std::memory_order_relaxed);
