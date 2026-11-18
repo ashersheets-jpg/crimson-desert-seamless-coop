@@ -19,6 +19,8 @@
 namespace cdmp::session2 {
 namespace {
 
+std::atomic<uint32_t> g_own_binds_live{0};  // user 2's own scenes with bound NPCs (a fast "none")
+
 std::atomic<osq::Mode> g_mode{osq::Mode::Off};
 std::mutex g_mu;  // leaf lock: under it only the outgoing queue's own lock is taken (server_push_extra)
 osq::Ledger g_ledger;  // under g_mu
@@ -692,6 +694,10 @@ void observer_seq_copy_sniffed(const uint8_t* packet, size_t size, uint64_t t_us
                     const uint32_t was = osq::le32(&pk[5]);
                     for (int i = 0; i < 4; ++i) pk[5 + i] = static_cast<uint8_t>(me >> (8 * i));
                     ok = server_push_extra(pk);
+                    if (ok) {
+                        g_copier.on_user2_own_deleted(seq);  // its NPCs are free again (observer_seq_copy_user2_scene_holds)
+                        g_own_binds_live.store(static_cast<uint32_t>(g_copier.own_binds()), std::memory_order_relaxed);
+                    }
                     static std::atomic<uint32_t> sent{0};
                     const uint32_t n = sent.fetch_add(1, std::memory_order_relaxed) + 1;
                     if (n <= 50 || n % 100 == 0) {
@@ -714,6 +720,16 @@ void observer_seq_copy_sniffed(const uint8_t* packet, size_t size, uint64_t t_us
         release_locked();
     } catch (...) {
         g_faults.fetch_add(1, std::memory_order_relaxed);
+    }
+}
+
+bool observer_seq_copy_user2_scene_holds(uint32_t key) noexcept {
+    if ((key >> 28) != 0xB || g_own_binds_live.load(std::memory_order_relaxed) == 0) return false;
+    try {
+        std::lock_guard lock(g_mu);
+        return g_copier.own_scene_holds(key, p8_now_us(), 300ull * 1000 * 1000);  // at most 5 min after its 2661
+    } catch (...) {
+        return false;
     }
 }
 
@@ -826,6 +842,8 @@ void observer_seq_copy_on_out(uint16_t opcode, std::span<const uint8_t> payload,
                 std::lock_guard lock(g_mu);
                 g_copier.on_user2_own(p->seq);
                 g_copier.on_user2_own_binds(p->seq, bound);
+                g_copier.note_own_bind_time(p->seq, now);
+                g_own_binds_live.store(static_cast<uint32_t>(g_copier.own_binds()), std::memory_order_relaxed);
                 return;
             }
             case osq::kOpDelete: {  // Co-op+ conflict hold: user 2's own scene went; what waited for it goes now
@@ -842,6 +860,7 @@ void observer_seq_copy_on_out(uint16_t opcode, std::span<const uint8_t> payload,
                     std::lock_guard lock(g_mu);
                     g_copier.on_user2_own_delete_native(seq);
                     refresh = g_copier.on_user2_own_deleted_refresh(seq, g_ledger);
+                    g_own_binds_live.store(static_cast<uint32_t>(g_copier.own_binds()), std::memory_order_relaxed);
                     for (const uint32_t k : refresh) {
                         uint64_t hs = 0;
                         uint32_t ho = 0, hn = 0;

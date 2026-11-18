@@ -628,6 +628,22 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
                 if (!v) return;
             }
         }
+        // Co-op+ 2026-11-17 (playtest: the guest talked to an NPC, got its menu, and the NPC kept walking): the host's
+        // client drives the NPC; while a scene of user 2's own binds it (its dialog), the host client's moves and
+        // actions of that NPC stay off user 2's queue, so the guest's own scene holds it there.
+        if (self == live_session2() && (opcode == 3008 || opcode == 2800) && v->payload.size() >= 4) {
+            uint32_t k = 0;
+            std::memcpy(&k, v->payload.data(), 4);
+            if (observer_seq_copy_user2_scene_holds(k)) {
+                static std::atomic<uint64_t> held{0};
+                const uint64_t n = held.fetch_add(1, std::memory_order_relaxed) + 1;
+                if (n <= 20 || n % 500 == 0) {
+                    log::info("Session2: NPC 0x{:08X} is in a scene of user 2's own (its dialog): the host client's {} "
+                              "of it is not sent to user 2 ({} so far)", k, opcode == 3008 ? "move" : "action", n);
+                }
+                return;
+            }
+        }
         // P8 S3 (observer_hold_acks.h): a held NPC's packets wait for its 2005; a 2005 is queued with them.
         AckRouteOut ar;
         const AckRoute route = to_live && observer_hold_acks_active()

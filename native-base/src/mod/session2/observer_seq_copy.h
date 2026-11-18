@@ -65,6 +65,11 @@ void observer_seq_copy_on_epoch(uint32_t epoch) noexcept;
 // A new server instance (the host back at the title, another game): the ledger, the known sequencer ids
 // and user 2's own ids go too (the server's ids start again).
 void observer_seq_copy_on_server_replaced() noexcept;
+// Co-op+ 2026-11-17 (playtest: the guest talked to an NPC and it kept walking): true while one of user 2's own live
+// scenes (its dialog with that NPC) binds the 0xB actor `key` (types 4 / 5 of its 2661; observer_hold_scene_conflict
+// on; at most 5 min). take_frame then keeps that NPC's MoveActorAck / StartActionAck from user 2: its own scene holds
+// it. Any thread.
+bool observer_seq_copy_user2_scene_holds(uint32_t key) noexcept;
 std::string observer_seq_copy_describe();
 
 }  // namespace cdmp::session2
