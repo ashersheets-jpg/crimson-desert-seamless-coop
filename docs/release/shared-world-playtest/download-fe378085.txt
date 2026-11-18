@@ -1,0 +1,13 @@
+**Update: shared world playtest 0.1.0-alpha+fe378085, for game 1.0.0.3663**
+Use this instead of 62f49d19; **both players need the same build**. For @Borque (from your 18 Nov list, thank you):
+
+- **The host now sees the joined player on its horse.** Since the game update, neither game put the other player's character on its horse; the joined player's game showed the host mounted anyway, the host's did not. Both games now seat the other player on its horse.
+- **The dye vendor and the goblin trader should show for the joined player** (they were missing from our list of hidden merchants; the craftsman, seat dealer, fence and other service NPCs were added too).
+- **Horse taming and carts:** a wild horse or a cart the joined player rides now runs on the joined player's game, which the minigame and driving need. Not tested on a wild horse or a cart yet: please try both.
+
+Tested with two copies of the game on one PC (Nvidia): full checklist, plus a mounted test from the host's view and the dye vendor's spot.
+
+- `...fe378085-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tell us in <#1567319198206525450> how it goes, with the report zip from **both** players (close the game, run **Diagnose Co-op+.cmd**).

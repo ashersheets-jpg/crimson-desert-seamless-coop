@@ -5,6 +5,20 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
+NOT POSTED YET: 0.1.0-alpha+fe378085, for game 1.0.0.3663 (checklist pp32 running): everything in 62f49d19 below,
+plus (from Borque's session of 18 Nov):
+- **The host sees the joined player on its horse.** Since the 3663 port neither game applied the other player's
+  mount itself (a message size of the old game version); the joined player's game happened to show the host
+  mounted anyway, the host's did not show the joined player mounted. Both now seat the other player's character on
+  its horse. Tested: two copies, both mounted, each seated the other; the host still steers itself afterwards.
+- **The dye vendor and the goblin trader show for the joined player** (they were missing from our list of
+  merchants that the game keeps hidden in co-op); other service NPCs (craftsman, seat dealer, fence, church...)
+  get the same unhide. Tested: both dye-vendor NPCs were hidden on the joined player's game and are now shown.
+- A wild horse or a cart the joined player rides now runs on the joined player's game (the horse-taming minigame
+  and driving a cart). Not tested on a wild horse or a cart yet.
+- A log line a minute measures how often the other player's character stands still while it runs (for the
+  "running freeze" reports; no change to play).
+
 POSTED 2026-11-18 10:47: 0.1.0-alpha+62f49d19, for game 1.0.0.3663 (checklist pp31: 22 of 23 steps pass, 964 checks; crime failed in pp31 and pp31b and passed in pp31c on the same binaries -- test variance, see PROGRESS 10:2x-10:47): everything in 9e85b891 below,
 plus (from JackyChan004's and D3vils' session of 18 Nov):
 - **After the cabin, the host's story goes on.** When the friend's own cabin scene ended, its game sent a message
