@@ -282,9 +282,12 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   - [~] Horses: the host sees the guest's horse invisible, the guest sees the host's away from the host.
     horse_follow / horse_follow_reverse were still on the 2976 MoveActorAck layout (235 B): every Ack was "bad size",
     none made, in our runs too. Ported to 239 B / the 3460+ offsets. Not yet tested.
-  - [ ] The guest sees city NPCs sitting on benches in a T-pose (the guest only).
+  - [ ] The guest sees city NPCs sitting on benches in a T-pose (the guest only). (Lead: GuestSeqRestore swaps a
+    remote NPC's seq_bodyanim_action it cannot find for an idle wait, 31 times in his session; cs58 looks in Hernand.)
   - [ ] The guest's "interact" opens the NPC's menu but the NPC keeps walking (the host's NPCs stop and look).
   - [ ] The host's armour dye is not seen by the guest.
+    (Lead: DyeItemListByEquipSlotAck 3042 / DyeItemByInventoryAck 2911 are ToTarget writers, owner_fanout_writers.h:
+    only the dyer's client gets them; the guest needs the host's item re-sent with its dye, e.g. an OtherEquipItemAck.)
   - [ ] A tree the guest cuts down is duplicated for the host.
   - [ ] Carryable animals (kiwis, goats) are not synced.
   - [ ] The running "animation freeze" happens almost all the time out of town (his theory: different FPS on the two

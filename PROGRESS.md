@@ -8712,3 +8712,14 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     invisible, the guest sees the host's not at its real place; the running "animation freeze" happens almost
     all the time out of town (his theory: different FPS on the two PCs). Combat on the client is much better.
   * Replied (tagged) 19:07: the save bug and fix, the list taken, the posted build does not have these yet.
+- 19:47 Borque fixes, built and tested (native f132243, package 62a4e274):
+  * Horse taming lock: the server sent the DeleteSequencerAck of the guest's OWN taming scene (0x5CE) to the host's
+    character (host log 00:17:46), so the guest's scene never ended. observer_seq_copy now copies the host client's
+    2292 of a scene of user 2's own (not yet deleted for it) to user 2, naming its character. Not yet seen in a run
+    (no automated taming: cs57a scouted the spot; wild horses not identified by variant).
+  * horse_follow / horse_follow_reverse were on the 2976 MoveActorAck layout: every Ack "bad size", 0 made, in our
+    runs too (pp29 mounts). Ported to 239 B / 3460+ offsets (unit test moved). pp30a (static, mounts, mountfight):
+    106 pass, 0 fail; HorseFollow bad size 0, made 1311; Reverse (guest's horse on the host's client) 736 delivered
+    (was 0). Not yet seen on screen (the host's view looks down).
+  * cs57a also showed the guest's own save still stages and loads with one account folder (af4cdfb).
+  * Dye and T-pose leads in ROADMAP P1. Next: cs58a (both in Hernand, shots, T-pose), cs56a (B10).
