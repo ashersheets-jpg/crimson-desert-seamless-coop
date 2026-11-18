@@ -11,6 +11,8 @@
 #include <windows.h>
 
 #include <atomic>
+#include <cstring>
+#include <span>
 #include <deque>
 #include <format>
 
@@ -215,6 +217,30 @@ DWORD WINAPI probe_thread(LPVOID) {
     }
 }
 
+// Co-op+ 2026-11-17 (playtest: the guest did not see the host's armour dye): DyeItemListByEquipSlotAck (3663: 2463;
+// u32 the dyed character's key | 10 x {u16 slot, 12 dye values}) goes to the dyer's client only (a ToTarget writer,
+// owner_fanout_writers.h), and the client applies it to the character its key names (0xCEE3D0, 3576). The host
+// client's copy, as it is, goes to user 2 too, so the host's character is dyed on the guest's screen as well. On the
+// guest (no server) the push simply fails.
+void dye_share_host_sniffed(const uint8_t* packet, size_t size, bool server_to_client) noexcept {
+    constexpr uint16_t kOpDyeItemListByEquipSlotAck = 2463;
+    if (!server_to_client || size < 5 + 4 || static_cast<uint16_t>(packet[0] | packet[1] << 8) != kOpDyeItemListByEquipSlotAck) {
+        return;
+    }
+    try {
+        uint32_t key = 0;
+        std::memcpy(&key, packet + 5, 4);
+        if ((key >> 28) != 0xA) return;  // a player character's dye only
+        const bool ok = server_push_extra(std::span<const uint8_t>(packet, size));
+        static std::atomic<uint32_t> n{0};
+        if (n.fetch_add(1, std::memory_order_relaxed) < 20) {
+            log::info("Session2 dye share: the host's dye of 0x{:08X} ({} bytes) {}", key, size,
+                      ok ? "copied to user 2" : "not copied (no live session 2)");
+        }
+    } catch (...) {
+    }
+}
+
 // The sniffer has one tap (its writer thread): it feeds every reader of the host client's capture.
 std::atomic<bool> g_tap_scene_diag{false}, g_tap_seq_copy{false}, g_tap_owner_fanout{false}, g_tap_travel{false},
     g_tap_mount_sync{false}, g_tap_rope_probe{false}, g_tap_docked_gimmicks{false}, g_tap_user2_stages{false},
@@ -223,6 +249,7 @@ void sniffer_fanout(const uint8_t* packet, size_t size, uint64_t t_us, bool serv
     npc_probe_client_sniff(packet, size, t_us, server_to_client); // S33: retorna inmediatamente con 0.
     shop_twin_host_sniffed(packet, size, server_to_client);       // Co-op+ 2026-11-09: the host's shop choices
     fog_share_host_sniffed(packet, size, server_to_client);
+    dye_share_host_sniffed(packet, size, server_to_client);  // Co-op+ 2026-11-17: the host's dye
     lootr_host_sniffed(packet, size, server_to_client);      // Co-op+ 2026-11-10 Lootr probe
     anti_grief_host_sniffed(packet, size, server_to_client);  // Co-op+ 2026-11-09 B19: the NPCs the host talks to       // Co-op+ 2026-11-09 B04: the host's map fog
     door_trace_packet(server_to_client ? DoorTraceStage::HostClientAck : DoorTraceStage::HostClientReq,
