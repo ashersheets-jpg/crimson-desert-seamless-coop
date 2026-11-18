@@ -8840,3 +8840,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   other player's character holds its pose while moving, runs > 100 / > 300 ms, the samples' arrival gaps). Harness:
   a fps_cap in -HostDev / -GuestDev now replaces the default 40. cs61a (both 40) then cs61b (host 20, guest 40)
   running: both run back and forth south of Hernand for ~2.5 min (Borque's FPS theory of the running freeze).
+- 11:18-12:04 Running freeze, position side (native b67a576 / f0dc02d: the stall counter counts only holds while
+  running and gaps the character moved through, not stops or teleports): cs61a (both 40 fps) / cs61b (host 20):
+  the first counter (any hold within 1.5 s of a sample) said 11-14 %, but that was the stops between the run legs.
+  cs62a / cs62b (the refined counter): the guest watching the running host had 1753 moving samples with 5 holes
+  (holds <= 50 ms x3, <= 100, <= 300); the host watching the guest 0-1. The position stream is smooth at 40/40 and
+  20/40, as the 17 Nov cs60a-c said. Screenshot bursts did not catch the runner (no camera aim in the dev script;
+  the bursts and the run were not in step). So the freeze is in the animation, not the position: asked Borque for
+  a 10-20 s clip (12:05), host or client, FPS on each.
