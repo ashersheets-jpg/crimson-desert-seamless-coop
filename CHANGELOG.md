@@ -5,6 +5,18 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
+NOT POSTED YET: 0.1.0-alpha+62f49d19, for game 1.0.0.3663 (checklist pp31 running): everything in 9e85b891 below,
+plus (from JackyChan004's and D3vils' session of 18 Nov):
+- **After the cabin, the host's story goes on.** When the friend's own cabin scene ended, its game sent a message
+  that the host's world applied to the HOST's story manager and switched it off: the host never got the next
+  scenes (the bear fight), and the friend's story stopped for the rest of the session too (and the NPCs around it
+  stood still on the friend's screen). The friend's message now goes to the friend's own story manager. Tested:
+  the switch is on and nothing else changed in our runs; the cabin itself has to be checked by you (in our
+  one-PC runs the friend's game never sends that message there).
+- A rare start-up check of the overlay waits longer on PCs with DLSS frame generation (it could create a
+  temporary swap chain that frame generation is known to crash on; the check went off too early in a few of our
+  starts, none crashed).
+
 POSTED 2026-11-18 05:40: 0.1.0-alpha+9e85b891, for game 1.0.0.3663 (checklist pp30 + pp30b: all 22 steps pass, 952 checks; pp30's first farfight2 had one overlay-watcher warning, explained, fixed in the next build): everything in 1c6453e1 below,
 plus (from Borque's two-PC session of 17 Nov):
 - **The friend's progress is kept on a PC with several Steam accounts.** If the host's save folder had folders for

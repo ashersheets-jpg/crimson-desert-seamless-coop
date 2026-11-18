@@ -8785,3 +8785,15 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     help; to test that F4 installs and acts, then ask the testers to retry the cabin.
   * Static NPCs there: 29 bear-camp NPCs bound by the host's 0100 scenes got an idle wait on the guest
     (GuestSeqRestore): the guest has neither the host's scenes nor its own (its stages dead after the reset).
+- 06:49 cs44i: the dev advance works on 3663 ("the quest server advanced step FFFFF4D0 (index 6435, result 0)",
+  FFFFF4CF index 6436).
+- 06:53-07:06 cs44j (layer with user2_revive_manager=1): "user2_revive_manager 1 LIVE", the host's manager stayed
+  at state 2, advance worked, both alive, SAVES OK, 5/5. F4 never had to act: in our two-copy runs user 2 is in its
+  own field (owner 0x9010011B), in the testers' run in the host's (0x90100000), so the cabin itself waits for them.
+- 07:11-07:19 cs58b (T-pose, -HostNativeExtra observer_sched_copy=1): the copy ran (234 stages created, sent to
+  user 2), idle substitutes 6 (cs58a without it: 6); no NPC in view in the shots. Inconclusive: needs a spot with
+  NPCs on benches. observer_sched_copy stays 0.
+- 07:15 Package 62f49d19 (layer: F4 on, overlay watcher 20 s with DLSS-G, mission table / dev advance);
+  test-install-fake all pass. 07:20 checklist pp31 running (22 steps + latehook). CHANGELOG entry and the post draft
+  (docs/release/shared-world-playtest/download-62f49d19.txt; tags Jacky 386412802371223552, D3vils
+  297687738386350080) written.

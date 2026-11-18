@@ -1,0 +1,11 @@
+**Update: shared world playtest 0.1.0-alpha+62f49d19, for game 1.0.0.3663**
+Use this instead of 9e85b891; **both players need the same build**. For @JackyChan004 and @D3vils (thank you for the logs):
+
+- **After the cabin, the host's story should go on to the bear fight.** When the joined player's own cabin scene ended, its game sent a message that the host's world applied to the HOST's story, which switched the host's story off: no next scenes for the host, and the joined player's story stopped too (with NPCs standing still around them). That message now goes to the joined player's own story.
+
+Tested with two copies of the game on one PC (Nvidia): full checklist. **Not seen in a test yet: the cabin itself** (in our one-PC runs the joined player's game never sends that message there), so please play the cabin again and tell us what each of you sees. The black screen for the joined player may or may not be the same problem; tell us if it is still there.
+
+- `...62f49d19-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tell us in <#1567319198206525450> how it goes, with the report zip from both of you (close the game, run **Diagnose Co-op+.cmd**).
