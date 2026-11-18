@@ -8744,3 +8744,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   character its key names, 0xCEE3D0) is copied to user 2. Untested (no scripted dye).
 - 21:02 Package 9e85b891 (all of today's native fixes); full checklist pp30 running (ends ~00:00). CHANGELOG entry
   and the post draft (docs/release/shared-world-playtest/download-9e85b891.txt) written.
+- 21:05 kMissionTable for 3663 (layer 687f9f5, built after pp30): 3576's only writer of 0x7248520 (static init
+  0x9F37E1E) maps to 3663 0xCBC240B, whose block has one more qword; candidates 0x7419180 (layout) and 0x7419188
+  (instruction order), checked at run time (count +8, info array +0x58, key +8), the chosen one logged.
+- 21:07 Discord (JS only): nothing new in #play-testing-feedback, #general, #bug-reports since 19:07.
