@@ -8871,3 +8871,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     rides goes to its game while ridden (the server takes a mount's AI / moves from its controller only). cs63c/d:
     noted 1, handed 0 (the guest's own horse is already its own: correct). Untested on a wild horse / a cart.
   * Vendor fix + stall counter + ride rule + mount fix go into one package; full checklist next.
+- 13:00 pp32 running (fe378085: the mount fix, ride rule, vendor lists, stall counter; 22 steps + latehook; the
+  mounts step now checks the seat on both sides). CHANGELOG entry + post draft written (download-fe378085.txt).
+  Windows Update: no restart pending (read-only check).
+- 13:1x Survey of 2976 sizes left in native (after the mount bug): attach_follow (pets / carried, off),
+  enemy_relay / local_capture StartActionReq 725 (off on native?), remote_puppet 725, scene_diag 725. attach_follow
+  ported in source to the 3663 layout (native, not built; still off). For Borque's (8) it would also need to accept
+  children that are not a user's (a caught animal / a grabbed NPC whose Path parent is a player character) and a
+  scripted carry to test it: lead, not done.
