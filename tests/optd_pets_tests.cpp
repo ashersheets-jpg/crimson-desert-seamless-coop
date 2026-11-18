@@ -860,7 +860,8 @@ std::vector<uint8_t> move_payload(size_t size, uint32_t key, uint64_t parent, co
 
 void test_layout_and_read() {
     using namespace afl;
-    CHECK(kAck.world_pos == 0x11F && kReq.world_pos == 0x11E && kAck.local_quat == 0xE3 && kReq.ts == 0x15F);
+    // 3663 (2026-11-18): Ack shift 0x8B, Req 0x8A; MoveData world pos 0x4C, local quat 0x10, ts 0xD4 (2976: 0x11F, 0x11E, 0xE3, 0x15F)
+    CHECK(kAck.world_pos == 0xD7 && kReq.world_pos == 0xD6 && kAck.local_quat == 0x9B && kReq.ts == 0x15E);
     const Pose world{{1, 2, 3}, yaw(10)}, local{{0.1f, 1.5f, 0}, yaw(5)};
     for (const bool ack : {true, false}) {
         const auto p = action_payload(ack, kHostPet, kHostChar, world, local, 777);
