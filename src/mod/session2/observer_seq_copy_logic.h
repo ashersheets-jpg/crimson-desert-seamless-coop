@@ -668,6 +668,20 @@ public:
         own_binds_[seq] = keys;
     }
     bool on_user2_own_deleted(uint64_t seq) { return own_binds_.erase(seq) != 0; }
+    // Co-op+ 2026-11-17 (playtest: the guest talked to an NPC and it kept walking): when user 2's own scene `seq` was
+    // prepared (its binds), and whether `key` is bound by one of user 2's own live scenes prepared at most `max_us` ago.
+    void note_own_bind_time(uint64_t seq, uint64_t now_us) {
+        if (own_bind_us_.size() >= 512) own_bind_us_.clear();
+        own_bind_us_[seq] = now_us;
+    }
+    bool own_scene_holds(uint32_t key, uint64_t now_us, uint64_t max_us) const {
+        for (const auto& [seq, bound] : own_binds_) {
+            if (std::find(bound.begin(), bound.end(), key) == bound.end()) continue;
+            const auto t = own_bind_us_.find(seq);
+            if (t != own_bind_us_.end() && now_us >= t->second && now_us - t->second <= max_us) return true;
+        }
+        return false;
+    }
     // The own scene `seq` went: the NPCs it bound that a live scene of the host requires are to be refreshed on user
     // 2's client (its RemoveActorAck, then a fresh 2005): they are no longer "announced" here, so the copies requiring
     // them wait for that 2005. Returns those keys (empty: nothing to refresh; the entry goes either way).
@@ -997,6 +1011,7 @@ private:
     uint64_t milestone_holds_ = 0, milestone_hold_expired_ = 0, snapshot_after_milestone_ = 0;
     std::unordered_set<uint32_t> announced_;
     bool own_conflict_ = false;
+    std::map<uint64_t, uint64_t> own_bind_us_;  // own scene -> when its binds were noted (mod clock)
     std::map<uint64_t, std::vector<uint32_t>> own_binds_;  // conflict hold: user 2's own live scenes -> bound NPCs
     uint64_t own_blocked_ = 0;
     uint64_t refreshed_ = 0;
