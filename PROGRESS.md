@@ -8856,3 +8856,18 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   CLIENT's RideOn::Enter of the remote rider found "Link 0" (attach type 12); MountSync judges [none], seat 0,
   dispatches 197 (guest 548340). The checklist's mounts step only checks the logs (published Begin/Commit), and its
   host shot looks down at the host: it could not see this. An agent reads mount_sync.cpp for the cause and the fix.
+- 12:20-12:55 The joined player's horse on the host (Borque's item 3), FIXED in our runs. Agent + my checks:
+  mount_sync's dispatch (the StartActionAck handler) still required 2976's 725 B; on 3663 every StartActionAck is
+  729 B (parent +0xCF, target +0x171), so no committed remote mount was ever judged or applied on 3663, on EITHER
+  side (judges [none], each remote mount "cancelled" after 3 s; the guest saw the host mounted only because the
+  host's own Acks carry it). Native 52e5e36: mount_sync reads the 3663 layout itself (ride_filter unchanged; A0/A1
+  not read, so its 725-byte rewrite never runs). cs63b: the host APPLIED the link but the seat was refused: on 3663
+  "no attachment" is type 12 (2976: 9; every vf54 seat logged went 12 -> 4), and on the host vf178 calls every
+  character a local user. Native 214feb6: kAttachNone 12; with the riding-action veto installed (S23) the local-user
+  answer no longer refuses. cs63c / cs63d: the host seats the guest on its horse ("attach type 12 -> 4, parent ->
+  0xB0100068"), the guest seats the host (judges [apply 2]), no game faults, both alive, SAVES OK, 5/5; the host
+  still moves itself after the seat (harness W: 5.4 m). The checklist's mounts step now checks "seated" on both sides.
+  * Ride rule (AiHandoff, native 52e5e36, for the taming horse and carts): an NPC mount / vehicle the other player
+    rides goes to its game while ridden (the server takes a mount's AI / moves from its controller only). cs63c/d:
+    noted 1, handed 0 (the guest's own horse is already its own: correct). Untested on a wild horse / a cart.
+  * Vendor fix + stall counter + ride rule + mount fix go into one package; full checklist next.

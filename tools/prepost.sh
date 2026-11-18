@@ -445,6 +445,10 @@ mounts)
   for r in host guest; do
     has "$N/$NAME.coopplus.$r.log" "Dev script: teleport beside actor 0xB[0-9A-F]+: \\(" "$r: its called horse was there (the script went to it)"
     has "$N/$NAME.$r.log" "MountSync summary .* published Begin [1-9][0-9]* Commit [1-9]" "$r: mounted (its mount was published to the other player)"
+    # 2026-11-18 (cs63a-d, Borque): the host never showed the guest mounted (the 3663 StartActionAck is 729 B, the
+    # "no attachment" type 12); the logs above could not see it. Now: the other player's rider is seated here.
+    has "$N/$NAME.$r.log" "MountSync summary .*mount_seat 1: seat \[seated [1-9]" "$r: the other player's rider is seated on its horse here (it shows mounted)"
+    hasnot "$N/$NAME.$r.log" "MountSync summary .*game faults [1-9]" "$r: no game fault in the mount code"
   done ;;
 mountfight)
   # 2026-11-17 (pp26: farfight and mountfight, the guest swung at the air with the bandits beside and behind it;

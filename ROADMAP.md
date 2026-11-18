@@ -299,7 +299,12 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
     small animals not caught; (8) the host's carried catches float on the client; (9) the client's cart invisible
     for the host (seat change not published). 3-9 wait for the host's zip (asked).
     (3) REPRODUCED in cs63a (two copies): the host's client never links the guest to its horse (RideOn::Enter
-    of the remote rider: Link 0); the guest sees the host mounted. Cause being read.
+    of the remote rider: Link 0); the guest sees the host mounted. CAUSE: mount_sync still checked 2976's
+    StartActionAck (725 B; 3663: 729, parent +0xCF, target +0x171) and 2976's "no attachment" type (9; 3663: 12), so
+    no remote mount was ever applied on 3663 (either side). Fixed (native 52e5e36 / 214feb6): cs63c the host links AND
+    seats the guest on its horse. Lead for (8): attach_follow (an 0xB riding an 0xA parent: a pet on a shoulder, a
+    carried animal) is off and still 2976-sized (MoveAck 235, actions 725, parent +0x117): port it, test a carry.
+    Also still 2976-sized: enemy_relay / local_capture StartActionReq 725, remote_puppet 725, scene_diag 725.
   - [~] JackyChan004 / D3vils (2026-11-18, 9e85b891): after "Enter the cabin" the friend's 2644 reset the host's
     stage manager (F4 off in the release): no bear fight for the host, the friend's stages off for the run, NPCs
     idle on the friend's screen. Fix: user2_revive_manager=1 (layer, not built yet); then the testers retry.
