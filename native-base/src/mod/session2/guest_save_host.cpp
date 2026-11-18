@@ -20,6 +20,7 @@
 #include "mod/game/game_fault.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
+#include "mod/session2/guest_save_wire.h"
 #include "mod/session2/host_save_export.h"
 #include "mod/session2/identity_probe.h"
 #include "mod/session2/offsets_s2.h"
@@ -1059,7 +1060,20 @@ int* __fastcall flush_detour(uintptr_t mgr, int* res, uintptr_t character, uint6
 
 // ---------------------------------------------------------------- install
 
-// The one all-digit folder in the sandbox (the save root "%#/%#/save/%#" names it after the account, 0x5714110).
+// The Steam account logged in now (its 32-bit account id, the name of its save folder), from Steam's own registry
+// value; 0 if unknown. The game saves under that account's folder.
+uint64_t steam_active_account() {
+    DWORD v = 0, size = sizeof v;
+    if (RegGetValueW(HKEY_CURRENT_USER, L"Software\\Valve\\Steam\\ActiveProcess", L"ActiveUser", RRF_RT_REG_DWORD,
+                     nullptr, &v, &size) != ERROR_SUCCESS) {
+        return 0;
+    }
+    return v;
+}
+
+// The account folder in the sandbox (the save root "%#/%#/save/%#" names it after the account, 0x5714110): the only
+// all-digit folder, or, with several (a PC used by more than one Steam account: playtest 2026-11-17, 3 folders), the
+// one of the account logged in to Steam now.
 bool find_account(const std::wstring& sandbox, std::wstring& account, std::string& why) {
     WIN32_FIND_DATAW fd;
     HANDLE f = FindFirstFileExW((sandbox + L"\\*").c_str(), FindExInfoBasic, &fd, FindExSearchNameMatch, nullptr, 0);
@@ -1076,13 +1090,21 @@ bool find_account(const std::wstring& sandbox, std::wstring& account, std::strin
         if (!n.empty() && n.find_first_not_of(L"0123456789") == std::wstring::npos) found.push_back(n);
     } while (FindNextFileW(f, &fd));
     FindClose(f);
-    if (found.size() != 1) {
-        why = std::format("the sandbox '{}' has {} account folders (all digits); exactly one is needed", narrow(sandbox),
-                          found.size());
-        return false;
+    if (found.size() == 1) {
+        account = found[0];
+        return true;
     }
-    account = found[0];
-    return true;
+    const uint64_t active = steam_active_account();
+    if (const auto pick = gsw::pick_account(found, active)) {
+        account = *pick;
+        log::info("Session2 guest save: the sandbox has {} account folders; using {}, the Steam account logged in now",
+                  found.size(), narrow(account));
+        return true;
+    }
+    why = std::format("the sandbox '{}' has {} account folders (all digits) and none is the Steam account logged in "
+                      "now ({}); exactly one is needed", narrow(sandbox), found.size(),
+                      active ? std::to_string(active) : std::string("unknown"));
+    return false;
 }
 
 bool stage_debug(const std::wstring& debug_dir) {
