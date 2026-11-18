@@ -38,7 +38,12 @@ constexpr uint8_t kTriggerHandlerHead[16] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48,
                                              0x24, 0x10, 0x48, 0x89, 0x7C, 0x24, 0x18, 0x4C};
 // The mission static data table (exe+0x4DBA40 reads it): [+0x08] u32 count, [+0x58] info* per index (null until
 // loaded); info +0x08 = the mission key (as in UpdateMissionListAck).
-constexpr uintptr_t kMissionTable = 0x7248520;  // 3549: 0x71C1940
+// The mission static data table global. 3576: 0x7248520 (3549: 0x71C1940). 1.0.0.3663 (2026-11-17): its only
+// writer, the static initializer at 3576 0x9F37E1E, is 0xCBC240B in 3663, where the block it fills has one qword
+// more (0x7419178..0x7419190): by layout the 3576 global is 0x7419180, by instruction order 0x7419188. Both are
+// tried at run time; the first whose table reads as one (count at +8, the info array at +0x58, an info's key at +8)
+// is kept and logged.
+constexpr uintptr_t kMissionTableCandidates[] = {0x7419180, 0x7419188};
 constexpr uint64_t kRequestMs = 10000;
 // Co-op+ shared XP (2026-11-07, Ghidra on 3576): the server's own "add sub-level experience" timer handler,
 // ProcessSubLevelIncreaseExperienceOnceTimer (2069; its TrocTr vtable 0x5EFDF30, slot 2). From its message it reads
@@ -89,11 +94,30 @@ bool head_is(uintptr_t rva, const uint8_t* want, size_t n) {
 
 void on_set_state(safetyhook::Context& ctx) { g_manager.store(ctx.rcx, std::memory_order_relaxed); }
 
+// The mission table global of this build (kMissionTableCandidates), 0 while none reads as one.
+uintptr_t mission_table_rva() {
+    static std::atomic<uintptr_t> chosen{0};
+    if (const uintptr_t c = chosen.load(std::memory_order_relaxed)) return c;
+    for (const uintptr_t rva : kMissionTableCandidates) {
+        uintptr_t table = 0, arr = 0, info = 0;
+        uint32_t count = 0, k = 0;
+        if (game::safe_read(g_base + rva, &table, 8) && table && game::safe_read(table + 8, &count, 4) && count &&
+            count <= 0x10000 && game::safe_read(table + 0x58, &arr, 8) && arr && game::safe_read(arr, &info, 8) &&
+            info && game::safe_read(info + 8, &k, 4) && k) {
+            chosen.store(rva, std::memory_order_relaxed);
+            log::info("Quest advance: the mission table is exe+0x{:X} ({} missions, the first key 0x{:X})", rva, count, k);
+            return rva;
+        }
+    }
+    return 0;
+}
+
 // The index of the loaded mission with this key, or -1.
 int mission_index(uint32_t key) {
     uintptr_t table = 0, arr = 0;
     uint32_t count = 0;
-    if (!game::safe_read(g_base + kMissionTable, &table, 8) || !game::safe_read(table + 8, &count, 4) ||
+    const uintptr_t rva = mission_table_rva();
+    if (!rva || !game::safe_read(g_base + rva, &table, 8) || !game::safe_read(table + 8, &count, 4) ||
         !game::safe_read(table + 0x58, &arr, 8) || count > 0x10000) {
         return -1;
     }
