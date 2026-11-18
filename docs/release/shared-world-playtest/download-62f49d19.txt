@@ -1,5 +1,5 @@
 **Update: shared world playtest 0.1.0-alpha+62f49d19, for game 1.0.0.3663**
-Use this instead of 9e85b891; **both players need the same build**. For @JackyChan004 and @D3vils (thank you for the logs):
+Use this instead of 9e85b891; **both players need the same build**. For <@386412802371223552> and <@297687738386350080> (thank you for the logs):
 
 - **After the cabin, the host's story should go on to the bear fight.** When the joined player's own cabin scene ended, its game sent a message that the host's world applied to the HOST's story, which switched the host's story off: no next scenes for the host, and the joined player's story stopped too (with NPCs standing still around them). That message now goes to the joined player's own story.
 

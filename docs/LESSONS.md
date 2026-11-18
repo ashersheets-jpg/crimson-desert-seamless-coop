@@ -341,3 +341,10 @@ topic BEFORE testing or guessing about it.
 - Discord in the browser pane during a game test is safe only as reads. A page reload plus a paste-and-send at the
   moment of a lobby screenshot took the foreground from the game: cs44h stopped at "game lost focus" two minutes in
   (2026-11-18). Post to Discord between runs, not during one.
+
+## Before calling a checklist failure a regression, re-run it on the old package -- and know what that changes (2026-11-18)
+The crime step failed twice on 62f49d19 and passed on "9e85b891" -- but the harness copies the BUILD OUTPUTS
+(cdmp.asi, coopplus.asi), and -PackageIni only takes that package's ini. So the "old package" run was the same
+binaries with an ini that differed in the version line: the pass proved test variance, not a fix. Look at the
+first screenshot of the failing runs before bisecting: here the guest's held E (for the assassinate) mounted a horse
+standing at its teleport spot. A key meant for an NPC can take the nearest prompt (a horse, a door, a seat).

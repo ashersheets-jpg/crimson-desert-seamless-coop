@@ -292,6 +292,12 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   - [ ] Carryable animals (kiwis, goats) are not synced.
   - [ ] The running "animation freeze" happens almost all the time out of town (his theory: different FPS on the two
     PCs; our runs have the same FPS on both). The host's FPS drops.
+  - [~] Borque (2026-11-18 08:05, 9e85b891, client side): (1) dye vendor / goblin trader missing -> both added to
+    the merchant unhide + shop twin, other function NPCs to unhide only (native, to test); (2) talk greyed out
+    (wanted after the cart? asked); (3) the client's horse invisible for the host; (4) taming never ends (the wild
+    horse stays under the host's control); (5) mining with the hand drill, the host's broken ore; (6) fishing; (7)
+    small animals not caught; (8) the host's carried catches float on the client; (9) the client's cart invisible
+    for the host (seat change not published). 3-9 wait for the host's zip (asked).
   - [~] JackyChan004 / D3vils (2026-11-18, 9e85b891): after "Enter the cabin" the friend's 2644 reset the host's
     stage manager (F4 off in the release): no bear fight for the host, the friend's stages off for the run, NPCs
     idle on the friend's screen. Fix: user2_revive_manager=1 (layer, not built yet); then the testers retry.

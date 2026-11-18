@@ -8797,3 +8797,29 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   test-install-fake all pass. 07:20 checklist pp31 running (22 steps + latehook). CHANGELOG entry and the post draft
   (docs/release/shared-world-playtest/download-62f49d19.txt; tags Jacky 386412802371223552, D3vils
   297687738386350080) written.
+- 10:23 pp31 (62f49d19, 22 steps + latehook): 964 pass, 2 fail, all in crime ("a guest's hit on a bandit was not
+  booked as a crime", "heal-back"): neither player landed a blow (blows guest>NPC 0, host>NPC 0; NPC>host 29).
+  pp31b (crime again, 10:34): the same 2. pp31c (10:45, crime with 9e85b891's ini, but the SAME binaries: the
+  harness copies the build outputs, and the two inis differ only in the version line): 50 pass, 0 fail (37 guest
+  hits). So test variance, not the build: in pp31b the guest's held E (meant for the assassinate) mounted a horse
+  standing at its teleport spot and the horse carried it to Rocca's Hill (shots pp31b-crime-g0/g3); in pp31 a horse
+  stood in the same place (pp31-crime-g0). Test-kit follow-up: keep the guest's E away from the horse (LESSONS).
+- 10:25 Borque (client, 9e85b891, 08:05 post, 9 items: vendors missing, NPC talk greyed out, the client's horse
+  invisible for the host, horse taming endless, mining, fishing, small animals, the host's catches floating, the
+  cart invisible for the host). Zip downloaded (standing OK) to build/tester/borque-1118b; log agent + my checks:
+  * Vendors: the host prepared cd_seq_funcnpc_dye (0x5FCC0360) and cd_seq_funcnpc_goblinbroker (0x25C5EC9B);
+    neither was in merchant_unhide's list (9 shop scenes), so no unhide and no shop twin. FIX (native, DECIDED BY
+    ME, not built yet): both into kShopScenes; the other function NPCs seen in our hosts' logs (craftsmith,
+    seatdealer, wantedfence, charlatanstore_demeniss_west, bond, church, contribution) into a new unhide-only list
+    (the unhide acts only on a hide bit still set 4 s after the binding; solo the AI clears it within ~1 s).
+  * Talk greyed out: the client became wanted at 13:36:13 (it took a seat in an NPC's cart, the driver got hurt);
+    the game's NPCs refuse a wanted player. Some talk was refused earlier too (13:31-13:32, server
+    eErrNoInteractionTargetConditionCheckFail; one NPC it had just hurt), and every GuestXInter redirect (173, the
+    host's pub scene 0x618) was refused by the prompt check. Asked Borque when it started.
+  * Horse / taming / cart / animals / fishing / mining: the client's log cannot show the host's side (the taming
+    horse stayed under the host's control: ctrl 0x90100000; the cart's seat change to the driver's seat was not
+    published, then the AI hand-over). Asked for the host's zip of the same session.
+  Reply posted 10:45 (tagged).
+- 10:47 POSTED 0.1.0-alpha+62f49d19 in #download-here (standing OK; checklist pp31 + pp31c): message
+  1572639519856005231, both zips (12 719 201 / 6 937 000 bytes), JackyChan004 and D3vils tagged (retry the cabin);
+  text as posted: docs/release/shared-world-playtest/download-62f49d19.txt. #general: nothing new since 17 Nov.

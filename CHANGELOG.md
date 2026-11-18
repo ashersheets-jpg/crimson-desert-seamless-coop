@@ -5,7 +5,7 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-NOT POSTED YET: 0.1.0-alpha+62f49d19, for game 1.0.0.3663 (checklist pp31 running): everything in 9e85b891 below,
+POSTED 2026-11-18 10:47: 0.1.0-alpha+62f49d19, for game 1.0.0.3663 (checklist pp31: 22 of 23 steps pass, 964 checks; crime failed in pp31 and pp31b and passed in pp31c on the same binaries -- test variance, see PROGRESS 10:2x-10:47): everything in 9e85b891 below,
 plus (from JackyChan004's and D3vils' session of 18 Nov):
 - **After the cabin, the host's story goes on.** When the friend's own cabin scene ended, its game sent a message
   that the host's world applied to the HOST's story manager and switched it off: the host never got the next
