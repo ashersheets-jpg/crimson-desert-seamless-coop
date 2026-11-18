@@ -8913,7 +8913,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     server accepted the stage (result 2): the client's own prompt check, not the server or the wanted state.
   * Host FPS: 72-74 alone, 39-44 with the client, 30-37 after 13:38 when the server's actors went ~480 -> ~900.
   Plan: post 569720a2 after pp33 (mounts / vendors / ride rule); catch rule + crash fix in the next batch.
-- 16:25 Borque's HOST CRASH found (agent, build/decomp/notes_host_unload_crash_3663.md, private; I checked the bytes):
+- 16:24 Borque's HOST CRASH found (agent, build/decomp/notes_host_unload_crash_3663.md, private; I checked the bytes):
   the server's 2808 handler (SequencerTriggerVolumeInOutReq, exe+0x2C53BB0) asks the subject's field (vf48) for its
   owner's stage manager and locks it with no null test; during the host's load (its stages closing, "unload at the
   owner's load") vf48 answered 0 for a 2808 most likely of the joined player's character -> null read at
