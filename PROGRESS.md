@@ -8830,3 +8830,13 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   friend was in the host's field), so the testers' retry of the cabin is still the real check.
 - 10:5x Native 7f58ad0 (vendor lists, unit test passes), native-base synced (3d2de1f), pushed.
 - 11:06 cs60a running: both go to the dye vendor (-10420 538 -4108) and then the goblin broker (-10430 541 -4301).
+- 11:06-11:16 cs60a (vendors; both at the dye vendor, then the goblin broker): the host prepared
+  cd_seq_funcnpc_dye (0x1C3) and cd_seq_funcnpc_goblinbroker (0x1DB). On the guest, MerchantUnhide now takes them:
+  the dye vendor's two NPCs 0xB01006CD / 0xB01006CE still had hide 0x200 4968 ms after their binding (the stuck bit
+  of Borque's report) and the game's setter cleared it (hide 0x0 at +8 s and +20 s); the goblin broker's NPC
+  0xB01005AE had its scene component released and hide 0x0. Both alive, SAVES OK, 5/5; only the known ERR set.
+  The shots do not show the vendors clearly (the log is the evidence).
+- 11:17 Native 53ddf34: RemoteInterp [remote character stalls], a line a minute on both clients (frames where the
+  other player's character holds its pose while moving, runs > 100 / > 300 ms, the samples' arrival gaps). Harness:
+  a fps_cap in -HostDev / -GuestDev now replaces the default 40. cs61a (both 40) then cs61b (host 20, guest 40)
+  running: both run back and forth south of Hernand for ~2.5 min (Borque's FPS theory of the running freeze).
