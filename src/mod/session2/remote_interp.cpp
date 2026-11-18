@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <atomic>
 #include <cstring>
 #include <format>
@@ -251,14 +252,34 @@ std::atomic<uint32_t> g_remote_char_key{0}, g_npc_key{0};
 // game does not extrapolate, so the character holds its pose. Runs of such frames, and the gaps between the samples'
 // arrivals (set position of the 0xA actor). Log only.
 std::atomic<uint64_t> g_ch_frames{0}, g_ch_held{0}, g_ch_runs100{0}, g_ch_runs300{0}, g_ch_run_max{0};
-std::atomic<uint64_t> g_ch_run_start{0}, g_ch_last_insert{0}, g_ch_last_arrival{0};
-std::array<std::atomic<uint64_t>, 6> g_ch_gap{};  // arrival gaps <=50, <=100, <=200, <=400, <=1000, >1000 ms
-std::atomic<uint64_t> g_ch_gap_max{0};
+std::atomic<uint64_t> g_ch_run_start{0}, g_ch_last_insert{0};
+std::array<std::atomic<uint64_t>, 6> g_ch_gap{};   // gaps while moving: <=50, <=100, <=200, <=400, <=1000, >1000 ms
+std::array<std::atomic<uint64_t>, 5> g_ch_hold{};  // the hold such a gap makes (gap - game delay): <=50, <=100, <=300, <=1000, >1000
+std::atomic<uint64_t> g_ch_gap_max{0}, g_ch_still_gaps{0};
+// The newest two samples of a buffer: positions and times. False: fewer than 2 or unreadable.
+bool last_two(uintptr_t buf, float (&p1)[3], uint64_t& t1, float (&p0)[3], uint64_t& t0) noexcept {
+    const FastMem m{};
+    uint32_t count = 0;
+    uintptr_t arr = 0;
+    if (!m.u32(buf + rip::kBufCount, count) || count < 2 || count > rip::kSaneCount) return false;
+    if (!m.ptr(buf + rip::kBufArray, arr) || !arr) return false;
+    const uintptr_t l1 = arr + static_cast<uintptr_t>(count - 1) * rip::kSampleSize, l0 = l1 - rip::kSampleSize;
+    return m.u64(l1 + rip::kSampleTs, t1) && m.vec3(l1, p1) && m.u64(l0 + rip::kSampleTs, t0) && m.vec3(l0, p0);
+}
+float dist3(const float (&a)[3], const float (&b)[3]) noexcept {
+    const float dx = a[0] - b[0], dy = a[1] - b[1], dz = a[2] - b[2];
+    return std::sqrt(dx * dx + dy * dy + dz * dz);
+}
+// Per frame: T = now - the game's delay is past the newest sample while the character was moving at it (the newest
+// two samples > 2 m/s apart): it holds its pose until the next sample (a stop decelerates, its last pair is slower).
 void note_char_frame(uintptr_t buf, uint64_t now, uint32_t gd) noexcept {
     g_ch_frames.fetch_add(1, std::memory_order_relaxed);
-    const rip::LastSample last = rip::last_sample(FastMem{}, buf, false);
-    const bool moving = last.ok && last.count && now >= last.ts && now - last.ts < 1500;
-    const bool held = moving && rip::no_sample_ahead(now, gd, last.ts);
+    float p1[3], p0[3];
+    uint64_t t1 = 0, t0 = 0;
+    bool held = false;
+    if (last_two(buf, p1, t1, p0, t0) && t1 > t0 && now >= t1 && now - t1 < 3000 && rip::no_sample_ahead(now, gd, t1)) {
+        held = dist3(p1, p0) / (static_cast<float>(t1 - t0) / 1000.0f) > 2.0f;
+    }
     const uint64_t start = g_ch_run_start.load(std::memory_order_relaxed);
     if (held) {
         g_ch_held.fetch_add(1, std::memory_order_relaxed);
@@ -271,27 +292,39 @@ void note_char_frame(uintptr_t buf, uint64_t now, uint32_t gd) noexcept {
         if (run > g_ch_run_max.load(std::memory_order_relaxed)) g_ch_run_max.store(run, std::memory_order_relaxed);
     }
 }
-void note_char_insert(uintptr_t buf) noexcept {
-    const rip::LastSample last = rip::last_sample(FastMem{}, buf, false);
-    if (!last.ok || !last.count) return;
-    const uint64_t prev = g_ch_last_insert.exchange(last.ts, std::memory_order_relaxed);
-    if (!prev || last.ts <= prev) return;
-    const uint64_t gap = last.ts - prev;
-    if (gap > 5000) return;  // a pause (stood still, a menu): not a cadence
+// Per inserted sample: the gap since the previous one, counted only when the character MOVED through it (> 1 m/s
+// between the two samples: a hole in a run); a gap at a stand-still is only counted apart.
+void note_char_insert(uintptr_t buf, uint32_t gd) noexcept {
+    float p1[3], p0[3];
+    uint64_t t1 = 0, t0 = 0;
+    if (!last_two(buf, p1, t1, p0, t0) || t1 <= t0) return;
+    if (g_ch_last_insert.exchange(t1, std::memory_order_relaxed) == t1) return;  // the same sample again
+    const uint64_t gap = t1 - t0;
+    if (gap > 10000) return;
+    if (dist3(p1, p0) / (static_cast<float>(gap) / 1000.0f) <= 1.0f) {
+        g_ch_still_gaps.fetch_add(1, std::memory_order_relaxed);
+        return;
+    }
     const size_t b = gap <= 50 ? 0 : gap <= 100 ? 1 : gap <= 200 ? 2 : gap <= 400 ? 3 : gap <= 1000 ? 4 : 5;
     g_ch_gap[b].fetch_add(1, std::memory_order_relaxed);
     if (gap > g_ch_gap_max.load(std::memory_order_relaxed)) g_ch_gap_max.store(gap, std::memory_order_relaxed);
+    if (gap > gd) {
+        const uint64_t h = gap - gd;
+        g_ch_hold[h <= 50 ? 0 : h <= 100 ? 1 : h <= 300 ? 2 : h <= 1000 ? 3 : 4].fetch_add(1, std::memory_order_relaxed);
+    }
 }
 void remote_character_stalls_line() noexcept {
     const uint64_t frames = g_ch_frames.load(), held = g_ch_held.load();
     if (!frames) return;
-    log::info("RemoteInterp [remote character stalls] 0x{:08X}: frames {} | held its pose while moving {} ({:.1f}%) | "
-              "runs > 100 ms {}, > 300 ms {}, longest {} ms | samples' arrival gaps [<=50 {}, <=100 {}, <=200 {}, "
-              "<=400 {}, <=1000 {}, >1000 {}] longest {} ms | game delay {} ms",
+    log::info("RemoteInterp [remote character stalls] 0x{:08X}: frames {} | held its pose while running {} ({:.1f}%) | "
+              "runs > 100 ms {}, > 300 ms {}, longest {} ms | gaps while moving [<=50 {}, <=100 {}, <=200 {}, <=400 {}, "
+              "<=1000 {}, >1000 {}] longest {} ms; the holds they make [<=50 {}, <=100 {}, <=300 {}, <=1000 {}, >1000 "
+              "{}] | gaps at a stand-still {} | game delay {} ms",
               g_remote_char_key.load(), frames, held, 100.0 * static_cast<double>(held) / static_cast<double>(frames),
               g_ch_runs100.load(), g_ch_runs300.load(), g_ch_run_max.load(), g_ch_gap[0].load(), g_ch_gap[1].load(),
               g_ch_gap[2].load(), g_ch_gap[3].load(), g_ch_gap[4].load(), g_ch_gap[5].load(), g_ch_gap_max.load(),
-              game_delay());
+              g_ch_hold[0].load(), g_ch_hold[1].load(), g_ch_hold[2].load(), g_ch_hold[3].load(), g_ch_hold[4].load(),
+              g_ch_still_gaps.load(), game_delay());
 }
 // The visibility guard's counters (on_flag_setter below).
 std::atomic<uint64_t> g_vis_stripped{0}, g_vis_added{0}, g_vis_calls{0};
@@ -455,7 +488,7 @@ void on_delay_read(safetyhook::Context& c) noexcept {
                               : rip::kOwnedUnknown;
     if (hs.site == Site::SetPos) observe_insert(c, buf, cls, slot, r.key, owned, owned_cap, cmode != Mode::Off);
     if (cls == KeyClass::Character) {
-        if (hs.site == Site::SetPos) note_char_insert(buf);
+        if (hs.site == Site::SetPos) note_char_insert(buf, gd);
         else if (hs.site == Site::UpdPos) note_char_frame(buf, now, gd);
     }
     if (hs.site == Site::UpdPos && slot) {
