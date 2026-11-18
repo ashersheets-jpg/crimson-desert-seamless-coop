@@ -355,3 +355,7 @@ I wrote "cs60" for the vendors and "cs61" for the running freeze without searchi
 same FPS comparison again. Before a new test: `grep -n "<topic>" PROGRESS.md | tail`, and `ls scratchpad/csNN*` before
 taking a number. The 17 Nov conclusion was the useful part: position samples show no freeze; the next probe is the
 copy's animation.
+- A step that fails twice "on the same binaries" and then passes is not proven variance: compare a count that says
+  whether the test DID the thing (pp31-pp32 crime: guest hits seen 2-6 failing vs 37-55 passing). If the test only
+  works when the game happens to line up, make it line up (a script step: tpnear, tpactor) instead of re-running.
+

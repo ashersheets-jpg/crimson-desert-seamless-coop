@@ -8879,3 +8879,15 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   ported in source to the 3663 layout (native, not built; still off). For Borque's (8) it would also need to accept
   children that are not a user's (a caught animal / a grabbed NPC whose Path parent is a player character) and a
   scripted carry to test it: lead, not done.
+- 15:59 pp32 (fe378085) done: 22 of 23 steps pass, 968 checks; crime FAILED again (third time: pp31, pp31b, pp32;
+  only pp31c passed, all on the same mod code). Not variance: the guest's hits seen were 2-6 when it failed and 37-55
+  when it passed; the guest's swings hit only if a bandit happened to walk up to it (the host's heal-back check
+  failed with it: the host got no blow in either). Test-kit fix (outer 569720a): both scripts step beside a bandit
+  every few seconds (dev script tpnear: the nearest living person; all within 30 m of the dock are the camp's
+  bandits, cs26a's list); a new check that the guest's script did stand beside one. fe378085 NOT posted.
+- 16:00 Built native aab1925 (ride rule seat 0 only) + f9791c4 (attach_follow 3663 layout, still off) + 4823263
+  (pets test line on the layout takes the 3663 values; pets back to its 6 old-baseline failures, mount_sync 2,
+  merchant_unhide all pass). native-base synced. Package 569720a2, fake install all pass.
+- 16:03 pp33 running on 569720a2 (full pass, crime second so the fix is seen early; ~3.5 h). The ride-rule change is
+  mod code, so the full pass, not steps + smoke. Draft post renamed download-569720a2.txt.
+

@@ -5,7 +5,8 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-NOT POSTED YET: 0.1.0-alpha+fe378085, for game 1.0.0.3663 (checklist pp32 running): everything in 62f49d19 below,
+NOT POSTED YET: 0.1.0-alpha+569720a2, for game 1.0.0.3663 (checklist pp33 running; fe378085 before it was never
+posted: pp32 22 of 23 steps, 968 checks, crime failed again): everything in 62f49d19 below,
 plus (from Borque's session of 18 Nov):
 - **The host sees the joined player on its horse.** Since the 3663 port neither game applied the other player's
   mount itself (a message size of the old game version); the joined player's game happened to show the host
@@ -14,8 +15,9 @@ plus (from Borque's session of 18 Nov):
 - **The dye vendor and the goblin trader show for the joined player** (they were missing from our list of
   merchants that the game keeps hidden in co-op); other service NPCs (craftsman, seat dealer, fence, church...)
   get the same unhide. Tested: both dye-vendor NPCs were hidden on the joined player's game and are now shown.
-- A wild horse or a cart the joined player rides now runs on the joined player's game (the horse-taming minigame
-  and driving a cart). Not tested on a wild horse or a cart yet.
+- A wild horse or a cart the joined player rides (the saddle or the driver's seat) now runs on the joined player's
+  game (the horse-taming minigame and driving a cart); a passenger seat leaves the cart to its driver. Not tested on
+  a wild horse or a cart yet.
 - A log line a minute measures how often the other player's character stands still while it runs (for the
   "running freeze" reports; no change to play).
 
