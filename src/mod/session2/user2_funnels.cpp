@@ -1165,7 +1165,7 @@ bool timer_vf48_ret(uint32_t rva, uint16_t opcode) noexcept {
     // call [rax+0x48] in the protected section; 2976: 0x1082F96A / 0x10830A0F / 0x10835A8F). Any of the three for
     // any of the three timers: the route answers the same object (user 2's manager) for each.
     const bool timer = opcode == 2047 || opcode == 2049 || opcode == 2050;
-    return timer && (rva == 0xECFEA3A || rva == 0xED021AF || rva == 0xED05E4F);
+    return timer && (rva == 0xE57536A || rva == 0xE57791F || rva == 0xE5780FF);
 }
 
 // vf48: counted under a subject; changed only by F3 (the 2283's two calls) and F4 (the 2362's setter call).

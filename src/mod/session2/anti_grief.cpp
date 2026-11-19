@@ -82,7 +82,7 @@ std::string tally_text_locked(int src) {
 // ---- crimes (tcB355 / tcB356: "Crime: Assault" / "Crime: Murder" on the guest for the host's quest bandits;
 // build/decomp/notes_crime_coop.md, local). Every crime is registered by exe+0x2BCE6A0(wanted comp, criminal, victim,
 // float3*, float3*, u8 type, i64 time, int, u8); comp+8 = the owning player. A hit comes from .tls$ 0xE3C54D0 (return
-// address exe+0xEA2BAD2), a kill from 0x2BCDDC0 (return address exe+0x2BCDE79); both skip when the attacker and the
+// address exe+0xE2AEA62), a kill from 0x2BCDDC0 (return address exe+0x2BCDE79); both skip when the attacker and the
 // victim have the same user (actor+0xA0). tcB358: the world's NPCs have NO user (owner key 0x90100000), the HOST's
 // hits and kills reach this function too, and the game's own test exe+0x2BCE2A0(comp, player, victim, float3*, u8 type,
 // i64 time) then says "no crime" for the host (its battle state, its faction relation, its quest targets) but "crime"
@@ -90,7 +90,7 @@ std::string tally_text_locked(int src) {
 // fought that NPC or when the game's test says the HOST would not be punished for it. What an NPC's own AI reports
 // (slot 44) is not touched.
 constexpr uint32_t kHostCharacter = 0xA0100001;
-constexpr uintptr_t kCrimeFn = 0x2C38B60, kCrimeGateFn = 0x2C38780, kCrimeRetHit = 0xEA2BAD2, kCrimeRetKill = 0x2C38358;
+constexpr uintptr_t kCrimeFn = 0x2C38B60, kCrimeGateFn = 0x2C38780, kCrimeRetHit = 0xE2AEA62, kCrimeRetKill = 0x2C38358;
 safetyhook::InlineHook g_crime;
 bool g_crime_gate_ok = false;
 std::atomic<uint64_t> c_crime_seen{0}, c_crime_skipped{0};
