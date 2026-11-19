@@ -8990,4 +8990,17 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   its byte lies in a section NAMED ".xtls", the protection's name on an older build; on 3732 that is plain writable
   data. Fixed: refuse only when the section is executable. SAVES OK, 5/5 restored.
 - 13:25 next: package, full checklist pp37 on it.
+- 13:25-16:28 pp37 (full) on 26bf2c71: 968 pass, 3 fail over 23 steps, every step SAVES OK and 5/5.
+  * chest (2): the share was handed out at once instead of waiting: the host's walk to the chest took 41 s ("at
+    (0, 0, 0) ... stuck") because the TEST KIT's camwalk/walkto.py reads the player's position from a game global
+    keyed by build stamp and knew only 3663's. Mapped for 3732 (0x725A040 / 0x7166368, 2 of 2 refs each). The mod's
+    chest share itself worked ("is there and got its own share ... bag gained 65").
+  * mountfight (1): the mounted guest's swings hit nothing (the bandits beside it, g2). Same as pp19 (a combat
+    outcome); pp33's pass was the guest fighting ON FOOT after being knocked off. Not a regression.
+  * fsr passed, but the new port wait never triggered ("UDP: port ... free after" absent): the race did not happen.
+- 16:29-17:03 pp37b (static chest mountfight fresh solostart) on 26bf2c71: 198 pass, 0 fail. CHECKLIST COMPLETE.
+### POSTED 2026-11-19 17:04: 0.1.0-alpha+26bf2c71 in #download-here (game 1.0.0.3732), both zips attached (12.7 MB
+  6b85fb3b..., 6.9 MB fcd6ee89...), text docs/release/shared-world-playtest/download-26bf2c71.txt (tags Borque).
+- 17:05 #play-testing-feedback: tagged Borque that catching small animals IS fixed in 26bf2c71 (closing my 19:36
+  correction), asked him to try a catch and taming / a cart as the joined player.
 

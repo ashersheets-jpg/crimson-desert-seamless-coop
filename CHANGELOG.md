@@ -5,8 +5,10 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-NOT POSTED YET: the next build, for game **1.0.0.3732** (Steam's update of 19 Nov; every earlier build switches
-itself off on it): everything in e5fa32dc just below (the small-animal catch, the host-load crash guard), plus:
+POSTED 2026-11-19 17:04: 0.1.0-alpha+26bf2c71, for game **1.0.0.3732** (Steam's update of 19 Nov; every earlier
+build switches itself off on it; checklist pp37 968/971 over 23 steps + pp37b 198/198: chest failed in pp37 on the
+test kit's own walker, which read 3663's position global; mountfight's mounted swings missed, a combat outcome seen
+before in pp19; both passed in pp37b): everything in e5fa32dc just below (the small-animal catch, the host-load crash guard), plus:
 - **Ported to game version 1.0.0.3732.** Message numbers did not change; every game function the mod uses has the
   same code at a new address. The installer's version note now knows 3732 (it had kept an older size since 3663).
 - The one-PC test host waits for its network port after the co-op restart (a test-only path; players use Steam).
