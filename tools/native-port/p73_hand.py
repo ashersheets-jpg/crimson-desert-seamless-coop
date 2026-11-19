@@ -29,7 +29,7 @@ OVERRIDES['native'].update({
 OVERRIDES['layer'].update({
     0x6F487B8: _TROC_BEGIN_NEW + (0x6F487B8 - 0x6F14E10),
     0x71600E1: _CLOCK_FLAG_NEW + 0x34, 0x71600E9: _CLOCK_FLAG_NEW + 0x3C,   # "= flag + 0x34 / + 0x3C"
-    0x100004: 0x1001F4,      # puppet_visibility: fn 0xFFF80 -> 0x100170 (244 B, identical listing), same offset
+    # 0x100004 (puppet_visibility kHideBit) is a bit mask, not an address: put back by hand after apply
     0x5A4760: 0x5A4AA0,      # remote_puppet (off): fn 0x5A46B0 -> 0x5A49F0 (2028 B, ratio 0.983), same offset
 })
 SKIP = {

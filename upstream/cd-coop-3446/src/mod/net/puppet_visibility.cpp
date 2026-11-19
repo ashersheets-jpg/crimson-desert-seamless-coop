@@ -48,7 +48,7 @@ std::unordered_map<uintptr_t, Watch> g_watch;
 // copy sits in its place): the hide bits the game itself uses, set through its own flag-change handler, cleared again
 // when released. Bit 20 alone (a loading copy's) did not hide the seated NPC; with bit 2 (the "alpha 0" of hidden
 // party members, enemy_relay.cpp) it is gone (live, 2026-11-03).
-constexpr uint64_t kHideBit = 0x1001F4;
+constexpr uint64_t kHideBit = 0x100004;
 std::atomic<uint32_t> g_hide_key{0};
 std::atomic<uintptr_t> g_hidden_actor{0};  // the actor we set the bit on (game thread)
 std::atomic<uint64_t> g_hide_logs{0};

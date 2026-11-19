@@ -62,7 +62,7 @@ constexpr uint32_t kArrowProjectile = 0xF653A168;
 constexpr float kArrowLead = 1.5f, kArrowHeight = 1.2f;
 std::atomic<bool> g_finish_arrow{true};
 constexpr uint64_t kFinishFallbackMs = 600;  // no death by then: KillCheatReq (no XP, but dead)
-constexpr uint32_t kStatHP = 0x000F4430;
+constexpr uint32_t kStatHP = 0x000F4240;
 constexpr uint32_t kPuppetPlayer = 0xA010F001;
 constexpr size_t kAarSize = 69;  // 3576 (2976: 77): with the old size no stagger was ever learnt on 3576
 constexpr size_t kAarInstance = 0x1C, kAarSource = 0x41;

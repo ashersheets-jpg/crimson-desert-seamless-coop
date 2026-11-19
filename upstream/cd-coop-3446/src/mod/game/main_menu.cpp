@@ -326,7 +326,7 @@ LONG CALLBACK watch_veh(EXCEPTION_POINTERS* e) {
         const auto* sp = reinterpret_cast<const uintptr_t*>(e->ContextRecord->Rsp);
         int k = 0;
         for (int i = 0; i < 200 && k < 6; ++i) {  // values on the stack that point into the game's code
-            if (sp[i] > base + 0x1000 && sp[i] < base + 0x4A045A0) h.ret[k++] = sp[i];
+            if (sp[i] > base + 0x1000 && sp[i] < base + 0x4A00000) h.ret[k++] = sp[i];
         }
     }
     return EXCEPTION_CONTINUE_EXECUTION;

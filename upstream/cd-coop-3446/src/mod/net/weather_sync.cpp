@@ -181,7 +181,7 @@ void weather_observe_c2s(const uint8_t* packet, size_t size) {
     if (op != kOpStageBranchStateReq && op != kOpUpdateStageChartEventReq) return;
     const uint8_t* p = packet + 5;
     const uint64_t id = rd<uint64_t>(p);
-    if (id < kFakeIdBase || id >= kFakeIdBase + 0x1000780) return;
+    if (id < kFakeIdBase || id >= kFakeIdBase + 0x1000000) return;
     const uint32_t player = capture_own_player_key();
     if (!player) return;
     std::vector<std::pair<uint16_t, Bytes>> inject;

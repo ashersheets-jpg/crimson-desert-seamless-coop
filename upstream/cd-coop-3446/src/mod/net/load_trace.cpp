@@ -89,7 +89,7 @@ int exe_frames(uintptr_t rsp, uintptr_t* out, int max) {
         const auto* sp = reinterpret_cast<const uintptr_t*>(rsp);
         for (int i = 0; i < 96 && n < max; ++i) {
             const uintptr_t v = sp[i];
-            if (v > g_base + 0x1000 && v < g_base + 0x5616C40) out[n++] = v - g_base;
+            if (v > g_base + 0x1000 && v < g_base + 0x5617000) out[n++] = v - g_base;
         }
     } __except (EXCEPTION_EXECUTE_HANDLER) {
     }
@@ -99,7 +99,7 @@ int exe_frames(uintptr_t rsp, uintptr_t* out, int max) {
 // The copies (0x?010Fxxx) always; our own player and user a few times, for comparison.
 std::atomic<int> g_own_lines{0};
 bool wanted(uint32_t key) {
-    if ((key & 0x0FFFF000) == 0x0010F1F0) return g_lines.fetch_add(1) < 2000;
+    if ((key & 0x0FFFF000) == 0x0010F000) return g_lines.fetch_add(1) < 2000;
     if (key == 0xA0100001 || key == 0x90100000) return g_own_lines.fetch_add(1) < 40;
     return false;
 }
@@ -159,7 +159,7 @@ void on_component_busy(safetyhook::Context& ctx) {
     uintptr_t actor = 0, comp = 0, vt = 0;
     uint32_t key = 0;
     if (!game::safe_read(ctx.r14 + 8, &actor, 8) || !game::safe_read(actor + 0x60, &key, 4)) return;
-    if ((key & 0x0FFFF000) != 0x0010F1F0) return;  // copies only
+    if ((key & 0x0FFFF000) != 0x0010F000) return;  // copies only
     if (!game::safe_read(ctx.rdi, &comp, 8) || !game::safe_read(comp, &vt, 8)) return;
     if (g_busy_lines.fetch_add(1) > 200) return;
     log::info("LoadTrace: copy {:08X} waits on component {} (vtable exe+0x{:X}, comp 0x{:X})", key,

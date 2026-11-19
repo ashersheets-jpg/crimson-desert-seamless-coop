@@ -140,7 +140,7 @@ void die_test(const char* what, uint32_t attacker) {
     if (hp > 1000) {
         Bytes b(16);
         const int64_t delta = -(hp - 1000);
-        const uint32_t stat = 0x000F4430;
+        const uint32_t stat = 0x000F4240;
         std::memcpy(b.data(), &own, 4);
         std::memcpy(b.data() + 4, &stat, 4);
         std::memcpy(b.data() + 8, &delta, 8);
