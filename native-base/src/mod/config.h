@@ -527,6 +527,7 @@ struct Config {
     // Co-op+ 2026-11-16 (B18, ai_handoff.h): ai_handoff_fight = 0 | 1, HOST. An enemy the other player is fighting
     // (and the host is not) runs its AI on that player's game, so it fights back at that player; the reverse for the
     // host. Needs anti_grief (its blow tally).
+    bool s2_ai_handoff_catch = true;  // the catch rule (ai_handoff.h; cs65d 2026-11-18: a partridge caught and carried)
     bool s2_ai_handoff_fight = true;  // on since 2026-11-16 (cs40f: 9 hand-overs, cs40h: out and back, 0 failed)
     // Co-op+ 2026-11-11 (session2/damage_range.h): a hit counts when the victim is in range of ANY player's
     // character, not only the host's (the game zeroes damage 80 m or more from the field owner's character).

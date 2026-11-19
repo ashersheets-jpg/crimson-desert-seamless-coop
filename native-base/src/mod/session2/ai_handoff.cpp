@@ -623,8 +623,14 @@ bool ai_handoff_client_recv(const uint8_t* packet, size_t size) noexcept {
     return false;
 }
 
+std::atomic<bool> g_catch_on{true};
+void ai_handoff_set_catch(bool on) noexcept {
+    g_catch_on.store(on);
+    if (!on) log::info("AiHandoff: catch rule OFF ([session2] ai_handoff_catch=0)");
+}
+
 void ai_handoff_note_catch(uint32_t catcher_key, uint32_t npc_key, uint32_t interaction) noexcept {
-    if (g_guest || !npc_key || (npc_key >> 28) != 0xB) return;
+    if (g_guest || !g_catch_on.load(std::memory_order_relaxed) || !npc_key || (npc_key >> 28) != 0xB) return;
     if ((catcher_key >> 28) != 0xA || catcher_key == kHostCharacter) return;  // the other player's character only
     bool is_catch = false;
     for (uint32_t c : kCatchInteractions) is_catch = is_catch || c == interaction;
