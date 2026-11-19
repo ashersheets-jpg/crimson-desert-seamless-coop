@@ -21,7 +21,7 @@
 namespace cdmp::net {
 namespace {
 
-namespace off = game::build_3663;
+namespace off = game::build_3732;
 
 // Co-op+: message numbers for game 1.0.0.3460, read from the live Troc table (every
 // TrocTr handler instance: RTTI name, opcode). The values here before were 2976-era.

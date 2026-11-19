@@ -22,7 +22,7 @@
 namespace cdmp::net {
 namespace {
 
-namespace off = game::build_3663;
+namespace off = game::build_3732;
 
 constexpr uintptr_t kDiscardBag = 0xF31CE0, kDiscardList = 0xF32050, kClientDiscard = 0xAFF6D0;
 constexpr uintptr_t kInventoryVftable = 0x5A7CC18;

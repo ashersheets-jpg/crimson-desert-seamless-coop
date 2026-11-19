@@ -11,7 +11,7 @@
 //
 #include "mod/game/offsets_3549.h"
 
-namespace cdmp::game::build_3663 {
+namespace cdmp::game::build_3732 {
 
 // Everything this patch did not move (opcodes, struct offsets, wire layout, heads that match).
 using build_3549::RelayedAck;
@@ -147,9 +147,9 @@ inline constexpr uint32_t kControlInner_Physics = 0x2D0;   // 3576: 0x2C0 (the i
 inline constexpr uint32_t kMoveController_WallUp = 0x178;  // 3576: 0x120 (the movement controller: +0x58 from +0x120)
 
 // ---- addresses (3576 -> 3663: tools/native-port/p63.py) ---------------------------
-inline constexpr uint32_t kPeTimestamp = 0x6AF5D198;  // 3576:0x6AED2E85
+inline constexpr uint32_t kPeTimestamp = 0x6AFDC0CF;  // 3663:0x6AF5D198
 inline constexpr uintptr_t kImageBase = 0x140000000;  // fixed, no ASLR
-inline constexpr uintptr_t kImageSize = 0x144E9000;  // 3576:0x13CC4000
+inline constexpr uintptr_t kImageSize = 0x13C7E000;  // 3663:0x144E9000
 inline constexpr uintptr_t kWorldSystemSlot = 0x724B350;  // 3549:0x71BDEF0, 8/8 code references agree
 inline constexpr uintptr_t kCameraSlot = 0x7166368;  // 3549:0x70DA028, 2/2
 inline constexpr uintptr_t kStaticPlayerPos = 0x725A040;  // 3549:0x71CD0B0, 2/2
@@ -210,4 +210,4 @@ inline constexpr uintptr_t kRideOnEnter = 0x77C8C0;  // 3549:0x74FBB0, head matc
 inline constexpr uintptr_t kRideOffEnter = 0x77D890;  // 3549:0x750B80, head matches
 inline constexpr uint8_t kMinimapIconDecideHead[] = {0x80, 0x7C, 0x24, 0x48, 0x00, 0x75, 0x6F, 0x8B, 0x05, 0xCA, 0xB2, 0x7B, 0x06, 0x41, 0x89, 0x06};  // its mov eax,[rip+d] moved with the data
 
-}  // namespace cdmp::game::build_3663
+}  // namespace cdmp::game::build_3732

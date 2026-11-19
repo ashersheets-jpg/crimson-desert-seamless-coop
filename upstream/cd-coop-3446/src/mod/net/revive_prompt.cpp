@@ -28,7 +28,7 @@
 
 namespace cdmp::net {
 namespace {
-namespace off = game::build_3663;
+namespace off = game::build_3732;
 
 constexpr uint16_t kOpReviveReq = 2869;             // u32 player | u8 type | u8 x3
 constexpr uint16_t kOpReviveLoadingStartReq = 2972;  // 04 | u8 type | 00

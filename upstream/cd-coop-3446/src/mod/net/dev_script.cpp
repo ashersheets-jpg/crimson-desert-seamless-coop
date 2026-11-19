@@ -74,20 +74,20 @@ static std::vector<NpcRow> npcs_near(float radius, float from, std::optional<pro
         Row r{d, key, variant, -1.0f, -1.0f, *at};
         // health: actor -> components -> status -> stat container (as for our own character, player_reader.cpp)
         if (const auto actor = game::find_actor(key)) {
-            const auto comps = game::read_ptr(*actor + game::build_3663::kActor_ComponentTable);
-            const auto status = comps ? game::read_ptr(*comps + game::build_3663::kComponents_Status) : std::nullopt;
+            const auto comps = game::read_ptr(*actor + game::build_3732::kActor_ComponentTable);
+            const auto status = comps ? game::read_ptr(*comps + game::build_3732::kComponents_Status) : std::nullopt;
             const auto vt = status ? game::read_ptr(*status) : std::nullopt;
-            if (status && vt && *vt == exe + game::build_3663::kVtStatusComponent) {
-                const auto cont = game::read_ptr(*status + game::build_3663::kStatus_StatContainer);
-                const auto entries = cont ? game::read_ptr(*cont + game::build_3663::kStatContainer_Entries) : std::nullopt;
-                const auto count = cont ? game::read<uint32_t>(*cont + game::build_3663::kStatContainer_Count) : std::nullopt;
-                if (entries && count && *count <= game::build_3663::kMaxStatEntries) {
+            if (status && vt && *vt == exe + game::build_3732::kVtStatusComponent) {
+                const auto cont = game::read_ptr(*status + game::build_3732::kStatus_StatContainer);
+                const auto entries = cont ? game::read_ptr(*cont + game::build_3732::kStatContainer_Entries) : std::nullopt;
+                const auto count = cont ? game::read<uint32_t>(*cont + game::build_3732::kStatContainer_Count) : std::nullopt;
+                if (entries && count && *count <= game::build_3732::kMaxStatEntries) {
                     for (uint32_t i = 0; i < *count; ++i) {
-                        const uintptr_t e = *entries + static_cast<uintptr_t>(i) * game::build_3663::kStatEntry_Size;
-                        const auto id = game::read<uint64_t>(e + game::build_3663::kStatEntry_Id);
-                        if (!id || *id != game::build_3663::kStatId_Health) continue;
-                        const auto cur = game::read<int64_t>(e + game::build_3663::kStatEntry_Current);
-                        const auto max = game::read<int64_t>(e + game::build_3663::kStatEntry_Max);
+                        const uintptr_t e = *entries + static_cast<uintptr_t>(i) * game::build_3732::kStatEntry_Size;
+                        const auto id = game::read<uint64_t>(e + game::build_3732::kStatEntry_Id);
+                        if (!id || *id != game::build_3732::kStatId_Health) continue;
+                        const auto cur = game::read<int64_t>(e + game::build_3732::kStatEntry_Current);
+                        const auto max = game::read<int64_t>(e + game::build_3732::kStatEntry_Max);
                         if (cur && max) {
                             r.hp = static_cast<float>(*cur) / 1000.0f;
                             r.hp_max = static_cast<float>(*max) / 1000.0f;

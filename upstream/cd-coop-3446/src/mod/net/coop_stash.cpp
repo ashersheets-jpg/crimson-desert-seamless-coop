@@ -22,7 +22,7 @@
 namespace cdmp::net {
 namespace {
 
-namespace off = game::build_3663;
+namespace off = game::build_3732;
 
 constexpr uint8_t kStashType = 29;  // coop_activity's kStash
 constexpr uint8_t kOpAsk = 1, kOpPage = 2;

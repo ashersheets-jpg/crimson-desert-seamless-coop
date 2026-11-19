@@ -499,7 +499,7 @@ void dev_ptrscan(uint32_t key) {
         log::info("Dev ptrscan: actor 0x{:08X} not loaded", key);
         return;
     }
-    const auto table = game::read_ptr(*actor + game::build_3663::kActor_ComponentTable);
+    const auto table = game::read_ptr(*actor + game::build_3732::kActor_ComponentTable);
     uintptr_t at = 0;
     size_t size = 0;
     if (!data_section(at, size)) return;
@@ -532,8 +532,8 @@ namespace cdmp::net {
 void dev_watch_status(int offset, int len, int hits) {
     const uint32_t own = capture_own_player_key();
     const auto actor = own ? game::find_actor(own) : std::nullopt;
-    const auto table = actor ? game::read_ptr(*actor + game::build_3663::kActor_ComponentTable) : std::nullopt;
-    const auto status = table ? game::read_ptr(*table + game::build_3663::kComponents_Status) : std::nullopt;
+    const auto table = actor ? game::read_ptr(*actor + game::build_3732::kActor_ComponentTable) : std::nullopt;
+    const auto status = table ? game::read_ptr(*table + game::build_3732::kComponents_Status) : std::nullopt;
     if (!status) {
         log::warn("Dev watchstatus: our status component not found");
         return;

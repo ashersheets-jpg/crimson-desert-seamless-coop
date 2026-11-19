@@ -21,7 +21,7 @@
 
 namespace cdmp::net {
 namespace {
-namespace off = game::build_3663;
+namespace off = game::build_3732;
 
 // exe+0x1C3F0F0(manager, u32* mission id, ctx, u8 state, changes*): the server queues a mission state change.
 // Called for every mission while a save loads, so the manager is known before anyone needs it.

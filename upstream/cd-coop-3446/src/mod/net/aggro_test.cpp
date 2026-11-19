@@ -23,7 +23,7 @@
 
 namespace cdmp::net {
 namespace {
-namespace off = game::build_3663;
+namespace off = game::build_3732;
 
 constexpr uint32_t kPuppetPlayer = 0xA010F001;
 // Co-op+: message numbers for game 1.0.0.3460, read from the live Troc table (every
