@@ -5,7 +5,7 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-NOT POSTED YET: 0.1.0-alpha+e5fa32dc, for game 1.0.0.3663 (checklist pp34 running): everything in 569720a2 just
+NOT POSTED (pp34 stopped after 16 steps, two fixes needed; the next build replaces it): 0.1.0-alpha+e5fa32dc, for game 1.0.0.3663: everything in 569720a2 just
 below, plus (from Borque's host report of 18 Nov):
 - **Catching small animals works for the joined player.** The host's game accepted the catch but kept running the
   animal, so the catch never finished. The animal now runs on the catcher's game from the moment the catch is

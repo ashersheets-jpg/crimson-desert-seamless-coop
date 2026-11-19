@@ -359,3 +359,15 @@ copy's animation.
   whether the test DID the thing (pp31-pp32 crime: guest hits seen 2-6 failing vs 37-55 passing). If the test only
   works when the game happens to line up, make it line up (a script step: tpnear, tpactor) instead of re-running.
 
+## Run nothing that can open a window while a checklist step drives a game (2026-11-18)
+
+The harness sends keys only to the game in front and throws "game lost focus" the moment another window is in front
+(pp34 farfight and farfight2 both lost their run that way; the second matched a python edit script I started). During
+a running step, use only the Read / Grep / Write tools; save edits, builds and shell commands for between steps.
+
+## Stopping a checklist pass between steps (2026-11-18)
+
+run_pp.sh stops before its next step when a coop_worlds\with_127_0_0_1_old_* folder exists. A dummy folder of that
+name (with a README saying so) stops it cleanly after the current step, which still restores the install and the
+saves. Delete the folder right after. Never kill a step in the middle.
+

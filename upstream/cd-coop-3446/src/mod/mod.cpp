@@ -512,6 +512,14 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
         bool ok = false;
         if (host) {
             ok = udp->open(cfg.peer_port, /*loopback_only=*/true);
+            // pp34 fsr (2026-11-18): after the co-op restart the old copy of this game still held the port 3.5 s
+            // later, so the new host listened elsewhere and the guest never found it. Wait up to 10 s for the port
+            // first (this thread runs only the network loop; one-PC tests only).
+            for (int i = 0; !ok && i < 50; ++i) {
+                Sleep(200);
+                ok = udp->open(cfg.peer_port, true);
+                if (ok) log::info("UDP: port {} free after {} ms (the previous copy had it)", cfg.peer_port, (i + 1) * 200);
+            }
             if (!ok) {
                 // One-PC tests: after a Leave the other copy still holds the port. Any free port keeps this copy's
                 // loop (the title lobby, the menu) running; nobody connects to it.

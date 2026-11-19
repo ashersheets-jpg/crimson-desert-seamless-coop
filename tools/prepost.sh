@@ -352,8 +352,12 @@ farfight)
   # it whatever the swings do afterwards.
   # 2026-11-17 pp28: with the combat stream (B18) the bandits' blows land where they really are; standing 26 s the guest
   # took 12 blows and was down before its first swing (pp27b: 5 blows, still up). It stands 12 s now.
+  # 2026-11-18 pp33: 17 hits, no kill, and the guest was down at g1 ("Death has found you", 13 bandit blows): the
+  # swing bot never blocks or dodges, so among five bandits it can go down before a kill (pp28 too). A Q tap (the
+  # instant revive, the revive step's key) after the first 50 swings, then 30 more swings, gives it a second life.
   GA=""; for i in $(seq 1 50); do GA="${GA}click:L:90_w:800_"; [ $((i % 3)) -eq 0 ] && GA="${GA}move:350:0:10_w:200_"; done
-  run2 "$BASE -Hold 10 -HostScript $SCAN\\ff_host_lure.txt -GuestScript $SCAN\\ff_guest_watch40.txt -GuestKeys w:12000_shot:$NAME-g0_${GA}shot:$NAME-g1_w:20000_shot:$NAME-g2 -HostKeys w:500_shot:$NAME-h0"; two_player_checks
+  GB=""; for i in $(seq 1 30); do GB="${GB}click:L:90_w:800_"; [ $((i % 3)) -eq 0 ] && GB="${GB}move:350:0:10_w:200_"; done
+  run2 "$BASE -Hold 10 -HostScript $SCAN\\ff_host_lure.txt -GuestScript $SCAN\\ff_guest_watch40.txt -GuestKeys w:12000_shot:$NAME-g0_${GA}shot:$NAME-g1_k:Q:300_w:6000_shot:$NAME-g1q_${GB}shot:$NAME-g1b_w:20000_shot:$NAME-g2 -HostKeys w:500_shot:$NAME-h0"; two_player_checks
   H=$N/$NAME.host.log
   has "$H" "DamageRange ON" "host: the damage range hook is in"
   has "$H" "DamageRange: on .* counted because another player was in range [1-9]" "hits far from the host counted because the guest was in range"

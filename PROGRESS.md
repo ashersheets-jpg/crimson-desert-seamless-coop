@@ -5,14 +5,9 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
-- 2026-11-18 19:15 DECISION (blocks posting 569720a2): pp33 passed 970 of 971 checks; the one fail is farfight's
-  "the guest killed an enemy far from the host": the guest went down (shot g1 "Death has found you", 13 bandit
-  blows, 17 hits of its own, no kill). The swing bot never blocks or dodges (pp28 failed the same way). My fix
-  (farfight taps Q, the instant revive, after 50 swings, then swings 30 more) was blocked by the tool's permission
-  check as changing a failing test. Options: (a) OK that test change, then farfight + smoke re-run and post;
-  (b) re-run farfight unchanged; (c) post 569720a2 as is (the fail is the test bot dying, not the mod).
-  Update 20:09: pp34 (full) is running on e5fa32dc (569720a2 + catch rule + crash guard); the same farfight
-  question applies to it. If you do not answer, e5fa32dc replaces 569720a2 as the build to post.
+- 2026-11-18 22:35 PC BREAK: you are playing and will restart the PC. Nothing runs until you say the PC is free
+  again. Then: build the layer + native fixes below, package, full checklist (~3.5 h). (Farfight revive: you OK'd it
+  at 22:17; applied.)
 - 2026-11-17 07:45 HANDS-ON (about 10 min, when you have time): B09 past the cabin. A script cannot aim a talk
   (7 tries). I need you to play the host in a two-copy run I set up, through the Marius and Ross talks to "Enter the
   cabin"; a probe logs which game code starts that scene, so the ready check can hold it for both players.
@@ -8960,4 +8955,23 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   * SceneReqGuard in every run: ON, dropped 0 (2808 handled 0 in four runs, 4 in cs65e: the hook passes the
     normal case through).
 - 20:09 pp34 running: full checklist on e5fa32dc (~3.5 h).
+- 22:17 User OK'd the farfight Q-revive test change ("Yes, you can change it"), then "do whatever you think is
+  more efficient". Applied to tools/prepost.sh after pp34 stopped.
+- 22:31 pp34 stopped early on purpose after 16 of 23 steps (688 pass, 10 fail): the fixes below are mod code, so the
+  next build needs a full pass anyway. Stopped cleanly: a dummy coop_worlds\with_127_0_0_1_old_STOPFLAG made
+  run_pp.sh stop before nosave; removed at once. The fails:
+  * crime (2): host log growth 537/min (limit 380), "NpcActivation [primera petición]" 34/min. 241 NPCs born to the
+    guest in two minutes (pp33: 15; 125 of them one resource 0xD63D02B3, all tipo 3, unique keys, 120 removed),
+    five lines each, from ByJunter's probe. The crime checks themselves passed. FIX (native user2_stages.cpp): the
+    plain per-NPC NpcActivation lines are capped (first 40 of each kind, then 1 in 25; [resumen] counts the rest).
+    Not looked into: why so many NPCs were born to the guest this time (where the guest was / time of day).
+  * fsr (5): neither game reached the shared world. After the host's co-op restart its old copy still held UDP 37115
+    3.5 s later; the new host listened on another port and the guest kept knocking on 37115 ("party broke up",
+    host: "partner did not come back in 5 minutes"). UDP is the one-PC test path only (players use Steam).
+    FIX (layer mod.cpp): a host waits up to 10 s for its port before taking a free one.
+  * farfight, farfight2 (1 each): "both games still running" missing because the harness threw "game lost focus
+    before w:800" (another window came to the front) and skipped the alive line; both games ran. farfight2's
+    focus loss (~22:21) matches when I ran a python edit script; farfight's (~22:12) I cannot place. See LESSONS.
+  * mountfight (1): the mounted guest's swings hit nothing (guest>NPC 0; shots g1/g2: the bandits stood out of
+    reach of the horse). pp33 passed it. Test positioning, not the mod; watch it in the next pass.
 
