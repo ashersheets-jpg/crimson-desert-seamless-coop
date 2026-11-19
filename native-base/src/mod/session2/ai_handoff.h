@@ -44,6 +44,12 @@ bool ai_handoff_client_recv(const uint8_t* packet, size_t size) noexcept;
 // SERVER-realm vf53 / RideOff (any thread; atomics only): on = mounted (rider's character key, the NPC's key), off =
 // the rider left it. The host's server tick hands the NPC over; the fight rule leaves a ridden NPC alone.
 void ai_handoff_note_ride(uint32_t rider_key, uint32_t mount_key, bool on) noexcept;
+// Passengers (2026-11-19, Borque 18 Nov 13:36: boarding an NPC's cart as a passenger, seat 1, made him wanted):
+// boarding sends frame events that name the vehicle and its driver, the tally took them for the other player's hits,
+// and the fight rule gave cart and driver to the passenger's game, where the driver got hurt. mount_sync notes a
+// player seated on a seat other than 0 (on) and the RideOff (off); while the other player is a passenger the fight rule
+// hands nothing to it. Host role only, any thread (atomics).
+void ai_handoff_note_passenger(uint32_t rider_key, uint32_t vehicle_key, bool on) noexcept;
 // The catch rule (2026-11-18, Borque: "catching small animals plays the animation but catches nothing"): the host's
 // server accepted the other player's catch interaction (2671 result 0, shop_probe's C point) on an NPC. In single
 // player the catcher's own game runs the animal while it is caught; with its AI left on the host the guest's catch

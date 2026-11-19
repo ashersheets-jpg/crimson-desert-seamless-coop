@@ -67,6 +67,23 @@ constexpr uint32_t kCatchInteractions[] = {0xF42BE, 0xF42CD};
 constexpr uint64_t kCatchMs = 30000;
 std::array<std::atomic<uint64_t>, kRides> g_catches{}, g_catch_ms{};
 std::atomic<uint64_t> c_catch_noted{0}, c_catch_out{0}, c_catch_full{0};
+// Passengers (ai_handoff_note_passenger): (vehicle key << 32) | rider key, 0 = free.
+std::array<std::atomic<uint64_t>, kRides> g_passengers{};
+std::atomic<uint64_t> c_pass_noted{0}, c_pass_skip{0}, c_pass_full{0};
+uint32_t passenger_vehicle(uint32_t rider_key) noexcept {
+    for (const auto& p : g_passengers) {
+        const uint64_t v = p.load(std::memory_order_relaxed);
+        if (v && static_cast<uint32_t>(v) == rider_key) return static_cast<uint32_t>(v >> 32);
+    }
+    return 0;
+}
+void drop_passenger(uint32_t rider_key) noexcept {
+    for (auto& p : g_passengers) {
+        uint64_t v = p.load(std::memory_order_relaxed);
+        if (v && static_cast<uint32_t>(v) == rider_key) p.compare_exchange_strong(v, 0);
+    }
+}
+constexpr float kPassengerM = 6.0f;  // a seated passenger is within this of its vehicle's origin
 uint32_t caught_by(uint32_t npc_key, uint64_t now) noexcept {
     for (size_t i = 0; i < kRides; ++i) {
         const uint64_t v = g_catches[i].load(std::memory_order_acquire);
@@ -536,6 +553,24 @@ void ai_handoff_server_tick() noexcept {
         // The fight rule (ai_handoff.h, 2026-11-16, B18).
         if (g_fight) {
             const uint64_t now = GetTickCount64();
+            // Passengers (ai_handoff_note_passenger): still seated only while the vehicle is beside the player (this
+            // server check's NPC list); otherwise the RideOff went by another route and the entry is dropped.
+            uint32_t passenger_user = 0;
+            for (int k = 0; k < n_players; ++k) {
+                if (pl[k].key == kHostCharacter) continue;
+                const uint32_t veh = passenger_vehicle(pl[k].key);
+                if (!veh) continue;
+                bool beside = false;
+                for (int i = 0; i < n_fight; ++i) {
+                    if (fights[i].key == veh && fights[i].d_other <= kPassengerM) beside = true;
+                }
+                if (beside) {
+                    passenger_user = pl[k].user;
+                } else {
+                    drop_passenger(pl[k].key);
+                    log::info("AiHandoff: passenger: 0x{:08X} is no longer beside vehicle 0x{:08X}: dropped", pl[k].key, veh);
+                }
+            }
             if (moved.size() > 8000) moved.clear();
             for (int i = 0; i < n_fight && done < kMaxPerTick; ++i) {
                 const Fight& f = fights[i];
@@ -548,6 +583,15 @@ void ai_handoff_server_tick() noexcept {
                 uint32_t to = 0;
                 if (f.ctrl == host_user && g_recent && h_quiet && f.d_other <= kFightM && f.d_other < f.d_host)
                     to = f.other_user;
+                if (to && to == f.other_user) {  // not to a passenger: its frame events are boarding, not blows
+                    if (to == passenger_user) {
+                        const uint64_t s = c_pass_skip.fetch_add(1) + 1;
+                        if (s <= 20 || s % 100 == 0)
+                            log::info("AiHandoff: fight rule: NPC 0x{:08X} (type {}) stays: the other player is a passenger "
+                                      "({} so far)", f.key, f.type, s);
+                        continue;
+                    }
+                }
                 else if (f.ctrl == f.other_user && h_recent && g_quiet && f.d_host <= kFightM && f.d_host < f.d_other)
                     to = host_user;
                 if (!to) continue;
@@ -687,6 +731,37 @@ void ai_handoff_note_ride(uint32_t rider_key, uint32_t mount_key, bool on) noexc
     c_ride_full.fetch_add(1);
 }
 
+void ai_handoff_note_passenger(uint32_t rider_key, uint32_t vehicle_key, bool on) noexcept {
+    if (g_guest || (rider_key >> 28) != 0xA || rider_key == kHostCharacter) return;
+    if (!on) {
+        for (auto& p : g_passengers) {
+            uint64_t v = p.load(std::memory_order_relaxed);
+            if (v && static_cast<uint32_t>(v) == rider_key) p.compare_exchange_strong(v, 0);
+        }
+        return;
+    }
+    if (!vehicle_key || (vehicle_key >> 28) != 0xB) return;
+    const uint64_t want = (static_cast<uint64_t>(vehicle_key) << 32) | rider_key;
+    for (auto& p : g_passengers) {  // the same rider again: its new vehicle
+        uint64_t v = p.load(std::memory_order_relaxed);
+        if (v && static_cast<uint32_t>(v) == rider_key) {
+            p.store(want, std::memory_order_relaxed);
+            c_pass_noted.fetch_add(1);
+            return;
+        }
+    }
+    for (auto& p : g_passengers) {
+        uint64_t zero = 0;
+        if (p.compare_exchange_strong(zero, want)) {
+            c_pass_noted.fetch_add(1);
+            log::info("AiHandoff: passenger: 0x{:08X} rides in NPC vehicle 0x{:08X}: the fight rule gives it nothing meanwhile",
+                      rider_key, vehicle_key);
+            return;
+        }
+    }
+    c_pass_full.fetch_add(1);
+}
+
 std::string ai_handoff_describe() {
     if (g_mode == Mode::Off && !g_fight && !c_client_took.load() && !c_client_gave.load() && !c_client_unknown.load())
         return {};
@@ -697,7 +772,9 @@ std::string ai_handoff_describe() {
                std::format(" | ride rule: rides noted {} handed to the rider {} table full {}", c_ride_noted.load(),
                            c_ride_out.load(), c_ride_full.load()) +
                std::format(" | catch rule: catches noted {} handed to the catcher {} table full {}", c_catch_noted.load(),
-                           c_catch_out.load(), c_catch_full.load());
+                           c_catch_out.load(), c_catch_full.load()) +
+               std::format(" | passengers noted {} fight hand-overs skipped {} table full {}", c_pass_noted.load(),
+                           c_pass_skip.load(), c_pass_full.load());
     return std::format("AiHandoff: {} | server checks {} | NPCs looked at {} (controller far, another player close: {}) | "
                        "handed over {} (of them back to the first controller {}) would {} failed {} | this client: took {} "
                        "noted {} not loaded {} notices dropped {}",
