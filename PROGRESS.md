@@ -5,6 +5,12 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- 2026-11-18 19:15 DECISION (blocks posting 569720a2): pp33 passed 970 of 971 checks; the one fail is farfight's
+  "the guest killed an enemy far from the host": the guest went down (shot g1 "Death has found you", 13 bandit
+  blows, 17 hits of its own, no kill). The swing bot never blocks or dodges (pp28 failed the same way). My fix
+  (farfight taps Q, the instant revive, after 50 swings, then swings 30 more) was blocked by the tool's permission
+  check as changing a failing test. Options: (a) OK that test change, then farfight + smoke re-run and post;
+  (b) re-run farfight unchanged; (c) post 569720a2 as is (the fail is the test bot dying, not the mod).
 - 2026-11-17 07:45 HANDS-ON (about 10 min, when you have time): B09 past the cabin. A script cannot aim a talk
   (7 tries). I need you to play the host in a two-copy run I set up, through the Marius and Ross talks to "Enter the
   cabin"; a probe logs which game code starts that scene, so the ready check can hold it for both players.
@@ -8924,3 +8930,16 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   the same unchecked vf48 (2644 2654 3141 2672 2678 2563 2313 2546 2924 2125; addresses in the notes): not checked.
   * Next batch (after 569720a2 is posted): catch rule 8e38f6a, SceneReqGuard 12c9bc8, tpanimal (layer 78b0ceb);
     tests cs65 (the guest catches a partridge) + the full checklist (SceneReqGuard ON line, 0 drops in normal play).
+- 19:07 pp33 (569720a2) done: 970 pass, 1 fail over 23 steps; SAVES OK and 5/5 restored on every step. crime 51/0
+  with the tpnear scripts (guest hits seen high). The fail: farfight "the guest killed an enemy far from the host":
+  the guest was DOWN at g1 (13 bandit blows; its client counted guest>NPC 5, the host saw 17 hits, kills 0). A
+  combat outcome of the swing bot, as pp28. Test change (Q revive mid-step) blocked by the permission check: asked
+  the user (Waiting on the user). 569720a2 NOT posted yet.
+- 19:08 Replied to Borque in #play-testing-feedback (tagged): host zip read; host crash found and guarded (next
+  build); taming horse / cart handed to the rider's game; catching small animals fixed next build; passenger cart
+  made him wanted (on the list); talk greyed = the client's own prompt check; fishing / mining / floating carries
+  on the list.
+- 19:15 Built native (8e38f6a catch rule + 12c9bc8 SceneReqGuard) and the layer (78b0ceb tpanimal); native unit
+  tests: 30 failing executables, the baseline is 31, none new. Package b981582e, fake install all pass. cs65a (the
+  catch test) running.
+
