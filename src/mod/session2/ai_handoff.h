@@ -50,6 +50,8 @@ void ai_handoff_note_ride(uint32_t rider_key, uint32_t mount_key, bool on) noexc
 // never ends. The next server tick hands that NPC to the catcher's game for kCatchMs (the fight rule leaves it alone
 // meanwhile). Host role only; the other player's character and the catch interactions only.
 void ai_handoff_note_catch(uint32_t catcher_key, uint32_t npc_key, uint32_t interaction) noexcept;
+// [session2] ai_handoff_catch (default 1): 0 turns the catch rule off (cs65's control run).
+void ai_handoff_set_catch(bool on) noexcept;
 std::string ai_handoff_describe();
 
 }  // namespace cdmp::session2
