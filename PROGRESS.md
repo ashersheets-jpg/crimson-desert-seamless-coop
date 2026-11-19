@@ -9004,3 +9004,17 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - 17:05 #play-testing-feedback: tagged Borque that catching small animals IS fixed in 26bf2c71 (closing my 19:36
   correction), asked him to try a catch and taming / a cart as the joined player.
 
+- 17:08-17:15 cs64a (T-pose, Borque's spot -10652 541 -4304 on 26bf2c71): both in the world; no T-pose in any shot;
+  GuestSeqRestore touched 0 actors (662 restores seen). The spot is Nas River / Serkis Estate, NOT Hernand's square as
+  cs58's comment said. Third run without a T-pose (cs58a, cs58b, cs64a): not reproduced; parked until a tester's log
+  names the actors.
+- 17:15-17:20 PASSENGER fix (Borque 18 Nov item 9, his host log 13:36:09): the guest boarded an NPC cart's seat 1
+  (interaction 0xF4299); 2.4 s later frame events of his named the cart (type 5) and its driver, the AntiGrief tally
+  took them for his hits, the fight rule gave both to his game ("last hits ... other player 219 ms ago"), "we hurt
+  enemy 0xB0102FA7 (hp 42.5)" -> wanted. The same at 13:35:24 for a type-6 NPC 450 ms after an interaction. Native
+  5fa2816 (ai_handoff + mount_sync): a player on a seat other than 0 is noted (server realm vf53); while the vehicle stays
+  within 6 m of that player in the server check, the fight rule hands nothing to it (else the entry is dropped).
+  Layer: dev script tpvehicle [radius] [n] + the actor type on npcs lines. Package 46b45969.
+- 17:24-17:31 cs66a (the guest at Borque's road, tpvehicle + E): no cart within 150 m at that hour; type 6 is also
+  birds (Pigeon, BlueJay) and a 5-HP object. UNTESTED live: passengers noted 0. Next: ask Borque to ride as a
+  passenger once it ships; tpvehicle should take type 5 only.
