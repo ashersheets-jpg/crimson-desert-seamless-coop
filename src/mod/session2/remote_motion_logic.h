@@ -162,7 +162,9 @@ inline ByteSite check_data_byte(std::span<const SectionInfo> secs, uint32_t rva)
     if (rva >= kCodeBegin && rva < kCodeEnd) return ByteSite::InCode;
     const SectionInfo* s = section_info_of(secs, rva);
     if (!s) return ByteSite::NoSection;
-    if (std::string_view(s->name) == ".xtls") return ByteSite::Xtls;
+    // 3732 (2026-11-19): section names are reshuffled every game build; ".xtls" is plain data on 3732 (0x6D5C000..,
+    // the old .sxdata) and the protection is ".text1". The protection is always executable: only then is it refused here.
+    if (std::string_view(s->name) == ".xtls" && (s->flags & kScnExecute)) return ByteSite::Xtls;
     if (s->flags & kScnExecute) return ByteSite::Executable;
     if (!(s->flags & kScnWrite)) return ByteSite::NotWritable;
     return ByteSite::Ok;
