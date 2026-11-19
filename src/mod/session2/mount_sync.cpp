@@ -52,8 +52,8 @@ constexpr uint8_t kVf54[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x6C, 0x2
 // Co-op+ port 1.0.0.3549 (docs/research/native-port-3549.json): ClientVehicleActorComponent vtable 0x5944B90 slots
 // 53/54, CommonVehicleActorComponent 0x5CEFC28 slot 53, the RideOff thunk right after its vf54 (as on 2976),
 // RideOn/RideOffMovementMethod slot 7, the handlers = slot 2 of their TrocTr vtables.
-constexpr uint8_t kThunkVf53[] = {0xE9, 0xCB, 0x76, 0xFE, 0x08};    // 3549 0xB4D8D0 jmp .xpdata (2976: jmp 0x9DC90A0)
-constexpr uint8_t kThunkRideOff[] = {0xE9, 0x3B, 0xAC, 0xD4, 0x0A};  // 3549 0x23FDCC0 jmp 0xCD40720 (2976: jmp 0xE6F2E60)
+constexpr uint8_t kThunkVf53[] = {0xE9, 0xEB, 0x97, 0xD3, 0x08};    // 3549 0xB4D8D0 jmp .xpdata (2976: jmp 0x9DC90A0)
+constexpr uint8_t kThunkRideOff[] = {0xE9, 0x5B, 0xE5, 0x73, 0x0A};  // 3549 0x23FDCC0 jmp 0xCD40720 (2976: jmp 0xE6F2E60)
 
 constexpr uintptr_t kCommonVf53 = 0x2471990, kClientVf53 = 0xB857C0, kRideOffThunk = 0x2472600, kClientVf54 = 0xB857E0;
 constexpr uintptr_t kRideOnEnter = 0x77C8C0, kRideOffEnter = 0x77D890, kH2663 = 0xD12280, kH2916 = 0xD12D50,
@@ -69,7 +69,7 @@ constexpr uintptr_t kCodeEnd = 0x5618000;  // Co-op+ port: end of .xtext on 1.0.
 constexpr uint8_t kThunkGate[] = {0x48, 0x89, 0x5C, 0x24, 0x10};  // 3549 0x251A350 (2976: the thunk jmp 0xEE58A40)
 constexpr uintptr_t kGateThunk = 0x258EF30, kGateNetRet = 0x977303, kGateCallSite = 0x9772F6, kGateNetOr = 0x20E1BA6;
 constexpr uint8_t kGateCallSiteBytes[] = {0x48, 0x8D, 0x54, 0x24, 0x20, 0x49, 0x8B, 0xCF,
-                                          0xE8, 0xBD, 0x5E, 0xC1, 0x01, 0x45, 0x89, 0x26};
+                                          0xE8, 0x2D, 0x7C, 0xC1, 0x01, 0x45, 0x89, 0x26};
 constexpr uint8_t kGateNetOrBytes[] = {0x41, 0x80, 0xC8, 0x02, 0x44, 0x08, 0x41, 0x50};
 // CC fields the gate reads [V 0xEE58A40]: [CC+8] actor, [CC+0x80] pending entries, CC+0xA8 "pending taken" flag.
 constexpr uint32_t kCcActor = 0x08, kCcPending = 0x80, kCcPendingBusy = 0xA8;

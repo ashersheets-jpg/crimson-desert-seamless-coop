@@ -65,7 +65,7 @@ constexpr uint8_t kKeyLookupBytes[] = {0x44, 0x89, 0x44, 0x24, 0x18, 0x48, 0x89,
 // Session 12 (the hold): 0xA9FEE0 (only caller 0xC0B619 in the 2335 handler 0xC0AFC0) calls 0x1862A80 at 0xA9FFC3
 // (E8 B8 2A DC 00): at the lookup's entry, [rsp] = 0xA9FFC8 means "this 2335 is running now" (checked at install).
 constexpr uintptr_t kStageCallRva = 0xBE4143, kStageRetRva = 0xBE4148;  // 3576: in 0xBABA90 (2976 0xA9FEE0)
-constexpr uint8_t kStageCallBytes[] = {0xE8, 0xA8, 0x6A, 0xE2, 0x00};  // 3576 call 0x19A4B90
+constexpr uint8_t kStageCallBytes[] = {0xE8, 0xC8, 0x7C, 0xE2, 0x00};  // 3576 call 0x19A4B90
 // pa::NPCScheduleData_File (ctor 0x1860C10 [V]): vtable, refcount u32 (+0x10), "atomic count" byte (+0x14 = 1).
 constexpr uintptr_t kVtFile = 0x5BFDD98;  // 3576 (2976 0x57DB080)
 constexpr uint32_t kFile_Refs = 0x10, kFile_Atomic = 0x14;

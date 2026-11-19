@@ -18,7 +18,7 @@ namespace {
 
 // The quest component's game-event callback, as registered (ServerQuestActorComponent vfB0 0x2B744B0 stores it).
 constexpr uintptr_t kThunk = 0x2C06090;
-constexpr uint8_t kThunkBytes[] = {0xE9, 0x6B, 0xE5, 0xFD, 0xFF};  // jmp 0x2B7A7A0
+constexpr uint8_t kThunkBytes[] = {0xE9, 0x9B, 0xD0, 0xFD, 0xFF};  // jmp 0x2B7A7A0
 // In 0x2B7A7A0: mov rcx,[rsp+0x30] | mov rax,[rcx] | call [rax+0x40] | mov rsi,rax | test rax,rax | je +0x4D
 constexpr uintptr_t kCtx = 0x2BE3160, kPoint = 0x2BE316B;
 constexpr uint8_t kCtxBytes[] = {0x48, 0x8B, 0x4C, 0x24, 0x30, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x40,

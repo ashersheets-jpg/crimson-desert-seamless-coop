@@ -126,7 +126,7 @@ inline constexpr uint8_t kPinShapeCount = 14, kPinColourCount = 15;
 // component, u16* icon, u16* sub icon, u8* a, u8* b), void; component +0x08 =
 // actor. Icon keys come from a table of u16 at [[[[exe+root]]+8]+0x270].
 inline constexpr uintptr_t kMinimapIconDecide = 0xA1A9ED;
-inline constexpr uint8_t kMinimapIconDecideHead[] = {0x80, 0x7C, 0x24, 0x48, 0x00, 0x75, 0x6F, 0x8B, 0x05, 0x0A, 0x5A, 0x7B,
+inline constexpr uint8_t kMinimapIconDecideHead[] = {0x80, 0x7C, 0x24, 0x48, 0x00, 0x75, 0x6F, 0x8B, 0x05, 0xCA, 0xB2, 0x7B,
                                                      0x06, 0x41, 0x89, 0x06};
 inline constexpr uintptr_t kMinimapIconRoot = 0x724B6E8;
 inline constexpr uintptr_t kMinimapIconRootAlt = 0x724B6F0;  // used under a TLS flag
