@@ -41,6 +41,7 @@ struct NpcRow {
     uint32_t key, variant;
     float hp, hp_max;
     proto::Vec3 at;
+    uint8_t type = 0;  // the actor's info +1 (native ai_handoff's reading: 3 people, 5 / 6 vehicles and mounts, ...)
 };
 // The loaded NPC actors between `from` and `radius` m of our character, nearest first.
 static std::vector<NpcRow> npcs_near(float radius, float from, std::optional<proto::Vec3>& me, int& loaded) {
@@ -74,6 +75,9 @@ static std::vector<NpcRow> npcs_near(float radius, float from, std::optional<pro
         Row r{d, key, variant, -1.0f, -1.0f, *at};
         // health: actor -> components -> status -> stat container (as for our own character, player_reader.cpp)
         if (const auto actor = game::find_actor(key)) {
+            if (const auto info = game::read_ptr(*actor + 0x88)) {
+                if (const auto t = game::read<uint8_t>(*info + 1)) r.type = *t;
+            }
             const auto comps = game::read_ptr(*actor + game::build_3732::kActor_ComponentTable);
             const auto status = comps ? game::read_ptr(*comps + game::build_3732::kComponents_Status) : std::nullopt;
             const auto vt = status ? game::read_ptr(*status) : std::nullopt;
@@ -158,8 +162,9 @@ static void log_npcs_near(float radius, float from) {
     for (size_t i = 0; i < rows.size() && i < 14; ++i) {
         const Row& r = rows[i];
         const char* animal = hunt_animal_name(r.variant);
-        log::info("Dev script: npc 0x{:08X} variant 0x{:08X}{}{} | {:.1f} m | hp {:.0f}/{:.0f} | at ({:.1f}, {:.1f}, {:.1f})",
-                  r.key, r.variant, animal ? " " : "", animal ? animal : "", r.d, r.hp, r.hp_max, r.at.x, r.at.y, r.at.z);
+        log::info("Dev script: npc 0x{:08X} type {} variant 0x{:08X}{}{} | {:.1f} m | hp {:.0f}/{:.0f} | at ({:.1f}, {:.1f}, {:.1f})",
+                  r.key, r.type, r.variant, animal ? " " : "", animal ? animal : "", r.d, r.hp, r.hp_max, r.at.x, r.at.y,
+                  r.at.z);
     }
     // Every key in range on one line (the two games' sets compared by key), 120 at most.
     std::string all;
@@ -601,6 +606,16 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
             steps.push_back(std::move(st));
             continue;
         }
+        if (kind == "tpvehicle") {  // tpvehicle [radius] [n]: 1 m beside the n-th nearest NPC vehicle / mount (type 5 or
+            st.kind = Step::TpActor;  // 6; 2026-11-19, the passenger test: Borque's cart was type 5 with a type 3 driver)
+            st.addr = 0xFFFFFFFCu;
+            float r = 60.0f, n = 0.0f;
+            in >> r >> n;
+            st.to[0] = r > 0 ? r : 60.0f;
+            st.to[1] = n > 0 ? n : 0.0f;
+            steps.push_back(std::move(st));
+            continue;
+        }
         if (kind == "tphorse") {  // tphorse: 1 m beside the horse the layer counts as ours (after a horse call)
             st.kind = Step::TpActor;
             st.addr = 0xFFFFFFFFu;
@@ -759,7 +774,7 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                 log_npcs_near(st.to[0], st.to[1]);
             } else if (st.kind == Step::TpActor) {
                 uint32_t key = st.addr == 0xFFFFFFFFu ? capture_horse_present()
-                               : st.addr == 0xFFFFFFFEu || st.addr == 0xFFFFFFFDu ? 0
+                               : st.addr == 0xFFFFFFFEu || st.addr == 0xFFFFFFFDu || st.addr == 0xFFFFFFFCu ? 0
                                : st.addr                ? static_cast<uint32_t>(st.addr)
                                                         : hunt_dev_last_kill();
                 if (st.addr == 0xFFFFFFFEu) {  // tpnear: the n-th nearest living person
@@ -774,6 +789,20 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                         break;
                     }
                     if (!key) log::info("Dev script: tpnear: no living person within {:.0f} m", st.to[0]);
+                }
+                if (st.addr == 0xFFFFFFFCu) {  // tpvehicle: the n-th nearest NPC vehicle / mount
+                    std::optional<proto::Vec3> me;
+                    int loaded = 0, n = static_cast<int>(st.to[1]);
+                    for (const NpcRow& r : npcs_near(st.to[0], 0.5f, me, loaded)) {
+                        if (r.type != 5 && r.type != 6) continue;
+                        if (n-- > 0) continue;
+                        key = r.key;
+                        log::info("Dev script: tpvehicle: 0x{:08X} type {} variant 0x{:08X}, {:.1f} m", r.key, r.type,
+                                  r.variant, r.d);
+                        break;
+                    }
+                    if (!key) log::info("Dev script: tpvehicle: no NPC vehicle within {:.0f} m ({} NPC actors loaded)",
+                                        st.to[0], loaded);
                 }
                 if (st.addr == 0xFFFFFFFDu) {  // tpanimal: the nearest living wild animal (of that variant)
                     std::optional<proto::Vec3> me;
