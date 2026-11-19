@@ -604,6 +604,8 @@ uintptr_t __fastcall common_detour(uintptr_t vc, int32_t* res, uintptr_t rider, 
     // 2026-11-18 (the ride rule, ai_handoff.h): the host's SERVER realm seated a rider on an NPC mount / vehicle.
     // Seat 0 only (the saddle / the driver's seat): a passenger in an NPC's cart leaves the cart to its driver.
     if (!client && r == 0 && seat == 0 && after.cur_vehicle == hk) ai_handoff_note_ride(rk, hk, true);
+    // 2026-11-19: a passenger seat (Borque's cart, seat 1): the fight rule must not take the boarding for blows.
+    if (!client && r == 0 && seat != 0 && after.cur_vehicle == hk) ai_handoff_note_passenger(rk, hk, true);
     if (pub) {
         ev.kind = msl::EvKind::Commit;
         ev.result = static_cast<uint32_t>(r);
@@ -667,6 +669,7 @@ uintptr_t __fastcall rideoff_detour(int32_t* res, uintptr_t horse, uint32_t* rid
     const int32_t r = res ? rdv<int32_t>(reinterpret_cast<uintptr_t>(res), -1) : -1;
     const msl::PairState after = client ? read_pair(rider, horse, vc_of(horse), 0) : msl::PairState{};
     if (!client && r == 0) ai_handoff_note_ride(rk, hk, false);  // the ride rule: the server realm's RideOff
+    if (!client && r == 0) ai_handoff_note_passenger(rk, hk, false);
     uint32_t tr = 0;
     if (pub) {
         tr = msl::arm_transition(armed);
