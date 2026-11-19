@@ -11,6 +11,8 @@ test save Out, shipped cdmp.ini restored.
   (farfight taps Q, the instant revive, after 50 swings, then swings 30 more) was blocked by the tool's permission
   check as changing a failing test. Options: (a) OK that test change, then farfight + smoke re-run and post;
   (b) re-run farfight unchanged; (c) post 569720a2 as is (the fail is the test bot dying, not the mod).
+  Update 20:09: pp34 (full) is running on e5fa32dc (569720a2 + catch rule + crash guard); the same farfight
+  question applies to it. If you do not answer, e5fa32dc replaces 569720a2 as the build to post.
 - 2026-11-17 07:45 HANDS-ON (about 10 min, when you have time): B09 past the cabin. A script cannot aim a talk
   (7 tries). I need you to play the host in a two-copy run I set up, through the Marius and Ross talks to "Enter the
   cabin"; a probe logs which game code starts that scene, so the ready check can hold it for both players.
@@ -8942,4 +8944,20 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - 19:15 Built native (8e38f6a catch rule + 12c9bc8 SceneReqGuard) and the layer (78b0ceb tpanimal); native unit
   tests: 30 failing executables, the baseline is 31, none new. Package b981582e, fake install all pass. cs65a (the
   catch test) running.
+- 19:24-20:09 Catch rule (Borque item 7) tests, two copies, the bandits start:
+  * cs65a (b981582e): no partridge found: on the guest the host server's batched NPC records leave most variants
+    0. Layer f00a2afc: tpanimal takes a living NPC of unknown variant under 40 HP as a critter.
+  * cs65b: it picked a fly (5 HP); the guest caught it ("Medium Fly x1 Acquired", interaction 0xF4263): the
+    insect catch already works. Borque's log showed his failed catches were handed to the client by the fight rule
+    ~1 s after the catch anyway, so I posted a correction to him (19:36): catching NOT confirmed fixed.
+  * cs65c (69c6a1d8, tpanimal min hp 8, the guest at Borque's spot -10365 533 -3864): "Partridge  E Carry" shown,
+    but the harness's E came after the bird walked off. cs65d: the script presses E 0.4 s after each step beside it.
+  * cs65d (69c6a1d8, catch rule ON): interaction 0xF42BE (Borque's) accepted; catch rule handed the partridge to
+    the guest 0.6 s later; "Drop R" (carrying) on every shot from 25 s to 40 s+ after.
+  * cs65e (e5fa32dc, native d98b6d1 adds [session2] ai_handoff_catch; set 0): two catches (0xF42BE) accepted, the
+    fight rule handed each over 1-1.5 s later, no "Drop R" on any shot after either: Borque's failure reproduced.
+    So the catch rule IS the fix (one run each way). SAVES OK, 5/5 restored in all five runs.
+  * SceneReqGuard in every run: ON, dropped 0 (2808 handled 0 in four runs, 4 in cs65e: the hook passes the
+    normal case through).
+- 20:09 pp34 running: full checklist on e5fa32dc (~3.5 h).
 

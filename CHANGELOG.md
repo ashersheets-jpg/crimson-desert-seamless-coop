@@ -5,8 +5,20 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-NOT POSTED YET: 0.1.0-alpha+569720a2, for game 1.0.0.3663 (checklist pp33 running; fe378085 before it was never
-posted: pp32 22 of 23 steps, 968 checks, crime failed again): everything in 62f49d19 below,
+NOT POSTED YET: 0.1.0-alpha+e5fa32dc, for game 1.0.0.3663 (checklist pp34 running): everything in 569720a2 just
+below, plus (from Borque's host report of 18 Nov):
+- **Catching small animals works for the joined player.** The host's game accepted the catch but kept running the
+  animal, so the catch never finished. The animal now runs on the catcher's game from the moment the catch is
+  accepted, for 30 s. Tested with two copies on one PC: a partridge caught and still carried 40 s later; with this
+  switched off (`[session2] ai_handoff_catch=0`) two catches in the same place both failed. Catching insects already
+  worked.
+- **A host crash while loading is guarded.** The game's own code for "a character entered or left a trigger area"
+  could read a missing object while the host's world loaded with the joined player's character still in it
+  (Borque's host crashed there). That moment's trigger is now skipped instead. Not reproduced here; the guard is
+  checked to be in and idle.
+
+NOT POSTED (replaced by e5fa32dc above): 0.1.0-alpha+569720a2 (checklist pp33: 970 of 971 checks; the one fail was
+farfight's test bot dying among five bandits before its first kill): everything in 62f49d19 below,
 plus (from Borque's session of 18 Nov):
 - **The host sees the joined player on its horse.** Since the 3663 port neither game applied the other player's
   mount itself (a message size of the old game version); the joined player's game happened to show the host
