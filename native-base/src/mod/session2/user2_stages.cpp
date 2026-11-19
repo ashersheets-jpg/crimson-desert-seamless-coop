@@ -577,6 +577,7 @@ std::string fam_types_text(uint16_t mask) {
     }
     return s;
 }
+std::atomic<uint64_t> g_activation_lines_capped{0};
 void npc_probe_drain() {
     static constexpr const char* names[] = {"nacimiento", "familia", "2005 encolado al invitado", "primera petición", "retorno externo",
         "acción OnServer", "baja", "retirada local", "contención rechazada", "viajero", "sin progreso", "nodo bloqueado", "plan seco",
@@ -761,6 +762,18 @@ void npc_probe_drain() {
                       e.v[11] & 0xFFFF, e.v[9], e.v[6], (e.v[10] >> 8) & 1);
             continue;
         }
+        // pp34 crime (2026-11-18): 241 NPCs born to the guest in two minutes in a town, five lines each, pushed the
+        // host log over the checklist's growth limit. The plain per-NPC lines: the first 40 of each kind, then 1 of
+        // every 25 (the [resumen] line counts the rest).
+        {
+            static uint32_t per_kind[std::size(names) + 1] = {};
+            const size_t k = e.kind < std::size(names) ? e.kind : std::size(names);
+            const uint32_t n = ++per_kind[k];
+            if (n > 40 && n % 25 != 0) {
+                g_activation_lines_capped.fetch_add(1, std::memory_order_relaxed);
+                continue;
+            }
+        }
         log::info("NpcActivation [{}] qpc={} T{} | key=0x{:08X} nacimiento={} controlador=0x{:08X} padre=0x{:08X} "
                   "tipo={} stage=0x{:X} recurso=0x{:08X} nodo={} época={} asignado={} desde2005_encolado_us={} dato={} adicional={}",
                   e.kind < std::size(names) ? names[e.kind] : "?", e.qpc_us, e.tid, e.v[0], e.v[1], e.v[2], e.v[3],
@@ -788,12 +801,12 @@ void npc_probe_drain() {
                   "eventos perdidos={}, tabla llena={}, contenciones rechazadas={}, abandonadas={} (por unidad; claves fuera "
                   "del vigilante antiguo {}), fallos nativos={}, vetos={} (de ellos en grupo nativo agotado entero {}; "
                   "omitidos {}, grupo no legible {}), constructores de otro dueño={}, sonda acción={}, veto nodo={}, "
-                  "escrituras detenidas={}, red antigua={}, contención lista={}",
+                  "escrituras detenidas={}, red antigua={}, contención lista={}, líneas por NPC no escritas={}",
                   tracked, pruned, g_activation_untracked.load(), budgets, g_activation_events.dropped(), full,
                   g_activation_refused.load(), abandoned, g_activation_gave_up_keys.load(), g_activation_faults.load(),
                   g_node_vetoes.load(), g_node_group_vetoes.load(), g_node_veto_skips.load(), g_node_group_unread.load(),
                   g_node_other_owner.load(), g_activation_ready.load(), g_node_ready.load(), g_activation_fault.load(),
-                  !containment_ready(), containment_ready());
+                  !containment_ready(), containment_ready(), g_activation_lines_capped.load());
         const auto ev = [](npcact::Evidence k) { return g_evidence_n[static_cast<size_t>(k)].load(); };
         const auto due = [](const std::atomic<uint64_t>* a, npcact::Due d) { return a[static_cast<size_t>(d)].load(); };
         const auto rc = [](npcact::Recheck r) { return g_recheck_n[static_cast<size_t>(r)].load(); };
