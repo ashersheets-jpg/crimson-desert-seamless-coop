@@ -28,9 +28,9 @@ namespace off = game::build_2976;
 // The category getter 0x1C358E0(table, NPC key) -> u8 (0 also when the NPC has no entry). Its callers: the condition
 // CheckQuestDialogCategory (0x24752E0) AND the quest-dialog search of HasQuestDialog (0x1C35970 -> 0x1C34B00), which
 // stops at a category 0 before it looks at the player's own dialogs (tcB86: the Greet's "Hello" search).
-constexpr uintptr_t kGetter = 0x1C99810;
+constexpr uintptr_t kGetter = 0x1C9B430;
 constexpr uint8_t kGetterHead[9] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x83, 0x79, 0x6C, 0x00};
-constexpr uintptr_t kLocalUserRoot = 0x72451C0;  // [[[root]+0x30]+0x58] = the local user, its +0x50 the character
+constexpr uintptr_t kLocalUserRoot = 0x724B350;  // [[[root]+0x30]+0x58] = the local user, its +0x50 the character
 constexpr uint64_t kSendEveryMs = 5000, kGuestStaleMs = 15000, kReadEveryMs = 1000;
 
 bool g_on = false, g_guest = false;
@@ -44,7 +44,7 @@ SafetyHookInline g_hook;
 // sets the category for the player whose client controls it (the host) only. Host: at the builder's entry for user 2's
 // table, an EXISTING record of user 2 whose effective category is 0 gets the host's category in its AI byte (+0x19 of
 // the entry, the byte the getter prefers when < 6). [session2] npc_dialog_share = 1 (default 0 until proven).
-constexpr uintptr_t kBuilder = 0x2BD86B0;
+constexpr uintptr_t kBuilder = 0x2BDB0D0;
 constexpr uint8_t kBuilderHead[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74, 0x24, 0x10,
                                     0x48, 0x89, 0x7C, 0x24, 0x20, 0x55};
 SafetyHookMid g_builder;

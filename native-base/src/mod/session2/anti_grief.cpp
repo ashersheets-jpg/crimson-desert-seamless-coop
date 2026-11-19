@@ -82,7 +82,7 @@ std::string tally_text_locked(int src) {
 // ---- crimes (tcB355 / tcB356: "Crime: Assault" / "Crime: Murder" on the guest for the host's quest bandits;
 // build/decomp/notes_crime_coop.md, local). Every crime is registered by exe+0x2BCE6A0(wanted comp, criminal, victim,
 // float3*, float3*, u8 type, i64 time, int, u8); comp+8 = the owning player. A hit comes from .tls$ 0xE3C54D0 (return
-// address exe+0xEA2BAD2), a kill from 0x2BCDDC0 (return address exe+0x2BCDE79); both skip when the attacker and the
+// address exe+0xE2AEA62), a kill from 0x2BCDDC0 (return address exe+0x2BCDE79); both skip when the attacker and the
 // victim have the same user (actor+0xA0). tcB358: the world's NPCs have NO user (owner key 0x90100000), the HOST's
 // hits and kills reach this function too, and the game's own test exe+0x2BCE2A0(comp, player, victim, float3*, u8 type,
 // i64 time) then says "no crime" for the host (its battle state, its faction relation, its quest targets) but "crime"
@@ -90,7 +90,7 @@ std::string tally_text_locked(int src) {
 // fought that NPC or when the game's test says the HOST would not be punished for it. What an NPC's own AI reports
 // (slot 44) is not touched.
 constexpr uint32_t kHostCharacter = 0xA0100001;
-constexpr uintptr_t kCrimeFn = 0x2C340D0, kCrimeGateFn = 0x2C33CF0, kCrimeRetHit = 0xEA2BAD2, kCrimeRetKill = 0x2C338C8;
+constexpr uintptr_t kCrimeFn = 0x2C38B60, kCrimeGateFn = 0x2C38780, kCrimeRetHit = 0xE2AEA62, kCrimeRetKill = 0x2C38358;
 safetyhook::InlineHook g_crime;
 bool g_crime_gate_ok = false;
 std::atomic<uint64_t> c_crime_seen{0}, c_crime_skipped{0};
@@ -138,9 +138,9 @@ int host_would_be_punished(uintptr_t victim, void* at, uint8_t type, int64_t tim
     int r = -1;
     __try {
         const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-        const uintptr_t mgr = *reinterpret_cast<uintptr_t*>(*reinterpret_cast<uintptr_t*>(base + 0x72456D8) + 0x50);
+        const uintptr_t mgr = *reinterpret_cast<uintptr_t*>(*reinterpret_cast<uintptr_t*>(base + 0x724B868) + 0x50);
         uint64_t scope[8] = {};
-        reinterpret_cast<void* (__fastcall*)(uintptr_t, uint64_t*, uint64_t)>(base + 0x2D787E0)(mgr, scope,
+        reinterpret_cast<void* (__fastcall*)(uintptr_t, uint64_t*, uint64_t)>(base + 0x2D7D270)(mgr, scope,
                                                                                                kHostCharacter);
         const uintptr_t host = scope[1];
         if ((scope[2] & 0xFF) != 0 && host) {
@@ -153,7 +153,7 @@ int host_would_be_punished(uintptr_t victim, void* at, uint8_t type, int64_t tim
                 r = (v & 0xFF) != 0 ? 1 : 0;
             }
         }
-        reinterpret_cast<void (__fastcall*)(uint64_t*)>(base + 0x1659380)(scope);
+        reinterpret_cast<void (__fastcall*)(uint64_t*)>(base + 0x165AF00)(scope);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         r = -1;
     }

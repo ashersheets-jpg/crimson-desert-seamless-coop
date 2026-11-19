@@ -502,9 +502,9 @@ inline VetoSite veto_site(uint32_t return_rva) noexcept {
         // (0x2819E00: +0x52C mode 2, +0x6A0 leader, +0x774 member, +0xB42), 0x2A63090 (0x281DBD0), 0x2A66460
         // (0x2820D80, its cmp [r12+0xB0],-1), 0x2A62D10 (0x281D970). A ninth caller, 0x2A68440 (ret 0x2A68794), is
         // new in 3576: Unknown (never vetoed).
-        case 0x2AC25FC: case 0x2AC3171: case 0x2AC3788: case 0x2AC6C65: return VetoSite::Exact;
-        case 0x2AC32E5: case 0x2AC33B9: return VetoSite::Group;
-        case 0x2ACA351: case 0x2AC696E: return VetoSite::Parent;
+        case 0x2AC4D4C: case 0x2AC58C1: case 0x2AC5ED8: case 0x2AC93B5: return VetoSite::Exact;
+        case 0x2AC5A35: case 0x2AC5B09: return VetoSite::Group;
+        case 0x2ACCAA1: case 0x2AC90BE: return VetoSite::Parent;
         default: return VetoSite::Unknown;
     }
 }
@@ -520,7 +520,7 @@ inline VetoSite veto_site(uint32_t return_rva) noexcept {
 // false (no se veta). read(dirección, destino, bytes) es una lectura protegida.
 // 3576: 0x2A5F1B0 has the same prologue (rbp = rsp+0x100); the group is loaded to r13 from [rbp-0x78] at 0x2A5F7AE
 // and not written between the two calls (0x2A5F850 leader, 0x2A5F924 member).
-inline constexpr uint32_t kGroupLeaderRet = 0x2AC32E5, kGroupMemberRet = 0x2AC33B9;
+inline constexpr uint32_t kGroupLeaderRet = 0x2AC5A35, kGroupMemberRet = 0x2AC5B09;
 inline constexpr uintptr_t kGroupFrameSlot = 0x88;
 inline constexpr uint32_t kMaxGroup = 64;
 struct GroupNode { uint32_t data = 0, index = 0; };

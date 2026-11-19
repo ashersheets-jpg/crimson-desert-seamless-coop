@@ -370,7 +370,7 @@ std::string weather_words(uintptr_t blk, uint32_t from, uint32_t to) {
 }
 
 void weather_dump() {
-    const auto pm = game::read_ptr(g_probe_base + 0x7160240);
+    const auto pm = game::read_ptr(g_probe_base + 0x71662E0);
     const uintptr_t m = pm ? *pm : 0;
     const auto ps = m ? game::read_ptr(m + 0x60) : std::nullopt;
     const uintptr_t sc = ps ? *ps : 0;

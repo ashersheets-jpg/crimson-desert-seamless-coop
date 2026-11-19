@@ -33,11 +33,11 @@ constexpr uint32_t kHostCharacter = 0xA0100001;
 constexpr uint16_t kOpChangeAiControlAck = 2152;
 constexpr uint32_t kPrivateMagic = 0xC0DEA1C7;   // our 12-byte form of 2660: magic | actor key | new controller
 constexpr uint32_t kTickEntry = 0xC0DE0008;      // trade_probe's entry for the server-thread check
-constexpr uintptr_t kServerActorMgrSlot = 0x72456D0;
-constexpr uintptr_t kClientWorldSlot = 0x72451C0;
-constexpr uintptr_t kFnPosition = 0x5D8540;      // (transform comp, buf)
-constexpr uintptr_t kFnAiSessionBump = 0x2BCAD70, kFnMoveSessionBump = 0x2BCC6B0, kFnActionReset = 0x229BC60;
-constexpr uintptr_t kFnClientControlMode = 0x5DAB00;  // (client actor): recomputes the control mode byte actor+0xC8
+constexpr uintptr_t kServerActorMgrSlot = 0x724B860;
+constexpr uintptr_t kClientWorldSlot = 0x724B350;
+constexpr uintptr_t kFnPosition = 0x5D8880;      // (transform comp, buf)
+constexpr uintptr_t kFnAiSessionBump = 0x2BCD790, kFnMoveSessionBump = 0x2BCF0D0, kFnActionReset = 0x229D880;
+constexpr uintptr_t kFnClientControlMode = 0x5DAE40;  // (client actor): recomputes the control mode byte actor+0xC8
 constexpr float kSector = 0.015625f;             // 1 / 64 m
 constexpr float kFarM = 60.0f, kNearM = 30.0f;   // controller farther than kFarM, another player within kNearM
 constexpr int kNeedChecks = 2;                   // the same answer on two checks in a row (about 2 s)

@@ -166,21 +166,21 @@ inline constexpr uint8_t kReqId = 5, kTimerId = 3;
 // 3576 (2026-11-09): each handler's first call [rax+0x48] from its TrocTr vtable's slot 2 (RTTI; tcB209 caught user 2's
 // 2752 at 0x2CE9CEA, the same); 0 = the handler jumps into the protected section (2839, 3161, the 2048 / 2059 timers):
 // matched by opcode for a vf48 called from the protected section (site_matches).
-inline constexpr uint32_t kProtectedBegin = 0x7AC4000, kProtectedEnd = 0x14046000;
+inline constexpr uint32_t kProtectedBegin = 0x7ACB000, kProtectedEnd = 0x137DB000;
 inline constexpr Site kSites[] = {
-    {2644, 0x2D510A9, kReqId, "StageBranchStateReq (-> 0x2891FB0)"},
+    {2644, 0x2D55B39, kReqId, "StageBranchStateReq (-> 0x2891FB0)"},
     {2200, 0, kReqId, "UpdateStageChartEventReq (0x2C4A8A0 -> 0x2936060)"},
-    {2654, 0x2D51490, kReqId, "StageBranchStateDelayEndReq (-> 0x2892210)"},
-    {3141, 0x2D51BAF, kReqId, "UpdateStageChartDelayedEventReq (-> 0x28928D0)"},
-    {2672, 0x2D50C0A, kReqId, "UpdateSequencerGamePlayDataEventReq (-> 0x2891CE0)"},
-    {2678, 0x2D4FF4A, kReqId, "DeleteSequencerReq (-> 0x2879320)"},
-    {2808, 0x2C53DBE, kReqId, "SequencerTriggerVolumeInOutReq (0x1F6C190 at 0x2978E6E)"},
+    {2654, 0x2D55F20, kReqId, "StageBranchStateDelayEndReq (-> 0x2892210)"},
+    {3141, 0x2D5663F, kReqId, "UpdateStageChartDelayedEventReq (-> 0x28928D0)"},
+    {2672, 0x2D5569A, kReqId, "UpdateSequencerGamePlayDataEventReq (-> 0x2891CE0)"},
+    {2678, 0x2D549DA, kReqId, "DeleteSequencerReq (-> 0x2879320)"},
+    {2808, 0x2C5884E, kReqId, "SequencerTriggerVolumeInOutReq (0x1F6C190 at 0x2978E6E)"},
     {3069, 0, kReqId, "SequencerStageFailReq (.xtls 0x1089F230)"},
-    {2563, 0x2D530AF, kReqId, "ChangeSequencerPivotReq (-> 0x28952F0)"},
-    {2313, 0x2D529F9, kReqId, "StageQuitReq (-> 0x28934F0)"},
-    {2546, 0x2D52219, kReqId, "SubTimelinePauseReq (-> 0x2892FE0)"},
-    {2924, 0x2D52609, kReqId, "SubTimelineResumeReq (-> 0x2893260)"},
-    {2125, 0x2D50863, kReqId, "SetNextBranchTypeFromAIReq (-> 0x2895DC0)"},
+    {2563, 0x2D57B3F, kReqId, "ChangeSequencerPivotReq (-> 0x28952F0)"},
+    {2313, 0x2D57489, kReqId, "StageQuitReq (-> 0x28934F0)"},
+    {2546, 0x2D56CA9, kReqId, "SubTimelinePauseReq (-> 0x2892FE0)"},
+    {2924, 0x2D57099, kReqId, "SubTimelineResumeReq (-> 0x2893260)"},
+    {2125, 0x2D552F3, kReqId, "SetNextBranchTypeFromAIReq (-> 0x2895DC0)"},
     {2048, 0, kTimerId, "StageBranchStateOnceTimer (.xtls 0x1082FB80 -> 0x2895820)"},
     // The deferred delete (tiendas-u2.md 12.2): without it a delete of one of user 2's scenes reached the host's
     // manager and was lost (an orphan scene in user 2's manager and in the guest's M).

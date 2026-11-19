@@ -52,13 +52,13 @@ constexpr uint8_t kVf54[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x6C, 0x2
 // Co-op+ port 1.0.0.3549 (docs/research/native-port-3549.json): ClientVehicleActorComponent vtable 0x5944B90 slots
 // 53/54, CommonVehicleActorComponent 0x5CEFC28 slot 53, the RideOff thunk right after its vf54 (as on 2976),
 // RideOn/RideOffMovementMethod slot 7, the handlers = slot 2 of their TrocTr vtables.
-constexpr uint8_t kThunkVf53[] = {0xE9, 0xCB, 0x76, 0xFE, 0x08};    // 3549 0xB4D8D0 jmp .xpdata (2976: jmp 0x9DC90A0)
-constexpr uint8_t kThunkRideOff[] = {0xE9, 0x3B, 0xAC, 0xD4, 0x0A};  // 3549 0x23FDCC0 jmp 0xCD40720 (2976: jmp 0xE6F2E60)
+constexpr uint8_t kThunkVf53[] = {0xE9, 0xEB, 0x97, 0xD3, 0x08};    // 3549 0xB4D8D0 jmp .xpdata (2976: jmp 0x9DC90A0)
+constexpr uint8_t kThunkRideOff[] = {0xE9, 0x5B, 0xE5, 0x73, 0x0A};  // 3549 0x23FDCC0 jmp 0xCD40720 (2976: jmp 0xE6F2E60)
 
-constexpr uintptr_t kCommonVf53 = 0x246F6C0, kClientVf53 = 0xB84E80, kRideOffThunk = 0x2470330, kClientVf54 = 0xB84EA0;
-constexpr uintptr_t kRideOnEnter = 0x77C3A0, kRideOffEnter = 0x77D370, kH2663 = 0xD11830, kH2916 = 0xD12300,
-                    kH2991 = 0xC9CA10;  // 3549 (2976: 0x2228260 0xA45740 0x2228E40 0xA45760 0x681C80 0x682C20 0xBB4130 0xBB4AC0 0xB57720)
-constexpr uintptr_t kCodeEnd = 0x5613000;  // Co-op+ port: end of .xtext on 1.0.0.3549 (2976: .rsrc ends at 0x51EB000)
+constexpr uintptr_t kCommonVf53 = 0x2471990, kClientVf53 = 0xB857C0, kRideOffThunk = 0x2472600, kClientVf54 = 0xB857E0;
+constexpr uintptr_t kRideOnEnter = 0x77C8C0, kRideOffEnter = 0x77D890, kH2663 = 0xD12280, kH2916 = 0xD12D50,
+                    kH2991 = 0xC9D460;  // 3549 (2976: 0x2228260 0xA45740 0x2228E40 0xA45760 0x681C80 0x682C20 0xBB4130 0xBB4AC0 0xB57720)
+constexpr uintptr_t kCodeEnd = 0x5618000;  // Co-op+ port: end of .xtext on 1.0.0.3549 (2976: .rsrc ends at 0x51EB000)
 
 // P8 S18 fix B (pendientes/p8-s18-desmontar-nativo.md §6, mount_sync_logic.h "the request gate") [V, capstone on the
 // installed PE]: the thunk 0x2329A90 `jmp 0xEE58A40` (5 B, a function start in .rsrc; no E8/E9 lands in +1..+4); its
@@ -67,9 +67,9 @@ constexpr uintptr_t kCodeEnd = 0x5613000;  // Co-op+ port: end of .xtext on 1.0.
 // Co-op+ port 1.0.0.3549: the gate is a real function 0x251A350 (no thunk; its 5-byte first instruction
 // mov [rsp+0x10],rbx is patched), called at 0x948E6E from the unique call site 0x948E66 (return 0x948E73).
 constexpr uint8_t kThunkGate[] = {0x48, 0x89, 0x5C, 0x24, 0x10};  // 3549 0x251A350 (2976: the thunk jmp 0xEE58A40)
-constexpr uintptr_t kGateThunk = 0x258CAA0, kGateNetRet = 0x976BE3, kGateCallSite = 0x976BD6, kGateNetOr = 0x20DFF86;
+constexpr uintptr_t kGateThunk = 0x258EF30, kGateNetRet = 0x977303, kGateCallSite = 0x9772F6, kGateNetOr = 0x20E1BA6;
 constexpr uint8_t kGateCallSiteBytes[] = {0x48, 0x8D, 0x54, 0x24, 0x20, 0x49, 0x8B, 0xCF,
-                                          0xE8, 0xBD, 0x5E, 0xC1, 0x01, 0x45, 0x89, 0x26};
+                                          0xE8, 0x2D, 0x7C, 0xC1, 0x01, 0x45, 0x89, 0x26};
 constexpr uint8_t kGateNetOrBytes[] = {0x41, 0x80, 0xC8, 0x02, 0x44, 0x08, 0x41, 0x50};
 // CC fields the gate reads [V 0xEE58A40]: [CC+8] actor, [CC+0x80] pending entries, CC+0xA8 "pending taken" flag.
 constexpr uint32_t kCcActor = 0x08, kCcPending = 0x80, kCcPendingBusy = 0xA8;
@@ -96,13 +96,13 @@ constexpr uint32_t kCcAttach = 0x100, kAttachType = 0x08, kCc228 = 0x228, kComps
                    kActorTypeTab = 0x88, kMcCc = 0x60, kHierType = 0x18, kActorLocalCtl = 0x94;
 // TransformSync (+0xB4 sector-local position, +0xC0 sector x/z, +0xA4 rotation; read_world, hold_after).
 constexpr uint32_t kCompsTs = 0x1A0, kTsQuat = 0xA4, kTsPos = 0xB4, kTsSector = 0xC0;
-constexpr uintptr_t kHoldUpdate = 0x9A50D0;  // 3549 MovementController_UpdateInterpolation (2976 0x88E6A0)
+constexpr uintptr_t kHoldUpdate = 0x9A5950;  // 3549 MovementController_UpdateInterpolation (2976 0x88E6A0)
 // P8 S22 [V Ghidra + capstone]: vf54 ends with `if (rider->vf178()) 0xA45AC0(rider vc, horse key, 1)`, an action
 // request launched on the LOCAL player's components (vf42's tail does the same with 0 on dismount, .xtls 0x9DCF13B).
 // Every client in-game actor class has vf178 = 0x4FE260: `[this+0xA0] == [[WorldSystem+0x30]+0x58] && [this+0x94]`
 // (the remote player's character reads +0x94 = 1, but its +0xA0 is the other user). Judged by msl::seat_local_user;
 // a veto at 0xA45AC0's entry (2 callers, cold) drops any such request for the remote player's character (expected 0).
-constexpr uintptr_t kActionReq = 0xB852D0;  // 3549 (2976 0xA45AC0): 2 callers, one at vf54's end 0xB4DC23
+constexpr uintptr_t kActionReq = 0xB85C10;  // 3549 (2976 0xA45AC0): 2 callers, one at vf54's end 0xB4DC23
 constexpr uint8_t kActionReqBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x20, 0x55, 0x57, 0x41, 0x56};
 constexpr uint32_t kActorUser = 0xA0, kMgrLocalUser = 0x58;
 constexpr uint8_t kHoldEntry[] = {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x10, 0x48, 0x89, 0x70,
