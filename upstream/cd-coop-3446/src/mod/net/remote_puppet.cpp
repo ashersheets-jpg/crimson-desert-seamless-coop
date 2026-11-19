@@ -2267,7 +2267,7 @@ uint64_t rope_piece_of(uintptr_t base, const uint8_t* scene) {
     bool attached = false;
     g_rope_lookup_faulted = true;  // stays so if the game code below faults
     __try {
-        reinterpret_cast<Find>(base + 0x18B6520)(mgr, att, scene);
+        reinterpret_cast<Find>(base + 0x18B83B0)(mgr, att, scene);
         attached = true;
         uintptr_t obj = 0;
         std::memcpy(&obj, att + 8, sizeof obj);
@@ -2288,7 +2288,7 @@ uint64_t rope_piece_of(uintptr_t base, const uint8_t* scene) {
         __try {
             const uintptr_t vt = base + 0x5725E48;  // ScopeAttacherBase, as the game leaves it
             std::memcpy(att, &vt, sizeof vt);
-            reinterpret_cast<Release>(base + 0x14731A0)(att);
+            reinterpret_cast<Release>(base + 0x1474D20)(att);
         } __except (EXCEPTION_EXECUTE_HANDLER) {
             return ~0ull;
         }
@@ -2357,7 +2357,7 @@ bool bend_tree(uintptr_t base, uintptr_t copy, uintptr_t own, float copy_x, floa
                 return true;
             }
         }
-        const uintptr_t node = reinterpret_cast<Node>(base + 0x5DCD00)(comp, 0);
+        const uintptr_t node = reinterpret_cast<Node>(base + 0x5DD040)(comp, 0);
         if (!node) return true;
         // Only a tree the game itself would bend (0x1191078): p = [node+0x108]
         // ->vf(0x328)(), with p and byte p+0x18 set.
@@ -2367,10 +2367,10 @@ bool bend_tree(uintptr_t base, uintptr_t copy, uintptr_t own, float copy_x, floa
         const auto vt = *reinterpret_cast<const uintptr_t* const*>(obj);
         const uintptr_t p = reinterpret_cast<CanBend>(vt[0x328 / 8])(obj);
         if (!p || *reinterpret_cast<const uint8_t*>(p + 0x18) == 0) return true;
-        const uintptr_t tree = reinterpret_cast<Tree>(base + 0x491AC0)(node);
+        const uintptr_t tree = reinterpret_cast<Tree>(base + 0x491ED0)(node);
         if (!tree) return true;
         alignas(16) uint8_t out[0x40] = {};
-        if (!reinterpret_cast<Point>(base + 0x5A4760)(comp, 0, out)) return true;
+        if (!reinterpret_cast<Point>(base + 0x5A4AA0)(comp, 0, out)) return true;
         float hx, hz;
         std::memcpy(&hx, out + 0x1C, 4);
         std::memcpy(&hz, out + 0x24, 4);
@@ -2378,7 +2378,7 @@ bool bend_tree(uintptr_t base, uintptr_t copy, uintptr_t own, float copy_x, floa
         const float len = std::sqrt(dir[0] * dir[0] + dir[2] * dir[2]);
         if (!(len > 0.01f) || !std::isfinite(len)) return true;
         dir[0] /= len, dir[2] /= len;
-        reinterpret_cast<Bend>(base + 0x350C9B0)(tree, dir, strength);
+        reinterpret_cast<Bend>(base + 0x3510EE0)(tree, dir, strength);
         // The rope's flex, as the local pull leaves it (arbol-cuerda-4 R2): visual only.
         *reinterpret_cast<float*>(comp + 0x4E0) = strength;
         *reinterpret_cast<float*>(comp + 0x4E4) = kBendPerSecond;
@@ -2444,7 +2444,7 @@ bool rope_effect(uintptr_t copy, bool hooked) {
 bool node_world(uintptr_t base, uintptr_t node, float out[3]) {
     using Get = void*(__fastcall*)(uintptr_t, void*);
     alignas(16) uint8_t xf[0x30] = {};
-    reinterpret_cast<Get>(base + 0x26D3940)(node, xf);
+    reinterpret_cast<Get>(base + 0x26D60A0)(node, xf);
     float p[3];
     int16_t sx, sz;
     std::memcpy(p, xf + 0x1C, sizeof p);
@@ -2477,7 +2477,7 @@ bool rope_end(uintptr_t comp, uint8_t slot) {
         alignas(16) uint8_t xf[0x30] = {};
         const float unit[7] = {1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
         std::memcpy(xf, unit, sizeof unit);
-        if (!reinterpret_cast<Target>(base + 0x5A40E0)(comp, 0, xf)) return true;
+        if (!reinterpret_cast<Target>(base + 0x5A4420)(comp, 0, xf)) return true;
         float t[3], b[3];
         std::memcpy(t, xf + 0x1C, sizeof t);
         if (node_world(base, o - 0x28, b)) {
@@ -2487,8 +2487,8 @@ bool rope_end(uintptr_t comp, uint8_t slot) {
         }
         if (!is_copy) return true;  // ours: measured only
         std::memset(xf + 0x28, 0, 4);
-        reinterpret_cast<Split>(base + 0x50EA00)(xf);
-        reinterpret_cast<SetWorld>(base + 0x26D4B40)(o - 0x28, xf, 0, 1);
+        reinterpret_cast<Split>(base + 0x50EE10)(xf);
+        reinterpret_cast<SetWorld>(base + 0x26D72A0)(o - 0x28, xf, 0, 1);
         g_rope_end_sets.fetch_add(1, std::memory_order_relaxed);
         return true;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
@@ -2564,12 +2564,12 @@ bool puppet_install_rope_bend() {
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     static const uint8_t kHead[] = {0x48, 0x8B, 0x8E, 0xC8, 0x00, 0x00, 0x00, 0xE8};  // mov rcx,[rsi+0xC8]; call
     uint8_t head[sizeof kHead];
-    if (base != off::kImageBase || !game::safe_read(base + 0x8971F6, head, sizeof head) ||
+    if (base != off::kImageBase || !game::safe_read(base + 0x897916, head, sizeof head) ||
         std::memcmp(head, kHead, sizeof head) != 0) {
         log::warn("Puppet: actor update not recognised; the tree will not bend for the other player");
         return false;
     }
-    g_bend_hook = safetyhook::create_mid(reinterpret_cast<void*>(base + 0x8971F6), on_actor_update);
+    g_bend_hook = safetyhook::create_mid(reinterpret_cast<void*>(base + 0x897916), on_actor_update);
     g_rope_bend = static_cast<bool>(g_bend_hook);
     g_rope_effect = g_rope_bend.load();
     log::info("Puppet: tree bend and rope effect for the other player's rope {}",
@@ -2577,9 +2577,9 @@ bool puppet_install_rope_bend() {
     // R5 (arbol-cuerda-5.md): movzx r8d,sil; vmovaps xmm1,xmm6; mov rcx,rdi; call 0x5AEAA0.
     static const uint8_t kSlotTick[] = {0x44, 0x0F, 0xB6, 0xC6, 0xC5, 0xF8, 0x28, 0xCE, 0x48, 0x8B, 0xCF, 0xE8};
     uint8_t at[sizeof kSlotTick];
-    if (g_rope_bend && !g_rope_end_hook && game::safe_read(base + 0x5C91FA, at, sizeof at) &&
+    if (g_rope_bend && !g_rope_end_hook && game::safe_read(base + 0x5C953A, at, sizeof at) &&
         std::memcmp(at, kSlotTick, sizeof at) == 0) {
-        g_rope_end_hook = safetyhook::create_mid(reinterpret_cast<void*>(base + 0x5C91FA), on_rope_slot_tick);
+        g_rope_end_hook = safetyhook::create_mid(reinterpret_cast<void*>(base + 0x5C953A), on_rope_slot_tick);
         g_rope_end = static_cast<bool>(g_rope_end_hook);
     }
     log::info("Puppet: the other player's rope end on the tree: {}", g_rope_end ? "installed" : "NOT installed");

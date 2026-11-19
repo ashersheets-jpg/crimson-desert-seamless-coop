@@ -80,7 +80,7 @@ bool photo_mode_active() {
     if (cutscene_playing().value_or(false)) cutscene_ms = now;
     uint32_t a = 0, b = 0;
     if (!safe_read(base + off::kPhotoModeIdA, &a, 4) || !safe_read(base + off::kPhotoModeIdB, &b, 4)) return false;
-    const bool raw = (a & 0xFFFFFF) == off::kPhotoModeId && (b & 0xFFFFFF) == off::kPhotoModeId;
+    const bool raw = (a & 0x100077F) == off::kPhotoModeId && (b & 0x100077F) == off::kPhotoModeId;
     auto reject = [&](const char* why) {
         st = St::Rejected;
         static int rejects = 0;

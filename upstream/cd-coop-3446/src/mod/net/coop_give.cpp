@@ -24,8 +24,8 @@ namespace {
 
 namespace off = game::build_3663;
 
-constexpr uintptr_t kDiscardBag = 0xF31570, kDiscardList = 0xF318E0, kClientDiscard = 0xAFEE20;
-constexpr uintptr_t kInventoryVftable = 0x5A77B88;
+constexpr uintptr_t kDiscardBag = 0xF31CE0, kDiscardList = 0xF32050, kClientDiscard = 0xAFF6D0;
+constexpr uintptr_t kInventoryVftable = 0x5A7CC18;
 constexpr uint16_t kOpMoveItem = 3104;
 constexpr uint32_t kGiveEntry = 0xC0DE0001;  // the native's give entry (upstream/cdmp-native trade_probe)
 constexpr uint32_t kStashDepositEntry = 0xC0DE0002;  // B12: guest bag -> the host character's WareHouse (native)
@@ -64,7 +64,7 @@ bool g_stash = false;  // ... or the deposit into the shared stash (B12)
 uint16_t inventory_key(uint32_t index) noexcept {
     const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     __try {
-        const uintptr_t row = game::info_row(base + 0x57B410, index);
+        const uintptr_t row = game::info_row(base + 0x57B750, index);
         if (row) return *reinterpret_cast<uint16_t*>(row + 8);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
     }
@@ -74,7 +74,7 @@ uint16_t inventory_key(uint32_t index) noexcept {
 uint16_t slot_item(int64_t holder, int16_t inventory, int16_t slot) noexcept {
     const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     __try {
-        const uintptr_t e = reinterpret_cast<uintptr_t (__fastcall*)(int64_t, int16_t, int16_t)>(base + 0x23687F0)(
+        const uintptr_t e = reinterpret_cast<uintptr_t (__fastcall*)(int64_t, int16_t, int16_t)>(base + 0x236A320)(
             holder, inventory, slot);
         if (e && *reinterpret_cast<int64_t*>(e + 0x10) > 0) return *reinterpret_cast<uint16_t*>(e + 8);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
@@ -163,7 +163,7 @@ bool clear_wait(int64_t* root, uintptr_t base) noexcept {
         *reinterpret_cast<int64_t*>(reinterpret_cast<uintptr_t>(root) + 0x138) = 0;
         const auto owner = reinterpret_cast<int64_t (__fastcall*)(int64_t*)>(
             *reinterpret_cast<uintptr_t*>(*reinterpret_cast<uintptr_t*>(root) + 0x118))(root);
-        if (owner) reinterpret_cast<void (__fastcall*)(int64_t)>(base + 0xF54850)(owner);
+        if (owner) reinterpret_cast<void (__fastcall*)(int64_t)>(base + 0xF54FC0)(owner);
         return true;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return false;

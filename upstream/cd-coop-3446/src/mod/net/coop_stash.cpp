@@ -55,7 +55,7 @@ uint64_t now64() { return GetTickCount64(); }
 bool warehouse_index(uint16_t& wh) {
     const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     // The game's own chain (exe+0xEC03A0): *(*(*(*[exe+0x71C04A0]) + 8) + 0x240) + 0xB2.
-    auto slot = game::read_ptr(base + 0x7245560);
+    auto slot = game::read_ptr(base + 0x724B6F0);
     if (!slot || !*slot) return false;
     auto root = game::read_ptr(*slot);
     if (!root || !*root) return false;
@@ -69,7 +69,7 @@ bool warehouse_index(uint16_t& wh) {
 uint16_t inventory_key(uint16_t index) {
     const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     __try {
-        const uintptr_t row = game::info_row(base + 0x57B410, index);
+        const uintptr_t row = game::info_row(base + 0x57B750, index);
         return row ? *reinterpret_cast<uint16_t*>(row + 8) : 0xFFFF;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return 0xFFFF;
@@ -458,7 +458,7 @@ bool read_name(uint16_t idx, char* out, size_t cap) noexcept {
     const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     out[0] = 0;
     __try {
-        const uintptr_t row = game::info_row(base + 0x3DAF10, idx);
+        const uintptr_t row = game::info_row(base + 0x3DB320, idx);
         if (!row) return false;
         const uintptr_t obj = *reinterpret_cast<uintptr_t*>(row + 0x90);
         if (!obj) return false;

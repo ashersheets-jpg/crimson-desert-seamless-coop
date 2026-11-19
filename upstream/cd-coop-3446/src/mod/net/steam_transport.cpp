@@ -335,7 +335,7 @@ std::vector<SteamFriend> SteamTransport::friends_playing() {
             fail("GetFriendGamePlayed");
             return {};
         }
-        if (!playing || (info.game_id & 0xFFFFFF) != kAppId) continue;
+        if (!playing || (info.game_id & 0x100077F) != kAppId) continue;
         const char* name = nullptr;
         call(name, a.friend_name, a.frn, id);
         out.push_back({id, name ? name : "?"});

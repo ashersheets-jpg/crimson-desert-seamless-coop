@@ -394,7 +394,7 @@ std::atomic<uint64_t> g_death_withheld_at{0};
 // one call of the 5-byte jmp stub exe+0xBA3700, which puts the UI into its "gameover" sub-phase (HUD hidden, menus
 // locked, the game's own death screen). With the stub skipped while we are down in co-op, the notice can go to the
 // client: the character falls and stays down, the UI stays ours. The game's two revive packets stand it up again.
-constexpr uintptr_t kGameOverStub = 0xBDB280;
+constexpr uintptr_t kGameOverStub = 0xBDBCD0;
 constexpr uint8_t kGameOverStubBytes[5] = {0xE9, 0x1B, 0x37, 0x0C, 0x09};  // build 1.0.0.3576
 SafetyHookInline g_gameover;
 std::atomic<bool> g_pose_down{false};

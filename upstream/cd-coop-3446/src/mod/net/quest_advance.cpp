@@ -25,15 +25,15 @@ namespace off = game::build_3663;
 
 // exe+0x1C3F0F0(manager, u32* mission id, ctx, u8 state, changes*): the server queues a mission state change.
 // Called for every mission while a save loads, so the manager is known before anyone needs it.
-constexpr uintptr_t kSetMissionState = 0x1CA3DE0;  // 3549: 0x1C3F0F0
+constexpr uintptr_t kSetMissionState = 0x1CA5A00;  // 3549: 0x1C3F0F0
 constexpr uint8_t kSetMissionStateHead[16] = {0x48, 0x89, 0x5C, 0x24, 0x18, 0x44, 0x88, 0x4C,
                                               0x24, 0x20, 0x48, 0x89, 0x54, 0x24, 0x10, 0x55};
 // exe+0x2B95BE0: the quest advancement routine (quest_advance.h).
-constexpr uintptr_t kAdvance = 0x2BFC3D0;  // 3549: 0x2B95BE0
+constexpr uintptr_t kAdvance = 0x2C002C0;  // 3549: 0x2B95BE0
 constexpr uint8_t kAdvanceHead[16] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x55, 0x56, 0x57,
                                       0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57};
 // MissionTriggerInOutReq's handler (runs on the quest server's thread).
-constexpr uintptr_t kTriggerHandler = 0x2F576B0;  // 3549: 0x2EEE800
+constexpr uintptr_t kTriggerHandler = 0x2F5BC00;  // 3549: 0x2EEE800
 constexpr uint8_t kTriggerHandlerHead[16] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74,
                                              0x24, 0x10, 0x48, 0x89, 0x7C, 0x24, 0x18, 0x4C};
 // The mission static data table, 1.0.0.3663 (2026-11-18, from the game's own getter at exe+0x4FFA10, which the
@@ -41,7 +41,7 @@ constexpr uint8_t kTriggerHandlerHead[16] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48,
 // count, [+0x20] the entries, 0x18 bytes each, entry +0x08 = the info* (null until loaded; the getter then loads
 // it, we only skip it). The older layout (3549: +0x08 count, +0x58 info* per index) is gone; the candidates of
 // 17 Nov (0x7419180 / 0x7419188, from the static initializer) were zero at run time (cs44f).
-constexpr uintptr_t kMissionTable = 0x7248520;
+constexpr uintptr_t kMissionTable = 0x724E6B0;
 constexpr uint32_t kMissionCountOff = 0x28, kMissionEntriesOff = 0x20, kMissionEntrySize = 0x18, kMissionInfoOff = 0x08;
 // The key's offset in the info (3549: +0x08), found at run time from the first key asked for: +0x08 first.
 constexpr uint32_t kMissionKeyOffs[] = {0x08, 0x00, 0x04, 0x0C, 0x10, 0x14, 0x18};
@@ -52,7 +52,7 @@ constexpr uint64_t kRequestMs = 10000;
 // into its index), u64 amount at +0x0B, u8 flag at +0x13 (only echoed in AddSubLevelExperienceAck), takes the game's
 // lock and calls the experience routine exe+0x2EB4180 -> AddSubLevelExperienceAck to our client. Its context: [0] the
 // user, [3] the message. Called here on the quest server's thread with MissionTriggerInOutReq's user.
-constexpr uintptr_t kSubLevelTimerHandler = 0x2F41420;
+constexpr uintptr_t kSubLevelTimerHandler = 0x2F45970;
 constexpr uint8_t kSubLevelTimerHead[16] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x55, 0x56, 0x57,
                                             0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57};
 using SubLevelTimerFn = uint32_t*(__fastcall*)(void* handler, uint32_t* out, int64_t* ctx);
@@ -60,8 +60,8 @@ using SubLevelTimerFn = uint32_t*(__fastcall*)(void* handler, uint32_t* out, int
 // handle*, u32 key) with manager = [[exe+0x71C0610] + 0x50]; the handle: +0x08 the actor, +0x10 u8 found; released by
 // setting +0x00 to exe+0x5AC58E0 and calling exe+0x1618660(handle). The timer handler's "user" is that actor (its key
 // at +0x60, its components at +0x68).
-constexpr uintptr_t kActorLookup = 0x2D78A00, kActorManagerGlobal = 0x72456D8, kHandleRelease = 0x1659380,
-                    kHandleReleaseTag = 0x5B40000;
+constexpr uintptr_t kActorLookup = 0x2D7D490, kActorManagerGlobal = 0x724B868, kHandleRelease = 0x165AF00,
+                    kHandleReleaseTag = 0x5B45300;
 using ActorLookupFn = void*(__fastcall*)(void* manager, void* handle, uint32_t key);
 using HandleReleaseFn = void(__fastcall*)(void* handle);
 struct XpGrant {

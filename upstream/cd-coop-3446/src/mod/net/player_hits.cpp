@@ -48,7 +48,7 @@ constexpr size_t kMaxAtaSize = 0x300;  // so a PlayerHit with its templates stay
 // own player is proto::kSelfMarker and the attacker is already its copy key.
 constexpr size_t kHitBaseSize = 16;
 constexpr uint8_t kHitHasTemplates = 1, kHitStaggers = 2;
-constexpr uint32_t kStatHP = 0x000F4240;
+constexpr uint32_t kStatHP = 0x000F4430;
 constexpr uint32_t kPuppetPlayer = 0xA010F001;
 constexpr size_t kTargetEntry = wire::kFrameEventTargetEntry;     // DoFrameEventReq target entry size
 constexpr size_t kAccessor = wire::kFrameEventAccessor;      // FrameEventAccessor: u8 type | ...

@@ -550,9 +550,9 @@ void dev_dump_item_move() {
     const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     uintptr_t table = 0;
     uint32_t count = 0;
-    if (!game::safe_read(base + 0x7246350, &table, sizeof table) || !table ||
+    if (!game::safe_read(base + 0x724C4F0, &table, sizeof table) || !table ||
         !game::safe_read(table + 8, &count, sizeof count)) {
-        log::warn("Dev script: dumpitemmove: the table [exe+0x7246350] is not readable");
+        log::warn("Dev script: dumpitemmove: the table [exe+0x724C4F0] is not readable");
         return;
     }
     uintptr_t defs = 0;
@@ -561,8 +561,8 @@ void dev_dump_item_move() {
     // The request handlers' "disabled" byte (+0x21: 1 = the server answers 0 and does nothing, as for the cheats):
     // 3111 MoveItemInventoryToOtherInventoryReq (exe+0x6EB9870), MoveItemInventoryToVehicleReq (exe+0x6EB9900),
     // AddMinusItemReq (exe+0x6EBA5F0, a cheat: expected 1).
-    for (const auto& [name, at] : {std::pair<const char*, uintptr_t>{"MoveItemInventoryToOtherInventoryReq", 0x6F3DB90},
-                                   {"MoveItemInventoryToVehicleReq", 0x6F3DC20}, {"AddMinusItemReq", 0x6F3E910}}) {
+    for (const auto& [name, at] : {std::pair<const char*, uintptr_t>{"MoveItemInventoryToOtherInventoryReq", 0x6F43B90},
+                                   {"MoveItemInventoryToVehicleReq", 0x6F43C20}, {"AddMinusItemReq", 0x6F44910}}) {
         uint8_t off = 0xFF;
         game::safe_read(base + at + 0x21, &off, 1);
         log::info("Dev script: dumpitemmove: handler {} +0x21 = {}", name, off);

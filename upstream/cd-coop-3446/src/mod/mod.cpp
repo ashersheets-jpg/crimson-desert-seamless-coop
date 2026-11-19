@@ -1938,7 +1938,7 @@ void combat_test_loop() {
                 log::warn("Combat test: no enemy with hit points moving within 15 m (hit one first)");
             } else if (f6) {
                 std::vector<uint8_t> b(16);
-                const uint32_t hp_stat = 0x000F4240;
+                const uint32_t hp_stat = 0x000F4430;
                 const int64_t delta = -5000;  // -5 HP (x1000)
                 std::memcpy(b.data(), &npc->key, 4);
                 std::memcpy(b.data() + 4, &hp_stat, 4);

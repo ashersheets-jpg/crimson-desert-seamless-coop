@@ -122,7 +122,7 @@ constexpr uint16_t kOpVaryHPAck = 2608;
 constexpr uint16_t kOpNotifyHandleDeadAck = 2316;
 constexpr uint16_t kOpCreateOrChangeSelfDestinationReq = 2285;  // Co-op+: vec3 | u8 (our map waypoint)
 constexpr uint16_t kOpVaryStatByAccInputReq = 2284;
-constexpr uint32_t kStatHP = 0x000F4240;
+constexpr uint32_t kStatHP = 0x000F4430;
 
 // World actors with hit points, from their loads and HP messages.
 struct Enemy {

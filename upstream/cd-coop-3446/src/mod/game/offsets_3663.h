@@ -150,11 +150,11 @@ inline constexpr uint32_t kMoveController_WallUp = 0x178;  // 3576: 0x120 (the m
 inline constexpr uint32_t kPeTimestamp = 0x6AF5D198;  // 3576:0x6AED2E85
 inline constexpr uintptr_t kImageBase = 0x140000000;  // fixed, no ASLR
 inline constexpr uintptr_t kImageSize = 0x144E9000;  // 3576:0x13CC4000
-inline constexpr uintptr_t kWorldSystemSlot = 0x72451C0;  // 3549:0x71BDEF0, 8/8 code references agree
-inline constexpr uintptr_t kCameraSlot = 0x71602A8;  // 3549:0x70DA028, 2/2
-inline constexpr uintptr_t kStaticPlayerPos = 0x7253E60;  // 3549:0x71CD0B0, 2/2
-inline constexpr uintptr_t kChunkOrigin = 0x7231330;  // 3549:0x71AA150, 8/8
-inline constexpr uintptr_t kCutscenePlaying = 0x7160116;  // 3549:0x70D9F14, 2/2
+inline constexpr uintptr_t kWorldSystemSlot = 0x724B350;  // 3549:0x71BDEF0, 8/8 code references agree
+inline constexpr uintptr_t kCameraSlot = 0x7166368;  // 3549:0x70DA028, 2/2
+inline constexpr uintptr_t kStaticPlayerPos = 0x725A040;  // 3549:0x71CD0B0, 2/2
+inline constexpr uintptr_t kChunkOrigin = 0x7237470;  // 3549:0x71AA150, 8/8
+inline constexpr uintptr_t kCutscenePlaying = 0x7166254;  // 3549:0x70D9F14, 2/2
 // Co-op+ (2026-11-16, cs39e: diffs of every writable section, ~1 a second: 21 in play, 2 in the menu, 12 in Photo
 // Mode (proven by a shot), 2 in the menu, 35 in play): kPhotoModeState is 0x40 in all 59 other samples and 0x20 in
 // all 12 photo ones; kPhotoModeCheck has bit 7 set (0xC1) elsewhere and clear (0x41) in photo mode. Both must agree.
@@ -163,51 +163,51 @@ inline constexpr uintptr_t kCutscenePlaying = 0x7160116;  // 3549:0x70D9F14, 2/2
 // 0x40; 0x75C5EF3 flickers). What switched exactly at photo-mode entry and exit, by pad here AND by mouse in
 // cs39e: the 3 bytes at +4..+6 of these two slots, 19 7B 9E in play / menu, 77 0A CB in photo mode (an id, not
 // a timer). Photo mode = both read 0xCB0A77 (u32 & 0xFFFFFF, little-endian).
-inline constexpr uintptr_t kPhotoModeIdA = 0x72AF864;
-inline constexpr uintptr_t kPhotoModeIdB = 0x72AF898;
-inline constexpr uint32_t kPhotoModeId = 0xCB0A77;
-inline constexpr uintptr_t kFieldTimeClient = 0x6F31C78;  // 3549:0x6EAB998, 6/6
-inline constexpr uintptr_t kMiniGameRoot = 0x7245218;  // 3549:0x71BDF48, 8/8
-inline constexpr uintptr_t kClientClockGlobal = 0x71600AD;  // 3549:0x70D9E3D, 8/8 cmp sites
-inline constexpr uintptr_t kClientFrameClockMs = 0x71600E1;  // = flag + 0x34
-inline constexpr uintptr_t kClientFrameClockUs = 0x71600E9;  // = flag + 0x3C
-inline constexpr uintptr_t kClientClockBias = 0x7245468;  // = kWorldSystemSlot + 0x2A8 (8/8 references agree)
+inline constexpr uintptr_t kPhotoModeIdA = 0x72B5A5C;
+inline constexpr uintptr_t kPhotoModeIdB = 0x72B5A50;
+inline constexpr uint32_t kPhotoModeId = 0xCB14C7;
+inline constexpr uintptr_t kFieldTimeClient = 0x6F37C78;  // 3549:0x6EAB998, 6/6
+inline constexpr uintptr_t kMiniGameRoot = 0x724B3A8;  // 3549:0x71BDF48, 8/8
+inline constexpr uintptr_t kClientClockGlobal = 0x716616D;  // 3549:0x70D9E3D, 8/8 cmp sites
+inline constexpr uintptr_t kClientFrameClockMs = 0x71661A1;  // = flag + 0x34
+inline constexpr uintptr_t kClientFrameClockUs = 0x71661A9;  // = flag + 0x3C
+inline constexpr uintptr_t kClientClockBias = 0x724B5F8;  // = kWorldSystemSlot + 0x2A8 (8/8 references agree)
 // Co-op+ low latency (2026-11-06): the client's game clock in ms, one u64. Found live with the dev clockscan
 // (dev_memscan.h): it runs with the wall clock and stays ~54 ms ahead of the newest MoveActorReq stamp (the game stamps
 // its Reqs that much behind it), unlike flag+0x34 above (0.7 s off). game_clock.cpp reads it on this build.
-inline constexpr uintptr_t kClientClockMs = 0x72B7DE8;
-inline constexpr uintptr_t kMinimapIconRoot = 0x7245558;  // = kWorldSystemSlot + 0x398
-inline constexpr uintptr_t kMinimapIconRootAlt = 0x7245560;  // = kWorldSystemSlot + 0x3A0
-inline constexpr uintptr_t kStatusFlagsChanged = 0x715810;  // 3549:0x6E99D0, head matches
-inline constexpr uintptr_t kVtNormalMovementMethod = 0x59D6970;  // 3549:0x5958C10 (= RTTI); slot 2 = kMovementMethodStep
-inline constexpr uintptr_t kMovementMethodStep = 0xBF51B0;  // 3549:0xBBD5F0, head matches
-inline constexpr uintptr_t kVtClientActorManager = 0x59C2760;  // 3549:0x5944B38 (= RTTI)
-inline constexpr uintptr_t kVtControlledActor = 0x5990BF0;  // 3549:0x59127C8 (= RTTI ClientChildOnlyInGameActor)
-inline constexpr uintptr_t kVtCharacterControl = 0x59C1660;  // 3549:0x59438F0 (= RTTI)
-inline constexpr uintptr_t kVtStatusComponent = 0x5998B60;  // 3549:0x591A710 (= RTTI)
-inline constexpr uintptr_t kVtWallUpMovementMethod = 0x59A2418;  // 3549:0x5923FA8 (= RTTI)
-inline constexpr uintptr_t kActionLayerAdvance = 0x21BD690;  // 3549:0x214EC90, head matches
-inline constexpr uintptr_t kActionLayersAdvance = 0x23A27C0;  // 3549:0x2331320; one of 227 identical template copies: the 64th in both builds (the whole block moved +0xD50, its callees too), 0x670 gap to kPending kept
-inline constexpr uintptr_t kMinimapIconDecide = 0xA1A16D;  // 3549:0x9EA31D
-inline constexpr uintptr_t kVtClientEquipSlotComponent = 0x59C90F8;  // 3549:0x594B388 (= RTTI)
+inline constexpr uintptr_t kClientClockMs = 0x72BE028;
+inline constexpr uintptr_t kMinimapIconRoot = 0x724B6E8;  // = kWorldSystemSlot + 0x398
+inline constexpr uintptr_t kMinimapIconRootAlt = 0x724B6F0;  // = kWorldSystemSlot + 0x3A0
+inline constexpr uintptr_t kStatusFlagsChanged = 0x715BA0;  // 3549:0x6E99D0, head matches
+inline constexpr uintptr_t kVtNormalMovementMethod = 0x59DBAC0;  // 3549:0x5958C10 (= RTTI); slot 2 = kMovementMethodStep
+inline constexpr uintptr_t kMovementMethodStep = 0xBF5C00;  // 3549:0xBBD5F0, head matches
+inline constexpr uintptr_t kVtClientActorManager = 0x59C7A08;  // 3549:0x5944B38 (= RTTI)
+inline constexpr uintptr_t kVtControlledActor = 0x59961D0;  // 3549:0x59127C8 (= RTTI ClientChildOnlyInGameActor)
+inline constexpr uintptr_t kVtCharacterControl = 0x59C6748;  // 3549:0x59438F0 (= RTTI)
+inline constexpr uintptr_t kVtStatusComponent = 0x599DC40;  // 3549:0x591A710 (= RTTI)
+inline constexpr uintptr_t kVtWallUpMovementMethod = 0x59A7508;  // 3549:0x5923FA8 (= RTTI)
+inline constexpr uintptr_t kActionLayerAdvance = 0x21BF2B0;  // 3549:0x214EC90, head matches
+inline constexpr uintptr_t kActionLayersAdvance = 0x23A4A90;  // 3549:0x2331320; one of 227 identical template copies: the 64th in both builds (the whole block moved +0xD50, its callees too), 0x670 gap to kPending kept
+inline constexpr uintptr_t kMinimapIconDecide = 0xA1A9ED;  // 3549:0x9EA31D
+inline constexpr uintptr_t kVtClientEquipSlotComponent = 0x59CE1D8;  // 3549:0x594B388 (= RTTI)
 // 3663: the item table is { +0x28 count, +0x20 -> entries of 24 bytes, the record pointer at entry + 8 }
 // (3576: { +0x08 count, +0x58 -> record pointers }); the getter's load is `mov rcx,[rip+d]` (was `mov rbx`).
 inline constexpr uint32_t kItemInfoTable_Count = 0x28;
 inline constexpr uint32_t kItemInfoTable_Records = 0x20;
 inline constexpr uint32_t kItemInfoTable_Stride = 24, kItemInfoTable_RecordAt = 8;
 inline constexpr uint8_t kItemInfoTableLoadReg = 0x0D;  // the ModRM byte of the load (rcx; rbx was 0x1D)
-inline constexpr uintptr_t kItemInfoTableSlot = 0x7246370;  // 3549:0x71BEE70, decoded from the load below
-inline constexpr uintptr_t kItemInfoTableLoad = 0x3DAF18;  // 3549:0x3DD5D5
-inline constexpr uintptr_t kTrocInstancesBegin = 0x6F14E10;  // 3549:0x6E8ED10, same span
-inline constexpr uintptr_t kTrocInstancesEnd = 0x6F487B8;  // last + 8
-inline constexpr uintptr_t kGameplayInput = 0x7226558;  // 3549:0x719F558, u8
-inline constexpr uintptr_t kUiModePush = 0xF5CA77;  // 3549:0xF21B07; its movzx reads kGameplayInput
-inline constexpr uintptr_t kErrorLogger = 0x163D960;  // 3549:0x15FC450, head matches
-inline constexpr uintptr_t kClientPostPacket = 0x3A9960;  // 3549:0x3A6030, head matches
-inline constexpr uintptr_t kClientOnRecvPacket = 0x3A9CF0;  // 3549:0x3A63C0, head matches
-inline constexpr uintptr_t kPointClimbEnter = 0x78D520;  // 3549:0x760A10, head matches
-inline constexpr uintptr_t kRideOnEnter = 0x77C3A0;  // 3549:0x74FBB0, head matches
-inline constexpr uintptr_t kRideOffEnter = 0x77D370;  // 3549:0x750B80, head matches
+inline constexpr uintptr_t kItemInfoTableSlot = 0x724C510;  // 3549:0x71BEE70, decoded from the load below
+inline constexpr uintptr_t kItemInfoTableLoad = 0x3DB328;  // 3549:0x3DD5D5
+inline constexpr uintptr_t kTrocInstancesBegin = 0x6F1AE10;  // 3549:0x6E8ED10, same span
+inline constexpr uintptr_t kTrocInstancesEnd = 0x6F4E7B8;  // last + 8
+inline constexpr uintptr_t kGameplayInput = 0x722C698;  // 3549:0x719F558, u8
+inline constexpr uintptr_t kUiModePush = 0xF5D1E7;  // 3549:0xF21B07; its movzx reads kGameplayInput
+inline constexpr uintptr_t kErrorLogger = 0x163F4E0;  // 3549:0x15FC450, head matches
+inline constexpr uintptr_t kClientPostPacket = 0x3A9D70;  // 3549:0x3A6030, head matches
+inline constexpr uintptr_t kClientOnRecvPacket = 0x3AA100;  // 3549:0x3A63C0, head matches
+inline constexpr uintptr_t kPointClimbEnter = 0x78DA40;  // 3549:0x760A10, head matches
+inline constexpr uintptr_t kRideOnEnter = 0x77C8C0;  // 3549:0x74FBB0, head matches
+inline constexpr uintptr_t kRideOffEnter = 0x77D890;  // 3549:0x750B80, head matches
 inline constexpr uint8_t kMinimapIconDecideHead[] = {0x80, 0x7C, 0x24, 0x48, 0x00, 0x75, 0x6F, 0x8B, 0x05, 0x0A, 0x5A, 0x7B, 0x06, 0x41, 0x89, 0x06};  // its mov eax,[rip+d] moved with the data
 
 }  // namespace cdmp::game::build_3663

@@ -55,7 +55,7 @@ constexpr uint8_t kSpawnReasonCheat = 33;
 // Co-op+ shared XP: a normal kill of our hidden enemy (guest_hits.cpp's finishing blow: HP down, then our collision).
 constexpr uint16_t kOpVaryStatCheatReq = 2136;      // u32 key | u32 stat | u8 mode | i32 delta | u8 | u8
 constexpr uint16_t kOpAttackByCollisionReq = 2315;  // u32 victim | u32 attacker | u32 0 | vec3 point | vec3 dir | u32
-constexpr uint32_t kStatHP = 0x000F4240;
+constexpr uint32_t kStatHP = 0x000F4430;
 constexpr uint32_t kCollisionProjectile = 0xF2EE2678;
 constexpr uint16_t kOpAddExperienceAck = 2404, kOpAddSubLevelExperienceAck = 2454;
 constexpr float kSharedXpRange = 400.0f;

@@ -37,10 +37,10 @@ constexpr uint16_t kOpDoFrameEventReq = 2460;
 // CommonTargetActorComponent's vtable (and ServerTargetActorComponent's), head unchanged; IsTargetable keeps
 // its 0x30B0 gap below it, head unchanged, 52 callers, the only one there reading actor+0x96 ("local
 // character"); CheckAIBattleType is slot 1 of AICondition_CheckAIBattleType's vtable (0x5C76508).
-constexpr uintptr_t kIsTargetable = 0x245AB80;    // (target comp, actor* candidate, u8 mode); 3549: 0x23E8580
+constexpr uintptr_t kIsTargetable = 0x245CE50;    // (target comp, actor* candidate, u8 mode); 3549: 0x23E8580
 constexpr uint8_t kIsTargetableHead[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74,
                                          0x24, 0x18, 0x48, 0x89, 0x7C, 0x24, 0x20, 0x55};
-constexpr uintptr_t kSetCurrentTarget = 0x245E3D0;  // (comp, int* res, u32 target, u64* seq, ...); 3479: 0x23E84C0
+constexpr uintptr_t kSetCurrentTarget = 0x24606A0;  // (comp, int* res, u32 target, u64* seq, ...); 3479: 0x23E84C0
 constexpr uint8_t kSetCurrentTargetHead[] = {0x48, 0x8B, 0xC4, 0x4C, 0x89, 0x48, 0x20, 0x44,
                                              0x89, 0x40, 0x18, 0x48, 0x89, 0x50, 0x10, 0x55};
 
@@ -58,7 +58,7 @@ constexpr uint8_t kSetCurrentTargetHead[] = {0x48, 0x8B, 0xC4, 0x4C, 0x89, 0x48,
 // (vtable 0x5C7CAD0), not of CheckAIBattleType (0x5C7CA60, slot 1 0x24C1D80): both entries are a bare 5-byte jmp
 // into the protection, so a head match proves nothing. Now taken from the RTTI: AICondition_CheckAIBattleType
 // vtable 0x5C7CF78, slot 1 (build/port3576/hist.py checks every archived build).
-constexpr uintptr_t kCheckAIBattleType = 0x25348D0;  // 3479: 0x24BE2F0 (RTTI-checked on 3479 and 3576)
+constexpr uintptr_t kCheckAIBattleType = 0x2536D60;  // 3479: 0x24BE2F0 (RTTI-checked on 3479 and 3576)
 constexpr uint8_t kCheckAIBattleTypeHead[] = {0xE9, 0x7B, 0x19, 0xFF, 0x0A};
 
 SafetyHookInline g_is_targetable;
@@ -71,7 +71,7 @@ constexpr uint64_t kTurnMs = 4000;  // how long a pair of enemies keeps its turn
 // after writing the tag exe+0x5AC58E0 at out+0 (as the game does). With the old offsets the copy was never seen
 // ("copy 0 ... others 1376", played test xs3): the host's enemies targeted the guest's copy but never attacked it.
 constexpr uintptr_t kCtxTarget = 0x268, kCtxTargetValid = 0x270;
-constexpr uintptr_t kHandleToActor = 0x19943A0, kHandleRelease = 0x1659380, kHandleReleaseTag = 0x5B40000;
+constexpr uintptr_t kHandleToActor = 0x1996230, kHandleRelease = 0x165AF00, kHandleReleaseTag = 0x5B45300;
 using HandleToActorFn = void*(__fastcall*)(uintptr_t handle, void* out);
 using HandleReleaseFn = void(__fastcall*)(void* out);
 uintptr_t exe_base() {
