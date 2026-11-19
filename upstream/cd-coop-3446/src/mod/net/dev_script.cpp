@@ -591,10 +591,12 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
         if (kind == "tpanimal") {  // tpanimal [radius] [hex variant]: 1 m beside the nearest living wild animal (the
             st.kind = Step::TpActor;  // catch rule's test, 2026-11-18: a partridge is variant F454C)
             st.addr = 0xFFFFFFFDu;
-            float r = 40.0f;
+            float r = 40.0f, minhp = 0.0f;  // [min hp]: cs65b took a fly (5 HP); the catchable animals are bigger
             std::string v;
-            in >> r >> v;
+            in >> r >> v >> minhp;
             st.to[0] = r > 0 ? r : 40.0f;
+            st.to[1] = minhp > 0 ? minhp : 0.0f;
+            if (v == "0") v.clear();
             if (!v.empty()) st.variant = static_cast<uint32_t>(std::strtoul(v.c_str(), nullptr, 16));
             steps.push_back(std::move(st));
             continue;
@@ -782,7 +784,9 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                         // have 40+, tpnear's line), whatever variant was asked.
                         const bool critter = r.variant == 0 && r.hp_max > 0.0f && r.hp_max < 40.0f;
                         const char* name = critter ? "critter (variant unknown)" : hunt_animal_name(r.variant);
-                        if (!name || r.hp <= 0.0f || (!critter && st.variant && r.variant != st.variant)) continue;
+                        if (!name || r.hp <= 0.0f || r.hp_max < st.to[1] ||
+                            (!critter && st.variant && r.variant != st.variant))
+                            continue;
                         key = r.key;
                         log::info("Dev script: tpanimal: 0x{:08X} {} variant 0x{:08X}, {:.1f} m, hp {:.0f}/{:.0f}", r.key, name,
                                   r.variant, r.d, r.hp, r.hp_max);
