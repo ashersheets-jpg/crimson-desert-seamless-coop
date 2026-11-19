@@ -8,7 +8,9 @@ from live import BASE, rd, q
 
 # Per game build, from the running game's PE timestamp (2026-11-06: 1.0.0.3576 moved both; 3527 and 3549 share theirs).
 _BUILDS = {0x6AED2E85: (0x71CF140, 0x70DC130),  # 3576 (build/port3576/map_3576.json)
-           0x6AF5D198: (0x7253E60, 0x71602A8)}  # 3663 (tools/native-port/p63.py: 2 of 2 code references each)
+           0x6AF5D198: (0x7253E60, 0x71602A8),  # 3663 (tools/native-port/p63.py: 2 of 2 code references each)
+           0x6AFDC0CF: (0x725A040, 0x7166368)}  # 3732 (build/port3732 fmap.data + portmap.data: 2 of 2 each; pp37 chest
+                                                 # walked blind on 3663's values: "at (0, 0, 0)", stuck 41 s)
 _pe = struct.unpack('<I', rd(BASE + struct.unpack('<I', rd(BASE + 0x3C, 4))[0] + 8, 4))[0]
 STATIC_POS, CAMERA_SLOT = _BUILDS.get(_pe, (0x71CD0B0, 0x70DA028))  # XY floats (+0), Z (+8); 3527/3549 (3479: 0x71C5DF0)
 CAMERA_BLOCK, CAM_FWD = 0x430, 0x90
@@ -42,6 +44,13 @@ def focus():
     return h
 
 
+def shot(h, path):
+    from PIL import ImageGrab
+    import ctypes.wintypes as wt
+    r = wt.RECT(); u32.GetWindowRect(h, ctypes.byref(r))
+    ImageGrab.grab(bbox=(r.left, r.top, r.right, r.bottom), all_screens=True).save(path)
+
+
 def key(vk, down):
     u32.keybd_event(vk, u32.MapVirtualKeyW(vk, 0), 0 if down else KEYUP, 0)
 
@@ -68,7 +77,11 @@ def aim(tx, tz, gain):
     for _ in range(4):
         x, _, z = pos()
         want = math.degrees(math.atan2(tx - x, tz - z))
-        err = wrap(want - cam_yaw())
+        yaw = cam_yaw()
+        if yaw is None:  # the camera block is not readable this instant (tc41/tc42: a menu / duel camera): try again
+            time.sleep(0.3)
+            continue
+        err = wrap(want - yaw)
         if abs(err) < 4:
             return
         turn(err * gain); time.sleep(0.25)
@@ -80,6 +93,10 @@ def main():
     stop = float(args[2]) if len(args) > 2 else 8.0
     sprint = '--walk' not in sys.argv
     h = focus()
+    for _ in range(20):  # wait up to ~6 s for a readable camera before calibrating
+        if cam_yaw() is not None:
+            break
+        time.sleep(0.3)
     gain = calibrate()
     print('gain %.2f mouse units / degree' % gain, flush=True)
     stuck = 0
@@ -108,6 +125,45 @@ def main():
             stuck = 0
         if it % 10 == 0:
             print('at (%.0f, %.0f, %.0f) %.0f m left' % (x1, y1, z1, math.hypot(tx - x1, tz - z1)), flush=True)
+    # --face=X,Z (2026-11-08): then turn the camera toward that point (a stall, an NPC) without moving
+    face = [a for a in sys.argv[1:] if a.startswith('--face=')]
+    if face:
+        fx, fz = (float(v) for v in face[0][7:].split(','))
+        aim(fx, fz, gain); time.sleep(0.3); aim(fx, fz, gain)
+        x, _, z = pos()
+        print('facing (%.1f, %.1f) from (%.1f, %.1f), camera yaw %s' % (fx, fz, x, z, cam_yaw()), flush=True)
+        # --sweep=FROM,TO,STEP,VK,PREFIX (2026-11-08): turn the camera FROM..TO degrees around that facing in STEP
+        # steps; at each, tap the key (virtual-key code, e.g. 82 = R) and save a window shot shots/PREFIX-<n>.png
+        sweep = [a for a in sys.argv[1:] if a.startswith('--sweep=')]
+        if sweep:
+            parts = sweep[0][8:].split(',')
+            lo, hi, st, vk, prefix = parts[:5]
+            hold = float(parts[5]) / 1000 if len(parts) > 5 else 0.15
+            lo, hi, st, vk = float(lo), float(hi), float(st), int(vk)
+            base = math.degrees(math.atan2(fx - x, fz - z))
+            n, off = 0, lo
+            while off <= hi + 0.01:
+                a = math.radians(base + off)
+                aim(x + 3 * math.sin(a), z + 3 * math.cos(a), gain)
+                time.sleep(0.4)
+                key(vk, True); time.sleep(hold); key(vk, False)
+                time.sleep(0.5)
+                shot(h, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'shots',
+                                     '%s-%02da.png' % (prefix, n)))
+                time.sleep(1.5)
+                shot(h, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'shots',
+                                     '%s-%02d.png' % (prefix, n)))
+                print('sweep %d: yaw %+.0f, key %d' % (n, off, vk), flush=True)
+                n += 1; off += st
+                # --stopfile=PATH (2026-11-09): stop sweeping once the game wrote it (an interaction opened); 3 more shots
+                stop = [x[11:] for x in sys.argv[1:] if x.startswith('--stopfile=')] or                     [r'D:\SteamLibrary\steamapps\common\Crimson Desert\bin64\shop_twin_open.flag']
+                if os.path.exists(stop[0]):
+                    for k in range(3):
+                        time.sleep(2.0)
+                        shot(h, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'shots',
+                                             '%s-open%d.png' % (prefix, k)))
+                    print('stopfile seen: stopped after sweep %d' % (n - 1), flush=True)
+                    break
 
 
 if __name__ == '__main__':

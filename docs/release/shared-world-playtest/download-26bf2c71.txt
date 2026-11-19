@@ -1,0 +1,14 @@
+**Update: shared world playtest 0.1.0-alpha+26bf2c71, for game 1.0.0.3732 (today's game update)**
+Use this instead of 62f49d19, which switched itself off after the game update; **both players need the same build**.
+
+- **Ported to game version 1.0.0.3732.** The game updated overnight; this build is made for the new version.
+- **Catching small animals works for the joined player** (<@224953308010381312>, from your 18 Nov report: the host's game kept running the animal, so the catch never finished). Tested with two copies on one PC: a partridge caught and still carried 40 s later; insects already worked.
+- **A host crash while loading is guarded** (Borque's host log: the game's own "entered or left a trigger area" code read something missing while the host's world loaded with the joined player still in it). Not reproduced here; the guard is in place.
+- Also new since 62f49d19: the host sees the joined player on its horse, the dye vendor and goblin trader for the joined player, and horses / carts the joined player rides run on their game (please try taming and driving: not tested on those yet).
+
+Tested with two copies of the game on one PC (Nvidia): the full checklist on 1.0.0.3732.
+
+- `...26bf2c71-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tell us in <#1567319198206525450> how it goes, with the report zip from **both** players (close the game, run **Diagnose Co-op+.cmd**).
