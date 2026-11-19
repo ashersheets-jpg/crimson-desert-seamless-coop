@@ -52,9 +52,9 @@ struct Body {
 // name, finds it through 0x19AC5F0 in [mgr+8], else "sequencer/binary__" + the reader), the reader 0x19A6760 ([mgr+0x90]
 // vf40), the container lookup 0x19AC460 (users +0x68, lock vf40 / vf18 / vf20), the release 0x3D7FA0 (refcount +0x10,
 // atomic +0x14, vf0(1)); ranges from .pdata (the release: the whole function, its first unwind entry is chained).
-constexpr Body kLoader{0x1A0D750, 0x1A0D9CD, 0xC7659132BD47D6DAull};  /* 3663: the same 154 instructions as 3576 0x19A8150 (fnv 0xACFA1300C77A2A02) */  // 2976 {0x1864140, 0x18643A8}
-constexpr Body kReader{0x1A0D9D0, 0x1A0E40E, 0xBF86C3E6268BDD12ull};  /* 3663: the same 643 instructions (3576 fnv 0x1841B8E73754BC97) */  // 2976 {0x18643B0, 0x1864CD8}
-constexpr Body kLookup{0x1A136D0, 0x1A13859, 0xD35D03A474EEDE22ull};  /* 3663: the same 124 instructions (3576 fnv 0x025B68BF2552A266) */  // 2976 {0x186A810, 0x186A999}
+constexpr Body kLoader{0x1A0D750, 0x1A0D9CD, 0xEC85DF2ECF441D62ull};  /* 3732: the same code (3663 fnv 0xC7659132BD47D6DA); 3663: the same 154 instructions as 3576 0x19A8150 (fnv 0xACFA1300C77A2A02) */  // 2976 {0x1864140, 0x18643A8}
+constexpr Body kReader{0x1A0D9D0, 0x1A0E40E, 0x6A5CAA67B9BB12CCull};  /* 3732: the same code (3663 fnv 0xBF86C3E6268BDD12); 3663: the same 643 instructions (3576 fnv 0x1841B8E73754BC97) */  // 2976 {0x18643B0, 0x1864CD8}
+constexpr Body kLookup{0x1A136D0, 0x1A13859, 0xF3BD9AA017A1D44Eull};  /* 3732: the same code (3663 fnv 0xD35D03A474EEDE22); 3663: the same 124 instructions (3576 fnv 0x025B68BF2552A266) */  // 2976 {0x186A810, 0x186A999}
 constexpr Body kRelease{0x3DB890, 0x3DB8EC, 0x9F799744CF2F1875ull};  // 2976 {0x38AD90, 0x38ADEC}
 constexpr uintptr_t kNodeLookupRva = 0x1A12EE0;  // 3576 (2976 0x1869D70; reads [0x70DBFA0]+8)
 constexpr uint8_t kNodeLookupBytes[] = {0x48, 0x89, 0x54, 0x24, 0x10, 0x48, 0x89, 0x4C,

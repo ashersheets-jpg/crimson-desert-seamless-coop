@@ -63,7 +63,7 @@ uint32_t ridden_by(uint32_t mount_key) noexcept {
 // The catch rule's table (ai_handoff_note_catch): (NPC key << 32) | catcher key, and when it was noted (ms).
 // Borque 18 Nov (host log): interactions 0xF42BE / 0xF42CD on small animals, accepted for user 2, the animal's AI
 // still on the host 1-1.5 s later.
-constexpr uint32_t kCatchInteractions[] = {0xF5DFD, 0xF44BD};
+constexpr uint32_t kCatchInteractions[] = {0xF42BE, 0xF42CD};
 constexpr uint64_t kCatchMs = 30000;
 std::array<std::atomic<uint64_t>, kRides> g_catches{}, g_catch_ms{};
 std::atomic<uint64_t> c_catch_noted{0}, c_catch_out{0}, c_catch_full{0};

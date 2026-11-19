@@ -833,7 +833,7 @@ int* __fastcall worker_detour(uintptr_t self, int* err, uint32_t item, uint16_t 
         if (e != 0) {  // which of the game's error constants it is (exe+0x7120000..0x7160000), for the decomp
             std::string where;
             std::vector<int> block(0x1000 / 4);
-            for (uintptr_t at = base + 0x7120000; at < base + 0x71660D0; at += 0x1000) {
+            for (uintptr_t at = base + 0x7126000; at < base + 0x7166000; at += 0x1000) {
                 if (!game::fast_read(at, block.data(), 0x1000)) continue;
                 for (size_t i = 0; i < block.size(); ++i) {
                     if (block[i] == e) where += std::format(" exe+0x{:X}", at + i * 4 - base);
@@ -891,7 +891,7 @@ void on_node(SafetyHookContext& c) {
 void on_lookup(SafetyHookContext& c) {
     const uintptr_t actor = c.rcx;
     // Only the shop interaction or a target with dynamic entries (NPC AI lookups flood otherwise).
-    if (rd<uint32_t>(c.r8) != 0x000F4511 && rd<uint32_t>(rd<uintptr_t>(rd<uintptr_t>(actor + 0x68) + 0x98) + 0x98) == 0) {
+    if (rd<uint32_t>(c.r8) != 0x000F4321 && rd<uint32_t>(rd<uintptr_t>(rd<uintptr_t>(actor + 0x68) + 0x98) + 0x98) == 0) {
         return;
     }
     if (g_lookup_left.fetch_sub(1) <= 0) return;
