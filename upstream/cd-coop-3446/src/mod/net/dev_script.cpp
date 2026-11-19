@@ -777,8 +777,12 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                     std::optional<proto::Vec3> me;
                     int loaded = 0;
                     for (const NpcRow& r : npcs_near(st.to[0], 0.5f, me, loaded)) {
-                        const char* name = hunt_animal_name(r.variant);
-                        if (!name || r.hp <= 0.0f || (st.variant && r.variant != st.variant)) continue;
+                        // cs65a (2026-11-18): on the guest the host server's batched records leave most variants
+                        // unknown (0, npcs_near); a living NPC of unknown variant under 40 HP is a critter then (people
+                        // have 40+, tpnear's line), whatever variant was asked.
+                        const bool critter = r.variant == 0 && r.hp_max > 0.0f && r.hp_max < 40.0f;
+                        const char* name = critter ? "critter (variant unknown)" : hunt_animal_name(r.variant);
+                        if (!name || r.hp <= 0.0f || (!critter && st.variant && r.variant != st.variant)) continue;
                         key = r.key;
                         log::info("Dev script: tpanimal: 0x{:08X} {} variant 0x{:08X}, {:.1f} m, hp {:.0f}/{:.0f}", r.key, name,
                                   r.variant, r.d, r.hp, r.hp_max);
