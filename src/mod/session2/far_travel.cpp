@@ -22,7 +22,7 @@
 namespace cdmp::session2 {
 namespace {
 
-constexpr uintptr_t kFieldInfoGetter = 0x57B290;  // 3663: (const u16* index) -> record; FieldInfoKey = u32 [record+8]
+constexpr uintptr_t kFieldInfoGetter = 0x57B5D0;  // 3663: (const u16* index) -> record; FieldInfoKey = u32 [record+8]
 constexpr uintptr_t kUserMainCharacter = 0xD0, kActorComponents = 0x68, kComponentsTransformSync = 0x1A0,
                     kTsFieldIndex = 0x28, kRecordFieldInfoKey = 0x08;
 

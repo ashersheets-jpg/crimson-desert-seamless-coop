@@ -35,9 +35,9 @@ using cfl::Skip;
 // moved). cs46a: 0x71600F0 is written once a frame by exe+0xC1668D (u64 us, +dt*1e6); 0x71600E8 is not written in
 // 30 s (the base); 0x7245468 = the world system slot 0x72451C0 + 0x2A8 as in 2976 (clock_push_logic.h). The
 // summary's offset histogram (our stamp vs the real Acks') checks them in a live run.
-constexpr uintptr_t kClockBase = 0x71600E8;
-constexpr uintptr_t kClockFrac = 0x71600F0;
-constexpr uintptr_t kClockBias = 0x7245468;
+constexpr uintptr_t kClockBase = 0x71661A0;
+constexpr uintptr_t kClockFrac = 0x71661B0;
+constexpr uintptr_t kClockBias = 0x724B5F8;
 // Client actor -> components (+0x68) -> TransformSync (+0x1A0): quat +0xA4, pos +0xB4 (sector-local), sector
 // i16 x/z +0xC0 (actor_lookup.cpp); the control state byte [actor+0xC8] (mirror-ack-formats.md §5: 1/2 =
 // simulated by this client, 0 = remote).

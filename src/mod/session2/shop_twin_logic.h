@@ -194,7 +194,7 @@ inline std::vector<std::vector<uint8_t>> local_answers(uint16_t op, std::span<co
 // that NPC lacks them and its shop menu stays empty (the dialog closes itself, tcB161). The host's entries are sent
 // to the guest (tunnel control state 17) and added to the guest's own 3086 for that NPC.
 inline constexpr uint16_t kOpQuestDialogAck = 2180;
-inline constexpr uint32_t kShopDialogGroup = 0x000F4440;
+inline constexpr uint32_t kShopDialogGroup = 0x000F4630;
 inline constexpr uint8_t kDialogState = 17, kDialogVersion = 1;
 inline constexpr size_t kMaxDialogNpcs = 256, kMaxDialogsPerNpc = 8;
 struct Dialog {
