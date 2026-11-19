@@ -1,11 +1,19 @@
 # Changelog
 
-## Shared world playtest builds (0.1.0-alpha+<id>-shared-world; game 1.0.0.3663 from the build after cf8c7fa3, 1.0.0.3576 before)
+## Shared world playtest builds (0.1.0-alpha+<id>-shared-world; game 1.0.0.3732 from the 19 Nov port, 1.0.0.3663 from the build after cf8c7fa3, 1.0.0.3576 before)
 
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-NOT POSTED (pp34 stopped after 16 steps, two fixes needed; the next build replaces it): 0.1.0-alpha+e5fa32dc, for game 1.0.0.3663: everything in 569720a2 just
+NOT POSTED YET: the next build, for game **1.0.0.3732** (Steam's update of 19 Nov; every earlier build switches
+itself off on it): everything in e5fa32dc just below (the small-animal catch, the host-load crash guard), plus:
+- **Ported to game version 1.0.0.3732.** Message numbers did not change; every game function the mod uses has the
+  same code at a new address. The installer's version note now knows 3732 (it had kept an older size since 3663).
+- The one-PC test host waits for its network port after the co-op restart (a test-only path; players use Steam).
+- Fewer repeated NPC lines in the host's log (the first 40 of each kind, then 1 in 25).
+- The checklist's far-fight test bot gets a revive after 50 swings (it never blocks, so five bandits could down it).
+
+NOT POSTED (pp34 stopped after 16 steps; then the game updated): 0.1.0-alpha+e5fa32dc, for game 1.0.0.3663: everything in 569720a2 just
 below, plus (from Borque's host report of 18 Nov):
 - **Catching small animals works for the joined player.** The host's game accepted the catch but kept running the
   animal, so the catch never finished. The animal now runs on the catcher's game from the moment the catch is

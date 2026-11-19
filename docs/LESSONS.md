@@ -371,3 +371,20 @@ run_pp.sh stops before its next step when a coop_worlds\with_127_0_0_1_old_* fol
 name (with a README saying so) stops it cleanly after the current step, which still restores the install and the
 saves. Delete the folder right after. Never kill a step in the middle.
 
+## A game update can land on any restart: read the first failing step's log before the whole pass (2026-11-19)
+
+Steam updated the game during the user's restart; pp35 then ran 10 hours with Co-op+ off in every step (290 fails).
+The first failing step's coopplus log said so in its 7th line ("Co-op+ is off: this mod was made for game version").
+After a restart: check the game exe's date/version BEFORE a long pass (`ls -la .../bin64/CrimsonDesert.exe`), and
+read the first failing step before letting the rest run.
+
+## An address port rewrites game DATA that looks like an address (2026-11-19, port 3732)
+
+p73.py's scan takes every 5+ digit hex literal below the protection as a candidate address, and a value that lies
+inside a paired function gets "mapped": interaction keys (0xF42BE), stat ids (the HP stat 0x000F4240 in 7 files), the
+Steam app-id mask 0xFFFFFF, our own DLL's size, a bit mask (I mapped that one by hand myself). Nothing failed to
+build; enemy scaling, catching, photo mode and the friend-join check would have broken quietly. Run
+build/port3732/review73.py on the apply commit before the first build and read every line it prints; mapcheck's
+"OUTSIDE the paired function" lines are usually such numbers. The port's tools that import the previous port's
+module (midsites.py imported p63) give "clean 0" until pointed at the new one.
+

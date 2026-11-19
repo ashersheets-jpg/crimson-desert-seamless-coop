@@ -5,9 +5,6 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
-- 2026-11-18 22:35 PC BREAK: you are playing and will restart the PC. Nothing runs until you say the PC is free
-  again. Then: build the layer + native fixes below, package, full checklist (~3.5 h). (Farfight revive: you OK'd it
-  at 22:17; applied.)
 - 2026-11-17 07:45 HANDS-ON (about 10 min, when you have time): B09 past the cabin. A script cannot aim a talk
   (7 tries). I need you to play the host in a two-copy run I set up, through the Marius and Ross talks to "Enter the
   cabin"; a probe logs which game code starts that scene, so the ready check can hold it for both players.
@@ -8974,4 +8971,23 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     focus loss (~22:21) matches when I ran a python edit script; farfight's (~22:12) I cannot place. See LESSONS.
   * mountfight (1): the mounted guest's swings hit nothing (guest>NPC 0; shots g1/g2: the bandits stood out of
     reach of the horse). pp33 passed it. Test positioning, not the mod; watch it in the next pass.
+### 2026-11-19 (game update 1.0.0.3732)
+- 02:48 PC free again (user). SAVES OK. Built e33d09c2 (port wait + log cap + farfight revive), unit tests 30/90 fail
+  (baseline), fake install all pass. 02:50 pp35 (full) started. Discord pane signed out after the restart; the user
+  signed in again; checked: no new feedback since 19:36, #general / #bug-reports quiet.
+- 12:40 pp35 ENDED 680 pass, 290 fail: Steam updated the game to 1.0.0.3732 at 02:08 (during the restart); every step
+  after static ran with Co-op+ off ("this mod was made for game version 1.0.0.3663"). The posted build is off for the
+  testers too. 12:42 posted a heads-up in #play-testing-feedback.
+- 12:45-13:10 PORT 3663 -> 3732 (docs/research/port-3732.md): small update (functions 224,300 -> 224,326, 98.8%
+  paired; message numbers unchanged; our functions the same code). p73.py: 776 native + 140 layer literals; 33 hand
+  decisions (jump stubs confirmed by callers / vtable slots); protected sites by the k-th call; build stamps; layer
+  table offsets_3732.h. CAUGHT before the first build: apply had rewritten game DATA that looks like an address (HP
+  stat id in 7 files, catch interaction ids, shop key, Steam app-id mask, photo mode id, a bit mask, our DLL size):
+  put back (fix73.py). guest_sched_load body checksums recomputed. Unit tests 30/90 (baseline). Installer version
+  check: 3732 (its image size had been 3576's since the 3663 port).
+- 13:13-13:21 pp36 static + fresh on bab4b839 (the port): THE JOIN WORKS on 3732 (39 pass). Fails: static
+  "uncommitted changes" (port tools being written), and a new error both sides: RemoteMotion refused wallup_send because
+  its byte lies in a section NAMED ".xtls", the protection's name on an older build; on 3732 that is plain writable
+  data. Fixed: refuse only when the section is executable. SAVES OK, 5/5 restored.
+- 13:25 next: package, full checklist pp37 on it.
 
