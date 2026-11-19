@@ -59,7 +59,7 @@ constexpr uint8_t kSetCurrentTargetHead[] = {0x48, 0x8B, 0xC4, 0x4C, 0x89, 0x48,
 // into the protection, so a head match proves nothing. Now taken from the RTTI: AICondition_CheckAIBattleType
 // vtable 0x5C7CF78, slot 1 (build/port3576/hist.py checks every archived build).
 constexpr uintptr_t kCheckAIBattleType = 0x2536D60;  // 3479: 0x24BE2F0 (RTTI-checked on 3479 and 3576)
-constexpr uint8_t kCheckAIBattleTypeHead[] = {0xE9, 0x7B, 0x19, 0xFF, 0x0A};
+constexpr uint8_t kCheckAIBattleTypeHead[] = {0xE9, 0xEB, 0x1E, 0x99, 0x0A};
 
 SafetyHookInline g_is_targetable;
 SafetyHookInline g_battle_type;
