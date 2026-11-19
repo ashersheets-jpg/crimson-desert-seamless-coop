@@ -8953,9 +8953,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   * cs65c (69c6a1d8, tpanimal min hp 8, the guest at Borque's spot -10365 533 -3864): "Partridge  E Carry" shown,
     but the harness's E came after the bird walked off. cs65d: the script presses E 0.4 s after each step beside it.
   * cs65d (69c6a1d8, catch rule ON): interaction 0xF42BE (Borque's) accepted; catch rule handed the partridge to
-    the guest 0.6 s later; "Drop R" (carrying) on every shot from 25 s to 40 s+ after.
+    the guest 0.6 s later; "Drop R" (carrying) on the shots looked at (g0 25 s after, gE3 38 s after).
   * cs65e (e5fa32dc, native d98b6d1 adds [session2] ai_handoff_catch; set 0): two catches (0xF42BE) accepted, the
-    fight rule handed each over 1-1.5 s later, no "Drop R" on any shot after either: Borque's failure reproduced.
+    fight rule handed each over 1-1.5 s later, no "Drop R" on the shots looked at (g0 26 s after the first, gE4 6 s after the second): Borque's failure reproduced.
     So the catch rule IS the fix (one run each way). SAVES OK, 5/5 restored in all five runs.
   * SceneReqGuard in every run: ON, dropped 0 (2808 handled 0 in four runs, 4 in cs65e: the hook passes the
     normal case through).
