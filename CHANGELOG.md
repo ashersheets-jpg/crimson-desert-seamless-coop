@@ -5,9 +5,14 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-NOT POSTED YET (checklist passed; held to post with the next batch, posts less often): 0.1.0-alpha+12d533ef, for
-game 1.0.0.3732 (checklist pp38 970/971 over 23 steps + pp38b 151/151: farfight's kill missed in pp38, the bandits never
-engaged the guest; passed in pp38b): everything in 26bf2c71 just below, plus:
+POSTED 2026-11-20 02:18: 0.1.0-alpha+9e777a23, for game 1.0.0.3732 (checklist pp39 963/971 over 23 steps + pp39b
+152/152: pp39's 8 fails were lowsave's log-rate checks over midnight, a checklist bug fixed in tools/prepost.sh; 12d533ef
+before it passed pp38 + pp38b and was never posted): everything in 26bf2c71 just below, plus:
+- **An animal the host carries stays in the host's hands on the joined player's screen** (Borque, 18 Nov) instead of
+  floating where it was caught. Its actions name the host's character as their parent, and the part that keeps a
+  carried child on its carrier only took a player's own children. New [session2] attach_follow=carry, the default:
+  only an animal / NPC nobody owns that the host carries. Measured (cs68f: 0.46-0.60 m from the hands, the positions
+  made within 1-3 mm of the host game's own); not yet seen on screen.
 - **Riding in an NPC's cart as a passenger no longer makes you wanted** (Borque, 18 Nov). Boarding sent frame events
   that named the cart and its driver; the host took them for the passenger's hits and gave cart and driver to the
   passenger's game, where the driver got hurt. While a player sits in a passenger seat (the vehicle checked beside them

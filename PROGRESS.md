@@ -9053,3 +9053,14 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     To ask a tester to look. Dev script: tpanimal takes an animal asked by variant without a hunting-table name.
   * Unit tests 30/90 (baseline). Package 9e777a23 = 12d533ef + carry.
 - 22:50 pp39 (full) on 9e777a23 started (~3.5 h).
+### 2026-11-20
+- 00:00 pp39 lowsave: 8 fails, all log-rate checks: the step ran 23:54:51 -> 00:00:23 and the checklist's span went
+  negative over midnight (clamped to 60 s: 1638 lines as "one minute"; really ~280 a minute). tools/prepost.sh: + 24 h
+  when the span is negative.
+- 00:58 #general: Emperor Shervin asked for a list of unresolved bugs. The user asked for the answer to post himself:
+  docs/release/shared-world-playtest/reply-2026-11-20-unresolved.txt (given in chat, not posted by me).
+- 01:52 pp39 (full) on 9e777a23: 963 pass, 8 fail (the midnight bug only); SAVES OK and 5/5 in every step. 02:17 pp39b
+  (static lowsave fresh solostart): 152 pass, 0 fail. CHECKLIST COMPLETE.
+### POSTED 2026-11-20 02:18: 0.1.0-alpha+9e777a23 in #download-here (game 1.0.0.3732), both zips (12 750 569 57c91c7d...,
+  6 951 443 849ce986...), text download-9e777a23.txt (Borque tagged; asks to try a passenger ride and look at a carry).
+

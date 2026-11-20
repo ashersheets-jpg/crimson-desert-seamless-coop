@@ -1,0 +1,23 @@
+<@506975934608441345> sure, here is what we know is still open on the current build (26bf2c71, game 1.0.0.3732):
+
+**Fixed in the next build** (it passed our full test run; posting soon):
+- Riding in an NPC's cart as a passenger can make the joined player wanted.
+- An animal the host carries floats where it was caught on the joined player's screen.
+- Two more cases where the host's game could crash while loading with the friend in its world.
+
+**Fixed, waiting for a tester to confirm:**
+- New game: after "Enter the cabin" the joined player could get a black screen and the host's story stopped before the bear fight.
+- Taming a wild horse and driving a cart as the joined player.
+
+**Still open:**
+- Mining and fishing as the joined player: not looked at yet.
+- The other player's running animation sometimes freezes or hitches (the position data is smooth, so it's the animation; a short clip helps).
+- Bosses: the joined player has no boss health bar, and boss mechanics (grabs, finishers) are not made for two yet.
+- NPCs in a T-pose were reported once; we could not reproduce it yet.
+- The joined player's talk prompt was greyed for some NPCs once (it was while wanted).
+- The Custom Characters mod makes the players invisible to each other (not compatible yet).
+- Two players only for now.
+
+**Not tested by us** (we test with two copies on one PC): two PCs over the internet, AMD / Intel graphics, long sessions. Your reports cover those.
+
+If you hit something, post it in <#1567301025843642498> with the report zip from both players (close the game, run Diagnose Co-op+.cmd).

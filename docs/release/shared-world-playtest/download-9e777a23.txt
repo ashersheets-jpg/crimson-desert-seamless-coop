@@ -1,0 +1,13 @@
+**Update: shared world playtest 0.1.0-alpha+9e777a23, for game 1.0.0.3732**
+Use this instead of 26bf2c71; **both players need the same build**. More from <@224953308010381312>'s 18 Nov list:
+
+- **Riding in an NPC's cart as a passenger no longer makes you wanted.** Getting in counted as hitting the cart and its driver, so the driver ended up hurt. Not seen in our own test yet (no cart came by): please try a ride as the joined player.
+- **An animal the host carries stays in the host's hands on the joined player's screen** instead of floating where it was caught. Measured in our test (the positions match the host's game to a few millimetres); please tell us how it looks.
+- **Two more cases where the host's game could crash while loading** with the friend in its world are guarded, the same kind as Borque's crash.
+
+Tested with two copies of the game on one PC (Nvidia): the full checklist on 1.0.0.3732.
+
+- `...9e777a23-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tell us in <#1567319198206525450> how it goes, with the report zip from **both** players (close the game, run **Diagnose Co-op+.cmd**).
