@@ -13,6 +13,8 @@
 
 #include "mod/log.h"
 #include "mod/net/troc_sniffer.h"
+#include "mod/session2/ai_handoff.h"
+#include "mod/session2/attach_follow.h"
 #include "mod/session2/child_hold.h"
 #include "mod/session2/horse_follow_logic.h"
 #include "mod/session2/remote_interp.h"
@@ -280,6 +282,7 @@ std::atomic<uint64_t> c_rev_acks{0}, c_rev_unreadable{0}, c_rev_build_failed{0},
     c_rev_real_stale{0}, c_rev_derived_stale{0}, c_rev_checks{0}, c_rev_ctrl_seen{0}, c_rev_exceptions{0};
 std::atomic<uint32_t> g_rev_last_rider{0}, g_rev_last_horse{0};
 std::atomic<uint64_t> c_pair_notes{0};
+std::atomic<uint64_t> c_rev_ridden_not_owned{0};
 
 // The packet as the client got it (the game's receive buffer): one SEH-guarded copy (no C++ objects here).
 bool guarded_read(void* dst, const void* src, size_t n) noexcept {
@@ -300,6 +303,18 @@ hfl::PairCheck pair_check(uint32_t horse, uint64_t now) {
     uintptr_t user2 = 0;
     const auto owner = hold_actor_owner(horse);
     if (owner && server_user2(user2) && user2) r = *owner == user2 ? hfl::PairCheck::Ok : hfl::PairCheck::NotOwned;
+    // 2026-11-20 (Borque 20 Nov, host log: 3945 of user 2's rider Acks 'horse not user 2's'; his screenshot: the joined
+    // player's model stuck where it got on, its name moving): a bandit's horse or a wild horse being tamed has no
+    // owner user, so the host's client got no horse samples and the rider, attached to it, stayed with it. A mount the
+    // ride rule noted for user 2's character (seat 0, mount_sync's server-realm vf53) runs on user 2's game (the ride
+    // / fight rule): its samples come from its rider like user 2's own horse.
+    if (r != hfl::PairCheck::Ok) {
+        const uint32_t u2c = server_user2_player_key();
+        if (u2c && ai_handoff_ridden_by(horse) == u2c) {
+            r = hfl::PairCheck::Ok;
+            c_rev_ridden_not_owned.fetch_add(1, std::memory_order_relaxed);
+        }
+    }
     g_rev_pair.put(horse, r, now);
     return r;
 }
@@ -363,13 +378,18 @@ size_t client_recv(const uint8_t* packet, uint16_t size, uint8_t* extra, size_t 
         c_pair_notes.fetch_add(1, std::memory_order_relaxed);
     }
     const auto mode = static_cast<Mode>(g_rev_mode.load(std::memory_order_relaxed));
-    if (mode == Mode::Off) return 0;
-    try {
-        return reverse(mode, m, whole, extra, cap);
-    } catch (...) {
-        c_rev_exceptions.fetch_add(1, std::memory_order_relaxed);
-        return 0;
+    if (mode != Mode::Off) {
+        try {
+            const size_t x = reverse(mode, m, whole, extra, cap);
+            if (x) return x;
+        } catch (...) {
+            c_rev_exceptions.fetch_add(1, std::memory_order_relaxed);
+            return 0;
+        }
     }
+    // 2026-11-20 (Borque 20 Nov, picture 2): an animal user 2's character carries (attach_follow=carry, incoming).
+    if (m.shape == Shape::OnFoot && (m.key >> 28) == 0xA) return attach_follow_client_in(whole, extra, cap);
+    return 0;
 }
 
 std::string reverse_describe() {
@@ -380,7 +400,7 @@ std::string reverse_describe() {
         "HorseFollowReverse [{}] (G->H, the host's client only{}): riders' Move Acks {} | user 2's rider on its own "
         "horse: {} {} (handed {}, delivered by OnRecvPacket {}, refused: the sniffer's injection off {}, FAULTED {}{}, build failed {}) | same tick {}, older "
         "than the horse's last {} | not user 2's rider {}, no world {}, owner unreadable {} (checks {}), horse not "
-        "user 2's {} | its Reqs name the horse {} | last pair 0x{:08X} on 0x{:08X} || the horse's own Acks while "
+        "user 2's {} (a mount user 2 rides, not its own: followed, checks {}) | its Reqs name the horse {} | last pair 0x{:08X} on 0x{:08X} || the horse's own Acks while "
         "ridden {} (stale: not newer than the last derived, dropped by the client's buffer {}) | intervals of the "
         "horse samples (ms) all [{}] own only [{}] | derived not newer {} | packet unreadable {} exceptions {} | "
         "riders' Acks noted for remote_interp_pair {}",
@@ -389,6 +409,7 @@ std::string reverse_describe() {
         c_rev_handed.load(), st.delivered, st.refused, st.faulted, st.faulted ? " -> the path is OFF" : "",
         c_rev_build_failed.load(), rv(hfl::Rev::Same), rv(hfl::Rev::Older), rv(hfl::Rev::NotUser2),
         rv(hfl::Rev::NoWorld), rv(hfl::Rev::Unverified), c_rev_checks.load(), rv(hfl::Rev::NotOwned),
+        c_rev_ridden_not_owned.load(),
         c_rev_ctrl_seen.load(), g_rev_last_rider.load(), g_rev_last_horse.load(), c_rev_real.load(),
         c_rev_real_stale.load(), iv_text(iv_rev_all), iv_text(iv_rev_real), c_rev_derived_stale.load(),
         c_rev_unreadable.load(), c_rev_exceptions.load(), c_pair_notes.load());

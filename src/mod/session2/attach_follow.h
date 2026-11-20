@@ -18,6 +18,7 @@
 // remote_interp_owned_cap_ms > 0): the 0xB keys whose last StartAction named an 0xA parent, read by
 // remote_interp's hooks (lock-free).
 
+#include <cstddef>
 #include <cstdint>
 #include <span>
 #include <string>
@@ -36,6 +37,10 @@ using AttachPushFn = bool (*)(std::span<const uint8_t> packet);
 void attach_follow_on_out(uint16_t opcode, std::span<const uint8_t> packet, AttachPushFn push) noexcept;
 // server inject, a Req of user 2 that was queued for the server (its payload). Also feeds the registry.
 void attach_follow_on_guest_req(uint16_t opcode, std::span<const uint8_t> payload) noexcept;
+// The host's client (horse_follow's OnRecvPacket callback: no allocation, no blocking lock, no log): a MoveActorAck of
+// user 2's character on foot (whole packet). attach_follow=carry: an NPC nobody owns that user 2's character carries
+// gets its pose (character pose x Path local) in `extra` every 3rd one. Returns the extra packet's size (0: none).
+size_t attach_follow_client_in(std::span<const uint8_t> whole, uint8_t* extra, size_t cap) noexcept;
 // A new guest epoch: the attachments and the registry are forgotten.
 void attach_follow_on_epoch() noexcept;
 // The mod's network thread: the queued lines.
