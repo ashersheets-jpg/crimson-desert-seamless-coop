@@ -813,6 +813,9 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                         // have 40+, tpnear's line), whatever variant was asked.
                         const bool critter = r.variant == 0 && r.hp_max > 0.0f && r.hp_max < 40.0f;
                         const char* name = critter ? "critter (variant unknown)" : hunt_animal_name(r.variant);
+                        // cs68c (2026-11-19): on the host the catchable fowl (0xF454D / 0xF4626, 5 HP) have no name in
+                        // the hunting table; a variant asked for by number is taken without one.
+                        if (!name && st.variant && r.variant == st.variant && r.hp_max > 0.0f) name = "animal (asked by variant)";
                         if (!name || r.hp <= 0.0f || r.hp_max < st.to[1] ||
                             (!critter && st.variant && r.variant != st.variant))
                             continue;
