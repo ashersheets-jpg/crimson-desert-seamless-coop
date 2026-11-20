@@ -1,0 +1,8 @@
+<@224953308010381312> thanks for the videos, screenshots and both zips (01:26, build 26bf2c71). Read them all; what they showed:
+
+- **Joined player stuck on the horse / cart from the host's view, name moving:** found it. The host's game moves the joined player's horse along with the rider only when it is the joined player's own horse. Every horse in your session that wasn't his (the bandit's horse at 01:10, the wild horse at 01:16) got no movement on the host's side, so the rider, sitting on it, stayed where he got on while his name tag moved. Fixed for the next build (any horse or cart he rides in the saddle / driver's seat).
+- **Caught animal not in the joined player's hands on the host's screen:** the fix in 9e777a23 was for the other way round (the host carrying). The joined player's carry is added for the next build.
+- **Horse taming freeze:** the taming starts and runs now, but at the end the joined player's game asks to move its taming scene to the next step and that request is never answered (your host log, 01:17:04), so he stays frozen on the horse. Working on it.
+- **Running animation freeze and talk greyed out:** thanks for the clips, watching them next. Your session at the bandit camp had no town NPCs, so the logs don't cover the talk one: if it happens again, please note the NPC and the time.
+
+We'll post here when the next build is up.

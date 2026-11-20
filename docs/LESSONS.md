@@ -388,3 +388,13 @@ build/port3732/review73.py on the apply commit before the first build and read e
 "OUTSIDE the paired function" lines are usually such numbers. The port's tools that import the previous port's
 module (midsites.py imported p63) give "clean 0" until pointed at the new one.
 
+## Two-copy tests: keys and screenshots of the other copy take the focus (2026-11-20)
+A dev script's `key` presses go to whichever window has the focus. -GuestKeys run first, then -HostKeys, and every
+actpid step (a `shot:` too) brings its own copy's window to the front. cs69c: the guest's script pressed E beside a
+partridge five times while the host's shots ran every 2.2 s; not one catch reached the host (cs69a, with the host's
+shots after the catches, caught). Put a script's key presses before the other copy's actpid steps start (the guest's
+keys begin ~21 s after its script loads, the host's ~2 s after the guest's end), or press keys with actpid itself.
+Also: the guest's `npcs` list never shows horses (type 5 on the host's server; the guest reads 3 / 6), and wild horses
+at the bandits start do not spawn every run; their keys move between runs. Take a horse's key from the host log's
+"observer load defer: NPC 0x... (type 5" line of the same run, not from an earlier one.
+

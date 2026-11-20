@@ -9063,4 +9063,24 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   (static lowsave fresh solostart): 152 pass, 0 fail. CHECKLIST COMPLETE.
 ### POSTED 2026-11-20 02:18: 0.1.0-alpha+9e777a23 in #download-here (game 1.0.0.3732), both zips (12 750 569 57c91c7d...,
   6 951 443 849ce986...), text download-9e777a23.txt (Borque tagged; asks to try a passenger ride and look at a carry).
+- 15:21 (the user: "Why did you stop working"): I had ended the turn after the post; back on the list. Discord: Borque
+  09:49 (26bf2c71 session 01:00-01:17, both zips, 3 videos, 2 pictures) downloaded to scratchpad/dl-borque-1120:
+  (a) host's view: the guest's model stuck on a horse where it got on, its name moving; (b) guest's caught animal not
+  in its hands on the host's screen; (c) taming: finished, then frozen on the horse (alt-f4); (d) talk greyed (video);
+  (e) running animation freeze on both screens (video).
+- (a) host log: HorseFollowReverse "horse not user 2's" 3945 rider Acks = the bandit horse 0xB0100922 (01:10) and the
+  wild horse 0xB0102082 (01:16): no owner user, so no horse samples on the host's client, the rider glued to a still
+  horse. Native aeb7d33: a mount the ride rule noted for user 2's character counts as its own (ai_handoff_ridden_by).
+  cs69b: a bandit's horse ridden, 387 derived, 0 refused.
+- (b) native aeb7d33 + 37af9e1: attach_follow=carry incoming, made at the host's client (horse_follow's OnRecvPacket
+  callback) with each 3rd Ack of user 2's character; the carried animal's own Moves from the catcher's game no longer
+  detach it (cs69a: one came 0.65 s after the attach: 13 poses of an ~8 s hold). Not yet seen held for long (cs69b
+  found no partridge).
+- Also found (cs69b + Borque 01:16:36): the host's observer apply of the guest's FIRST mount of a wild horse is refused
+  (rider/horse controller mismatch: the ride rule hands the horse 0.8 s later), so the rider is never seated on the
+  host's screen for that ride. Native c04de89: such a commit waits for the hand-over (until kApplyWaitMs). Testing
+  (cs70: wild horses do not always spawn at the bandits start).
+- (c) host log: the taming sequencer 0x432 (user 2's own 2661) got StageBranchStateReq "then 0" answered, "then 2"
+  (01:17:04) never answered (no 2920 to user 2); the sequencer lives in the host's field manager. Open.
+- Layer: dev script tpvehicle [radius] [n] [type] (type 6 were small animals).
 

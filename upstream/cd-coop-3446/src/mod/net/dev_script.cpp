@@ -597,10 +597,11 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
             st.kind = Step::TpActor;  // catch rule's test, 2026-11-18: a partridge is variant F454C)
             st.addr = 0xFFFFFFFDu;
             float r = 40.0f, minhp = 0.0f;  // [min hp]: cs65b took a fly (5 HP); the catchable animals are bigger
-            std::string v;
-            in >> r >> v >> minhp;
+            std::string v, strict;  // [strict]: never a critter of unknown variant (cs69d-f: deer, uncatchable)
+            in >> r >> v >> minhp >> strict;
             st.to[0] = r > 0 ? r : 40.0f;
             st.to[1] = minhp > 0 ? minhp : 0.0f;
+            st.to[2] = strict == "strict" ? 1.0f : 0.0f;
             if (v == "0") v.clear();
             if (!v.empty()) st.variant = static_cast<uint32_t>(std::strtoul(v.c_str(), nullptr, 16));
             steps.push_back(std::move(st));
@@ -819,7 +820,7 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                         // the hunting table; a variant asked for by number is taken without one.
                         if (!name && st.variant && r.variant == st.variant && r.hp_max > 0.0f) name = "animal (asked by variant)";
                         if (!name || r.hp <= 0.0f || r.hp_max < st.to[1] ||
-                            (!critter && st.variant && r.variant != st.variant))
+                            ((!critter || st.to[2] > 0.0f) && st.variant && r.variant != st.variant))
                             continue;
                         key = r.key;
                         log::info("Dev script: tpanimal: 0x{:08X} {} variant 0x{:08X}, {:.1f} m, hp {:.0f}/{:.0f}", r.key, name,
