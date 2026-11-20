@@ -205,7 +205,8 @@ std::atomic<uint64_t> c_vf53{0}, c_vf53_client{0}, c_vf53_other{0}, c_vf53_direc
     c_dispatch{0}, c_accept[static_cast<size_t>(msl::Accept::Count)] = {}, c_judge[static_cast<size_t>(msl::Judge::Count)] = {},
     c_outcome[6] = {}, c_post_fail{0}, c_detach_ok{0}, c_detach_fail{0}, c_fallback{0}, c_fallback_fail{0},
     c_defer{0}, c_defer_busy{0}, c_cancel{0}, c_hold_guest{0}, c_hold_host{0}, c_rel_guest{0}, c_rel_host{0},
-    c_epoch_reset{0}, c_faults{0}, c_ctl_observed{0}, c_ctl_watch_reads{0}, c_ctl_watch_unknown{0}, c_no_event{0};
+    c_epoch_reset{0}, c_faults{0}, c_ctl_observed{0}, c_ctl_watch_reads{0}, c_ctl_watch_unknown{0}, c_no_event{0},
+    c_await_handover{0}, c_await_applied{0};  // 2026-11-20: commits awaiting the ride rule's hand-over
 // P8 S18: the gate detour's verdicts; the dispatch probe of the remote rider; the self-check.
 std::atomic<uint64_t> c_gate_verdict[static_cast<size_t>(msl::GateVerdict::Count)] = {}, c_gate_drop{0}, c_gate_force_bit{0},
     c_m7_2991{0}, c_m7_rejected{0}, c_m7_taken{0}, c_m7_unlocked{0}, c_probe_lines{0}, c_gate_lines{0}, c_learned{0},
@@ -1125,11 +1126,12 @@ void record_apply(uint16_t plan, const msl::Txn& t, msl::Judge j, msl::Outcome o
     diag(kApply, e);
 }
 
-void finish(bool commit, const msl::Txn& t, msl::Outcome o, bool retired_old = false) noexcept {
+void finish(bool commit, const msl::Txn& t, msl::Outcome o, bool retired_old = false,
+            bool await_handover = false) noexcept {
     c_outcome[static_cast<size_t>(o)].fetch_add(1, std::memory_order_relaxed);
     AcquireSRWLockExclusive(&g_lock);
     if (commit) {
-        g_table.finish_commit(t.rider, t.transition, o, retired_old);
+        g_table.finish_commit(t.rider, t.transition, o, retired_old, await_handover);
     } else {
         g_table.finish_detach(t.rider, t.transition, o);
     }
@@ -1269,11 +1271,14 @@ void do_commit(const msl::Txn& t) noexcept {
     msl::Post post = msl::Post::Ok;
     int32_t r = -1;
     msl::PairState after = before;
+    // The ride rule's hand-over of this mount to the rider's game is coming (the host: its table names this rider).
+    const bool await = j == msl::Judge::ControllerMismatch && t.horse && ai_handoff_ridden_by(t.horse) == t.rider;
+    if (await) c_await_handover.fetch_add(1, std::memory_order_relaxed);
     if (mode() != Mode::On) {
         o = msl::Outcome::ProbeOnly;
     } else if (j == msl::Judge::AlreadyApplied) {
         o = msl::Outcome::AlreadyApplied;
-    } else if (msl::judge_retry(j)) {
+    } else if (msl::judge_retry(j) || await) {
         o = msl::Outcome::NotReady;
     } else if (j != msl::Judge::Apply || g_apply_off.load() || !g_vf53) {
         o = msl::Outcome::Refused;
@@ -1291,7 +1296,9 @@ void do_commit(const msl::Txn& t) noexcept {
     if (seat_mode() != Mode::Off && (o == msl::Outcome::Applied || o == msl::Outcome::AlreadyApplied)) {
         seat_rider(t, o, rider, horse, vc);
     }
-    finish(true, t, o, retired_old);
+    if (t.await_handover && (o == msl::Outcome::Applied || o == msl::Outcome::AlreadyApplied))
+        c_await_applied.fetch_add(1, std::memory_order_relaxed);
+    finish(true, t, o, retired_old, await);
 }
 
 void do_detach(const msl::Txn& t) noexcept {
@@ -2655,7 +2662,8 @@ std::string mount_sync_describe() {
         "without the thunk {}), RideOff {}, vf54 {}, interactions {} | published Begin {} Commit {} Detach {} (ring "
         "full {}) | Enter RideOn {} (failed {}) RideOff {} (failed {}) | observer events [{}] | judges [{}] | "
         "outcomes [{}] (post failures {}, detach ok {} failed {}) | ride_filter deferred {} (busy {}) | fallback "
-        "rewrites {} (failed {}) | holds guest {} (released {}) host {} (released {}) | cancelled {} | connection "
+        "rewrites {} (failed {}) | holds guest {} (released {}) host {} (released {}) | cancelled {} | awaiting the ride "
+        "rule's hand-over {} (then applied {}) | connection "
         "resets {} | dispatches {} | game faults {}{} | lines {} (not logged {}, ring dropped {}, limited {}) | "
         "controller link watch: observed Detach published {} (reads {}, unreadable {}), armed now {} | observer "
         "retirements without the controller's Detach {} | ride geometry (the remote rider vs its horse here, "
@@ -2673,7 +2681,7 @@ std::string mount_sync_describe() {
         c_enter_off_fail.load(), acc.empty() ? "none" : acc, jud.empty() ? "none" : jud, out.empty() ? "none" : out,
         c_post_fail.load(), c_detach_ok.load(), c_detach_fail.load(), c_defer.load(), c_defer_busy.load(),
         c_fallback.load(), c_fallback_fail.load(), c_hold_guest.load(), c_rel_guest.load(), c_hold_host.load(),
-        c_rel_host.load(), c_cancel.load(), c_epoch_reset.load(), c_dispatch.load(), c_faults.load(),
+        c_rel_host.load(), c_cancel.load(), c_await_handover.load(), c_await_applied.load(), c_epoch_reset.load(), c_dispatch.load(), c_faults.load(),
         g_apply_off.load() ? " (native calls OFF after a fault)" : "", g_lines.load(), g_lines_dropped.load(),
         g_diag.dropped(), g_limited.load(), c_ctl_observed.load(), c_ctl_watch_reads.load(),
         c_ctl_watch_unknown.load(),

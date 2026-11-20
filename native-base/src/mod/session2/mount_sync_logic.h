@@ -508,6 +508,7 @@ inline constexpr uint64_t kClaimStuckMs = 2000;
 // Not-ready retries of one commit: at any dispatch BEFORE the rider's own StartActionAck; the attempt at the
 // rider's own (its mount action) is the last one (session 18 review (5): never linked after its RideOn).
 inline constexpr uint32_t kMaxAttempts = 20;
+inline constexpr uint32_t kMaxAwaitAttempts = 2000;  // await_handover: every StartActionAck dispatch claims it
 inline constexpr size_t kHoldMaxPackets = 2048;    // the guest's held stream
 inline constexpr size_t kHoldMaxBytes = 4u << 20;
 inline constexpr size_t kHoldMaxReq = 256;         // the host's held user 2 Req (its own bound is 512)
@@ -565,6 +566,12 @@ struct Txn {
     bool relinking = false;
     bool relink_probed = false;
     bool claimed_at_rider = false; // the last commit claim was at the rider's own StartActionAck
+    // 2026-11-20 (cs69b, Borque 20 Nov 01:16:36): the other player mounted an NPC horse (a wild one: taming) that the
+    // host's game still ran; the ride rule hands it to the rider's game at the next server check (0.8 s later), and
+    // the apply 6 ms after the commit was refused (controller mismatch): the rider never seated on the host's
+    // screen for that ride. Awaiting that hand-over the commit stays claimable (any dispatch, past the rider's
+    // own action) until kApplyWaitMs from the Commit.
+    bool await_handover = false;
     uint32_t attempts = 0;
     bool quarantined_pair = false;
     uint64_t on_foot_ms = 0;     // since when the rider's actions are on foot here (0: mounted / not yet)
@@ -938,7 +945,8 @@ public:
     }
 
     // `retired_old`: the commit first retired the link this client had made to the rider's previous horse.
-    void finish_commit(uint32_t rider, uint32_t transition, Outcome o, bool retired_old = false) {
+    void finish_commit(uint32_t rider, uint32_t transition, Outcome o, bool retired_old = false,
+                       bool await_handover = false) {
         Txn* t = slot_of(rider);
         if (!t || t->transition != transition || t->phase != Phase::Applying) return;
         if (retired_old) t->linked_here = 0;
@@ -951,6 +959,11 @@ public:
                 break;
             case Outcome::ProbeOnly: t->phase = Phase::Riding; break;
             case Outcome::NotReady:
+                if (await_handover) {  // kApplyWaitMs (expire) bounds it; attempts only against a runaway
+                    t->await_handover = true;
+                    t->phase = t->attempts >= kMaxAwaitAttempts ? Phase::Cancelled : Phase::Committed;
+                    break;
+                }
                 t->phase = (t->claimed_at_rider || t->attempts >= kMaxAttempts) ? Phase::Cancelled : Phase::Committed;
                 break;
             case Outcome::Refused: t->phase = Phase::Cancelled; break;
