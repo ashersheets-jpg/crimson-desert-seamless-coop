@@ -44,6 +44,8 @@ bool ai_handoff_client_recv(const uint8_t* packet, size_t size) noexcept;
 // SERVER-realm vf53 / RideOff (any thread; atomics only): on = mounted (rider's character key, the NPC's key), off =
 // the rider left it. The host's server tick hands the NPC over; the fight rule leaves a ridden NPC alone.
 void ai_handoff_note_ride(uint32_t rider_key, uint32_t mount_key, bool on) noexcept;
+// The other player's character noted on that mount by the ride rule (seat 0), 0 = none. Any thread (atomics).
+uint32_t ai_handoff_ridden_by(uint32_t mount_key) noexcept;
 // Passengers (2026-11-19, Borque 18 Nov 13:36: boarding an NPC's cart as a passenger, seat 1, made him wanted):
 // boarding sends frame events that name the vehicle and its driver, the tally took them for the other player's hits,
 // and the fight rule gave cart and driver to the passenger's game, where the driver got hurt. mount_sync notes a

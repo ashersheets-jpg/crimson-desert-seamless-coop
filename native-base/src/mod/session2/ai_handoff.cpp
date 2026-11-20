@@ -702,6 +702,8 @@ void ai_handoff_note_catch(uint32_t catcher_key, uint32_t npc_key, uint32_t inte
                   "to the catcher's game at the next server check ({} so far)", catcher_key, npc_key, interaction, n);
 }
 
+uint32_t ai_handoff_ridden_by(uint32_t mount_key) noexcept { return mount_key ? ridden_by(mount_key) : 0; }
+
 void ai_handoff_note_ride(uint32_t rider_key, uint32_t mount_key, bool on) noexcept {
     if (g_guest || !mount_key || (mount_key >> 28) != 0xB) return;
     if (!on) {

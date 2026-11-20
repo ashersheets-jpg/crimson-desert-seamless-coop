@@ -405,6 +405,13 @@ public:
         n_ = 0;
         for (auto& c : c_) c = Char{};
     }
+    // The first attachment riding `parent` (nullptr: none).
+    const Att* first_on(uint32_t parent) const {
+        for (size_t i = 0; i < n_; ++i) {
+            if (a_[i].parent == parent) return &a_[i];
+        }
+        return nullptr;
+    }
     const Att* get(uint32_t child) const {
         for (size_t i = 0; i < n_; ++i) {
             if (a_[i].child == child) return &a_[i];

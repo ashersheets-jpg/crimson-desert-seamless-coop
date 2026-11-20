@@ -6,6 +6,7 @@
 #include <array>
 #include <atomic>
 #include <climits>
+#include <cstring>
 #include <cmath>
 #include <cstdint>
 #include <format>
@@ -109,7 +110,10 @@ void push_note(Note kind, std::initializer_list<uint64_t> v) {
     if (!g_notes.push(e)) g_notes_lost.fetch_add(1, std::memory_order_relaxed);
 }
 
-const char* dir_name(uint64_t in) { return in ? "user 2's -> host (measured only)" : "host's -> user 2"; }
+const char* dir_name(uint64_t in) {
+    return in ? "user 2's -> host (carry: made at the host's client; a user's own child measured only)"
+              : "host's -> user 2";
+}
 std::string err_mm(int32_t v) { return v < 0 ? std::string("-") : std::format("{}", v); }
 
 std::string note_text(const p8p::Event& e) {
@@ -145,6 +149,11 @@ std::string note_text(const p8p::Event& e) {
 // the joined player's screen where it was caught. Outgoing only: user 2's own catches run on its game (the catch rule).
 constexpr uint32_t kHostCharacterKey = 0xA0100001;
 std::atomic<uint64_t> c_carried{0};
+// 2026-11-20 (Borque 20 Nov, picture 2): the other way round. The joined player caught an animal (the catch rule runs it
+// on the catcher's game) and holds it on its own screen; on the host's nothing in its hands. Incoming: an NPC nobody
+// owns whose StartActionReqs name user 2's character; the host's client gets its pose with each 3rd Ack of that
+// character (attach_follow_client_in).
+std::atomic<uint64_t> c_carried_in{0}, c_in_client_moves{0}, c_in_made{0}, c_in_busy{0};
 // attach_follow=carry (the default from 2026-11-19): only those carried NPCs are followed; a user's own child (a pet:
 // never checked live on the shared world) is measured as in probe.
 std::atomic<bool> g_carry_only{false};
@@ -153,7 +162,13 @@ std::optional<bool> owner_is(uint32_t child, uint32_t parent, bool in) {
     const auto owner = hold_actor_owner(child);
     if (!owner) return std::nullopt;
     if (!*owner) {
-        if (in || parent != kHostCharacterKey) return false;
+        if (in) {
+            const uint32_t u2 = server_user2_player_key();
+            if (!u2 || parent != u2) return false;
+            c_carried_in.fetch_add(1, std::memory_order_relaxed);
+            return true;  // carried by user 2's character
+        }
+        if (parent != kHostCharacterKey) return false;
         c_carried.fetch_add(1, std::memory_order_relaxed);
         return true;  // carried by the host: followed like the host's child
     }
@@ -278,13 +293,14 @@ std::string dir_text(const Dir& d, bool in) {
     auto ev = [&](Ev e) { return d.ev[static_cast<size_t>(e)].load(); };
     return std::format(
         "{}: StartActions {} (attached {}, still attached {}, Path local not an offset {}, detached {}, not a user's "
-        "child {}; owner unreadable {}; carried by the host, no owner {}) | parent Moves {} -> child Moves {} {} (made {}, "
+        "child {}; owner unreadable {}; carried, no owner {}) | parent Moves {} -> child Moves {} {} (made {}, "
         "skipped while the child is "
         "withheld {}, push refused {}, build failed {}) | detached by its own Move {}, stale {} | busy {} (detaches "
         "deferred {}, applied {}, lost {}) | last 0x{:08X} on 0x{:08X} | errors mm: parent x local "
         "[{}] | Path world x local [{}] | previous local applied later [{}] | previous relative pose applied later [{}]",
         dir_name(in), d.actions.load(), ev(Ev::Attached), ev(Ev::Refreshed), ev(Ev::BadLocal), ev(Ev::Detached),
-        ev(Ev::NotOwned), d.owner_unknown.load(), in ? 0 : c_carried.load(), d.char_moves.load(), d.makes.load(),
+        ev(Ev::NotOwned), d.owner_unknown.load(), in ? c_carried_in.load() : c_carried.load(), d.char_moves.load(),
+        d.makes.load(),
         in || static_cast<Mode>(g_mode.load()) != Mode::On ? "would be made" : "due", d.made.load(),
         d.held_skips.load(), d.push_failed.load(), d.build_failed.load(), d.child_moves_detached.load(),
         d.expired.load(), d.busy.load(), d.deferred_detaches.load(), d.applied_detaches.load(), d.lost_detaches.load(),
@@ -401,6 +417,35 @@ void attach_follow_on_guest_req(uint16_t opcode, std::span<const uint8_t> payloa
     }
 }
 
+size_t attach_follow_client_in(std::span<const uint8_t> whole, uint8_t* extra, size_t cap) noexcept {
+    constexpr size_t kWhole = afl::kHeader + afl::kMoveAckSize;
+    if (!g_carry_only.load(std::memory_order_relaxed) ||
+        static_cast<Mode>(g_mode.load(std::memory_order_relaxed)) != Mode::On)
+        return 0;
+    if (!g_in.attached.load(std::memory_order_relaxed) || whole.size() != kWhole || !extra || cap < kWhole) return 0;
+    const afl::Move mv = afl::read_move(whole.subspan(afl::kHeader), afl::kMoveAckSize);
+    if (!mv.ok || !afl::char_key(mv.key) || !afl::sane_world(mv.pose)) return 0;
+    if (mv.key != server_user2_player_key()) return 0;
+    if (c_in_client_moves.fetch_add(1, std::memory_order_relaxed) % afl::kEvery != 0) return 0;
+    if (!TryAcquireSRWLockExclusive(&g_in.lock)) {
+        c_in_busy.fetch_add(1, std::memory_order_relaxed);
+        return 0;
+    }
+    uint32_t child = 0;
+    afl::Pose pose{};
+    if (const auto* e = g_in.t.first_on(mv.key);
+        e && e->local_ok && GetTickCount64() - e->last_ms <= afl::kStaleMs) {
+        child = e->child;
+        pose = afl::compose(mv.pose, e->local);
+    }
+    ReleaseSRWLockExclusive(&g_in.lock);
+    if (!child || !afl::sane_world(pose)) return 0;
+    std::memcpy(extra, whole.data(), kWhole);
+    afl::write_child(extra + afl::kHeader, child, pose);
+    c_in_made.fetch_add(1, std::memory_order_relaxed);
+    return kWhole;
+}
+
 void attach_follow_on_epoch() noexcept {
     for (Dir* d : {&g_out, &g_in}) {
         AcquireSRWLockExclusive(&d->lock);  // the network thread; the holders never block inside
@@ -429,9 +474,10 @@ void attach_follow_tick() noexcept {
 std::string attach_follow_describe() {
     const auto mode = static_cast<Mode>(g_mode.load());
     if (mode == Mode::Off) return {};
-    return std::format("AttachFollow [{}]: {} || {} || registry: attached {} (noted {}, ended {})", afl::mode_name(mode),
-                       dir_text(g_out, false), dir_text(g_in, true), g_registry.count(GetTickCount64()),
-                       g_reg_attach.load(), g_reg_detach.load());
+    return std::format("AttachFollow [{}]: {} || {} | made at the host's client {} (of user 2's Moves {}, busy {}) || "
+                       "registry: attached {} (noted {}, ended {})", g_carry_only.load() ? "carry" : afl::mode_name(mode),
+                       dir_text(g_out, false), dir_text(g_in, true), c_in_made.load(), c_in_client_moves.load(),
+                       c_in_busy.load(), g_registry.count(GetTickCount64()), g_reg_attach.load(), g_reg_detach.load());
 }
 
 void attach_registry_enable(bool on) { g_registry_on.store(on); }
