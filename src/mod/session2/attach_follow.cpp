@@ -140,10 +140,20 @@ std::string note_text(const p8p::Event& e) {
 
 // The child's owner is that user (the host for the outgoing direction, user 2 for the incoming one).
 // nullopt: unreadable (child_hold's hooks not installed, or the actor not found).
-std::optional<bool> owner_is(uint32_t child, bool in) {
+// 2026-11-19 (Borque 18 Nov item 8, cs68e): an NPC nobody owns that the HOST's character carries (a caught partridge:
+// its StartActions name the host's character 0xA0100001 as their Path parent; "not a user's child" before) floated on
+// the joined player's screen where it was caught. Outgoing only: user 2's own catches run on its game (the catch rule).
+constexpr uint32_t kHostCharacterKey = 0xA0100001;
+std::atomic<uint64_t> c_carried{0};
+
+std::optional<bool> owner_is(uint32_t child, uint32_t parent, bool in) {
     const auto owner = hold_actor_owner(child);
     if (!owner) return std::nullopt;
-    if (!*owner) return false;
+    if (!*owner) {
+        if (in || parent != kHostCharacterKey) return false;
+        c_carried.fetch_add(1, std::memory_order_relaxed);
+        return true;  // carried by the host: followed like the host's child
+    }
     uintptr_t user = 0;
     const bool ok = in ? server_user2(user) : server_host_user(user);
     if (!ok || !user) return std::nullopt;
@@ -157,7 +167,7 @@ void on_action(Dir& d, const afl::Action& a, bool in) {
     d.actions.fetch_add(1, std::memory_order_relaxed);
     bool owner_ok = false;
     if (rides) {
-        const auto o = owner_is(a.key, in);
+        const auto o = owner_is(a.key, static_cast<uint32_t>(a.parent), in);
         if (!o) {
             d.owner_unknown.fetch_add(1, std::memory_order_relaxed);
             if (d.other_logged.fetch_add(1, std::memory_order_relaxed) < kOtherLines) {
@@ -264,12 +274,13 @@ std::string dir_text(const Dir& d, bool in) {
     auto ev = [&](Ev e) { return d.ev[static_cast<size_t>(e)].load(); };
     return std::format(
         "{}: StartActions {} (attached {}, still attached {}, Path local not an offset {}, detached {}, not a user's "
-        "child {}; owner unreadable {}) | parent Moves {} -> child Moves {} {} (made {}, skipped while the child is "
+        "child {}; owner unreadable {}; carried by the host, no owner {}) | parent Moves {} -> child Moves {} {} (made {}, "
+        "skipped while the child is "
         "withheld {}, push refused {}, build failed {}) | detached by its own Move {}, stale {} | busy {} (detaches "
         "deferred {}, applied {}, lost {}) | last 0x{:08X} on 0x{:08X} | errors mm: parent x local "
         "[{}] | Path world x local [{}] | previous local applied later [{}] | previous relative pose applied later [{}]",
         dir_name(in), d.actions.load(), ev(Ev::Attached), ev(Ev::Refreshed), ev(Ev::BadLocal), ev(Ev::Detached),
-        ev(Ev::NotOwned), d.owner_unknown.load(), d.char_moves.load(), d.makes.load(),
+        ev(Ev::NotOwned), d.owner_unknown.load(), in ? 0 : c_carried.load(), d.char_moves.load(), d.makes.load(),
         in || static_cast<Mode>(g_mode.load()) != Mode::On ? "would be made" : "due", d.made.load(),
         d.held_skips.load(), d.push_failed.load(), d.build_failed.load(), d.child_moves_detached.load(),
         d.expired.load(), d.busy.load(), d.deferred_detaches.load(), d.applied_detaches.load(), d.lost_detaches.load(),
