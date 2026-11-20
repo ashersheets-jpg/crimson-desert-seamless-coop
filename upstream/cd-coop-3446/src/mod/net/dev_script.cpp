@@ -609,10 +609,11 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
         if (kind == "tpvehicle") {  // tpvehicle [radius] [n]: 1 m beside the n-th nearest NPC vehicle / mount (type 5 or
             st.kind = Step::TpActor;  // 6; 2026-11-19, the passenger test: Borque's cart was type 5 with a type 3 driver)
             st.addr = 0xFFFFFFFCu;
-            float r = 60.0f, n = 0.0f;
-            in >> r >> n;
+            float r = 60.0f, n = 0.0f, t = 0.0f;  // [type]: 5 or 6 only (cs69a: type 6 were small animals)
+            in >> r >> n >> t;
             st.to[0] = r > 0 ? r : 60.0f;
             st.to[1] = n > 0 ? n : 0.0f;
+            st.to[2] = t;
             steps.push_back(std::move(st));
             continue;
         }
@@ -795,6 +796,7 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                     int loaded = 0, n = static_cast<int>(st.to[1]);
                     for (const NpcRow& r : npcs_near(st.to[0], 0.5f, me, loaded)) {
                         if (r.type != 5 && r.type != 6) continue;
+                        if (st.to[2] > 0.0f && r.type != static_cast<int>(st.to[2])) continue;
                         if (n-- > 0) continue;
                         key = r.key;
                         log::info("Dev script: tpvehicle: 0x{:08X} type {} variant 0x{:08X}, {:.1f} m", r.key, r.type,
