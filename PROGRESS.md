@@ -9036,3 +9036,20 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - 21:20 12d533ef NOT POSTED on purpose: 26bf2c71 went out at 17:04 and the user asked for fewer posts; it goes with the
   next batch (draft to write then).
 
+- 21:20-22:47 CARRIED ANIMALS FLOAT (Borque 18 Nov item 8), cs68a-h (two copies; the host catches at the bandits start,
+  -10365 533 -3864; [session2] attach_follow probe / 1 / the new default):
+  * Host-side variants: EuropeanPartridge 0xF454C (10 HP, the catchable bird; interactions 0xF42BE / 0xF42CD); the
+    5-HP 0xF454D / 0xF4626 are insects (interaction 0xF4263, straight to the bag). Animals differ every run.
+  * cs68e (probe): the host caught a partridge (0xF42BE accepted); its StartActions name the host's character
+    0xA0100001 as Path parent every 8 s, and attach_follow said "not a user's child ... never followed": an NPC
+    nobody owns. That is why the guest saw it float where it was caught.
+  * Native: an owner-less NPC whose action names the HOST's character is followed toward user 2 like the host's child
+    (outgoing only; user 2's catches run on its own game, the catch rule). New mode attach_follow=carry, THE DEFAULT:
+    only those; pets stay measured (never checked live on the shared world). cs68f (=1): 5 carried actions, Path local
+    (-174, 420..493, -45) mm, |local| 0.46-0.60 m; made poses vs the game's own: 1-3 mm (parent x local and Path
+    world x local, 4 of 5 <= 50 mm; the 5th the catch's own first action, "not an offset", skipped). Made 5-8 child
+    Moves (the host barely moved). Teleporting drops the carry (cs68g: detached at the first tp, parent -1).
+  * Visual check NOT done: guest shots blocked by a rock (cs68f), host 47 m away (cs68g), the guest loading (cs68h).
+    To ask a tester to look. Dev script: tpanimal takes an animal asked by variant without a hunting-table name.
+  * Unit tests 30/90 (baseline). Package 9e777a23 = 12d533ef + carry.
+- 22:50 pp39 (full) on 9e777a23 started (~3.5 h).
