@@ -43,7 +43,9 @@ growth() {  # log, who, limit per minute
   # down from 420 to 380 (seen without them: 214-346 in the steps, 319 over the 35-minute soak).
   n=$(grep -vcE "Lootr probe|HorseDiag |User2Stages \[create\]" "$f")
   local sa=$((10#${a:0:2}*3600 + 10#${a:3:2}*60 + 10#${a:6:2})) sb=$((10#${b:0:2}*3600 + 10#${b:3:2}*60 + 10#${b:6:2}))
-  local secs=$((sb - sa)); [ $secs -lt 60 ] && secs=60
+  # pp39-lowsave (2026-11-20, 23:54:51 -> 00:00:23): a log that runs past midnight gave a negative span, clamped to
+  # 60 s, so 5.5 minutes of lines counted as one minute (8 fails, the real rate 280 a minute). Over midnight: + 24 h.
+  local secs=$((sb - sa)); [ $secs -lt 0 ] && secs=$((secs + 86400)); [ $secs -lt 60 ] && secs=60
   local per=$((n * 60 / secs))
   # the single most repeated line (numbers and addresses blanked): more than 30 a minute = something logs every
   # second or two for the whole session
