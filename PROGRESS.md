@@ -9018,3 +9018,21 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - 17:24-17:31 cs66a (the guest at Borque's road, tpvehicle + E): no cart within 150 m at that hour; type 6 is also
   birds (Pigeon, BlueJay) and a 5-HP object. UNTESTED live: passengers noted 0. Next: ask Borque to ride as a
   passenger once it ships; tpvehicle should take type 5 only.
+- 17:43 cs67a (B02 hand check on 3732, Hernand: market -10673 622 -3901, north gate -10666 634 -3701; both teleport,
+  npcs 60 six times per spot): matched in time (< 1 s apart) the NPC keys agree: market 116/120, 112/120, 119/120 (the
+  key line stops at 120, sorted by distance, the players 2 m apart), gate 92/92, 88/89-93, 96/96-97; the gaps only in
+  the first samples while one side still loaded. Same townsfolk on both screens (gA2 / hA2). The HUD clocks 11:00 vs
+  11:20 = the shots 96 s apart (scale 12): the clock push is ON and in step.
+- 18:00-18:30 SceneReqGuard extended (native 7d89c64): the crash notes' 4.3 list traced on 3732
+  (build/port3732/nulltrace73.py): 2678 DeleteSequencerReq reads [rax+0x18] unchecked (0x2D54A1A), 3141's callee
+  0x2B571B0 reads [rcx+0x18] unchecked; the other seven branch away first on the straight path. Both guarded like 2808:
+  a mid hook on the instruction after `call [rax+0x48]`, 0 -> the handler's own not-attached block (2678: site 0x2D549DA
+  -> 0x2D5498D, result r12d 0; 3141: 0x2D5663F -> 0x2D56606, result r15d 0). guardcheck73.py: the registers those
+  blocks use are written at the handler's entry only; no branch into the 11 / 12 patched bytes. Package 12d533ef.
+- 17:46-20:52 pp38 (full) on 12d533ef: 970 pass, 1 fail over 23 steps; SAVES OK and 5/5 in every step. All three
+  guards ON (2808 / 2678 / 3141); 2808 passed ~115 Reqs through in newsave, 0 drops; 2678 / 3141 saw none. The fail:
+  farfight's kill (the bandits never engaged the guest, g1: a bandit walking by 10 m off; guest>NPC 1; passengers noted
+  0). pp38b (static farfight fresh solostart): 151 pass, 0 fail. CHECKLIST COMPLETE for 12d533ef.
+- 21:20 12d533ef NOT POSTED on purpose: 26bf2c71 went out at 17:04 and the user asked for fewer posts; it goes with the
+  next batch (draft to write then).
+

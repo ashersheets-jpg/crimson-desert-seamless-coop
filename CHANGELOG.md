@@ -5,6 +5,18 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
+NOT POSTED YET (checklist passed; held to post with the next batch, posts less often): 0.1.0-alpha+12d533ef, for
+game 1.0.0.3732 (checklist pp38 970/971 over 23 steps + pp38b 151/151: farfight's kill missed in pp38, the bandits never
+engaged the guest; passed in pp38b): everything in 26bf2c71 just below, plus:
+- **Riding in an NPC's cart as a passenger no longer makes you wanted** (Borque, 18 Nov). Boarding sent frame events
+  that named the cart and its driver; the host took them for the passenger's hits and gave cart and driver to the
+  passenger's game, where the driver got hurt. While a player sits in a passenger seat (the vehicle checked beside them
+  every server check) the fight rule hands nothing to them. Not seen live yet: no cart passed in the one-PC test.
+- **Two more host crash guards** of the same kind as the 18 Nov host crash: a sequencer delete (2678) and a delayed
+  stage chart event (3141) from the joined player, arriving while the host's world loads, used a missing stage manager.
+  They now leave by each handler's own "not attached" exit. All three guards install on 3732 (checked in pp38); the two
+  new ones saw no such request in the checklist.
+
 POSTED 2026-11-19 17:04: 0.1.0-alpha+26bf2c71, for game **1.0.0.3732** (Steam's update of 19 Nov; every earlier
 build switches itself off on it; checklist pp37 968/971 over 23 steps + pp37b 198/198: chest failed in pp37 on the
 test kit's own walker, which read 3663's position global; mountfight's mounted swings missed, a combat outcome seen
