@@ -358,7 +358,9 @@ struct Config {
     // riding its owner's character (StartAction with an 0xA Path parent) gets, with 1, a synthetic 2697 to
     // user 2 every 3rd 2697 of the character (character pose x the action's Path local); user 2's riding
     // children are measured only.
-    std::string s2_attach_follow = "0";
+    // "carry" (2026-11-19, the default): only an NPC nobody owns that the host's character carries (a caught
+    // animal, Borque 18 Nov: it floated on the joined player's screen); pets stay measured only.
+    std::string s2_attach_follow = "carry";
     // P8 session 9 (pendientes/p8-s9-combate-montura.md §6, p8-impl-s9-movimiento.md), each "0" (default) |
     // "probe" | "1"; the raw ini values.
     // ride_filter, host AND guest (session2/ride_filter.h): the other player's mount/dismount StartActionAck becomes

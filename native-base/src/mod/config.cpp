@@ -244,7 +244,7 @@ Config load_config(const std::wstring& ini_path) {
     // P8 session 8 pets (pendientes/p8-impl-mascotas.md).
     c.s2_child_settle_ms = read_uint(ini_path, L"session2", L"child_settle_ms", 0);
     c.s2_remote_interp_owned_cap_ms = read_uint(ini_path, L"session2", L"remote_interp_owned_cap_ms", 0);
-    c.s2_attach_follow = narrow(read_string(ini_path, L"session2", L"attach_follow", "0"));
+    c.s2_attach_follow = narrow(read_string(ini_path, L"session2", L"attach_follow", "carry"));
     // P8 session 9 (pendientes/p8-impl-s9-movimiento.md).
     c.s2_ride_filter = narrow(read_string(ini_path, L"session2", L"ride_filter", "0"));
     c.s2_mount_sync = narrow(read_string(ini_path, L"session2", L"mount_sync", "0"));
