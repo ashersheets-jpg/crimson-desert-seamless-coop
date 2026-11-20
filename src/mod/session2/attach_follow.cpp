@@ -145,6 +145,9 @@ std::string note_text(const p8p::Event& e) {
 // the joined player's screen where it was caught. Outgoing only: user 2's own catches run on its game (the catch rule).
 constexpr uint32_t kHostCharacterKey = 0xA0100001;
 std::atomic<uint64_t> c_carried{0};
+// attach_follow=carry (the default from 2026-11-19): only those carried NPCs are followed; a user's own child (a pet:
+// never checked live on the shared world) is measured as in probe.
+std::atomic<bool> g_carry_only{false};
 
 std::optional<bool> owner_is(uint32_t child, uint32_t parent, bool in) {
     const auto owner = hold_actor_owner(child);
@@ -154,6 +157,7 @@ std::optional<bool> owner_is(uint32_t child, uint32_t parent, bool in) {
         c_carried.fetch_add(1, std::memory_order_relaxed);
         return true;  // carried by the host: followed like the host's child
     }
+    if (g_carry_only.load(std::memory_order_relaxed)) return false;  // carry: a user's own child is not followed
     uintptr_t user = 0;
     const bool ok = in ? server_user2(user) : server_host_user(user);
     if (!ok || !user) return std::nullopt;
@@ -291,9 +295,11 @@ std::string dir_text(const Dir& d, bool in) {
 }  // namespace
 
 bool attach_follow_configure(const std::string& raw) {
-    const auto p = afl::parse_mode(raw);
+    const bool carry = raw == "carry";
+    g_carry_only.store(carry);
+    const auto p = afl::parse_mode(carry ? std::string("1") : raw);
     if (!p.known) {
-        log::warn("AttachFollow: attach_follow='{}' is not 0, probe or 1; it stays off", raw);
+        log::warn("AttachFollow: attach_follow='{}' is not 0, probe, carry or 1; it stays off", raw);
         return false;
     }
     g_mode.store(static_cast<uint8_t>(p.mode));
@@ -302,7 +308,7 @@ bool attach_follow_configure(const std::string& raw) {
               "parent (+0x116/+0x117) rides it: {}; user 2's children riding user 2 (the host's view) are measured "
               "only, in every mode; attachments end with another parent, a Move of the child with parent -1, the "
               "dismount hash 0x{:08X}, or {} s without an attached action{}",
-              afl::mode_name(p.mode),
+              carry ? "carry: only an NPC nobody owns that the host's character carries" : afl::mode_name(p.mode),
               p.mode == Mode::On ? "every 3rd MoveActorAck of the character to user 2 is followed by a synthetic 3094 "
                                    "of the child (character pose x the action's Path local +0xD7)"
                                  : "probe: the Path local hypothesis is measured against each action's own position, "
