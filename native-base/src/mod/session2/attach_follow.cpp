@@ -154,6 +154,10 @@ std::atomic<uint64_t> c_carried{0};
 // owns whose StartActionReqs name user 2's character; the host's client gets its pose with each 3rd Ack of that
 // character (attach_follow_client_in).
 std::atomic<uint64_t> c_carried_in{0}, c_in_client_moves{0}, c_in_made{0}, c_in_busy{0};
+// cs69a (2026-11-20): the catcher's game (the catch rule runs the animal there) sent a Move of the held animal with
+// parent -1 0.65 s after it was attached, which ended the attachment (13 poses made of an ~8 s hold). Incoming carry:
+// the animal's own Moves are counted, never a detach (another parent, the dismount hash or kStaleMs end it).
+std::atomic<uint64_t> c_in_own_moves{0};
 // attach_follow=carry (the default from 2026-11-19): only those carried NPCs are followed; a user's own child (a pet:
 // never checked live on the shared world) is measured as in probe.
 std::atomic<bool> g_carry_only{false};
@@ -259,6 +263,10 @@ size_t on_char_move(Dir& d, const afl::Move& mv, std::array<afl::Make, 8>& makes
 
 void on_child_move(Dir& d, const afl::Move& mv) {
     if (!d.attached.load(std::memory_order_relaxed)) return;  // nothing attached (the common case)
+    if (&d == &g_in && g_carry_only.load(std::memory_order_relaxed)) {
+        if (mv.key == d.last_child.load(std::memory_order_relaxed)) c_in_own_moves.fetch_add(1, std::memory_order_relaxed);
+        return;
+    }
     if (!lock_dir(d)) {
         if (!afl::char_parent(mv.parent)) defer_detach(d, mv.key);  // its own Move with parent -1: it got down
         return;
@@ -474,10 +482,10 @@ void attach_follow_tick() noexcept {
 std::string attach_follow_describe() {
     const auto mode = static_cast<Mode>(g_mode.load());
     if (mode == Mode::Off) return {};
-    return std::format("AttachFollow [{}]: {} || {} | made at the host's client {} (of user 2's Moves {}, busy {}) || "
+    return std::format("AttachFollow [{}]: {} || {} | made at the host's client {} (of user 2's Moves {}, busy {}; the carried NPC's own Moves kept attached {}) || "
                        "registry: attached {} (noted {}, ended {})", g_carry_only.load() ? "carry" : afl::mode_name(mode),
                        dir_text(g_out, false), dir_text(g_in, true), c_in_made.load(), c_in_client_moves.load(),
-                       c_in_busy.load(), g_registry.count(GetTickCount64()), g_reg_attach.load(), g_reg_detach.load());
+                       c_in_busy.load(), c_in_own_moves.load(), g_registry.count(GetTickCount64()), g_reg_attach.load(), g_reg_detach.load());
 }
 
 void attach_registry_enable(bool on) { g_registry_on.store(on); }
