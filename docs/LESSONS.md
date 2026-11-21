@@ -407,3 +407,12 @@ reading a per-player comparison: check each list's "from (x, y, z)" against the 
 player's, and grep both logs for a revive (2390) or a load (2437). A fight zone is no place for a sync check.
 Also: the two sides' lists are ~15 s apart (each game runs its own script from its own load); compare what one side saw
 near a FIXED point against everything the other side listed at any distance, not set against set.
+
+## A two-PC bug that one PC never shows: add the network back with TEST sim_lag (2026-11-21)
+The running freeze was reported by every two-PC tester for days; four one-PC runs (cs49, cs60) found nothing, because
+one PC has no network between the games. Native 9b9bad7's TEST sim_lag ([session2] sim_lag_delay_ms / _jitter_ms /
+_spike_ms / _spike_per_mille, each end holds what its tunnel receives, in order; -HostNativeExtra k=v,k=v and
+-GuestDev native_extra=k=v+k=v) reproduced it in the first run (cs74b: held 8.4% vs 2.2%, Borque's 3-8%). For any
+report that only two PCs show (lag, desync, order of events), run it with sim_lag first. And measure the cause, not the
+symptom: the sample GAPS looked fine; the samples' LATENESS at arrival (100-300 ms against the game's 200 ms window)
+was the cause.

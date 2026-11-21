@@ -284,14 +284,21 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
     none made, in our runs too. Ported to 239 B / the 3460+ offsets. Not yet tested.
   - [ ] The guest sees city NPCs sitting on benches in a T-pose (the guest only). (Lead: GuestSeqRestore swaps a
     remote NPC's seq_bodyanim_action it cannot find for an idle wait, 31 times in his session; cs58 looks in Hernand.)
-  - [ ] The guest's "interact" opens the NPC's menu but the NPC keeps walking (the host's NPCs stop and look).
+  - [~] The guest's "interact" opens the NPC's menu but the NPC keeps walking (the host's NPCs stop and look).
+    (2026-11-21: the talk rule, native 9b9bad7, [session2] ai_handoff_talk=1: the person the guest interacts with runs
+    on the guest's game while it stands within 6 m, then back; in single player the talker's game runs the NPC and its
+    AI is what stops it. To test: cs75 at the butcher; a walking NPC by hand.)
   - [ ] The host's armour dye is not seen by the guest.
     (Lead: DyeItemListByEquipSlotAck 3042 / DyeItemByInventoryAck 2911 are ToTarget writers, owner_fanout_writers.h:
     only the dyer's client gets them; the guest needs the host's item re-sent with its dye, e.g. an OtherEquipItemAck.)
   - [ ] A tree the guest cuts down is duplicated for the host.
   - [ ] Carryable animals (kiwis, goats) are not synced.
-  - [ ] The running "animation freeze" happens almost all the time out of town (his theory: different FPS on the two
+  - [~] The running "animation freeze" happens almost all the time out of town (his theory: different FPS on the two
     PCs; our runs have the same FPS on both). The host's FPS drops.
+    (2026-11-21: REPRODUCED on one PC with the TEST sim_lag (cs74b: held 8.4% vs 2.2%; Borque's two PCs 3-8%): the
+    other player's samples arrive LATE for their stamps and the game, reading 200 ms back without extrapolating, holds
+    the pose. remote_interp_char (native 6695412) gives the character a delay from that lateness; cs74c / cs74d
+    compare. Each game's own frame hitches are logged now (UiPause) for the "both screens at once" case.)
   - [~] Borque (2026-11-18 08:05, 9e85b891, client side): (1) dye vendor / goblin trader missing -> both added to
     the merchant unhide + shop twin, other function NPCs to unhide only (native, to test); (2) talk greyed out
     (wanted after the cart? asked); (3) the client's horse invisible for the host; (4) taming never ends (the wild

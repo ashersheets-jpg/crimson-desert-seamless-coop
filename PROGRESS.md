@@ -5,6 +5,11 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- 2026-11-21 03:30 SAVE REQUEST (not urgent): B07 (boss mechanics for two) needs a save right before a boss fight
+  (any story or world boss you have reached), so two copies of the game can fight it together and I can see grabs,
+  phases, the arena and the finish on both screens. None of the test saves is at a boss (the windridge fort's wyvern
+  only burned the joined player). If you have one: tell me which save slot; I copy it into the test kit, your own
+  saves stay untouched.
 - 2026-11-20 21:10 HANDS-ON (about 10 min, when you have time): mining and fishing as the joined player (Borque 18 Nov
   items 5 / 6). The mod has no mining or fishing code yet, and the fresh test saves have no hand drill or rod. I need
   a host-only session where you mine one ore block with the hand drill and fish once, with the sniffer recording (I
@@ -9174,3 +9179,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   (waiting list, the owner's), the owner answered EdwardJames's controller question; nothing else needs help.
 - 03:28 cs74c (lag a, the guest runs straight W / S 12 s x 4) / cs74d (the same + remote_interp_char=1) / cs73a (the
   wild-horse hunt, 13 min, taming with the branch probe) running.
+- 03:36 cs74c (6729b33c, TEST sim_lag a, the guest running straight W / S 12 s x 4, remote_interp_char off): the host
+  saw the guest held 8.1%, runs > 100 ms 25, > 300 ms 5; NEW mid-run holds (a new sample ended the hold while it still
+  moved): <=100 ms 53, <=300 1, <=1000 1, longest 424 ms. The cause in numbers: the guest's samples arrive at the
+  host's client LATE for their stamps: lateness [<=100 0, <=200 1322, <=300 589, <=500 26, <=1000 14] (largest 618 ms).
+  Even on one PC they are 100-200 ms old on arrival, and the game shows them 200 ms back: any extra latency (two PCs)
+  pushes a third of them past it, a short hold each time. That is the "almost all the time" freeze (Borque) and Jay's
+  "small desync hitches". The guest's view of the standing host: lateness mostly <= 100 ms. Frame hitches (UiPause):
+  host 8 frames > 100 ms (one 1957 ms: the teleport / load), guest 4: these games do not hitch while running here.

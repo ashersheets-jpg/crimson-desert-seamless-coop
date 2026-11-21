@@ -1795,6 +1795,7 @@ void test_native_mode_text() {
     CHECK(native_mode_of_text(gt) == NativeMode::Guest);
     CHECK(has(gt, "guest_schedule_load=1") && has(gt, "guest_x_interaction_stage=1"));  // B02 far world (tcB224)
     CHECK(has(gt, "tunnel_compress=1") && has(ht, "tunnel_compress=1"));  // both ends (playtest 2026-11-10)
+    CHECK(has(gt, "remote_interp_char=1") && has(ht, "remote_interp_char=1"));  // both ends (the running freeze, 2026-11-21)
     CHECK(has(ht, "lootr=1") && !has(gt, "lootr=1"));  // Lootr by default, the host's key
     // [coop] story_together (2026-11-14, experimental): off by default; on, the host writes story mode + the ready check.
     CHECK(!has(ht, "story_gate=hold") && !has(ht, "user2_stages_own_quest=1"));
