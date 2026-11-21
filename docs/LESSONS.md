@@ -422,3 +422,11 @@ dev_script.cpp caps every `wait N` at 10000 ms. cs73a's "wait 30000" and "wait 7
 13-minute horse watch lasted 4 minutes, and the guest teleported 12 minutes early. Write a long wait as several
 `wait 10000` (cs73b.sh's `w N` helper), and check a script's timeline in the log ("Dev script:" lines) before
 reading its results.
+
+## NPC keys are not stable between runs; find a person by place (2026-11-21)
+cs75b / cs76b teleported to NPCs by the keys an earlier run of the SAME build and save had logged: one key named
+another NPC 130 m away, the three others were "NOT loaded". The server numbers actors in load order, which shifts
+with streaming and timing. In a script: `tp` to the spot, then `tpnear [radius] [n]` (the n-th nearest living person;
+it logs the key it found), and aim from there (`py:faceto:R-1,0`: tpnear/tpactor put us 1 m east, +x, of the NPC).
+Also: a talk / shop / table interaction starts with R while the camera faces the person; E is objects (cs75a's
+stall prompt "Meat: E Buy" won while the shopkeeper stood beside the guest).
