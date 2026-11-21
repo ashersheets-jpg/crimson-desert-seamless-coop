@@ -6,7 +6,7 @@ Use this instead of 69edcc84; **both players need the same build**. Mostly from 
 - **The taming freeze:** this build logs the host game's answer to that last taming step. If it happens again, please send both report zips.
 - The report zips now also show each game's own frame hitches, so a freeze can be told apart from a stutter of the PC.
 
-Tested with two copies of the game on one PC (Nvidia): the full checklist on 1.0.0.3732 (24 steps, one of them new: a run with simulated internet lag).
+Tested with two copies of the game on one PC (Nvidia): the full checklist on 1.0.0.3732 (24 steps, one of them new: a run with simulated internet lag). Not covered here: two PCs over Steam, a real internet connection, AMD / Intel cards, long sessions; that is what your reports tell us.
 
 - `...4394b014-shared-world.zip`: the one you want. Run its installer with the game closed.
 - `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
