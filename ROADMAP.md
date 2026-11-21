@@ -301,6 +301,13 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
     (thousands of checks; Borque's client log 173). 3732's check exe+0x23607D0 tests the instance's +0x168, its dead
     check, a condition on the player and a condition list after the lookup: research builds gx1 / gx2 count where it
     stops (cs75g, cs75p1). 3576 got "R Shop" for the guest with the same code (tcB238 / tcB242).
+    2026-11-21 noon, what it really is (research gx3-gx7, cs82a): (1) shops: the joined player's usable shop entries
+    are ShopTwin's (its own copy of the host's shop scene); the host's own entries are refused there on purpose. The
+    cs75 scripts teleported the joined player AFTER the twins were made, and a far teleport ends every scene of its
+    own manager, the twins too (8 -> 0); nothing made them again. Fixed in ShopTwin (prepared again). The far shop
+    (the joined player's own scene) works on 3732 (cs82a). (2) Greet / talk with townsfolk: NpcCategory's table read
+    empty on 3732 (3663's offsets; 3732 is back at 3576's), so the joined player's greet / talk condition failed:
+    fixed. (3) Still open: talks that belong to a host scene (B02a's "twin for the NPC scenes with dialogs").
   - [~] The guest's "interact" opens the NPC's menu but the NPC keeps walking (the host's NPCs stop and look).
     (2026-11-21: the talk rule, native 9b9bad7, [session2] ai_handoff_talk=1: the person the guest interacts with runs
     on the guest's game while it stands within 6 m, then back; in single player the talker's game runs the NPC and its

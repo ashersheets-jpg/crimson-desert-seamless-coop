@@ -3,7 +3,7 @@
 # one game session and every step's screenshots can be looked at before the next one starts:
 #
 #   bash tools/prepost.sh TAG "<package folder>" STEP        STEP = static | real | fresh | xess | fsr | display |
-#                                                                   lowsave | chest | revive | loot | crime | leave | farfight | farfight2 | newsave | solostart | mounts | mountfight | nosave |
+#                                                                   lowsave | chest | revive | loot | crime | leave | shop | farfight | farfight2 | newsave | solostart | mounts | mountfight | nosave |
 #                                                                   retry | stuck | mismatch | hostrevive |
 #                                                                   summary
 #
@@ -376,6 +376,40 @@ leave)
   e=$(unknown_errs "$H" | grep -c .)
   [ "${e:-0}" -eq 0 ] && ok "host: native log: no error line outside the known set" || { bad "host: native log: $e unknown error line(s):"; unknown_errs "$H" | cut -d']' -f3- | cut -c1-170 | sort | uniq -c | head -5 | sed 's/^/          /' >> "$R"; }
   info "screenshots to LOOK AT: $(cd $N/shots && ls $NAME-*.png 2>/dev/null | tr '\n' ' ')" ;;
+shop)
+  # 2026-11-21 (cs82c; Borque 20 Nov "client still not able to interact with npcs"): the friend opens the Hernand
+  # butcher's shop alone with the host 440 m away (its OWN shop scene), then again with the host beside the butcher
+  # (ShopTwin: the friend's private twin of the host's shop scene; its branches are answered locally). The host parks
+  # 94 m above the Rodbel dock (the dock's bandits downed it in cs82a/b), comes back at T+70 and stands beside her.
+  # One Esc closes a shop menu (a second opens the game menu, which then swallows the next R: cs82a/b).
+  head_step "the friend opens a shop alone (host 440 m away) and with the host beside the shopkeeper (the twin)"
+  sw() { local n=$1; while [ $n -ge 10 ]; do echo "wait 10000"; n=$((n - 10)); done; [ $n -gt 0 ] && echo "wait $((n * 1000))"; }
+  { echo "wait 3000"; echo "tp -10238 640 -3958"; sw 67; echo "tp -10678.5 612 -3904.2"; sw 25; echo "tpnear 4 0"; sw 60; } > $N/scan/shop_host.txt
+  { echo "wait 3000"; echo "tp -10678.5 612 -3904.2"; sw 25; echo "npcs 4"; sw 120; } > $N/scan/shop_guest.txt
+  OPEN="py:facesweep2:-10677.6,-3905.4,-30,30,10,82,1500,u2,70_w:1500"
+  CLOSE="k:ESC:150_w:2500"
+  GK="w:15000_${OPEN}_shot:$NAME-a0_${CLOSE}_shot:$NAME-a1_w:38000_${OPEN}_shot:$NAME-a2_${CLOSE}_shot:$NAME-a3"
+  run2 "-CoopPlus -Lobby -Fresh -PackageIni $MODW -HostVariant usercopy -Hold 20 -HostScript $SCAN\\shop_host.txt -GuestScript $SCAN\\shop_guest.txt -GuestKeys $GK -HostKeys w:2000_shot:$NAME-h0"
+  O=$N/$NAME.out; H=$N/$NAME.host.log; G=$N/$NAME.guest.log; HL=$N/$NAME.coopplus.host.log
+  has "$O" "^host in the shared world: True"  "host reached the shared world"
+  has "$O" "^guest in the shared world: True" "guest reached the shared world"
+  has "$O" "^host alive=True guest alive=True" "both games still running at the end"
+  has "$O" "^SAVES OK"                     "the player's saves untouched (SAVES OK)"
+  has "$O" "user install restored: 5/5 OK" "the player's install put back (5/5)"
+  n=$(grep -cE "USER 2 asked: requester 0xA0100066 .* interaction 0x000F4321 .* ACCEPTED" "$H" 2>/dev/null)
+  [ "${n:-0}" -ge 2 ] && ok "the friend's shop requests reached the host's server and were accepted: $n (alone, then with the host there)" \
+                      || bad "the friend's shop requests accepted by the host's server: ${n:-0} of 2 (alone, then with the host there)"
+  has "$G" "ShopTwin \\[prepared\\] the host's shop scene 0x[0-9A-F]+ \\(resource 0x978345CA\\)" "the friend's game made its twin of the host's butcher scene"
+  has "$G" "ShopTwin \\[branch\\] twin 0x1[0-9A-F]+ -> branch 0 answered locally with state 2" "the twin's shop menu was answered on the friend's game (the host's scene untouched)"
+  has "$H" "AiHandoff: talk rule: NPC 0x[0-9A-F]+ \\(type 3\\) -> the talker's game" "the talk rule handed the shopkeeper to the friend's game"
+  overlay_checks "$HL" "host"
+  no_recording "$H" "host"
+  growth "$H" "host native" 380
+  growth "$HL" "host layer" 240
+  new_wrn "host" "$HL" $N/$NAME.coopplus.host.before.log "$H"
+  e=$(unknown_errs "$H" | grep -c .)
+  [ "${e:-0}" -eq 0 ] && ok "host: native log: no error line outside the known set" || { bad "host: native log: $e unknown error line(s):"; unknown_errs "$H" | cut -d']' -f3- | cut -c1-170 | sort | uniq -c | head -5 | sed 's/^/          /' >> "$R"; }
+  info "screenshots to LOOK AT (a0: the menu alone, a2: the menu with the host there): $(cd $N/shots && ls $NAME-*.png 2>/dev/null | tr '\n' ' ')" ;;
 farfight)
   # 2026-11-17 (pp26: farfight and mountfight, the guest swung at the air with the bandits beside and behind it;
   # 7 of 35 fight checks since pp11 failed that way): a mouse turn every 3 swings sweeps the guest around.

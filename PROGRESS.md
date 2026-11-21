@@ -9547,3 +9547,97 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   which thread / for which kind of stage manager (client or server) the host's process runs the node that creates
   them; then decide between making the host's scenes run their StageChart on the joined player's client (as on 3576:
   there the redirect alone made the shop open) and resolving the evaluator in X the way the redirect does.
+- 11:38-11:50 cs75p4 (gx6): SAVES OK, 5/5. The host's entries are made on its SERVER thread (InteractionShare's node
+  ADD, manager vtable exe+0x5F5FAF0 = ServerSequencerStageManager); its client uses the same NPC objects. The "vtables"
+  gx5 logged are heap pointers: entry+8 is not a C++ object but the stage data SetInteraction's add stores (2976 notes,
+  p8-impl-veto-interaccion.md §2.1: index, stage id, stage data, condition; +0x18 = the default condition).
+- 11:56-12:08 cs75p5 (gx7: which code asks the joined player's own manager for one of the host's stage ids): SAVES OK,
+  5/5, both alive. No caller caught: the crosshair stayed on the bowl ("Wide Bowl: E Buy"), so no check of Renee's
+  entries at all. THE "REDIRECT STATE" IS ONLY THE AIM: cs75p3's crosshair sat on her chest ("R Shop" with gx4),
+  cs75p5's on the bowl, from the same spot.
+- 12:10 WHAT THE RUNS REALLY TESTED (cs75p5's node lines, guest): Renee's list on the joined player has 10 dynamic
+  entries: 5 from the host's server (index 7 / 6 / 9 bound to the host's shop scene, A / 8 unbound) and 5 of ShopTwin's
+  twin (7 / 6 / 9 bound to the twin id = host id + 0x10000000, A / 8), the twin's added on the joined player's client by
+  SetInteraction (3732: StageChart_Function_SetInteraction vtable exe+0x5DC7448, body 0x25D1E30) running in its own
+  manager M. Then the TEST's far teleport of the joined player (the cs75 scripts move it 330 m AFTER the host's arrival
+  made the twins) removed all 24 twin entries in that same 0.5 s. So every cs75 run checked only the host's entries.
+  On 3576 the shop worked through the twin (shop_twin.h: the host's entries are refused there on purpose; the twin's
+  entries are the joined player's, its 3008 names the NPC and goes to the host's server). The gx4 change accepts the
+  host's entries, which cannot start anything (no 3008 left the joined player) and would hide the twin's: it does NOT
+  ship in that form. Townsfolk talks (non-shop scenes) never had a twin: B02a's "twin for the NPC scenes with
+  dialogs", not started. Also found for later: the joined player's request sender on 3732 =
+  pa::ClientInteractionActorComponent (vtable exe+0x59CF548) +0x180 = 0xAF1530 (2976's 2671 sender), +0x188 = 0xAF0D60.
+- 12:13 cs82a (the host waits at the Rodbel dock while the joined player opens the butcher's shop alone, then the
+  host arrives and the joined player opens it again: twins made in place, no teleport after). NOT the release build:
+  the harness copies the tree's cdmp.asi (LESSONS), so it ran gx7 with the evaluator change ON. Half 1 (host 440 m
+  away, the joined player's OWN shop scene): its R reached the host's server at once ("USER 2 asked ... 0xB0100511
+  interaction 0x000F4321 -> ACCEPTED", 12:21:11): the far shop works on 3732. Half 2 (the host beside her): the
+  evaluator change accepted her host-scene entries (908) and nothing was asked, as expected with it on.
+- 12:10-12:22 found while it ran (static):
+  * cs75p5's twin wipe in numbers: the joined player's own manager M went from 8 live scenes (the twins) to 0 at the
+    test's far teleport; ShopTwin never prepared them again. In play: a friend who fast-travels into a town where the
+    host's shop scenes already run gets no shop there. FIX written (shop_twin.cpp again_check): every 2 s a twin not
+    live in M twice in a row (8 s after its last prepare) gets its own 2380 + initial 2920 again, max 30 per twin.
+  * NpcCategory on 3732: "host table 0 NPCs" on the host in every run (76 596 getter calls, 69 frames out, all
+    empty): the category table's fields moved back to the 3576 layout (3732 getter 0x1C9B430: count +0x6C, buckets
+    +0x68, bucket array +0x78, entries +0x80) and the mod read 3663's (0x18 lower). That table is what let the joined
+    player's greeting pass on 3576 (tcB88: "E Greet", interaction 0xAD); empty, every townsperson's greet / talk is
+    refused for it: Borque's "talk greyed" (with his wanted state). FIX: the 3576 offsets (npc_category.cpp).
+  * The evaluator change now needs [session2] guest_x_eval_fix=1 (default 0: counted only, as the game refuses).
+- 12:25 cs82a done: SAVES OK, 5/5, both alive; the talk rule handed Renee to the joined player's game at its open
+  (2.7 m); InteractionShare kept 18 entries when its own scenes closed at the host's arrival. #general and
+  #play-testing-feedback read (nothing new since 08:26 UTC). 12:26 build (native 90 tests, the 17 known failures;
+  layer OK): V off by default, ShopTwin again_check, NpcCategory's 3732 offsets (cdmp.asi 39c7b214). 12:27 cs82b (the
+  same run on it) running.
+- 12:30 NpcCategory FIXED (cs82b, live): the host's table reads again ("host table 13 NPCs" a minute in, 0 in every
+  earlier 3732 run) and reaches the joined player.
+- 12:38 cs82b done: SAVES OK, 5/5, both alive; half 1 again ACCEPTED (12:34:31). Half 2 again nothing, and NOT a test
+  of the twin: cs82's close (Esc, Esc) closed the shop and then OPENED the game menu (shot a1: the inventory), which
+  stayed up through the 38 s wait and the second sweep (a2). Also the host, parked at the Rodbel dock (y 546), was
+  downed by its bandits each time ("Host is down"), so its own open never came. cs82c: the host parked 94 m above
+  (tcB243's spot, y 640), one Esc to close. Rebuilt with again_check's limits (8 s apart for 10 tries, then every
+  30 s while the host's scene lives; a twin seen live starts over), cdmp.asi 918f710e. 12:40 cs82c running.
+- 12:50 *** cs82c: THE JOINED PLAYER'S SHOP WORKS ON 3732, FAR AND NEAR THE HOST *** (918f710e: V off, again_check,
+  NpcCategory 3732): SAVES OK, 5/5, both alive. Half 1 (host parked 440 m away at y 640, safe): ACCEPTED at 12:47:26,
+  the menu "Hernand Butchery - Renee: Buy / Sell / Leave". Half 2 (the host beside her): ACCEPTED at 12:48:13 and the
+  TWIN's branches answered locally ("branch 6 -> state 1", "branch 0 -> state 2": the menu). The host's own R while
+  the joined player's menu was open sent nothing ("R Shop" on its screen): the game's own rule, one talker at a time.
+  So the joined player's "can't interact with NPCs" was, for shops: the twin lost to a teleport (fixed), and in the
+  cs75 runs also the test's teleport and the evaluator change. 12:51 cs75w1 (the host first, then the joined player
+  teleports in: the twins must come back by again_check) running.
+- 13:00 cs75w1: SAVES OK, 5/5, both alive; the joined player's shop ACCEPTED at the first sweep angle (12:58:23), the
+  twin's branch answered, the talk rule gave Renee to its game. But the twins came 2 s AFTER its teleport (12:57:47
+  vs :45), so nothing was lost and again_check had nothing to do. cs75w2 (the joined player waits 30 s before its
+  teleport, sweeps 40 s after its keys start) running on the same build. Meanwhile a review agent reads the
+  shipping changes (again_check, NpcCategory offsets, the V gating: V now installs only with guest_x_research or
+  guest_x_eval_fix; source changed, not built yet).
+- 13:10 cs75w2: SAVES OK, 5/5, both alive. The loss reproduced (twins made 13:07:19, the joined player's own manager
+  8 -> 0 at its teleport 13:07:40) and again_check NEVER fired (no "[again]"), so no shop (nothing asked). The host's
+  ObserverSeqCopy did not count that same-field teleport as a trip (no re-send of its scenes). Likely: the ended twins
+  stay in the table flagged dead, which the check skips (unverified: it logs nothing while waiting).
+  The review (agent, read only): NpcCategory and the V gating fine; again_check has 3 faults: (F1) twins whose host
+  scene ended while the joined player was away (a trip: the host's delete is then not forwarded) stay in its table and
+  are made again all session, orphans binding the NPC twice when it returns; (F2) after a trip the host's copy is sent
+  again and the twin's prepare is injected unconditionally: with a re-made twin already there, the same id twice
+  (the game's add is protected code: unknown, possibly a crash); (F3) a check landing on the host's delete re-makes
+  the twin right after its own delete.
+  DECISION (mine, scoped): again_check ships OFF ([session2] shop_twin_again, default 0) with F3 fixed (the check runs
+  after the packet's own handling, never for a scene being deleted); its second round (a fresh twin id per re-make, so
+  no id is ever prepared twice; re-make only while the host's scene is live in X; a status line of what the check
+  sees) comes after this batch. Without it the shop works when the joined player walks in or arrives before the
+  host's shop scenes (cs82c, cs75w1); after a far teleport INTO a town whose host scenes already run, it does not
+  (known, said in the post). Built (b41c72b0: 17 known unit failures). 13:15 cs80b (talks in the market) running.
+- 13:18 cs80b: THE HOST'S GAME CRASHED during its world load (13:17:46, before the joined player was in): access
+  violation in VCRUNTIME140+0x1C177 (a copy) reading an unmapped page, every frame of the stack in the game's
+  protected section .xpdata (exe+0x415D1CE, +0x416BCE2, +0x415D043, +0x41707A3, +0x162EBD2 ...), no mod frame. SAVES OK,
+  5/5. First time this signature shows in any run's logs; nothing host-side changed since 918f710e (cs82c, cs75w1/2
+  clean). Taken as the game's own for now; if it comes again, it is a blocker. 13:24 cs80c (the same) running.
+- 13:33 *** cs80c: THE JOINED PLAYER GREETS TOWNSFOLK AGAIN ON 3732 *** (b41c72b0): SAVES OK, 5/5, both alive, no
+  crash. Its greeting of a townsperson (interaction 0xAD) ACCEPTED by the host's server (13:32:26) and its screen shows
+  "Stranger - Trust +5 - Your actions are appreciated" with the NPC's line (shot b0), as on 3576 (tcB88). The host's
+  category table 213 NPCs, the joined player answered 180 lookups from it (139 non-zero). (Its first try landed at
+  the butcher: "R Shop" shown, the single R hold took nothing; the shop itself is cs82c's.)
+- 13:35 native c7fdb0d committed (NpcCategory 3732; ShopTwin again_check behind shop_twin_again=0; GuestXInter research
+  behind guest_x_research / guest_x_eval_fix) and synced (5d02466). The checklist gets a "shop" step (tools/prepost.sh,
+  RELEASE-CHECKLIST.md: 26 steps): the joined player's shop alone (the host parked 440 m away) and with the host beside
+  the shopkeeper (the twin). Next: package, then pp42 (all 26 steps).

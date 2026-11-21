@@ -285,6 +285,10 @@ topic BEFORE testing or guessing about it.
   build-native-layer), not the package named by -PackageIni (only its coopplus.ini). A "baseline on the posted
   package" needs that package's DLLs put in the build folders first, and any compile in between changes what the
   next test runs. Say in PROGRESS which DLLs a run had (cs28a ran a fix that was meant to be absent).
+  Again 2026-11-21: the "research packages" gx1-gx7 (make_research_pkg.sh) changed nothing a run used, and cs82a,
+  called a run "on the release build 908c60c5", ran the tree's gx7 research native with the evaluator change in it,
+  which spoiled its near-shop half. The package id in a script's arguments says nothing about the binaries; the run's
+  kept sums.txt (run_keep.sh) does. Before a run meant to test a package, build that package's source into the tree.
 - Name a HUD element only after zooming in on it. cs27c called the line "Balthazar, the Wyvernflame" over a green
   bar a "boss bar"; it was the region panel's fort holder (with "100.00% / Fort Windridge" under it). That label cost
   three test runs and a module (trigger_share, shelved) aimed at the wrong thing. Crop both players' shots at the

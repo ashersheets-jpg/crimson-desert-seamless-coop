@@ -18,6 +18,23 @@ snapshots older than ~60 s; compare against the save files' mtime recorded at th
 marks long before their shares expire (ledger only ids ever in a file, prune by age only); (4) a 15 s dedup of
 LoadSlot can swallow a real reload (dedup on the user-actor / character pair instead).
 
+v3 plan (2026-11-21 12:30, not written yet; v2's patch is the base):
+1. Ledger, complete: every give is recorded ON THE SERVER THREAD once its add has run (persist_give and the chest
+   shares add synchronously there; the in-session "guest took it too" path records at its server-thread add, not in
+   lootr_tick). The joined player's save (SavePlayerToSlot, also the server thread) then marks every give recorded
+   before it: no 1.5 s rule. Marks of a save whose ledger write failed stay queued with that save and are written
+   again every 2 s until they are on the ledger. Recording and ledger writes need only "armed once in this process"
+   (the folder known), never the current arming, so a later failed load does not drop them.
+2. Slot file, never older than its save: at a failed write at the commit, the slot's old file is set aside at once
+   (renamed .stale, deleted if that fails): that slot then restores nothing. The file's stamp is the newest mtime of
+   the slot's own save files measured right after the commit; at load, newer save files than stamp + 2 s mean a
+   later save missed its file: nothing restored. A snapshot whose commit comes more than 60 s after it is not written
+   (the old file set aside instead).
+3. Ledger size: only ids that were ever in a slot file (written or read in this process, or waiting in a pending
+   snapshot) are marked; marks are pruned by age only (32 days); a 100 000-mark safety cap.
+4. Arming: at the host's LoadSlot of a world slot for its CHARACTER (the 3093 character call, exe+0xE274364, actor
+   not a user actor): one arming per world load; the UserLogin and lobby calls (user actors) do not arm. No time dedup.
+
 ## What happens today (lootr.h, native)
 
 "Items in the world: each their own" works inside one session:
