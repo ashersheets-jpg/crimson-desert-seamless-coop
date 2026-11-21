@@ -452,3 +452,11 @@ minwindef.h defines `far` and `near` as EMPTY macros (16-bit pointer leftovers),
 `int = 0;` and `int& far` as a nameless parameter: a confusing error far from the cause. Written into the departure
 sweep while the build was locked and caught by reading the diff (renamed n_far). Grep a diff for `-w far` / `-w near`
 before a native build.
+
+## Player-facing text goes stale when the mode changes: survey it against the code (2026-11-21)
+The shared-world zip shipped for two weeks with the two-worlds README (townsfolk "not shared", "no trading", the F8
+panel and a dozen hotkeys the shared world never binds), the installer's last line named F8 / Ctrl+F1, and the
+native layer still printed "Ctrl+F2" / "Shift+F1" / "(Ctrl+F8 too)" hints; a download post sent testers to a
+"Combat & Loot" section their Co-op tab hid. Every checklist step passed: none reads text. When a build changes how
+players do things, have the player-facing text (README, installer, on-screen hints, settings labels, the posts)
+checked against the code that draws the menus (an agent's survey of the menu code found all of these in one pass).
