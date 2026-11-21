@@ -9347,6 +9347,17 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   both players on the bandit test save (the camp's "Defeat the enemies" step for both), quest_shared_credit=1, the
   host kills the camp with the test-only lootr_kill_hits=1 while the guest stands 25 m off. Drafted, not queued
   (keys from cs76c first): cs84, B13 groundwork: both players in an arm-wrestling match at the inn table at once.
+- 06:30 PLAN after pp41 (11/24 steps passed so far, 0 fails): (1) cs75c / cs76c run by themselves; if the shop
+  opens and nothing breaks, post 4394b014 (zips staged in scratchpad/upload, index.html set; post.json and the talk
+  line to write), CHANGELOG, tag Borque; check #general. (2) build/scratch-keep/next_batch_build.sh: native + its
+  unit tests against the baseline (cut the list to what still fails) + the layer + its tests; commit native (sweep,
+  talk hand-back, hitch lines, fixtures, tests/opmap_2976.h), sync native-base, push; commit the layer (native hints,
+  Session rows, scaling rows). (3) scratchpad add_leave_step.py (the checklist's 25th step) while no test runs;
+  Windows Update check; touch scan/after_pp41.go: cs81a, cs74g / h, cs73b, cs80a, cs79a, cs77a, cs78a, cs82a, cs85a.
+  (4) their results: guest_clock_fix default?, B09 talks by script (drop the hands-on if cs79a works), B02a, B06,
+  B12, B02's shop meet, B10's credit, the taming answer, the gimmick probe (tree). (5) B13: cs84 with cs76c's keys,
+  then the design question (scratchpad b13_question.txt). (6) the package and pp42 (25 steps), then the post.
+  Later: fixtures that need 3732 captures (a recording run), B19 across sessions (asked), B20 voices (probe port).
 - 06:20 SHARED-WORLD README written (kit/coopplus/README-shared-world.txt, committed 2956e9d; package-native.ps1
   now puts it in place of the normal README, whose body was the two-worlds mode). From an agent's survey of the
   layer's native menus (read only): the title flow, holding Interact on the friend (the menu: the challenges, a
