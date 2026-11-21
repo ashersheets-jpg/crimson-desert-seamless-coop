@@ -82,13 +82,16 @@ uintptr_t table_of(uintptr_t actor) {
     return table_of_main(main);
 }
 
-// 0x1C358E0's lookup (3663: every offset of this line is 0x18 lower): buckets +0x68, count +0x6C, bucket array +0x78 (0x100 bytes each: u32 n, then n pairs
-// {u32 key, u32 index} from +8), entries [[+0x80] + index*8] (+4 key, category +0x18 / +0x19).
+// 0x1C358E0's lookup: buckets +0x68, count +0x6C, bucket array +0x78 (0x100 bytes each: u32 n, then n pairs
+// {u32 key, u32 index} from +8), entries [[+0x80] + index*8] (+4 key, category +0x18 / +0x19). 3663 had every one of
+// these 0x18 lower; 3732 (getter 0x1C9B430: cmp [rcx+0x6C],0 / [rcx+0x68] / [rcx+0x78] / [rcx+0x80]) is back at these
+// (2026-11-21: with 3663's the host's table read empty on 3732, "host table 0 NPCs").
+constexpr uint32_t kTabBuckets = 0x68, kTabCount = 0x6C, kTabBucketArray = 0x78, kTabEntries = 0x80;
 bool lookup(uintptr_t tab, uint32_t key, uint8_t& cat) {
     uint32_t buckets = 0, count = 0;
     uintptr_t bk = 0, ents = 0;
-    if (!rd(tab + 0x50, buckets) || !rd(tab + 0x54, count) || !buckets || !count || !rd(tab + 0x60, bk) ||  /* 3663: -0x18 */
-        !rd(tab + 0x68, ents) || !bk || !ents)
+    if (!rd(tab + kTabBuckets, buckets) || !rd(tab + kTabCount, count) || !buckets || !count ||
+        !rd(tab + kTabBucketArray, bk) || !rd(tab + kTabEntries, ents) || !bk || !ents)
         return false;
     const uintptr_t b = bk + static_cast<uintptr_t>(key % buckets) * 0x100;
     uint32_t n = 0;
@@ -124,8 +127,8 @@ bool host_category(uint32_t key, uint8_t& cat, uint64_t now) {
 uintptr_t entry_of(uintptr_t tab, uint32_t key) {
     uint32_t buckets = 0, count = 0;
     uintptr_t bk = 0, ents = 0;
-    if (!rd(tab + 0x50, buckets) || !rd(tab + 0x54, count) || !buckets || !count || !rd(tab + 0x60, bk) ||  /* 3663: -0x18 */
-        !rd(tab + 0x68, ents) || !bk || !ents)
+    if (!rd(tab + kTabBuckets, buckets) || !rd(tab + kTabCount, count) || !buckets || !count ||
+        !rd(tab + kTabBucketArray, bk) || !rd(tab + kTabEntries, ents) || !bk || !ents)
         return 0;
     const uintptr_t b = bk + static_cast<uintptr_t>(key % buckets) * 0x100;
     uint32_t n = 0;
@@ -219,7 +222,7 @@ std::vector<ncl::Entry> read_local_table() {
     const uintptr_t tab = local_table();
     uint32_t count = 0;
     uintptr_t ents = 0;
-    if (!tab || !rd(tab + 0x54, count) || !rd(tab + 0x68, ents) || !ents) return out;  /* 3663: -0x18 */
+    if (!tab || !rd(tab + kTabCount, count) || !rd(tab + kTabEntries, ents) || !ents) return out;
     if (count > ncl::kMaxEntries) count = ncl::kMaxEntries;
     out.reserve(count);
     for (uint32_t i = 0; i < count; ++i) {

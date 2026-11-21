@@ -79,6 +79,7 @@
 #include "mod/session2/damage_range.h"
 #include "mod/session2/anti_grief.h"
 #include "mod/session2/lootr.h"
+#include "mod/session2/guest_x_interaction.h"
 #include "mod/session2/handle_guard.h"
 #include "mod/session2/shop_twin.h"
 #include "mod/session2/story_gate.h"
@@ -1256,6 +1257,7 @@ DWORD WINAPI worker(LPVOID) {
             // Co-op+ 2026-11-14 (research): the guest's game logs its own volume events (story_gate.h client_probe).
             if (cfg.s2_guest && cfg.s2_story_gate == "client_probe") session2::story_gate_set_mode(cfg.s2_story_gate);
             session2::shop_twin_start(cfg.s2_shop_twin, cfg.s2_guest);
+            session2::shop_twin_set_again(cfg.s2_shop_twin_again);
             session2::shop_twin_share_all(cfg.s2_dialog_share_all);
             session2::shop_twin_redeliver(cfg.s2_dialog_redeliver);
             session2::stage_candidate_guard_start(cfg.s2_stage_candidate_guard);
@@ -1264,6 +1266,7 @@ DWORD WINAPI worker(LPVOID) {
             session2::ai_handoff_set_catch(cfg.s2_ai_handoff_catch);
             session2::ai_handoff_set_talk(cfg.s2_ai_handoff_talk);
             session2::damage_range_start(cfg.s2_damage_range_players, cfg.s2_guest);
+            if (!cfg.s2_guest && cfg.s2_guest_x_research) session2::guest_x_interaction_host_probe_start();  // research
             session2::lootr_set_chests(cfg.s2_lootr_chests);
             session2::lootr_set_body_share(cfg.s2_lootr_body_share);
             session2::lootr_start(cfg.s2_lootr, cfg.s2_lootr_probe, cfg.s2_guest, cfg.s2_lootr_bodies);

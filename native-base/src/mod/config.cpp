@@ -306,6 +306,8 @@ Config load_config(const std::wstring& ini_path) {
     // P8 session 13, the shopkeepers (pendientes/p8-impl-tenderos-c1.md).
     c.s2_guest_x_interaction_stage =
         narrow(read_string(ini_path, L"session2", L"guest_x_interaction_stage", "0"));
+    c.s2_guest_x_research = read_uint(ini_path, L"session2", L"guest_x_research", 0) != 0;
+    c.s2_guest_x_eval_fix = read_uint(ini_path, L"session2", L"guest_x_eval_fix", 0) != 0;
     c.s2_shop_probe = read_uint(ini_path, L"session2", L"shop_probe", 0) != 0;
     c.s2_trade_probe = read_uint(ini_path, L"session2", L"trade_probe", 1) != 0;  // Co-op+: the give and the shared stash ride on it (host)
     c.s2_inter_probe = read_uint(ini_path, L"session2", L"inter_probe", 0) != 0;
@@ -347,6 +349,7 @@ Config load_config(const std::wstring& ini_path) {
     c.s2_user2_condition_subject_host = read_uint(ini_path, L"session2", L"user2_condition_subject_host", 0) != 0;
     c.s2_test_greet = read_uint(ini_path, L"session2", L"test_greet", 0) != 0;
     c.s2_shop_twin = read_uint(ini_path, L"session2", L"shop_twin", 0) != 0;
+    c.s2_shop_twin_again = read_uint(ini_path, L"session2", L"shop_twin_again", 0) != 0;
     c.s2_dialog_share_all = read_uint(ini_path, L"session2", L"dialog_share_all", 0) != 0;
     c.s2_dialog_redeliver = read_uint(ini_path, L"session2", L"dialog_redeliver", 0) != 0;
     c.s2_stage_candidate_guard = read_uint(ini_path, L"session2", L"stage_candidate_guard", 1) != 0;

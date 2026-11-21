@@ -1493,6 +1493,7 @@ void guest_seq_route_hook(Point point, safetyhook::Context& ctx) noexcept {
     if (v == gsr::Verdict::Route && point != Point::P2524) {
         guest_seq_play_note_x(f.x, f.actor_key, rdp(ctx.rbp - kFieldSlot[i]), point == Point::P2322);
     }
+    if (v == gsr::Verdict::Route && point == Point::P2661 && seq) guest_x_interaction_note_xseq(seq);  // research
     if (v == gsr::Verdict::NotCharacter || v == gsr::Verdict::OwnCharacter || v == gsr::Verdict::Off) return;
     p::Event e;
     e.v[0] = static_cast<uint64_t>(point) | static_cast<uint64_t>(v) << 8;
