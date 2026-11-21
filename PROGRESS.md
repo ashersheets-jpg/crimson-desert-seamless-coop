@@ -26,6 +26,8 @@ test save Out, shipped cdmp.ini restored.
 - 2026-11-17 07:45 HANDS-ON (about 10 min, when you have time): B09 past the cabin. A script cannot aim a talk
   (7 tries). I need you to play the host in a two-copy run I set up, through the Marius and Ross talks to "Enter the
   cabin"; a probe logs which game code starts that scene, so the ready check can hold it for both players.
+  2026-11-21: MAYBE NOT NEEDED: the 7 tries held E, and talks start with R while facing the person; a scripted
+  version (cs79) runs this morning. If it works, this and the NPC-conversation check below come off the list.
 - 2026-11-17 05:56 QUESTION (not urgent): the public GitHub playtest release (crimson-desert-coop-playtest,
   releases/latest) is still 22e8f365 from 10 Nov; your OK then was for that one release. Discord has had 8a65cf2d
   since 05:54. Should each build that is posted to Discord also go to GitHub (same zips, same notes), or leave
@@ -9241,3 +9243,51 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   held 4.0% (stops / teleport); the character's delay 252 ms (peak lateness 192). With cs74d: the fix holds in both
   runs (cs74c / cs74e without it: 53+2 / 25+6). THE RUNNING FREEZE IS FIXED for the conditions sim_lag makes; Borque /
   Jay to confirm on two PCs.
+- 04:56 cs75b (cs75v2: tpactor 0xB010039B, faceto, R): the key pointed at another NPC 130 m from the stall this run:
+  NPC keys are not stable even between runs of one build and save (load order). No interaction. cs75v3 / cs76v3: tp
+  to the spot, then tpnear (the n-th nearest living person), faceto R-1,0, R. They run right after pp41 and BEFORE
+  the post (the talk rule ships in this build; its effect on the guest's own shop is not seen yet); the research runs
+  (after_pp41.sh: cs74g, cs74h, cs73b, cs79, cs77, cs78) wait for scan/after_pp41.go, set after the post.
+- Next build (source only, not built during pp41): UiPause logs each frame hitch > 0.5 s with its time (the first
+  40); the talk rule's note says "a person near a player".
+- 05:01 pp41's static step needs the native src committed: the next batch's two edits (UiPause hitch lines, the talk
+  note) are in native `git stash` ("next batch: hitch lines + talk note (after pp41)"): re-apply after pp41. Native
+  48830fc: mount_sync's test fixture fixed (all pass); baseline list 31 -> 29 (mount_sync, clock_push out).
+- 05:06 cs76b (cs76v2, tpactor by cs76a's keys): all three "NOT loaded": keys change from run to run (cs75b too).
+  cs75v3 / cs76v3 (tp + tpnear) after pp41. pp41 (24 steps on 4394b014) started 05:06.
+- Unit-test fixtures (edited, built after pp41): guest_save_b (the save Req's opcode from the logic), gimmick_event_dedup
+  (the capture's opcode bytes are its build's), observer_milestone (the label from kOpMilestone), shop_troc (the grocer
+  IS a trade shop since aa78454), shop_trade (callers by message name, not number).
+- 05:10 Plan after pp41: (1) cs75c / cs76c (talk rule with a shop / the arm-wrestling table, tpnear method); if the
+  shop opens and nothing breaks: post 4394b014 (download-4394b014.txt, CHANGELOG from scratchpad changelog_4394.txt)
+  and tag Borque (and Jay: the freeze); (2) touch scan/after_pp41.go -> cs74g / cs74h (clock), cs73b (horse hunt +
+  taming probe), cs80 (B02a talks by script), cs79 (B09 cabin talks), cs77 (B06), cs78 (B12); (3) the next batch:
+  native stash (hitch lines, talk note) + the unit-test fixture fixes (8 files) + guest_clock_fix if cs74g shows it
+  helps; the 24-step checklist again before the next post.
+- 05:12 Next batch, talk rule: at the end of a talk, hand the NPC back to the game that ran it only when that
+  player's character is within ~60 m of it (kFarM); a far host would get it and the far-controller rule would hand
+  it straight back (two flips). (After the stash is popped: the same file.) pets / character_hold fixtures already
+  carry 3732's opcodes (ActorLoadDataAck 2005, ChangeAIStateAck 2499, StartActionAck 2800, MoveActorAck 3008): those
+  fail on logic, not numbers; later.
+- 05:16 pp41 crime 51/0. The TALK RULE SEEN WORKING in it: the guest's interaction 0x35 on townsperson 0xB01000D7 ->
+  noted 05:14:39.375, handed to the guest's game 113 ms later (the talker 2.9 m away; the guest's client "now runs
+  NPC 0xB01000D7"), back to the host's game at 05:14:49 when the talker was 6.9 m off. The crime checks unaffected.
+- 05:20 Next batch, ai_handoff (found reading): the far-controller rule is OFF in the release (mode 0; only the
+  fight / ride / catch / talk rules run), and no rule hands back an NPC whose controller LEFT: an NPC the guest's game
+  runs (fight / ride / catch / talk) when the guest disconnects would stand still on the host (unless the game's
+  server reassigns at a logout: not known). Plan: each server check, an NPC near a player whose controller is not a
+  player in the world goes to the nearest player (logged). Test: cs-run where the guest fights, then -GuestLeave.
+- 05:29 pp41 so far: static 12/0, crime 51/0, real 14/0, fresh 43/0 (05:26). Next batch, native src (NOT built:
+  pp41 runs): the stash is back (UiPause hitch lines, the talk note) and the DEPARTURE SWEEP is written instead of the
+  05:20 plan (that plan could never run: the server checks stop once user 2 is out of the world, and scan() returns
+  nothing with one player). Now: when server_user2_in_world() goes false (its goodbye, a lost link, or a load: fast
+  travel, a respawn), one server check runs with the host alone and every NPC (no owner user) whose controller is not
+  the host goes back to the host's game (48 a second, the rest the next second); then a check every 10 s while the
+  host is alone, until one finds none. Log "AiHandoff: departure sweep N: ..." with the first 8 keys and their old
+  controller; the summary gains "departures: sweeps / back / failed". The host's client drops the game's notice for
+  an NPC it does not have (the receive hook, as for every hand-over), so far NPCs only change on the server. Also
+  the talk rule: back to the earlier game only when that player is within 60 m (kFarM) of the NPC; otherwise it
+  stays with the talker (logged with the distance). Test cs81 (build/native/cs81.sh): the guest fights at the bandit
+  camp (the crime step's script and keys), the host comes to the dock and does not fight, the guest's game is killed
+  right after its second round of swings (-GuestLeave), the host plays on 60 s; the host's log must show the sweep
+  and "this client now runs NPC" for those bandits. First in after_pp41.sh (it needs the next build).

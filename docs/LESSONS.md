@@ -430,3 +430,19 @@ with streaming and timing. In a script: `tp` to the spot, then `tpnear [radius] 
 it logs the key it found), and aim from there (`py:faceto:R-1,0`: tpnear/tpactor put us 1 m east, +x, of the NPC).
 Also: a talk / shop / table interaction starts with R while the camera faces the person; E is objects (cs75a's
 stall prompt "Meat: E Buy" won while the shopkeeper stood beside the guest).
+
+## "The other player is in the world" is also false while it loads (2026-11-21)
+server_user2_in_world() (server.h) is true only while user 2's move phase is Stable and no goodbye was asked: a fast
+travel, a respawn or any field load turns it false as surely as a disconnect. Every host rule that runs "while user 2
+is in the world" (the AI hand-over checks, the clock push) stops during the friend's loads too, and anything the
+friend's game held when the load began (an enemy it fought, a mount, a talk) is left with a controller whose game no
+longer has it. Design such rules for both cases at once (the departure sweep, native next batch: any NPC whose
+controller is not the host goes back to the host when user 2 leaves the world, for whatever reason).
+
+## An unbuilt test edit: read the old binary's failures and the helpers first (2026-11-21)
+The unit-test fixture fixes written while pp41 held the build had two faults a build would have shown at once: one
+passed a std::string to the test's has(..., const char* needle) (no conversion: a compile error), and one checked the
+"GuestLoad [in <kOpMilestone>]" label while the logic prints an old build's hard-coded number there (2384). Before
+editing a failing test blind, run its existing binary (build/bin/RelWithDebInfo/cdmp_tests_*.exe, a few ms, no
+game) for the exact failing lines, read the helper signatures, and match strings the logic really prints (better:
+the message's name, not its number).

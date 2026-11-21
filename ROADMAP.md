@@ -297,7 +297,11 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
     2463 go to the dyer only, and nothing broadcasts a dye: the fix re-sends the dyed item as a 2426 to user 2. Needs
     one capture of a real dye (waiting list: the owner's hands-on).)
   - [ ] A tree the guest cuts down is duplicated for the host.
-  - [ ] Carryable animals (kiwis, goats) are not synced.
+  - [~] Carryable animals (kiwis, goats) are not synced. (2026-11-19/20: attach_follow=carry, the default (native
+    914e7d7 / aeb7d33 / 37af9e1): a caught animal nobody owns whose actions name a player's character as Path parent
+    follows that character on the other screen, both ways (cs68f: the host's partridge, made poses 1-3 mm from the
+    game's own; cs69a: the guest's, 13 poses of an ~8 s hold, made at the host's client). Left: seeing a long carry on
+    the other screen (cs69c-h found no catch held long enough), and kiwis / goats (only partridges were caught).)
   - [~] The running "animation freeze" happens almost all the time out of town (his theory: different FPS on the two
     PCs; our runs have the same FPS on both). The host's FPS drops.
     (2026-11-21: REPRODUCED on one PC with the TEST sim_lag (cs74b: held 8.4% vs 2.2%; Borque's two PCs 3-8%): the
@@ -319,7 +323,9 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
     Also still 2976-sized: enemy_relay / local_capture StartActionReq 725, remote_puppet 725, scene_diag 725.
   - [~] JackyChan004 / D3vils (2026-11-18, 9e85b891): after "Enter the cabin" the friend's 2644 reset the host's
     stage manager (F4 off in the release): no bear fight for the host, the friend's stages off for the run, NPCs
-    idle on the friend's screen. Fix: user2_revive_manager=1 (layer, not built yet); then the testers retry.
+    idle on the friend's screen. Fix: user2_revive_manager=1 (in 62f49d19 and every build since; cs44j: "1 LIVE",
+    the host's manager kept its state). F4 never had to act in our runs (user 2 has its own field there, the
+    testers' friend was in the host's): the testers' retry of the cabin is the check (asked 18 Nov).
   - [ ] Jay (via the owner, 2026-11-17 23:20; an older build, not played for a few versions): small "desync
     hitches" in the other player's animations, seen by both players; polish, not a blocker. Likely the same family
     as the running freeze: when testing that one, also measure short stalls of the remote character's animation
