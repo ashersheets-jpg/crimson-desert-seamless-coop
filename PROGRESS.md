@@ -13,6 +13,9 @@ test save Out, shipped cdmp.ini restored.
   PC, and no test save can dye).
 - 2026-11-20 21:10 QUESTION (not urgent): in #general, w-ri (21:55 UTC) offers to test daily over Radmin with an
   "offline steam account", which may mean an unofficial copy. I have not replied. Reply yourself, or tell me what to say.
+  2026-11-21 03:27: also in #general, panda (07:49 UTC) asks whether the mod works with cracked / pirated copies. Not
+  replied (yours: the same question as w-ri's). EdwardJames (23:36 UTC) asked how far boss fights are; you answered
+  his controller question at 05:53 UTC; I left the boss part (B07 not tested yet).
 - 2026-11-20 20:54 DONE: 69edcc84 POSTED in #download-here by me (standing OK; pp40 971/971): rides on mounts that
   are not the joined player's own, the first wild-horse mount seated on the host, the joined player's carry.
 - 2026-11-17 07:45 HANDS-ON (about 10 min, when you have time): B09 past the cabin. A script cannot aim a talk
@@ -9156,3 +9159,18 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   Native (not built yet): remote_interp_char (0 default | 1): the other player's character gets a delay of its own,
   its peak sample gap (kept 10 s) + 40 ms within [200, 450], the game's while it rides (the ride pairs, now noted for
   it too). cs74b (TEST sim_lag 30+0..60 ms, 400 ms stalls 3 per mille) running.
+- 03:21 cs74b (4d98fc15, TEST sim_lag 30 + 0..60 ms with 400 ms stalls at 3 per mille on BOTH tunnels' incoming
+  sides; held 23995 messages, 68 stalls, longest wait 496 ms): the host saw the walking guest held 8.4% (cs74a 2.2%),
+  runs > 100 ms 47 (12), > 300 ms 16 (4): Borque's two-PC numbers (3-8%, 9-15) REPRODUCED on one PC. The gaps
+  between the samples' stamps stayed as without the lag: the holds come from samples arriving LATE for their stamps.
+  So native 6695412: remote_interp_char follows the samples' peak lateness at arrival (kept 10 s) + 60 ms within
+  [200, 600], the game's while riding; new measures: mid-run holds (a new sample ends a hold while the character still
+  moves: no teleport / stop), the lateness histogram, and UiPause's frame hitches of each game (> 100 / 250 / 500 ms /
+  1 s) for the "both screens at once" theory. Unit tests 60 / 30 (baseline), remote_interp's new test passes.
+  Package 6729b33c.
+- 03:26 Discord: reply to Borque posted in #play-testing-feedback (tagged; reply-2026-11-21-borque-draft.txt): own
+  horse (asked when), talk greyed (asked whether he was wanted), the NPC that keeps walking (fixed next build), the
+  running freeze (reproduced, testing a fix), the taming probe. #general skimmed: panda asks about pirated copies
+  (waiting list, the owner's), the owner answered EdwardJames's controller question; nothing else needs help.
+- 03:28 cs74c (lag a, the guest runs straight W / S 12 s x 4) / cs74d (the same + remote_interp_char=1) / cs73a (the
+  wild-horse hunt, 13 min, taming with the branch probe) running.
