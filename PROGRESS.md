@@ -9414,3 +9414,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   (it lapses)"; the party scaling rows (Tougher enemies / Enemy health / Boss health with a guest) are shown again
   in native: hidden by 6962853 when scaling needed the relay, working since 1c6453e1 (the crime step's x1.50), so
   1c6453e1's post pointed testers to a "Combat & Loot" section their Co-op tab did not have.
+- 07:02 STOPPED at the usage limit. Running on its own: pp41 (15/24 steps done, 0 fails so far), then cs75c / cs76c
+  (waiter b4fm89jgd); they restore the player's install themselves. NOT started: the research chain (waits for
+  scan/after_pp41.go, which needs the next build first). Next, in order: read pp41's TOTAL and cs75c / cs76c; post
+  4394b014 (scratchpad: upload/, make_post_json.py, discord_attach.js, changelog_4394.txt; the talk line in
+  download-4394b014.txt); check #general; bash build/scratch-keep/next_batch_build.sh; commit native (message in
+  scratchpad native_commit_msg.txt) and the layer (layer_commit_msg.txt), sync native-base, push; scratchpad
+  add_leave_step.py; Windows Update check; touch scan/after_pp41.go. Source of the next batch is uncommitted in
+  upstream/cdmp-native (ai_handoff, ui_pause, tests + tests/opmap_2976.h) and upstream/cd-coop-3446/src (4 files).
