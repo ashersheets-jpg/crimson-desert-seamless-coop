@@ -9228,3 +9228,12 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   of cs33a's patrons (same spots, variants, HP): 0xB010033C (was 382), 0xB0100340 (386), 0xB010033D (383): keys move
   between game builds. cs76v2 (tpactor each, face R-1,0, R; E at the last) queued after cs75v2; cs79 now finds Marius /
   Ross by their spots (tp, then tpnear) instead of 3663's keys.
+- 04:38 cs74e (sim_lag a, remote_interp_char=0 pinned, the host's window shot every 250 ms by pwshot): SAVES OK, 5/5.
+  Mid-run holds <=100 ms 25, <=300 2, <=1000 4 (longest 520), held 7.4%: the fix-off condition again (cs74c: 53/1/1).
+  The shots do not settle it by eye: the guest runs ~19 m away across the river and the water changes every frame
+  (a pixel-change count is 110-700 for every pair). The log measure is the evidence. Host frame hitches > 1 s: 3
+  (cs74c: 1): PrintWindow every 250 ms on the host's window likely adds hitches; pwshot shots are not for timing runs.
+- 04:41 Queue reordered (the release first): cs74f (running) -> cs75b (cs75v2: talk rule + the guest's shop, tpactor
+  + faceto) -> cs76b (cs76v2: arm wrestling) -> pp41, the full checklist (24 steps with the new lagrun) on 4394b014.
+  After it: cs74g / cs74h (the clock probe and guest_clock_fix), cs73b (13-min horse hunt), cs77 (B06), cs78 (B12),
+  cs79 (B09 cabin talks).
