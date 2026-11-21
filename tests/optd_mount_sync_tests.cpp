@@ -1457,7 +1457,9 @@ void test_guest_observer() {
     CHECK(!dismount_gate_lost(true, false, false));      // partial / rewrite: ride_filter decided already
     CHECK(!dismount_gate_lost(false, true, false));      // a mount
     // The self-check: a 2223 naming the remote rider (1) or its horse (2); never another key or opcode.
-    uint8_t req[kHeader + 8] = {0xAF, 0x08, 0xFF, 8, 0};  // 2223 = 0x08AF
+    // The opcode moves with each game build (2223 on 2976): the logic's own constant.
+    uint8_t req[kHeader + 8] = {static_cast<uint8_t>(kOpStartActionReq & 0xFF), static_cast<uint8_t>(kOpStartActionReq >> 8),
+                                0xFF, 8, 0};
     put32(req + kHeader, kHRider);
     CHECK(self_check_hit(req, sizeof req, kHRider, kHHorse) == 1);
     put32(req + kHeader, kHHorse);
@@ -1466,7 +1468,7 @@ void test_guest_observer() {
     put32(req + kHeader, kGRider);
     CHECK(self_check_hit(req, sizeof req, kHRider, kHHorse) == 0);  // the guest's own actions
     put32(req + kHeader, kHRider);
-    req[0] = 0xAE;  // 2222
+    req[0] = static_cast<uint8_t>((kOpStartActionReq - 1) & 0xFF);  // another opcode
     CHECK(self_check_hit(req, sizeof req, kHRider, kHHorse) == 0);
     req[0] = 0xAF;
     CHECK(self_check_hit(req, kHeader + 3, kHRider, kHHorse) == 0);  // too short
