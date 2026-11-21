@@ -398,3 +398,12 @@ Also: the guest's `npcs` list never shows horses (type 5 on the host's server; t
 at the bandits start do not spawn every run; their keys move between runs. Take a horse's key from the host log's
 "observer load defer: NPC 0x... (type 5" line of the same run, not from an earlier one.
 
+
+## A comparison "near the player" needs the player to be where the script put it (2026-11-21)
+cs71a compared the NPC keys each game listed within 60 m of its own character at Fort Windridge and found 20-56
+"missing" soldiers per side. The guest had DIED there 20 s in (the fort is the Balthazar boss arena; the host log's
+"the load began with ReviveLoadingReq 2390") and was revived 99 m away, so its later lists were of another place. Before
+reading a per-player comparison: check each list's "from (x, y, z)" against the teleport target and the other
+player's, and grep both logs for a revive (2390) or a load (2437). A fight zone is no place for a sync check.
+Also: the two sides' lists are ~15 s apart (each game runs its own script from its own load); compare what one side saw
+near a FIXED point against everything the other side listed at any distance, not set against set.

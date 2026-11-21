@@ -1,0 +1,7 @@
+<@224953308010381312> thanks, noted about his own horse. More from your 20 Nov logs (no new build yet):
+
+- **Stuck on his own horse too:** in your 20 Nov host log his rides on his own horse (01:06-01:12) did reach the host's game (about 95% of his moves followed). If you remember roughly when it happened on his own horse (or in which session), that helps.
+- **Talk greyed out:** the client was "wanted" twice in that session (from 01:10, and again from 01:15 after a hit on a townsperson). Was the talk greyed while he was wanted? That may be the game's own rule. If not, please note the NPC and the time next time.
+- **NPC keeps walking when you interact:** found why. In single player the talking player's own game runs that NPC, which is what stops it and turns it to you; in co-op the host's game kept running it. The next build hands the NPC to the client's game while he stands beside it, and back when he walks off.
+- **Running animation freeze:** your logs show it on both screens: the other player holds still while moving, usually for a fraction of a second, sometimes about a second. We can now reproduce some of it on one PC and are testing a fix.
+- **Taming freeze:** the next build logs the host game's answer to that last taming step; we are also hunting a wild horse to test it ourselves.

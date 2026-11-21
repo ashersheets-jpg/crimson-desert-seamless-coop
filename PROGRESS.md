@@ -8,7 +8,9 @@ test save Out, shipped cdmp.ini restored.
 - 2026-11-20 21:10 HANDS-ON (about 10 min, when you have time): mining and fishing as the joined player (Borque 18 Nov
   items 5 / 6). The mod has no mining or fishing code yet, and the fresh test saves have no hand drill or rod. I need
   a host-only session where you mine one ore block with the hand drill and fish once, with the sniffer recording (I
-  set it up); the recording shows which game messages to share.
+  set it up); the recording shows which game messages to share. 2026-11-21: in the same session, if you can, dye one
+  armour piece at a dye vendor (Borque: the joined player does not see the host's dye; the game tells only the dyer's
+  PC, and no test save can dye).
 - 2026-11-20 21:10 QUESTION (not urgent): in #general, w-ri (21:55 UTC) offers to test daily over Radmin with an
   "offline steam account", which may mean an unofficial copy. I have not replied. Reply yourself, or tell me what to say.
 - 2026-11-20 20:54 DONE: 69edcc84 POSTED in #download-here by me (standing OK; pp40 971/971): rides on mounts that
@@ -9133,3 +9135,24 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   the NPC, and its AI is what stops it.
 - Dye (Borque): DyeItemByInventoryAck / DyeItemListByEquipSlotAck are ToTarget (only the dyer's game); OtherEquipItemAck
   is what other players get for an equip. Needs a capture of a real dye (no test save can dye yet): hands-on list.
+- 02:54 cs72a (62bd6e88, the branch probe): SAVES OK, 5/5, both alive. Probe B HOOKED: the host's own
+  StageBranchStateReqs 65, 0 refused. No wild horse at Borque's spot, so no taming: user 2 sent no 2644. Every run so
+  far (cs*.host.log) mounted only early keys (own horse 0xB0100068, bandits' 0xB01000Dx, transitions 1-2); Borque's
+  wild horse 0xB0102082 (transitions 5 / 6) appeared 16 min into his session. cs73 written: 13 min at the bandits
+  start with the host listing mounts every 30 s (layer: dev script "vehicles [radius]", tpvehicle [min key]).
+- 03:00 native 9b9bad7 (talk rule + TEST sim_lag), layer tpvehicle min key; package 4d98fc15. Unit tests: 60 pass,
+  30 fail (the baseline 30).
+- Borque 23:29 (Discord): the stuck-rider view "also happened with his own horse". His 20 Nov host log: the own-horse
+  rides (01:06-01:12) were followed (11328 of 14702 riding moves derived). Asked in the draft reply when it happened.
+- Talk greyed (Borque's video): his game made him WANTED twice in that session (01:10, 01:15, after his own hit on a
+  townsperson 0xB0101C09 at 01:15:36); a wanted player cannot talk to townsfolk in the game. Asked whether he was
+  wanted then (draft docs/release/shared-world-playtest/reply-2026-11-21-borque-draft.txt, not posted).
+- Running freeze: Borque's logs (two PCs) have the other player "held its pose while running" 3.2% (host) / 5.7%
+  (guest), runs > 300 ms 9 / 15. Borque: "for both players at the same time". Lead: a sender's own frame hitch
+  (streaming new land out of town) sends no Move for that moment; the other screen holds the pose (the game reads its
+  buffer 200 ms back, no extrapolation). cs74a (4d98fc15, one PC, no lag, the guest walking with walkto.py's bursts):
+  the host saw the guest held 2.2%, holds 4 x <= 300 ms and 1 x <= 1000 ms (gaps while moving up to 868 ms). The
+  metric also counts a teleport / an abrupt stop (the 2.8 s "longest" = after the tp, the remote stood still).
+  Native (not built yet): remote_interp_char (0 default | 1): the other player's character gets a delay of its own,
+  its peak sample gap (kept 10 s) + 40 ms within [200, 450], the game's while it rides (the ride pairs, now noted for
+  it too). cs74b (TEST sim_lag 30+0..60 ms, 400 ms stalls 3 per mille) running.

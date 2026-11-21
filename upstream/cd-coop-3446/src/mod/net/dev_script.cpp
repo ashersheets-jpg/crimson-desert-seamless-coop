@@ -171,6 +171,26 @@ static void log_npcs_near(float radius, float from) {
     for (size_t i = 0; i < rows.size() && i < 120; ++i) all += std::format("{}{:X}", i ? " " : "", rows[i].key);
     log::info("Dev script: npc keys {:.0f}-{:.0f} m ({}): {}", from, radius, rows.size(), all);
 }
+// [dev] "vehicles [radius]" (2026-11-21, the wild-horse hunt for the taming freeze): every loaded NPC mount / vehicle
+// (type 5) and type 6 actor in range, nearest first, up to 40 lines; log only.
+static void log_vehicles_near(float radius) {
+    std::optional<proto::Vec3> me;
+    int loaded = 0;
+    const std::vector<NpcRow> rows = npcs_near(radius, 0.0f, me, loaded);
+    if (!me) {
+        log::info("Dev script: vehicles: our own position is not known");
+        return;
+    }
+    int n = 0;
+    for (const NpcRow& r : rows) {
+        if (r.type != 5 && r.type != 6) continue;
+        if (n++ >= 40) break;
+        log::info("Dev script: vehicle 0x{:08X} type {} variant 0x{:08X} | {:.1f} m | hp {:.0f}/{:.0f} | at ({:.1f}, {:.1f}, {:.1f})",
+                  r.key, r.type, r.variant, r.d, r.hp, r.hp_max, r.at.x, r.at.y, r.at.z);
+    }
+    log::info("Dev script: vehicles within {:.0f} m of ({:.1f}, {:.1f}, {:.1f}): {} (of {} loaded NPC actors)", radius, me->x,
+              me->y, me->z, n, loaded);
+}
 namespace {
 
 struct Step {
@@ -574,6 +594,15 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
             steps.push_back(std::move(st));
             continue;
         }
+        if (kind == "vehicles") {  // vehicles [radius m, default 300]: the NPC mounts / vehicles near us (log only)
+            st.kind = Step::Npcs;
+            float r = 300.0f;
+            in >> r;
+            st.to[0] = r > 0 ? r : 300.0f;
+            st.to[1] = -1.0f;  // log_vehicles_near, not log_npcs_near
+            steps.push_back(st);
+            continue;
+        }
         if (kind == "npcs") {  // npcs [radius m, default 40]: the loaded NPC actors near us, nearest first (log only)
             st.kind = Step::Npcs;
             float r = 40.0f, from = 0.0f;  // npcs [radius] [from]: only those at least `from` m away
@@ -775,7 +804,8 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
             } else if (st.kind == Step::LootLast) {
                 loot_last_killed();
             } else if (st.kind == Step::Npcs) {
-                log_npcs_near(st.to[0], st.to[1]);
+                if (st.to[1] < 0.0f) log_vehicles_near(st.to[0]);
+                else log_npcs_near(st.to[0], st.to[1]);
             } else if (st.kind == Step::TpActor) {
                 uint32_t key = st.addr == 0xFFFFFFFFu ? capture_horse_present()
                                : st.addr == 0xFFFFFFFEu || st.addr == 0xFFFFFFFDu || st.addr == 0xFFFFFFFCu ? 0
