@@ -502,3 +502,8 @@ while the step ran ("native source has uncommitted changes"), and Windows Defend
 test exe at the moment the step ran it (cdmp_tests_optd_host_save, "Program:Win32/Wacapew.A!ml", a heuristic). Keep
 work in progress in a separate worktree (upstream/cdmp-native-wip) or a patch while a checklist runs; when a test exe
 vanishes, read Get-MpThreatDetection before calling it a failure, and never change a security setting for it.
+
+## One Esc closes a game menu; a second opens the game's own menu and eats every key after it (2026-11-21)
+cs33b (16 Nov) and cs82a / cs82b (21 Nov) each lost half a run to it: "Esc, Esc" after a shop menu or a talk closed it
+and then opened the inventory, which stayed up through the next sweep, so every R after it did nothing. Close with one
+Esc, shoot the screen after it, and keep double Escs for the very end of a script.

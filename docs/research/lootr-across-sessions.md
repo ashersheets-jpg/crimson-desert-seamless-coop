@@ -18,7 +18,9 @@ snapshots older than ~60 s; compare against the save files' mtime recorded at th
 marks long before their shares expire (ledger only ids ever in a file, prune by age only); (4) a 15 s dedup of
 LoadSlot can swallow a real reload (dedup on the user-actor / character pair instead).
 
-v3 plan (2026-11-21 12:30, not written yet; v2's patch is the base):
+v3 written (2026-11-21 13:45, worktree upstream/cdmp-native-wip branch wip-b19-v3: 281e103) and reviewed again (14:05): the four v2 findings fixed, four new ways to give twice found and fixed in v3.1 (c22bc27): an in-session give the worker does not confirm in 60 s counts as given; a failed ledger write sets aside the slot files that list those ids; a commit without its snapshot sets the old file aside (and drops an older snapshot still waiting); no save files found = restore nothing, 60 s slack (the stamp is the commit hook's clock); host gives of this process never come back at a re-arm. Not built yet; the live test still needs the owner's answer.
+
+v3 plan (2026-11-21 12:30; v2's patch is the base):
 1. Ledger, complete: every give is recorded ON THE SERVER THREAD once its add has run (persist_give and the chest
    shares add synchronously there; the in-session "guest took it too" path records at its server-thread add, not in
    lootr_tick). The joined player's save (SavePlayerToSlot, also the server thread) then marks every give recorded

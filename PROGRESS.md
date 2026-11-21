@@ -5,6 +5,11 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- 2026-11-21 14:10 HANDS-ON (about 5 min, when you have time): one real FAST TRAVEL as the joined player. In a
+  two-copy run I set up, the host stands at the Hernand butcher; you take the joined player's window, open its map
+  and fast-travel to Hernand (any waypoint there), then walk to the butcher and hold R on her. It tells whether a real
+  fast travel loses the joined player's shops in a town the host is in (a scripted teleport does; the tester logs have
+  no fast travel of the joined player). The fix waits for this.
 - 2026-11-21 13:45 FYI (nothing to do unless you want to): Windows Defender quarantined one of the mod's own unit-test
   programs (build\bin\...\cdmp_tests_optd_host_save.exe, "Program:Win32/Wacapew.A!ml", a machine-learning guess, at
   13:36). Only that test program; the game DLLs we ship were not flagged. I changed no security setting. If you want
@@ -9656,4 +9661,18 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - 13:40-13:45 work in progress moved to a separate worktree, upstream/cdmp-native-wip (outer repo: in
   .git/info/exclude), so the checklist's tree stays clean: branch wip-twin-again (a45f580: again_check's second round)
   and branch wip-b19-v3 (9185159 = v2 as the base, 281e103 = v3: the review's four findings). Neither built yet.
-  pp42: static 10/2 (above), real 14/0.
+  pp42: static 10/2 (above), real 14/0, fresh 43/0. A read-only review of both worktree branches is running.
+  AFTER pp42 (in order): (1) relink only cdmp_tests_optd_host_save, run it, then pp42b static on the clean tree;
+  (2) if all pass: CHANGELOG + download-cfaa3a69.txt (draft: scratchpad changelog_next_draft.md), post in
+  #download-here, the Borque reply (docs/release/shared-world-playtest/reply-2026-11-21-borque-npcs-draft.txt);
+  (3) bring the worktree branches into the main tree after the review's fixes, build, cs75w3 (the twin re-make: the
+  joined player teleports in after the twins exist, shop_twin_again=1), B19 v3's unit tests; (4) cs76 (the inn
+  patrons' arm wrestling with the category fix), then chain_c (cs74h cs73b cs79a cs77a cs78a cs85a cs83a).
+- 14:05 the second read-only review (both worktree branches): ShopTwin round 2 has six more faults (docs/research/
+  shop-twin-again.md: orphan twins after the host's delete, the same id prepared twice after a forget, unvalidated X,
+  a second twin while a re-make is queued, generations used up by refused tries, the initial 2920's id). DECISION
+  (mine, scoped): round 2 is NOT carried on; round 3 goes the host's way (its ObserverSeqCopy re-sends live scenes
+  after a field move; a same-field teleport is not one) and first needs one real fast travel of the joined player
+  (hands-on above: no tester log has one). shop_twin_again stays 0 in the release. B19 v3: the four v2 findings
+  fixed; four new ways to give twice found and fixed in v3.1 (c22bc27, worktree; docs/research/
+  lootr-across-sessions.md). pp42: xess 44/0, fsr 44/0.
