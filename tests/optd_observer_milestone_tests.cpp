@@ -556,7 +556,8 @@ void test_guest_trips() {
     t.on_event(ev(ltr::kState, us(35.0), 0x10, 0x11), lines);
     t.on_event(ev(ltr::kState, us(35.0001), 0x11, 0x12), lines);
     t.on_event(ev(ltr::kState, us(35.01), 0x12, 0x13), lines);
-    CHECK(has(lines, "GuestLoad [in 2322]"));
+    // By the message's name: the label's number is an old build's (the logic's opcodes move with each game build).
+    CHECK(has(lines, "PlayAllPreLoadSequencerAck #1 actor 0xA0100334"));
     CHECK(has(lines, "corr=2322:A0100334:0x0:0x0"));
     CHECK(t.trips().size() == 1);
     CHECK(t.trips().back().n2322 == 1 && t.trips().back().out11_to == 0x12);

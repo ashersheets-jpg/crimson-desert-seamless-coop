@@ -103,7 +103,8 @@ int main() {
     CHECK(u2trade::is_trade_resource("cd_seq_funcnpc_butcher"));
     CHECK(!u2trade::is_trade_resource("cd_seq_funcnpc_"));
     CHECK(!u2trade::is_trade_resource("cd_seq_funcnpc_smithy_01"));
-    CHECK(!u2trade::is_trade_resource("cd_seq_funcnpc_grocery"));
+    CHECK(u2trade::is_trade_resource("cd_seq_funcnpc_grocery"));  // aa78454: all 9 merchant scenes
+    CHECK(!u2trade::is_trade_resource("cd_seq_funcnpc_blacksmith"));
     CHECK(u2trade::is_trade_hash(0xA7132561) && u2trade::is_trade_hash(0x978345CA));
     CHECK(!u2trade::is_trade_hash(0) && !u2trade::is_trade_hash(0x0E965A02));
     CHECK(u2trade::trade_name(0xA7132561) == "cd_seq_funcnpc_smithy");

@@ -906,7 +906,7 @@ void fake_notify_race(uintptr_t flag, const GameVec* s, const GameVec* k) {
     const auto* sd = static_cast<const uintptr_t*>(s->data);
     const auto* kd = static_cast<const uint32_t*>(k->data);
     if (s->count == 1 && sd[0] == kS1 && k->count == 1 && kd[0] == kHostChar) {
-        take(actor_packet(2697, kHostChar, 7));
+        take(actor_packet(3008, kHostChar, 7));
     }
 }
 
@@ -961,9 +961,9 @@ void test_acks_with_character() {
         g_out.clear();
         w.appear({kHostChar});  // withheld from user 2: its packets wait
         CHECK(g_out.empty() && observer_hold_acks_keys() == 1);
-        take(actor_packet(2697, kHostChar, 1));  // MoveActorAck
-        take(actor_packet(2991, kHostChar, 2));  // StartActionAck
-        take(actor_packet(2697, kUser2Char, 9)); // user 2's own character: passes
+        take(actor_packet(3008, kHostChar, 1));  // MoveActorAck
+        take(actor_packet(2800, kHostChar, 2));  // StartActionAck
+        take(actor_packet(3008, kUser2Char, 9)); // user 2's own character: passes
         CHECK(g_out.size() == 1 && key_of(g_out[0]) == kUser2Char);
         w.kliff1.set_restore(1);
         g_now = 1100;
@@ -983,7 +983,7 @@ void test_acks_with_character() {
         w.kliff1.set_restore(0);
         g_out.clear();
         w.appear({kHostChar});
-        take(actor_packet(2697, kHostChar, 1));
+        take(actor_packet(3008, kHostChar, 1));
         CHECK(g_out.empty() && observer_hold_acks_keys() == 1);
         w.sector.set({w.host.a()});
         FakeReq other(0xB0100555);

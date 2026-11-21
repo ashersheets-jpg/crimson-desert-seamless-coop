@@ -19,6 +19,7 @@ std::vector<uint8_t> framed(uint16_t op, const std::vector<uint8_t> &pl) {
   f.insert(f.end(), pl.begin(), pl.end());
   return f;
 }
+// The opcodes are door_trace_logic.h's (game 1.0.0.3732): 2772 spawn, 2367 accepted, 2481 rejected, 3055 sync.
 int main() {
   CHECK(dt::observe_tap(false, true));
   CHECK(dt::observe_tap(false, false));
@@ -42,41 +43,41 @@ int main() {
                                  0x7b, 0xde, 0x4f, 0xb9, 0xee, 0xab, 0x67,
                                  0x0f, 0x74, 0x56, 0x3c, 0x34, 0x3d, 0x64,
                                  0x0c, 0,    0,    0};
-  auto r = dt::frame(framed(2928, req));
+  auto r = dt::frame(framed(2772, req));
   CHECK(r.valid && r.matched && r.kind == dt::Kind::Spawn);
   CHECK(r.items == 1 && r.resource == 0xDE7B52AA && r.subject == 0);
   // Ack positivo H offset26896307: active1. Nak S38 conserva actor+UUID, carece
   // del código de error.
   std::vector<uint8_t> ack{4, 1, 0, 0x10, 0xa0, 1};
   ack.insert(ack.end(), dt::kScene.begin(), dt::kScene.end());
-  r = dt::frame(framed(2145, ack));
+  r = dt::frame(framed(2367, ack));
   CHECK(r.valid && r.matched && r.subject == 0xA0100001 && r.active == 1);
   std::vector<uint8_t> nak{4, 0x7b, 2, 0x10, 0xa0};
   nak.insert(nak.end(), dt::kScene.begin(), dt::kScene.end());
-  r = dt::frame(framed(2953, nak));
+  r = dt::frame(framed(2481, nak));
   CHECK(r.valid && r.matched && r.subject == 0xA010027B &&
         r.kind == dt::Kind::Rejected);
   auto wrong = req;
   wrong.back() = 1;
-  CHECK(dt::parse(2928, wrong).valid && !dt::parse(2928, wrong).matched);
+  CHECK(dt::parse(2772, wrong).valid && !dt::parse(2772, wrong).matched);
   for (size_t n = 0; n < req.size(); ++n)
-    CHECK(!dt::parse(2928, std::span(req.data(), n)).valid);
+    CHECK(!dt::parse(2772, std::span(req.data(), n)).valid);
   wrong = req;
   wrong[1] = 0;
-  CHECK(!dt::parse(2928, wrong).valid);
+  CHECK(!dt::parse(2772, wrong).valid);
   wrong = req;
   wrong[1] = 2;
-  CHECK(dt::parse(2928, wrong).valid);
+  CHECK(dt::parse(2772, wrong).valid);
   wrong = req;
   wrong.push_back(0);
-  CHECK(!dt::parse(2928, wrong).valid);
+  CHECK(!dt::parse(2772, wrong).valid);
   wrong = req;
   wrong[0] = 0;
-  CHECK(!dt::parse(2928, wrong).valid);
-  auto f = framed(2928, req);
+  CHECK(!dt::parse(2772, wrong).valid);
+  auto f = framed(2772, req);
   f[3]--;
   CHECK(!dt::frame(f).valid);
-  f = framed(2928, req);
+  f = framed(2772, req);
   f.push_back(0);
   CHECK(!dt::frame(f).valid);
   // Lote: se reconoce cada identidad de16B en su límite y no coincidencias
@@ -84,17 +85,17 @@ int main() {
   wrong = req;
   wrong[1] = 2;
   wrong.insert(wrong.end(), dt::kScene.begin(), dt::kScene.end());
-  CHECK(dt::parse(2928, wrong).valid && dt::parse(2928, wrong).items == 2);
+  CHECK(dt::parse(2772, wrong).valid && dt::parse(2772, wrong).items == 2);
   wrong[1] = 1;
-  CHECK(dt::parse(2928, wrong).valid && dt::parse(2928, wrong).items == 2);
+  CHECK(dt::parse(2772, wrong).valid && dt::parse(2772, wrong).items == 2);
   CHECK(!dt::parse(2779, req).valid);
   CHECK(!dt::parse(2671, req).valid);
   std::vector<uint8_t> sync(615);
   sync[4] = 1;
   std::copy(dt::kScene.begin(), dt::kScene.end(), sync.begin() + 8);
-  CHECK(dt::parse(2665, sync).matched);
+  CHECK(dt::parse(3055, sync).matched);
   sync[4] = 2;
-  CHECK(!dt::parse(2665, sync).valid);
+  CHECK(!dt::parse(3055, sync).valid);
   const std::array<uint32_t, 4> codes{11, 12, 13, 14};
   CHECK(dt::classify(true, 0, codes, false) == dt::Result::Success);
   CHECK(dt::classify(false, 0, codes, true) == dt::Result::Unreadable);

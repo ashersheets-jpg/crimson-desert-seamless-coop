@@ -732,10 +732,10 @@ void test_settle_acks() {
         CHECK(g_out.size() == 1 && op_of(g_out[0]) == 2005 && key_of(g_out[0]) == kHostChar);
         CHECK(observer_hold_acks_keys() == 1);
         // The pet's packets meanwhile (session 8: 2404 / 2991 / 2697): kept.
-        take(actor_packet(2404, kHostPet, 1));
-        take(actor_packet(2991, kHostPet, 2));
-        take(actor_packet(2697, kHostPet, 3));
-        take(actor_packet(2697, kHostChar, 4));  // the character's own: passes
+        take(actor_packet(2499, kHostPet, 1));
+        take(actor_packet(2800, kHostPet, 2));
+        take(actor_packet(3008, kHostPet, 3));
+        take(actor_packet(3008, kHostChar, 4));  // the character's own: passes
         CHECK(g_out.size() == 2 && key_of(g_out[1]) == kHostChar);
         g_now = 2500;
         w.action();
@@ -756,7 +756,7 @@ void test_settle_acks() {
         w.seams.notify = fake_notify_2005;
         g_out.clear();
         w.appear({kHostChar, kHostPet}, {kS2});
-        take(actor_packet(2991, kHostPet, 2));
+        take(actor_packet(2800, kHostPet, 2));
         w.sector.set({w.host.a()});
         g_now = 2600;
         w.action();

@@ -8,6 +8,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <format>
 #include <initializer_list>
 #include <memory>
 #include <string>
@@ -17,6 +18,7 @@
 #include "mod/game/safe_memory.h"
 #include "mod/session2/field_share.h"
 #include "mod/session2/guest_lifecycle.h"
+#include "opmap_2976.h"
 
 using namespace cdmp::session2;
 
@@ -653,7 +655,9 @@ void test_move_phase_tracker() {
     CHECK(t.count(mv::kMoveFieldAck) == 2 && t.count(mv::kMoveFieldCompleteAck) == 2 &&
           t.count(mv::kLoginCharacterReq) == 1 && t.count(mv::kGameLoadingStartReq) == 1 &&
           t.count(mv::kLoadingCompleteAck) == 2 && t.count(1234) == 0);
-    CHECK(t.describe().find("STABLE (3093 1, 2437 1, 2174 2, 2549 2, 2144 2, 2445 2, 2762 2)") == 0);
+    CHECK(t.describe().find(std::format("STABLE ({} 1, {} 1, {} 2, {} 2, {} 2, {} 2, {} 2)", mv::kLoginCharacterReq,
+                                        mv::kGameLoadingStartReq, mv::kMoveFieldAck, mv::kMoveFieldCompleteReq,
+                                        mv::kMoveFieldCompleteAck, mv::kLoadingCompleteReq, mv::kLoadingCompleteAck)) == 0);
     // A new epoch starts from nothing.
     t.reset();
     CHECK(t.phase() == MovePhase::None && t.count(mv::kMoveFieldAck) == 0);
@@ -668,10 +672,11 @@ struct MoveEvent {
 MovePhaseTracker tracker_at(std::initializer_list<MoveEvent> events) {
     MovePhaseTracker t;
     for (const auto& e : events) {
+        const uint16_t op = cdmp::tests::renumber_2976(e.op);  // the sequences are written in 2976's numbers
         if (e.req) {
-            t.on_req(e.op);
+            t.on_req(op);
         } else {
-            t.on_ack(e.op);
+            t.on_ack(op);
         }
     }
     return t;

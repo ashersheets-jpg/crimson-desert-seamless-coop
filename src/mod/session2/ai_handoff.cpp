@@ -48,6 +48,18 @@ constexpr uint64_t kFightRecentMs = 4000, kFightQuietMs = 6000, kFightCooldownMs
 std::atomic<uint64_t> c_ticks{0}, c_npcs{0}, c_orphans{0}, c_handed{0}, c_would{0}, c_failed{0}, c_back{0};
 std::atomic<uint64_t> c_client_took{0}, c_client_gave{0}, c_client_unknown{0}, c_client_dropped{0};
 std::atomic<uint64_t> c_fight_out{0}, c_fight_back{0}, c_fight_seen{0};
+// The departure sweep (2026-11-21): the far-controller rule is off in the release (mode 0) and the checks below run
+// only while a second player is in the world, so an NPC the other player's game ran (a fight, a ride, a catch, a talk,
+// or born near that player) when it LEFT (its goodbye under way, or its session gone: a lost link, a crash) or began
+// a LOAD (fast travel, a respawn: its move phase in a real load) keeps a controller whose game no longer has it: it
+// would stand still for the host. Then one server check gives every such NPC in the host's own 3x3 block of 64 m sectors (what the
+// host's client surely has, ai_handoff.h) back to the host, kMaxPerTick a second; after a departure (not a load) a
+// check every 10 s while the host is alone, at most 10 minutes, until none is left anywhere (the host may walk up to
+// the others). Only the host's block: NPCs born under the other player at the destination of its load, given to a
+// host whose game does not have them, would stand still for it when it arrives. The other rules never run while the
+// other player is not in the world (as before the sweep).
+std::atomic<bool> g_left_sweep{false}, g_left_watch{false};
+std::atomic<uint64_t> c_left_back{0}, c_left_sweeps{0}, c_left_failed{0};
 std::atomic<uint32_t> g_local_user{0};
 // The ride rule's table (ai_handoff_note_ride): (mount key << 32) | rider key, 0 = free. Lock-free, any thread.
 constexpr size_t kRides = 8;
@@ -108,6 +120,23 @@ uint32_t caught_by(uint32_t npc_key, uint64_t now) noexcept {
     return 0;
 }
 
+// The departure sweep: the other player's entries in the ride / catch / passenger tables (their low 32 bits are the
+// player's character key). A load or a departure ends a ride, a catch and a seat, and a stale ride entry would hand a
+// mount nobody rides to its game again when it comes back with the same key. Talks are left to the talk rule (its
+// "the talker left" / "walked off" ends them, and after a short load the talk's NPC can still go back). Any thread.
+int forget_other_player() noexcept {
+    int n = 0;
+    for (size_t i = 0; i < kRides; ++i) {
+        uint64_t v = g_rides[i].load(std::memory_order_acquire);
+        if (v && static_cast<uint32_t>(v) != kHostCharacter && g_rides[i].compare_exchange_strong(v, 0)) ++n;
+        v = g_catches[i].load(std::memory_order_acquire);
+        if (v && static_cast<uint32_t>(v) != kHostCharacter && g_catches[i].compare_exchange_strong(v, 0)) ++n;
+        v = g_passengers[i].load(std::memory_order_acquire);
+        if (v && static_cast<uint32_t>(v) != kHostCharacter && g_passengers[i].compare_exchange_strong(v, 0)) ++n;
+    }
+    return n;
+}
+
 struct PlayerAt {
     uint32_t key = 0, user = 0;
     int sx = 0, sz = 0;
@@ -159,6 +188,64 @@ bool actor_xz(uintptr_t base, uintptr_t actor, float& x, float& z) noexcept {
     x = f[0] + 1000.0f * static_cast<float>(*reinterpret_cast<int16_t*>(buf + 0xC));
     z = f[2] + 1000.0f * static_cast<float>(*reinterpret_cast<int16_t*>(buf + 0xE));
     return true;
+}
+
+// The departure sweep's list: NPCs (0xB, no owner user, a controller that is not `host_user`), with what the AI restart
+// needs. Plain data only (SEH).
+struct Left {
+    uintptr_t actor = 0;
+    uint32_t key = 0, ctrl = 0;
+    float d = 0;  // from the host's character
+};
+int scan_left(uint32_t host_user, float hx, float hz, int hsx, int hsz, Left* out, int cap, int& n_far,
+              bool& ok) noexcept {
+    int n = 0;
+    n_far = 0;
+    ok = true;
+    const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    __try {
+        const uintptr_t slot = *reinterpret_cast<uintptr_t*>(base + kServerActorMgrSlot);
+        const uintptr_t sam = slot ? *reinterpret_cast<uintptr_t*>(slot) : 0;
+        const uint32_t cnt = sam ? *reinterpret_cast<uint32_t*>(sam + 0x9C) : 0;
+        const uintptr_t arr = sam ? *reinterpret_cast<uintptr_t*>(sam + 0xB0) : 0;
+        if (!sam || !arr || cnt > 200000) {
+            ok = false;  // no list to judge by: the watch goes on
+            return 0;
+        }
+        for (uint32_t i = 0; i < cnt && n < cap; ++i) {
+            const uintptr_t e = *reinterpret_cast<uintptr_t*>(arr + 8ull * i);
+            const uintptr_t actor = e ? *reinterpret_cast<uintptr_t*>(e + 8) : 0;
+            if (!actor) continue;
+            const uint32_t key = *reinterpret_cast<uint32_t*>(actor + 0x60);
+            if ((key >> 28) != 0xB || *reinterpret_cast<uintptr_t*>(actor + 0xA0)) continue;
+            const uint32_t ctrl = *reinterpret_cast<uint32_t*>(actor + 0x90);
+            if (!ctrl || ctrl == host_user) continue;
+            const uintptr_t info = *reinterpret_cast<uintptr_t*>(actor + 0x88);
+            const uint8_t type = info ? *reinterpret_cast<uint8_t*>(info + 1) : 0;
+            if (type != 3 && type != 4 && type != 5 && type != 6 && type != 8 && type != 9) continue;
+            const uintptr_t comps = *reinterpret_cast<uintptr_t*>(actor + 0x68);
+            if (!comps) continue;
+            const uintptr_t status = *reinterpret_cast<uintptr_t*>(comps + 0x20);
+            const uintptr_t aic = *reinterpret_cast<uintptr_t*>(comps + 0x40);
+            const uintptr_t ai = *reinterpret_cast<uintptr_t*>(comps + 0x58);
+            const uintptr_t mv = *reinterpret_cast<uintptr_t*>(comps + 0x1A0);
+            if (!status || !aic || !ai || !mv || !*reinterpret_cast<uintptr_t*>(aic + 0x40)) continue;
+            if (*reinterpret_cast<uint8_t*>(status + 0x293)) continue;  // a dead body
+            float x = 0, z = 0;
+            if (!actor_xz(base, actor, x, z)) continue;
+            const int sx = sector(x), sz = sector(z);
+            if (sx < hsx - 1 || sx > hsx + 1 || sz < hsz - 1 || sz > hsz + 1) {
+                ++n_far;
+                continue;
+            }
+            const float d = std::sqrt((x - hx) * (x - hx) + (z - hz) * (z - hz));
+            out[n++] = Left{actor, key, ctrl, d};
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        ok = false;  // a partial list: the watch must not end on it
+        return n;
+    }
+    return n;
 }
 
 // The server's actor list: the players (out) and every NPC nobody who controls it can see while another player can.
@@ -402,9 +489,63 @@ void ai_handoff_start(std::string_view mode, bool guest, bool fight) {
 void ai_handoff_tick() noexcept {
     if ((g_mode == Mode::Off && !damage_range_on() && !g_fight) || g_guest) return;
     try {
-        static uint64_t next = 0;
+        static uint64_t next = 0, next_state = 0, next_watch = 0, watch_until = 0;
+        static bool in = false, was_present = false, was_loading = false, host_in = false, departed = false,
+                    in_since = false;
         const uint64_t now = GetTickCount64();
-        if (now < next || !server_user2_in_world()) return;
+        // The other player's state, four times a second (each read takes a lock and a copy in server.cpp).
+        if (now >= next_state) {
+            next_state = now + 250;
+            // One phase read: "in the world" (server_user2_in_world's test), the load and the goodbye all from it.
+            const MovePhase ph = server_user2_phase().phase();
+            const bool present = server_user2_present();
+            const bool logout = server_logout_requested();
+            in = present && !logout && ph == MovePhase::Stable;
+            // A real load: past the move's 2549 (move_phase_loading; a move can stop before it, and the phase is not
+            // Stable at times with both players in the world, cs8a).
+            const bool loading = present && move_phase_loading(ph);
+            // Its goodbye under way (asked, or the host's for a lost link: the final save, then the 2001). A crash
+            // reaches this ~10 s after the link went quiet, the session's end 15 s later.
+            const bool leaving = present && logout;
+            uintptr_t host = 0;
+            host_in = server_host_user(host) && host;
+            if (in || (!was_present && present)) departed = false;  // in the world again, or a new session
+            if (in) in_since = true;
+            const bool rules = g_mode != Mode::Off || g_fight;  // the hand-overs, and so the sweep
+            if (rules && !departed && !in && ((was_present && !present) || leaving)) {
+                departed = true;
+                in_since = false;
+                // Gone: its ride / catch / passenger entries first, then a server check, then the watch.
+                if (const int f = forget_other_player())
+                    log::info("AiHandoff: the other player left: {} ride / catch / passenger entr{} of its forgotten", f,
+                              f == 1 ? "y" : "ies");
+                g_left_sweep.store(true);
+                g_left_watch.store(true);
+                next_watch = now + 10000;
+                watch_until = now + 600000;
+            } else if (rules && loading && !was_loading && in_since) {
+                // A load (fast travel, a respawn): a load ends a ride, a catch and a seat too; one check, no watch.
+                in_since = false;
+                if (const int f = forget_other_player())
+                    log::info("AiHandoff: the other player is loading: {} ride / catch / passenger entr{} of its "
+                              "forgotten", f, f == 1 ? "y" : "ies");
+                g_left_sweep.store(true);
+            }
+            was_loading = loading;
+            if (in) {
+                g_left_sweep.store(false);  // back in the world: its game runs its NPCs again
+                g_left_watch.store(false);
+            } else if (g_left_watch.load() && now >= next_watch) {
+                next_watch = now + 10000;
+                if ((present && !leaving) || !host_in || now >= watch_until) {
+                    g_left_watch.store(false);  // came back, or the host left its world too, or 10 minutes
+                } else {
+                    g_left_sweep.store(true);
+                }
+            }
+            was_present = present;
+        }
+        if (now < next || (!in && !(g_left_sweep.load() && host_in))) return;
         next = now + 1000;
         std::vector<uint8_t> pl(30, 0);  // the host's own trade request with our entry: the server thread runs the check
         std::memcpy(&pl[14], &kHostCharacter, 4);
@@ -424,6 +565,7 @@ void ai_handoff_server_tick() noexcept {
         static Cand cand[512];
         static Fight fights[256];
         static std::unordered_map<uint32_t, uint64_t> moved;  // actor key -> when it was last handed over (ms)
+        const bool sweep_now = g_left_sweep.exchange(false);  // taken here: no early return below leaves it set
         int n_players = 0, n_npcs = 0, n_orphans = 0, n_fight = 0;
         const int n_all = scan(pl, 4, n_players, cand, 512, n_npcs, n_orphans, fights, 256, n_fight);
         const int n = g_mode == Mode::Off ? 0 : n_all;  // the distance rule only with ai_handoff = probe / 1
@@ -443,6 +585,62 @@ void ai_handoff_server_tick() noexcept {
         uint32_t host_user = 0;
         for (int k = 0; k < n_players; ++k) {
             if (pl[k].key == kHostCharacter) host_user = pl[k].user;
+        }
+        const bool user2_in = server_user2_in_world();
+        if (sweep_now && !host_user && !user2_in) g_left_sweep.store(true);  // the host's own load: the next check
+        if (sweep_now && host_user && !user2_in) {
+            float hx = 0, hz = 0;
+            int hsx = 0, hsz = 0;
+            for (int k = 0; k < n_players; ++k) {
+                if (pl[k].key == kHostCharacter) {
+                    hx = pl[k].x;
+                    hz = pl[k].z;
+                    hsx = pl[k].sx;
+                    hsz = pl[k].sz;
+                }
+            }
+            static Left left[512];
+            int n_far = 0;
+            bool ok = true;
+            const int m = scan_left(host_user, hx, hz, hsx, hsz, left, 512, n_far, ok);
+            int back = 0, failed = 0;
+            std::string keys;  // the first few, for the log
+            for (int i = 0; i < m && back < kMaxPerTick; ++i) {
+                if (!hand_over(left[i].actor, left[i].key, left[i].ctrl, host_user)) {
+                    ++failed;
+                    continue;
+                }
+                if (++back <= 8)
+                    keys += std::format(" 0x{:08X} (from 0x{:08X}, {:.0f} m)", left[i].key, left[i].ctrl, left[i].d);
+                uint8_t priv[12];
+                std::memcpy(priv, &kPrivateMagic, 4);
+                std::memcpy(priv + 4, &left[i].key, 4);
+                std::memcpy(priv + 8, &host_user, 4);
+                uint8_t real[4];
+                std::memcpy(real, &left[i].key, 4);
+                // A player still listed (during its load) notes the new controller, as with the other rules.
+                for (int k = 0; k < n_players; ++k) {
+                    if (pl[k].user != host_user) tell(pl[k].user, host_user, priv);
+                }
+                tell(host_user, host_user, priv);
+                tell(host_user, host_user, real);
+                moved[left[i].key] = GetTickCount64();
+            }
+            if (m > back + failed) g_left_sweep.store(true);  // the rest at the next check (a second)
+            if (ok && m == 0 && n_far == 0) g_left_watch.store(false);  // none anywhere: no more checks
+            const uint64_t sw = c_left_sweeps.fetch_add(1) + 1;
+            c_left_back.fetch_add(static_cast<uint64_t>(back));
+            c_left_failed.fetch_add(static_cast<uint64_t>(failed));
+            if (back || sw <= 3 || (failed && sw % 30 == 0))
+                log::info("AiHandoff: departure sweep {}: the other player is not in the world; {} NPC(s) another game ran "
+                          "back to the host's game ({} found in the host's 3x3 sectors, {} did not go through, {} farther "
+                          "wait for the host to come near){}{}", sw, back, m, failed, n_far,
+                          ok && m == 0 && n_far == 0 ? "; none left" : ok ? "" : "; the scan faulted",
+                          keys.empty() ? "" : ":" + keys);
+        }
+        if (!user2_in) {  // the rules below only while the other player is in the world (as before the sweep)
+            pending.clear();
+            return;
         }
         if (n_players < 2 || !host_user) {
             pending.clear();
@@ -606,11 +804,19 @@ void ai_handoff_server_tick() noexcept {
                     // Back to the game that ran it before, if that player is still in the world and the talker's game
                     // has it now (a ride / catch / fight rule may have moved it since).
                     bool from_here = false;
-                    for (int k = 0; k < n_players; ++k) from_here = from_here || pl[k].user == from;
-                    if (!from || !from_here || f.ctrl != talker_user || from == f.ctrl) {
-                        log::info("AiHandoff: talk rule: the talk with NPC 0x{:08X} is over ({}); it stays with 0x{:08X}",
+                    float d_from = 1e9f;
+                    for (int k = 0; k < n_players; ++k) {
+                        if (pl[k].user != from) continue;
+                        from_here = true;
+                        d_from = std::sqrt((f.x - pl[k].x) * (f.x - pl[k].x) + (f.z - pl[k].z) * (f.z - pl[k].z));
+                    }
+                    const bool from_far = from_here && d_from > kFarM;
+                    if (!from || !from_here || f.ctrl != talker_user || from == f.ctrl || from_far) {
+                        log::info("AiHandoff: talk rule: the talk with NPC 0x{:08X} is over ({}); it stays with 0x{:08X}{}",
                                   f.key, !talker_user ? "the talker left" : age >= kTalkMaxMs ? "10 min" :
-                                  d > kTalkEndM ? "the talker walked off" : "ridden / caught", f.ctrl);
+                                  d > kTalkEndM ? "the talker walked off" : "ridden / caught", f.ctrl,
+                                  from_far ? std::format(" (the game that ran it before is {:.0f} m away)", d_from)
+                                           : std::string());
                         continue;
                     }
                     to = from;
@@ -811,7 +1017,7 @@ void ai_handoff_note_catch(uint32_t catcher_key, uint32_t npc_key, uint32_t inte
         const uint64_t n = c_talk_noted.fetch_add(1) + 1;
         if (n <= 40 || n % 100 == 0)
             log::info("AiHandoff: talk rule: the other player's 0x{:08X} interacts with NPC 0x{:08X} (interaction 0x{:X}): "
-                      "a person goes to the talker's game at the next server check ({} so far)", catcher_key, npc_key,
+                      "a person near a player goes to the talker's game at the next server check ({} so far)", catcher_key, npc_key,
                       interaction, n);
         return;
     }
@@ -914,6 +1120,8 @@ std::string ai_handoff_describe() {
                std::format(" | talk rule{}: talks noted {} handed to the talker {} back {} ended {} not a person {} table "
                            "full {}", g_talk_on.load() ? "" : " (OFF)", c_talk_noted.load(), c_talk_out.load(),
                            c_talk_back.load(), c_talk_ended.load(), c_talk_skip.load(), c_talk_full.load()) +
+               std::format(" | departures: sweeps {} NPCs back to the host {} failed {}", c_left_sweeps.load(),
+                           c_left_back.load(), c_left_failed.load()) +
                std::format(" | passengers noted {} fight hand-overs skipped {} table full {}", c_pass_noted.load(),
                            c_pass_skip.load(), c_pass_full.load());
     return std::format("AiHandoff: {} | server checks {} | NPCs looked at {} (controller far, another player close: {}) | "
@@ -923,7 +1131,9 @@ std::string ai_handoff_describe() {
                        c_back.load(), c_would.load(), c_failed.load(), c_client_took.load(), c_client_gave.load(),
                        c_client_unknown.load(), c_client_dropped.load()) +
            std::format(" | ride rule: rides noted {} handed to the rider {} table full {}", c_ride_noted.load(),
-                       c_ride_out.load(), c_ride_full.load());
+                       c_ride_out.load(), c_ride_full.load()) +
+           std::format(" | departures: sweeps {} NPCs back to the host {} failed {}", c_left_sweeps.load(),
+                       c_left_back.load(), c_left_failed.load());
 }
 
 }  // namespace cdmp::session2

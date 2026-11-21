@@ -100,7 +100,10 @@ const char* k2661_1AB =
 
 void test_seq_copy_ignores_2283() {
     osq::Ledger l;
-    l.on_host_packet(hex(k2661_1AB), 1);
+    auto prep = hex(k2661_1AB);  // the capture's opcode bytes are 2976's (2661): the logic's PrepareSequencerAck now
+    prep[0] = static_cast<uint8_t>(osq::kOpPrepare);
+    prep[1] = static_cast<uint8_t>(osq::kOpPrepare >> 8);
+    l.on_host_packet(prep, 1);
     osq::Copier c;
     c.on_user2_move(true, 1, l);
     // Control: a sequencer Req about 0x1AB is still the host's.
@@ -408,14 +411,14 @@ void test_owner_alias_2643() {
 void test_owner_alias_2174() {
     // The 2174's own layout (17 + 48n) and the same +9; the 2643's switch does not apply to it (server.cpp passes
     // enabled = true for 2174).
-    std::vector<uint8_t> payload(17 + 48, 0x33);
+    std::vector<uint8_t> payload(tpl::kMoveFieldHead + tpl::kRecord, 0x33);  // a record is 0x38 since 3549 (2976: 48)
     put32(payload, 9, kHostUser);
     auto pkt = packet(tpl::kOpMoveFieldAck, payload);
     uint32_t orig = 0;
     CHECK(tpl::alias_owner(pkt, kHdr, tpl::kOpMoveFieldAck, kUser2, true, &orig) == tpl::AliasOut::Rewrite);
     CHECK(orig == kHostUser && get32(pkt, kHdr + 9) == kUser2 && pkt[kHdr + 8] == 0x33 && pkt[kHdr + 13] == 0x33);
     // A 2643-sized payload is not a 2174.
-    std::vector<uint8_t> wrong(20 + 48, 0);
+    std::vector<uint8_t> wrong(tpl::kLoadingFieldHead + tpl::kRecord, 0);
     auto wp = packet(tpl::kOpMoveFieldAck, wrong);
     CHECK(tpl::alias_owner(wp, kHdr, tpl::kOpMoveFieldAck, kUser2, true) == tpl::AliasOut::BadLayout);
     CHECK(tpl::owner_layout_ok(tpl::kOpMoveFieldAck, 17) && !tpl::owner_layout_ok(tpl::kOpMoveFieldAck, 20));

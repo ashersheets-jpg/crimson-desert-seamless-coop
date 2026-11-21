@@ -31,7 +31,19 @@ namespace cdmp::session2 {
 // that the host has not hit for 6 s, with that player within 20 m and nearer than the host, goes to that player;
 // the same the other way back. At most one hand-over per NPC in 10 s.
 void ai_handoff_start(std::string_view mode, bool guest, bool fight = false);
-// Any thread, the host: asks for the server-thread check once a second while a second player is in the world.
+// The host's network thread (session2's tunnel_tick, its only caller; plain statics): asks for the server-thread check
+// once a second while a second player is in the world.
+// The DEPARTURE sweep (2026-11-21, revised after two reviews the same day): when the other player LEAVES (its
+// goodbye under way, or its session gone: a lost link, a crash) or begins a real LOAD (fast travel, a respawn: its
+// move phase past the move's 2549, move_phase_loading), one check runs: every NPC (no owner user) in the host's own
+// 3x3 block of 64 m sectors whose controller is not the host goes back to the host's game (at most 48 a second), as
+// the other game no longer has it; after a departure also a check every 10 s while the host is alone in its world,
+// at most 10 minutes, until no NPC anywhere has such a controller. Without it, an enemy the other player fought when
+// it left would stand still for the host (the distance rule above is off in the release). Only the host's block:
+// NPCs born under the other player at the destination of its load, given to a host whose game does not have them,
+// would stand still for it when it arrives. Its ride / catch / passenger entries are forgotten when it leaves or
+// loads (a stale ride would hand a mount nobody rides to its game when it comes back). The other rules still run only
+// while the other player is in the world.
 void ai_handoff_tick() noexcept;
 // The SERVER thread (trade_probe's entry 0xC0DE0008, the host's own request).
 void ai_handoff_server_tick() noexcept;
@@ -65,7 +77,8 @@ void ai_handoff_set_catch(bool on) noexcept;
 // it and turns it to the player. The host's server accepted another interaction of the other player (not a catch) on
 // a person (type 3): the next server tick hands that NPC to the talker's game while the talker stays beside it
 // (kTalkEndM, after a kTalkGraceMs grace); when the talker walks off it goes back to the game that ran it before (if
-// that player is still in the world). The fight rule leaves it alone meanwhile. Host role only. shop_probe's C point
+// that player is still in the world and within 60 m of the NPC: a farther game may not have it any more, and the
+// NPC would stand still for the talker; it stays with the talker then). The fight rule leaves it alone meanwhile. Host role only. shop_probe's C point
 // calls ai_handoff_note_catch for every accepted interaction of user 2: the catches go to the catch rule, the rest to
 // this one. [session2] ai_handoff_talk (default 1): 0 turns it off.
 void ai_handoff_set_talk(bool on) noexcept;

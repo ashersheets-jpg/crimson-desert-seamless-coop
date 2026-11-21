@@ -485,7 +485,7 @@ void test_host_chains() {
 void test_npc_control() {
     // S31's NPC: born in user 2's 2045, NPCSchedule descriptor, eax = the host's user key 0x90100000 = [field+0x180].
     u2s::CtlIn in;
-    in.opcode = 2045;
+    in.opcode = u2s::kOp2045;  // (the constants keep 2976's names; their values move with each game build)
     in.own_mgr_troc = true;
     in.armed = true;
     in.desc_npc_schedule = true;
@@ -500,9 +500,9 @@ void test_npc_control() {
     t.type = 6;  // type 3 only until type 6 is measured (the 6c12c82 crash review)
     CHECK(u2s::ctl_verdict(t) == u2s::Ctl::Type);
     t.type = 3;
-    t.opcode = 2043;
+    t.opcode = u2s::kOp2043;
     CHECK(u2s::ctl_verdict(t) == u2s::Ctl::Assign);
-    t.opcode = 2046;
+    t.opcode = u2s::kOp2046;
     CHECK(u2s::ctl_verdict(t) == u2s::Ctl::Assign);
     t.session_key2 = 0;  // unknown: not compared
     CHECK(u2s::ctl_verdict(t) == u2s::Ctl::Assign);
@@ -911,8 +911,8 @@ void test_ctl_stats_and_abort() {
     for (size_t i = 0; i < static_cast<size_t>(u2s::CtlAbort::Count); ++i) {
         CHECK(std::string(u2s::ctl_abort_name(static_cast<u2s::CtlAbort>(i))) != "?");
     }
-    CHECK(u2s::ai_req(2556) && u2s::ai_req(2223) && u2s::ai_req(2734) && u2s::ai_req(2405) && u2s::ai_req(2291) &&
-          u2s::ai_req(2296));
+    CHECK(u2s::ai_req(2790) && u2s::ai_req(2431) && u2s::ai_req(2766) && u2s::ai_req(2637) && u2s::ai_req(2346) &&
+          u2s::ai_req(2296));  // the logic's 3732 numbers (2976's list: 2556 2223 2734 2405 2291 2828)
     CHECK(!u2s::ai_req(2005) && !u2s::ai_req(2380));
 }
 

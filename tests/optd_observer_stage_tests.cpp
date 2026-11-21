@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "mod/session2/observer_stage_logic.h"
+#include "opmap_2976.h"
 
 using namespace cdmp::session2;
 
@@ -134,6 +135,7 @@ std::vector<uint8_t> unhex(const char* s) {
     std::vector<uint8_t> v;
     auto nib = [](char c) { return c <= '9' ? c - '0' : (c | 0x20) - 'a' + 10; };
     for (; s[0] && s[1]; s += 2) v.push_back(static_cast<uint8_t>(nib(s[0]) << 4 | nib(s[1])));
+    cdmp::tests::renumber_2976_packet(v);  // a capture of 1.0.0.2976: the logic's numbers are 3732's (by name)
     return v;
 }
 

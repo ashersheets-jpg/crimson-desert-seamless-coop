@@ -48,8 +48,18 @@ frm::Sample sample(uint64_t t, uint32_t dist, u2s::Cell host, u2s::Cell u2, uint
 
 // S34 1b (4-contencion §2): Hernand, the host 1 cell from user 2, its load L at 18:55:51.646, the first far sample
 // (61 cells) ~0.8 s later.
+// These timelines were written for the 10 / 7 cell band; the default was lowered since (4 / 2, the 4-9 cell dead
+// zone): the tests pin the band they were written for.
+u2s::Thresholds band_10_7() {
+    u2s::Thresholds t;
+    t.on_cells = 10;
+    t.off_cells = 7;
+    return t;
+}
+
 frm::FastIn departure() {
     frm::FastIn in;
+    in.t = band_10_7();
     const uint64_t t0 = 1000 * kS;
     in.prev = sample(t0, 1, {-168, -62}, {-167, -62});
     in.cur = sample(t0 + 1 * kS, 61, {-228, -40}, {-167, -62});
@@ -86,6 +96,7 @@ void test_arrival_is_not_fast() {
 // Review 3b: the candidate's confirmation over kConfirmUs.
 frm::ConfirmIn confirm_base() {
     frm::ConfirmIn ci;
+    ci.t = band_10_7();
     ci.jump = sample(1000 * kS, 61, {-228, -40}, {-167, -62});
     ci.cur = sample(1000 * kS + 3 * kS, 61, {-228, -40}, {-167, -62});
     return ci;
@@ -129,13 +140,14 @@ void test_confirm() {
 
 void test_walking_is_not_fast() {
     // Walking / riding away: 7 -> 8 -> 9 -> 10 never jumps; the band never counts.
-    u2s::Thresholds t;
+    const u2s::Thresholds t = band_10_7();
     const uint64_t t0 = 50 * kS;
     CHECK(!frm::jump(sample(t0, 7, {0, 0}, {7, 0}), sample(t0 + kS, 8, {0, 0}, {8, 0}), t));
     CHECK(!frm::jump(sample(t0, 8, {0, 0}, {8, 0}), sample(t0 + kS, 10, {0, 0}, {10, 0}), t));
     CHECK(!frm::jump(sample(t0, 7, {0, 0}, {7, 0}), sample(t0 + kS, 9, {0, 0}, {9, 0}), t));
     CHECK(frm::jump(sample(t0, 7, {0, 0}, {7, 0}), sample(t0 + kS, 10, {0, 0}, {10, 0}), t));
     frm::FastIn in;
+    in.t = band_10_7();
     in.prev = sample(t0, 7, {7, 0}, {0, 0});
     in.cur = sample(t0 + kS, 9, {9, 0}, {0, 0});
     CHECK(frm::fast_verdict(in) == frm::Fast::NoJump);

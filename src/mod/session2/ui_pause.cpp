@@ -251,6 +251,19 @@ void note_frame_time() noexcept {
     if (us > 1000000) c_hitch[3].fetch_add(1, std::memory_order_relaxed);
     if (us > c_hitch_max_us.load(std::memory_order_relaxed) && us < 60000000)  // a minute: a pause / a debugger
         c_hitch_max_us.store(us, std::memory_order_relaxed);
+    // Each long one with its time (the first 40): a tester's "freeze at 01:12:34" can be matched to this game's own
+    // hitch (or ruled out). Rare, so a log call on the main thread is fine (it just stood still for 0.5 s anyway).
+    if (us > 500000 && us < 60000000) {
+        static std::atomic<uint32_t> n{0};
+        const uint32_t k = n.fetch_add(1, std::memory_order_relaxed) + 1;
+        if (k <= 40) {
+            try {
+                log::info("UiPause: hitch #{}: this game's main loop stood still {} ms, ending at this line's time (while "
+                          "live; the gap between two calls of the time scale)", k, us / 1000);
+            } catch (...) {
+            }
+        }
+    }
 }
 
 // 0x35CD990(world) -> f32 in xmm0. The original is the only game call.
