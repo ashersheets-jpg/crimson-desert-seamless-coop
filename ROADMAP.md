@@ -294,7 +294,12 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
     none made, in our runs too. Ported to 239 B / the 3460+ offsets. Not yet tested.
   - [ ] The guest sees city NPCs sitting on benches in a T-pose (the guest only). (Lead: GuestSeqRestore swaps a
     remote NPC's seq_bodyanim_action it cannot find for an idle wait, 31 times in his session; cs58 looks in Hernand.)
-  - [ ] The guest cannot interact with townsfolk (Borque 20 Nov video: "client still not able to interact with npcs";
+  - [~] The guest cannot interact with townsfolk (Borque 20 Nov video: "client still not able to interact with npcs";
+    2026-11-21 afternoon: FIXED for shops and greetings on 3732, both checked (cs82c: the shop alone and with the host
+    beside the shopkeeper; cs80c: a townsperson's greeting, "Trust +5"); in cfaa3a69 (checklist step "shop" added).
+    Left: the twins lost to a far teleport into a town whose shop scenes the host already runs (shop_twin_again, round
+    2 in the worktree); the inn patrons' arm wrestling (cs76, to retake with the category fix); talks that belong to a
+    host scene (B02a's twin for dialog scenes);
     talk greyed). 2026-11-21: reproduced by script on 3732 (cs75c-e at the Hernand butcher, cs76c-e at the inn
     cellar's patrons: no R ever reached the host's server). The guest's prompt check of a person's dynamic entry is
     redirected to the host's stage manager X (GuestXInter) and finds the stage, then refuses (result 0) every time

@@ -5,6 +5,11 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- 2026-11-21 13:45 FYI (nothing to do unless you want to): Windows Defender quarantined one of the mod's own unit-test
+  programs (build\bin\...\cdmp_tests_optd_host_save.exe, "Program:Win32/Wacapew.A!ml", a machine-learning guess, at
+  13:36). Only that test program; the game DLLs we ship were not flagged. I changed no security setting. If you want
+  that test to keep running, you could exclude the folder upstream\cdmp-native\build yourself; otherwise I re-run it
+  when needed and note it.
 - 2026-11-21 06:05 QUESTION (not urgent): B19's last part, "items in the world" across sessions, has a design
   (docs/research/lootr-across-sessions.md: the other player's share is kept in a file next to the co-op save, written
   when the game saves). Testing it needs one test that SAVES, into the TEST co-op world only (backed up before and put
@@ -9641,3 +9646,14 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   behind guest_x_research / guest_x_eval_fix) and synced (5d02466). The checklist gets a "shop" step (tools/prepost.sh,
   RELEASE-CHECKLIST.md: 26 steps): the joined player's shop alone (the host parked 440 m away) and with the host beside
   the shopkeeper (the twin). Next: package, then pp42 (all 26 steps).
+- 13:36 package cfaa3a69 (cdmp.asi b41c72b0 = the tree's build, coopplus.asi 8f4e0b90); pp42 started (26 steps).
+  Static step: 10 pass, 2 fail, NEITHER the package's: (1) "native source has uncommitted changes": I applied
+  again_check's second round to the tree while that step ran (moved out at once: scratchpad st_again_v2.patch; never
+  edit the native tree during a checklist's static step); (2) "NEW failure: cdmp_tests_optd_host_save": Windows
+  Defender QUARANTINED that unit-test exe at 13:36:54 ("Program:Win32/Wacapew.A!ml", a machine-learning heuristic; only
+  that test exe, not cdmp.asi / coopplus.asi). No security setting touched. After pp42: relink only that test target
+  and run the static step again on the clean tree (pp42b).
+- 13:40-13:45 work in progress moved to a separate worktree, upstream/cdmp-native-wip (outer repo: in
+  .git/info/exclude), so the checklist's tree stays clean: branch wip-twin-again (a45f580: again_check's second round)
+  and branch wip-b19-v3 (9185159 = v2 as the base, 281e103 = v3: the review's four findings). Neither built yet.
+  pp42: static 10/2 (above), real 14/0.

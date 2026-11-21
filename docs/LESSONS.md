@@ -495,3 +495,10 @@ A synthetic paste into the edit box of a message (ArrowUp in the empty composer 
 replace a Ctrl+A selection: the new text lands after the old (3692 chars instead of 1897). Escape cancels the edit
 without saving. Ctrl+A then the Delete key empties the box (innerText ~2); check that, paste, check the length and a
 sentence, then Enter; afterwards the message shows "(edited)" and keeps its attachments.
+
+## Never touch the native tree while a checklist runs; antivirus can eat a test exe (2026-11-21)
+pp42's static step failed twice for reasons outside the package: an in-progress edit applied to the native tree
+while the step ran ("native source has uncommitted changes"), and Windows Defender quarantining a freshly built unit
+test exe at the moment the step ran it (cdmp_tests_optd_host_save, "Program:Win32/Wacapew.A!ml", a heuristic). Keep
+work in progress in a separate worktree (upstream/cdmp-native-wip) or a patch while a checklist runs; when a test exe
+vanishes, read Get-MpThreatDetection before calling it a failure, and never change a security setting for it.
