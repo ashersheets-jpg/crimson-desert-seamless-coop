@@ -69,6 +69,21 @@ constexpr uintptr_t kC = 0x2CDC149, kCCtx = 0x2CDC13D;
 constexpr uint32_t kCPatch = 5;
 constexpr uint8_t kCBytes[] = {0x8B, 0x5D, 0x80, 0x85, 0xDB};
 constexpr uint8_t kCCtxBytes[] = {0x48, 0x8B, 0x89, 0x98, 0x00, 0x00, 0x00, 0xE8, 0x37, 0x00, 0x16, 0x00};
+// B (Co-op+ 2026-11-21, the taming freeze: user 2's StageBranchStateReq "then 2" of its taming scene got no Ack and no
+// Nak). 3732: the StageBranchStateReq handler (its vf48 at 0x2D55B36) calls the branch 0x2B56870 (protected) as
+// (manager = vf48's rax, &result [rbp-0x80], field [rbp-0x38], seq [rbp-0x80], then [rbp-0x48], [rbp+0x88] u8,
+// [rbp+0x80] u8); a result != 0 is answered with a Nak 1013 (0x3F5) at 0x2D55B75.
+//   B1 0x2D55B56  mov r9,[rbp-0x80] ; mov r8,[rbp-0x38]   8 bytes: the sequencer, the branch, the manager (rax)
+//   B2 0x2D55B6A  mov ebx,[rbp-0x80] ; test ebx,ebx        5 bytes: the result (the je rel32 after it is not patched)
+//   Context 0x2D55B36: call [rax+0x48] ; movzx ecx,byte [rbp+0x80]; 0x2D55B5E: lea rdx,[rbp-0x80] ; mov rcx,rax ;
+//   call 0x2B56870 (E8 06 0D E0 FF).
+constexpr uintptr_t kB1 = 0x2D55B56, kB2 = 0x2D55B6A, kBCtx = 0x2D55B36, kBCallCtx = 0x2D55B5E;
+constexpr uint32_t kB1Patch = 8, kB2Patch = 5;
+constexpr uint8_t kB1Bytes[] = {0x4C, 0x8B, 0x4D, 0x80, 0x4C, 0x8B, 0x45, 0xC8};
+constexpr uint8_t kB2Bytes[] = {0x8B, 0x5D, 0x80, 0x85, 0xDB};
+constexpr uint8_t kBCtxBytes[] = {0xFF, 0x50, 0x48, 0x0F, 0xB6, 0x8D, 0x80, 0x00, 0x00, 0x00};
+constexpr uint8_t kBCallCtxBytes[] = {0x48, 0x8D, 0x55, 0x80, 0x48, 0x8B, 0xC8, 0xE8, 0x06, 0x0D, 0xE0, 0xFF};
+constexpr int32_t kB_Seq = -0x80, kB_Then = -0x48, kB_Field = -0x38, kB_U8a = 0x88, kB_U8b = 0x80, kB_Result = -0x80;
 
 // Offsets (server objects; the same ones observer_stage / observer_milestone read).
 constexpr uint32_t kActor_Key = 0x60, kActor_User = 0xA0, kUser_Key = 0x60, kField_Owner = 0x180, kMgr_Actor = 0x18;
@@ -98,6 +113,19 @@ std::atomic<uint64_t> g_twin_verdicts[static_cast<size_t>(shp::TwinVerdict::Coun
 std::atomic<bool> g_e_on{false}, g_g_on{false}, g_p_on{false}, g_c_on{false}, g_sa_on{false}, g_sr_on{false},
     g_sf_on{false};
 SafetyHookMid g_e_hook, g_g_hook, g_p_hook, g_c_hook, g_sa_hook, g_sr_hook, g_sf_hook;
+std::atomic<bool> g_b1_on{false}, g_b2_on{false};
+SafetyHookMid g_b1_hook, g_b2_hook;
+// B: user 2's StageBranchStateReq sequencers (the tap), so the handler's result is told as user 2's.
+shp::IdRing<32> g_u2_branch_seqs;
+std::atomic<uint64_t> g_branch[2] = {}, g_branch_fail[2] = {}, g_branch_unpaired{0};  // [0] user 2, [1] other
+struct BranchCall {
+    uint64_t seq = 0;
+    uintptr_t mgr = 0, field = 0;
+    uint32_t then = 0;
+    uint8_t a = 0, b = 0;
+    bool set = false;
+};
+thread_local BranchCall t_branch;
 
 shp::KeyTable<16> g_keys;
 shp::IdRing<64> g_funcnpc;
@@ -109,10 +137,10 @@ std::atomic<uint64_t> g_srv[3] = {}, g_srv_found[3] = {}, g_srv_result[3][4] = {
 std::atomic<uint64_t> g_req[4] = {}, g_req_filtered[4] = {}, g_req_funcnpc[4] = {};  // 2671 2720 2436 2591
 std::atomic<uint64_t> g_out[6] = {}, g_out_funcnpc[6] = {};  // 2663 3000 2916 2525 2981 2524
 
-enum Kind : uint16_t { kEGate, kEPrep, kE2671, kESrv, kEReq, kEOut, kETwin, kKindCount };
+enum Kind : uint16_t { kEGate, kEPrep, kE2671, kESrv, kEReq, kEOut, kETwin, kEBranch, kKindCount };
 p::EventRing<512> g_ring;
 p::WindowLimiter g_lim[kKindCount] = {{16, 5'000'000}, {48, 5'000'000}, {32, 5'000'000}, {32, 5'000'000},
-                                       {48, 5'000'000}, {48, 5'000'000}, {32, 5'000'000}};
+                                       {48, 5'000'000}, {48, 5'000'000}, {32, 5'000'000}, {32, 5'000'000}};
 std::atomic<uint64_t> g_limited{0}, g_lost{0}, g_lines{0};
 constexpr uint64_t kMaxLines = 4000;
 
@@ -306,6 +334,42 @@ void on_c(safetyhook::Context& ctx) noexcept {
     emit(kE2671, e);
 }
 
+// B1 0x2D55B56: the StageBranchStateReq handler right before its call of the branch 0x2B56870 (rax = the manager).
+void on_b1(safetyhook::Context& ctx) noexcept {
+    if (!g_b1_on.load(std::memory_order_acquire)) return;
+    BranchCall& b = t_branch;
+    b.seq = rdv<uint64_t>(ctx.rbp + kB_Seq);
+    b.then = rdv<uint32_t>(ctx.rbp + kB_Then);
+    b.field = rdp(ctx.rbp + kB_Field);
+    b.a = rdv<uint8_t>(ctx.rbp + kB_U8a);
+    b.b = rdv<uint8_t>(ctx.rbp + kB_U8b);
+    b.mgr = ctx.rax;
+    b.set = true;
+}
+
+// B2 0x2D55B6A: the branch's result (!= 0: the handler answers with a Nak 1013).
+void on_b2(safetyhook::Context& ctx) noexcept {
+    if (!g_b2_on.load(std::memory_order_acquire)) return;
+    const uint32_t result = rdv<uint32_t>(ctx.rbp + kB_Result);
+    BranchCall b = t_branch;
+    t_branch.set = false;
+    if (!b.set) g_branch_unpaired.fetch_add(1, std::memory_order_relaxed);
+    const bool u2 = b.set && g_u2_branch_seqs.has(b.seq);
+    g_branch[u2 ? 0 : 1].fetch_add(1, std::memory_order_relaxed);
+    if (result) g_branch_fail[u2 ? 0 : 1].fetch_add(1, std::memory_order_relaxed);
+    // User 2's are all logged (the limiter bounds them); the host's: its failures, 16 per id.
+    if (!u2 && (!result || !g_book.take(book_key(b.seq, 0x60), 16))) return;
+    p::Event e;
+    e.v[0] = result;
+    e.v[1] = b.seq;
+    e.v[2] = b.then;
+    e.v[3] = b.mgr;
+    e.v[4] = b.field;
+    e.v[5] = static_cast<uint64_t>(b.a) | static_cast<uint64_t>(b.b) << 8 | static_cast<uint64_t>(u2) << 16 |
+             static_cast<uint64_t>(b.set) << 17;
+    emit(kEBranch, e);
+}
+
 // S: the server's 0x2126920. A = the decision point's registers (RAX = field vf48), R = the lookup's result, F = BL.
 void on_sa(safetyhook::Context& ctx) noexcept {
     if (!g_sa_on.load(std::memory_order_acquire)) return;
@@ -472,6 +536,15 @@ std::string line_of(const p::Event& e) {
                                static_cast<uint32_t>(v[3]), v[2], (v[0] >> 8) & 0xFF, static_cast<uint32_t>(v[3]),
                                hex_of(v + 4, kPlayDataLogged));
         }
+        case kEBranch:
+            return std::format("ShopProbe [branch] {} T{} | the server's StageBranchStateReq handler for {}: sequencer "
+                               "0x{:X} then 0x{:08X} (u8 {} {}) in manager 0x{:X} (field 0x{:X}) | 0x2B56870 result 0x{:X} "
+                               "-> {}{}",
+                               when, e.tid, (v[5] >> 16) & 1 ? "USER 2" : "the host / another", v[1],
+                               static_cast<uint32_t>(v[2]), v[5] & 0xFF, (v[5] >> 8) & 0xFF, v[3], v[4],
+                               static_cast<uint32_t>(v[0]),
+                               v[0] ? "REFUSED (a Nak 1013 follows)" : "ACCEPTED (its Ack 2920 is the branch's own)",
+                               (v[5] >> 17) & 1 ? "" : " (B1 not seen on this thread: sequencer unknown)");
         default:
             return std::format("ShopProbe: event {}?", e.kind);
     }
@@ -528,6 +601,14 @@ void summary() {
               g_out_funcnpc[5].load(), g_limited.load(), g_lost.load());
 }
 
+void branch_summary() {
+    if (!g_b2_on.load()) return;
+    log::info("ShopProbe branch summary: the StageBranchStateReq handler's 0x2B56870: user 2 {} (refused {}), the host "
+              "/ others {} (refused {}), without B1 {} | user 2's branch sequencers seen {}",
+              g_branch[0].load(), g_branch_fail[0].load(), g_branch[1].load(), g_branch_fail[1].load(),
+              g_branch_unpaired.load(), g_u2_branch_seqs.size());
+}
+
 void drain() {
     p::Event e;
     while (g_ring.pop(e)) {
@@ -572,6 +653,13 @@ void install(std::span<const gad::Section> secs) {
     if (context_ok(secs, kCCtx, kCCtxBytes, "the 2671 handler's call 0x2B36860")) {
         mid(kC, kCPatch, kCBytes, on_c, g_c_hook, g_c_on, "C, the 2671's result 0x29E9282");
     }
+    if (context_ok(secs, kBCtx, kBCtxBytes, "the StageBranchStateReq handler's vf48 0x2D55B36") &&
+        context_ok(secs, kBCallCtx, kBCallCtxBytes, "the handler's call 0x2B56870")) {
+        mid(kB1, kB1Patch, kB1Bytes, on_b1, g_b1_hook, g_b1_on, "B1, before the branch 0x2B56870");
+        if (g_b1_on.load()) mid(kB2, kB2Patch, kB2Bytes, on_b2, g_b2_hook, g_b2_on, "B2, the branch's result");
+    }
+    log::info("ShopProbe: B 0x2D55B56/0x2D55B6A (the StageBranchStateReq handler's result) {}/{}",
+              g_b1_on.load() ? "hooked" : "REFUSED", g_b2_on.load() ? "hooked" : "REFUSED");
     if (context_ok(secs, isl::kCtxLookup, isl::kCtxLookupBytes, "the entry check's lookup call 0x2126A5C") &&
         context_ok(secs, isl::kCtxA, isl::kCtxABytes, "the entry check's vf48 call 0x2126A14")) {
         mid(isl::kPointR, isl::kPatchR, isl::kBytesR, on_sr, g_sr_hook, g_sr_on, "S/R, after the lookup 0x2126AAB");
@@ -635,7 +723,10 @@ DWORD WINAPI probe_thread(LPVOID) {
         try {
             if (g_twin.load()) refresh_user2();
             drain();
-            if (tick % 60 == 0) summary();
+            if (tick % 60 == 0) {
+                summary();
+                branch_summary();
+            }
         } catch (...) {
         }
     }
@@ -688,6 +779,7 @@ void shop_probe_on_user2_req(uint16_t opcode, std::span<const uint8_t> payload, 
         e.v[3] = r.interaction;
     } else {
         const shp::SeqReq r = shp::parse_seq_req(payload);
+        if (i == 2) g_u2_branch_seqs.add(r.seq);  // B: the handler's result is told as user 2's
         funcnpc = g_funcnpc.has(r.seq);
         if (funcnpc) g_req_funcnpc[i].fetch_add(1, std::memory_order_relaxed);
         // 2591s are many (stage chart events): only the funcnpc ones and the first 8 others are logged.
