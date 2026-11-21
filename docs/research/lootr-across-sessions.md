@@ -9,6 +9,15 @@ their shares stayed. Being reworked (one file per save slot, written in the save
 that slot, nothing restored or written without the save hook); not in a build yet. The live test still needs one
 save into the test co-op world, the owner's question below.
 
+v2 (10:00, scratchpad b19/b19_v2.patch: per-slot files written at the commit, a ledger of what the joined player got
+and saved, armed only at the host's LoadSlot) was reviewed again: nothing that can crash, deadlock or stall the server
+thread, nothing changes with the option off; still four ways to give twice, for v3: (1) ledger ids missed (the 1.5 s
+rule for synchronous gives, no retry of a failed ledger write, a later disarm stops the tracking); (2) the stamp's
+120 s slack trusts an older file after a failed write (set the old file aside at the first failed write; drop pending
+snapshots older than ~60 s; compare against the save files' mtime recorded at the commit); (3) the 4000-mark cap drops
+marks long before their shares expire (ledger only ids ever in a file, prune by age only); (4) a 15 s dedup of
+LoadSlot can swallow a real reload (dedup on the user-actor / character pair instead).
+
 ## What happens today (lootr.h, native)
 
 "Items in the world: each their own" works inside one session:

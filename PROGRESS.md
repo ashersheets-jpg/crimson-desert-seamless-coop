@@ -10,7 +10,9 @@ test save Out, shipped cdmp.ini restored.
   when the game saves). Testing it needs one test that SAVES, into the TEST co-op world only (backed up before and put
   back after; your own saves are still checked unchanged). Our tests never save today. May a test save there?
   (09:25: a first version is written, switched off; an independent review found ways it could give items twice
-  across sessions, so it is being reworked and is not in the next build. The test question still stands.)
+  across sessions, so it is being reworked and is not in the next build. The test question still stands. Correction 10:10: our tests
+  already make the game save the TEST co-op world by itself when the friend's game is killed (the host's final save,
+  cs81a); the B19 test would save there on purpose, which is what the question asks.)
 - 2026-11-21 03:30 SAVE REQUEST (not urgent): B07 (boss mechanics for two) needs a save right before a boss fight
   (any story or world boss you have reached), so two copies of the game can fight it together and I can see grabs,
   phases, the arena and the finish on both screens. None of the test saves is at a boss (the windridge fort's wyvern
@@ -9472,3 +9474,32 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   why they use radmin", 10:38 UTC; the piracy questions stay the owner's) and a new member; nothing for feedback.
 - 09:30 the next batch's build started (next_batch_build.sh, without B19); then commit, package, and the research
   chain with the new package (after_pp41.sh now starts with cs75e / cs76e, the sweep retakes).
+- 09:44 cs75e (the butcher's shop by facesweep, -40..+40 by 10, R 1.5 s each, on 908c60c5): SAVES OK, 5/5; NOTHING
+  taken at any angle: "Wide Bowl: E Buy" (an item on her counter) kept the focus. facesweep2.py (also tilts the camera
+  up over the counter at each angle) written; cs82 uses it. CORRECTION to the 4394b014 post: the talk-rule evidence
+  from pp41's crime step was the guest holding E on a bandit at the camp (interaction 0x35), not a talk; the CHANGELOG
+  says so now, and the post's sentence gets the same correction (download-4394b014.txt, 1903 chars) once no game
+  test runs (a Discord edit takes the screen's focus).
+- 09:55 cs76e (arm wrestling by facesweep, a full circle by 20 deg, R 1.5 s each, 908c60c5): SAVES OK, 5/5; NOTHING
+  asked at any of 18 angles. With cs75c-e this points at the joined player's NPC prompts themselves (Borque 20 Nov:
+  "client still not able to interact with npcs"), not the test method: the guest's GuestXInter redirect (its prompt
+  check of a person's dynamic entry looked up in the host's stage manager X) found the stage every time and the check
+  still returned 0 (refused, no prompt): cs75c 8187, cs75d 1274, cs76c 117, cs76e 100 checks, all 0; Borque's 18 Nov
+  client log the same (173). 3732's prompt check exe+0x23607D0 after the lookup (R 0x2360965): the found instance's
+  +0x168 must be 0; its dead check 0x21CABF0(manager, instance); the condition [instance+0x78] on the player
+  (0x25B7F30 with the player's status word); a condition list; 0x1C9FBB0. The same checks as 3576's 0x22EE2D0,
+  where the guest DID get "R Shop" (tcB238/242): a state, not code, refuses on 3732.
+- 10:05 cs81a (the departure sweep, 908c60c5): SAVES OK, 5/5; the fight rule gave the guest's game 8 bandits; its game
+  killed at 10:03:50; the sweep 20 s later found none on another game ("0 found ... none left"): the host's server
+  takes a departed user's NPCs back by itself (the sweep is for loads). The checklist's leave step now asks for a
+  sweep that ran and left none waiting or failed (9e59ee2). Also seen: the host's game SAVED the test co-op world at
+  10:04 when the guest's game was killed (the lost-link final save: writes 30): our tests do save into the TEST co-op
+  world in that case, which the B19 question's "our tests never save" overlooked.
+- 10:08 the chain stopped after cs81a (scan/chain.stop: the queued scripts skip themselves; chain_c.sh has the runs that
+  do not need the joined player's talks). B19 v2 reviewed (no crash / deadlock / stall, unchanged with the option off;
+  4 ways left to give twice: the ledger's 1.5 s rule and missing retries, the stamp's 120 s slack, the ledger cap,
+  the 15 s load dedup): out of the tree again (b19/b19_v2.patch) for a v3 after the NPC prompts.
+- 10:10-10:19 research build gx1 (908c60c5 + GuestXInter "gates" between R and F, read only): cs75g at the butcher:
+  SAVES OK, 5/5, but no prompt check reached A this time (0 redirects; the X noted), so no gate data. gx2 adds counters
+  for every call of the check (its entry and the three early returns before A): cs75p1 running (2.5 min at the stall,
+  R every 15 s).

@@ -294,6 +294,13 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
     none made, in our runs too. Ported to 239 B / the 3460+ offsets. Not yet tested.
   - [ ] The guest sees city NPCs sitting on benches in a T-pose (the guest only). (Lead: GuestSeqRestore swaps a
     remote NPC's seq_bodyanim_action it cannot find for an idle wait, 31 times in his session; cs58 looks in Hernand.)
+  - [ ] The guest cannot interact with townsfolk (Borque 20 Nov video: "client still not able to interact with npcs";
+    talk greyed). 2026-11-21: reproduced by script on 3732 (cs75c-e at the Hernand butcher, cs76c-e at the inn
+    cellar's patrons: no R ever reached the host's server). The guest's prompt check of a person's dynamic entry is
+    redirected to the host's stage manager X (GuestXInter) and finds the stage, then refuses (result 0) every time
+    (thousands of checks; Borque's client log 173). 3732's check exe+0x23607D0 tests the instance's +0x168, its dead
+    check, a condition on the player and a condition list after the lookup: research builds gx1 / gx2 count where it
+    stops (cs75g, cs75p1). 3576 got "R Shop" for the guest with the same code (tcB238 / tcB242).
   - [~] The guest's "interact" opens the NPC's menu but the NPC keeps walking (the host's NPCs stop and look).
     (2026-11-21: the talk rule, native 9b9bad7, [session2] ai_handoff_talk=1: the person the guest interacts with runs
     on the guest's game while it stands within 6 m, then back; in single player the talker's game runs the NPC and its
