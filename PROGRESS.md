@@ -9340,3 +9340,14 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   seq_copy, scene_diag, observer_stage, scene_acks, guest_stage (their 2976 captures read with today's numbers),
   plus seq_copy's route checks and scene_diag's first / last scene Req by constant. Layout changes (e.g. the
   PrepareSequencerAck's size) are not fixed by this: what still fails after the build needs 3732 captures.
+- 06:20 SHARED-WORLD README written (kit/coopplus/README-shared-world.txt, committed 2956e9d; package-native.ps1
+  now puts it in place of the normal README, whose body was the two-worlds mode). From an agent's survey of the
+  layer's native menus (read only): the title flow, holding Interact on the friend (the menu: the challenges, a
+  give / trade note, Leave), the Co-op tab as the pause menu's last tab, the challenges' rules, Discard's Give /
+  Offer in a trade / Stake / Put in the shared stash, the settings by section, saves, known issues, [keys]. The
+  same survey found stale hotkey hints in the native layer, fixed (layer src, built after pp41): "Still stuck:
+  Ctrl+F2" (-> Leave the Party in the Co-op menu), the guest's panel hint "Ctrl+F2: leave" (-> pause menu > Co-op >
+  Leave the session), "Controls card: Shift+F1" (-> pause menu > Co-op > Controls), "Name over my friend (Ctrl+F8
+  too)" (no Ctrl+F8). Also seen, not changed yet: "Who can join" is tagged Session but that section lists no
+  settings in native (the row shows nowhere); "Stay here" only presses Decline (no message to the caller);
+  "Enemy health with a guest" is hidden in native (the scaling still applies: the crime step's x1.50).
