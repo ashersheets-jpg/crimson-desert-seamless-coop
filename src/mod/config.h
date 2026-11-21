@@ -535,6 +535,10 @@ struct Config {
     // lootr_body_share = 0 | 1, HOST: what one player loots from a body, the other player nearby gets too (needs
     // lootr=1; off when lootr_bodies=1, which gives the second looter an own roll instead)
     bool s2_lootr_body_share = true;
+    // lootr_persist = 0 | 1, HOST (B19, session2/lootr.h): what one player is still owed (a world item the other took,
+    // a chest's other share) is kept with each save of the co-op world and waits at its place next session. Needs
+    // lootr=1, a co-op folder and guest_own_save's save hooks (without them it stays off).
+    bool s2_lootr_persist = false;
     // Co-op+ 2026-11-11 (session2/ai_handoff.h): "0" | "probe" | "1". An NPC whose controller's player cannot see
     // it any more goes to the player who can (its client then runs its AI).
     std::string s2_ai_handoff = "0";

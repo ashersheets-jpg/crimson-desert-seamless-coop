@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -21,6 +22,8 @@
 #include "mod/log.h"
 #include "mod/session2/anti_grief_logic.h"
 #include "mod/session2/lootr_logic.h"
+#include "mod/session2/lootr_persist_logic.h"
+#include "mod/session2/save_hooks.h"
 #include "mod/session2/server.h"
 #include "mod/game/info_row.h"
 
@@ -31,6 +34,24 @@ constexpr uint32_t kHostCharacter = 0xA0100001;
 constexpr uint32_t kLootrGiveEntry = 0xC0DE0005;  // trade_probe's worker: add an item to the requester
 constexpr uint64_t kGatherMs = 1700;              // the 3073 -> pickup delay the game shows (tcB324: ~1.76 s)
 constexpr uint64_t kKeepMs = 30 * 60 * 1000;      // an entry the guest never takes is forgotten after 30 min
+                                                  // (B19 lootr_persist, armed: it waits at its place instead)
+
+// B19: every share gets an id (lootr_persist_logic.h make_id) and its start time, kept across sessions.
+int64_t unix_now() noexcept {
+    return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+std::atomic<int64_t> g_session_start{0};
+std::atomic<uint32_t> g_share_counter{0};
+uint64_t next_share_id() noexcept {
+    int64_t start = g_session_start.load();
+    if (!start) {
+        start = unix_now();
+        g_session_start.store(start);
+    }
+    return lpl::make_id(start, g_share_counter.fetch_add(1) + 1);
+}
+bool g_persist_on = false;         // [session2] lootr_persist
+std::atomic<bool> g_armed{false};  // B19: the host loaded a co-op world slot through guest_save_host's hook
 
 bool g_on = false, g_probe = false;
 safetyhook::InlineHook g_pickup;
@@ -102,6 +123,11 @@ struct Taken {
     uint64_t step_at = 0;
     uint32_t requester = 0;
     bool host_waits = false;                 // phase 2: the GUEST took it first, the host takes its copy later
+    // B19 (lootr_persist): where the gimmick stood (read only while armed), the share's id and start (unix s).
+    float x = 0, y = 0, z = 0;
+    bool pos_ok = false;
+    uint64_t share_id = 0;
+    int64_t made = 0;
 };
 std::mutex g_mu;
 std::vector<Taken> g_taken;  // guarded by g_mu
@@ -197,6 +223,7 @@ void read_pickup(Seen& s, uintptr_t comp, uintptr_t picker) noexcept {
 }
 
 thread_local int t_in_pickup = 0;  // a Drop event inside the pickup worker is the pickup's own business
+bool gimmick_pos(uintptr_t comp, float& x, float& y, float& z) noexcept;
 
 int* __fastcall pickup_detour(uintptr_t comp, int* err, uintptr_t picker, uint64_t kind) noexcept {
     Seen s;
@@ -219,6 +246,9 @@ int* __fastcall pickup_detour(uintptr_t comp, int* err, uintptr_t picker, uint64
             t.picker = picker;
             t.host_waits = guest_first;
             t.at = GetTickCount64();
+            if (g_armed.load()) t.pos_ok = gimmick_pos(comp, t.x, t.y, t.z);
+            t.share_id = next_share_id();
+            t.made = unix_now();
             snap_bag(picker, t.before);
             std::lock_guard lk(g_mu);
             if (g_taken.size() < 512) g_taken.push_back(std::move(t));
@@ -493,7 +523,10 @@ struct ChestShare {
     bool told = false;  // the layer was told that this share waits (the other player was not at the chest)
     bool body = false;  // a dead body's loot: no notice, 30 m, kept 10 minutes
     BagSnap before;
+    uint64_t share_id = 0;  // B19
+    int64_t made = 0;
 };
+void persist_keep(const ChestShare& c, const char* why) noexcept;  // B19: below
 constexpr uint64_t kSettleMs = 1500;
 constexpr uint64_t kShareKeepMs = 3ull * 60 * 60 * 1000;  // a share nobody fetches is forgotten after 3 hours
 constexpr uint64_t kBodyShareKeepMs = 10ull * 60 * 1000;
@@ -899,6 +932,8 @@ void chest_opened(uintptr_t comp, uintptr_t opener, uint32_t gimmick, uint32_t o
     sh.opener = opener_key;
     sh.at = GetTickCount64();
     sh.before = before;
+    sh.share_id = next_share_id();
+    sh.made = unix_now();
     if (!gimmick_pos(comp, sh.x, sh.y, sh.z)) {
         log::info("Lootr: chest 0x{:08X} opened by 0x{:08X}: the chest's position is unreadable (no share kept)",
                   gimmick, opener_key);
@@ -910,6 +945,7 @@ void chest_opened(uintptr_t comp, uintptr_t opener, uint32_t gimmick, uint32_t o
             if (g_shares[k].at < g_shares[slot].at) slot = k;
         }
     }
+    if (g_share_n == kShareMax && g_shares[slot].gimmick) persist_keep(g_shares[slot], "the shares' list was full");
     g_shares[slot] = sh;
     g_shares_pending = g_share_n;
 }
@@ -931,6 +967,8 @@ void body_looted(uintptr_t comp, uint32_t body, uint32_t looter_key, const BagSn
     sh.at = now;
     sh.before = before;
     sh.body = true;
+    sh.share_id = next_share_id();
+    sh.made = unix_now();
     sh.told = true;  // never announced
     if (!gimmick_pos(comp, sh.x, sh.y, sh.z)) return;
     int slot = g_share_n < kShareMax ? g_share_n++ : 0;
@@ -939,6 +977,7 @@ void body_looted(uintptr_t comp, uint32_t body, uint32_t looter_key, const BagSn
             if (g_shares[k].at < g_shares[slot].at) slot = k;
         }
     }
+    if (g_share_n == kShareMax && g_shares[slot].gimmick) persist_keep(g_shares[slot], "the shares' list was full");
     g_shares[slot] = sh;
     g_shares_pending = g_share_n;
     c_body_looted.fetch_add(1);
@@ -1000,13 +1039,441 @@ int players_now(PlayerAt* out, int cap) noexcept {
     return n;
 }
 
+// ---- B19 (lootr_persist, armed): the shares kept across sessions (lootr.h, lootr_persist_logic.h). The game's
+// LoadSlot / SavePlayerToSlot / FlushPendingSaveData (guest_save_host's hooks) and Lootr's entry all run on the server
+// thread; g_near and g_given_guest are also touched by lootr_tick (the network thread), under g_mu.
+std::vector<lpl::Share> g_near;  // guarded by g_mu: shares waiting at their place (6 m)
+struct GivenGuest {
+    uint64_t id;
+    uint64_t at;  // GetTickCount64 at the give
+};
+std::vector<GivenGuest> g_given_guest;  // guarded by g_mu: given to the joined player, not on the ledger yet
+std::atomic<int> g_near_n{0};
+std::atomic<bool> g_write_due{false};
+std::wstring g_pdir;  // the server thread: <co-op folder>\cdmp_lootr
+struct PendingSlot {  // the server thread: a host save's snapshot, written at that slot's commit
+    uint32_t slot = 0;
+    std::vector<lpl::Share> list;
+    bool committed = false;  // its commit came and the write failed: Lootr's entry tries again
+    int64_t stamp = 0;
+    int tries = 0;
+};
+std::vector<PendingSlot> g_pending;
+uint32_t g_loaded_slot = 0xFFFFFFFFu;  // the server thread
+uint64_t g_loaded_at = 0;
+std::atomic<uint64_t> c_p_read{0}, c_p_written{0}, c_p_failed{0}, c_p_given{0}, c_p_late{0}, c_p_ledger{0},
+    c_p_stale{0};
+
+std::string narrow_path(const std::wstring& w) {
+    if (w.empty()) return {};
+    const int n = WideCharToMultiByte(CP_UTF8, 0, w.data(), static_cast<int>(w.size()), nullptr, 0, nullptr, nullptr);
+    std::string s(static_cast<size_t>(n > 0 ? n : 0), '\0');
+    if (n > 0) WideCharToMultiByte(CP_UTF8, 0, w.data(), static_cast<int>(w.size()), s.data(), n, nullptr, nullptr);
+    return s;
+}
+enum class ReadResult { Ok, Missing, Error };
+ReadResult read_small_file(const std::wstring& path, std::string& out, DWORD& err) {
+    err = 0;
+    HANDLE f = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, 0,
+                           nullptr);
+    if (f == INVALID_HANDLE_VALUE) {
+        err = GetLastError();
+        return err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND ? ReadResult::Missing : ReadResult::Error;
+    }
+    LARGE_INTEGER size{};
+    bool ok = GetFileSizeEx(f, &size) && size.QuadPart >= 0 && size.QuadPart < (4ll << 20);
+    if (ok) {
+        out.resize(static_cast<size_t>(size.QuadPart));
+        DWORD got = 0;
+        ok = out.empty() || (ReadFile(f, out.data(), static_cast<DWORD>(out.size()), &got, nullptr) && got == out.size());
+    }
+    if (!ok) err = GetLastError() ? GetLastError() : ERROR_READ_FAULT;
+    CloseHandle(f);
+    return ok ? ReadResult::Ok : ReadResult::Error;
+}
+// <path>.tmp written whole, then moved over <path>: a crash mid-write leaves the last good file. 0 = written, else the
+// Windows error. (No flush to the disk: the server thread waits for this.)
+DWORD write_small_file(const std::wstring& path, const std::string& text) {
+    CreateDirectoryW(g_pdir.c_str(), nullptr);  // the folder, the first time (an existing one is fine)
+    const std::wstring tmp = path + L".tmp";
+    HANDLE f = CreateFileW(tmp.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (f == INVALID_HANDLE_VALUE) return GetLastError() ? GetLastError() : ERROR_WRITE_FAULT;
+    DWORD put = 0;
+    const bool ok = WriteFile(f, text.data(), static_cast<DWORD>(text.size()), &put, nullptr) && put == text.size();
+    const DWORD e = ok ? 0 : (GetLastError() ? GetLastError() : ERROR_WRITE_FAULT);
+    CloseHandle(f);
+    if (!ok) {
+        DeleteFileW(tmp.c_str());
+        return e;
+    }
+    if (!MoveFileExW(tmp.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING)) {
+        const DWORD m = GetLastError() ? GetLastError() : ERROR_WRITE_FAULT;
+        DeleteFileW(tmp.c_str());
+        return m;
+    }
+    return 0;
+}
+std::wstring slot_path(uint32_t slot) { return g_pdir + L"\\slot" + std::to_wstring(slot) + L".txt"; }
+std::wstring ledger_path() { return g_pdir + L"\\given_guest.txt"; }
+// The newest write time (unix s) of the game's own files of save slot N (<co-op folder>\<account>\slot<N>\*); 0 when
+// none is found.
+int64_t newest_save_time(const std::wstring& coop, uint32_t slot) {
+    int64_t best = 0;
+    WIN32_FIND_DATAW a;
+    HANDLE ha = FindFirstFileExW((coop + L"\\*").c_str(), FindExInfoBasic, &a, FindExSearchLimitToDirectories, nullptr, 0);
+    if (ha == INVALID_HANDLE_VALUE) return 0;
+    do {
+        if (!(a.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) || a.cFileName[0] == L'.') continue;
+        const std::wstring dir = coop + L"\\" + a.cFileName + L"\\slot" + std::to_wstring(slot);
+        WIN32_FIND_DATAW f;
+        HANDLE hf = FindFirstFileExW((dir + L"\\*").c_str(), FindExInfoBasic, &f, FindExSearchNameMatch, nullptr, 0);
+        if (hf == INVALID_HANDLE_VALUE) continue;
+        do {
+            if (f.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+            ULARGE_INTEGER u;
+            u.LowPart = f.ftLastWriteTime.dwLowDateTime;
+            u.HighPart = f.ftLastWriteTime.dwHighDateTime;
+            const int64_t t = static_cast<int64_t>(u.QuadPart / 10000000ull) - 11644473600ll;
+            if (t > best) best = t;
+        } while (FindNextFileW(hf, &f));
+        FindClose(hf);
+    } while (FindNextFileW(ha, &a));
+    FindClose(ha);
+    return best;
+}
+lpl::Share share_of(const Taken& t) {
+    lpl::Share s;
+    s.id = t.share_id;
+    s.for_host = t.host_waits;  // the guest took it first: the host's copy waits
+    s.x = t.x;
+    s.y = t.y;
+    s.z = t.z;
+    s.made = t.made;
+    s.kinds = 1;
+    s.item[0] = t.item_key;
+    s.n[0] = t.count > lpl::kMaxCount ? lpl::kMaxCount : t.count;
+    return s;
+}
+lpl::Share share_of(const ChestShare& c) {
+    lpl::Share s;
+    s.id = c.share_id;
+    s.for_host = c.opener != kHostCharacter;  // the other player's share
+    s.chest = true;
+    s.x = c.x;
+    s.y = c.y;
+    s.z = c.z;
+    s.made = c.made;
+    for (int i = 0; i < c.items && i < lpl::kMaxKinds; ++i) {
+        s.item[s.kinds] = c.item[i];
+        s.n[s.kinds++] = c.n[i] > lpl::kMaxCount ? lpl::kMaxCount : c.n[i];
+    }
+    return s;
+}
+void near_add(const lpl::Share& s) {  // under g_mu
+    if (g_near.size() >= lpl::kMaxShares) g_near.erase(g_near.begin());
+    g_near.push_back(s);
+    g_near_n = static_cast<int>(g_near.size());
+}
+// What each player is still owed now (the server thread).
+std::vector<lpl::Share> persist_list() {
+    std::vector<lpl::Share> list;
+    {
+        std::lock_guard lk(g_mu);
+        for (const Taken& t : g_taken) {
+            if (t.state == 0 && t.item_known && t.pos_ok && t.count > 0) list.push_back(share_of(t));
+        }
+        list.insert(list.end(), g_near.begin(), g_near.end());
+    }
+    for (int k = 0; k < g_share_n; ++k) {
+        const ChestShare& c = g_shares[k];
+        if (c.settled && !c.body && c.items > 0) list.push_back(share_of(c));
+    }
+    std::stable_sort(list.begin(), list.end(), [](const lpl::Share& a, const lpl::Share& b) { return a.made < b.made; });
+    return list;
+}
+bool persist_write_slot(PendingSlot& p) {
+    const std::string text =
+        lpl::to_text(p.list, unix_now(), std::format("slot {}: the shares as of the host's save of it", p.slot), p.stamp);
+    const DWORD e = write_small_file(slot_path(p.slot), text);
+    if (!e) {
+        c_p_written.fetch_add(1);
+        static std::atomic<int> said{0};
+        if (said.fetch_add(1) < 30)
+            log::info("Lootr: slot {}'s shares written at the game's commit of that save: {} share(s) kept across "
+                      "sessions", p.slot, p.list.size());
+        return true;
+    }
+    c_p_failed.fetch_add(1);
+    if (++p.tries <= 3 || p.tries % 100 == 0)
+        log::warn("Lootr: slot {}'s shares file could NOT be written (error {}, try {}): tried again every 2 s",
+                  p.slot, e, p.tries);
+    return false;
+}
+// Each waiting share whose player stands within 6 m of its place goes into that player's bag; kinds the add refused
+// (a full bag) stay, under a new id, for another try.
+void persist_give() {
+    if (g_near_n.load() <= 0) return;
+    PlayerAt pl[4];
+    const int n = players_now(pl, 4);
+    if (!n) return;
+    std::vector<lpl::Share> due;
+    std::vector<int> to;
+    {
+        std::lock_guard lk(g_mu);
+        for (const lpl::Share& s : g_near) {
+            for (int p = 0; p < n; ++p) {
+                if ((pl[p].key == kHostCharacter) != s.for_host) continue;
+                const float dx = pl[p].x - s.x, dy = pl[p].y - s.y, dz = pl[p].z - s.z;
+                if (dx * dx + dy * dy + dz * dz > 36.0f) continue;
+                due.push_back(s);
+                to.push_back(p);
+                break;
+            }
+        }
+    }
+    if (due.empty()) return;
+    const int64_t now = unix_now();
+    std::vector<lpl::Share> rest;
+    std::vector<uint64_t> to_guest;
+    static std::atomic<int> said{0};
+    for (size_t i = 0; i < due.size(); ++i) {
+        const lpl::Share& s = due[i];
+        const PlayerAt& p = pl[to[i]];
+        lpl::Share left = s;
+        left.kinds = 0;
+        std::string list;
+        for (int k = 0; k < s.kinds; ++k) {
+            const int e = lootr_add_item(p.holder, s.item[k], static_cast<uint64_t>(s.n[k]));
+            list += std::format("{}{} x{}{}", k ? ", " : "", s.item[k], s.n[k],
+                                e == 0 ? "" : std::format(" (NOT added, err {})", e));
+            if (e != 0) {
+                left.item[left.kinds] = s.item[k];
+                left.n[left.kinds++] = s.n[k];
+            }
+        }
+        if (left.kinds < s.kinds) {
+            c_p_given.fetch_add(1);
+            if (!s.for_host) to_guest.push_back(s.id);  // what it got is on the ledger at its next save
+        }
+        if (left.kinds) {
+            if (left.kinds < s.kinds) left.id = next_share_id();  // the part it did not get lives on by itself
+            rest.push_back(left);
+        }
+        if (left.kinds < s.kinds || said.fetch_add(1) < 20)
+            log::info("Lootr: a kept share ({} at ({:.1f}, {:.1f}, {:.1f}), {} h old): 0x{:08X} is there: [{}]",
+                      s.chest ? "a chest's" : "a world item", s.x, s.y, s.z, (now - s.made) / 3600, p.key, list);
+    }
+    std::lock_guard lk(g_mu);
+    for (const lpl::Share& s : due) std::erase_if(g_near, [&](const lpl::Share& x) { return x.id == s.id; });
+    for (const lpl::Share& r : rest) near_add(r);
+    const uint64_t tick = GetTickCount64();
+    for (const uint64_t id : to_guest) g_given_guest.push_back({id, tick});
+    g_near_n = static_cast<int>(g_near.size());
+}
+// A chest share that would be forgotten (its 3 hours, the list full) waits at its place instead, while armed.
+void persist_keep(const ChestShare& c, const char* why) noexcept {
+    if (!g_armed.load() || c.body || !c.settled || c.items <= 0 || !c.share_id) return;
+    try {
+        std::lock_guard lk(g_mu);
+        near_add(share_of(c));
+        c_p_late.fetch_add(1);
+        log::info("Lootr: chest 0x{:08X}'s share for the {} ({}) now waits at its place (6 m), across sessions too",
+                  c.gimmick, c.opener != kHostCharacter ? "host" : "guest", why);
+    } catch (...) {
+    }
+}
+// A share the joined player got (not under g_mu): on the ledger at its next save.
+void persist_given_guest(uint64_t id) noexcept {
+    if (!g_armed.load() || !id) return;
+    try {
+        std::lock_guard lk(g_mu);
+        g_given_guest.push_back({id, GetTickCount64()});
+    } catch (...) {
+    }
+}
+// Lootr's entry (the server thread, every 2 s while armed with work): a failed write again, the waiting shares.
+void persist_server_work() noexcept {
+    try {
+        bool due = false;
+        for (size_t i = 0; i < g_pending.size();) {
+            PendingSlot& p = g_pending[i];
+            if (p.committed && persist_write_slot(p)) {
+                g_pending.erase(g_pending.begin() + static_cast<std::ptrdiff_t>(i));
+                continue;
+            }
+            due = due || p.committed;
+            ++i;
+        }
+        g_write_due = due;
+        persist_give();
+    } catch (...) {
+    }
+}
+
 }  // namespace
 
 void lootr_set_chests(bool on) { g_chests_on = on; }
+void lootr_set_persist(bool on) { g_persist_on = on; }
+
+// B19 (lootr.h): the host loaded world slot N. The world is that save's now: what was taken since is not taken any
+// more (the in-memory shares go), and that save's own shares come back, less the ledger and what the joined player got
+// in this process. Arms the persistence (its hooks are live: this call came through them).
+void lootr_host_loaded(uint32_t slot) noexcept {
+    if (!g_persist_on || !g_on) return;
+    try {
+        const uint64_t tick = GetTickCount64();
+        if (slot == g_loaded_slot && tick - g_loaded_at < 15000) return;  // the same load's second call (its character)
+        g_loaded_slot = slot;
+        g_loaded_at = tick;
+        const std::wstring coop = save_hooks_coop_dir();
+        if (coop.empty()) {
+            static bool said = false;
+            if (!said) {
+                said = true;
+                log::warn("Lootr: lootr_persist is on, but this run saves in no co-op folder: nothing is kept across "
+                          "sessions");
+            }
+            g_armed = false;
+            return;
+        }
+        g_pdir = coop + L"\\cdmp_lootr";
+        std::string text, ledger;
+        DWORD e1 = 0, e2 = 0;
+        const ReadResult r1 = read_small_file(slot_path(slot), text, e1);
+        const ReadResult r2 = read_small_file(ledger_path(), ledger, e2);
+        const int64_t now = unix_now();
+        const lpl::Ledger l = r2 == ReadResult::Ok ? lpl::ledger_parse(ledger, now) : lpl::Ledger{};
+        if (r1 == ReadResult::Error || r2 == ReadResult::Error || (r2 == ReadResult::Ok && !l.header_ok)) {
+            g_armed = false;  // nothing read, nothing written: a later run reads them as they are
+            log::warn("Lootr: slot {}'s shares or the ledger could not be read (errors {} / {}{}): nothing is kept "
+                      "across sessions in this run", slot, e1, e2,
+                      r2 == ReadResult::Ok && !l.header_ok ? ", the ledger is not one this build reads" : "");
+            return;
+        }
+        lpl::Parsed p;
+        if (r1 == ReadResult::Ok) p = lpl::from_text(text, now);
+        if (r1 == ReadResult::Ok && !p.header_ok) {
+            const std::wstring aside = slot_path(slot) + L".unread";
+            MoveFileExW(slot_path(slot).c_str(), aside.c_str(), MOVEFILE_REPLACE_EXISTING);
+            log::warn("Lootr: slot {}'s shares file is not one this build reads: set aside (.unread), none restored",
+                      slot);
+        }
+        // A file older than the slot's own save files missed a later save of that slot: its shares are not that
+        // save's (losing them beats giving twice).
+        const int64_t saved = newest_save_time(coop, slot);
+        const bool stale = p.header_ok && saved > 0 && p.stamp > 0 && saved > p.stamp + 120;
+        if (stale) {
+            c_p_stale.fetch_add(1);
+            log::warn("Lootr: slot {}'s shares file (stamp {}) is older than that save ({}): not restored", slot,
+                      p.stamp, saved);
+        }
+        std::vector<uint64_t> gone = lpl::ids_of(l.marks);
+        std::vector<lpl::Share> back;
+        {
+            std::lock_guard lk(g_mu);
+            for (const GivenGuest& g : g_given_guest) gone.push_back(g.id);
+            if (p.header_ok && !stale) back = lpl::minus_ids(p.shares, gone);
+            g_taken.clear();
+            g_near = back;
+            g_near_n = static_cast<int>(g_near.size());
+        }
+        for (int k = 0; k < g_share_n; ++k) g_shares[k] = ChestShare{};
+        g_share_n = 0;
+        g_shares_pending = 0;
+        g_pending.clear();
+        g_write_due = false;
+        g_armed = true;
+        c_p_read.fetch_add(back.size());
+        int for_host = 0;
+        for (const lpl::Share& s : back) for_host += s.for_host ? 1 : 0;
+        log::info("Lootr: shares kept across sessions ARMED: the host loaded slot {}: {} share(s) wait at their place "
+                  "({} for the host, {} for the friend; in the file {}, on the ledger or given before {}, older than 30 "
+                  "days {}, unreadable lines {})",
+                  slot, back.size(), for_host, back.size() - static_cast<size_t>(for_host), p.shares.size(),
+                  p.shares.size() - (stale ? p.shares.size() : back.size()), p.expired, p.bad_lines);
+    } catch (...) {
+    }
+}
+// B19: the host saved world slot N: what each player is owed at this moment, for that slot's commit.
+void lootr_host_saved(uint32_t slot) noexcept {
+    if (!g_armed.load()) return;
+    try {
+        PendingSlot p;
+        p.slot = slot;
+        p.list = persist_list();
+        for (PendingSlot& q : g_pending) {
+            if (q.slot == slot) {
+                q = std::move(p);
+                return;
+            }
+        }
+        g_pending.push_back(std::move(p));
+    } catch (...) {
+    }
+}
+// B19: the game committed world slot N: its snapshot goes to slot<N>.txt (a failed write is tried again every 2 s).
+void lootr_host_flushed(uint32_t slot) noexcept {
+    if (!g_armed.load()) return;
+    try {
+        for (size_t i = 0; i < g_pending.size(); ++i) {
+            PendingSlot& p = g_pending[i];
+            if (p.slot != slot || p.committed) continue;
+            p.committed = true;
+            p.stamp = unix_now();
+            if (persist_write_slot(p)) {
+                g_pending.erase(g_pending.begin() + static_cast<std::ptrdiff_t>(i));
+            } else {
+                g_write_due = true;
+            }
+            return;
+        }
+    } catch (...) {
+    }
+}
+// B19: the joined player's save went through: the shares it got (at least 1.5 s ago, so the add has run) go on the
+// ledger. Nothing is dropped until the ledger is written.
+void lootr_guest_saved() noexcept {
+    if (!g_armed.load()) return;
+    try {
+        const uint64_t tick = GetTickCount64();
+        const int64_t now = unix_now();
+        std::vector<lpl::Mark> add;
+        {
+            std::lock_guard lk(g_mu);
+            for (const GivenGuest& g : g_given_guest) {
+                if (tick - g.at >= 1500) add.push_back({g.id, now});
+            }
+        }
+        if (add.empty()) return;
+        std::string text;
+        DWORD e = 0;
+        const ReadResult r = read_small_file(ledger_path(), text, e);
+        const lpl::Ledger l = r == ReadResult::Ok ? lpl::ledger_parse(text, now) : lpl::Ledger{};
+        DWORD w = 0;
+        if (r == ReadResult::Error || (r == ReadResult::Ok && !l.header_ok) ||
+            (w = write_small_file(ledger_path(), lpl::ledger_text(l.marks, add, now))) != 0) {
+            c_p_failed.fetch_add(1);
+            log::warn("Lootr: the ledger could NOT be updated at the joined player's save (read {} / write {}): its {} "
+                      "share(s) stay for its next save", e, w, add.size());
+            return;
+        }
+        c_p_ledger.fetch_add(add.size());
+        std::lock_guard lk(g_mu);
+        std::erase_if(g_given_guest, [&](const GivenGuest& g) {
+            for (const lpl::Mark& m : add) {
+                if (m.id == g.id) return true;
+            }
+            return false;
+        });
+    } catch (...) {
+    }
+}
 void lootr_set_body_share(bool on) { g_body_share_on = on; }
 
 void lootr_chest_shares(uintptr_t host_actor) noexcept {
-    if (!g_on || !host_actor || !g_share_n) return;
+    if (!g_on || !host_actor) return;
+    if (g_armed.load()) persist_server_work();  // B19
+    if (!g_share_n) return;
     PlayerAt pl[4];
     const int n = players_now(pl, 4);
     const uint64_t now = GetTickCount64();
@@ -1015,7 +1482,9 @@ void lootr_chest_shares(uintptr_t host_actor) noexcept {
         bool done = false;
         if (now - sh.at > (sh.body ? kBodyShareKeepMs : kShareKeepMs)) {
             if (!sh.body) c_chest_expired.fetch_add(1);
-            if (!sh.body) log::info("Lootr: the share of chest 0x{:08X} was not fetched in 3 hours: forgotten", sh.gimmick);
+            if (!sh.body && !(g_armed.load() && sh.settled && sh.items > 0))
+                log::info("Lootr: the share of chest 0x{:08X} was not fetched in 3 hours: forgotten", sh.gimmick);
+            if (!sh.body) persist_keep(sh, "not fetched in 3 hours");
             done = true;
         }
         if (!done && !sh.settled) {
@@ -1059,6 +1528,7 @@ void lootr_chest_shares(uintptr_t host_actor) noexcept {
                 for (int i = 0; i < bag0.slots; ++i) gained -= bag0.idx[i] != 0xFFFF && bag0.n[i] > 0 ? bag0.n[i] : 0;
             }
             (sh.body ? c_body_shared : c_chest_shared).fetch_add(1);
+            if (pl[p].key != kHostCharacter) persist_given_guest(sh.share_id);  // B19
             if (sh.told && !sh.body) chest_event(2, pl[p].key, sh);
             static std::atomic<int> said_body{0};
             if (!sh.body || said_body.fetch_add(1) < 40)
@@ -1169,6 +1639,11 @@ void lootr_start(bool on, bool probe, bool guest, bool bodies) {
     g_on = on && !guest;
     g_probe = probe && !guest;
     g_bodies_on = bodies && g_on;
+    g_persist_on = g_persist_on && g_on;
+    if (!g_session_start.load()) g_session_start = unix_now();
+    if (g_persist_on)
+        log::info("Lootr: shares kept across sessions (lootr_persist) armed at the host's load of a co-op world slot: "
+                  "<co-op folder>\\cdmp_lootr\\slot<N>.txt per save, given_guest.txt");
     if (!g_on && !g_probe) return;
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     uint8_t head[2]{};
@@ -1288,7 +1763,8 @@ void lootr_tick(std::vector<std::vector<uint8_t>>& to_server) noexcept {
     try {
         const uint64_t now = GetTickCount64();
         static uint64_t next_share = 0;
-        if (g_shares_pending.load() > 0 && now >= next_share) {  // the host's own request: the server thread
+        if ((g_shares_pending.load() > 0 || (g_armed.load() && (g_near_n.load() > 0 || g_write_due.load()))) &&
+            now >= next_share) {  // the host's own request: the server thread
             next_share = now + 2000;
             std::vector<uint8_t> pl(30, 0);
             const uint32_t entry = 0xC0DE0007;
@@ -1400,6 +1876,16 @@ void lootr_tick(std::vector<std::vector<uint8_t>>& to_server) noexcept {
                 log::info("Lootr: the guest took gimmick 0x{:08X} too: item key {} x{} for 0x{:08X}, {} packet(s) "
                           "replayed", t.g, t.item_key, t.count, t.requester, t.held.size());
                 t.state = 2;
+                if (g_armed.load() && t.share_id) g_given_guest.push_back({t.share_id, now});  // B19 (under g_mu)
+            }
+        }
+        if (g_armed.load()) {  // B19: not taken within kKeepMs: it waits at its place (and across sessions) instead
+            for (const Taken& t : g_taken) {
+                if (t.state != 0 || now - t.at <= kKeepMs || !t.item_known || !t.pos_ok || t.count <= 0) continue;
+                near_add(share_of(t));
+                c_p_late.fetch_add(1);
+                log::info("Lootr: gimmick 0x{:08X}'s item for the {} was not taken in 30 min: it now waits at its "
+                          "place (6 m), across sessions too", t.g, t.host_waits ? "host" : "guest");
             }
         }
         std::erase_if(g_taken, [&](const Taken& t) { return t.state == 2 || now - t.at > kKeepMs; });
@@ -1420,7 +1906,13 @@ std::string lootr_describe() {
                        g_chests_on ? "per player" : "as the game", c_chest_opened.load(), c_chest_shared.load(),
                        g_shares_pending.load(), c_chest_expired.load(),
                        g_body_share_on && !g_bodies_on ? "shared" : "not shared", c_body_looted.load(),
-                       c_body_shared.load());
+                       c_body_shared.load()) +
+           (!g_persist_on ? std::string(" | kept across sessions: off")
+                          : std::format(" | kept across sessions: {} | restored {} given {} waiting {} kept late {} | "
+                                        "slot files written {} failed {} stale {} | ledger marks {}",
+                                        g_armed.load() ? "armed" : "not armed yet", c_p_read.load(), c_p_given.load(),
+                                        g_near_n.load(), c_p_late.load(), c_p_written.load(), c_p_failed.load(),
+                                        c_p_stale.load(), c_p_ledger.load()));
 }
 
 void lootr_host_recv(uint8_t* packet, uint16_t size) noexcept {

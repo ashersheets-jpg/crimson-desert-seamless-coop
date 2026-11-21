@@ -47,5 +47,19 @@ int lootr_add_item(uintptr_t holder, uint32_t key, uint64_t count) noexcept;
 // Phase 2a (host's client, OnRecvPacket, the game's thread): what the host is told about a gimmick the GUEST took
 // first is blanked in place (gimmick key 0 / zero save key), so the host still sees it; the originals are kept.
 void lootr_host_recv(uint8_t* packet, uint16_t size) noexcept;
+// B19 (2026-11-21, [session2] lootr_persist, lootr_persist_logic.h): Lootr's shares kept across sessions. Call
+// lootr_set_persist before lootr_start. It arms at the host's load of a co-op world slot (guest_save_host's LoadSlot
+// hook; without its hooks nothing is read, written or given). Each host save of slot N takes a snapshot of what each
+// player is still owed (a world item the other took; a chest's other share; a world item not taken within 30 minutes
+// and a chest share past its 3 hours wait at their place instead of being forgotten), written to
+// <co-op folder>\cdmp_lootr\slot<N>.txt when the game commits that save. Loading slot N brings that file's shares back,
+// less those on the ledger (given_guest.txt: shares the joined player got and then saved). A share waiting at its
+// place goes to its player within 6 m.
+void lootr_set_persist(bool on);
+// guest_save_host.cpp, on the server thread, each after the game's own call went through (result 0):
+void lootr_host_loaded(uint32_t slot) noexcept;   // LoadSlot of a host world slot
+void lootr_host_saved(uint32_t slot) noexcept;    // SavePlayerToSlot of a host world slot: the snapshot
+void lootr_host_flushed(uint32_t slot) noexcept;  // FlushPendingSaveData committed that slot: its file
+void lootr_guest_saved() noexcept;                // user 2's save went through and was exported: the ledger
 
 }  // namespace cdmp::session2

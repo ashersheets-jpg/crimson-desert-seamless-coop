@@ -23,6 +23,7 @@
 #include "mod/session2/guest_save_wire.h"
 #include "mod/session2/host_save_export.h"
 #include "mod/session2/identity_probe.h"
+#include "mod/session2/lootr.h"
 #include "mod/session2/offsets_s2.h"
 #include "mod/session2/save_hooks.h"
 #include "mod/session2/server.h"
@@ -887,6 +888,10 @@ int* __fastcall load_slot_detour(uintptr_t mgr, int* res, uint32_t slot, uintptr
     t_load_slot = {outer.depth + 1, actor, d.action == Action::Remap};
     int* r = g_h_load_slot.unsafe_call<int*>(mgr, res, d.slot, actor);
     t_load_slot = outer;
+    if (owner == Owner::Host && d.action != Action::Remap && hsv::slot_whitelisted(d.slot)) {
+        int32_t code = -1;
+        if (peek(reinterpret_cast<uintptr_t>(r), code) && code == 0) lootr_host_loaded(d.slot);  // B19
+    }
     if (user2_on) {
         int32_t code = -1;
         if (!peek(reinterpret_cast<uintptr_t>(r), code)) code = -1;
@@ -978,6 +983,8 @@ int* __fastcall save_detour(uintptr_t mgr, int* res, uint32_t slot, uintptr_t ch
     ev.result = code;
     ev.redirect_failed = save_hooks_redirect_failed();
     host_save_observe_save(ev);
+    if (code_ok && code == 0 && owner == Owner::Host && d.action != Action::Remap && hsv::slot_whitelisted(d.slot))
+        lootr_host_saved(d.slot);  // B19
     try {
         if (logged) {
             log::info("Session2 guest save probe: SavePlayerToSlot from {} character 0x{:X} slot {} returned {}",
@@ -992,6 +999,7 @@ int* __fastcall save_detour(uintptr_t mgr, int* res, uint32_t slot, uintptr_t ch
                           code_ok ? std::format("0x{:X}", static_cast<uint32_t>(code)) : std::string("unreadable"));
             } else if (export_slot(caller, slot, why)) {
                 c_exported.fetch_add(1);
+                lootr_guest_saved();  // B19
             } else {
                 c_export_failed.fetch_add(1);
                 log::error("Session2 guest save: user 2's save to {} succeeded but the export FAILED: {}", g_slot_name,
@@ -1021,6 +1029,10 @@ int* __fastcall flush_detour(uintptr_t mgr, int* res, uintptr_t character, uint6
     {
         const DepthScope depth;
         r = g_h_flush.unsafe_call<int*>(mgr, res, character, counter, opts, slot_out);
+    }
+    if (owner == Owner::Host && pending_ok && pending >= 0 && hsv::slot_whitelisted(static_cast<uint32_t>(pending))) {
+        int32_t code = -1;
+        if (peek(reinterpret_cast<uintptr_t>(r), code) && code == 0) lootr_host_flushed(static_cast<uint32_t>(pending));
     }
     try {
         // P8 S35 phase E: the journal's event. The committed slot is not recorded: with nothing pending the game does

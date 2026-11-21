@@ -360,6 +360,7 @@ Config load_config(const std::wstring& ini_path) {
     c.s2_lootr_bodies = read_uint(ini_path, L"session2", L"lootr_bodies", 0) != 0;
     c.s2_lootr_chests = read_uint(ini_path, L"session2", L"lootr_chests", 1) != 0;
     c.s2_lootr_body_share = read_uint(ini_path, L"session2", L"lootr_body_share", 1) != 0;
+    c.s2_lootr_persist = read_uint(ini_path, L"session2", L"lootr_persist", 0) != 0;
     c.s2_ai_handoff = narrow(read_string(ini_path, L"session2", L"ai_handoff", "0"));
     c.s2_ai_handoff_fight = read_uint(ini_path, L"session2", L"ai_handoff_fight", c.s2_ai_handoff_fight ? 1 : 0) != 0;
     c.s2_ai_handoff_catch = read_uint(ini_path, L"session2", L"ai_handoff_catch", c.s2_ai_handoff_catch ? 1 : 0) != 0;
