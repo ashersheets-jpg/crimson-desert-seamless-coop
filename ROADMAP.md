@@ -292,7 +292,10 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
     AI is what stops it. To test: cs75 at the butcher; a walking NPC by hand.)
   - [ ] The host's armour dye is not seen by the guest.
     (Lead: DyeItemListByEquipSlotAck 3042 / DyeItemByInventoryAck 2911 are ToTarget writers, owner_fanout_writers.h:
-    only the dyer's client gets them; the guest needs the host's item re-sent with its dye, e.g. an OtherEquipItemAck.)
+    only the dyer's client gets them; the guest needs the host's item re-sent with its dye, e.g. an OtherEquipItemAck.
+    2026-11-21: on 3732 OtherEquipItemAck is 2426 (a field broadcast, not a ToTarget writer), the dye Acks 3150 /
+    2463 go to the dyer only, and nothing broadcasts a dye: the fix re-sends the dyed item as a 2426 to user 2. Needs
+    one capture of a real dye (waiting list: the owner's hands-on).)
   - [ ] A tree the guest cuts down is duplicated for the host.
   - [ ] Carryable animals (kiwis, goats) are not synced.
   - [~] The running "animation freeze" happens almost all the time out of town (his theory: different FPS on the two
