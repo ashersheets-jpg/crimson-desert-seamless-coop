@@ -61,18 +61,11 @@ $solo = @(
 $natSha = (& git -C $nat rev-parse --short=8 HEAD).Trim()
 & git -C $nat archive --format=zip -o (Join-Path $stage 'source-native.zip') HEAD -- src CMakeLists.txt cmake LICENSE README.md third_party scripts tests tools
 if ($LASTEXITCODE -ne 0) { throw 'git archive of the native base failed' }
-Add-Content (Join-Path $stage 'README.txt') @"
-
-SHARED WORLD BUILD
-------------------
-This build plays co-op in ONE shared world: your friend joins your actual world (the native base by ByJunter,
-CrimsonDesertMultiplayer NativeServer, ported to this game version) instead of seeing copies. Start Co-op in the
-title menu restarts both games once into co-op (about 30 seconds); the next launch is your own game again.
-Your own saves are never written in co-op: each friend has a co-op save of its own in
-%LOCALAPPDATA%\Pearl Abyss\CD\coop_worlds.
-Your Co-op+ settings are in coopplus.ini (cdmp.ini is Co-op+'s own launch file now).
-Native base source: source-native.zip (GPL-3.0, commit $natSha).
-"@
+# 2026-11-21: the shared-world README (kit\coopplus\README-shared-world.txt) REPLACES the normal package's, whose body
+# describes the two-worlds mode (townsfolk not shared, F8 panel, hotkeys, no trading...).
+$version = $normal.Name -replace '^CrimsonDesert-SeamlessCoop-', ''
+(Get-Content (Join-Path $root 'kit\coopplus\README-shared-world.txt') -Raw).Replace('@VERSION@', $version).Replace('@NATIVE@', $natSha) |
+    Set-Content -Encoding ascii (Join-Path $stage 'README.txt')
 
 Get-ChildItem $stage -File -Recurse | Where-Object Name -ne 'SHA256.txt' | ForEach-Object {
     '{0}  {1}' -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.FullName.Substring($stage.Length + 1)
