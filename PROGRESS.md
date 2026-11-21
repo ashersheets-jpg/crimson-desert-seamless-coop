@@ -9306,9 +9306,18 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   friend when it arrives. Farther ones are counted; the 10 s watch goes on while any exists (the host may walk up to
   them, or the server removes them) and ends when none is left anywhere. The tick runs on the host's tunnel loop,
   which stays open after the friend leaves (mod.cpp: s2_link).
-- 05:55 Departure sweep, one more piece (source): the friend's ride / catch / talk / passenger table entries are
-  forgotten when it leaves the world (logged). A stale ride entry would have handed a mount nobody rides to the
-  friend's game again when it came back with the same character key. Test fixtures (no build): door_trace (its
+- 05:55 Departure sweep, one more piece (source): the friend's ride / catch / passenger table entries are forgotten
+  when it leaves the world (logged). A stale ride entry would have handed a mount nobody rides to the friend's game
+  again when it came back with the same character key. Talk entries stay with the talk rule (its "talker left" /
+  "walked off" ends them, and after a short load the NPC can still go back). Checked: "not in the world" is a real
+  load (GameLoadingStartReq / MoveFieldAck ... LoadingCompleteAck, guest_lifecycle.cpp); the dev script's tp under
+  250 m is hops, not a load, so the crime step's tpnear every 6 s does not fire the sweep (far tp / fast travel do).
+  Also caught by reading: a variable named `far` (an empty macro from <windows.h>), renamed (LESSONS).
+- 06:00 Queued (after_pp41.sh, all on the next build): cs81a (departure sweep) first, then cs74g / cs74h / cs73b /
+  cs80a / cs79a / cs77a / cs78a, then cs82a: B02's open item since 9 Nov, the far guest then meeting the host at
+  the same shop in one run (the host at the Rodbel dock while the guest opens the butcher's shop; the host travels
+  to the butcher; the guest's shop open again with the host beside, the host opens the same shop meanwhile).
+  gimmick_event_dedup=probe rides in cs73b / cs77a / cs81a (the tree lead); knowledge_grant=1 in cs79a / cs80a. Test fixtures (no build): door_trace (its
   logic has 3732's 2772 / 2367 / 2481 / 3055, the test had older ones), fast_travel (the capture's 2661 -> the
   logic's PrepareSequencerAck; MoveFieldAck records 0x38 since 3549). Read from the old binaries: seq_copy crashes,
   and observer_stage / owner_fanout / s3 / s9 / scene_acks fail on old captures (old opcodes AND layouts: e.g. a
