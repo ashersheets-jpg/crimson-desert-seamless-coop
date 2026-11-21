@@ -416,3 +416,9 @@ _spike_ms / _spike_per_mille, each end holds what its tunnel receives, in order;
 report that only two PCs show (lag, desync, order of events), run it with sim_lag first. And measure the cause, not the
 symptom: the sample GAPS looked fine; the samples' LATENESS at arrival (100-300 ms against the game's 200 ms window)
 was the cause.
+
+## A dev script's "wait" is at most 10 s (2026-11-21)
+dev_script.cpp caps every `wait N` at 10000 ms. cs73a's "wait 30000" and "wait 724000" ran as 10 s each: the host's
+13-minute horse watch lasted 4 minutes, and the guest teleported 12 minutes early. Write a long wait as several
+`wait 10000` (cs73b.sh's `w N` helper), and check a script's timeline in the log ("Dev script:" lines) before
+reading its results.

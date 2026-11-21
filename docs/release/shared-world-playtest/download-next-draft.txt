@@ -1,0 +1,14 @@
+**Update: shared world playtest 0.1.0-alpha+<ID>, for game 1.0.0.3732**
+Use this instead of 69edcc84; **both players need the same build**. Mostly from <@224953308010381312>'s reports:
+
+- **The other player no longer freezes mid-run.** Over the internet the other player's movement arrives a little late, and the game only waits 200 ms for it, so the other player often stood still for a moment while running. Each game now waits as long as its connection needs (usually around a quarter of a second, up to 0.6 s). Reproduced on our side with simulated internet lag: the short freezes went from 53 to 1 in a run.
+- **An NPC the joined player talks to stops and turns to him**, as it does for the host (it used to keep walking).
+- **The taming freeze:** this build logs the host game's answer to the last taming step; if it happens again, please send both report zips.
+- (to fill: what cs73 / cs75 / cs76 / cs74g show)
+
+Tested with two copies of the game on one PC (Nvidia): the full checklist on 1.0.0.3732, plus runs with simulated internet lag.
+
+- `...<ID>-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tell us in <#1567319198206525450> how it goes, with the report zip from **both** players (close the game, run **Diagnose Co-op+.cmd**).
