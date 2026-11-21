@@ -1063,6 +1063,10 @@ std::atomic<size_t> g_ledger_due_n{0};  // its size, for the status line (anothe
 std::unordered_set<uint64_t> g_filed;    // guarded by g_mu: ids ever in a slot file (written or read) in this process
 std::atomic<bool> g_tracking{false};     // armed once in this process (the folder known): gives are tracked
 std::atomic<uint64_t> c_p_unfiled{0}, c_p_setaside{0}, c_p_late_commit{0};
+// v3.1: the server thread: the share ids each slot's CURRENT file lists (written or read here), for setting aside the
+// files that would give a share again whose ledger mark could not be written (review B2).
+std::unordered_map<uint32_t, std::unordered_set<uint64_t>> g_slot_ids;
+std::unordered_set<uint64_t> g_given_host;  // guarded by g_mu: shares given to the host in this process (review B4)
 std::atomic<int> g_near_n{0};
 std::atomic<bool> g_write_due{false};
 std::wstring g_pdir;  // the server thread: <co-op folder>\cdmp_lootr
@@ -1214,6 +1218,7 @@ void set_aside(uint32_t slot, const char* why) {
     const bool moved = MoveFileExW(path.c_str(), aside.c_str(), MOVEFILE_REPLACE_EXISTING) != 0;
     const DWORD e = moved ? 0 : GetLastError();
     if (!moved && e != ERROR_FILE_NOT_FOUND && e != ERROR_PATH_NOT_FOUND) DeleteFileW(path.c_str());
+    g_slot_ids.erase(slot);
     if (moved || (e != ERROR_FILE_NOT_FOUND && e != ERROR_PATH_NOT_FOUND)) {
         c_p_setaside.fetch_add(1);
         log::warn("Lootr: slot {}'s shares file set aside ({}): a load of that slot restores none", slot, why);
@@ -1228,6 +1233,9 @@ bool persist_write_slot(PendingSlot& p) {
         lpl::to_text(p.list, unix_now(), std::format("slot {}: the shares as of the host's save of it", p.slot), p.stamp);
     const DWORD e = write_small_file(slot_path(p.slot), text);
     if (!e) {
+        auto& ids = g_slot_ids[p.slot];
+        ids.clear();
+        for (const lpl::Share& s : p.list) ids.insert(s.id);
         c_p_written.fetch_add(1);
         static std::atomic<int> said{0};
         if (said.fetch_add(1) < 30)
@@ -1267,7 +1275,7 @@ void persist_give() {
     if (due.empty()) return;
     const int64_t now = unix_now();
     std::vector<lpl::Share> rest;
-    std::vector<uint64_t> to_guest;
+    std::vector<uint64_t> to_guest, host_got;
     static std::atomic<int> said{0};
     for (size_t i = 0; i < due.size(); ++i) {
         const lpl::Share& s = due[i];
@@ -1287,6 +1295,7 @@ void persist_give() {
         if (left.kinds < s.kinds) {
             c_p_given.fetch_add(1);
             if (!s.for_host) to_guest.push_back(s.id);  // what it got is on the ledger at its next save
+            else host_got.push_back(s.id);               // v3.1 (review B4)
         }
         if (left.kinds) {
             if (left.kinds < s.kinds) left.id = next_share_id();  // the part it did not get lives on by itself
@@ -1301,6 +1310,7 @@ void persist_give() {
     for (const lpl::Share& r : rest) near_add(r);
     const uint64_t tick = GetTickCount64();
     for (const uint64_t id : to_guest) g_given_guest.push_back({id, tick});
+    for (const uint64_t id : host_got) g_given_host.insert(id);
     g_near_n = static_cast<int>(g_near.size());
 }
 // A chest share that would be forgotten (its 3 hours, the list full) waits at its place instead, while armed.
@@ -1339,6 +1349,18 @@ bool ledger_write(const std::vector<lpl::Mark>& add) {
         g_ledger_due = std::move(all);
         g_ledger_due_n = g_ledger_due.size();
         g_ledger_retry = true;
+        // v3.1 (review B2): until these marks are on the ledger, a slot file listing one of them would give it again in
+        // a later session (the host may quit before the retry succeeds): those files are set aside now.
+        std::vector<uint32_t> slots;
+        for (const auto& [slot, ids] : g_slot_ids) {
+            for (const lpl::Mark& m : g_ledger_due) {
+                if (ids.count(m.id)) {
+                    slots.push_back(slot);
+                    break;
+                }
+            }
+        }
+        for (const uint32_t slot : slots) set_aside(slot, "a share the joined player saved is not on the ledger yet");
         c_p_failed.fetch_add(1);
         static std::atomic<int> said{0};
         if (said.fetch_add(1) < 20)
@@ -1412,6 +1434,13 @@ void lootr_host_loaded(uint32_t slot) noexcept {
         }
         lpl::Parsed p;
         if (r1 == ReadResult::Ok) p = lpl::from_text(text, now);
+        {
+            auto& ids = g_slot_ids[slot];  // what this slot's current file lists
+            ids.clear();
+            if (p.header_ok) {
+                for (const lpl::Share& s : p.shares) ids.insert(s.id);
+            }
+        }
         if (r1 == ReadResult::Ok && !p.header_ok) {
             const std::wstring aside = slot_path(slot) + L".unread";
             MoveFileExW(slot_path(slot).c_str(), aside.c_str(), MOVEFILE_REPLACE_EXISTING);
@@ -1421,7 +1450,9 @@ void lootr_host_loaded(uint32_t slot) noexcept {
         // A file older than the slot's own save files missed a later save of that slot: its shares are not that
         // save's (losing them beats giving twice).
         const int64_t saved = newest_save_time(coop, slot);
-        const bool stale = p.header_ok && saved > 0 && p.stamp > 0 && saved > p.stamp + 10;
+        // v3.1 (review B3): no save files found for the slot = nothing to compare with: restore nothing. The stamp is the
+        // commit hook's clock; the game's own files may be written a little after it (60 s slack).
+        const bool stale = p.header_ok && (saved == 0 || (p.stamp > 0 && saved > p.stamp + 60));
         if (stale) {
             c_p_stale.fetch_add(1);
             log::warn("Lootr: slot {}'s shares file (stamp {}) is older than that save ({}): not restored", slot,
@@ -1437,6 +1468,7 @@ void lootr_host_loaded(uint32_t slot) noexcept {
             if (p.header_ok) {
                 for (const lpl::Share& s : p.shares) g_filed.insert(s.id);
             }
+            for (const uint64_t id : g_given_host) gone.push_back(id);  // v3.1 (review B4)
             if (p.header_ok && !stale) back = lpl::minus_ids(p.shares, gone);
             g_taken.clear();
             g_near = back;
@@ -1500,6 +1532,11 @@ void lootr_host_flushed(uint32_t slot) noexcept {
             }
             return;
         }
+        // v3.1 (review B3): a commit of this slot without a snapshot of that save (its SavePlayerToSlot unreadable or
+        // refused, another slot pending): the old file may list shares given since: set aside, and an older snapshot of
+        // this slot still waiting for its write is dropped (it would bring that file back).
+        std::erase_if(g_pending, [&](const PendingSlot& q) { return q.slot == slot; });
+        set_aside(slot, "its commit came without a snapshot of that save");
     } catch (...) {
     }
 }
@@ -1605,6 +1642,10 @@ void lootr_chest_shares(uintptr_t host_actor) noexcept {
             }
             (sh.body ? c_body_shared : c_chest_shared).fetch_add(1);
             if (pl[p].key != kHostCharacter) persist_given_guest(sh.share_id);  // B19
+            else if (g_tracking.load() && sh.share_id) {                          // v3.1 (review B4)
+                std::lock_guard lk(g_mu);
+                g_given_host.insert(sh.share_id);
+            }
             if (sh.told && !sh.body) chest_event(2, pl[p].key, sh);
             static std::atomic<int> said_body{0};
             if (!sh.body || said_body.fetch_add(1) < 40)
@@ -1967,7 +2008,12 @@ void lootr_tick(std::vector<std::vector<uint8_t>>& to_server) noexcept {
             }
         }
         std::erase_if(g_taken, [&](const Taken& t) { return t.state == 2 || now - t.at > kKeepMs; });
-        std::erase_if(g_pending_adds, [&](const PendingAdd& a) { return now - a.at > 60000; });  // never ran: not given
+        // v3.1 (review B1): a give the worker did not confirm in 60 s may still run later (its request held while the
+        // server takes none of the joined player's): counted as given (losing it if it never ran beats giving twice).
+        for (const PendingAdd& a : g_pending_adds) {
+            if (now - a.at > 60000) g_given_guest.push_back({a.id, now});
+        }
+        std::erase_if(g_pending_adds, [&](const PendingAdd& a) { return now - a.at > 60000; });
     } catch (...) {
     }
 }
