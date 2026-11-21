@@ -9430,3 +9430,10 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   Test-kit fix (scratchpad fix_lagrun_wrn.py): the step allows that line for itself (WRN_ALLOW, as latehook), so a
   sim_lag line in any other run still fails. By the rule (test-kit-only fix): pp41b = static fresh solostart lagrun,
   after cs75c / cs76c (running now: no harness edit while they run). Then the post.
+- 08:25 pp41's later screenshots looked at: farfight2 (the guest down at the dock, "Your partner is still fighting the
+  boss" with a boss-style bar on its screen: the camp's bandit leader counts as a boss for the game; the host in
+  Hernand, "Guest is down: go to them"), mountfight (the "World event near Host: Reinforcements at Rodbel Fishing
+  Dock" notice, the guest mounted among dead bandits, the host down), solostart / retry / stuck / latehook (side by
+  side at Nas River; the menus' Co-op tab after Others), nosave (both titles say the guest needs a character first),
+  mismatch (both "Can't play together: ... another Co-op+ build"), hostrevive (the host up at Nas River), lagrun
+  (both by the river). Nothing wrong seen.
