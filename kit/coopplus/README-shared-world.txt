@@ -101,8 +101,8 @@ The host's game runs the world; the friend plays in it with their own character.
 - Townsfolk and merchants are the same people for both of you. The friend talks to
   them, buys and sells with their own money and stock, also far from the host.
 - Enemies are shared: both of you hit and kill the same ones, and an enemy fights the
-  player who fights it. With a friend in, enemies have about 1.5x health. No
-  friendly fire.
+  player who fights it. With a friend in, enemies have about 1.5x health (Co-op tab >
+  Combat & Loot). No friendly fire.
 - Items in the world: each of you can take each item once ("Items in the world: each
   their own", Co-op tab > World): plants, ore, chests and the loot of bodies. A chest
   your friend opened keeps your share for you at the chest (pinned on your map).
@@ -191,6 +191,8 @@ THE CO-OP TAB'S SETTINGS
   friend's story: shown, or hidden (no spoilers: their quest steps you have not
   reached are not named). Shared quest credit and Story scenes together are the
   host's choice and apply at the next Start Co-op (Items in the world too).
+- Combat & Loot: Tougher enemies with a guest; Enemy health with a guest; Boss health
+  with a guest (the host's values count).
 - Reviving: Revive each other; After a checkpoint revive: stay at the checkpoint, or
   back to my friend; Wait for my friend if I die at a boss.
 - World: Items in the world (each their own, or first come); Weather follows the host.

@@ -9348,6 +9348,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   same survey found stale hotkey hints in the native layer, fixed (layer src, built after pp41): "Still stuck:
   Ctrl+F2" (-> Leave the Party in the Co-op menu), the guest's panel hint "Ctrl+F2: leave" (-> pause menu > Co-op >
   Leave the session), "Controls card: Shift+F1" (-> pause menu > Co-op > Controls), "Name over my friend (Ctrl+F8
-  too)" (no Ctrl+F8). Also seen, not changed yet: "Who can join" is tagged Session but that section lists no
-  settings in native (the row shows nowhere); "Stay here" only presses Decline (no message to the caller);
-  "Enemy health with a guest" is hidden in native (the scaling still applies: the crime step's x1.50).
+  too)" (no Ctrl+F8). Also fixed (layer src): "Who can join" (the Steam party's lobby type, private or friends
+  only, at the next start) was tagged Session, which lists no settings in native: it shows under the Session
+  buttons now; "Stay here" said "Tells <who> you are staying" but only presses Decline: "Turns down <who>'s call
+  (it lapses)"; the party scaling rows (Tougher enemies / Enemy health / Boss health with a guest) are shown again
+  in native: hidden by 6962853 when scaling needed the relay, working since 1c6453e1 (the crime step's x1.50), so
+  1c6453e1's post pointed testers to a "Combat & Loot" section their Co-op tab did not have.
