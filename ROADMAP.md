@@ -225,6 +225,12 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
 
 **Minigames and challenges**
 - [ ] **B13 — Real PvP minigames** (arm wrestling on each other's live gauge; shot contests, boxing, spear duel, cards).
+  (2026-11-21 reading: the layer's versus arm wrestling (D35: one gauge that both players' E presses push, the host
+  holds it, each game writes it) is from the two-worlds era (each at its own table, the other's puppet in the NPC's
+  seat); its gauge address is ported to 3732 (kMiniGameRoot 0x724B3A8, not checked in a match). In the shared world
+  the order is: the guest's own match at the Hernand table (B14, cs76c), then both players in a match at once (one
+  server: does it allow two matches at one table, or at two tables?), then the shared gauge; [dev] versus_test checks
+  the gauge on one game.)
 - [~] **B14 — The empty arm-wrestling table** (T21). (2026-11-16 cs33a: on native both games list the same 15
   people at the Hernand inn table and both screens show them; left: the guest's own "Try arm wrestling" there.)
 - [~] **B15 — Duel extras and scoreboard** (wagers, arenas, spectator camera, rematch, titles). (Rematch T42,
@@ -296,7 +302,12 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
     2026-11-21: on 3732 OtherEquipItemAck is 2426 (a field broadcast, not a ToTarget writer), the dye Acks 3150 /
     2463 go to the dyer only, and nothing broadcasts a dye: the fix re-sends the dyed item as a 2426 to user 2. Needs
     one capture of a real dye (waiting list: the owner's hands-on).)
-  - [ ] A tree the guest cuts down is duplicated for the host.
+  - [ ] A tree the guest cuts down is duplicated for the host. (2026-11-21 lead, from the native base's research
+    gimmicks-dueno.md section 7: CreateProjectileFromGimmickEventReq has no controller check on the server, so when
+    both games run a gimmick's event both send it and the server makes the projectile twice (S27: 10 extra). A felled
+    trunk may be such a projectile. gimmick_event_dedup (default 0) withholds the guest's copy when the gimmick's
+    controller is the host; its rule: run "probe" first, switch to 1 only if every "would withhold" matches one
+    "DUPLICATE created" on the host. The probe now rides in cs73b / cs77 / cs81; a tree to cut is still needed.)
   - [~] Carryable animals (kiwis, goats) are not synced. (2026-11-19/20: attach_follow=carry, the default (native
     914e7d7 / aeb7d33 / 37af9e1): a caught animal nobody owns whose actions name a player's character as Path parent
     follows that character on the other screen, both ways (cs68f: the host's partridge, made poses 1-3 mm from the

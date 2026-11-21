@@ -9291,3 +9291,18 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   camp (the crime step's script and keys), the host comes to the dock and does not fight, the guest's game is killed
   right after its second round of swings (-GuestLeave), the host plays on 60 s; the host's log must show the sweep
   and "this client now runs NPC" for those bandits. First in after_pp41.sh (it needs the next build).
+- 05:40 Unit-test fixture review (the old binaries run for their exact failing lines, no build): observer_milestone's
+  edit could not compile (has() takes const char*) and checked a label the logic does not print (its number is an
+  old build's, 2384): it now checks "PlayAllPreLoadSequencerAck #1 actor 0xA0100334". The other seven match the code
+  (x_veto 3081 / 2723, fast_rearm's 10 / 7 band pinned, the shop callers by name, the grocer a trade shop, the save
+  Req by constant). LESSONS: two entries. ROADMAP: carryable animals [~] (attach_follow=carry, cs68f / cs69a), F4
+  in every build since 62f49d19. B04 knowledge: knowledge_grant=1 added to cs79 (the host's Marius / Ross talks)
+  and cs80 (the guest's market talks): a first talk may teach the NPC's knowledge (its meeting), the grant's first
+  chance at a real learn (3732 addresses, its first-bytes check). The checklist's "leave" step is drafted
+  (scratchpad leave_step.txt) for after cs81a.
+- 05:45 Departure sweep, narrowed (source): only NPCs within 150 m of the host's character go back (the host's client
+  has about two 64 m sectors around it, ff4). Reason: server_user2_in_world() is false during the friend's loads too,
+  and NPCs born under the friend at the destination of a fast travel, given to a far host, would stand still for the
+  friend when it arrives. Farther ones are counted; the 10 s watch goes on while any exists (the host may walk up to
+  them, or the server removes them) and ends when none is left anywhere. The tick runs on the host's tunnel loop,
+  which stays open after the friend leaves (mod.cpp: s2_link).
