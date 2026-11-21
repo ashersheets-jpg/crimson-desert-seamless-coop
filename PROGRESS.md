@@ -9,6 +9,7 @@ test save Out, shipped cdmp.ini restored.
   (docs/research/lootr-across-sessions.md: the other player's share is kept in a file next to the co-op save, written
   when the game saves). Testing it needs one test that SAVES, into the TEST co-op world only (backed up before and put
   back after; your own saves are still checked unchanged). Our tests never save today. May a test save there?
+  (09:10: the code is written for the next build, switched off until that test has run; only the test waits.)
 - 2026-11-21 03:30 SAVE REQUEST (not urgent): B07 (boss mechanics for two) needs a save right before a boss fight
   (any story or world boss you have reached), so two copies of the game can fight it together and I can see grabs,
   phases, the arena and the finish on both screens. None of the test saves is at a boss (the windridge fort's wyvern
@@ -9437,3 +9438,19 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   side at Nas River; the menus' Co-op tab after Others), nosave (both titles say the guest needs a character first),
   mismatch (both "Can't play together: ... another Co-op+ build"), hostrevive (the host up at Nas River), lagrun
   (both by the river). Nothing wrong seen.
+- 08:39-09:02 the talk-rule retakes on 4394b014, all SAVES OK, 5/5, both alive; none opened anything:
+  cs75c (the butcher): the tpnear ran 7 s after the guest's far tp, its load not done ("NOT loaded"). cs76c (the inn
+  cellar's patrons): tpnear's spot, 1 m east of the patron, put the guest on the floor ABOVE the cellar (y 620.7, the
+  patrons at 617.1), facing a wall. cs75d / cs76d (v5: no tpnear; the guest at a spot an earlier run showed lands
+  right, the camera aimed by world position at the person): the right place, but at the stall the bowl on the
+  butcher's table took the focus ("Wide Bowl: E Buy"), and in the cellar no R hold at the three patrons opened a
+  prompt; the host's log has no "USER 2 asked" in either. The method that worked before (tcB242's shop, 3576's
+  aw_route.sh "Try arm wrestling") turned the camera in steps with R held at each: build/native/facesweep.py does
+  that for actpid ("py:facesweep:X,Z,FROM,TO,STEP,VK,HOLDMS,WHO") and stops when the host's log gets "<who> asked:
+  requester" (or the shop flag). cs75v6 / cs76v6 use it (after pp41b); the chain's cs80 (waits 25 s before tpnear),
+  cs82 (the shop by sweep, no tpnear for the guest), cs83 / cs84 (the cellar spot, sweeps; START = E held 1.5 s,
+  aw_route's "Participate") changed with it. The talk rule itself was seen in pp41's crime step (server side).
+  4394b014's post says so: the visible "it stops for you" is the testers' check.
+- 09:02 pp41b started (static fresh solostart lagrun on 4394b014, with the lagrun fix 69d715a); the next batch's
+  source stashed in both repos meanwhile (static checks a clean tree). Drafted meanwhile (scratchpad b19/, not in the
+  tree yet): B19's shares across sessions ([session2] lootr_persist, default 0 until the owner's save-test answer).

@@ -430,6 +430,16 @@ with streaming and timing. In a script: `tp` to the spot, then `tpnear [radius] 
 it logs the key it found), and aim from there (`py:faceto:R-1,0`: tpnear/tpactor put us 1 m east, +x, of the NPC).
 Also: a talk / shop / table interaction starts with R while the camera faces the person; E is objects (cs75a's
 stall prompt "Meat: E Buy" won while the shopkeeper stood beside the guest).
+Two more (cs75c / cs76c): after a FAR `tp` (a load) the people there are not loaded for ~20 s, so a tpnear 7 s later
+finds nobody ("NOT loaded"); and tpnear's spot, 1 m east of the person, can be inside a table or a wall, and the
+game then puts the player wherever it fits: cs76c's guest landed on the floor ABOVE the inn's cellar (y 620.7, the
+patrons at 617.1) and faced a wall for every try. Seats and stalls do not move between runs even when keys do: `tp`
+to a spot an earlier run showed lands right (the y in its "npcs ... from (x, y, z)" line), wait 25 s, and aim by
+world position (`py:faceto:X,Z`, the person's x, z from that run's npcs list). An exact aim is still not enough
+(cs75d: the bowl on the butcher's table took the focus, "Wide Bowl: E Buy", and R did nothing; cs76d: no prompt at
+three patrons): turn the camera in steps with R held at each, as the runs that worked did (tcB242, aw_route.sh), and
+stop on the server's own word: `py:facesweep:X,Z,FROM,TO,STEP,82,1500,u2|host` waits for "<who> asked: requester" in
+the host's log.
 
 ## "The other player is in the world" is also false while it loads (2026-11-21)
 server_user2_in_world() (server.h) is true only while user 2's move phase is Stable and no goodbye was asked: a fast

@@ -360,8 +360,10 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
     (solo stays usable, the reason shown) when any required save-redirection hook fails to install -- on native that
     is the native base's save guard (the redirect to the co-op folder), not Co-op+'s save_io. Reference: Plitos's
     C606D401 handoff (Setup-Direct.ps1, save_io ready guard); credit Plitos in the changelog.
-- 2026-11-18 Scene Req handlers with an unchecked field-owner stage manager (vf48 -> lock, no null test), found with
+- [~] 2026-11-18 Scene Req handlers with an unchecked field-owner stage manager (vf48 -> lock, no null test), found with
   Borque's host crash (2808, guarded by SceneReqGuard 12c9bc8): 2644, 2654, 3141, 2672, 2678, 2563, 2313, 2546, 2924,
-  2125 (sites in build/decomp/notes_host_unload_crash_3663.md, private). Each needs its own not-attached exit
-  checked before a guard; a crafted 2808 at the host's load would make the 2808 guard testable on demand.
+  2125 (sites in build/decomp/notes_host_unload_crash_3663.md, private). 2026-11-19 on 3732: 2808, 2678 and 3141
+  guarded (each its own not-attached exit, scene_req_guard.cpp); the other seven traced as branching away before
+  their callee's first use (build/port3732/nulltrace73.py). Left: a crafted 2808 at the host's load would make the
+  guard testable on demand (the notes' section 5).
 
