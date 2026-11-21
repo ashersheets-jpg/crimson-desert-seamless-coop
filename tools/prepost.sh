@@ -573,7 +573,10 @@ lagrun)
   printf 'wait 10000\ntp -10365 533 -3864\nwait 10000\n' > $N/scan/lag_guest.txt
   LX="sim_lag_delay_ms=30,sim_lag_jitter_ms=60,sim_lag_spike_ms=400,sim_lag_spike_per_mille=3"
   RUN="kd:W_w:12000_ku:W_w:1500_kd:S_w:12000_ku:S_w:1500_kd:W_w:12000_ku:W_w:1500_kd:S_w:12000_ku:S"
+  # (pp41: its own TEST switch announces itself as a warning on purpose; allowed here only, as latehook's line)
+  WRN_ALLOW='TEST sim_lag on the tunnel'
   run2 "$BASE -Hold 25 -HostScript $SCAN\\lag_host.txt -GuestScript $SCAN\\lag_guest.txt -GuestKeys w:16000_shot:$NAME-g0_${RUN}_shot:$NAME-g1 -HostKeys w:500_shot:$NAME-h0 -HostNativeExtra $LX -GuestDev native_extra=${LX//,/+}"; two_player_checks
+  WRN_ALLOW=
   H=$N/$NAME.host.log
   has "$H" "TEST sim_lag 30\+0\.\.60 ms" "host: the TEST lag was on (the host's tunnel held what it got)"
   has "$N/$NAME.guest.log" "TEST sim_lag 30\+0\.\.60 ms" "guest: the TEST lag was on"
