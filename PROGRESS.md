@@ -9719,3 +9719,8 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   the friend was joining (18:10:10-26), not while it ran. DECISION (mine, scoped): guest_clock_fix stays 0: on one PC
   it changes nothing measurable (its rewrites up to 8-10 s are the guest clock's own offset, which the game's buffer
   already absorbs). The ~4% "held while running" with no mid-run holds is the run's starts and stops; nothing to chase.
+- 18:38 cs73b (the taming freeze: 13 min at the bandits start waiting for a wild horse): SAVES OK, 5/5, both alive; no
+  wild horse came (41 mounts within 400 m, all bandits' early keys; tpvehicle found none from 0xB0101000), so the
+  taming step was not reached (user 2's branch requests 0). The friend's E on two bandit horses (0x000F4244) ACCEPTED.
+  Inconclusive again: the taming freeze waits for a tester's zips (the probe is in the posted build) or a wild-horse
+  spot.
