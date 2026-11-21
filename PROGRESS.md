@@ -9196,3 +9196,15 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   the guest clock's error) and guest_clock_fix (default 0: 2474's tick from the least delayed Ack of the last minute
   + half the link's RTT; GuestClockFix lines measure it always). Layer: remote_interp_char=1 by default on both ends
   (layer test checks it). Unit tests: native 60 / 30 (baseline), layer all pass. Package 4394b014.
+- 03:55 cs73a (the wild-horse hunt) runs with the WRONG timeline: a dev script's wait is capped at 10 s
+  (dev_script.cpp), so its 30 s / 724 s waits ran 10 s each: 24 listings in 4 min (no type 5 within 400 m at all,
+  only critters), the guest beside the host at once. cs73b.sh chains `wait 10000` (LESSONS). Borque's guest mounted
+  his wild horse at (-10357, -3866) at 01:16:36, 4-5 min after the players first came there: the spot is right.
+- cs74d logs: the ride pairs needed for remote_interp_char's "riding" case attach on both ends (the guest's client
+  observer "attached ... rider -> horse pairs"); the guest's view of the host settled at 200 ms (peak lateness ~25 ms),
+  the host's view of the guest at 258-356 ms. Riding itself is exercised by the checklist's mounts / mountfight.
+- Queued (chains): cs75 (talk rule + the guest's butcher shop), cs76 (B14: the guest's own arm wrestling, the shop
+  method), cs74e / cs74f (the host's window shot every 250 ms under sim_lag, char off / on), cs74g (sim_lag + char +
+  guest_clock_fix=1, the clock probe), cs74h (no lag, defaults: the baseline clock error), cs73b (13 min hunt).
+  Then the full checklist on the final build. cs77 (the host fights from the saddle, the guest's window shot
+  focus-free: B06's last piece) after it.
