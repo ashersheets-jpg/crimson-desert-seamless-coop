@@ -332,6 +332,12 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
     seats the guest on its horse. Lead for (8): attach_follow (an 0xB riding an 0xA parent: a pet on a shoulder, a
     carried animal) is off and still 2976-sized (MoveAck 235, actions 725, parent +0x117): port it, test a carry.
     Also still 2976-sized: enemy_relay / local_capture StartActionReq 725, remote_puppet 725, scene_diag 725.
+    2026-11-21 status: (1) both vendors in the lists (7f58ad0, cs60a: the hide bit cleared); (2) the wanted state
+    (asked); (3) fixed (cs63c); (4) the 2292 copy (f132243), then "then 2" never answered (20 Nov): ShopProbe B in
+    4394b014 logs the host's answer; (5) / (6) the owner's hands-on capture; (7) the catch rule (26bf2c71); (8)
+    attach_follow ported (f9791c4) and carry on by default (914e7d7 / aeb7d33), see "Carryable animals" below; (9) the
+    ride rule hands a ridden NPC vehicle to its rider's game (aeb7d33), a cart not yet seen. enemy_relay /
+    local_capture / remote_puppet are the base's two-worlds puppets, not used in the shared world.
   - [~] JackyChan004 / D3vils (2026-11-18, 9e85b891): after "Enter the cabin" the friend's 2644 reset the host's
     stage manager (F4 off in the release): no bear fight for the host, the friend's stages off for the run, NPCs
     idle on the friend's screen. Fix: user2_revive_manager=1 (in 62f49d19 and every build since; cs44j: "1 LIVE",

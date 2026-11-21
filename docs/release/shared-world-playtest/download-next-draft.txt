@@ -1,12 +1,12 @@
 **Update: shared world playtest 0.1.0-alpha+<ID>, for game 1.0.0.3732**
-Use this instead of 69edcc84; **both players need the same build**. Mostly from <@224953308010381312>'s reports:
+Use this instead of 4394b014; **both players need the same build**.
 
-- **The other player no longer freezes mid-run.** Over the internet the other player's movement arrives a little late, and the game only waits 200 ms for it, so the other player often stood still for a moment while running. Each game now waits as long as its connection needs (usually around a quarter of a second, up to 0.6 s). Reproduced on our side with simulated internet lag: the short freezes went from 53 to 1 in a run.
-- **An NPC the joined player talks to stops and turns to him**, as it does for the host (it used to keep walking).
-- **The taming freeze:** this build logs the host game's answer to the last taming step; if it happens again, please send both report zips.
-- (to fill: what cs73 / cs75 / cs76 / cs74g show)
+- **Enemies no longer stand still when the joined player leaves, fast travels or respawns mid-fight.** An enemy the joined player fights runs on his game; when his game closed, loaded somewhere else or respawned him, nothing gave that enemy back to the host's game, so it froze for the host. Now every such NPC near the host goes back to the host's game at once (and the ones farther away when the host comes near).
+- **After a talk, the NPC stays with the joined player's game if the host is far away** (before, it went back to the host's game, which may not have it any more, and stood still).
+- The report zips now also list each long frame hitch with its time, so a "freeze at 01:12" can be matched to one game.
+- (to fill: what cs81 / cs73b / cs74g / cs80 / cs79 / cs77 / cs78 show)
 
-Tested with two copies of the game on one PC (Nvidia): the full checklist on 1.0.0.3732, plus runs with simulated internet lag.
+Tested with two copies of the game on one PC (Nvidia): the full checklist on 1.0.0.3732 (<N> steps, one new: the joined player's game closed mid-fight).
 
 - `...<ID>-shared-world.zip`: the one you want. Run its installer with the game closed.
 - `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.

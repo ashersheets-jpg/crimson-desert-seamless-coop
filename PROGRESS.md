@@ -9306,3 +9306,10 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   friend when it arrives. Farther ones are counted; the 10 s watch goes on while any exists (the host may walk up to
   them, or the server removes them) and ends when none is left anywhere. The tick runs on the host's tunnel loop,
   which stays open after the friend leaves (mod.cpp: s2_link).
+- 05:55 Departure sweep, one more piece (source): the friend's ride / catch / talk / passenger table entries are
+  forgotten when it leaves the world (logged). A stale ride entry would have handed a mount nobody rides to the
+  friend's game again when it came back with the same character key. Test fixtures (no build): door_trace (its
+  logic has 3732's 2772 / 2367 / 2481 / 3055, the test had older ones), fast_travel (the capture's 2661 -> the
+  logic's PrepareSequencerAck; MoveFieldAck records 0x38 since 3549). Read from the old binaries: seq_copy crashes,
+  and observer_stage / owner_fanout / s3 / s9 / scene_acks fail on old captures (old opcodes AND layouts: e.g. a
+  PrepareSequencerAck is no longer 184 B): they need 3732 captures from our own packet logs, a bigger job (later).

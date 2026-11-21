@@ -446,3 +446,9 @@ passed a std::string to the test's has(..., const char* needle) (no conversion: 
 editing a failing test blind, run its existing binary (build/bin/RelWithDebInfo/cdmp_tests_*.exe, a few ms, no
 game) for the exact failing lines, read the helper signatures, and match strings the logic really prints (better:
 the message's name, not its number).
+
+## No variable may be called `far` or `near` in code that includes <windows.h> (2026-11-21)
+minwindef.h defines `far` and `near` as EMPTY macros (16-bit pointer leftovers), so `int far = 0;` compiles as
+`int = 0;` and `int& far` as a nameless parameter: a confusing error far from the cause. Written into the departure
+sweep while the build was locked and caught by reading the diff (renamed n_far). Grep a diff for `-w far` / `-w near`
+before a native build.
