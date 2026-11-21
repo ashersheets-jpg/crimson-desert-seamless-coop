@@ -9709,3 +9709,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   then chain_c's rest (cs74h guest_clock_fix 'n', cs73b, cs79a B09 cabin talks, cs77a B06, cs78a B12, cs85a B10 shared
   quest credit, cs83a the host's versus gauge) and cs84a (B13: both players at the cellar table). The worktree builds
   (B19 v3.1, the twin re-make) wait for the chain's end.
+- 18:06 cs76f (the Hernand inn cellar's patrons, the friend's R held at 18 angles; cfaa3a69's build): SAVES OK, 5/5,
+  both alive; nothing taken by the server at any angle, the category fix notwithstanding. As cs33b on 3663: the
+  friend's own "Try arm wrestling" on a patron is B14's known leftover (the patrons' minigame belongs to a host
+  scene with no twin, likely), not a regression of today's work. Stays on the list (B14).
