@@ -271,7 +271,9 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
 - [~] **B19 — Anti-grief protections** (quest NPCs, the host's story items; setting). (2026-11-10: hits on protected
   people taken out of a swing that also hits enemies; an NPC the host fights is fair game. User 2026-11-10: world items
   are per player instead of protected ("Lootr", built and seen working both ways for gathered items, tcB329/332;
-  setting "Items in the world"); chests / bodies / across sessions still to do.)
+  setting "Items in the world"); chests / bodies / across sessions still to do.) (Chests and bodies since done: the
+  checklist's chest and loot steps. Across sessions: designed 2026-11-21, docs/research/lootr-across-sessions.md;
+  its test needs one save into the test co-op world: asked.)
 - [~] **B20 — Partner audio** (footsteps, combat sounds, voice lines, distance falloff). (2026-11-17 cs42a: the
   host's game plays the friend's swings (peaks to 553 vs ~120 ambient). cs47-cs48c: the friend's FOOTSTEPS are
   played too (every step reaches the game's sound player, ~115 in a 50 s walk) and heard: muting them in
