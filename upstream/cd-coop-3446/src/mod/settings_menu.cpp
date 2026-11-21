@@ -90,7 +90,7 @@ constexpr Tag kTags[] = {
     {"Duel ground (when I place it)", "Challenges", "How large the ring is when you start a duel."},
     {"Player colours", "Display", "The colours of the host and the guest on name tags, the map and the party frame."},
     {"My friend's map pin colour", "Display", "The colour of your friend's pin on the map and minimap."},
-    {"Name over my friend (Ctrl+F8 too)", "Display", "Your friend's name and health over their head."},
+    {(kNativeLayer ? "Name over my friend" : "Name over my friend (Ctrl+F8 too)"), "Display", "Your friend's name and health over their head."},
 };
 
 std::mutex g_mutex;
@@ -232,7 +232,7 @@ void init(const std::wstring& ini_path, const Config& cfg, float health_2p, floa
         }
         g_items.push_back(std::move(pin));
     }
-    g_items.push_back({"Name over my friend (Ctrl+F8 too)", L"overlay", L"nameplates", on_off(), one_zero(),
+    g_items.push_back({(kNativeLayer ? "Name over my friend" : "Name over my friend (Ctrl+F8 too)"), L"overlay", L"nameplates", on_off(), one_zero(),
                        cfg.overlay_nameplates ? 0 : 1, false, nullptr});
     for (Item& it : g_items) {
         for (const Tag& t : kTags) {
@@ -251,12 +251,12 @@ void init(const std::wstring& ini_path, const Config& cfg, float health_2p, floa
     if (kNativeLayer) {
         // On the native base (native_layer.h) the server shares the world: what these chose is its job now (loot,
         // kills, Focus via the native ui_pause) or no longer exists (co-op saves, story copies).
+        // (2026-11-21: the party scaling rows are shown again. They were hidden when the scaling needed the relay;
+        // since 1c6453e1 it works on the native base too, the host's sniffer giving HP back after the players' blows,
+        // and the checklist's crime step checks it: "Combat & Loot" was missing from the shared world's Co-op tab.)
         const std::string_view hidden[] = {"EXPERIMENTAL: co-op saves + live quests", "Loot of shared kills",
                                            "Guest finishes the host's enemies", "Slow motion (Focus) in co-op",
-                                           "Copy my friend's story into my save (guest)", "Let my guest copy my story (host)",
-                                           // party scaling works through the sniffer (VaryHPAck / VaryStatCheatReq): off
-                                           "Tougher enemies with a guest", "  Enemy health with a guest",
-                                           "  Boss health with a guest"};
+                                           "Copy my friend's story into my save (guest)", "Let my guest copy my story (host)"};
         std::erase_if(g_items, [&](const Item& it) {
             return std::find(std::begin(hidden), std::end(hidden), std::string_view(it.label)) != std::end(hidden);
         });

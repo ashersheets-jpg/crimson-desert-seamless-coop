@@ -229,7 +229,7 @@ std::vector<Row> rows_for(int section, const HudData& d, const std::vector<std::
             if (const int t = net::travel_request(); t == 1) {
                 rows.push_back(button("Go to " + who + " (they called you)", input::Action::GoToFriend,
                                       "Takes you to their side."));
-                rows.push_back(button("Stay here", input::Action::Decline, "Tells " + who + " you are staying."));
+                rows.push_back(button("Stay here", input::Action::Decline, "Turns down " + who + "'s call (it lapses)."));
             } else if (t == 2) {
                 rows.push_back(button("Follow " + who, input::Action::GoToFriend,
                                       "They travelled far: takes you to their side."));
@@ -259,6 +259,13 @@ std::vector<Row> rows_for(int section, const HudData& d, const std::vector<std::
                                   "Joins again from scratch when things drift apart (both characters are sent again)."));
             rows.push_back(button("Leave the session", input::Action::Leave,
                                   "Ends the session: you go back to the title screen, nothing of your friend stays."));
+            // The settings tagged Session (Who can join), as the other sections list theirs.
+            const auto items = settings::page_rows(name);
+            for (int i = 0; i < static_cast<int>(items.size()); ++i) {
+                Row r{Row::Setting, items[i].label, items[i].value, items[i].help, items[i].live, nullptr};
+                r.act = [name, i](int delta) { settings::page_change(name, i, delta == 0 ? 1 : delta); };
+                rows.push_back(std::move(r));
+            }
             return rows;
         }
         rows.push_back(button("Leave the session", input::Action::Leave,

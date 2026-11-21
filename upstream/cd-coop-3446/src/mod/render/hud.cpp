@@ -192,7 +192,8 @@ void draw_panel(const HudData& d, const HudOptions& opt, float remote_distance, 
         ImGui::TextDisabled(en ? "(no code: %s)" : "(sin codigo: %s)", d.room_status.c_str());
     }
     if (!d.coop_hint.empty()) ImGui::TextColored(ImVec4(0.85f, 0.85f, 0.6f, 1), "%s", d.coop_hint.c_str());
-    ImGui::TextDisabled("Controls card: Shift+F1 (pad: hold View / Touchpad + left stick click)");
+    ImGui::TextDisabled("%s", kNativeLayer ? "Controls card: pause menu > Co-op > Controls"
+                                           : "Controls card: Shift+F1 (pad: hold View / Touchpad + left stick click)");
     // Co-op+ (T43): the record against this friend.
     for (const auto& l : d.score_lines) ImGui::TextColored(ImVec4(0.91f, 0.78f, 0.51f, 1), "%s", l.c_str());
     // Co-op+ (T30/T40): the settings (settings_menu.h).

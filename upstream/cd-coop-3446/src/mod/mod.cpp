@@ -947,7 +947,9 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
                     render::hud_set_problem(
                         render::Problem::Join,
                         std::format("Can't reach {} yet. Check: both games running with a save loaded, the same "
-                                    "Co-op+ zip, Steam online. Still stuck: Ctrl+F2, then Join Game again.", who));
+                                    "Co-op+ zip, Steam online. Still stuck: {}", who,
+                                    kNativeLayer ? "Leave the Party in the Co-op menu, then accept the invite again."
+                                                 : "Ctrl+F2, then Join Game again."));
                 }
             }
         }
@@ -1460,7 +1462,8 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
                 } else if (host) {
                     hud.coop_hint = net::room_lobby_id() && !kNativeLayer ? "Ctrl+F1: invite a Steam friend" : "";
                 } else {
-                    hud.coop_hint = "Ctrl+F2: leave and go back to your world";
+                    hud.coop_hint = kNativeLayer ? "Leave: pause menu > Co-op > Leave the session"
+                                                 : "Ctrl+F2: leave and go back to your world";
                 }
             }
             // Co-op+: the other player pinged their position (Ctrl+F3).
