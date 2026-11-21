@@ -3,7 +3,7 @@
 # one game session and every step's screenshots can be looked at before the next one starts:
 #
 #   bash tools/prepost.sh TAG "<package folder>" STEP        STEP = static | real | fresh | xess | fsr | display |
-#                                                                   lowsave | chest | revive | loot | crime | farfight | farfight2 | newsave | solostart | mounts | mountfight | nosave |
+#                                                                   lowsave | chest | revive | loot | crime | leave | farfight | farfight2 | newsave | solostart | mounts | mountfight | nosave |
 #                                                                   retry | stuck | mismatch | hostrevive |
 #                                                                   summary
 #
@@ -343,6 +343,37 @@ crime)
   has "$HL" "Capture: the character load of 0xA01000[0-9A-F]+ .* is the other player's, not ours \\(0xA0100001\\)" "host layer: the guest's character load is not taken for the host's own"
   hasnot "$HL" "Capture: user template \\(user 0x[0-9A-F]+, player 0xA0100066" "host layer: its own character stays 0xA0100001"
   has "$HL" "Scaling: x1\\.50 \\| gave back [1-9]" "host: enemy health with a guest is applied to the players' blows (heal-back)" ;;
+leave)
+  # 2026-11-21 (the departure sweep, ai_handoff.h): the friend's game closes in a fight (a crash / Alt+F4). The guest
+  # fights at the bandit camp like the crime step (its script steps beside the nearest bandit every 6 s), so the fight
+  # rule gives the bandits it hits to its game; the host comes to the dock 40 s in and does not fight. Right after the
+  # guest's second round of swings its game is killed (-GuestLeave) and the host plays on 60 s.
+  head_step "the friend's game closes mid-fight: the host plays on, the NPCs the friend's game ran come back to the host's"
+  GA=""; for i in $(seq 1 12); do GA="${GA}click:L:90_w:350_kd:E_w:1200_ku:E_w:500_"; done
+  { echo "wait 10000"; echo "wait 10000"; echo "wait 10000"; echo "wait 10000"; echo "tp -10239 546 -3957"; echo "wait 10000"; } > $N/scan/leave_host.txt
+  run2 "$BASE -Hold 1 -GuestLeave -HostScript $SCAN\\leave_host.txt -GuestScript $SCAN\\crime_guest_near.txt -GuestKeys w:2000_shot:$NAME-g0_${GA}shot:$NAME-g1 -HostKeys w:1000_shot:$NAME-h0 -GuestAfterWalkKeys w:500_${GA}shot:$NAME-g2"
+  O=$N/$NAME.out; H=$N/$NAME.host.log; HL=$N/$NAME.coopplus.host.log
+  has "$O" "^host in the shared world: True"  "host reached the shared world"
+  has "$O" "^guest in the shared world: True" "guest reached the shared world"
+  has "$O" "guest leaves \\(its game is killed\\)" "the guest's game was closed mid-fight"
+  has "$O" "host running 60 s after the guest left: True" "the host plays on for 60 s after"
+  has "$O" "^host alive=True" "the host's game still running at the end"
+  has "$O" "^SAVES OK"                     "the player's saves untouched (SAVES OK)"
+  has "$O" "user install restored: 5/5 OK" "the player's install put back (5/5)"
+  has "$H" "AiHandoff: fight rule: NPC 0x[0-9A-F]+ \\(type [0-9]+\\) -> the other player" "the fight rule gave the friend's game a bandit it fought"
+  # (the guest's first far teleport is a load too: a sweep with nothing to give back may come before the kill's)
+  has "$H" "AiHandoff: departure sweep [0-9]+: the other player is not in the world; [1-9][0-9]* NPC" "the departure sweep gave the friend's NPCs back to the host's game"
+  hasnot "$H" "AiHandoff: departure sweep [0-9]+: .* [1-9][0-9]* did not go through" "every NPC of the sweep went back"
+  info "the sweep: $(grep -h 'AiHandoff: departure sweep' "$H" | head -2 | cut -d']' -f3- | cut -c1-230 | tr '\n' ' ')"
+  info "the host's client took back: $(grep -c 'AiHandoff: this client now runs NPC' "$H") NPC(s) over the run"
+  overlay_checks "$HL" "host"
+  no_recording "$H" "host"
+  growth "$H" "host native" 380
+  growth "$HL" "host layer" 240
+  new_wrn "host" "$HL" $N/$NAME.coopplus.host.before.log "$H"
+  e=$(unknown_errs "$H" | grep -c .)
+  [ "${e:-0}" -eq 0 ] && ok "host: native log: no error line outside the known set" || { bad "host: native log: $e unknown error line(s):"; unknown_errs "$H" | cut -d']' -f3- | cut -c1-170 | sort | uniq -c | head -5 | sed 's/^/          /' >> "$R"; }
+  info "screenshots to LOOK AT: $(cd $N/shots && ls $NAME-*.png 2>/dev/null | tr '\n' ' ')" ;;
 farfight)
   # 2026-11-17 (pp26: farfight and mountfight, the guest swung at the air with the bandits beside and behind it;
   # 7 of 35 fight checks since pp11 failed that way): a mouse turn every 3 swings sweeps the guest around.
@@ -594,7 +625,7 @@ lagrun)
   info "host: $(grep -h 'remote character delay\]' "$H" | tail -1 | grep -o 'delay now.*' | cut -c1-120)"
   ;;
 summary)
-  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c '^== ' "$R") (24 in the list)"; exit 0 ;;
+  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c '^== ' "$R") (25 in the list)"; exit 0 ;;
 *) echo "unknown step $STEP"; exit 2 ;;
 esac
 sed -n "/^== $STEP /,\$p" "$R"
