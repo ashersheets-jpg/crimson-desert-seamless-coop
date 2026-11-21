@@ -9368,6 +9368,21 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   guest Day 1 0:08 AM, host Day 0 10:58 PM, the known cosmetic op1 finding), mounts (both mounted), lowsave (the
   guest's last view is its pause menu, the step's own Esc presses; the "Co-op" tab after Others), chest (both at the
   Greymane Shrine, the guest's "Warspike Spear E Take"). Nothing wrong seen.
+- 06:40 An independent review of the unbuilt native diff (an agent, read only, given the code not my conclusions):
+  no compile error found; LOGIC FINDINGS, all real, all fixed in source (not built): (a, high) "not in the world"
+  is also true for non-load phases (cs8a at the cabin with both in the world): the sweep, the forget and the watch
+  fired on a false departure -> now a departure is the friend's SESSION gone (server_user2_present() false: goodbye,
+  lost link, crash) and a load is a real load phase (MoveAsked .. LoadingSent), one check, no watch, no forget;
+  (b) the sweep flag stayed set when the friend came back (a later tick would sweep NPCs its game rightly runs) ->
+  cleared when it is in the world, and checked again on the server thread; (c) with the sweep the server tick ran
+  during the friend's loads and the OTHER rules ran on stale data (the fight rule could hand an enemy to a loading
+  player) -> the rules return while the friend is not in the world, as before; (d) 150 m was beyond what the host's
+  client surely has (its 3x3 block of 64 m sectors) -> the sector block; (e) the flag could latch and inject every
+  second (rules off, or no host character) -> taken at the top of the server tick, armed only when the rules are on,
+  injected only while the host is in a world, the watch at most 10 minutes; (f) a faulted scan no longer ends the
+  watch; (g) the forget before the flags; (h) a still-listed friend is told the new controller. Also: the state is
+  read 4 times a second (not every loop pass); the hitch line says its time is the hitch's end. LESSONS candidate:
+  an independent review before the first build caught 8 logic faults my own three passes missed.
 - 06:20 SHARED-WORLD README written (kit/coopplus/README-shared-world.txt, committed 2956e9d; package-native.ps1
   now puts it in place of the normal README, whose body was the two-worlds mode). From an agent's survey of the
   layer's native menus (read only): the title flow, holding Interact on the friend (the menu: the challenges, a

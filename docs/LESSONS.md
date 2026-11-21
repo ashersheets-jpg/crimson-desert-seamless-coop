@@ -460,3 +460,11 @@ native layer still printed "Ctrl+F2" / "Shift+F1" / "(Ctrl+F8 too)" hints; a dow
 "Combat & Loot" section their Co-op tab hid. Every checklist step passed: none reads text. When a build changes how
 players do things, have the player-facing text (README, installer, on-screen hints, settings labels, the posts)
 checked against the code that draws the menus (an agent's survey of the menu code found all of these in one pass).
+
+## An independent review before the first build of a server-thread change (2026-11-21)
+The departure sweep (ai_handoff.cpp) got three passes of my own reading and still held eight logic faults that an
+agent's read-only review found in one pass (a "not in the world" signal that is also true for non-load phases, a
+flag left set when the friend came back, the other rules running on stale data during a load, a radius beyond what
+the host's client has, a flag that could latch into endless injections, ...). For code that runs on the host's
+SERVER thread or changes who controls actors (a crash there goes to Pearl Abyss, a wrong controller freezes NPCs for
+a player), ask for a review with the diff and the threading facts, not my conclusions, before building it.
