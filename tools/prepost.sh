@@ -361,8 +361,10 @@ leave)
   has "$O" "^SAVES OK"                     "the player's saves untouched (SAVES OK)"
   has "$O" "user install restored: 5/5 OK" "the player's install put back (5/5)"
   has "$H" "AiHandoff: fight rule: NPC 0x[0-9A-F]+ \\(type [0-9]+\\) -> the other player" "the fight rule gave the friend's game a bandit it fought"
-  # (the guest's first far teleport is a load too: a sweep with nothing to give back may come before the kill's)
-  has "$H" "AiHandoff: departure sweep [0-9]+: the other player is not in the world; [1-9][0-9]* NPC" "the departure sweep gave the friend's NPCs back to the host's game"
+  # cs81a (2026-11-21): when the friend's game is killed, the host's server takes back the NPCs it ran by itself; the
+  # sweep then finds none left (a load, cs81's other case, leaves them with the friend's game: there it gives them back)
+  has "$H" "AiHandoff: departure sweep [0-9]+: the other player is not in the world;" "a departure sweep ran after the friend's game closed"
+  hasnot "$H" "AiHandoff: departure sweep [0-9]+: .* [1-9][0-9]* farther wait" "no NPC left waiting on the friend's game"
   hasnot "$H" "AiHandoff: departure sweep [0-9]+: .* [1-9][0-9]* did not go through" "every NPC of the sweep went back"
   info "the sweep: $(grep -h 'AiHandoff: departure sweep' "$H" | head -2 | cut -d']' -f3- | cut -c1-230 | tr '\n' ' ')"
   info "the host's client took back: $(grep -c 'AiHandoff: this client now runs NPC' "$H") NPC(s) over the run"
