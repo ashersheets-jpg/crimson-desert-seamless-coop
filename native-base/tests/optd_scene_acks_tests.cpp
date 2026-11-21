@@ -20,6 +20,7 @@
 
 #include "mod/session2/observer_hold_acks_logic.h"
 #include "mod/session2/observer_scene_copy_logic.h"
+#include "opmap_2976.h"
 
 using namespace cdmp::session2;
 
@@ -44,6 +45,7 @@ std::vector<uint8_t> hex(const char* s) {
         return -1;
     };
     for (size_t i = 0; s[i] && s[i + 1]; i += 2) out.push_back(static_cast<uint8_t>(nib(s[i]) << 4 | nib(s[i + 1])));
+    cdmp::tests::renumber_2976_packet(out);  // a capture of 1.0.0.2976: the logic's numbers are 3732's (by name)
     return out;
 }
 

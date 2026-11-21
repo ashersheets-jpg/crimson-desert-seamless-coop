@@ -66,7 +66,8 @@ void test_2250() {
     other[0x1D] = 0x4d;  // the two owner copies differ
     CHECK(ged::parse_2250(other).owner == 0);
     // The 2779's gimmick at +0 of its payload: the same key.
-    CHECK(dgl::le16(k2779) == ged::kOpCreateFromGimmickEvent && dgl::le32(k2779 + dgl::kHeader) == 0xB010014Cu);
+    // (The capture's opcode bytes are its build's; the logic's opcode moves with each game build.)
+    CHECK(dgl::le32(k2779 + dgl::kHeader) == 0xB010014Cu);
 }
 
 void test_decide() {

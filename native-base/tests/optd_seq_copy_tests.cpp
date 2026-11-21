@@ -27,6 +27,7 @@
 
 #include "mod/session2/guest_seq_route_logic.h"
 #include "mod/session2/observer_seq_copy_logic.h"
+#include "opmap_2976.h"
 
 using namespace cdmp::session2;
 
@@ -51,6 +52,7 @@ std::vector<uint8_t> hex(const char* s) {
         return -1;
     };
     for (size_t i = 0; s[i] && s[i + 1]; i += 2) out.push_back(static_cast<uint8_t>(nib(s[i]) << 4 | nib(s[i + 1])));
+    cdmp::tests::renumber_2976_packet(out);  // the session 7 captures are 1.0.0.2976's: the logic's numbers are 3732's
     return out;
 }
 
@@ -496,8 +498,8 @@ void test_guest_route() {
     g = f, g.packet_key = 0;  // 2322: the key is the packet's, the actor found by it
     CHECK(gsr::decide(g) == gsr::Verdict::Route);
 
-    CHECK(gsr::point_of_op(2661) == gsr::Point::P2661 && gsr::point_of_op(2322) == gsr::Point::P2322 &&
-          gsr::point_of_op(2524) == gsr::Point::P2524 && !gsr::point_of_op(2111));
+    CHECK(gsr::point_of_op(2356) == gsr::Point::P2661 && gsr::point_of_op(2941) == gsr::Point::P2322 &&
+          gsr::point_of_op(2369) == gsr::Point::P2524 && !gsr::point_of_op(2111));
     // Session 9: the payload layouts the hooks read (p8-s9-npc.md §6.2; GC1/GC2 captures).
     {
         // GC2 t=61.409 2524: u8 4 | u32 actor @1 | u64 sequencer @5 | ... (the hook read @0/@4 before: x44 KeyMismatch)
@@ -544,9 +546,9 @@ void test_guest_route() {
     // guest_seq_play_live: the 2524 is routed, never gated (it arrives natively: 144 in session 8, into M).
     {
         const std::vector<uint8_t> p2524 = hex("04010010a0ab010000000000000100000000");  // u8 4 | u32 actor | u64 seq
-        CHECK(!gsr::named_actor(2524, p2524));
-        CHECK(gsr::gate(2524, p2524, kUser2Char, false) == gsr::Gate::Deliver);
-        CHECK(gsr::gate(2524, p2524, 0, false) == gsr::Gate::Deliver);
+        CHECK(!gsr::named_actor(2369, p2524));
+        CHECK(gsr::gate(2369, p2524, kUser2Char, false) == gsr::Gate::Deliver);
+        CHECK(gsr::gate(2369, p2524, 0, false) == gsr::Gate::Deliver);
         gsr::RouteFacts r = f;  // the 2524 point: no kind, the packet's key = the actor's
         r.need_known = true;    // only into an X guest_seq_play ticks (review 11)
         r.x_known = true;
@@ -614,17 +616,17 @@ void test_guest_route() {
         }
     }
     const std::vector<uint8_t> p2661 = hex(k2661_1AB), p2810 = hex(k2810_19E), p2322 = hex(k2322_host);
-    CHECK(gsr::named_actor(2661, payload_of(p2661)) == kHost && gsr::named_actor(2810, payload_of(p2810)) == kHost &&
-          gsr::named_actor(2322, payload_of(p2322)) == kHost && !gsr::named_actor(2981, payload_of(p2661)));
+    CHECK(gsr::named_actor(2356, payload_of(p2661)) == kHost && gsr::named_actor(2659, payload_of(p2810)) == kHost &&
+          gsr::named_actor(2941, payload_of(p2322)) == kHost && !gsr::named_actor(2752, payload_of(p2661)));
     // The gate: the host's copies only when routed; the own key unknown or the own character: delivered.
-    CHECK(gsr::gate(2661, payload_of(p2661), kUser2Char, false) == gsr::Gate::DropNotRouted);
-    CHECK(gsr::gate(2661, payload_of(p2661), kUser2Char, true) == gsr::Gate::Deliver);
-    CHECK(gsr::gate(2322, payload_of(p2322), kUser2Char, false) == gsr::Gate::DropNotRouted);
-    CHECK(gsr::gate(2810, payload_of(p2810), kUser2Char, false) == gsr::Gate::DropNotRouted);
+    CHECK(gsr::gate(2356, payload_of(p2661), kUser2Char, false) == gsr::Gate::DropNotRouted);
+    CHECK(gsr::gate(2356, payload_of(p2661), kUser2Char, true) == gsr::Gate::Deliver);
+    CHECK(gsr::gate(2941, payload_of(p2322), kUser2Char, false) == gsr::Gate::DropNotRouted);
+    CHECK(gsr::gate(2659, payload_of(p2810), kUser2Char, false) == gsr::Gate::DropNotRouted);
     // The own character not known yet on this connection: fail closed (none arrives before 2756 in session 7).
-    CHECK(gsr::gate(2661, payload_of(p2661), 0, true) == gsr::Gate::DropOwnUnknown);
-    CHECK(gsr::gate(2322, payload_of(hex("1209ff0400e90210a0")), 0, true) == gsr::Gate::DropOwnUnknown);
-    CHECK(gsr::gate(2322, payload_of(hex("1209ff0400e90210a0")), kUser2Char, false) == gsr::Gate::Deliver);  // GC #800
+    CHECK(gsr::gate(2356, payload_of(p2661), 0, true) == gsr::Gate::DropOwnUnknown);
+    CHECK(gsr::gate(2941, payload_of(hex("1209ff0400e90210a0")), 0, true) == gsr::Gate::DropOwnUnknown);
+    CHECK(gsr::gate(2941, payload_of(hex("1209ff0400e90210a0")), kUser2Char, false) == gsr::Gate::Deliver);  // GC #800
     CHECK(gsr::gate(2005, payload_of(p2661), kUser2Char, false) == gsr::Gate::Deliver);
 }
 

@@ -158,22 +158,23 @@ void test_sites() {
     // S13 (the host's smithy 0x19D): a 2436 as a packet (u16 opcode | i8 slot | u16 length | payload).
     const auto b2436 = bytes_of({0x84, 0x09, 0x00, 0x0E, 0x00, 0x9D, 0x01, 0, 0, 0, 0, 0, 0, 0x06, 0, 0, 0, 0, 0});
     uint64_t id = 0;
-    CHECK(u2sh::scene_id(2436, b2436, id) && id == 0x19D);
+    // (the opcodes as arguments are 3732's; the captured bytes keep 2976's numbers, which scene_id does not read)
+    CHECK(u2sh::scene_id(2644, b2436, id) && id == 0x19D);
     // A 2767 (S13, 541.621) and a 2173.
     const auto b2767 = bytes_of({0xCF, 0x0A, 0x00, 0x12, 0x00, 0x9D, 0x01, 0, 0, 0, 0, 0, 0, 0x14, 0, 0, 0x20, 0x00, 0x02,
                                  0x00, 0x10, 0xB0, 0x01});
-    CHECK(u2sh::scene_id(2767, b2767, id) && id == 0x19D);
+    CHECK(u2sh::scene_id(2808, b2767, id) && id == 0x19D);
     // The 2044 timer: u16 opcode | u8 | u64 id | u32 (0x2895820(mgr, packet+3, [packet+0xB])).
     const auto b2044 = bytes_of({0xFC, 0x07, 0xFF, 0xA7, 0x01, 0, 0, 0, 0, 0, 0, 0x06, 0, 0, 0});
-    CHECK(u2sh::scene_id(2044, b2044, id) && id == 0x1A7);
+    CHECK(u2sh::scene_id(2048, b2044, id) && id == 0x1A7);
     // The 2054 (16 bytes: u16 opcode | u8 | u64 id @3 | u8 flag @0xB | ...): 0x2879440(mgr, &res, packet+3, [+0xB]).
     const auto b2054 = bytes_of({0x06, 0x08, 0xFF, 0xC4, 0x02, 0, 0, 0, 0, 0, 0, 0x0E, 0, 0, 0, 0});
-    CHECK(u2sh::scene_id(2054, b2054, id) && id == 0x2C4);
+    CHECK(u2sh::scene_id(2059, b2054, id) && id == 0x2C4);
     // Too short, not a site, no id (2173's "u32 1 | u32 actor" form still gives a non-zero id: the lookup refuses it).
-    CHECK(!u2sh::scene_id(2436, std::span<const uint8_t>(b2436.data(), 12), id));
+    CHECK(!u2sh::scene_id(2644, std::span<const uint8_t>(b2436.data(), 12), id));
     CHECK(!u2sh::scene_id(2671, b2436, id));
     const auto zero = bytes_of({0x84, 0x09, 0x00, 0x0E, 0x00, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0});
-    CHECK(!u2sh::scene_id(2436, zero, id));
+    CHECK(!u2sh::scene_id(2644, zero, id));
 }
 
 void test_route() {
@@ -321,8 +322,8 @@ void test_shop_watch() {
     h.open_us = t;
     CHECK(u2sh::hold_decision(h) == H::Expired);
     // Review B4: the Req opcode of a Nak 1013 (u16 0x3F5 | u8 0xFF | i32 error | u16 opcode @7 | u64).
-    const auto nak = bytes_of({0xF5, 0x03, 0xFF, 0x05, 0, 0, 0, 0x84, 0x09, 0, 0, 0, 0, 0, 0, 0, 0});
-    CHECK(u2sh::nak_req_opcode(nak) == 2436 && u2sh::site_of(u2sh::nak_req_opcode(nak)));
+    const auto nak = bytes_of({0xF5, 0x03, 0xFF, 0x05, 0, 0, 0, 0x54, 0x0A, 0, 0, 0, 0, 0, 0, 0, 0});
+    CHECK(u2sh::nak_req_opcode(nak) == 2644 && u2sh::site_of(u2sh::nak_req_opcode(nak)));
     CHECK(u2sh::nak_req_opcode(std::span<const uint8_t>(nak.data(), 8)) == 0);
     CHECK(u2sh::nak_error(nak) == 5);  // S46: the i32 error @3
     CHECK(u2sh::nak_error(std::span<const uint8_t>(nak.data(), 8)) == 0);
@@ -346,7 +347,7 @@ void test_t1() {
     const auto trade = [](std::string_view n) { return u2sh::is_funcnpc(n) && u2trade::is_trade_resource(n); };
     CHECK(u2sh::t1_verdict(trade("cd_seq_funcnpc_smithy"), false) == u2sh::T1::WouldPass);
     CHECK(u2sh::t1_verdict(trade("cd_seq_funcnpc_butcher"), true) == u2sh::T1::Near);
-    CHECK(u2sh::t1_verdict(trade("cd_seq_funcnpc_grocery"), false) == u2sh::T1::NotTrade);
+    CHECK(u2sh::t1_verdict(trade("cd_seq_funcnpc_grocery"), false) == u2sh::T1::WouldPass);  // a trade shop now
     CHECK(u2sh::t1_verdict(trade("cd_seq_funcnpc_research_ptm_contact_00"), false) == u2sh::T1::NotTrade);
     for (int i = 0; i < static_cast<int>(u2sh::T1::Count); ++i) {
         CHECK(std::strlen(u2sh::t1_name(static_cast<u2sh::T1>(i))) > 0);
@@ -366,11 +367,14 @@ void test_t1_active() {
     CHECK(u2trade::dict_hash("cd_seq_funcnpc_grocery_pdem_contact_00") == 0x0E965A02u);
     CHECK(u2trade::dict_hash("cd_seq_funcnpc_research_ptm_contact_00") == 0xD6B8EB6Fu);
     CHECK(u2trade::is_trade_name_by_hash("cd_seq_funcnpc_smithy") && u2trade::is_trade_name_by_hash("cd_seq_funcnpc_butcher"));
-    // Hernand's other shop scenes (p1b host.log): none is on the list.
-    for (const char* n : {"cd_seq_funcnpc_bank", "cd_seq_funcnpc_church", "cd_seq_funcnpc_clothes",
-                          "cd_seq_funcnpc_contribution", "cd_seq_funcnpc_craftsmith", "cd_seq_funcnpc_general",
-                          "cd_seq_funcnpc_goblinbroker", "cd_seq_funcnpc_grocery", "cd_seq_funcnpc_leather",
-                          "cd_seq_funcnpc_pub", "cd_seq_funcnpc_smithy_", "cd_seq_funcnpc_smith", ""}) {
+    // Hernand's other shop scenes (p1b host.log): the merchants are on the list since 2026-11-09 (all 9 merchant
+    // scenes), the others are not.
+    for (const char* n : {"cd_seq_funcnpc_bank", "cd_seq_funcnpc_clothes", "cd_seq_funcnpc_general",
+                          "cd_seq_funcnpc_grocery", "cd_seq_funcnpc_leather", "cd_seq_funcnpc_pub"}) {
+        CHECK(u2trade::is_trade_name_by_hash(n));
+    }
+    for (const char* n : {"cd_seq_funcnpc_church", "cd_seq_funcnpc_contribution", "cd_seq_funcnpc_craftsmith",
+                          "cd_seq_funcnpc_goblinbroker", "cd_seq_funcnpc_smithy_", "cd_seq_funcnpc_smith", ""}) {
         CHECK(!u2trade::is_trade_name_by_hash(n));
     }
     const auto seq = u2s::Element::Sequencer;

@@ -838,7 +838,7 @@ void test_save_req() {
     // 2910 = u32 slot | u32 n | n UTF-16 | u16 0, as the client's writer .xtls 0xA4624C0 builds it; slot byte 0.
     const Bytes f = gsw::make_final_save_req();
     const auto v = troc::parse(f);
-    CHECK(v && v->opcode == 2910 && v->slot == 0 && v->payload.size() == 10 + 2 * gsw::kFinalSaveName.size());
+    CHECK(v && v->opcode == gsw::kOpSaveToFileCurrentPlayerReq && v->slot == 0 && v->payload.size() == 10 + 2 * gsw::kFinalSaveName.size());
     if (v) {
         const Bytes expect = {100, 0, 0, 0, 5, 0, 0, 0, 'C', 0, 'o', 0, '-', 0, 'o', 0, 'p', 0, 0, 0};
         CHECK(Bytes(v->payload.begin(), v->payload.end()) == expect);

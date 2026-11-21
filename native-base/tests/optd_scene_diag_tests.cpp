@@ -26,6 +26,7 @@
 #include "mod/session2/observer_stage_logic.h"
 #include "mod/session2/p8_probe_logic.h"
 #include "mod/session2/scene_diag_logic.h"
+#include "opmap_2976.h"
 
 using namespace cdmp::session2;
 
@@ -50,6 +51,7 @@ std::vector<uint8_t> unhex(const char* h) {
         return -1;
     };
     for (size_t i = 0; h[i] && h[i + 1]; i += 2) out.push_back(static_cast<uint8_t>(nib(h[i]) << 4 | nib(h[i + 1])));
+    cdmp::tests::renumber_2976_packet(out);  // a capture of 1.0.0.2976: the logic's numbers are 3732's (by name)
     return out;
 }
 
@@ -256,7 +258,8 @@ void test_scene_reqs() {
     CHECK(r.op == 2672 && r.has_actor && r.actor == 0xA0100001);
     r = scd::parse_scene_req(2767, std::span<const uint8_t>(a).subspan(5, 4));  // too short for anything
     CHECK(!r.has_scene && !r.has_actor);
-    CHECK(scd::scene_req_index(2620) == 0 && scd::scene_req_index(2202) == static_cast<int>(scd::kSceneReqCount) - 1);
+    CHECK(scd::scene_req_index(scd::kOpTriggerVolume) == 0 &&
+          scd::scene_req_index(scd::kOpStartActionReq) == static_cast<int>(scd::kSceneReqCount) - 1);
     CHECK(scd::scene_req_index(2005) == -1);
     CHECK(scd::is_npc_key(0xB010006D) && !scd::is_npc_key(0xA0100001) && scd::is_character_key(0xA0100001));
 }

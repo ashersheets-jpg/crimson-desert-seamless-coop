@@ -530,9 +530,9 @@ void test_u2c_and_p1() {
     CHECK(stp::mgr_is(0, 0, 0) == stp::MgrIs::Other);
     // The callers (call rel32 + 5).
     const stp::Caller* buy = stp::caller_of(0x2BFFDC5 + 5);
-    CHECK(buy && buy->server && std::string_view(buy->what).starts_with("2789"));
+    CHECK(buy && buy->server && std::string_view(buy->what).find("BuyStockFromStoreReq") != std::string_view::npos);  // the number moves with each build
     const stp::Caller* sell = stp::caller_of(0x2C04B00 + 5);
-    CHECK(sell && std::string_view(sell->what).starts_with("2366"));
+    CHECK(sell && std::string_view(sell->what).find("SellItemToItemStoreReq") != std::string_view::npos);
     const stp::Caller* ui = stp::caller_of(0xA1D9DC + 5);
     CHECK(ui && !ui->server);
     CHECK(!stp::caller_of(0x2BFFDC5));
