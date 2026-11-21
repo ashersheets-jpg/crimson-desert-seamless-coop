@@ -25,17 +25,51 @@ TrocLink::TrocLink(ClientSession& session, Dir out, Dir in, PacketFn on_packet)
             ++dropped_;
             return;
         }
-        for (auto& p : receiver_.on_message(msg.bytes)) {
-            // The other end's capabilities: the link's own business, never its owner's.
-            if (const auto v = caps_in_dir_ ? parse(p) : std::optional<PacketView>{}; v && v->opcode == kCapsOpcode) {
-                peer_caps_ = v->payload.empty() ? 0 : v->payload[0];
-                peer_caps_epoch_ = session_.epoch();
-                ++caps_in_;
-                continue;
+        if (sim_.on()) {  // TEST ONLY (troc_link.h, sim_lag)
+            sim_rng_ ^= sim_rng_ << 13;
+            sim_rng_ ^= sim_rng_ >> 7;
+            sim_rng_ ^= sim_rng_ << 17;
+            uint32_t wait = sim_.delay + (sim_.jitter ? static_cast<uint32_t>(sim_rng_ % (sim_.jitter + 1)) : 0);
+            if (sim_.spike && sim_.spike_pm && (sim_rng_ >> 32) % 1000 < sim_.spike_pm) {
+                wait += sim_.spike;
+                ++sim_spikes_;
             }
-            on_packet_(std::move(p), now_ms);
+            uint32_t at = now_ms + wait;
+            if (!held_.empty() && static_cast<int32_t>(at - last_release_) < 0) at = last_release_;  // in order
+            last_release_ = at;
+            held_.push_back(Held{at, now_ms, msg.bytes});
+            ++sim_held_;
+            return;
         }
+        deliver(msg.bytes, now_ms);
     });
+}
+
+void TrocLink::deliver(std::span<const uint8_t> message, uint32_t now_ms) {
+    for (auto& p : receiver_.on_message(message)) {
+        // The other end's capabilities: the link's own business, never its owner's.
+        if (const auto v = caps_in_dir_ ? parse(p) : std::optional<PacketView>{}; v && v->opcode == kCapsOpcode) {
+            peer_caps_ = v->payload.empty() ? 0 : v->payload[0];
+            peer_caps_epoch_ = session_.epoch();
+            ++caps_in_;
+            continue;
+        }
+        on_packet_(std::move(p), now_ms);
+    }
+}
+
+void TrocLink::release_held(uint32_t now_ms) {
+    while (!held_.empty() && static_cast<int32_t>(now_ms - held_.front().at) >= 0) {
+        Held h = std::move(held_.front());
+        held_.pop_front();
+        if (broken_) {
+            ++dropped_;
+            continue;
+        }
+        const uint32_t waited = now_ms - h.got;
+        if (waited > sim_max_wait_) sim_max_wait_ = waited;
+        deliver(h.bytes, now_ms);
+    }
 }
 
 TrocLink::~TrocLink() { session_.set_game_handlers({}, {}); }
@@ -74,13 +108,16 @@ void TrocLink::tick(uint32_t now_ms) {
         if (epoch_ != 0 || sender_.packets_sent() > 0 || receiver_.packets_received() > 0) broken_ = true;
         epoch_ = session_.epoch();
         sender_.reset();
+        held_.clear();  // sim_lag: what the old connection sent is gone with it
     }
+    if (!held_.empty()) release_held(now_ms);
     sender_.set_compress(compressing());
     if (!broken_ && connected()) sender_.flush();
 }
 
 void TrocLink::reset() {
     sender_.reset();
+    held_.clear();
     broken_ = false;
     epoch_ = session_.epoch();
     // The capabilities belong to the connection, not to the conversation:
@@ -106,6 +143,12 @@ std::string TrocLink::describe() const {
     }
     if (caps_ || receiver_.compressed_received() || caps_in_) {
         s += std::format(" | in compressed batches {}", receiver_.compressed_received());
+    }
+    if (sim_.on()) {
+        s += std::format(" | TEST sim_lag {}+0..{} ms (spikes {} ms, {} per mille): held {} messages, {} spikes, longest "
+                         "wait {} ms, waiting now {}",
+                         sim_.delay, sim_.jitter, sim_.spike, sim_.spike_pm, sim_held_, sim_spikes_, sim_max_wait_,
+                         held_.size());
     }
     return s;
 }

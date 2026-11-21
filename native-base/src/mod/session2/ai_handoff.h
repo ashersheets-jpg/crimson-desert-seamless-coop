@@ -60,6 +60,15 @@ void ai_handoff_note_passenger(uint32_t rider_key, uint32_t vehicle_key, bool on
 void ai_handoff_note_catch(uint32_t catcher_key, uint32_t npc_key, uint32_t interaction) noexcept;
 // [session2] ai_handoff_catch (default 1): 0 turns the catch rule off (cs65's control run).
 void ai_handoff_set_catch(bool on) noexcept;
+// The TALK rule (2026-11-21, Borque 17 Nov: "the guest's interact opens the NPC's menu but the NPC keeps walking; the
+// host's NPCs stop and look"): in single player the talking player's own game runs the NPC, and its AI is what stops
+// it and turns it to the player. The host's server accepted another interaction of the other player (not a catch) on
+// a person (type 3): the next server tick hands that NPC to the talker's game while the talker stays beside it
+// (kTalkEndM, after a kTalkGraceMs grace); when the talker walks off it goes back to the game that ran it before (if
+// that player is still in the world). The fight rule leaves it alone meanwhile. Host role only. shop_probe's C point
+// calls ai_handoff_note_catch for every accepted interaction of user 2: the catches go to the catch rule, the rest to
+// this one. [session2] ai_handoff_talk (default 1): 0 turns it off.
+void ai_handoff_set_talk(bool on) noexcept;
 std::string ai_handoff_describe();
 
 }  // namespace cdmp::session2

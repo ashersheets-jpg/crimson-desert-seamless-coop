@@ -15,6 +15,7 @@
 // Takes over the session's game handlers (never used together with CoopLink).
 
 #include <cstdint>
+#include <deque>
 #include <functional>
 #include <span>
 #include <string>
@@ -65,6 +66,20 @@ public:
     // CURRENT connection. Same packets, same order either way.
     void set_compress(bool want) { want_compress_ = want; }
     void set_announce_caps(bool on) { caps_ = on ? kCapsCompressed : 0; }
+    // TEST ONLY (Co-op+ 2026-11-21, one-PC runs that look like two PCs; [session2] sim_lag_*): what arrives is held
+    // `delay` ms plus a random 0..`jitter` ms, and per mille `spike_pm` of the messages `spike` ms more (a stall of the
+    // relay / Wi-Fi); always in order (the channel is reliable: a later message never overtakes a held one). All 0 =
+    // off (the default): delivered at once, as before.
+    struct SimLag {
+        uint32_t delay = 0, jitter = 0, spike = 0, spike_pm = 0;
+        bool on() const { return delay || jitter || (spike && spike_pm); }
+    };
+    void set_sim_lag(const SimLag& s) { sim_ = s; }
+    const SimLag& sim_lag() const { return sim_; }
+    uint64_t sim_held() const { return sim_held_; }
+    uint64_t sim_spikes() const { return sim_spikes_; }
+    uint32_t sim_max_wait() const { return sim_max_wait_; }
+
     // The flags this end announces (kCapsCompressed | kCapsGuestSave ...); 0 = nothing is announced.
     void set_announce_flags(uint8_t flags) { caps_ = flags; }
     uint8_t announce_flags() const { return caps_; }
@@ -93,6 +108,19 @@ private:
     uint8_t peer_caps_ = 0;
     uint32_t peer_caps_epoch_ = 0;  // the connection the other end's caps came on
     uint64_t caps_in_ = 0;
+    // sim_lag (above): the held messages, oldest first, with their release time.
+    void deliver(std::span<const uint8_t> message, uint32_t now_ms);
+    void release_held(uint32_t now_ms);
+    struct Held {
+        uint32_t at = 0, got = 0;
+        std::vector<uint8_t> bytes;
+    };
+    SimLag sim_;
+    std::deque<Held> held_;
+    uint32_t last_release_ = 0;
+    uint64_t sim_rng_ = 0x9E3779B97F4A7C15ull;
+    uint64_t sim_held_ = 0, sim_spikes_ = 0;
+    uint32_t sim_max_wait_ = 0;
 };
 
 }  // namespace cdmp::troc
