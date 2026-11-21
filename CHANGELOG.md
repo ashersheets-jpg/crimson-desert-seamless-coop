@@ -5,6 +5,18 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
+POSTED 2026-11-20 20:54: 0.1.0-alpha+69edcc84, for game 1.0.0.3732 (checklist pp40 971/971 over 23 steps):
+everything in 9e777a23 just below, plus (Borque, 20 Nov):
+- **The joined player on a horse that is not his own (a bandit's, a wild one) moves with it on the host's screen.**
+  The host's client derived the horse's movement from its rider only for the rider's own horse; a mount the ride rule
+  notes for him counts too now. Tested (cs69b: a bandit's horse, 387 derived, 0 refused).
+- **The first mount of a wild horse is seated on the host's screen**: the host's apply 6 ms after the commit was
+  refused (controller mismatch: the ride rule hands the horse to the rider's game ~1 s later); it now waits for that
+  hand-over (until 3 s). Not seen live (wild horses do not spawn every run).
+- **An animal the joined player carries stays in his hands on the host's screen** (attach_follow=carry, incoming: made
+  at the host's client; the carried animal's own Moves from the catcher's game no longer end it). Measured (cs69a:
+  attached, 13 poses), not seen on screen.
+
 POSTED 2026-11-20 02:18: 0.1.0-alpha+9e777a23, for game 1.0.0.3732 (checklist pp39 963/971 over 23 steps + pp39b
 152/152: pp39's 8 fails were lowsave's log-rate checks over midnight, a checklist bug fixed in tools/prepost.sh; 12d533ef
 before it passed pp38 + pp38b and was never posted): everything in 26bf2c71 just below, plus:

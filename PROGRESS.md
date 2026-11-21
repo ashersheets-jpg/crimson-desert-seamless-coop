@@ -9083,4 +9083,14 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - (c) host log: the taming sequencer 0x432 (user 2's own 2661) got StageBranchStateReq "then 0" answered, "then 2"
   (01:17:04) never answered (no 2920 to user 2); the sequencer lives in the host's field manager. Open.
 - Layer: dev script tpvehicle [radius] [n] [type] (type 6 were small animals).
+- 17:47 Discord: reply to Borque posted in #play-testing-feedback (reply-2026-11-20-borque.txt; the first-mount line
+  says "not yet seen in our test"). #general: w-ri offers daily tests (Radmin, "offline steam account"): left to the
+  user (may mean an unofficial copy).
+- 17:47-20:53 pp40 (full) on 69edcc84: 971 pass, 0 fail over 23 steps; SAVES OK (real: REAL SAVES UNCHANGED) and 5/5
+  in every step. CHECKLIST COMPLETE.
+- Carry visual tests cs69c-h: no catch held long enough to see (focus: the host's shots stole the guest's E presses,
+  cs69c; then no catchable animal / the partridge fled). LESSONS entry. Taming freeze: needs a live wild horse; next
+  step a probe of the server's 2644 handler 0x2891FB0 result for user 2's sequencer.
+### POSTED 2026-11-20 20:54: 0.1.0-alpha+69edcc84 in #download-here (game 1.0.0.3732), both zips (12 755 400 4517be31...,
+  6 953 722 8daf32ba...), text download-69edcc84.txt (Borque tagged).
 

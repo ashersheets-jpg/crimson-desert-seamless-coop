@@ -1,0 +1,15 @@
+**Update: shared world playtest 0.1.0-alpha+69edcc84, for game 1.0.0.3732**
+Use this instead of 9e777a23; **both players need the same build**. From <@224953308010381312>'s 20 Nov report:
+
+- **The joined player on a horse that isn't his own (a bandit's, a wild one) now moves with it on the host's screen.** Before, the host saw him stuck where he got on while his name moved. Tested with a bandit's horse.
+- **The first time the joined player gets on a wild horse, the host's game seats him** (it waits for the horse to be handed to his game). Not seen in our own test yet (no wild horse came by): please tell us how it looks.
+- **An animal the joined player catches and carries stays in his hands on the host's screen.** Measured in our test, not yet seen on screen: please tell us how it looks.
+
+Still open: the taming freeze at the end of the minigame, the running animation freeze, the greyed talk prompt.
+
+Tested with two copies of the game on one PC (Nvidia): the full checklist on 1.0.0.3732.
+
+- `...69edcc84-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tell us in <#1567319198206525450> how it goes, with the report zip from **both** players (close the game, run **Diagnose Co-op+.cmd**).
