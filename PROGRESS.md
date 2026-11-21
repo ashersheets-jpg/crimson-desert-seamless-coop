@@ -9705,3 +9705,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   mod-manager 6 989 428 B; text docs/release/shared-world-playtest/download-cfaa3a69.txt, 1753 chars; CHANGELOG
   entry). 17:55 the reply to Borque in #play-testing-feedback (message 1573834222672810015): the real "talk greyed" bug,
   shops, the fast-travel case not checked yet.
+- 18:00 chain_d running on cfaa3a69's build (b41c72b0): cs76f (the inn patrons' arm wrestling with the category fix),
+  then chain_c's rest (cs74h guest_clock_fix 'n', cs73b, cs79a B09 cabin talks, cs77a B06, cs78a B12, cs85a B10 shared
+  quest credit, cs83a the host's versus gauge) and cs84a (B13: both players at the cellar table). The worktree builds
+  (B19 v3.1, the twin re-make) wait for the chain's end.
