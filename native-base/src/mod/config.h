@@ -419,6 +419,8 @@ struct Config {
     // remote_interp_pair, host AND guest (needs remote_interp and [sniffer] enabled): 0 | 1. A ridden horse's delay
     // targets its rider's (the game's) while its samples are dense enough; the same no-jump approach.
     bool s2_remote_interp_pair = false;
+    // Co-op+ 2026-11-21 (remote_interp_logic.h, the other player's character): remote_interp_char = 0 | 1.
+    bool s2_remote_interp_char = false;
     // P8 S1 option A, the sequencer part (session2/observer_seq_copy.h, guest_seq_route.h;
     // pendientes/p8-impl-opcion-a.md), each "0" (default) | "probe" | "1"; the raw ini values.
     // observer_seq_copy, HOST (needs create_session and [sniffer] enabled): the host client's sequencers

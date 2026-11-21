@@ -263,6 +263,7 @@ Config load_config(const std::wstring& ini_path) {
     // P8 mount ride (pendientes/p8-impl-monturas-cabalgata.md).
     c.s2_horse_follow_reverse = narrow(read_string(ini_path, L"session2", L"horse_follow_reverse", "0"));
     c.s2_remote_interp_pair = read_uint(ini_path, L"session2", L"remote_interp_pair", 0) != 0;
+    c.s2_remote_interp_char = read_uint(ini_path, L"session2", L"remote_interp_char", 0) != 0;
     // P8 S1 option A, sequencers (pendientes/p8-impl-opcion-a.md).
     c.s2_observer_seq_copy = narrow(read_string(ini_path, L"session2", L"observer_seq_copy", "0"));
     c.s2_observer_seq_copy_only = narrow(read_string(ini_path, L"session2", L"observer_seq_copy_only", ""));

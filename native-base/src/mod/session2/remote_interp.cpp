@@ -120,6 +120,9 @@ std::atomic<uint32_t> g_pair_last_horse{0}, g_pair_last_d{0};
 // P8 session 25 ([session2] remote_interp_combat, guest; remote_interp_logic.h "the combat class"): (b)'s table, fed
 // by the mod's network thread (remote_interp_on_host_packet), and what the class did per update-position frame.
 std::atomic<uint8_t> g_combat{0};     // 0 | probe | 1
+std::atomic<bool> g_char_on{false};   // Co-op+ 2026-11-21: remote_interp_char (remote_interp_logic.h)
+std::atomic<uint32_t> g_char_delay_now{0}, g_char_peak_now{0};
+std::atomic<uint64_t> g_char_frames_adapted{0}, g_char_frames_riding{0};
 std::atomic<uint32_t> g_own_char{0};  // this client's character (its MainPlayerDataStartAck 2756)
 rip::EngageTable g_engage;
 std::atomic<uint64_t> g_cb_packets{0}, g_cb_no_own{0};
@@ -256,6 +259,14 @@ std::atomic<uint64_t> g_ch_run_start{0}, g_ch_last_insert{0};
 std::array<std::atomic<uint64_t>, 6> g_ch_gap{};   // gaps while moving: <=50, <=100, <=200, <=400, <=1000, >1000 ms
 std::array<std::atomic<uint64_t>, 5> g_ch_hold{};  // the hold such a gap makes (gap - game delay): <=50, <=100, <=300, <=1000, >1000
 std::atomic<uint64_t> g_ch_gap_max{0}, g_ch_still_gaps{0};
+// Co-op+ 2026-11-21: a held run that a NEW sample ends while the character is still moving (> 1 m/s, < 30 m/s from the
+// newest one): a freeze in the middle of a run, not a teleport or a stop (which the run counts above also take).
+std::array<std::atomic<uint64_t>, 4> g_ch_mid{};  // <=100, <=300, <=1000, >1000 ms
+std::atomic<uint64_t> g_ch_mid_max{0}, g_ch_mid_start{0};
+// Its samples' lateness at arrival (the game's clock at the insert minus the stamp): <=50, <=100, <=200, <=300, <=500,
+// <=1000, more; and the largest.
+std::array<std::atomic<uint64_t>, 7> g_ch_late{};
+std::atomic<uint64_t> g_ch_late_max{0};
 // The newest two samples of a buffer: positions and times. False: fewer than 2 or unreadable.
 bool last_two(uintptr_t buf, float (&p1)[3], uint64_t& t1, float (&p0)[3], uint64_t& t0) noexcept {
     const FastMem m{};
@@ -315,6 +326,36 @@ void note_char_insert(uintptr_t buf, uint32_t gd) noexcept {
         g_ch_hold[h <= 50 ? 0 : h <= 100 ? 1 : h <= 300 ? 2 : h <= 1000 ? 3 : 4].fetch_add(1, std::memory_order_relaxed);
     }
 }
+// set position of the 0xA character (the new sample at rbp, before it is inserted): ends an open held run.
+// set position of the 0xA character: the new sample's lateness (histogram; the slot's peak for remote_interp_char).
+void note_char_late(const safetyhook::Context& c, rip::Slot* slot, uint64_t now) noexcept {
+    const FastMem m{};
+    uint64_t ts_new = 0;
+    if (!m.u64(c.rbp + rip::kSampleTs, ts_new) || ts_new > now) return;
+    const uint64_t late = now - ts_new;
+    if (late > rip::kCharMaxLate) return;
+    g_ch_late[late <= 50 ? 0 : late <= 100 ? 1 : late <= 200 ? 2 : late <= 300 ? 3 : late <= 500 ? 4 : late <= 1000 ? 5 : 6]
+        .fetch_add(1, std::memory_order_relaxed);
+    if (late > g_ch_late_max.load(std::memory_order_relaxed)) g_ch_late_max.store(late, std::memory_order_relaxed);
+    if (slot) slot->note_char_late(static_cast<uint32_t>(late), now);
+}
+void note_char_hold_end(const safetyhook::Context& c, uintptr_t buf, uint64_t now) noexcept {
+    const uint64_t start = g_ch_run_start.load(std::memory_order_relaxed);
+    if (!start || now <= start + 50) return;
+    if (g_ch_mid_start.exchange(start, std::memory_order_relaxed) == start) return;  // that run was judged already
+    const FastMem m{};
+    uint64_t ts_new = 0;
+    float pos_new[3] = {}, p1[3], p0[3];
+    uint64_t t1 = 0, t0 = 0;
+    if (!m.u64(c.rbp + rip::kSampleTs, ts_new) || !m.vec3(c.rbp, pos_new) || !last_two(buf, p1, t1, p0, t0) ||
+        ts_new <= t1)
+        return;
+    const float speed = dist3(pos_new, p1) / (static_cast<float>(ts_new - t1) / 1000.0f);
+    if (speed <= 1.0f || speed > 30.0f) return;
+    const uint64_t run = now - start;
+    g_ch_mid[run <= 100 ? 0 : run <= 300 ? 1 : run <= 1000 ? 2 : 3].fetch_add(1, std::memory_order_relaxed);
+    if (run > g_ch_mid_max.load(std::memory_order_relaxed)) g_ch_mid_max.store(run, std::memory_order_relaxed);
+}
 void remote_character_stalls_line() noexcept {
     const uint64_t frames = g_ch_frames.load(), held = g_ch_held.load();
     if (!frames) return;
@@ -327,6 +368,17 @@ void remote_character_stalls_line() noexcept {
               g_ch_gap[2].load(), g_ch_gap[3].load(), g_ch_gap[4].load(), g_ch_gap[5].load(), g_ch_gap_max.load(),
               g_ch_hold[0].load(), g_ch_hold[1].load(), g_ch_hold[2].load(), g_ch_hold[3].load(), g_ch_hold[4].load(),
               g_ch_still_gaps.load(), game_delay());
+    log::info("RemoteInterp [remote character mid-run holds] 0x{:08X}: holds a new sample ended while it still moved "
+              "[<=100 {}, <=300 {}, <=1000 {}, >1000 {}] longest {} ms (not a teleport or a stop) | its samples' lateness "
+              "at arrival [<=50 {}, <=100 {}, <=200 {}, <=300 {}, <=500 {}, <=1000 {}, more {}] largest {} ms",
+              g_remote_char_key.load(), g_ch_mid[0].load(), g_ch_mid[1].load(), g_ch_mid[2].load(), g_ch_mid[3].load(),
+              g_ch_mid_max.load(), g_ch_late[0].load(), g_ch_late[1].load(), g_ch_late[2].load(), g_ch_late[3].load(),
+              g_ch_late[4].load(), g_ch_late[5].load(), g_ch_late[6].load(), g_ch_late_max.load());
+    if (g_char_on.load())
+        log::info("RemoteInterp [remote character delay] remote_interp_char=1: delay now {} ms (peak lateness {} ms, cap "
+                  "{} ms; game's {} ms) | frames adapted {} riding (the game's) {}",
+                  g_char_delay_now.load(), g_char_peak_now.load(), rip::kCharCap, game_delay(), g_char_frames_adapted.load(),
+                  g_char_frames_riding.load());
 }
 // The visibility guard's counters (on_flag_setter below).
 std::atomic<uint64_t> g_vis_stripped{0}, g_vis_added{0}, g_vis_calls{0};
@@ -490,8 +542,17 @@ void on_delay_read(safetyhook::Context& c) noexcept {
                               : rip::kOwnedUnknown;
     if (hs.site == Site::SetPos) observe_insert(c, buf, cls, slot, r.key, owned, owned_cap, cmode != Mode::Off);
     if (cls == KeyClass::Character) {
-        if (hs.site == Site::SetPos) note_char_insert(buf, gd);
-        else if (hs.site == Site::UpdPos) note_char_frame(buf, now, gd);
+        // remote_interp_char: the holds are judged against the delay in force (the slot's once it has one).
+        const bool cin = g_char_on.load(std::memory_order_relaxed) && slot && mode == Mode::On;
+        const uint32_t dcur = cin && slot->d_fix.load(std::memory_order_relaxed)
+                                  ? rip::from_fix(slot->d_fix.load(std::memory_order_relaxed))
+                                  : gd;
+        if (hs.site == Site::SetPos) {
+            note_char_hold_end(c, buf, now);
+            note_char_late(c, slot, now);
+            note_char_insert(buf, dcur);
+        }
+        else if (hs.site == Site::UpdPos) note_char_frame(buf, now, dcur);
     }
     if (hs.site == Site::UpdPos && slot) {
         // P8 mount ride: a horse its rider (0xA, which always reads the game's value) rides now targets gd.
@@ -510,7 +571,18 @@ void on_delay_read(safetyhook::Context& c) noexcept {
             cs.excluded = owned == rip::kOwnedYes;
             csp = &cs;
         }
-        rip::update_step(*slot, cls, now, gd, rip::delay_cap(owned, owned_cap), pair_delay, &dense, csp);
+        int char_mode = 0;
+        if (cls == KeyClass::Character && g_char_on.load(std::memory_order_relaxed)) {
+            bool riding = false;
+            g_pairs.for_each_live(GetTickCount64(), [&](uint32_t rider, uint32_t) { riding = riding || rider == r.key; });
+            char_mode = riding ? 2 : 1;
+            (riding ? g_char_frames_riding : g_char_frames_adapted).fetch_add(1, std::memory_order_relaxed);
+        }
+        rip::update_step(*slot, cls, now, gd, rip::delay_cap(owned, owned_cap), pair_delay, &dense, csp, char_mode);
+        if (char_mode) {
+            g_char_delay_now.store(rip::from_fix(slot->d_fix.load(std::memory_order_relaxed)), std::memory_order_relaxed);
+            g_char_peak_now.store(slot->peak.load(std::memory_order_relaxed), std::memory_order_relaxed);
+        }
         if (csp && cs.cls.in) note_combat_frame(*slot, buf, now, cs);
         if (pair_delay) {
             g_pair_frames.fetch_add(1, std::memory_order_relaxed);
@@ -542,6 +614,7 @@ void on_delay_read(safetyhook::Context& c) noexcept {
     in.updated = slot && slot->updated.load(std::memory_order_relaxed);
     in.d_fix = slot ? slot->d_fix.load(std::memory_order_relaxed) : 0;
     in.game_delay = gd;
+    in.char_on = g_char_on.load(std::memory_order_relaxed);
     const rip::DelayOut d = rip::decide_delay(in);
     if (hs.site == Site::UpdPos && cls == KeyClass::Npc && in.updated) g_delays.add(d.would);
     if (d.replaced) {
@@ -970,17 +1043,18 @@ DWORD WINAPI interp_thread(LPVOID) {
             g_patch_state.store(-1);
         }
     }
-    if (g_pair_on.load()) {
+    if (g_pair_on.load() || g_char_on.load()) {
         // The pairs come from the client's OnRecvPacket (the sniffer's hook, in by now: late_init installs it once
-        // WorldSystem exists, before the local player is in the world).
+        // WorldSystem exists, before the local player is in the world). remote_interp_char needs them too (riding).
         horse_follow_set_pair_notes(true);
         bool attached = false;
         for (int i = 0; i < 60 && !(attached = horse_follow_client_attach("remote_interp_pair")); ++i) Sleep(1000);
         if (!attached) {
             g_pair_on.store(false);
+            g_char_on.store(false);
             horse_follow_set_pair_notes(false);
-            log::warn("RemoteInterp: remote_interp_pair needs the sniffer's OnRecvPacket hook ([sniffer] enabled=1); "
-                      "pairs off (every horse keeps its own delay)");
+            log::warn("RemoteInterp: remote_interp_pair / remote_interp_char need the sniffer's OnRecvPacket hook "
+                      "([sniffer] enabled=1); both off (every actor keeps its own delay, the characters the game's)");
         }
     }
     log::info("RemoteInterp ON ({}, {}): 4 mid hooks at the delay reads exe+0x{:X} / 0x{:X} / 0x{:X} / 0x{:X} (7 "
@@ -1066,7 +1140,8 @@ void remote_interp_start(const std::string& raw, bool guest, uint32_t owned_cap_
 }
 
 void remote_interp_note_ride(uint32_t rider, uint32_t horse) noexcept {
-    if (!g_pair_on.load(std::memory_order_relaxed)) return;
+    // remote_interp_char also needs to know when the other player rides (its delay is then the game's).
+    if (!g_pair_on.load(std::memory_order_relaxed) && !g_char_on.load(std::memory_order_relaxed)) return;
     g_pairs.note(rider, horse, GetTickCount64());
 }
 
@@ -1114,6 +1189,15 @@ void remote_interp_on_host_packet(uint16_t opcode, std::span<const uint8_t> payl
 }
 
 bool remote_interp_active() { return g_on.load(); }
+
+void remote_interp_set_char(bool on) noexcept {
+    g_char_on.store(on);
+    if (on)
+        log::info("RemoteInterp: remote_interp_char=1: the other player's character gets a delay of its own: its "
+                  "samples' peak lateness at arrival (kept {} s) + {} ms, within [the game's, {} ms]; the game's while it "
+                  "rides",
+                  rip::kCharPeakMs / 1000, rip::kCharMargin, rip::kCharCap);
+}
 
 std::string remote_interp_describe() {
     if (!g_started.load()) return {};
