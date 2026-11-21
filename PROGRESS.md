@@ -9388,6 +9388,14 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   crash ends the friend's session only after its logout (the final save, up to 15 s, then the 2001), ~25 s of frozen
   enemies; the departure now fires at the START of the goodbye (session present, phase Stable, not in the world =
   the logout asked), once, and re-arms when the friend is in the world again.
+- 06:55 Second review (the same agent, on the revision): 3 of the first findings confirmed fixed; 6 more, all fixed
+  in source: a load now forgets the ride / catch / passenger entries too (else the ride rule hands the mount back to
+  a game that no longer has it); a load is move_phase_loading() (past the move's 2549: MoveAsked / WindowA can stop
+  short); a load sweep taken while the host had no character comes back next second; a new session resets the
+  departure latch; scan_left's early exits are not a "complete" scan; "in the world", the load and the goodbye come
+  from ONE phase read plus server_logout_requested() (separate reads could race the server writing the 2762). Mine:
+  a 250 ms poll could miss the Stable -> loading edge when MoveAsked / WindowA are sampled first: a latch ("in the
+  world since the last trigger") instead of "was in at the last poll".
 - 06:20 SHARED-WORLD README written (kit/coopplus/README-shared-world.txt, committed 2956e9d; package-native.ps1
   now puts it in place of the normal README, whose body was the two-worlds mode). From an agent's survey of the
   layer's native menus (read only): the title flow, holding Interact on the friend (the menu: the challenges, a
