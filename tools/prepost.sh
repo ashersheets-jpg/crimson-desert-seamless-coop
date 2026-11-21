@@ -563,8 +563,35 @@ hostrevive)
   hasnot "$H" "timer guard: schedule timer .* given up" "host: no timer was given up"
   info "timer guard: $(grep -h 'timer guard: schedule timers' "$H" | tail -1 | sed 's/.*timer guard: //' | cut -c1-200)"
   info "LOOK: $NAME-h0 (the death screen with both choices), $NAME-h1 (the game's own warp), $NAME-h2 (at the checkpoint)" ;;
+lagrun)
+  head_step "the joined player runs with internet-like lag (TEST sim_lag): the host must not see it freeze mid-run"
+  # 2026-11-21 (Borque / Jay: the other player's "running animation freeze", two PCs only): the other player's samples
+  # arrive late for their stamps; the game reads them 200 ms back and holds the pose. TEST sim_lag (both tunnels:
+  # 30 + 0..60 ms, 400 ms stalls at 3 per mille) reproduced it on one PC (cs74c: 53 mid-run holds <= 100 ms, 2 longer);
+  # remote_interp_char (on by default) gives the character a delay of its own (cs74d: 1 + 1).
+  printf 'wait 10000\ntp -10362 533 -3861\nwait 10000\n' > $N/scan/lag_host.txt
+  printf 'wait 10000\ntp -10365 533 -3864\nwait 10000\n' > $N/scan/lag_guest.txt
+  LX="sim_lag_delay_ms=30,sim_lag_jitter_ms=60,sim_lag_spike_ms=400,sim_lag_spike_per_mille=3"
+  RUN="kd:W_w:12000_ku:W_w:1500_kd:S_w:12000_ku:S_w:1500_kd:W_w:12000_ku:W_w:1500_kd:S_w:12000_ku:S"
+  run2 "$BASE -Hold 25 -HostScript $SCAN\\lag_host.txt -GuestScript $SCAN\\lag_guest.txt -GuestKeys w:16000_shot:$NAME-g0_${RUN}_shot:$NAME-g1 -HostKeys w:500_shot:$NAME-h0 -HostNativeExtra $LX -GuestDev native_extra=${LX//,/+}"; two_player_checks
+  H=$N/$NAME.host.log
+  has "$H" "TEST sim_lag 30\+0\.\.60 ms" "host: the TEST lag was on (the host's tunnel held what it got)"
+  has "$N/$NAME.guest.log" "TEST sim_lag 30\+0\.\.60 ms" "guest: the TEST lag was on"
+  has "$H" "RemoteInterp \[remote character delay\] remote_interp_char=1" "host: remote_interp_char is on (the release default)"
+  m=$(grep -h "remote character mid-run holds\] 0xA0100066" "$H" | tail -1)
+  s=$(echo "$m" | sed -n 's/.*\[<=100 \([0-9]*\), <=300 \([0-9]*\), <=1000 \([0-9]*\), >1000 \([0-9]*\)\].*/\1 \2 \3 \4/p')
+  read -r h1 h2 h3 h4 <<< "$s"
+  if [ -z "$m" ] || [ -z "$s" ]; then
+    bad "host: no mid-run hold line for the guest's character (the run did not happen?)"
+  else
+    [ "$h1" -le 8 ] && ok "host: short mid-run holds of the running guest: $h1 (<= 8; without the fix ~50)" || bad "host: short mid-run holds of the running guest: $h1 (wanted <= 8; without the fix ~50)"
+    [ $(( h2 + h3 + h4 )) -le 3 ] && ok "host: longer mid-run holds: $(( h2 + h3 + h4 )) (<= 3)" || bad "host: longer mid-run holds: $(( h2 + h3 + h4 )) (wanted <= 3)"
+  fi
+  info "host: $(echo "$m" | grep -o 'holds a new.*' | cut -c1-260)"
+  info "host: $(grep -h 'remote character delay\]' "$H" | tail -1 | grep -o 'delay now.*' | cut -c1-120)"
+  ;;
 summary)
-  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c '^== ' "$R") (23 in the list)"; exit 0 ;;
+  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c '^== ' "$R") (24 in the list)"; exit 0 ;;
 *) echo "unknown step $STEP"; exit 2 ;;
 esac
 sed -n "/^== $STEP /,\$p" "$R"

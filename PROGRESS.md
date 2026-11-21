@@ -9219,3 +9219,12 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   cap), tpvehicle found none; the guest's late E presses: 2 accepted interactions 0xF4244 (objects): the talk rule
   noted them, handed nothing (not near any player in its list after the grace: dropped, "ended 2"): harmless.
   Branch probe: the host's 131 StageBranchStateReqs, 0 refused.
+- 04:18 cs75a (talk rule + the guest's shop, tcB242's walkto sweep with R at the butcher): SAVES OK, 5/5, both alive.
+  NO interaction reached the server (the talk rule noted 0): every sweep shot shows the stall's own "Meat: E Buy"
+  prompt; the butcher (0xB010039B on 3732, shop scene 0x978345CA) stood right beside the guest, off the camera's
+  centre. faceto.py takes R<dx>,<dz> now (relative: after a dev "tpactor", R-1,0 faces the actor); cs75v2 (tpactor
+  the butcher, face her, R) queued; cs79 uses R-1,0 for Marius / Ross too.
+- 04:28 cs76a (B14, walkto sweep with R at the inn table): no interaction (as cs75a). Its npcs list gives 3732's keys
+  of cs33a's patrons (same spots, variants, HP): 0xB010033C (was 382), 0xB0100340 (386), 0xB010033D (383): keys move
+  between game builds. cs76v2 (tpactor each, face R-1,0, R; E at the last) queued after cs75v2; cs79 now finds Marius /
+  Ross by their spots (tp, then tpnear) instead of 3663's keys.
