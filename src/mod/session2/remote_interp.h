@@ -53,6 +53,9 @@ void remote_interp_start(const std::string& raw, bool guest, uint32_t owned_cap_
 // its own character (2756) and the 2922 / 2991 engaging an enemy with it. Lock-free, no allocation, no log.
 void remote_interp_on_host_packet(uint16_t opcode, std::span<const uint8_t> payload) noexcept;
 bool remote_interp_active();          // the four hooks are in
+// Co-op+ 2026-11-21 ([session2] remote_interp_char, default 0; remote_interp_logic.h): the other player's character
+// gets a delay of its own (needs remote_interp=1). Before remote_interp_start or after, any thread.
+void remote_interp_set_char(bool on) noexcept;
 std::string remote_interp_describe();  // atomics only ("" when off)
 // P8 mount ride: a rider's (0xA) latest Move Ack names `horse` as its Path parent (0 = on foot / another parent).
 // The client's NetworkThread (inside OnRecvPacket): lock-free, no allocation, no log.

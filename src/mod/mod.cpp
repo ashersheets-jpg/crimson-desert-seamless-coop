@@ -1304,6 +1304,7 @@ DWORD WINAPI worker(LPVOID) {
                                                cfg.s2_divergence_probe},
                                               /*guest=*/true);
                 // The host's NPCs, animals and horses move smoothly here (p8-impl-interp-remota.md); its own thread.
+                session2::remote_interp_set_char(cfg.s2_remote_interp_char);
                 session2::remote_interp_start(cfg.s2_remote_interp, /*guest=*/true, cfg.s2_remote_interp_owned_cap_ms,
                                               cfg.s2_remote_interp_pair, cfg.s2_remote_interp_combat);
                 // P8 mounts (pendientes/p8-impl-monturas.md): the rider<->horse commit both ways; its own thread.
@@ -1375,6 +1376,7 @@ DWORD WINAPI worker(LPVOID) {
         }
         // User 2's pet and horse move smoothly on the host's client (p8-impl-interp-remota.md); nothing with 0.
         if (session2) {
+            session2::remote_interp_set_char(cfg.s2_remote_interp_char);
             session2::remote_interp_start(cfg.s2_remote_interp, /*guest=*/false, cfg.s2_remote_interp_owned_cap_ms,
                                           cfg.s2_remote_interp_pair, cfg.s2_remote_interp_combat);
             // P8 mounts (pendientes/p8-impl-monturas.md): the rider<->horse commit both ways; its own thread.

@@ -725,9 +725,62 @@ void test_pair_ramp() {
     CHECK(c.d_fix.load() == 0 && c.updated.load() == 1);
 }
 
+// Co-op+ 2026-11-21, remote_interp_char: the other player's character gets a delay of its own (char_mode 1).
+void test_char() {
+    CHECK(rip::char_target(0, 200) == 200);
+    CHECK(rip::char_target(40, 200) == 200);          // on time: the game's
+    CHECK(rip::char_target(300, 200) == 360);         // samples 300 ms late: 360
+    CHECK(rip::char_target(2000, 200) == rip::kCharCap);
+    CHECK(rip::char_target(100, 700) == 700);         // never below the game's
+    rip::Slot c;
+    c.reinit(0xA0100066, 0);
+    uint64_t now = 10000;
+    c.note_char_late(30, now);
+    c.note_char_late(320, now);  // a stall
+    c.note_char_late(40, now);   // on time again: the peak stays
+    CHECK(c.peak.load() == 320 && c.late_last.load() == 40);
+    rip::update_step(c, KeyClass::Character, now, 200, rip::kMaxDelay, 0, nullptr, nullptr, 1);
+    CHECK(c.d_fix.load() == rip::to_fix(200));  // the first step: no dt yet
+    for (int i = 0; i < 40; ++i) {
+        now += 16;
+        rip::update_step(c, KeyClass::Character, now, 200, rip::kMaxDelay, 0, nullptr, nullptr, 1);
+    }
+    CHECK(c.d_fix.load() == rip::to_fix(380));  // 320 + 60, reached at <= 0.5 ms per ms
+    // kCharPeakMs later with no new peak: the newest lateness (40) is the peak, the delay goes back down.
+    now += rip::kCharPeakMs;
+    rip::update_step(c, KeyClass::Character, now, 200, rip::kMaxDelay, 0, nullptr, nullptr, 1);
+    CHECK(c.peak.load() == 40);
+    for (int i = 0; i < 100; ++i) {
+        now += 16;
+        rip::update_step(c, KeyClass::Character, now, 200, rip::kMaxDelay, 0, nullptr, nullptr, 1);
+    }
+    CHECK(c.d_fix.load() == rip::to_fix(200));
+    // Riding (char_mode 2): the game's delay whatever the lateness.
+    c.note_char_late(500, now);
+    for (int i = 0; i < 40; ++i) {
+        now += 16;
+        rip::update_step(c, KeyClass::Character, now, 200, rip::kMaxDelay, 0, nullptr, nullptr, 2);
+    }
+    CHECK(c.d_fix.load() == rip::to_fix(200));
+    // decide_delay: a character's slot delay applies only with char_on.
+    rip::DelayIn in;
+    in.mode = rip::Mode::On;
+    in.applying = true;
+    in.cls = KeyClass::Character;
+    in.have_slot = true;
+    in.updated = true;
+    in.d_fix = rip::to_fix(380);
+    in.game_delay = 200;
+    CHECK(!rip::decide_delay(in).replaced);
+    in.char_on = true;
+    const rip::DelayOut o = rip::decide_delay(in);
+    CHECK(o.replaced && o.value == 380);
+}
+
 }  // namespace
 
 int main() {
+    test_char();
     test_keys_and_target();
     test_approach();
     test_observe_set();

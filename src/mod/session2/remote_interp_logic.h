@@ -226,6 +226,19 @@ struct Slot {
     std::atomic<uint64_t> arr_last{0};          // the newest ts that arrived
     std::atomic<uint32_t> d2_fix{0};            // probe: the class's delay beside the one in force (1/16 ms)
     std::atomic<uint64_t> combat_at{0};         // the clock of its last frame in the class (0 = never)
+    // Co-op+ 2026-11-21, the other player's character (remote_interp_char): the peak lateness its delay follows, when,
+    // and the newest sample's lateness.
+    std::atomic<uint32_t> peak{0};
+    std::atomic<uint64_t> peak_at{0};
+    std::atomic<uint32_t> late_last{0};
+    // One insert of the character: `late` = the game's clock minus the new sample's stamp (ms).
+    void note_char_late(uint32_t late, uint64_t now) noexcept {
+        late_last.store(late, std::memory_order_relaxed);
+        if (late >= peak.load(std::memory_order_relaxed)) {
+            peak.store(late, std::memory_order_relaxed);
+            peak_at.store(now, std::memory_order_relaxed);
+        }
+    }
 
     void reinit(uint32_t k, uint64_t now) noexcept {
         key.store(k, std::memory_order_relaxed);
@@ -241,6 +254,9 @@ struct Slot {
         arr_last.store(0, std::memory_order_relaxed);
         d2_fix.store(0, std::memory_order_relaxed);
         combat_at.store(0, std::memory_order_relaxed);
+        peak.store(0, std::memory_order_relaxed);
+        peak_at.store(0, std::memory_order_relaxed);
+        late_last.store(0, std::memory_order_relaxed);
         touched.store(now, std::memory_order_relaxed);
     }
     // P8 re-entry (s25/reentrada.md §1.4): the table generation the state was made in (SlotTable::new_generation).
@@ -682,9 +698,48 @@ inline constexpr std::array<uint32_t, 8> kCombatDelayBounds = {120, 140, 160, 20
 // (0 = not paired: its own target). `dense` (optional): whether the pair's target was taken.
 // combat (optional, P8 session 25): remote_interp_combat's mode, (b) and the exclusion in; the class and the delays
 // out. With 1 the class's target and descent drive d_fix; with probe d_fix is as before and d2_fix runs the class.
+// ---------------------------------------------------------------- Co-op+ 2026-11-21: the other player's character
+//
+// [session2] remote_interp_char = 0 (default) | 1, host and guest (needs remote_interp). Borque's two-PC logs (20
+// Nov): the other player's character held its pose while running in 3-8% of the frames (the game reads its buffer
+// 200 ms back and does not extrapolate: a sample later than that and it stands still until the next), on one PC 0%.
+// cs74b (TEST sim_lag 30 + 0..60 ms, 400 ms stalls): the holds came from samples arriving LATE for their own time
+// stamps (the sender's, in the server's time base), not from wider gaps between the stamps (those stayed as without
+// the lag). So with 1 the character (0xA) gets a delay of its own from its samples' LATENESS at arrival (the game's
+// clock at the insert minus the sample's stamp): the PEAK lateness (a later one raises it at once; it is kept
+// kCharPeakMs, then it is the newest one's again) + kCharMargin, within [the game's, kCharCap]; reached through the same
+// no-jump approach as an NPC's (<= +0.5 / -0.25 ms per ms). While it rides (a fresh ride pair) it keeps the game's
+// delay: its horse's pair target is the game's (remote_interp_pair).
+inline constexpr uint32_t kCharMargin = 60;
+inline constexpr uint32_t kCharCap = 600;
+inline constexpr uint32_t kCharMaxLate = 5000;  // a later "lateness" is a clock jump or a pause, not the network
+inline constexpr uint64_t kCharPeakMs = 10000;
+inline uint32_t char_target(uint32_t peak, uint32_t game_delay) {
+    const uint32_t lo = delay_floor(game_delay);
+    if (peak == 0) return lo;
+    return std::clamp(peak + kCharMargin, lo, std::max(lo, kCharCap));
+}
 inline void update_step(Slot& s, KeyClass cls, uint64_t now, uint32_t game_delay, uint32_t cap = kMaxDelay,
-                        uint32_t pair_delay = 0, bool* dense = nullptr, CombatStep* combat = nullptr) noexcept {
+                        uint32_t pair_delay = 0, bool* dense = nullptr, CombatStep* combat = nullptr,
+                        int char_mode = 0) noexcept {
     if (!s.updated.load(std::memory_order_relaxed)) s.updated.store(1, std::memory_order_relaxed);
+    if (cls == KeyClass::Character && char_mode != 0) {  // remote_interp_char (above): 1 = adapt, 2 = riding
+        uint32_t d = s.d_fix.load(std::memory_order_relaxed);
+        if (d == 0) d = to_fix(delay_floor(game_delay));
+        const uint64_t at = s.d_at.load(std::memory_order_relaxed);
+        const uint64_t dt = at && now > at ? now - at : 0;
+        // The peak lateness (note_char_late at each insert) runs out after kCharPeakMs without a newer peak.
+        uint32_t pk = s.peak.load(std::memory_order_relaxed);
+        if (pk && now >= s.peak_at.load(std::memory_order_relaxed) + kCharPeakMs) {
+            pk = s.late_last.load(std::memory_order_relaxed);
+            s.peak.store(pk, std::memory_order_relaxed);
+            s.peak_at.store(now, std::memory_order_relaxed);
+        }
+        const uint32_t target = char_mode == 2 ? delay_floor(game_delay) : char_target(pk, game_delay);
+        s.d_fix.store(approach(d, target, dt), std::memory_order_relaxed);
+        s.d_at.store(now, std::memory_order_relaxed);
+        return;
+    }
     if (cls != KeyClass::Npc) return;
     uint32_t d = s.d_fix.load(std::memory_order_relaxed);
     if (d == 0) d = to_fix(game_delay ? game_delay : kMinDelay);
@@ -743,6 +798,7 @@ struct DelayIn {
     bool updated = false;     // the slot's buffer is read by a per-frame update (mode 2)
     uint32_t d_fix = 0;       // the slot's delay (0 = none yet)
     uint32_t game_delay = kMinDelay;
+    bool char_on = false;     // remote_interp_char=1: the other player's character (0xA) gets its slot's delay too
 };
 struct DelayOut {
     uint32_t value = kMinDelay;  // what the read yields (the game's own unless replaced)
@@ -756,7 +812,8 @@ inline DelayOut decide_delay(const DelayIn& in) {
     DelayOut o;
     o.value = in.game_delay;
     o.would = in.game_delay;
-    if (in.mode == Mode::Off || !in.have_slot || in.cls != KeyClass::Npc || !in.updated || in.d_fix == 0) return o;
+    const bool cls_ok = in.cls == KeyClass::Npc || (in.cls == KeyClass::Character && in.char_on);
+    if (in.mode == Mode::Off || !in.have_slot || !cls_ok || !in.updated || in.d_fix == 0) return o;
     o.would = from_fix(in.d_fix);
     if (in.mode == Mode::On && in.applying && o.would != in.game_delay) {
         o.value = o.would;

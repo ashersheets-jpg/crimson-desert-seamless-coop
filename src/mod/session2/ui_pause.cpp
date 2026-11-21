@@ -7,6 +7,7 @@
 #include <safetyhook.hpp>
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <bit>
 #include <cstring>
@@ -223,9 +224,39 @@ void travel_now(uint32_t actor) noexcept {
     g_travel_called.store(actor, std::memory_order_release);
 }
 
+// Co-op+ 2026-11-21 (the running freeze, Borque: "for both players at the same time"): this game's own frame hitches,
+// one QueryPerformanceCounter per main loop turn. A hitch on the HOST stops its server too, so both screens freeze.
+// Main loop turns longer than 100 / 250 / 500 / 1000 ms, and the longest, while a P8 session is live.
+std::atomic<int64_t> g_frame_qpc{0};
+std::array<std::atomic<uint64_t>, 4> c_hitch{};
+std::atomic<uint64_t> c_hitch_max_us{0}, c_hitch_frames{0};
+int64_t qpc_freq() noexcept {
+    static const int64_t f = [] {
+        LARGE_INTEGER q{};
+        QueryPerformanceFrequency(&q);
+        return q.QuadPart ? q.QuadPart : 1;
+    }();
+    return f;
+}
+void note_frame_time() noexcept {
+    LARGE_INTEGER q{};
+    QueryPerformanceCounter(&q);
+    const int64_t prev = g_frame_qpc.exchange(q.QuadPart, std::memory_order_relaxed);
+    if (!prev || q.QuadPart <= prev || !g_live.load(std::memory_order_relaxed)) return;
+    const uint64_t us = static_cast<uint64_t>((q.QuadPart - prev) * 1000000 / qpc_freq());
+    c_hitch_frames.fetch_add(1, std::memory_order_relaxed);
+    if (us > 100000) c_hitch[0].fetch_add(1, std::memory_order_relaxed);
+    if (us > 250000) c_hitch[1].fetch_add(1, std::memory_order_relaxed);
+    if (us > 500000) c_hitch[2].fetch_add(1, std::memory_order_relaxed);
+    if (us > 1000000) c_hitch[3].fetch_add(1, std::memory_order_relaxed);
+    if (us > c_hitch_max_us.load(std::memory_order_relaxed) && us < 60000000)  // a minute: a pause / a debugger
+        c_hitch_max_us.store(us, std::memory_order_relaxed);
+}
+
 // 0x35CD990(world) -> f32 in xmm0. The original is the only game call.
 float __fastcall scale_detour(void* world) noexcept {
     freeze_watchdog_frame();  // once per main loop turn: the freeze watchdog's frame source (two relaxed stores)
+    note_frame_time();
     const FreezeMark mark(g_mark);
     const float orig = g_hook.unsafe_call<float>(world);
     if (const uint32_t a = g_travel_actor.exchange(0, std::memory_order_acq_rel)) travel_now(a);
@@ -668,11 +699,13 @@ std::string ui_pause_describe() {
     return std::format(
         "ui_pause_block {} ({}, hook {}) | session {} | frames {} (UI scale in force {}, blocked {}) | dt calls {} "
         "(blocked {}) | other callers {} | transitions {}, source changes {}, walks {} (incomplete {}), events lost "
-        "{} | UI value now {} | current episode {} frames ({} blocked)",
+        "{} | UI value now {} | current episode {} frames ({} blocked) | this game's hitches while live: of {} frames, "
+        "> 100 ms {}, > 250 ms {}, > 500 ms {}, > 1 s {}, longest {} ms",
         uip::mode_name(mode), g_guest ? "guest" : "host", g_on.load() ? "on" : "OFF", g_live.load() ? "LIVE" : "not live",
         c_calls[1].load(), c_would[1].load(), c_blocked[1].load(), c_calls[2].load(), c_blocked[2].load(),
         c_calls[0].load(), c_transitions.load(), c_sources.load(), c_walks.load(), c_walk_bad.load(), g_ring.dropped(),
-        std::format("{:g}", std::bit_cast<float>(bits)), g_ep.seen.load(), g_ep.blocked.load());
+        std::format("{:g}", std::bit_cast<float>(bits)), g_ep.seen.load(), g_ep.blocked.load(), c_hitch_frames.load(),
+        c_hitch[0].load(), c_hitch[1].load(), c_hitch[2].load(), c_hitch[3].load(), c_hitch_max_us.load() / 1000);
 }
 
 }  // namespace cdmp::session2
