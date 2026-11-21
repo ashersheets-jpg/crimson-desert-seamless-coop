@@ -9422,3 +9422,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   scratchpad native_commit_msg.txt) and the layer (layer_commit_msg.txt), sync native-base, push; scratchpad
   add_leave_step.py; Windows Update check; touch scan/after_pp41.go. Source of the next batch is uncommitted in
   upstream/cdmp-native (ai_handoff, ui_pause, tests + tests/opmap_2976.h) and upstream/cd-coop-3446/src (4 files).
+- 08:20 pp41 (24 steps on 4394b014) DONE: 1017 pass, 2 fail. static 12/0, crime 51/0, real 14/0, fresh 43/0, newsave
+  100/0, mounts 51/0, xess 44/0, fsr 44/0, display 7/0, lowsave 48/0, chest 47/0, revive 49/0, loot 48/0, farfight
+  47/0, farfight2 46/0, mountfight 47/0, nosave 7/0, retry 47/0, stuck 51/0, mismatch 9/0, hostrevive 51/0, solostart
+  49/0, latehook 59/0, lagrun 46/2. SAVES OK and 5/5 in every step. The 2 fails: lagrun's new-warning check on both
+  ends, the step's OWN test switch ("SessionN: TEST sim_lag on the tunnel's incoming side ..."; a WRN on purpose).
+  Test-kit fix (scratchpad fix_lagrun_wrn.py): the step allows that line for itself (WRN_ALLOW, as latehook), so a
+  sim_lag line in any other run still fails. By the rule (test-kit-only fix): pp41b = static fresh solostart lagrun,
+  after cs75c / cs76c (running now: no harness edit while they run). Then the post.
