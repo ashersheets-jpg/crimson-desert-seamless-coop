@@ -9208,3 +9208,14 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   guest_clock_fix=1, the clock probe), cs74h (no lag, defaults: the baseline clock error), cs73b (13 min hunt).
   Then the full checklist on the final build. cs77 (the host fights from the saddle, the guest's window shot
   focus-free: B06's last piece) after it.
+- 04:02 LEAD for B09 / B10 by script: every scripted talk try (cs25c-g, cs44b-d: "a script cannot aim a talk") held
+  E; in this game a talk starts with R while the camera faces the person (tcB242 / cs75's shop: walkto face + sweep
+  with R; cs33a: the host's R at the inn "started a talk with a patron"; the arm-wrestling route: hold R). And cs44's
+  "wait 75000" before Ross ran 10 s (the wait cap). build/native/faceto.py (actpid step py:faceto:X,Z: walkto's aim,
+  no walk) + cs79.sh: the cabin ready check, then the host 1 m east of Marius (-9840.0, -2825.6), aimed, R, Space x14;
+  at +75 s the same for Ross (-9828.2, -2821.2); 2 min of shots for "Enter the cabin". Queued after the checklist with
+  cs77 (B06 host saddle fight) and cs78 (B12 shared stash with the owner's save, its warehouse unlocked).
+- 04:07 cs73a done (SAVES OK, 5/5, both alive): no mount (type 5) within 400 m in 4 minutes of listings (the wait
+  cap), tpvehicle found none; the guest's late E presses: 2 accepted interactions 0xF4244 (objects): the talk rule
+  noted them, handed nothing (not near any player in its list after the grace: dropped, "ended 2"): harmless.
+  Branch probe: the host's 131 StageBranchStateReqs, 0 refused.

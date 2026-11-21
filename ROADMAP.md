@@ -199,7 +199,9 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   both games, testers saw it work 16 Nov. 2026-11-16 from their zips: no host story scene is copied to the guest any
   more (the black screen after the host's next cinematic; native 781dba6), the NPCs move in the guest's cabin scene
   (cs28b shots), a message when the friend is busy with the NPC (one talk at a time, the server's rule). Left: the
-  scenes that start from a TALK (design question to the user), a hands-on / tester check of the fix.)
+  scenes that start from a TALK (design question to the user), a hands-on / tester check of the fix.
+  2026-11-21: the talk scenes were decided (option 2, 11-17); a script may reach them now: talks start with R while
+  the camera faces the person, every scripted try had held E (cs79: faceto + R at Marius and Ross).)
 - [~] **B10 — Quest sharing on by default** (live quest steps, co-op save per friend: out of experimental).
   (2026-11-09: quest_route -- option 3 LIVE in tcB198: the guest's game events go to its OWN quest manager instead
   of the host's; option 2 = quest_shared_credit, built, untested. A guest quest step advancing still to be shown.)
