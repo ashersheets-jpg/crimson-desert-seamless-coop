@@ -5,6 +5,10 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- 2026-11-21 17:54 DONE: cfaa3a69 POSTED in #download-here by me (standing OK; checklist pp42 1064/7 over 26 steps,
+  none of the 7 the package's, then pp42b 155/1 and pp42c static 12/0 after test-kit-only fixes): the joined player's
+  greet / talk with townsfolk and its shops on 3732, the departure sweep. Tags Borque; a follow-up reply to his "can't
+  interact with NPCs" in #play-testing-feedback (17:55).
 - 2026-11-21 14:10 HANDS-ON (about 5 min, when you have time): one real FAST TRAVEL as the joined player. In a
   two-copy run I set up, the host stands at the Hernand butcher; you take the joined player's window, open its map
   and fast-travel to Hernand (any waypoint there), then walk to the butcher and hold R on her. It tells whether a real
@@ -9689,3 +9693,15 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   $ERR_ALLOW in unknown_errs, the two steps' allowances and growth limits 440 / 480 with the reasons), applied after
   pp42; then pp42b: static (clean tree, host_save relinked), leave, shop + smoke (fresh, solostart).
   Discord 15:10: #general only a new member (Luc), #play-testing-feedback nothing new.
+- 15:27-17:13 pp42's rest: farfight 47/0, farfight2 46/0, newsave 100/0, solostart 49/0, mounts 51/0, mountfight 47/0,
+  nosave 7/0, retry 47/0, stuck 51/0, mismatch 9/0, hostrevive 51/0, lagrun 48/0. TOTAL 1064 pass, 7 fail, 26 steps.
+- 17:14 test-kit fix (b1a7155: leave / shop allowances, $ERR_ALLOW) committed; pp42b (static leave shop fresh
+  solostart): 155 pass, 1 fail: static's unit tests again, Windows Defender quarantined cdmp_tests_optd_hooks_redirect
+  at 17:13:51 (same heuristic); relinked, run by hand: all pass; leave 27/0, shop 25/0 (both of the friend's shop
+  requests accepted again), fresh 43/0, solostart 49/0. Static step (test kit): an exe Defender quarantined while the
+  step ran it is an INFO line with the detection, not a failure (one gone without a detection stays a FAIL). pp42c
+  static 12/0. cfaa3a69's checklist complete.
+- 17:54 cfaa3a69 POSTED in #download-here (message 1573834060931928184, both zips: shared-world 12 828 728 B,
+  mod-manager 6 989 428 B; text docs/release/shared-world-playtest/download-cfaa3a69.txt, 1753 chars; CHANGELOG
+  entry). 17:55 the reply to Borque in #play-testing-feedback (message 1573834222672810015): the real "talk greyed" bug,
+  shops, the fast-travel case not checked yet.

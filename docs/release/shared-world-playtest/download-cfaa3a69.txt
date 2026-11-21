@@ -1,0 +1,14 @@
+**Update: shared world playtest 0.1.0-alpha+cfaa3a69, for game 1.0.0.3732**
+Use this instead of 4394b014; **both players need the same build**. From <@224953308010381312>'s "can't interact with NPCs":
+
+- **The joined player can greet and talk to townsfolk again.** On 1.0.0.3732 their greet / talk options stayed greyed: the part of the mod that gives the joined player the host's "who is this NPC" table read it from the wrong place after the update, so it was always empty. Fixed and checked: the joined player's greeting goes through ("Trust +5" and the NPC's line).
+- **Shops for the joined player work on 3732**, alone and with the host at the same shopkeeper (tested at the Hernand butcher). Not checked yet: a shop right after the joined player fast-travels into a town where the host already is; if one stays closed then, please tell us.
+- **If the other player's game closes or loads** (a crash, Alt+F4, fast travel), the NPCs it was running go back to the host's game instead of standing still.
+- The report zips now note each frame hitch with its time, so a "freeze at 21:40" can be matched.
+
+Tested with two copies of the game on one PC (Nvidia): the full checklist on 1.0.0.3732 (26 steps, two new: the joined player's shop alone and with the host there, and the friend's game closing mid-fight). Not covered here: two PCs over Steam, a real internet connection, AMD / Intel cards, long sessions; that is what your reports tell us.
+
+- `...cfaa3a69-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tell us in <#1567319198206525450> how it goes, with the report zip from **both** players (close the game, run **Diagnose Co-op+.cmd**).

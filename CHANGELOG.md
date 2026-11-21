@@ -5,6 +5,34 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
+POSTED 2026-11-21 17:54: 0.1.0-alpha+cfaa3a69, for game 1.0.0.3732 (checklist pp42 1064 pass, 7 fail over 26 steps, two new:
+shop and leave; none of the 7 the package's: two in the static step (an in-progress edit applied to the native tree
+while it ran; Windows Defender quarantining one unit-test exe at that moment) and five test-kit expectations of the two
+new steps (the friend's game killed: the tunnel's stop, U-1's goodbye while armed; the host parked far: U-1's logging,
+User2Shops' drain / nested-vf48 diagnostics, a teleport stopped 39 m short), then pp42b 155 pass, 1 fail (static, leave,
+shop, fresh, solostart with the test-kit fix; the 1: Defender quarantining another test exe) and pp42c static 12/0): everything in 4394b014 just below, plus (Borque 20 Nov "client still not
+able to interact with npcs"):
+- **The joined player's greet / talk with townsfolk work again on 3732** (NpcCategory): the game asks the NPC's
+  category from a per-player table before it offers a greeting or a talk; the joined player's is filled only on the
+  host (the NPCs' own stage functions run there), so the mod sends the host's table across. On 3732 the table's fields
+  are back at their 3576 places and the mod still read 3663's: the host's table always read empty and the joined
+  player's greet / talk stayed greyed. Fixed (the 3732 getter's own offsets). Checked: the host's table 188-213 NPCs,
+  the joined player's greeting of a townsperson accepted by the host's server, "Stranger - Trust +5" (cs80c).
+- **Shops for the joined player, checked on 3732**: alone (the host 440 m away: its own shop scene) and with the host
+  beside the shopkeeper (ShopTwin: its private copy of the host's shop scene), both accepted by the host's server and
+  the menu shown (cs82c; the checklist's new shop step). Not checked yet: a fast travel of the joined player INTO a town
+  whose shop scenes the host already runs. The test's cheat teleport loses its private shop copies there (cs75p5,
+  cs75w2); a real fast travel ends with a field move, after which the host sends its scenes again, so they should come
+  back by themselves (to confirm by hand).
+- **When the other player's game closes or loads** (a crash, Alt+F4, fast travel, a respawn) the NPCs its game ran go
+  back to the host's game (the departure sweep, native 18fdc52); an NPC the joined player talked to goes back to the
+  game that ran it only when that player is within 60 m.
+- Logs: each frame hitch over 0.5 s with its end time (UiPause), for "freeze at hh:mm" reports.
+- Research, off in the release: GuestXInter's probes of the joined player's NPC prompts ([session2]
+  guest_x_research), the evaluator change ([session2] guest_x_eval_fix: it would hide ShopTwin's entries), ShopTwin's
+  re-making of lost twins ([session2] shop_twin_again: a second round reviewed, a third pending a real fast travel).
+- Test kit: the checklist's shop step and leave step; step-specific error allowances ($ERR_ALLOW).
+
 POSTED 2026-11-21 09:31: 0.1.0-alpha+4394b014, for game 1.0.0.3732 (checklist pp41 1017 pass, 2 fail over 24 steps, one new:
 lagrun; the 2 were lagrun's own test switch announcing itself as a warning, allowed for that step in the test kit, then
 pp41b 152 pass, 0 fail (static, fresh, solostart, lagrun again)): everything in 69edcc84 just below, plus (Borque / Jay, 20-21 Nov):
