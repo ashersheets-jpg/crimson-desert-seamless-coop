@@ -9397,6 +9397,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   from ONE phase read plus server_logout_requested() (separate reads could race the server writing the 2762). Mine:
   a 250 ms poll could miss the Stable -> loading edge when MoveAsked / WindowA are sampled first: a latch ("in the
   world since the last trigger") instead of "was in at the last poll".
+- 07:00 cs83a / cs84a (B13) queued last in after_pp41.sh with START from scan/b13_start.txt (default E
+  "Participate"; set it from cs76c's shots before they run: the file can change while the chain runs, the script
+  cannot).
 - 06:20 SHARED-WORLD README written (kit/coopplus/README-shared-world.txt, committed 2956e9d; package-native.ps1
   now puts it in place of the normal README, whose body was the two-worlds mode). From an agent's survey of the
   layer's native menus (read only): the title flow, holding Interact on the friend (the menu: the challenges, a
