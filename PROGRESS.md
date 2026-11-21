@@ -9340,6 +9340,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   seq_copy, scene_diag, observer_stage, scene_acks, guest_stage (their 2976 captures read with today's numbers),
   plus seq_copy's route checks and scene_diag's first / last scene Req by constant. Layout changes (e.g. the
   PrepareSequencerAck's size) are not fixed by this: what still fails after the build needs 3732 captures.
+  c4 too (describe() built from the constants; its move sequences renumbered). optd's script-learn test fails on a
+  2976 PrepareSequencerAck (113 B, "91 + 11 n": the 3732 layout differs): needs a 3732 capture (cs75's butcher
+  scene in our own packet logs) and the test's values rewritten to it. Later.
 - 06:20 SHARED-WORLD README written (kit/coopplus/README-shared-world.txt, committed 2956e9d; package-native.ps1
   now puts it in place of the normal README, whose body was the two-worlds mode). From an agent's survey of the
   layer's native menus (read only): the title flow, holding Interact on the friend (the menu: the challenges, a
