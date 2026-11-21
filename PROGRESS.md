@@ -9187,3 +9187,12 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   pushes a third of them past it, a short hold each time. That is the "almost all the time" freeze (Borque) and Jay's
   "small desync hitches". The guest's view of the standing host: lateness mostly <= 100 ms. Frame hitches (UiPause):
   host 8 frames > 100 ms (one 1957 ms: the teleport / load), guest 4: these games do not hitch while running here.
+- 03:45 cs74d (cs74c + remote_interp_char=1 both ends): mid-run holds <=100 ms 53 -> 1, <=300 1 -> 0, <=1000 1 -> 1
+  (longest 424 -> 324 ms); held 8.1% -> 3.3% (the rest: the stops at the end of each 12 s leg and the teleport,
+  which the old measure also counts); the character's delay settled at 265 ms (peak lateness 205). This run's
+  lateness had 421 samples 300-500 ms late (cs74c: 26): consistent with the clock lead (a ServerTimeInfoAck 2474
+  delayed by a stall sets the guest's clock behind for 5 s; the game takes tick - now with no allowance for travel).
+- 03:49 native 2c0ef47: the clock probe (RemoteInterp [clock] every 10 s: game now - QPC; on one PC host vs guest =
+  the guest clock's error) and guest_clock_fix (default 0: 2474's tick from the least delayed Ack of the last minute
+  + half the link's RTT; GuestClockFix lines measure it always). Layer: remote_interp_char=1 by default on both ends
+  (layer test checks it). Unit tests: native 60 / 30 (baseline), layer all pass. Package 4394b014.
