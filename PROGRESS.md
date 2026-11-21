@@ -9334,3 +9334,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   The shared-world README is the two-worlds README with a section added (its body says townsfolk / animals are not
   shared, no trading, F8 panel, ...): a README for the shared world is being written (an agent surveys the layer's
   native menus first).
+- 06:14 The opcode map 2976 -> 3732 BY NAME (build/scratch-keep/opmap.py: every kOp<Name> constant of the native
+  src at 3cbb03c and at HEAD: 296 pairs, 123 old numbers, none ambiguous) -> tests/opmap_2976.h (generated:
+  renumber_2976(op) and renumber_2976_packet(p) for a whole captured packet). Used by the capture readers of
+  seq_copy, scene_diag, observer_stage, scene_acks, guest_stage (their 2976 captures read with today's numbers),
+  plus seq_copy's route checks and scene_diag's first / last scene Req by constant. Layout changes (e.g. the
+  PrepareSequencerAck's size) are not fixed by this: what still fails after the build needs 3732 captures.
