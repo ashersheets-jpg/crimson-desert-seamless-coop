@@ -9517,3 +9517,33 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   rule tested only on a bandit; "Known, being worked on: the joined player cannot open some townsfolk's talks and
   shops at all (Borque's video; we reproduced it)"); 1877 chars shown, both zips kept. The chain's remaining runs
   that need no talk started as chain_c.sh on 908c60c5 (cs74g, cs74h, cs73b, cs79a, cs77a, cs78a, cs85a, cs83a).
+- 10:50 reading cs75d / cs75p1 / cs75q1 / cs75g: the butcher's scene gets a new id each run (0x32B, 0x329, 0x32A, 0x32E:
+  ids go in load order); her shop twin for the joined player is prepared in every run ("ShopTwin [prepared] ...
+  resource 0x978345CA -> twin 0x1000xxxx for 0xA0100066"), so the twin is not what differs. On the joined player's
+  client Renee stays bound to the HOST's scene (GuestSeqRoute [G5 actor]: owner 0xA0100001, NOT bound). What differs:
+  cs75d's client checked entries of hers bound to the host's scene (redirected to X, refused), cs75p1's checked none
+  (23 947 checks, all of entries with no stage). Also seen on the host: User2Stages' D / S / F / H points REFUSED (2976
+  addresses never ported, already on 3576 where the shop worked: not the regression). Next: research build gx3 logs, on
+  the joined player's client, the StageChart interaction node's ADD / REMOVE of NPCs' dynamic entries (which scene of
+  which manager: its own M, the host's X) and dumps the touched components' lists. chain_c paused after cs74g
+  (scan/chain.stop) so gx3 can be built.
+- 11:00-11:12 cs75p2 (gx3: gates + early counters + node hooks, at the butcher, R every 15 s): SAVES OK, 5/5. ROOT CAUSE
+  of the joined player's dead NPC prompts found: this run was in the redirect state (its client checked Renee's
+  entries bound to the host's butcher scene: 4432 redirected calls) and EVERY one passed all five gates (the
+  instance's +0x168, its dead check, the player's condition 0xC51C, the condition list, 0x1C9FBB0) and was refused
+  after them, at exe+0x2360A4D: mov r10,[r13+8] ; test ; je -> xor bl,bl. The entry has NO EVALUATOR ([entry+8] == 0;
+  the code after it only chooses between 1 and 2, both accepted). The joined player's copies of the host's entries
+  never get one: no StageChart interaction node runs on its client at all (0 ADD / 0 REMOVE), they arrive with the
+  NPC from the host. FIX (native, gx4): a mid hook at 0x2360A4D: a REDIRECTED call whose entry has no evaluator gets
+  BL = 1 (accepted) and goes on at the tail 0x2360B7C every result takes (7 bytes patched, no branch inside; the
+  native refusal reaches the same tail). The host's server still validates the interaction itself. The research
+  hooks (gates, early counters, nodes) now install only with [session2] guest_x_research=1. cs75p3 (gx4) running.
+- 11:14-11:26 cs75p3 (gx4, THE FIX): SAVES OK, 5/5. The joined player's prompt checks of Renee's redirected entries
+  were ACCEPTED (10 978) and its screen now shows "R Shop" on her (before: only the bowl's "E Buy"). But holding R
+  still sent nothing to the host's server: the start of the interaction needs more than the prompt (likely the same
+  missing evaluator). gx5 (cs75s1, the host with guest_x_research=1): all 26 701 of the host's own checks had an
+  evaluator; entry+8 is a holder whose first field is the evaluator object (whose first field is its vtable), a
+  distinct object per entry. Next (gx6, cs75p4 running): the whole 0x38 bytes of the entries on both games, and in
+  which thread / for which kind of stage manager (client or server) the host's process runs the node that creates
+  them; then decide between making the host's scenes run their StageChart on the joined player's client (as on 3576:
+  there the redirect alone made the shop open) and resolving the evaluator in X the way the redirect does.
