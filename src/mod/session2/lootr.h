@@ -61,5 +61,7 @@ void lootr_host_loaded(uint32_t slot) noexcept;   // LoadSlot of a host world sl
 void lootr_host_saved(uint32_t slot) noexcept;    // SavePlayerToSlot of a host world slot: the snapshot
 void lootr_host_flushed(uint32_t slot) noexcept;  // FlushPendingSaveData committed that slot: its file
 void lootr_guest_saved() noexcept;                // user 2's save went through and was exported: the ledger
+// v3: trade_probe's 0xC0DE0005 worker (the server thread) ran an in-session give's add for `requester` (ok = added).
+void lootr_server_added(uint32_t requester, uint32_t item, uint64_t count, bool ok) noexcept;
 
 }  // namespace cdmp::session2

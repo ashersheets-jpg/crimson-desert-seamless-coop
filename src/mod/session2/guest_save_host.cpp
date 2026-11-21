@@ -888,7 +888,9 @@ int* __fastcall load_slot_detour(uintptr_t mgr, int* res, uint32_t slot, uintptr
     t_load_slot = {outer.depth + 1, actor, d.action == Action::Remap};
     int* r = g_h_load_slot.unsafe_call<int*>(mgr, res, d.slot, actor);
     t_load_slot = outer;
-    if (owner == Owner::Host && d.action != Action::Remap && hsv::slot_whitelisted(d.slot)) {
+    // B19 v3: armed once per world load, at the host CHARACTER's LoadSlot (the user actor's login / lobby calls of the
+    // same load come first and do not arm).
+    if (owner == Owner::Host && !self && d.action != Action::Remap && hsv::slot_whitelisted(d.slot)) {
         int32_t code = -1;
         if (peek(reinterpret_cast<uintptr_t>(r), code) && code == 0) lootr_host_loaded(d.slot);  // B19
     }

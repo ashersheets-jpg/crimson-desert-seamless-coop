@@ -36,7 +36,7 @@ inline constexpr int64_t kMaxCount = 9999;                   // per kind (the 0x
 inline constexpr int64_t kKeepSeconds = 30ll * 24 * 3600;    // a share nobody fetched in 30 days (wall clock) is dropped
 inline constexpr int64_t kLedgerSeconds = kKeepSeconds + 2 * 86400;  // ledger marks outlive the shares they cancel
 inline constexpr size_t kMaxShares = 400;                    // per file and in memory (the oldest go first)
-inline constexpr size_t kMaxMarks = 4000;                    // ledger lines (the oldest go first)
+inline constexpr size_t kMaxMarks = 100000;  // ledger lines, a safety net (v3: only filed ids are marked; age prunes)
 inline constexpr std::string_view kHeader = "cdmp-lootr-shares 1";
 inline constexpr std::string_view kLedgerHeader = "cdmp-lootr-given 1";
 

@@ -1045,14 +1045,30 @@ int players_now(PlayerAt* out, int cap) noexcept {
 std::vector<lpl::Share> g_near;  // guarded by g_mu: shares waiting at their place (6 m)
 struct GivenGuest {
     uint64_t id;
-    uint64_t at;  // GetTickCount64 at the give
+    uint64_t at;  // GetTickCount64 at the give (its add has run, on the server thread)
 };
-std::vector<GivenGuest> g_given_guest;  // guarded by g_mu: given to the joined player, not on the ledger yet
+std::vector<GivenGuest> g_given_guest;  // guarded by g_mu: given to the joined player (added), not on the ledger yet
+// v3: the in-session "the guest took it too" give runs later on the server thread (trade_probe's 0xC0DE0005 worker):
+// lootr_tick queues it here, lootr_server_added moves it to g_given_guest once the add ran.
+struct PendingAdd {
+    uint64_t id;
+    uint32_t requester, item;
+    int64_t count;
+    uint64_t at;
+};
+std::vector<PendingAdd> g_pending_adds;  // guarded by g_mu
+std::vector<lpl::Mark> g_ledger_due;     // the server thread: marks of saves whose ledger write failed (tried again)
+std::atomic<bool> g_ledger_retry{false};
+std::atomic<size_t> g_ledger_due_n{0};  // its size, for the status line (another thread)
+std::unordered_set<uint64_t> g_filed;    // guarded by g_mu: ids ever in a slot file (written or read) in this process
+std::atomic<bool> g_tracking{false};     // armed once in this process (the folder known): gives are tracked
+std::atomic<uint64_t> c_p_unfiled{0}, c_p_setaside{0}, c_p_late_commit{0};
 std::atomic<int> g_near_n{0};
 std::atomic<bool> g_write_due{false};
 std::wstring g_pdir;  // the server thread: <co-op folder>\cdmp_lootr
 struct PendingSlot {  // the server thread: a host save's snapshot, written at that slot's commit
     uint32_t slot = 0;
+    uint64_t snap_ms = 0;  // GetTickCount64 at the snapshot (SavePlayerToSlot)
     std::vector<lpl::Share> list;
     bool committed = false;  // its commit came and the write failed: Lootr's entry tries again
     int64_t stamp = 0;
@@ -1191,7 +1207,23 @@ std::vector<lpl::Share> persist_list() {
     std::stable_sort(list.begin(), list.end(), [](const lpl::Share& a, const lpl::Share& b) { return a.made < b.made; });
     return list;
 }
+// A slot's file that may no longer be that save's (its newer write failed, or a snapshot came too late): renamed
+// .stale (deleted if that fails), so a load of the slot restores nothing rather than an older save's shares.
+void set_aside(uint32_t slot, const char* why) {
+    const std::wstring path = slot_path(slot), aside = path + L".stale";
+    const bool moved = MoveFileExW(path.c_str(), aside.c_str(), MOVEFILE_REPLACE_EXISTING) != 0;
+    const DWORD e = moved ? 0 : GetLastError();
+    if (!moved && e != ERROR_FILE_NOT_FOUND && e != ERROR_PATH_NOT_FOUND) DeleteFileW(path.c_str());
+    if (moved || (e != ERROR_FILE_NOT_FOUND && e != ERROR_PATH_NOT_FOUND)) {
+        c_p_setaside.fetch_add(1);
+        log::warn("Lootr: slot {}'s shares file set aside ({}): a load of that slot restores none", slot, why);
+    }
+}
 bool persist_write_slot(PendingSlot& p) {
+    {
+        std::lock_guard lk(g_mu);
+        for (const lpl::Share& s : p.list) g_filed.insert(s.id);  // filed (or about to be): its give is ledgered
+    }
     const std::string text =
         lpl::to_text(p.list, unix_now(), std::format("slot {}: the shares as of the host's save of it", p.slot), p.stamp);
     const DWORD e = write_small_file(slot_path(p.slot), text);
@@ -1204,6 +1236,7 @@ bool persist_write_slot(PendingSlot& p) {
         return true;
     }
     c_p_failed.fetch_add(1);
+    if (p.tries == 0) set_aside(p.slot, "its newer write failed");
     if (++p.tries <= 3 || p.tries % 100 == 0)
         log::warn("Lootr: slot {}'s shares file could NOT be written (error {}, try {}): tried again every 2 s",
                   p.slot, e, p.tries);
@@ -1284,16 +1317,45 @@ void persist_keep(const ChestShare& c, const char* why) noexcept {
 }
 // A share the joined player got (not under g_mu): on the ledger at its next save.
 void persist_given_guest(uint64_t id) noexcept {
-    if (!g_armed.load() || !id) return;
+    if (!g_tracking.load() || !id) return;
     try {
         std::lock_guard lk(g_mu);
         g_given_guest.push_back({id, GetTickCount64()});
     } catch (...) {
     }
 }
+// The ledger with `add` (and every mark still due) written; false = not written (they all stay due). Server thread.
+bool ledger_write(const std::vector<lpl::Mark>& add) {
+    const int64_t now = unix_now();
+    std::vector<lpl::Mark> all = g_ledger_due;
+    all.insert(all.end(), add.begin(), add.end());
+    if (all.empty()) return true;
+    std::string text;
+    DWORD e = 0, w = 0;
+    const ReadResult r = read_small_file(ledger_path(), text, e);
+    const lpl::Ledger l = r == ReadResult::Ok ? lpl::ledger_parse(text, now) : lpl::Ledger{};
+    if (r == ReadResult::Error || (r == ReadResult::Ok && !l.header_ok) ||
+        (w = write_small_file(ledger_path(), lpl::ledger_text(l.marks, all, now))) != 0) {
+        g_ledger_due = std::move(all);
+        g_ledger_due_n = g_ledger_due.size();
+        g_ledger_retry = true;
+        c_p_failed.fetch_add(1);
+        static std::atomic<int> said{0};
+        if (said.fetch_add(1) < 20)
+            log::warn("Lootr: the ledger could NOT be written (read {} / write {}): its {} mark(s) are tried again every "
+                      "2 s", e, w, g_ledger_due.size());
+        return false;
+    }
+    c_p_ledger.fetch_add(add.size());
+    g_ledger_due.clear();
+    g_ledger_due_n = 0;
+    g_ledger_retry = false;
+    return true;
+}
 // Lootr's entry (the server thread, every 2 s while armed with work): a failed write again, the waiting shares.
 void persist_server_work() noexcept {
     try {
+        if (!g_ledger_due.empty()) ledger_write({});
         bool due = false;
         for (size_t i = 0; i < g_pending.size();) {
             PendingSlot& p = g_pending[i];
@@ -1321,10 +1383,8 @@ void lootr_set_persist(bool on) { g_persist_on = on; }
 void lootr_host_loaded(uint32_t slot) noexcept {
     if (!g_persist_on || !g_on) return;
     try {
-        const uint64_t tick = GetTickCount64();
-        if (slot == g_loaded_slot && tick - g_loaded_at < 15000) return;  // the same load's second call (its character)
-        g_loaded_slot = slot;
-        g_loaded_at = tick;
+        g_loaded_slot = slot;  // v3: called for the host CHARACTER's LoadSlot only (guest_save_host), once a load
+        g_loaded_at = GetTickCount64();
         const std::wstring coop = save_hooks_coop_dir();
         if (coop.empty()) {
             static bool said = false;
@@ -1361,7 +1421,7 @@ void lootr_host_loaded(uint32_t slot) noexcept {
         // A file older than the slot's own save files missed a later save of that slot: its shares are not that
         // save's (losing them beats giving twice).
         const int64_t saved = newest_save_time(coop, slot);
-        const bool stale = p.header_ok && saved > 0 && p.stamp > 0 && saved > p.stamp + 120;
+        const bool stale = p.header_ok && saved > 0 && p.stamp > 0 && saved > p.stamp + 10;
         if (stale) {
             c_p_stale.fetch_add(1);
             log::warn("Lootr: slot {}'s shares file (stamp {}) is older than that save ({}): not restored", slot,
@@ -1372,6 +1432,11 @@ void lootr_host_loaded(uint32_t slot) noexcept {
         {
             std::lock_guard lk(g_mu);
             for (const GivenGuest& g : g_given_guest) gone.push_back(g.id);
+            for (const PendingAdd& a : g_pending_adds) gone.push_back(a.id);  // queued gives: maybe added already
+            for (const lpl::Mark& m : g_ledger_due) gone.push_back(m.id);    // saved, not on the ledger file yet
+            if (p.header_ok) {
+                for (const lpl::Share& s : p.shares) g_filed.insert(s.id);
+            }
             if (p.header_ok && !stale) back = lpl::minus_ids(p.shares, gone);
             g_taken.clear();
             g_near = back;
@@ -1383,6 +1448,7 @@ void lootr_host_loaded(uint32_t slot) noexcept {
         g_pending.clear();
         g_write_due = false;
         g_armed = true;
+        g_tracking = true;
         c_p_read.fetch_add(back.size());
         int for_host = 0;
         for (const lpl::Share& s : back) for_host += s.for_host ? 1 : 0;
@@ -1400,6 +1466,7 @@ void lootr_host_saved(uint32_t slot) noexcept {
     try {
         PendingSlot p;
         p.slot = slot;
+        p.snap_ms = GetTickCount64();
         p.list = persist_list();
         for (PendingSlot& q : g_pending) {
             if (q.slot == slot) {
@@ -1418,6 +1485,12 @@ void lootr_host_flushed(uint32_t slot) noexcept {
         for (size_t i = 0; i < g_pending.size(); ++i) {
             PendingSlot& p = g_pending[i];
             if (p.slot != slot || p.committed) continue;
+            if (GetTickCount64() - p.snap_ms > 60000) {  // v3: what the slot holds may differ from the snapshot
+                c_p_late_commit.fetch_add(1);
+                set_aside(slot, "its commit came over 60 s after the snapshot");
+                g_pending.erase(g_pending.begin() + static_cast<std::ptrdiff_t>(i));
+                return;
+            }
             p.committed = true;
             p.stamp = unix_now();
             if (persist_write_slot(p)) {
@@ -1432,39 +1505,42 @@ void lootr_host_flushed(uint32_t slot) noexcept {
 }
 // B19: the joined player's save went through: the shares it got (at least 1.5 s ago, so the add has run) go on the
 // ledger. Nothing is dropped until the ledger is written.
+// v3: every give recorded before this save (all on the server thread, as this call) is in it: each one whose share
+// was ever in a slot file or waits in a snapshot is marked; the others can never come back (no mark). A failed
+// ledger write keeps the marks due (persist_server_work tries again every 2 s).
 void lootr_guest_saved() noexcept {
-    if (!g_armed.load()) return;
+    if (!g_tracking.load()) return;
     try {
-        const uint64_t tick = GetTickCount64();
         const int64_t now = unix_now();
         std::vector<lpl::Mark> add;
         {
+            std::unordered_set<uint64_t> waiting;
+            for (const PendingSlot& p : g_pending) {
+                for (const lpl::Share& s : p.list) waiting.insert(s.id);
+            }
             std::lock_guard lk(g_mu);
             for (const GivenGuest& g : g_given_guest) {
-                if (tick - g.at >= 1500) add.push_back({g.id, now});
+                if (g_filed.count(g.id) || waiting.count(g.id)) add.push_back({g.id, now});
+                else c_p_unfiled.fetch_add(1);
             }
+            g_given_guest.clear();
         }
-        if (add.empty()) return;
-        std::string text;
-        DWORD e = 0;
-        const ReadResult r = read_small_file(ledger_path(), text, e);
-        const lpl::Ledger l = r == ReadResult::Ok ? lpl::ledger_parse(text, now) : lpl::Ledger{};
-        DWORD w = 0;
-        if (r == ReadResult::Error || (r == ReadResult::Ok && !l.header_ok) ||
-            (w = write_small_file(ledger_path(), lpl::ledger_text(l.marks, add, now))) != 0) {
-            c_p_failed.fetch_add(1);
-            log::warn("Lootr: the ledger could NOT be updated at the joined player's save (read {} / write {}): its {} "
-                      "share(s) stay for its next save", e, w, add.size());
+        if (!add.empty()) ledger_write(add);
+    } catch (...) {
+    }
+}
+// v3 (trade_probe's 0xC0DE0005 worker, the server thread): an in-session give ran its add.
+void lootr_server_added(uint32_t requester, uint32_t item, uint64_t count, bool ok) noexcept {
+    if (!g_tracking.load() || requester == kHostCharacter) return;
+    try {
+        std::lock_guard lk(g_mu);
+        for (size_t i = 0; i < g_pending_adds.size(); ++i) {
+            const PendingAdd& a = g_pending_adds[i];
+            if (a.requester != requester || a.item != item || a.count != static_cast<int64_t>(count)) continue;
+            if (ok) g_given_guest.push_back({a.id, GetTickCount64()});
+            g_pending_adds.erase(g_pending_adds.begin() + static_cast<std::ptrdiff_t>(i));
             return;
         }
-        c_p_ledger.fetch_add(add.size());
-        std::lock_guard lk(g_mu);
-        std::erase_if(g_given_guest, [&](const GivenGuest& g) {
-            for (const lpl::Mark& m : add) {
-                if (m.id == g.id) return true;
-            }
-            return false;
-        });
     } catch (...) {
     }
 }
@@ -1472,7 +1548,7 @@ void lootr_set_body_share(bool on) { g_body_share_on = on; }
 
 void lootr_chest_shares(uintptr_t host_actor) noexcept {
     if (!g_on || !host_actor) return;
-    if (g_armed.load()) persist_server_work();  // B19
+    if (g_armed.load() || g_ledger_retry.load()) persist_server_work();  // B19
     if (!g_share_n) return;
     PlayerAt pl[4];
     const int n = players_now(pl, 4);
@@ -1763,7 +1839,8 @@ void lootr_tick(std::vector<std::vector<uint8_t>>& to_server) noexcept {
     try {
         const uint64_t now = GetTickCount64();
         static uint64_t next_share = 0;
-        if ((g_shares_pending.load() > 0 || (g_armed.load() && (g_near_n.load() > 0 || g_write_due.load()))) &&
+        if ((g_shares_pending.load() > 0 || g_ledger_retry.load() ||
+             (g_armed.load() && (g_near_n.load() > 0 || g_write_due.load()))) &&
             now >= next_share) {  // the host's own request: the server thread
             next_share = now + 2000;
             std::vector<uint8_t> pl(30, 0);
@@ -1876,7 +1953,8 @@ void lootr_tick(std::vector<std::vector<uint8_t>>& to_server) noexcept {
                 log::info("Lootr: the guest took gimmick 0x{:08X} too: item key {} x{} for 0x{:08X}, {} packet(s) "
                           "replayed", t.g, t.item_key, t.count, t.requester, t.held.size());
                 t.state = 2;
-                if (g_armed.load() && t.share_id) g_given_guest.push_back({t.share_id, now});  // B19 (under g_mu)
+                if (g_tracking.load() && t.share_id)  // B19 v3: recorded when the worker's add ran (under g_mu)
+                    g_pending_adds.push_back({t.share_id, t.requester, t.item_key, static_cast<int64_t>(t.count), now});
             }
         }
         if (g_armed.load()) {  // B19: not taken within kKeepMs: it waits at its place (and across sessions) instead
@@ -1889,6 +1967,7 @@ void lootr_tick(std::vector<std::vector<uint8_t>>& to_server) noexcept {
             }
         }
         std::erase_if(g_taken, [&](const Taken& t) { return t.state == 2 || now - t.at > kKeepMs; });
+        std::erase_if(g_pending_adds, [&](const PendingAdd& a) { return now - a.at > 60000; });  // never ran: not given
     } catch (...) {
     }
 }
@@ -1909,10 +1988,12 @@ std::string lootr_describe() {
                        c_body_shared.load()) +
            (!g_persist_on ? std::string(" | kept across sessions: off")
                           : std::format(" | kept across sessions: {} | restored {} given {} waiting {} kept late {} | "
-                                        "slot files written {} failed {} stale {} | ledger marks {}",
+                                        "slot files written {} failed {} stale {} set aside {} (late commits {}) | "
+                                        "ledger marks {} (due {}, unfiled gives {})",
                                         g_armed.load() ? "armed" : "not armed yet", c_p_read.load(), c_p_given.load(),
                                         g_near_n.load(), c_p_late.load(), c_p_written.load(), c_p_failed.load(),
-                                        c_p_stale.load(), c_p_ledger.load()));
+                                        c_p_stale.load(), c_p_setaside.load(), c_p_late_commit.load(),
+                                        c_p_ledger.load(), g_ledger_due_n.load(), c_p_unfiled.load()));
 }
 
 void lootr_host_recv(uint8_t* packet, uint16_t size) noexcept {

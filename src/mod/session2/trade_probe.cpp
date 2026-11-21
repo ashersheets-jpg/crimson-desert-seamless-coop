@@ -673,6 +673,7 @@ int* __fastcall worker_detour(uintptr_t self, int* err, uint32_t item, uint16_t 
                             me == g && me == r && (me >> 28) == 0xA && item && count >= 1 &&
                             count <= 9999;
         if (ok_req) e = lootr_add(base, self, item, count);
+        if (ok_req) lootr_server_added(me, item, count, e == 0);  // B19 v3: the give ran (the ledger)
         log::info("Lootr: {}'s copy: item key {} x{} to 0x{:08X}: {} (err {} {})",
                   me == kHostCharacter ? "the host" : "the guest", item, count, me,
                   ok_req ? (e == 0 ? "added" : "NOT added") : "refused (not the player's own request)", e, err_name(e));
