@@ -195,9 +195,18 @@ static)
   [ "$t" = "All tests passed" ] && ok "layer unit tests: $t" || bad "layer unit tests: $t"
   # native unit tests: 31 of them still carry fixtures of the older game version and fail (docs/tests/
   # native-unit-baseline.txt, the same set since 2026-11-09); only a test OUTSIDE that list failing is a finding.
-  nt=0; nnew=""; for t in $ROOT/upstream/cdmp-native/build/bin/RelWithDebInfo/cdmp_tests*.exe; do
-    b=$(basename "$t" .exe); nt=$((nt+1)); "$t" > /dev/null 2>&1 || { grep -qx "$b" $ROOT/docs/tests/native-unit-baseline.txt || nnew="$nnew $b"; }
+  nt=0; nnew=""; nav=""; for t in $ROOT/upstream/cdmp-native/build/bin/RelWithDebInfo/cdmp_tests*.exe; do
+    b=$(basename "$t" .exe); nt=$((nt+1)); "$t" > /dev/null 2>&1 || { grep -qx "$b" $ROOT/docs/tests/native-unit-baseline.txt || { [ -f "$t" ] && nnew="$nnew $b" || nav="$nav $b"; }; }
   done 2>/dev/null
+  # 2026-11-21 (pp42 / pp42b): Windows Defender's machine-learning heuristic ("Program:Win32/Wacapew.A!ml") quarantines
+  # one of these test exes now and then while this step runs it (host_save 13:36, hooks_redirect 17:13; they redirect
+  # save paths in temp folders). An exe that vanished is not a test result: named with Defender's detection (relink it
+  # and run it by hand); one gone without a detection is a FAIL. This step never changes a security setting.
+  for b in $nav; do
+    d=$(powershell -NoProfile -Command "\$d = Get-MpThreatDetection -ErrorAction SilentlyContinue | Where-Object { (\$_.Resources -join ' ') -like '*$b.exe*' } | Sort-Object InitialDetectionTime -Descending | Select-Object -First 1; if (\$d) { \$d.InitialDetectionTime.ToString('yyyy-MM-dd HH:mm:ss') }" 2>/dev/null | tr -d '\r')
+    [ -n "$d" ] && info "native unit test $b: its exe was QUARANTINED by Windows Defender at $d (a heuristic, not a test result): not run; relink and run it by hand" \
+                || bad "native unit test $b: its exe vanished while this step ran (no antivirus detection found)"
+  done
   [ -z "$nnew" ] && ok "native unit tests: $nt run, no failure outside the known old list ($(wc -l < $ROOT/docs/tests/native-unit-baseline.txt) old-fixture tests)" || bad "native unit tests: NEW failures:$nnew"
   o=$(cd $ROOT && powershell -NoProfile -ExecutionPolicy Bypass -File tools/test-install-fake.ps1 -Zip "$(cygpath -w "$PKG.zip")" 2>&1 | tr -d '\r')
   echo "$o" | grep -q "All steps passed" && ok "install / uninstall / vanilla on a fake game folder: All steps passed" || { bad "test-install-fake: $(echo "$o" | tail -2 | tr '\n' ' ')"; }
