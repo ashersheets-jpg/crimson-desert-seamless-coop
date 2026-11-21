@@ -28,11 +28,18 @@
 namespace cdmp::session2 {
 
 // From guest_start. mode = guest_x_interaction_stage's raw value; route_mode = guest_seq_route's (refused unless 1).
-void guest_x_interaction_start(const std::string& mode, const std::string& route_mode);
+// research: the read-only counters inside the check (guest_x_research=1). In mode 1 a redirected entry with no
+// evaluator of its own is accepted (2026-11-21: the joined player's copies of the host's entries never get one).
+void guest_x_interaction_start(const std::string& mode, const std::string& route_mode, bool research = false,
+                               bool eval_fix = false);
+// HOST, research only (guest_x_research=1): what the host's own entries carry as their evaluator.
+void guest_x_interaction_host_probe_start();
 void guest_x_interaction_tick() noexcept;  // the diagnostics thread, every 5 s
 // guest_x_veto: an X (another character's ClientSequencerStageManager) this client just used, with the character
 // key it belongs to (0 if unknown). Any game thread; atomics only; a no-op while the module is off.
 void guest_x_interaction_note_x(uintptr_t x, uint32_t key) noexcept;
+// Research (guest_x_research=1): a sequencer GuestSeqRoute routed into X (its 2661).
+void guest_x_interaction_note_xseq(uint64_t seq) noexcept;
 // S46 phase 2 (shop_trade_probe's R0 on the guest): the X managers noted in this conversation (at most cap; 0 while the
 // module is off). Any thread; atomics only.
 size_t guest_x_interaction_known_x(uintptr_t* xs, size_t cap) noexcept;

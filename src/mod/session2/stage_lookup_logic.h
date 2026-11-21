@@ -194,6 +194,33 @@ inline constexpr uintptr_t kCtxA = 0x23608CE, kCtxLookup = 0x2360916;  // 3576 (
 inline constexpr uint8_t kCtxABytes[] = {0x48, 0x8B, 0x4C, 0x24, 0x48, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x48};
 inline constexpr uint8_t kCtxLookupBytes[] = {0x4D, 0x8B, 0x45, 0x20, 0x48, 0x8D, 0x95, 0xE0, 0x08, 0x00, 0x00,
                                               0x48, 0x8B, 0xCF, 0xE8, 0x47, 0x6A, 0xE6, 0xFF};  // 3576
+// Gates between R and F (2026-11-21, 3732 only: read-only research hooks; the 3576 code has the same checks):
+//   P0 cmp dword [rdi+0x168],0 | P1 mov edi,[r14+0x78] ; mov [rbp+0x8E0],edi | P2 lea rcx,[rbp+0x8E0] |
+//   P3 mov edx,edi ; mov rcx,[rsp+0x30] | P4 mov rcx,[rbp+0x8F0]
+inline constexpr uintptr_t kGateAt[5] = {0x236097A, 0x236099E, 0x23609D9, 0x2360A2A, 0x2360A3E};
+inline constexpr uint32_t kGatePatch[5] = {7, 10, 7, 7, 7};
+// The evaluator test (2026-11-21 fix): 0x2360A4D mov r10,[r13+8] ; test r10,r10 (then je 0x2360B7A: xor bl,bl = refused).
+// A redirected entry with no evaluator continues at the tail 0x2360B7C with BL = 1 (accepted).
+inline constexpr uintptr_t kEvalAt = 0x2360A4D, kTailAt = 0x2360B7C;
+inline constexpr uint32_t kEvalPatch = 7;
+inline constexpr uint8_t kEvalBytes[] = {0x4D, 0x8B, 0x55, 0x08, 0x4D, 0x85, 0xD2};
+inline constexpr uint8_t kTailBytes[] = {0x48, 0x8D, 0x4C, 0x24, 0x28};
+// Early counters (every call): E0 the entry (mov [rsp+0x10],rbx), E1 past the stage-id / user early returns
+// (lea rdx,[rsp+0x70]), E2 past [rbp-0x80] (lea rdx,[rsp+0x40]), E3 past [rsp+0x50] (lea rax,[rbp-0x60] ; mov ...).
+inline constexpr uintptr_t kEarlyAt[4] = {0x23607D0, 0x2360820, 0x236083F, 0x236085D};
+inline constexpr uint32_t kEarlyPatch[4] = {5, 5, 5, 8};
+inline constexpr uint8_t kEarly0[] = {0x48, 0x89, 0x5C, 0x24, 0x10};
+inline constexpr uint8_t kEarly1[] = {0x48, 0x8D, 0x54, 0x24, 0x70};
+inline constexpr uint8_t kEarly2[] = {0x48, 0x8D, 0x54, 0x24, 0x40};
+inline constexpr uint8_t kEarly3[] = {0x48, 0x8D, 0x45, 0xA0, 0x48, 0x89, 0x45, 0x90};
+inline constexpr uint8_t kGate0[] = {0x83, 0xBF, 0x68, 0x01, 0x00, 0x00, 0x00};
+inline constexpr uint8_t kGate1[] = {0x41, 0x8B, 0x7E, 0x78, 0x89, 0xBD, 0xE0, 0x08, 0x00, 0x00};
+inline constexpr uint8_t kGate2[] = {0x48, 0x8D, 0x8D, 0xE0, 0x08, 0x00, 0x00};
+inline constexpr uint8_t kGate3[] = {0x8B, 0xD7, 0x48, 0x8B, 0x4C, 0x24, 0x30};
+inline constexpr uint8_t kGate4[] = {0x48, 0x8B, 0x8D, 0xF0, 0x08, 0x00, 0x00};
+// P0: [instance+0x168] must be 0 (after the lookup rbx = rsi = rdi = r14 = the stage instance found: 0x2360953..59;
+// P1's 0x21CABF0(manager used, instance) is its dead check, [instance+0x78] the condition id P1 reads).
+inline constexpr uint32_t kMgrBusy = 0x168;
 inline constexpr uint32_t kRspField = 0x48;     // [rsp+0x48] at A: the field whose vf48 gave RAX
 inline constexpr uint32_t kRbpMgrUsed = 0x8F8;  // 3576 (2976: 0x8E8)  // [rbp+0x8E8] after A: the manager the lookup used
 inline constexpr uint32_t kEntry_StageId = 0x20;  // u64 [entry+0x20] (0x2126A5C), tested & 0x1FFFFFFF at 0x212694D

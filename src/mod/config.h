@@ -511,6 +511,14 @@ struct Config {
     // "probe" | "1". C1: the prompt check 0x2126920 of an NPC's dynamic interaction entry looks its stage id up in X
     // (the host character's manager) when it is not in M but is in X (RAX := X at 0x2126A1F); probe decides and counts.
     std::string s2_guest_x_interaction_stage = "0";
+    // guest_x_research = 0 | 1, GUEST (2026-11-21, research only): GuestXInter's read-only counters inside the prompt
+    // check (its entry, the gates between the lookup and the result, the StageChart node's adds / removes).
+    bool s2_guest_x_research = false;
+    // guest_x_eval_fix = 0 | 1, GUEST (2026-11-21, research): with guest_x_interaction_stage=1, a redirected entry that
+    // has no stage data of its own (the host's entries on this client) is ACCEPTED by the prompt check (BL = 1). Off:
+    // counted only ("would accept"). Not for release: it shows "R Shop" on the host's entry, which starts nothing,
+    // and hides ShopTwin's own entry of the same NPC (cs75p3 / cs75p5).
+    bool s2_guest_x_eval_fix = false;
     // shop_probe, HOST (session2/shop_probe.h; pendientes/p8-impl-tenderos-c1.md): read-only probes of the server's
     // shop scenes (owner gate 0x288B87A, 0x288AAEF, the 2671 result, the server's 0x2126920) and user 2's
     // 2671/2720/2436/2591 with observer_seq_copy's R1 verdict. Needs create_session=1.
@@ -604,6 +612,9 @@ struct Config {
     bool s2_dialog_redeliver = false;  // Co-op+ 2026-11-15 (guest): a list the guest has gets the host's later choices too
     bool s2_dialog_share_all = false;  // Co-op+ 2026-11-09: every non-greeting dialog group shared (shop_twin.h)
     bool s2_shop_twin = false;  // Co-op+ 2026-11-09: the guest's own shop scenes (shop_twin.h)
+    // Co-op+ 2026-11-21 (shop_twin.h, research until its second round): a twin the guest's own manager lost (a far
+    // teleport ends its scenes) is prepared again while the host's scene lives. Default 0.
+    bool s2_shop_twin_again = false;
     bool s2_stage_candidate_guard = true;
     bool s2_anti_grief = false;  // Co-op+ 2026-11-09 B19: the guest cannot hit the NPCs the host talks to (anti_grief.h)
     bool s2_knowledge_grant = false;  // Co-op+ 2026-11-16 B04: knowledge one player learns, the other too (knowledge_grant.h)

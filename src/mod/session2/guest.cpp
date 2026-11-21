@@ -1632,7 +1632,8 @@ void guest_start(bool remote, bool slot_refresh_test, bool actor_diag, bool laye
                            lc.s2_guest_x_ui_veto_allow, lc.s2_guest_seq_route);
         // P8 session 13, C1 (pendientes/p8-impl-tenderos-c1.md): the prompt check of an NPC entry added from X looks
         // its stage up in X (guest_x_veto notes each X it sees).
-        guest_x_interaction_start(lc.s2_guest_x_interaction_stage, lc.s2_guest_seq_route);
+        guest_x_interaction_start(lc.s2_guest_x_interaction_stage, lc.s2_guest_seq_route, lc.s2_guest_x_research,
+                                  lc.s2_guest_x_eval_fix);
         // S46 phase 2 (research/s25/s46-tenderos.md): R0 in this client (X's entries against M's). Its lookups need M
         // (guest_seq_play's frame hook) and the X noted (guest_x_interaction): without them R0 stays native.
         shop_trade_probe_start_guest(lc.s2_shop_interaction_own_delete);

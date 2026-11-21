@@ -15,11 +15,13 @@
 #include "mod/session2/merchant_unhide_logic.h"
 #include "mod/session2/server.h"
 #include "mod/session2/shop_twin_logic.h"
+#include "mod/session2/stage_lookup_logic.h"
 
 namespace cdmp::session2 {
 namespace {
 
 bool g_on = false, g_guest = false;
+std::atomic<bool> g_again{false};  // [session2] shop_twin_again
 std::atomic<bool> g_share_all{false};
 uintptr_t g_base = 0;
 std::mutex g_mu;
@@ -28,9 +30,15 @@ struct Twin {
     bool initialised = false;  // its first 2920 (the initial state) given
     uint32_t root = 0;         // that 2920's root value (the answer to a branch 0 carries it)
     uint32_t state = 0;        // the type of the last 2920 it was given (stl::next_branch_type)
+    // Prepared again after this client's manager lost it (again_check): its own 2380 and initial 2920 payloads, when
+    // it was last prepared (GetTickCount64), checks in a row that found it missing, times prepared again.
+    std::vector<uint8_t> prep, init;
+    uint64_t prepared_ms = 0;
+    uint8_t missing = 0;
+    uint16_t again = 0;
 };
 std::unordered_map<uint64_t, Twin> g_twins;  // the host's scene id -> its twin
-std::atomic<uint64_t> c_prepared{0}, c_deleted{0}, c_withheld{0}, c_answered{0}, c_branches{0};
+std::atomic<uint64_t> c_prepared{0}, c_deleted{0}, c_withheld{0}, c_answered{0}, c_branches{0}, c_again{0};
 std::atomic<uint32_t> g_last_branch{0};
 
 bool is_shop(uint32_t h) { return mul::is_shop_scene(h); }
@@ -57,7 +65,73 @@ uint32_t own_key() {
     return (k >> 28) == 0xA ? k : 0;
 }
 
+// This client's own ClientSequencerStageManager M: its character's [[[actor+0x68]+0xA8]+0x18], vtable checked.
+uintptr_t own_manager() {
+    uintptr_t g = 0, g30 = 0, user = 0, ch = 0, comps = 0, seq = 0, m = 0, vt = 0;
+    if (!game::safe_read(g_base + 0x724B350, &g, 8) || !g || !game::safe_read(g + 0x30, &g30, 8) || !g30 ||
+        !game::safe_read(g30 + 0x58, &user, 8) || !user || !game::safe_read(user + 0xD0, &ch, 8) || !ch ||
+        !game::safe_read(ch + 0x68, &comps, 8) || !comps || !game::safe_read(comps + 0xA8, &seq, 8) || !seq ||
+        !game::safe_read(seq + 0x18, &m, 8) || !m || !game::safe_read(m, &vt, 8))
+        return 0;
+    return vt == g_base + isl::kVtClientStageMgr ? m : 0;
+}
+struct SafeRd {
+    template <class T>
+    bool rd(uintptr_t a, T& v) const noexcept {
+        return game::safe_read(a, &v, sizeof v);
+    }
+};
+
+// Co-op+ 2026-11-21 (cs75p5): a load / far teleport of this client ends every scene of its own manager M, the twins
+// too, while the host's scenes live on in X; nothing prepared the twins again. Every 2 s (the network thread, before a
+// host packet): a twin whose id is not a live stage of M in two checks in a row, 8 s or more after it was last
+// prepared, gets its own 2380 and initial 2920 again, queued after this packet. A shopkeeper not loaded here makes the
+// client refuse the 2380 (a far teleport out of town): the first 10 tries come 8 s apart, then one every 30 s while
+// the host's scene lives; a twin seen live again starts over. Under g_mu.
+void again_check(std::vector<std::vector<uint8_t>>& after, uint64_t deleting) {
+    if (!g_again.load(std::memory_order_relaxed)) return;
+    const uint64_t now = GetTickCount64();
+    static uint64_t next = 0;
+    if (now < next) return;
+    next = now + 2000;
+    if (g_twins.empty()) return;
+    const uintptr_t m = own_manager();
+    if (!m) return;
+    const SafeRd r;
+    for (auto& [host_id, t] : g_twins) {
+        if (host_id == deleting) continue;  // this packet deletes it (review F3)
+        if (t.prep.empty() || t.init.empty() || now - t.prepared_ms < 8000) continue;
+        const isl::Lookup l = isl::find_stage(r, m, t.twin);
+        if (!l.read_ok || l.dead) continue;  // unreadable, or still being ended: not yet
+        if (l.found) {
+            t.missing = 0;
+            t.again = 0;  // live: a later loss starts over
+            continue;
+        }
+        if (++t.missing < 2) continue;
+        t.missing = 0;
+        if (t.again >= 10 && now - t.prepared_ms < 30000) continue;
+        if (t.again < 0xFFFF) ++t.again;
+        t.prepared_ms = now;
+        t.state = 0;
+        after.push_back(stl::frame(stl::kOpPrepare, t.prep));
+        after.push_back(stl::frame(stl::kOpBranchState, t.init));
+        if (c_again.fetch_add(1) < 40)
+            log::info("ShopTwin [again] twin 0x{:X} (the host's scene 0x{:X}) is no live scene of this client's manager "
+                      "any more (a load or a far teleport ends them): prepared again (try {})",
+                      t.twin, host_id, t.again);
+    }
+}
+
 }  // namespace
+
+void shop_twin_set_again(bool on) {
+    g_again = on;
+    if (on) {
+        log::info("ShopTwin [again] shop_twin_again=1: a twin this client's own manager lost (a load or far teleport ends "
+                  "its scenes) is prepared again while the host's scene lives");
+    }
+}
 
 void shop_twin_share_all(bool on) {
     g_share_all = on;
@@ -91,6 +165,19 @@ void shop_twin_on_host(std::vector<uint8_t>& packet, std::vector<std::vector<uin
         uint16_t op = 0;
         std::span<const uint8_t> pl;
         if (!stl::split(packet, op, pl)) return;
+        // again_check (shop_twin_again) after this packet's own handling: a twin this packet deletes is not made again.
+        struct AgainAfter {
+            std::vector<std::vector<uint8_t>>& after;
+            uint64_t deleting = 0;
+            ~AgainAfter() {
+                try {
+                    std::lock_guard lk(g_mu);
+                    again_check(after, deleting);
+                } catch (...) {
+                }
+            }
+        } again_after{after};
+        if (op == stl::kOpDelete) again_after.deleting = stl::id_of_2292(pl);
         // dialog_redeliver: the lists whose host choices changed since the client got them, again, ahead of this packet.
         if (g_redeliver.load(std::memory_order_relaxed)) {
             std::lock_guard lk(g_dmu);
@@ -141,7 +228,11 @@ void shop_twin_on_host(std::vector<uint8_t>& packet, std::vector<std::vector<uin
             const uint64_t host_id = stl::rd64(pl.data() + 9);
             {
                 std::lock_guard lk(g_mu);
-                g_twins[host_id] = Twin{stl::twin_of(host_id), false};
+                Twin tw;
+                tw.twin = stl::twin_of(host_id);
+                tw.prep = *t;
+                tw.prepared_ms = GetTickCount64();
+                g_twins[host_id] = std::move(tw);
             }
             after.push_back(stl::frame(stl::kOpPrepare, *t));
             const uint64_t n = c_prepared.fetch_add(1) + 1;
@@ -155,7 +246,8 @@ void shop_twin_on_host(std::vector<uint8_t>& packet, std::vector<std::vector<uin
             if (it == g_twins.end() || it->second.initialised) return;  // only the initial state, never the host's branches
             it->second.initialised = true;
             it->second.root = stl::root_of_initial_2920(pl);
-            after.push_back(stl::frame(stl::kOpBranchState, stl::twin_branch_state(pl, own_key())));
+            it->second.init = stl::twin_branch_state(pl, own_key());
+            after.push_back(stl::frame(stl::kOpBranchState, it->second.init));
         } else if (op == stl::kOpDelete) {
             const uint64_t id = stl::id_of_2292(pl);
             bool had = false;
@@ -329,10 +421,11 @@ bool shop_twin_guest_on_control(std::span<const uint8_t> payload) {
 
 std::string shop_twin_describe() {
     std::lock_guard lk(g_mu);
-    return std::format("ShopTwin ({}): live twins {} | prepared {} deleted {} | requests withheld {} (answered {}, "
-                       "branches {}, last branch {}) | dialogs: host frames out {} in {}, lists rewritten {}, given "
-                       "again {} (marked {})",
-                       g_on ? "on" : "off", g_twins.size(), c_prepared.load(), c_deleted.load(), c_withheld.load(),
+    return std::format("ShopTwin ({}): live twins {} | prepared {} (again after a load {}) deleted {} | requests "
+                       "withheld {} (answered {}, branches {}, last branch {}) | dialogs: host frames out {} in {}, lists "
+                       "rewritten {}, given again {} (marked {})",
+                       g_on ? "on" : "off", g_twins.size(), c_prepared.load(), c_again.load(), c_deleted.load(),
+                       c_withheld.load(),
                        c_answered.load(), c_branches.load(), g_last_branch.load(), c_dialog_frames_out.load(),
                        c_dialog_frames_in.load(), c_dialog_rewritten.load(), c_redelivered.load(),
                        c_redeliver_marked.load());
