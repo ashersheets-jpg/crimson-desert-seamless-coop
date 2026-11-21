@@ -222,6 +222,11 @@ Set-Content -Path $listPath -Encoding ascii -Value (
 
 Write-Host ''
 Write-Host 'Installed. Start Crimson Desert from Steam as usual.' -ForegroundColor Green
-Write-Host 'In game: F8 shows the co-op panel, Ctrl+F1 invites a Steam friend.'
+if ($native) {
+    # The shared-world package (its layer, coopplus.asi): co-op starts from the title's Co-op menu, no hotkeys.
+    Write-Host 'At the title: the Co-op menu. Invite Friends, then Start Co-op (both games restart once into one world).'
+} else {
+    Write-Host 'In game: F8 shows the co-op panel, Ctrl+F1 invites a Steam friend.'
+}
 Write-Host 'Your friend accepts the invite (or uses "Join Game" on you in Steam) and lands in your world.'
 Done 0
