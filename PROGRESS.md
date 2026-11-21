@@ -9503,3 +9503,17 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   SAVES OK, 5/5, but no prompt check reached A this time (0 redirects; the X noted), so no gate data. gx2 adds counters
   for every call of the check (its entry and the three early returns before A): cs75p1 running (2.5 min at the stall,
   R every 15 s).
+- 10:23-10:34 cs75p1 (gx2: counters on every call of the joined player's prompt check, 2.5 min at the butcher, R every
+  15 s): SAVES OK, 5/5; 23 947 checks, ALL of entries with no stage id (the check's early "accept"); no redirect, no
+  R reached the host's server. 10:35-10:45 cs75q1, THE CONTROL: the HOST at the same spot, the same aim, R held:
+  "host asked: requester 0xA0100001 -> NPC 0xB0100372 interaction 0x000F4321 -> ACCEPTED" at the first try (the
+  butcher's shop, as on 3576); its screen shows the bottom-right interaction panel "Renee" beside the bowl's "E Buy",
+  the joined player's never does (only "Lean"). So the joined player's NPC interaction IS broken (Borque's report), on
+  the panel's side: its client does not list Renee as someone to interact with. cs75d's state (Renee's entries bound
+  to the host's shop scene 0x32B, the twin prepared) differs from cs75g / cs75p1's (no ShopTwin [prepared], no
+  stage-bound entries): next, what the joined player's client holds for Renee (her interaction component's lists)
+  against the host's.
+- 10:47 #general read (only a new member). 10:50 the 4394b014 post EDITED in #download-here (the correction: the talk
+  rule tested only on a bandit; "Known, being worked on: the joined player cannot open some townsfolk's talks and
+  shops at all (Borque's video; we reproduced it)"); 1877 chars shown, both zips kept. The chain's remaining runs
+  that need no talk started as chain_c.sh on 908c60c5 (cs74g, cs74h, cs73b, cs79a, cs77a, cs78a, cs85a, cs83a).

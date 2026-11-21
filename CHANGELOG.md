@@ -17,7 +17,9 @@ pp41b 152 pass, 0 fail (static, fresh, solostart, lagrun again)): everything in 
   lagrun step keeps it so.
 - **An NPC the joined player talks to stops for them** (the talk rule, [session2] ai_handoff_talk=1): in single
   player the talker's own game runs the NPC; the person goes to the talker's game while they stand within 6 m, then
-  back. Seen in pp41's crime step (a townsperson handed to the guest's game 113 ms after the talk, back at 6.9 m).
+  back. Seen in pp41's crime step on another interaction, not a talk (held E on a bandit at the camp,
+  interaction 0x35: the NPC on the guest's game 113 ms after, back at 6.9 m). (Corrected 2026-11-21 09:50: it
+  first said "a townsperson ... after the talk".)
   Not yet seen on screen: the scripted shop runs (cs75c / cs75d) never opened the butcher's shop (a load not
   finished; then the bowl on her table had the focus, so R sent nothing); the visible check is the testers'.
 - Logs: the host's answer to the joined player's StageBranchStateReq (ShopProbe B: the taming freeze); each game's

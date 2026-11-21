@@ -2,7 +2,7 @@
 Use this instead of 69edcc84; **both players need the same build**. Mostly from <@224953308010381312>'s reports:
 
 - **The other player no longer freezes mid-run.** Over the internet the other player's movement reaches your game a little late, and the game only waits 200 ms for it, so the other player kept standing still for a moment while running. Each game now waits as long as its connection needs (usually around a quarter of a second, at most 0.6 s). We reproduced it on one PC with simulated internet lag: the short freezes in a run went from 25-53 to 0-1.
-- **An NPC the joined player talks to should now stop for them**, as it does for the host (before, the host's game kept it walking). In our test the person went over to the joined player's game a tenth of a second after the talk began, and back once they walked off; please tell us if one still walks on.
+- **An NPC the joined player talks to should now stop for them**, as it does for the host (before, the host's game kept it walking). Tested only on a bandit the joined player held E on: it went over to their game a tenth of a second later, and back once they walked off. Known, being worked on: the joined player cannot open some townsfolk's talks and shops at all (Borque's video; we reproduced it).
 - **The taming freeze:** this build logs the host game's answer to that last taming step. If it happens again, please send both report zips.
 - The report zips now also show each game's own frame hitches, so a freeze can be told apart from a stutter of the PC.
 

@@ -478,3 +478,16 @@ flag left set when the friend came back, the other rules running on stale data d
 the host's client has, a flag that could latch into endless injections, ...). For code that runs on the host's
 SERVER thread or changes who controls actors (a crash there goes to Pearl Abyss, a wrong controller freezes NPCs for
 a player), ask for a review with the diff and the threading facts, not my conclusions, before building it.
+
+## When the joined player cannot do something by script, run the host doing exactly the same (2026-11-21)
+Five talk / shop / table runs (cs75c-e, cs76c-e) failed for the joined player and were first blamed on the test
+method (the teleport, the aim, the bowl on the counter), each fix costing a run. One control run with the HOST at the
+same spot, the same aim and the same R (cs75q1) opened the butcher's shop at the first try: the joined player's
+misses were the bug the testers had reported ("can't interact with NPCs"), and its screen lacked the bottom-right
+"Renee" panel the host's had. Make the host's control the first retake, not the last.
+
+## Editing a Discord post: delete before you paste (2026-11-21)
+A synthetic paste into the edit box of a message (ArrowUp in the empty composer opens the last own message) does NOT
+replace a Ctrl+A selection: the new text lands after the old (3692 chars instead of 1897). Escape cancels the edit
+without saving. Ctrl+A then the Delete key empties the box (innerText ~2); check that, paste, check the length and a
+sentence, then Enter; afterwards the message shows "(edited)" and keeps its attachments.
