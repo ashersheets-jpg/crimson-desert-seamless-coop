@@ -383,6 +383,25 @@ void remote_character_stalls_line() noexcept {
 // The visibility guard's counters (on_flag_setter below).
 std::atomic<uint64_t> g_vis_stripped{0}, g_vis_added{0}, g_vis_calls{0};
 std::atomic<uintptr_t> g_vis_last_caller{0};
+// Co-op+ 2026-11-21 (cs74c: the guest's samples reach the host 100-300 ms late for their stamps): each game's clock
+// against the PC's. The game's "now" is its frame clock + the client -> server offset that each ServerTimeInfoAck 2474
+// sets (offset = the server's tick - this client's now, no allowance for the Ack's own travel time). On ONE PC the
+// QPC is shared by both copies, so (the guest's game now - QPC) - (the host's game now - QPC) is the guest clock's error.
+constexpr uintptr_t kClockBase = 0x71661A0, kClockFrac = 0x71661B0, kClockBias = 0x724B5F8;  // combat_follow's (3732)
+void clock_line() noexcept {
+    uint64_t base = 0, frac = 0;
+    int64_t bias = 0;
+    if (!game::safe_read(g_base + kClockBase, &base, sizeof base) || !game::safe_read(g_base + kClockFrac, &frac, sizeof frac) ||
+        !game::safe_read(g_base + kClockBias, &bias, sizeof bias) || !base)
+        return;
+    LARGE_INTEGER q{}, f{};
+    QueryPerformanceCounter(&q);
+    QueryPerformanceFrequency(&f);
+    const int64_t qpc_ms = f.QuadPart ? static_cast<int64_t>(q.QuadPart / f.QuadPart * 1000 + q.QuadPart % f.QuadPart * 1000 / f.QuadPart) : 0;
+    const int64_t now = static_cast<int64_t>(base + frac / 1000) + bias;
+    log::info("RemoteInterp [clock] {}: game now - QPC ms = {} (frame ms {}, the ServerTimeInfoAck offset {})",
+              g_guest ? "guest" : "host", now - qpc_ms, base + frac / 1000, bias);
+}
 void remote_character_line() noexcept {
     const uintptr_t actor = g_remote_char.load(), mc = g_remote_char_mc.load();
     if (!actor) return;
@@ -1083,6 +1102,7 @@ DWORD WINAPI interp_thread(LPVOID) {
         if (now - last_pos >= 10000) {
             last_pos = now;
             remote_character_line();
+            clock_line();
         }
         if (now - last >= kSummaryMs) {
             last = now;

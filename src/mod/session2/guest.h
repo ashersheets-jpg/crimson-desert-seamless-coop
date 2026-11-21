@@ -45,6 +45,16 @@ void guest_start(bool remote, bool slot_refresh_test = false, bool actor_diag = 
 // when the client connects), the host's packets for the client, and the
 // client's packets for the host.
 void guest_set_tunnel_up(bool up);
+// Co-op+ 2026-11-21 ([session2] guest_clock_fix = 0 (default) | 1, GUEST): the game sets its client -> server clock
+// offset from each ServerTimeInfoAck 2474 (every 5 s) as the server's tick minus its own now, with no allowance for the
+// Ack's travel time; through the tunnel that leaves this game's clock behind the host's server by the Ack's delay (a
+// stall: for 5 s), so its own Move samples reach the host "late" (cs74c: 100-300 ms) and the host's copy of this
+// character holds its pose. With 1 each 2474's tick is rewritten so that the offset the game takes is the BEST of the
+// last minute's (the largest tick - frame clock, i.e. the least delayed Ack) plus half the link's round trip
+// (NTP's minimum filter). Logged: the first Acks, then one line a minute.
+void guest_clock_fix_start(bool on) noexcept;
+// The mod's link round trip (ClientSession's smoothed RTT), each network loop. Any thread.
+void guest_set_link_rtt(float rtt_ms) noexcept;
 void guest_deliver(std::vector<uint8_t>&& packet);
 // Also runs child_reannounce's step (P8 session 9, reannounce_logic.h): new CreateOwnedActor failures of a
 // user's child become a control packet to the host, queued before the batch is taken.

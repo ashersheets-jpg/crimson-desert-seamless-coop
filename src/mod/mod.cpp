@@ -567,6 +567,7 @@ void run_network(const Config& cfg, LocalSource& local) {
             hud.connected = session.state() == ClientSession::State::Connected;
             hud.peer_name = session.peer_name();
             hud.rtt_ms = session.stats().rtt_ms;
+            session2::guest_set_link_rtt(hud.rtt_ms);  // guest_clock_fix (guest.h)
             hud.local = local.snapshot();
             hud.local_status = local.status();
             hud.remote = session.remote_state();
@@ -1292,6 +1293,7 @@ DWORD WINAPI worker(LPVOID) {
                 session2::guest_start(cfg.s2_guest_remote, cfg.s2_guest_slot_refresh_test, cfg.s2_guest_actor_diag,
                                       cfg.s2_guest_layer_guard, cfg.s2_guest_s3_diag, cfg.s2_guest_crash_dump,
                                       cfg.s2_guest_update_guard);
+                session2::guest_clock_fix_start(cfg.s2_guest_clock_fix);  // Co-op+ 2026-11-21 (guest.h)
                 // P8 S1/S2 read-only probes (pendientes/p8-impl-s1s2.md): their own thread.
                 session2::p8_probes_start({cfg.s2_load_diag, cfg.s2_s1_diag, /*host=*/false});
                 // NPC schedule files (pendientes/p8-impl-horarios.md §8): read-only self-check, its own thread.
