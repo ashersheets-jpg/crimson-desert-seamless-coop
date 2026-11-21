@@ -9,7 +9,8 @@ test save Out, shipped cdmp.ini restored.
   (docs/research/lootr-across-sessions.md: the other player's share is kept in a file next to the co-op save, written
   when the game saves). Testing it needs one test that SAVES, into the TEST co-op world only (backed up before and put
   back after; your own saves are still checked unchanged). Our tests never save today. May a test save there?
-  (09:10: the code is written for the next build, switched off until that test has run; only the test waits.)
+  (09:25: a first version is written, switched off; an independent review found ways it could give items twice
+  across sessions, so it is being reworked and is not in the next build. The test question still stands.)
 - 2026-11-21 03:30 SAVE REQUEST (not urgent): B07 (boss mechanics for two) needs a save right before a boss fight
   (any story or world boss you have reached), so two copies of the game can fight it together and I can see grabs,
   phases, the arena and the finish on both screens. None of the test saves is at a boss (the windridge fort's wyvern
@@ -26,8 +27,9 @@ test save Out, shipped cdmp.ini restored.
   2026-11-21 03:27: also in #general, panda (07:49 UTC) asks whether the mod works with cracked / pirated copies. Not
   replied (yours: the same question as w-ri's). EdwardJames (23:36 UTC) asked how far boss fights are; you answered
   his controller question at 05:53 UTC; I left the boss part (B07 not tested yet).
-- 2026-11-20 20:54 DONE: 69edcc84 POSTED in #download-here by me (standing OK; pp40 971/971): rides on mounts that
-  are not the joined player's own, the first wild-horse mount seated on the host, the joined player's carry.
+- 2026-11-21 09:31 DONE: 4394b014 POSTED in #download-here by me (standing OK; pp41 1017/2, the 2 the lagrun step's
+  own test switch, then pp41b 152/0 with the test-kit fix): the running-freeze fix (remote_interp_char), the talk rule
+  (an NPC the joined player talks to runs on their game), the taming-freeze logs, frame-hitch logs. Tags Borque.
 - 2026-11-17 07:45 HANDS-ON (about 10 min, when you have time): B09 past the cabin. A script cannot aim a talk
   (7 tries). I need you to play the host in a two-copy run I set up, through the Marius and Ross talks to "Enter the
   cabin"; a probe logs which game code starts that scene, so the ready check can hold it for both players.
@@ -9454,3 +9456,19 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - 09:02 pp41b started (static fresh solostart lagrun on 4394b014, with the lagrun fix 69d715a); the next batch's
   source stashed in both repos meanwhile (static checks a clean tree). Drafted meanwhile (scratchpad b19/, not in the
   tree yet): B19's shares across sessions ([session2] lootr_persist, default 0 until the owner's save-test answer).
+- 09:20 B19 first version reviewed (an agent, read only, the diff and the threading facts): 7 faults, 4 of them able
+  to hand out items twice across sessions (the file read even without the save hook that rewrites it; written up to
+  2 s after the save and never retried; a race losing a "given" mark; one file for every save slot, so an older save
+  brings the items back while their shares stay), plus a game call on every pickup with the option off, chest
+  shares still expiring after 3 h, a failed add consuming the share. Taken OUT of the next batch (scratchpad
+  b19/b19_v1.patch); rework planned: one file per save slot written inside the save, read at the host's load of that
+  slot, nothing restored or written without the save hook, given marks erased by count, chest shares kept.
+- 09:19 pp41b solostart 49/0 (static 12/0, fresh 43/0); lagrun running.
+- 09:28 pp41b DONE: 152 pass, 0 fail (static 12, fresh 43, solostart 49, lagrun 48), SAVES OK and 5/5 in each.
+  4394b014's checklist is complete (pp41 + pp41b).
+- 09:31 4394b014 POSTED in #download-here (message 1573707431039606884, both zips: shared-world 12 780 587 B,
+  mod-manager 6 967 496 B; text docs/release/shared-world-playtest/download-4394b014.txt; CHANGELOG entry above
+  69edcc84's). #general read first: since 05:53 UTC only Burns' reply to panda's piracy question ("I think thats
+  why they use radmin", 10:38 UTC; the piracy questions stay the owner's) and a new member; nothing for feedback.
+- 09:30 the next batch's build started (next_batch_build.sh, without B19); then commit, package, and the research
+  chain with the new package (after_pp41.sh now starts with cs75e / cs76e, the sweep retakes).

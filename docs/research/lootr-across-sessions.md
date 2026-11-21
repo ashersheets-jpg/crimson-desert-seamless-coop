@@ -1,9 +1,13 @@
 # Items in the world across sessions (B19's last part): a design (2026-11-21)
 
-Status (2026-11-21 09:10): WRITTEN for the native next batch (its build follows) behind [session2] lootr_persist (default 0): lootr.cpp,
-lootr_persist_logic.h (unit-tested), the save hook in guest_save_host.cpp. The file is a text file, one share per line
-(`cdmp_lootr_shares.txt` inside the co-op folder; easier to read and to recover line by line than JSON). Not run in the
-game yet: the test needs one save into the test co-op world, the owner's question below.
+Status (2026-11-21 09:25): a first version was written ([session2] lootr_persist, default 0; a text file, one share per
+line, `cdmp_lootr_shares.txt`, instead of JSON) and an independent review found faults that could hand out items
+twice across sessions: the file was read even when the save hook that rewrites it was not installed; it was written
+up to 2 s after the save (shares made after the save could get in) and not retried after a failure; a race could
+lose a "given" mark; and one file served every save slot, so loading an older save brought the items back while
+their shares stayed. Being reworked (one file per save slot, written in the save itself, read at the host's load of
+that slot, nothing restored or written without the save hook); not in a build yet. The live test still needs one
+save into the test co-op world, the owner's question below.
 
 ## What happens today (lootr.h, native)
 

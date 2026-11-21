@@ -5,6 +5,26 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
+POSTED 2026-11-21 09:31: 0.1.0-alpha+4394b014, for game 1.0.0.3732 (checklist pp41 1017 pass, 2 fail over 24 steps, one new:
+lagrun; the 2 were lagrun's own test switch announcing itself as a warning, allowed for that step in the test kit, then
+pp41b 152 pass, 0 fail (static, fresh, solostart, lagrun again)): everything in 69edcc84 just below, plus (Borque / Jay, 20-21 Nov):
+- **The other player no longer freezes mid-run** (the "running animation freeze", two PCs only). The other player's
+  movement samples reach a game late for their own stamps (100-300 ms on one PC with simulated internet lag; the
+  game reads them 200 ms back and does not extrapolate), so it stood still for a moment, often. New
+  [session2] remote_interp_char=1 (the default, both ends): the other player's character gets a delay of its own,
+  its samples' peak lateness (kept 10 s) + 60 ms, within [200, 600] ms, the game's while it rides. Tested with the
+  new TEST sim_lag (30 + 0..60 ms, 400 ms stalls): short mid-run holds 25-53 -> 0-1 (cs74c-f); the checklist's new
+  lagrun step keeps it so.
+- **An NPC the joined player talks to stops for them** (the talk rule, [session2] ai_handoff_talk=1): in single
+  player the talker's own game runs the NPC; the person goes to the talker's game while they stand within 6 m, then
+  back. Seen in pp41's crime step (a townsperson handed to the guest's game 113 ms after the talk, back at 6.9 m).
+  Not yet seen on screen: the scripted shop runs (cs75c / cs75d) never opened the butcher's shop (a load not
+  finished; then the bowl on her table had the focus, so R sent nothing); the visible check is the testers'.
+- Logs: the host's answer to the joined player's StageBranchStateReq (ShopProbe B: the taming freeze); each game's
+  own frame hitches (UiPause); the other player's mid-run holds and its samples' lateness (RemoteInterp); each game's
+  clock against the PC's (RemoteInterp [clock]); guest_clock_fix (default 0) measured.
+- Test kit: TEST sim_lag ([session2] sim_lag_*), dev script "vehicles", tpvehicle [min key], faceto.py.
+
 POSTED 2026-11-20 20:54: 0.1.0-alpha+69edcc84, for game 1.0.0.3732 (checklist pp40 971/971 over 23 steps):
 everything in 9e777a23 just below, plus (Borque, 20 Nov):
 - **The joined player on a horse that is not his own (a bandit's, a wild one) moves with it on the host's screen.**
