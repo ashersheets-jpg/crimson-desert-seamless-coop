@@ -9326,3 +9326,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   logic's PrepareSequencerAck; MoveFieldAck records 0x38 since 3549). Read from the old binaries: seq_copy crashes,
   and observer_stage / owner_fanout / s3 / s9 / scene_acks fail on old captures (old opcodes AND layouts: e.g. a
   PrepareSequencerAck is no longer 184 B): they need 3732 captures from our own packet logs, a bigger job (later).
+- 06:10 More fixtures (no build; old binaries read for the lines): user2_shops (the scene sites' 2976 numbers ->
+  3732's by name from 3cbb03c's source: StageBranchStateReq 2436 -> 2644, SequencerTriggerVolumeInOutReq 2767 -> 2808,
+  the two timers 2044 / 2054 -> 2048 / 2059; the trade list holds all 9 merchant scenes), user2_stages (the timers by
+  constant; ai_req's 3732 list), sched_load (ScheduleCreate 2335 -> 2224, InitSchedule 2874 -> 2272; the captures
+  renumbered as they are read). Installer: the shared-world package's last line names the Co-op menu, not F8.
+  The shared-world README is the two-worlds README with a section added (its body says townsfolk / animals are not
+  shared, no trading, F8 panel, ...): a README for the shared world is being written (an agent surveys the layer's
+  native menus first).
