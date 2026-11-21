@@ -9358,6 +9358,10 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   B12, B02's shop meet, B10's credit, the taming answer, the gimmick probe (tree). (5) B13: cs84 with cs76c's keys,
   then the design question (scratchpad b13_question.txt). (6) the package and pp42 (25 steps), then the post.
   Later: fixtures that need 3732 captures (a recording run), B19 across sessions (asked), B20 voices (probe port).
+  Drafted for B13 (keys from cs76c): cs83, the versus gauge on ONE game ([dev] versus_test=8: a simulated other
+  player in the host's match; the host mashes faster: "Activity: versus ... over: we won" if the 3732 gauge address
+  and the match detection work), cs84 (both players in a match at the table). A recording run for 3732 fixture
+  captures needs no new switch: [dev] native_record=1 (-HostDev) writes [sniffer] record=1.
 - 06:20 SHARED-WORLD README written (kit/coopplus/README-shared-world.txt, committed 2956e9d; package-native.ps1
   now puts it in place of the normal README, whose body was the two-worlds mode). From an agent's survey of the
   layer's native menus (read only): the title flow, holding Interact on the friend (the menu: the challenges, a
