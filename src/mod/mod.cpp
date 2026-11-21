@@ -480,6 +480,12 @@ void run_network(const Config& cfg, LocalSource& local) {
                 });
             // p8-tunel-rendimiento.md: compressed batches to a guest that says it decodes them.
             s2_link->set_compress(cfg.s2_tunnel_compress);
+            s2_link->set_sim_lag({cfg.s2_sim_lag_delay_ms, cfg.s2_sim_lag_jitter_ms, cfg.s2_sim_lag_spike_ms,
+                                  cfg.s2_sim_lag_spike_pm});
+            if (s2_link->sim_lag().on())
+                log::warn("Session2: TEST sim_lag on the tunnel's incoming side: {} + 0..{} ms, spikes {} ms at {} per "
+                          "mille", cfg.s2_sim_lag_delay_ms, cfg.s2_sim_lag_jitter_ms, cfg.s2_sim_lag_spike_ms,
+                          cfg.s2_sim_lag_spike_pm);
             log::info("Session2: Troc tunnel open on the network link (the guest is whoever connects){}",
                       cfg.s2_tunnel_compress ? "; tunnel_compress=1: batches compressed once the guest says it "
                                                "decodes them"
@@ -504,6 +510,12 @@ void run_network(const Config& cfg, LocalSource& local) {
                                                       session2::guest_save_guest_caps() |
                                                       session2::guest_rejoin_caps());
             s2_guest_link->set_announce_flags(caps);
+            s2_guest_link->set_sim_lag({cfg.s2_sim_lag_delay_ms, cfg.s2_sim_lag_jitter_ms, cfg.s2_sim_lag_spike_ms,
+                                        cfg.s2_sim_lag_spike_pm});
+            if (s2_guest_link->sim_lag().on())
+                log::warn("Session2 guest: TEST sim_lag on the tunnel's incoming side: {} + 0..{} ms, spikes {} ms at {} "
+                          "per mille", cfg.s2_sim_lag_delay_ms, cfg.s2_sim_lag_jitter_ms, cfg.s2_sim_lag_spike_ms,
+                          cfg.s2_sim_lag_spike_pm);
             log::info("Session2 guest: Troc tunnel open on the network link{}{}",
                       cfg.s2_tunnel_compress ? "; tunnel_compress=1: the host may send compressed batches" : "",
                       caps & troc::kCapsGuestSave ? "; guest_own_save: caps 0x02 (states 6-11)" : "");
@@ -1249,6 +1261,7 @@ DWORD WINAPI worker(LPVOID) {
             session2::anti_grief_start(cfg.s2_anti_grief, cfg.s2_guest);
             session2::ai_handoff_start(cfg.s2_ai_handoff, cfg.s2_guest, cfg.s2_ai_handoff_fight);
             session2::ai_handoff_set_catch(cfg.s2_ai_handoff_catch);
+            session2::ai_handoff_set_talk(cfg.s2_ai_handoff_talk);
             session2::damage_range_start(cfg.s2_damage_range_players, cfg.s2_guest);
             session2::lootr_set_chests(cfg.s2_lootr_chests);
             session2::lootr_set_body_share(cfg.s2_lootr_body_share);

@@ -358,6 +358,11 @@ Config load_config(const std::wstring& ini_path) {
     c.s2_ai_handoff = narrow(read_string(ini_path, L"session2", L"ai_handoff", "0"));
     c.s2_ai_handoff_fight = read_uint(ini_path, L"session2", L"ai_handoff_fight", c.s2_ai_handoff_fight ? 1 : 0) != 0;
     c.s2_ai_handoff_catch = read_uint(ini_path, L"session2", L"ai_handoff_catch", c.s2_ai_handoff_catch ? 1 : 0) != 0;
+    c.s2_ai_handoff_talk = read_uint(ini_path, L"session2", L"ai_handoff_talk", c.s2_ai_handoff_talk ? 1 : 0) != 0;
+    c.s2_sim_lag_delay_ms = std::min<uint32_t>(read_uint(ini_path, L"session2", L"sim_lag_delay_ms", 0), 2000);
+    c.s2_sim_lag_jitter_ms = std::min<uint32_t>(read_uint(ini_path, L"session2", L"sim_lag_jitter_ms", 0), 2000);
+    c.s2_sim_lag_spike_ms = std::min<uint32_t>(read_uint(ini_path, L"session2", L"sim_lag_spike_ms", 0), 5000);
+    c.s2_sim_lag_spike_pm = std::min<uint32_t>(read_uint(ini_path, L"session2", L"sim_lag_spike_per_mille", 0), 1000);
     c.s2_damage_range_players = read_uint(ini_path, L"session2", L"damage_range_players", 1) != 0;
     c.s2_stash_inventory = static_cast<int>(read_uint(ini_path, L"session2", L"stash_inventory", 0xFFFF));
     c.s2_fog_share = read_uint(ini_path, L"session2", L"fog_share", 0) != 0;

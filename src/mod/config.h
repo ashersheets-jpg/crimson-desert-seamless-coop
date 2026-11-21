@@ -530,6 +530,10 @@ struct Config {
     // (and the host is not) runs its AI on that player's game, so it fights back at that player; the reverse for the
     // host. Needs anti_grief (its blow tally).
     bool s2_ai_handoff_catch = true;  // the catch rule (ai_handoff.h; cs65d 2026-11-18: a partridge caught and carried)
+    bool s2_ai_handoff_talk = true;   // the talk rule (ai_handoff.h, 2026-11-21: the NPC the other player talks to)
+    // TEST ONLY (troc_link.h SimLag, 2026-11-21): [session2] sim_lag_delay_ms / sim_lag_jitter_ms / sim_lag_spike_ms /
+    // sim_lag_spike_per_mille hold what this end's tunnel receives (one-PC runs that look like two PCs). All 0 = off.
+    uint32_t s2_sim_lag_delay_ms = 0, s2_sim_lag_jitter_ms = 0, s2_sim_lag_spike_ms = 0, s2_sim_lag_spike_pm = 0;
     bool s2_ai_handoff_fight = true;  // on since 2026-11-16 (cs40f: 9 hand-overs, cs40h: out and back, 0 failed)
     // Co-op+ 2026-11-11 (session2/damage_range.h): a hit counts when the victim is in range of ANY player's
     // character, not only the host's (the game zeroes damage 80 m or more from the field owner's character).

@@ -67,6 +67,21 @@ constexpr uint32_t kCatchInteractions[] = {0xF42BE, 0xF42CD};
 constexpr uint64_t kCatchMs = 30000;
 std::array<std::atomic<uint64_t>, kRides> g_catches{}, g_catch_ms{};
 std::atomic<uint64_t> c_catch_noted{0}, c_catch_out{0}, c_catch_full{0};
+// The talk rule's table (ai_handoff_note_catch, the interactions that are not catches): (NPC key << 32) | talker key,
+// when it was noted (ms), and the controller the NPC had before the talker's game took it (0 = not handed yet).
+constexpr uint64_t kTalkGraceMs = 4000, kTalkMaxMs = 600000;
+constexpr float kTalkEndM = 6.0f;  // the talker this far from the NPC (after the grace): the talk is over
+std::array<std::atomic<uint64_t>, kRides> g_talks{}, g_talk_ms{};
+std::array<std::atomic<uint32_t>, kRides> g_talk_from{};
+std::atomic<uint64_t> c_talk_noted{0}, c_talk_out{0}, c_talk_back{0}, c_talk_ended{0}, c_talk_full{0}, c_talk_skip{0};
+std::atomic<bool> g_talk_on{true};
+size_t talk_slot(uint32_t npc_key) noexcept {
+    for (size_t i = 0; i < kRides; ++i) {
+        const uint64_t v = g_talks[i].load(std::memory_order_acquire);
+        if (v && static_cast<uint32_t>(v >> 32) == npc_key) return i;
+    }
+    return kRides;
+}
 // Passengers (ai_handoff_note_passenger): (vehicle key << 32) | rider key, 0 = free.
 std::array<std::atomic<uint64_t>, kRides> g_passengers{};
 std::atomic<uint64_t> c_pass_noted{0}, c_pass_skip{0}, c_pass_full{0};
@@ -550,6 +565,92 @@ void ai_handoff_server_tick() noexcept {
                               caught ? "caught by" : "ridden by", rider, f.ctrl, to, h);
             }
         }
+        // The talk rule (ai_handoff.h, 2026-11-21): a person the other player talks to runs on the talker's game.
+        {
+            const uint64_t now = GetTickCount64();
+            // A talk whose NPC is no longer within kFightM of any player (both walked off) is over: dropped, the NPC
+            // stays where it is (the far-controller rule above looks after it).
+            for (size_t s = 0; s < kRides; ++s) {
+                uint64_t v = g_talks[s].load(std::memory_order_acquire);
+                if (!v || now - g_talk_ms[s].load(std::memory_order_relaxed) < kTalkGraceMs) continue;
+                bool seen = false;
+                for (int i = 0; i < n_fight && !seen; ++i) seen = fights[i].key == static_cast<uint32_t>(v >> 32);
+                if (!seen && g_talks[s].compare_exchange_strong(v, 0)) {
+                    g_talk_from[s].store(0, std::memory_order_relaxed);
+                    c_talk_ended.fetch_add(1);
+                }
+            }
+            for (int i = 0; i < n_fight && done < kMaxPerTick; ++i) {
+                const Fight& f = fights[i];
+                const size_t s = talk_slot(f.key);
+                if (s == kRides) continue;
+                const uint64_t v = g_talks[s].load(std::memory_order_acquire);
+                const uint32_t talker = static_cast<uint32_t>(v);
+                const uint64_t age = now - g_talk_ms[s].load(std::memory_order_relaxed);
+                uint32_t talker_user = 0;
+                float d = 1e9f;
+                for (int k = 0; k < n_players; ++k) {
+                    if (pl[k].key != talker) continue;
+                    talker_user = pl[k].user;
+                    d = std::sqrt((f.x - pl[k].x) * (f.x - pl[k].x) + (f.z - pl[k].z) * (f.z - pl[k].z));
+                }
+                const bool over = !talker_user || age >= kTalkMaxMs || (age >= kTalkGraceMs && d > kTalkEndM) ||
+                                  ridden_by(f.key) || caught_by(f.key, now);
+                const uint32_t from = g_talk_from[s].load(std::memory_order_relaxed);
+                uint32_t to = 0;
+                if (over) {
+                    uint64_t want = v;
+                    if (!g_talks[s].compare_exchange_strong(want, 0)) continue;
+                    g_talk_from[s].store(0, std::memory_order_relaxed);
+                    c_talk_ended.fetch_add(1);
+                    // Back to the game that ran it before, if that player is still in the world and the talker's game
+                    // has it now (a ride / catch / fight rule may have moved it since).
+                    bool from_here = false;
+                    for (int k = 0; k < n_players; ++k) from_here = from_here || pl[k].user == from;
+                    if (!from || !from_here || f.ctrl != talker_user || from == f.ctrl) {
+                        log::info("AiHandoff: talk rule: the talk with NPC 0x{:08X} is over ({}); it stays with 0x{:08X}",
+                                  f.key, !talker_user ? "the talker left" : age >= kTalkMaxMs ? "10 min" :
+                                  d > kTalkEndM ? "the talker walked off" : "ridden / caught", f.ctrl);
+                        continue;
+                    }
+                    to = from;
+                } else {
+                    if (f.type != 3) {  // a person (or an animal) only
+                        uint64_t want = v;
+                        g_talks[s].compare_exchange_strong(want, 0);
+                        c_talk_skip.fetch_add(1);
+                        continue;
+                    }
+                    if (f.ctrl == talker_user) continue;  // its game has it already
+                    if (!from) g_talk_from[s].store(f.ctrl, std::memory_order_relaxed);
+                    to = talker_user;
+                }
+                if (!hand_over(f.actor, f.key, f.ctrl, to)) {
+                    const uint64_t fl = c_failed.fetch_add(1) + 1;
+                    if (fl <= 10) log::warn("AiHandoff: talk rule: NPC 0x{:08X}: the hand-over did not go through", f.key);
+                    continue;
+                }
+                ++done;
+                moved[f.key] = now;
+                uint8_t priv[12];
+                std::memcpy(priv, &kPrivateMagic, 4);
+                std::memcpy(priv + 4, &f.key, 4);
+                std::memcpy(priv + 8, &to, 4);
+                uint8_t real[4];
+                std::memcpy(real, &f.key, 4);
+                for (int k = 0; k < n_players; ++k) {
+                    if (pl[k].user != to) tell(pl[k].user, host_user, priv);
+                }
+                tell(to, host_user, priv);
+                tell(to, host_user, real);
+                const uint64_t h = (over ? c_talk_back : c_talk_out).fetch_add(1) + 1;
+                if (h <= 60 || h % 100 == 0)
+                    log::info("AiHandoff: talk rule: NPC 0x{:08X} (type {}) {} (0x{:08X} -> 0x{:08X}; the talker 0x{:08X} "
+                              "{:.1f} m from it; {} so far)", f.key, f.type,
+                              over ? "back to the game that ran it before the talk" : "-> the talker's game", f.ctrl, to,
+                              talker, d, h);
+            }
+        }
         // The fight rule (ai_handoff.h, 2026-11-16, B18).
         if (g_fight) {
             const uint64_t now = GetTickCount64();
@@ -574,7 +675,7 @@ void ai_handoff_server_tick() noexcept {
             if (moved.size() > 8000) moved.clear();
             for (int i = 0; i < n_fight && done < kMaxPerTick; ++i) {
                 const Fight& f = fights[i];
-                if (ridden_by(f.key) || caught_by(f.key, now)) continue;  // the ride / catch rule's
+                if (ridden_by(f.key) || caught_by(f.key, now) || talk_slot(f.key) != kRides) continue;  // the ride / catch / talk rule's
                 uint64_t hm = 0, gm = 0;
                 if (!anti_grief_last_hits(f.key, hm, gm)) continue;
                 c_fight_seen.fetch_add(1);
@@ -673,12 +774,47 @@ void ai_handoff_set_catch(bool on) noexcept {
     if (!on) log::info("AiHandoff: catch rule OFF ([session2] ai_handoff_catch=0)");
 }
 
+void ai_handoff_set_talk(bool on) noexcept {
+    g_talk_on.store(on);
+    if (!on) log::info("AiHandoff: talk rule OFF ([session2] ai_handoff_talk=0)");
+}
+
 void ai_handoff_note_catch(uint32_t catcher_key, uint32_t npc_key, uint32_t interaction) noexcept {
-    if (g_guest || !g_catch_on.load(std::memory_order_relaxed) || !npc_key || (npc_key >> 28) != 0xB) return;
+    if (g_guest || !npc_key || (npc_key >> 28) != 0xB) return;
     if ((catcher_key >> 28) != 0xA || catcher_key == kHostCharacter) return;  // the other player's character only
     bool is_catch = false;
     for (uint32_t c : kCatchInteractions) is_catch = is_catch || c == interaction;
-    if (!is_catch) return;
+    if (is_catch && !g_catch_on.load(std::memory_order_relaxed)) return;
+    if (!is_catch) {
+        // The talk rule (ai_handoff.h): the same NPC again refreshes its time; else a free or stale slot.
+        if (!g_talk_on.load(std::memory_order_relaxed)) return;
+        const uint64_t t = GetTickCount64();
+        const uint64_t want = (static_cast<uint64_t>(npc_key) << 32) | catcher_key;
+        size_t slot = talk_slot(npc_key);
+        if (slot != kRides) {
+            g_talk_ms[slot].store(t, std::memory_order_relaxed);
+            g_talks[slot].store(want, std::memory_order_release);
+            return;
+        }
+        for (size_t i = 0; i < kRides && slot == kRides; ++i) {
+            uint64_t v = g_talks[i].load(std::memory_order_relaxed);
+            if (v && t - g_talk_ms[i].load(std::memory_order_relaxed) < kTalkMaxMs + 60000) continue;
+            if (g_talks[i].compare_exchange_strong(v, 0)) slot = i;
+        }
+        if (slot == kRides) {
+            c_talk_full.fetch_add(1);
+            return;
+        }
+        g_talk_from[slot].store(0, std::memory_order_relaxed);
+        g_talk_ms[slot].store(t, std::memory_order_relaxed);
+        g_talks[slot].store(want, std::memory_order_release);
+        const uint64_t n = c_talk_noted.fetch_add(1) + 1;
+        if (n <= 40 || n % 100 == 0)
+            log::info("AiHandoff: talk rule: the other player's 0x{:08X} interacts with NPC 0x{:08X} (interaction 0x{:X}): "
+                      "a person goes to the talker's game at the next server check ({} so far)", catcher_key, npc_key,
+                      interaction, n);
+        return;
+    }
     const uint64_t now = GetTickCount64();
     const uint64_t want = (static_cast<uint64_t>(npc_key) << 32) | catcher_key;
     size_t slot = kRides;
@@ -775,6 +911,9 @@ std::string ai_handoff_describe() {
                            c_ride_out.load(), c_ride_full.load()) +
                std::format(" | catch rule: catches noted {} handed to the catcher {} table full {}", c_catch_noted.load(),
                            c_catch_out.load(), c_catch_full.load()) +
+               std::format(" | talk rule{}: talks noted {} handed to the talker {} back {} ended {} not a person {} table "
+                           "full {}", g_talk_on.load() ? "" : " (OFF)", c_talk_noted.load(), c_talk_out.load(),
+                           c_talk_back.load(), c_talk_ended.load(), c_talk_skip.load(), c_talk_full.load()) +
                std::format(" | passengers noted {} fight hand-overs skipped {} table full {}", c_pass_noted.load(),
                            c_pass_skip.load(), c_pass_full.load());
     return std::format("AiHandoff: {} | server checks {} | NPCs looked at {} (controller far, another player close: {}) | "
