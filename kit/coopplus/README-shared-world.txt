@@ -226,6 +226,8 @@ KNOWN ISSUES (shared world playtest)
 - City NPCs sitting on benches may stand in a T-pose on the joined player's screen
   (reported once, not seen in our tests).
 - Boss fights are not tested with two players yet.
+- At the very start of a New Co-op Save the friend's time of day can differ from the
+  host's (cosmetic: different light).
 - Story scenes that start from a TALK do not wait for both of you yet (only the first
   scene of a story step does).
 - Arm wrestling and the game's other minigames against each other: not yet.
