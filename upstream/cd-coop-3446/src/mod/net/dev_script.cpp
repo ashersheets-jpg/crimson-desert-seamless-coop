@@ -611,10 +611,12 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
             st.kind = Step::TpActor;  // 6; 2026-11-19, the passenger test: Borque's cart was type 5 with a type 3 driver)
             st.addr = 0xFFFFFFFCu;
             float r = 60.0f, n = 0.0f, t = 0.0f;  // [type]: 5 or 6 only (cs69a: type 6 were small animals)
-            in >> r >> n >> t;
+            std::string mk;  // [min key, hex] (2026-11-21): a wild horse spawns late (Borque's 0xB0102082 after 16 min),
+            in >> r >> n >> t >> mk;  // the bandits' horses at the start are 0xB01000Dx: skip keys below it
             st.to[0] = r > 0 ? r : 60.0f;
             st.to[1] = n > 0 ? n : 0.0f;
             st.to[2] = t;
+            st.variant = mk.empty() ? 0u : static_cast<uint32_t>(std::strtoul(mk.c_str(), nullptr, 16));
             steps.push_back(std::move(st));
             continue;
         }
@@ -798,14 +800,16 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                     for (const NpcRow& r : npcs_near(st.to[0], 0.5f, me, loaded)) {
                         if (r.type != 5 && r.type != 6) continue;
                         if (st.to[2] > 0.0f && r.type != static_cast<int>(st.to[2])) continue;
+                        if (st.variant && r.key < st.variant) continue;  // [min key]
                         if (n-- > 0) continue;
                         key = r.key;
                         log::info("Dev script: tpvehicle: 0x{:08X} type {} variant 0x{:08X}, {:.1f} m", r.key, r.type,
                                   r.variant, r.d);
                         break;
                     }
-                    if (!key) log::info("Dev script: tpvehicle: no NPC vehicle within {:.0f} m ({} NPC actors loaded)",
-                                        st.to[0], loaded);
+                    if (!key) log::info("Dev script: tpvehicle: no NPC vehicle within {:.0f} m{} ({} NPC actors loaded)",
+                                        st.to[0], st.variant ? std::format(" with a key from 0x{:08X}", st.variant)
+                                                             : std::string(), loaded);
                 }
                 if (st.addr == 0xFFFFFFFDu) {  // tpanimal: the nearest living wild animal (of that variant)
                     std::optional<proto::Vec3> me;

@@ -9119,3 +9119,17 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - B02 Fort Windridge: cs71a's sets were taken ~15 s apart per side (guest keys first, then host's), so soldiers
   walking in / out of 60 m count as differences (0xB01003B7, "host only", IS in the guest's 21:03:59 list). The
   comparison must be at the same moment or with a radius wider than the patrols. Redo with a 200 m radius.
+- 02:42 native a3e8d53 (ShopProbe B) built, unit tests pass, package 62bd6e88. 02:44 cs72a (cs70 + the branch probe,
+  the host's shots only after 95 s so they do not take the guest's focus) running.
+- B02 Fort Windridge SETTLED (cs71a logs): NOT a sync gap. The guest DIED there (21:03:55 hp 268 -> host log 21:03:59
+  "the load began with ReviveLoadingReq 2390 (revive)"), revived at (-6578, 508, -5591), 99 m away, and its later lists
+  were taken there: 0xB01003C4 ("guest only") stood 39.8 m from the revived guest and 61 m from the host (outside the
+  host's 60 m list). The fort is the Balthazar boss arena (cs27e: its soldiers fight both players). B02's evidence
+  stays Hernand cs67a (116-120/120 matched in time) and Fort Windridge cs27e (55/55, 59/60, 62/64).
+- Talk rule written (native, not built): an NPC person (type 3) the other player interacts with (user 2's accepted
+  2671, not a catch) runs on the talker's game while the talker stays within 6 m (after a 4 s grace), then goes back
+  to the game that ran it before ([session2] ai_handoff_talk, default 1). For Borque's "the guest's interact opens the
+  NPC's menu but the NPC keeps walking; the host's NPCs stop and look": in single player the talker's own game runs
+  the NPC, and its AI is what stops it.
+- Dye (Borque): DyeItemByInventoryAck / DyeItemListByEquipSlotAck are ToTarget (only the dyer's game); OtherEquipItemAck
+  is what other players get for an equip. Needs a capture of a real dye (no test save can dye yet): hands-on list.
