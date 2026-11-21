@@ -187,6 +187,8 @@ In your inventory, Discard on an item while your friend is within 10 m asks:
 
 THE CO-OP TAB'S SETTINGS
 ------------------------
+- Session: Who can join (any Steam friend, or only friends you invite; from the next
+  start).
 - Saves & Story: Shared quest credit; Story scenes together (experimental); My
   friend's story: shown, or hidden (no spoilers: their quest steps you have not
   reached are not named). Shared quest credit and Story scenes together are the
