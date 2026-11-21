@@ -9,7 +9,9 @@ test save Out, shipped cdmp.ini restored.
   two-copy run I set up, the host stands at the Hernand butcher; you take the joined player's window, open its map
   and fast-travel to Hernand (any waypoint there), then walk to the butcher and hold R on her. It tells whether a real
   fast travel loses the joined player's shops in a town the host is in (a scripted teleport does; the tester logs have
-  no fast travel of the joined player). The fix waits for this.
+  no fast travel of the joined player). Expected to work (14:15): per the native base's research a fast travel ends
+  with a MoveFieldAck, which the host's copy logic counts as a trip and answers by sending its live scenes again, so the
+  twins come back by themselves; only the test's cheat teleport skips that. The hands-on confirms it.
 - 2026-11-21 13:45 FYI (nothing to do unless you want to): Windows Defender quarantined one of the mod's own unit-test
   programs (build\bin\...\cdmp_tests_optd_host_save.exe, "Program:Win32/Wacapew.A!ml", a machine-learning guess, at
   13:36). Only that test program; the game DLLs we ship were not flagged. I changed no security setting. If you want
