@@ -9343,6 +9343,10 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   c4 too (describe() built from the constants; its move sequences renumbered). optd's script-learn test fails on a
   2976 PrepareSequencerAck (113 B, "91 + 11 n": the 3732 layout differs): needs a 3732 capture (cs75's butcher
   scene in our own packet logs) and the test's values rewritten to it. Later.
+- 06:27 Queued last in after_pp41.sh: cs85a, B10's open item (shared quest credit never shown on a step BOTH hold):
+  both players on the bandit test save (the camp's "Defeat the enemies" step for both), quest_shared_credit=1, the
+  host kills the camp with the test-only lootr_kill_hits=1 while the guest stands 25 m off. Drafted, not queued
+  (keys from cs76c first): cs84, B13 groundwork: both players in an arm-wrestling match at the inn table at once.
 - 06:20 SHARED-WORLD README written (kit/coopplus/README-shared-world.txt, committed 2956e9d; package-native.ps1
   now puts it in place of the normal README, whose body was the two-worlds mode). From an agent's survey of the
   layer's native menus (read only): the title flow, holding Interact on the friend (the menu: the challenges, a
