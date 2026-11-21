@@ -9713,3 +9713,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   both alive; nothing taken by the server at any angle, the category fix notwithstanding. As cs33b on 3663: the
   friend's own "Try arm wrestling" on a patron is B14's known leftover (the patrons' minigame belongs to a host
   scene with no twin, likely), not a regression of today's work. Stays on the list (B14).
+- 18:16 cs74h (guest_clock_fix measuring only; cs74g this morning had it on): SAVES OK, 5/5, both alive. The host's
+  view of the running friend: held its pose 4.0% of frames (cs74g 3.9%), longest 2.8 s; mid-run holds (a sample ending
+  while it still moved, what remote_interp_char fixed) 0 in both. The host's three 5 s main-loop hitches came while
+  the friend was joining (18:10:10-26), not while it ran. DECISION (mine, scoped): guest_clock_fix stays 0: on one PC
+  it changes nothing measurable (its rewrites up to 8-10 s are the guest clock's own offset, which the game's buffer
+  already absorbs). The ~4% "held while running" with no mid-run holds is the run's starts and stops; nothing to chase.
