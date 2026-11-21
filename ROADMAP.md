@@ -299,7 +299,9 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
     beside the shopkeeper; cs80c: a townsperson's greeting, "Trust +5"); in cfaa3a69 (checklist step "shop" added).
     Left: the twins lost to a far teleport into a town whose shop scenes the host already runs (shop_twin_again, round
     2 in the worktree); the inn patrons' arm wrestling (cs76, to retake with the category fix); talks that belong to a
-    host scene (B02a's twin for dialog scenes);
+    host scene (B02a's twin for dialog scenes); pp42-shop's one "User2Shops [nested vf48]" (inside a routed 2808 of
+    the joined player's OWN shop scene a nested lookup kept the host's manager: check what it touched; none in
+    cs82a-c);
     talk greyed). 2026-11-21: reproduced by script on 3732 (cs75c-e at the Hernand butcher, cs76c-e at the inn
     cellar's patrons: no R ever reached the host's server). The guest's prompt check of a person's dynamic entry is
     redirected to the host's stage manager X (GuestXInter) and finds the stage, then refuses (result 0) every time

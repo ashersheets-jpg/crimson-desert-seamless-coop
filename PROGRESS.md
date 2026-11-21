@@ -9678,3 +9678,14 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   (hands-on above: no tester log has one). shop_twin_again stays 0 in the release. B19 v3: the four v2 findings
   fixed; four new ways to give twice found and fixed in v3.1 (c22bc27, worktree; docs/research/
   lootr-across-sessions.md). pp42: xess 44/0, fsr 44/0.
+- 15:20 pp42 so far: latehook 59/0, display 7/0, lowsave 48/0, chest 47/0, revive 49/0, loot 48/0, crime 51/0;
+  leave 24/3 and shop 23/2 (both new steps' first checklist runs), every failure the test kit's own expectations,
+  every functional check passed (shop: both of the friend's requests ACCEPTED, the twin made, its menu answered on the
+  friend's game, the shopkeeper handed to it). leave: the friend's game is killed, so the host's tunnel stops after
+  15 s (ERR) and U-1 says goodbye while armed (WRN); its log 393 lines a minute (U-1 arms: the host starts far from the
+  friend). shop: the host parked 440 m away arms U-1 too (458 a minute), User2Shops "[drain NOT held]" when the host
+  comes back while the friend's own shop is open, a "[nested vf48]" diagnostic (none in cs82a-c: noted to look into),
+  the host's teleport "stopped 39 m short" (still ~400 m away). Test-kit fix written (scratchpad leave_kit_fix.py:
+  $ERR_ALLOW in unknown_errs, the two steps' allowances and growth limits 440 / 480 with the reasons), applied after
+  pp42; then pp42b: static (clean tree, host_save relinked), leave, shop + smoke (fresh, solostart).
+  Discord 15:10: #general only a new member (Luc), #play-testing-feedback nothing new.

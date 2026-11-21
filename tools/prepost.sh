@@ -109,14 +109,14 @@ overlay_checks() {  # layer log, who
 # 13 logs since tcB69, always the UI time scale hook's page). The exe form is only known when one of the five lines
 # before or after it (the fault is logged at once, the hook's own line when it is in) names a hook in the same
 # 4 KB page: an execute fault in game code with no hook being written is real.
-unknown_errs() {  # native log
-  awk -v KNOWN='Session2 save redirect: (cannot copy|CDMP_SANDBOX_ADD)|User2Stages: [DSF], .* REFUSED, not hooked|GuestXVeto: unsupported game build|GuestS3 first-chance AV at cdmp.asi|GuestS3 first-chance AV at 0x(7FF|13FF[EF])[0-9A-F]+ kind 0x8' '
+unknown_errs() {  # native log ($ERR_ALLOW: an error kind a step allows for itself, as $WRN_ALLOW)
+  awk -v EXTRA="${ERR_ALLOW:-^this never matches\$}" -v KNOWN='Session2 save redirect: (cannot copy|CDMP_SANDBOX_ADD)|User2Stages: [DSF], .* REFUSED, not hooked|GuestXVeto: unsupported game build|GuestS3 first-chance AV at cdmp.asi|GuestS3 first-chance AV at 0x(7FF|13FF[EF])[0-9A-F]+ kind 0x8' '
     { L[NR] = $0 }
     END {
       for (n = 1; n <= NR; n++) {
         line = L[n]
         if (line !~ /\] ERR /) continue
-        known = (line ~ KNOWN)
+        known = (line ~ KNOWN) || (line ~ EXTRA)
         if (!known && match(line, /GuestS3 first-chance AV at exe\+0x([0-9A-F]+) kind 0x8/, m) && length(m[1]) > 3) {
           page = "exe\\+0x" substr(m[1], 1, length(m[1]) - 3) "[0-9A-F][0-9A-F][0-9A-F]([^0-9A-F]|$)"
           for (k = n - 5; k <= n + 5; k++)
@@ -370,11 +370,19 @@ leave)
   info "the host's client took back: $(grep -c 'AiHandoff: this client now runs NPC' "$H") NPC(s) over the run"
   overlay_checks "$HL" "host"
   no_recording "$H" "host"
-  growth "$H" "host native" 380
+  # pp42 (this step's first checklist run): the host starts far from the friend, so U-1 arms user 2's own world
+  # (User2Stages control / element / close and NpcActivation lines, ~800 more than crime at the same camp: ~400 a
+  # minute); the friend's game is KILLED, so the host's tunnel stops after 15 s (ERR) and U-1 says goodbye while armed
+  # (WRN). Both are this step's scenario.
+  growth "$H" "host native" 440
   growth "$HL" "host layer" 240
+  WRN_ALLOW='^UserNStages \[goodbye while ARMED\]'
   new_wrn "host" "$HL" $N/$NAME.coopplus.host.before.log "$H"
+  WRN_ALLOW=
+  ERR_ALLOW='Session2: the Troc tunnel stops: the guest has been gone for [0-9]+ s'
   e=$(unknown_errs "$H" | grep -c .)
-  [ "${e:-0}" -eq 0 ] && ok "host: native log: no error line outside the known set" || { bad "host: native log: $e unknown error line(s):"; unknown_errs "$H" | cut -d']' -f3- | cut -c1-170 | sort | uniq -c | head -5 | sed 's/^/          /' >> "$R"; }
+  [ "${e:-0}" -eq 0 ] && ok "host: native log: no error line outside the known set (the tunnel's stop after the friend's game was killed is this step's)" || { bad "host: native log: $e unknown error line(s):"; unknown_errs "$H" | cut -d']' -f3- | cut -c1-170 | sort | uniq -c | head -5 | sed 's/^/          /' >> "$R"; }
+  ERR_ALLOW=
   info "screenshots to LOOK AT: $(cd $N/shots && ls $NAME-*.png 2>/dev/null | tr '\n' ' ')" ;;
 shop)
   # 2026-11-21 (cs82c; Borque 20 Nov "client still not able to interact with npcs"): the friend opens the Hernand
@@ -404,9 +412,15 @@ shop)
   has "$H" "AiHandoff: talk rule: NPC 0x[0-9A-F]+ \\(type 3\\) -> the talker's game" "the talk rule handed the shopkeeper to the friend's game"
   overlay_checks "$HL" "host"
   no_recording "$H" "host"
-  growth "$H" "host native" 380
+  # pp42 (this step's first run): the host parked 440 m away arms U-1 (user 2's own world: ~460 lines a minute, as in
+  # leave); when it comes back while the friend's own shop is open, User2Shops drains it ("[drain NOT held]") and its
+  # routing may note a nested vf48 (a counted diagnostic, the first of each kind); the host's teleport to its spot
+  # above the dock can stop short (still ~400 m away).
+  growth "$H" "host native" 480
   growth "$HL" "host layer" 240
+  WRN_ALLOW='^(UserNShops \[(drain NOT held|nested vfN)\]|Teleport: stopped N m short)'
   new_wrn "host" "$HL" $N/$NAME.coopplus.host.before.log "$H"
+  WRN_ALLOW=
   e=$(unknown_errs "$H" | grep -c .)
   [ "${e:-0}" -eq 0 ] && ok "host: native log: no error line outside the known set" || { bad "host: native log: $e unknown error line(s):"; unknown_errs "$H" | cut -d']' -f3- | cut -c1-170 | sort | uniq -c | head -5 | sed 's/^/          /' >> "$R"; }
   info "screenshots to LOOK AT (a0: the menu alone, a2: the menu with the host there): $(cd $N/shots && ls $NAME-*.png 2>/dev/null | tr '\n' ' ')" ;;
