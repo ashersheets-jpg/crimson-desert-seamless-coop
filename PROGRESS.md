@@ -5,6 +5,10 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- 2026-11-21 06:05 QUESTION (not urgent): B19's last part, "items in the world" across sessions, has a design
+  (docs/research/lootr-across-sessions.md: the other player's share is kept in a file next to the co-op save, written
+  when the game saves). Testing it needs one test that SAVES, into the TEST co-op world only (backed up before and put
+  back after; your own saves are still checked unchanged). Our tests never save today. May a test save there?
 - 2026-11-21 03:30 SAVE REQUEST (not urgent): B07 (boss mechanics for two) needs a save right before a boss fight
   (any story or world boss you have reached), so two copies of the game can fight it together and I can see grabs,
   phases, the arena and the finish on both screens. None of the test saves is at a boss (the windridge fort's wyvern
