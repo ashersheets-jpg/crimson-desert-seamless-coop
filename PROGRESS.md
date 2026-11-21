@@ -9237,3 +9237,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   + faceto) -> cs76b (cs76v2: arm wrestling) -> pp41, the full checklist (24 steps with the new lagrun) on 4394b014.
   After it: cs74g / cs74h (the clock probe and guest_clock_fix), cs73b (13-min horse hunt), cs77 (B06), cs78 (B12),
   cs79 (B09 cabin talks).
+- 04:47 cs74f (sim_lag a, remote_interp_char=1, pwshot): mid-run holds <=100 ms 0, <=300 1, <=1000 0 (longest 297);
+  held 4.0% (stops / teleport); the character's delay 252 ms (peak lateness 192). With cs74d: the fix holds in both
+  runs (cs74c / cs74e without it: 53+2 / 25+6). THE RUNNING FREEZE IS FIXED for the conditions sim_lag makes; Borque /
+  Jay to confirm on two PCs.
