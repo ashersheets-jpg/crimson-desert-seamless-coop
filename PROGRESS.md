@@ -9362,6 +9362,12 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   player in the host's match; the host mashes faster: "Activity: versus ... over: we won" if the 3732 gauge address
   and the match detection work), cs84 (both players in a match at the table). A recording run for 3732 fixture
   captures needs no new switch: [dev] native_record=1 (-HostDev) writes [sniffer] record=1.
+- 06:33 pp41 screenshots looked at so far (contact sheets of each step's last views): crime (both at the camp,
+  bandits on both, "Defeat the enemies" on the host's), fresh / xess / fsr (side by side at Nas River, the "R
+  Interact" prompt on the friend), newsave (both at the cabin at night; the New Co-op Save clock still differs:
+  guest Day 1 0:08 AM, host Day 0 10:58 PM, the known cosmetic op1 finding), mounts (both mounted), lowsave (the
+  guest's last view is its pause menu, the step's own Esc presses; the "Co-op" tab after Others), chest (both at the
+  Greymane Shrine, the guest's "Warspike Spear E Take"). Nothing wrong seen.
 - 06:20 SHARED-WORLD README written (kit/coopplus/README-shared-world.txt, committed 2956e9d; package-native.ps1
   now puts it in place of the normal README, whose body was the two-worlds mode). From an agent's survey of the
   layer's native menus (read only): the title flow, holding Interact on the friend (the menu: the challenges, a
