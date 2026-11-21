@@ -9367,7 +9367,8 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   Interact" prompt on the friend), newsave (both at the cabin at night; the New Co-op Save clock still differs:
   guest Day 1 0:08 AM, host Day 0 10:58 PM, the known cosmetic op1 finding), mounts (both mounted), lowsave (the
   guest's last view is its pause menu, the step's own Esc presses; the "Co-op" tab after Others), chest (both at the
-  Greymane Shrine, the guest's "Warspike Spear E Take"). Nothing wrong seen.
+  Greymane Shrine, the guest's "Warspike Spear E Take"). Nothing wrong seen. revive: the guest's death screen
+  ("Death has found you", Q instant / U checkpoint, "Host can revive you (8 s)"), then up again at the dock.
 - 06:40 An independent review of the unbuilt native diff (an agent, read only, given the code not my conclusions):
   no compile error found; LOGIC FINDINGS, all real, all fixed in source (not built): (a, high) "not in the world"
   is also true for non-load phases (cs8a at the cabin with both in the world): the sweep, the forget and the watch
