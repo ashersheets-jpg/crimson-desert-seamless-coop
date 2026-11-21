@@ -9109,7 +9109,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   Next: whose spawn are the fort's 0xB01003xx soldiers (stage schedules on each side? the guest's own 2005s?).
 
 ## 2026-11-21 (the user on the PC: static work only)
-- 00:40-01:30 Taming freeze, static: 3732's StageBranchStateReq handler (vf48 0x2D55B36) calls the branch 0x2B56870
+- 00:40-00:47 Taming freeze, static: 3732's StageBranchStateReq handler (vf48 0x2D55B36) calls the branch 0x2B56870
   (protected, also in 3576: 0x2AF0110 -> thunk) and answers a result != 0 with a Nak 1013 (0x3F5, at 0x2D55B75).
   Borque's host log: User2Shops "to user 2: Nak 0" all session, so "then 2" was NOT refused with a Nak: either the
   branch accepted it and its Ack 2920 never came (the branch waits on something), or the handler left before the
