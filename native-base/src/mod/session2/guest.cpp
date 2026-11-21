@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <atomic>
 #include <deque>
+#include <array>
 #include <cstring>
 #include <format>
 #include <mutex>
@@ -1813,6 +1814,64 @@ void guest_deliver(std::vector<uint8_t>&& packet) {
 }
 
 namespace {
+// guest_clock_fix (guest.h). The game's frame clock (3732; combat_follow's kClockBase / kClockFrac) without the offset.
+constexpr uint16_t kOpServerTimeInfo = 2474;
+constexpr uintptr_t kFrameClockBase = 0x71661A0, kFrameClockFrac = 0x71661B0;
+constexpr uint64_t kClockWindowMs = 60000;
+std::atomic<bool> g_clock_fix{false};
+std::atomic<uint32_t> g_link_rtt_x10{0};
+struct ClockObs {
+    uint64_t at = 0;  // GetTickCount64
+    int64_t obs = 0;  // the Ack's tick - this game's frame clock
+};
+std::array<ClockObs, 16> g_clock_obs{};  // the mod's network thread only
+size_t g_clock_next = 0;
+std::atomic<uint64_t> c_clock_acks{0}, c_clock_fixed{0}, c_clock_bad{0};
+std::atomic<int64_t> g_clock_last_adjust{0}, g_clock_max_adjust{0}, g_clock_last_obs{0}, g_clock_best{0};
+void clock_fix_on_packet(std::vector<uint8_t>& packet, size_t payload_at, size_t payload_size) noexcept {
+    c_clock_acks.fetch_add(1, std::memory_order_relaxed);
+    static const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    uint64_t fb = 0, ff = 0;
+    if (payload_size != 20 || payload_at + 12 > packet.size() || !game::safe_read(base + kFrameClockBase, &fb, sizeof fb) ||
+        !game::safe_read(base + kFrameClockFrac, &ff, sizeof ff) || !fb) {
+        c_clock_bad.fetch_add(1, std::memory_order_relaxed);
+        return;
+    }
+    uint64_t tick = 0;
+    std::memcpy(&tick, packet.data() + payload_at + 4, 8);
+    const int64_t frame = static_cast<int64_t>(fb + ff / 1000);
+    const int64_t obs = static_cast<int64_t>(tick) - frame;
+    const uint64_t now = GetTickCount64();
+    g_clock_obs[g_clock_next++ % g_clock_obs.size()] = ClockObs{now, obs};
+    int64_t best = obs;
+    for (const ClockObs& o : g_clock_obs) {
+        if (o.at && now - o.at < kClockWindowMs && o.obs > best) best = o.obs;
+    }
+    const int64_t half_rtt = static_cast<int64_t>(g_link_rtt_x10.load(std::memory_order_relaxed)) / 20;
+    const int64_t target = best + half_rtt;
+    const int64_t adjust = target - obs;  // how much later than the Ack says the server's clock is
+    g_clock_last_obs.store(obs, std::memory_order_relaxed);
+    g_clock_best.store(best, std::memory_order_relaxed);
+    g_clock_last_adjust.store(adjust, std::memory_order_relaxed);
+    if (adjust > g_clock_max_adjust.load(std::memory_order_relaxed)) g_clock_max_adjust.store(adjust, std::memory_order_relaxed);
+    const uint64_t n = c_clock_acks.load(std::memory_order_relaxed);
+    if (g_clock_fix.load(std::memory_order_relaxed) && adjust > 0 && adjust < 5000) {
+        const uint64_t fixed = static_cast<uint64_t>(frame + target);
+        std::memcpy(packet.data() + payload_at + 4, &fixed, 8);
+        c_clock_fixed.fetch_add(1, std::memory_order_relaxed);
+    }
+    if (n <= 6 || n % 12 == 0) {
+        try {
+            log::info("GuestClockFix [{}]: ServerTimeInfoAck {}: tick - frame clock {} ms, the best of the last minute {} "
+                      "ms, half the link round trip {} ms -> {} {} ms later (largest so far {} ms; rewritten {} of {}, "
+                      "unreadable {})",
+                      g_clock_fix.load() ? "1" : "measure", n, obs, best, half_rtt,
+                      g_clock_fix.load() && adjust > 0 && adjust < 5000 ? "the tick set" : "would set the tick", adjust,
+                      g_clock_max_adjust.load(), c_clock_fixed.load(), n, c_clock_bad.load());
+        } catch (...) {
+        }
+    }
+}
 void deliver_body(std::vector<uint8_t>&& packet) {
     if (g_mode.load() != Mode::Remote || g_broken.load()) return;  // nothing to deliver to
     auto v = troc::parse_wire(packet, troc::Dir::ToGuestClient);
@@ -1830,6 +1889,11 @@ void deliver_body(std::vector<uint8_t>&& packet) {
     // P8 session 9, D1 (ride_filter.h): the host character's mount/dismount actions -> native locomotion, in
     // place, before the client gets the packet; probe: counted only. Off: nothing.
     if (v && ride_filter_active()) ride_filter_on_guest_packet(packet, g_epoch.load());
+    // guest_clock_fix (guest.h): measured always, the tick rewritten with 1.
+    if (v && v->opcode == kOpServerTimeInfo) {
+        const size_t at = static_cast<size_t>(v->payload.data() - packet.data()), sz = v->payload.size();
+        clock_fix_on_packet(packet, at, sz);
+    }
     // The mod's network thread only queues: the NetworkThread hands it to the game (guest_pump).
     if (!g_mod_net_tid.load(std::memory_order_relaxed)) g_mod_net_tid.store(GetCurrentThreadId());
     gin::Push pushed = gin::Push::Full;
@@ -1846,6 +1910,19 @@ void deliver_body(std::vector<uint8_t>&& packet) {
     if (pushed != gin::Push::Queued) end_remote("too many packets of the host waiting");
 }
 }  // namespace
+
+void guest_clock_fix_start(bool on) noexcept {
+    g_clock_fix.store(on);
+    if (on)
+        log::info("GuestClockFix: guest_clock_fix=1: each ServerTimeInfoAck {} sets this game's clock from the least "
+                  "delayed Ack of the last minute plus half the link's round trip", kOpServerTimeInfo);
+}
+
+void guest_set_link_rtt(float rtt_ms) noexcept {
+    g_link_rtt_x10.store(rtt_ms > 0 && rtt_ms < 10000 ? static_cast<uint32_t>(rtt_ms * 10.0f) : 0,
+                         std::memory_order_relaxed);
+}
+
 
 namespace {
 

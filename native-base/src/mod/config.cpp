@@ -230,6 +230,7 @@ Config load_config(const std::wstring& ini_path) {
     c.s2_user2_revive_manager = narrow(read_string(ini_path, L"session2", L"user2_revive_manager", "0"));
     c.s2_guest_fast_travel_veto = narrow(read_string(ini_path, L"session2", L"guest_fast_travel_veto", "0"));
     c.s2_guest_reload_wait_fix = narrow(read_string(ini_path, L"session2", L"guest_reload_wait_fix", "0"));
+    c.s2_guest_clock_fix = read_uint(ini_path, L"session2", L"guest_clock_fix", 0) != 0;
     c.s2_loading_owner_alias = read_uint(ini_path, L"session2", L"user2_loading_owner_alias", 1) != 0;
     c.s2_user2_travel_probe = read_uint(ini_path, L"session2", L"user2_travel_probe", 0) != 0;
     // P8 remote climb / wall-up / dismount (pendientes/p8-impl-escalada.md).

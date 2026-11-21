@@ -312,6 +312,8 @@ struct Config {
     // blocking actor; 1: also removes from the wait list a host NPC that was already NOT READY (+0x5E 8) when a
     // reload in the same field began (as 0x12 removes a ready one), at most 16 per trip.
     std::string s2_guest_reload_wait_fix = "0";
+    // Co-op+ 2026-11-21 (session2/guest.h, guest_clock_fix): GUEST, 0 (default) | 1.
+    bool s2_guest_clock_fix = false;
     // P8 session 15, HOST (session2/travel_probe.h, p8-impl-viaje-rapido.md §11). user2_loading_owner_alias: 1 (default)
     // = user 2's copy of LoadingFieldDataAck 2643 names user 2 as the field owner (u32 +9), as its 2174 already does.
     // user2_travel_probe: 1 = read-only lines TravelBegin/Context/Prepared/Consume/Ack around user 2's 2283/2437.
