@@ -9381,8 +9381,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   second (rules off, or no host character) -> taken at the top of the server tick, armed only when the rules are on,
   injected only while the host is in a world, the watch at most 10 minutes; (f) a faulted scan no longer ends the
   watch; (g) the forget before the flags; (h) a still-listed friend is told the new controller. Also: the state is
-  read 4 times a second (not every loop pass); the hitch line says its time is the hitch's end. LESSONS candidate:
-  an independent review before the first build caught 8 logic faults my own three passes missed.
+  read 4 times a second (not every loop pass); the hitch line says its time is the hitch's end. LESSONS: an
+  independent review before the first build caught 8 logic faults my own three passes missed. One more (mine): a
+  crash ends the friend's session only after its logout (the final save, up to 15 s, then the 2001), ~25 s of frozen
+  enemies; the departure now fires at the START of the goodbye (session present, phase Stable, not in the world =
+  the logout asked), once, and re-arms when the friend is in the world again.
 - 06:20 SHARED-WORLD README written (kit/coopplus/README-shared-world.txt, committed 2956e9d; package-native.ps1
   now puts it in place of the normal README, whose body was the two-worlds mode). From an agent's survey of the
   layer's native menus (read only): the title flow, holding Interact on the friend (the menu: the challenges, a
