@@ -5,6 +5,14 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- 2026-11-20 21:10 HANDS-ON (about 10 min, when you have time): mining and fishing as the joined player (Borque 18 Nov
+  items 5 / 6). The mod has no mining or fishing code yet, and the fresh test saves have no hand drill or rod. I need
+  a host-only session where you mine one ore block with the hand drill and fish once, with the sniffer recording (I
+  set it up); the recording shows which game messages to share.
+- 2026-11-20 21:10 QUESTION (not urgent): in #general, w-ri (21:55 UTC) offers to test daily over Radmin with an
+  "offline steam account", which may mean an unofficial copy. I have not replied. Reply yourself, or tell me what to say.
+- 2026-11-20 20:54 DONE: 69edcc84 POSTED in #download-here by me (standing OK; pp40 971/971): rides on mounts that
+  are not the joined player's own, the first wild-horse mount seated on the host, the joined player's carry.
 - 2026-11-17 07:45 HANDS-ON (about 10 min, when you have time): B09 past the cabin. A script cannot aim a talk
   (7 tries). I need you to play the host in a two-copy run I set up, through the Marius and Ross talks to "Enter the
   cabin"; a probe logs which game code starts that scene, so the ready check can hold it for both players.
@@ -9094,3 +9102,8 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 ### POSTED 2026-11-20 20:54: 0.1.0-alpha+69edcc84 in #download-here (game 1.0.0.3732), both zips (12 755 400 4517be31...,
   6 953 722 8daf32ba...), text download-69edcc84.txt (Borque tagged).
 
+- 21:08 cs71a (B02 at Fort Windridge, 69edcc84; cs67's method: both log NPC keys within 60 m, 2 spots): spot 1 both 78,
+  host only 2, guest only 22; spot 2 both 66, host only 56, guest only 40. The differences are PEOPLE (type 3, soldiers
+  45 / 135 HP, keys 0xB01003xx), not animals. Guest-only 0xB01003C4 / D0 never appear in the host's log at all; host-only
+  0xB01003B7 stood 10.7 m from the host and never in the guest's list. Hernand matched (cs67); the fort does not.
+  Next: whose spawn are the fort's 0xB01003xx soldiers (stage schedules on each side? the guest's own 2005s?).
