@@ -10275,3 +10275,10 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   player's own story-scene copies (ROADMAP B09). README's player steps updated. 677c87bb's post staged (zips checked
   25/25 and 10/10 against the package folders). Research package 26a59d8a now carries the 15:00 chain (cs95, cs95b,
   cs93b, cs94, cs96, cs97, cs98, cs99) after pp44 lagrun and pp44b on 677c87bb.
+- 12:55 the 15:00 window split: window_1500.sh = 677c87bb's runs only (dllswap put 677c87bb, pp44 lagrun, pp44b
+  static fresh solostart loot display), then the post with no test running, then build/native/window_chain.sh (put
+  26a59d8a, chain_j: cs95, cs95b, cs93b, cs94, cs96, cs97, cs98, cs99, cs79c = cs79b without the story mode: do the
+  host's talks open when the friend's story copies are not there?). FEATURES.md rewritten for the shared world.
+  Discord 13:00: nothing to answer. Found: the partner frame's stamina has read 0 since at least 14 Nov (3663), not
+  only on 3732. B14's server-side grip cannot be read (the 2976 chart handler jumps into .xtls): the two built fixes
+  are the way.
