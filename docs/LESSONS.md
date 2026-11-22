@@ -507,3 +507,20 @@ vanishes, read Get-MpThreatDetection before calling it a failure, and never chan
 cs33b (16 Nov) and cs82a / cs82b (21 Nov) each lost half a run to it: "Esc, Esc" after a shop menu or a talk closed it
 and then opened the inventory, which stayed up through the next sweep, so every R after it did nothing. Close with one
 Esc, shoot the screen after it, and keep double Escs for the very end of a script.
+
+## A square key icon can still be a hold: try a held key before calling an input dead (2026-11-21)
+The arm-wrestling organizer's "E Participate" ignored a 200 ms E and 20 s of E taps (cs83a, cs83w2), so the match
+looked unreachable by script. Held for 2 s, E started the match at once (cs83w3). When a menu ignores a tap, try a
+2 s hold, then other confirm keys (Space, left click, F), with a shot after each, in one run.
+
+## A log line that marks a step's request is not the step done: look at the shot (2026-11-21)
+cs83a was written up as "the host's arm wrestling STARTED" from the layer's "we started a minigame" line. That line is
+the client's ActivateMiniGameReq, sent when the organizer's "Participate" menu OPENS; the shots of cs83w2 show the
+menu still up 20 s later and no match. Before calling a game action done, find what the player would see (a shot, a
+state the game reports) and quote it, not the request on its way.
+
+## Some game actions save the host's world by themselves; keep the test world as it was (2026-11-21)
+The arm-wrestling menu's opening made the game save the host (SavePlayerToSlot slot 0 and 206) into the TEST co-op
+world, creating a slot0 the backup did not have, so the next runs would have loaded the host where that save left
+it. After a run that opens a minigame, a shop's purchase or anything else that may save, compare the test world with
+its backup (bash coopworld.sh backup says "backup is current" when nothing changed) and move a new save out of it.

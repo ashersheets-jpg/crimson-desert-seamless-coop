@@ -9764,3 +9764,45 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   host's own match starts with interaction 0x000F431C accepted (cs83a). Native 3d4092c twin_watch (research, host,
   default empty): logs every message about the listed scenes during a host match, to learn what a twin of it would
   have to answer. Built; cs83w1 (the host's match with twin_watch on the three minigame scenes) running.
+- 20:15 cs83w2 (twin_watch on the three minigame scenes; cs83w1 was the first try): SAVES OK, 5/5, both alive; 118
+  watch lines. CORRECTION to 19:28: no match was played, in cs83a or here. The host's talk with the table's organizer
+  opens his "Fancy giving it a try?" menu (E Participate, 20 copper; Esc Back) and stays there: neither the E press
+  (200 ms) nor 20 s of E presses started the match (shots h1-h3), so "we started a minigame (id 0x4240)" (the
+  layer's ActivateMiniGameReq 2359) marks the menu opening, not a match. What the capture shows of the table scene
+  'cd_minigame_armwrest_base' (host id 0x31F; seotda 0x1D8 and rock-paper-scissors 0x1F6 prepared with it):
+  the 2380 (len 180) and the initial 2752 at the cellar's load; the talk = 2642 / 2308 / 2304 / 2363 (interaction
+  0x000F431C on the organizer 0xB0100341, the server's check finds stage 0x31F in the field owner's manager:
+  accepted); then the scene's branch 5 (C>S 2644 -> S>C 2369 + 2752 type 1 n 5, no 2698 unlike a shop's greeting),
+  14 x C>S 2672 (one per scene element, no answer), C>S 2200 chart events 0 and 1 every 30 ms (S>C 2105 acks), C>S
+  2808 trigger volumes. Everything about the scene but the talk itself is the kind of request a twin withholds and
+  answers locally (as the shop twin does). Not seen yet: what "Participate" sends (the 20 copper must be taken by the
+  server, and a win paid by it, which a locally answered twin would skip). Also found: the menu's opening made the
+  game SAVE the host's world (SavePlayerToSlot slot 0 + 206 at 20:06:40, into the TEST co-op world's slot0, which
+  the 19:30 backup did not have; the user's own saves unchanged): moved out (build/native/cs83w2-autosave-slot0),
+  the test world is the backup's again ("backup is current").
+- 20:17 cs83w3 started (B14): the same talk, then one input at a time with a shot after each (E tap, E held 2 s,
+  Space, left click, F, then 20 s of E), the host recording every packet (sniffer_record, the capture moved out of
+  bin64 after the run) and its slot0 autosave moved out of the test world again. If nothing starts the match, the
+  likely cause is the host's money (20 copper; the test world's purse is unknown).
+- 20:30 cs83w3: SAVES OK, 5/5, both alive; the autosave moved out again ("backup is current"); capture kept in
+  build/native/packets/cs83w3 (the script's glob missed the sniffer's "cdmp_packets.host_" name: moved by hand,
+  glob fixed). THE HOST PLAYED A WHOLE MATCH: "Participate" is E HELD ~2 s (h2: the table's intro cinematic, h5: the
+  countdown, h6 after 20 s of E: "Play Again (20)", the purse 114.64; the layer: "a match of arm wrestling (stage
+  16005100)" ... "we finished"). The match is the client's minigame requests (Activate / Join / SpawnMiniGameCharacter
+  / Apply -> the server's RemoveItemToInventoryAck of the 20 copper / Join of the opponent / Leave / Result -> the
+  prize's AddItemToInventoryAck / Unspawn), all per requesting player; only Spawn / Unspawn name the scene (u64 at
+  +1). The scene's win path: 0 -b5-> 1 -b0-> (2698 + 2369 now, the 2752 type 3 only after the client's
+  StageBranchStateDelayEndReq 2654) 3 -b0-> 4 -b1-> 5 -b0-> 6 -> 7 -> 8 -> 10, with SetAvoidByCutScene 2698 on / off
+  around several steps (docs/research/armwrest-twin.md has the table). So a twin of the table for the joined player
+  looks workable: its scene requests answered locally (a per-scene table incl. the delayed state), its minigame
+  requests to the server with the twin id put back to the host's in Spawn / Unspawn (and the Acks' id to the twin's).
+  Missing for the table: the menu's Back, a lost match, Play Again and Back after a win: cs83w4 (same set-up, those
+  paths) running.
+- 20:40 cs83w4 (the host: talk, Back; talk, Participate, no keys = a loss; Play Again, mash = a win; Back): every path
+  seen. The table's whole graph: 0 -b5-> 1 (menu); Back 1 -b1-> 2 -b0-> 0; Participate 1 -b0 (held)-> 3 -b0-> 4 -b1->
+  5 -b0-> 6 -b0-> 7; won 7 -b0-> 8 -b0-> 10, lost 7 -b1-> 9 -b0-> 10 ("Play Again (20)" / "Back", shots h5 / h8);
+  Play Again 10 -b6 (held)-> 3; Back 10 -b7-> 11 -b0-> 0. A held step's AvoidOff comes ~20 ms AFTER its delayed state
+  (so cs83w3's "off" before the next step's answers was that tail, not the next step's). Native twin_extra (B14,
+  research, guest, default empty) written in the main tree, not built yet: ShopTwin for listed resources with this
+  table (stl::kArmwrestSteps), the held answers, the minigame id swap. Next: build, then chain_e (cs86 the joined
+  player's own match, cs85b B10 with dev-script kills, cs83v the B13 versus gauge).

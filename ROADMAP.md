@@ -233,6 +233,9 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   the gauge on one game.)
 - [~] **B14 — The empty arm-wrestling table** (T21). (2026-11-16 cs33a: on native both games list the same 15
   people at the Hernand inn table and both screens show them; left: the guest's own "Try arm wrestling" there.)
+  (2026-11-21: the table is the host's scene 'cd_minigame_armwrest_base' with no twin, so the joined player's prompt
+  there is refused like the host's own shop entries; the way in is a twin like the shops' (research:
+  docs/research/armwrest-twin.md; the organizer's menu captured, the match itself next).)
 - [~] **B15 — Duel extras and scoreboard** (wagers, arenas, spectator camera, rematch, titles). (Rematch T42,
   scoreboard and titles T43 exist. 2026-11-16 wagers: from a challenge's invite on, "Stake on the challenge" on the
   inventory's Discard question; when the match ends the loser's game gives its stake to the winner (cs36e, one PC).
