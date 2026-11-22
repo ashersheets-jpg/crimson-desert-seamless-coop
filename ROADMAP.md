@@ -204,7 +204,10 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   silent "we hurt" was a two-worlds-only line, not the saddle (the guest's blows from the saddle carry its own key);
   found with it: the host's layer took the guest's character for its own and "Enemy health with a guest" barely
   worked in the shared world -- fixed in 1c6453e1 (both players' blows, cs55). Left: the host fighting from the
-  saddle with the guest watching (cs26a could not script the host's ride).)
+  saddle with the guest watching (cs26a could not script the host's ride). 2026-11-22: cs77b and cs77c could not
+  either: at the Rodbel dock the host's horse is ~500 m off and does not answer the call (the guest's does, it is
+  parked near the dock); the host's ride starts at its own spot in the mounts step. The host's blows are its own
+  game's ordinary combat on its own server, so this is the lowest-risk part of B06.)
 - [ ] **B07 — Boss mechanics for two** (grabs, finishers, phase triggers, arena locks).
   (2026-11-21: docs/research/boss-audit.md revised for the shared world (its top section): the first boss test reads
   each mechanic off both screens with the JOINED player landing the final blow, because with each player's own quest
@@ -229,6 +232,10 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   player's side (its own cheat kills at the camp). A consequence of option 3 to settle before the release: an
   objective of the HOST's that the joined player completes (a camp's last kill, a story boss's final blow, B07) only
   counts for the joined player's own quests, so the host's step may stall unless option 2 is on.)
+  (2026-11-22 cs93, both on the bandit save, the test guest's long mailbox set aside, quest_shared_credit=1, the
+  host's script kills the camp: 257 ms after the host's camp mission moved (0x0F4D39 / 0x0F4D3A, quest 0x0F42D9),
+  the JOINED player's own character got the same three updates: option 2 seen working on 3732. The baseline with the
+  credit off (cs93b) is next, to rule out the game sharing that step by itself.)
   **Design (user 2026-11-08, after a Discord poll):** option 3 as the base -- each player keeps and plays their OWN
   quests and story in the shared world (start / finish individually, fight together); option 2 as an optional "do it
   together" bonus -- when both are on the SAME step of the same quest, one completing it checks it off for both

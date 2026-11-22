@@ -5,6 +5,11 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- 2026-11-22 05:20 FYI, time-sensitive: Windows has an update RESTART PENDING (read-only check: RebootRequired is
+  set; active hours 15:00-09:00), so it may restart the PC between 09:00 and 15:00. The checklist pass pp44 (build
+  677c87bb, the door fix) runs 05:22-~08:50 and stops before its last two steps; I run those only if there is time
+  before 09:00. When you are up: either pause updates (Settings > Windows Update) or let it restart when no test runs;
+  I change no system setting myself.
 - 2026-11-21 19:30 QUESTION (not urgent, B13: player-vs-player arm wrestling in one shared world): who sits where?
   (1) each player at a table, two matches with one shared strength bar (the faster masher wins on both screens);
   (2) one match: you wrestle the table's NPC, your friend stands by and mashes too, both screens show the bar and the
@@ -10171,3 +10176,30 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   character got the same three (0xA0100066, t 305.860). QuestRoute: 561 shared passes. The host's next mission
   (0x0F429A, t 306.421) did not follow for the joined player. To be sure the credit did it and not the game's own
   party rules: cs93b, the same run with the credit off (written; next chain).
+- 05:19 cs77c (B06, the host fighting from the saddle; SAVES OK, 5/5): NOT exercised again: at the dock the host's
+  horse stays 502 m off ("it did not come"), so no ride. Left as the lowest-risk part of B06 (ROADMAP).
+  Static checks after chain_i: door_step.py applied (prepost.sh door step, RELEASE-CHECKLIST row, known-warnings line;
+  wrn-kinds of cs88b gives exactly that kind, nothing else new); kg_check.py: knowledge_grant's 3732 learn core
+  0x2E80970 = 3663's 0x2E7C210 (64/64 masked bytes), its entry thunk jumps to the same prologue: the hook is right,
+  cs91 just had no new knowledge. cs94 (B04, LearnKnowledgeByCheatReq 2309 for a knowledge on demand) written.
+- 05:20 Windows: an update restart is PENDING (read-only check). Active hours 15-09, so the pass runs 05:22-~08:50
+  without its last two steps (hostrevive, lagrun); see "Waiting on the user".
+- 05:22-07:10 pp44 (677c87bb, 25 of 27 steps so far 15): static 12/0, real 14/0, fresh 42/1, xess 44/0, fsr 44/0,
+  latehook 59/0, display 7/0, lowsave 48/0, chest 47/0, revive 49/0, loot 47/1, crime 51/0, leave 27/0, shop 25/0,
+  door 47/0 (NEW: the joined player's door request Ack 1, Nak 0, the tavern's levels made ready for it; shot g4: the
+  door open, the joined player walking out into Hernand's square). The two fails are the test kit's:
+  fresh: the install-time User2Stages "cannot arm" line ran 33 ms before ShopProbe's G hook (the owner gate's other
+  source) was in, so it also listed "the owner gate (U-a)": a new warning kind, same behaviour as every run (U off);
+  loot: the joined player's character was 0xA0100067 this run (the server hands keys out) and the check names 66; the
+  four shares were given ("0xA0100067 is there and got its own share ... bag gained"). Fix (scratchpad jkey_fix.py,
+  after the pass): the checks read the key from the host's log; the warning goes to known-warnings. Also seen: the
+  display step's three shots show this app's window, not the game's title (pp43's too): that step is proven by its
+  logs only; a test-kit fix later (bring the game's window up before the shot). Discord 05:57: nothing to answer.
+- 08:43 pp44's 25 steps done: 1017 pass, 2 fail (the two test-kit ones above). After 07:10: farfight 47/0, farfight2
+  46/0, newsave 100/0, solostart 49/0, mounts 51/0, mountfight 47/0 (g1: the joined player in the saddle among the
+  bandits, Kick / Dismount; g2 on foot, knocked off), nosave 7/0, retry 47/0, stuck 51/0, mismatch 9/0. Every step
+  SAVES OK and the install restored 5/5.
+- 08:44 jkey_fix.py applied (prepost.sh: jkey() reads the joined player's key from the host's log, 7 checks use it;
+  its run on pp44-loot's files gives 0xA0100067; known-warnings: the "the owner" variant). hostrevive started
+  (08:44-~08:57). lagrun and the re-runs the rule asks for (loot and fresh, then static / fresh / solostart as the
+  smoke) wait for the update restart to be dealt with (after 15:00, or once updates are paused).

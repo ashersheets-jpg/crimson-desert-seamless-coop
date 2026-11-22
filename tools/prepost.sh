@@ -30,6 +30,14 @@ hasnot() { if grep -qE -- "$2" "$1" 2>/dev/null; then bad "$3   [$(grep -cE -- "
 lastnum() { grep -E -- "$2" "$1" 2>/dev/null | tail -1 | sed -n "s/.*$3 \([0-9][0-9]*\).*/\1/p"; }
 atleast() { local v; v=$(lastnum "$1" "$2" "$3"); if [ -n "$v" ] && [ "$v" -ge "$4" ]; then ok "$5 ($3 $v)"; else bad "$5 ($3 '${v:-none}', wanted >= $4)   [$(basename "$1")]"; fi; }
 
+# The joined player's character key in this run. The server hands it out: usually 0xA0100066, but pp44-loot
+# (2026-11-22) had 0xA0100067 and its working share failed a check that named 66. Read from the host's native log
+# (the C2 identity line); the usual key when the log has none yet.
+jkey() {
+  local k; k=$(grep -m1 -oE "user 2 status of character 0xA01000[0-9A-F]{2}" "$N/$NAME.host.log" 2>/dev/null | grep -oE "0xA01000[0-9A-F]{2}")
+  echo "${k:-0xA0100066}"
+}
+
 # Lines per minute of a log (first to last "[HH:MM:SS" stamp). More than $3 a minute is a FAIL: a player's log must
 # not grow by a line or two every second for hours (2026-11-11: the mod's own once-a-second request did that).
 growth() {  # log, who, limit per minute
@@ -294,7 +302,10 @@ latehook)
   info "LOOK AT: $NAME-Wguest* (the waiting screen must be drawn on the guest), $NAME-L1-host-start-coop (the menu)" ;;
 display)
   head_step "the player's own display mode and graphics, frame generation on, Steam lobby, title only"
-  run2 "-CoopPlus -Lobby -Fresh -KeepDisplay -FrameGen -HostTransport steam -TitleHold 45"
+  # 2026-11-22 (pp43 / pp44): the title-hold shots are of the whole screen and nothing brought the game forward, so
+  # they showed whatever window was in front. -HostKeys makes the harness activate the game's window first (actpid);
+  # the sequence only waits, nothing is pressed at the title.
+  run2 "-CoopPlus -Lobby -Fresh -KeepDisplay -FrameGen -HostTransport steam -TitleHold 45 -HostKeys w:1500"
   O=$N/$NAME.out
   has "$O" "^SAVES OK" "the player's saves untouched (SAVES OK)"; has "$O" "user install restored: 5/5 OK" "the player's install put back (5/5)"
   overlay_checks "$N/$NAME.coopplus.host.log" "host"
@@ -320,8 +331,8 @@ chest)
   run2 "$BASE -Hold 10 -HostScript $SCAN\\tp_chest4_host.txt -GuestScript $SCAN\\chest_far_guest.txt -HostWalkTo -10347.8_-3991.8_-10347.8_-3991.8 -AfterWalkKeys $A"; two_player_checks
   H=$N/$NAME.host.log
   has "$H" "Lootr: chest 0x[0-9A-F]+ at .* opened by 0xA0100001: [0-9]+ item kind" "chest opened by the host, a share kept for the guest"
-  has "$H" "the share waits for 0xA0100066"                                        "the share waited while the guest was away"
-  has "$H" "0xA0100066 is there and got its own share .* its bag gained [1-9]"     "the guest got its share at the chest (bag grew)"
+  has "$H" "the share waits for $(jkey)"                                        "the share waited while the guest was away"
+  has "$H" "$(jkey) is there and got its own share .* its bag gained [1-9]"     "the guest got its share at the chest (bag grew)"
   has "$N/$NAME.coopplus.guest.log" "Your friend opened a chest"                   "the guest was told (notice)" ;;
 revive)
   head_step "going down: death screen, input held, Q revive (the guest)"
@@ -354,7 +365,7 @@ loot)
   asked=$(grep -c "Lootr probe: body loot by 0xA0100001" "$H" 2>/dev/null)
   if [ "${took:-0}" -gt 0 ]; then
     ok "$took of $asked loot requests gave the host an item, a share kept each time"
-    has "$H" "0xA0100066 is there and got its own share .* its bag gained [1-9]" "the guest got its own share (bag grew)"
+    has "$H" "$(jkey) is there and got its own share .* its bag gained [1-9]" "the guest got its own share (bag grew)"
   else
     bad "none of $asked loot requests gave the host an item (a roll, about one in six): the share was not exercised; run this step again"
   fi ;;
@@ -390,7 +401,7 @@ crime)
   # blows only, and its "fighting us" gate (the relay's, off here) let 2 of 10 through.
   HL=$N/$NAME.coopplus.host.log
   has "$HL" "Capture: the character load of 0xA01000[0-9A-F]+ .* is the other player's, not ours \\(0xA0100001\\)" "host layer: the guest's character load is not taken for the host's own"
-  hasnot "$HL" "Capture: user template \\(user 0x[0-9A-F]+, player 0xA0100066" "host layer: its own character stays 0xA0100001"
+  hasnot "$HL" "Capture: user template \\(user 0x[0-9A-F]+, player $(jkey)" "host layer: its own character stays 0xA0100001"
   has "$HL" "Scaling: x1\\.50 \\| gave back [1-9]" "host: enemy health with a guest is applied to the players' blows (heal-back)" ;;
 leave)
   # 2026-11-21 (the departure sweep, ai_handoff.h): the friend's game closes in a fight (a crash / Alt+F4). The guest
@@ -454,7 +465,7 @@ shop)
   has "$O" "^host alive=True guest alive=True" "both games still running at the end"
   has "$O" "^SAVES OK"                     "the player's saves untouched (SAVES OK)"
   has "$O" "user install restored: 5/5 OK" "the player's install put back (5/5)"
-  n=$(grep -cE "USER 2 asked: requester 0xA0100066 .* interaction 0x000F4321 .* ACCEPTED" "$H" 2>/dev/null)
+  n=$(grep -cE "USER 2 asked: requester $(jkey) .* interaction 0x000F4321 .* ACCEPTED" "$H" 2>/dev/null)
   [ "${n:-0}" -ge 2 ] && ok "the friend's shop requests reached the host's server and were accepted: $n (alone, then with the host there)" \
                       || bad "the friend's shop requests accepted by the host's server: ${n:-0} of 2 (alone, then with the host there)"
   has "$G" "ShopTwin \\[prepared\\] the host's shop scene 0x[0-9A-F]+ \\(resource 0x978345CA\\)" "the friend's game made its twin of the host's butcher scene"
@@ -712,7 +723,7 @@ lagrun)
   has "$H" "TEST sim_lag 30\+0\.\.60 ms" "host: the TEST lag was on (the host's tunnel held what it got)"
   has "$N/$NAME.guest.log" "TEST sim_lag 30\+0\.\.60 ms" "guest: the TEST lag was on"
   has "$H" "RemoteInterp \[remote character delay\] remote_interp_char=1" "host: remote_interp_char is on (the release default)"
-  m=$(grep -h "remote character mid-run holds\] 0xA0100066" "$H" | tail -1)
+  m=$(grep -h "remote character mid-run holds\] $(jkey)" "$H" | tail -1)
   s=$(echo "$m" | sed -n 's/.*\[<=100 \([0-9]*\), <=300 \([0-9]*\), <=1000 \([0-9]*\), >1000 \([0-9]*\)\].*/\1 \2 \3 \4/p')
   read -r h1 h2 h3 h4 <<< "$s"
   if [ -z "$m" ] || [ -z "$s" ]; then
@@ -742,7 +753,7 @@ door)
   ERR_ALLOW=
   H=$N/$NAME.host.log; G=$N/$NAME.guest.log
   has "$H" "SceneLevelShare ON \(scene_level_share=1\)"                           "host: scene_level_share on (the release default)"
-  has "$H" "SceneLevelShare \[ready for user 2\].*sector_-42_-15.*actor 0xA0100066" "host: the tavern's levels the joined player loaded first were made ready for it"
+  has "$H" "SceneLevelShare \[ready for user 2\].*sector_-42_-15.*actor $(jkey)" "host: the tavern's levels the joined player loaded first were made ready for it"
   m=$(grep -h "DoorTrace \[resumen\] invitado-entrega" "$G" | tail -1)
   ack=$(echo "$m" | sed -n 's/.*Ack2145 \([0-9]*\).*/\1/p'); nak=$(echo "$m" | sed -n 's/.*Nak2953 \([0-9]*\).*/\1/p')
   if [ -n "$ack" ] && [ "$ack" -ge 1 ]; then ok "guest: the server answered its door request (Ack $ack)"; else bad "guest: no door Ack (last summary: '${m:-none}')"; fi
