@@ -103,6 +103,10 @@ overlay_checks() {  # layer log, who
     fn=$([ -n "$img" ] && python $ROOT/tools/symaddr.py "$img" $o 2>/dev/null | cut -d' ' -f3- | tr -d '\r')
     case "$fn" in
       *fast_read*|*guest_seq_route.cpp*|*safe_memory*) known=$((known+1)) ;;
+      # No "[src...:line]": dbghelp found no .pdb of THIS build beside the DLL and gave an export name (2026-11-22,
+      # pp44 lagrun after a DLL swap). Name it with the package's symbols zip (build/native/dllswap.sh put does).
+      *"["*) bad "$2: first-chance exception at $a = $fn (not a known guarded read)" ;;
+      ?*) bad "$2: first-chance exception at $a: the .pdb beside the build tree's $m is not this build's (export name only: $fn); name it with the package's symbols zip" ;;
       *) bad "$2: first-chance exception at $a = ${fn:-unknown code} (not a known guarded read)" ;;
     esac
   done

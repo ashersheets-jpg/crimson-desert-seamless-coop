@@ -603,6 +603,17 @@ research build made while a candidate (677c87bb) still had steps left would have
 only the static step's hash check would have said so, and only if static ran first. Before a candidate's runs:
 `bash build/native/dllswap.sh show` (which package the build tree is) and `put <candidate>`; after them, `put` the
 research package back. A research run's own log says which build it tested only through that same hash.
+The .pdb must travel with the DLL: the checklist names each first-chance exception site from the .pdb beside the
+build tree's DLL, and another build's .pdb makes dbghelp fall back to export names (pp44 lagrun: fast_read showed as
+"cdmp_chest_events+0x825D6", two false FAILs). dllswap put now unzips the package's symbols; a name with no
+"[src...:line]" is a symbol mismatch, not a finding.
+
+## An invisible notification window can hold the front (2026-11-22, pp44b)
+A Windows Update toast came up during fresh; after it went, its "New notification" window (ShellExperienceHost) kept
+the foreground, even minimised, and no SetForegroundWindow, Alt tap or AttachThreadInput could take it back: three
+steps stopped at their first key with "game window is not in front". The screen looked clean. Only a real click
+moves the front from it: the harness now clicks the game window's own title bar as a last try. When a step says
+"not in front", read the front window's process and title, not just the screenshot.
 
 ## A local answer that matches the server's can still skip what the server DOES (2026-11-22, B14)
 The arm-wrestling twin answered every chart event with exactly the 2105 the host's server sends, and its match still

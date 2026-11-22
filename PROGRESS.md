@@ -10282,3 +10282,17 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   Discord 13:00: nothing to answer. Found: the partner frame's stamina has read 0 since at least 14 Nov (3663), not
   only on 3732. B14's server-side grip cannot be read (the 2976 chart handler jumps into .xtls): the two built fixes
   are the way.
+- 15:25 the 15:00 window on 677c87bb: pp44 lagrun 47 / 3, pp44b static 12 / 0, display 7 / 0, fresh / solostart /
+  loot stopped at the first key. All test-kit causes, no game or mod fault:
+  (1) lagrun's two "first-chance exception at cdmp.asi+0x9460B / 0x94613 = cdmp_chest_events+..." were fast_read (the
+  base's guarded read): dllswap put the package's DLLs but the .pdb beside them was the newer build's, so dbghelp gave
+  export names. dllswap now unzips the package's .pdb files too; prepost says "the .pdb is not this build's" for an
+  export-only name. (2) a new warning kind: one 70 ms host tunnel tick, all link flush, at fps cap 40 while the
+  guest's save upload came in: added to tools/known-warnings.txt. Re-judged on its own files (pj44): lagrun 48 / 0.
+  (3) fresh / solostart / loot: a Windows Update toast ("Your device will restart to update outside of active hours
+  ... Restart now / OK") came up at 15:12. Once it was gone its invisible window ("New notification",
+  ShellExperienceHost) still held the front, even minimised, and actpid's Alt + SetForegroundWindow could not take it
+  back (AttachThreadInput fails too). A real click takes it: actpid.ps1 now clicks the game window's own title bar
+  when everything else fails, only when the point is that game's. I clicked the Claude app's empty sidebar once to
+  free the front (not the toast). Re-run as pp44c (static fresh solostart loot) at 15:26.
+  Discord 15:25: no new feedback; #general: "does dlc work with the mod" (to answer once no test runs).

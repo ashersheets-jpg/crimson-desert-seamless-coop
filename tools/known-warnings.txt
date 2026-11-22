@@ -20,6 +20,7 @@ SessionN family order: ORPHAN queued for user N: record X (t ## OPEN, rare (1 in
 SessionN guest save (PN SN, phase A): guest_own_save=N | use ## notice: the guest plays its own save
 SessionN host tunnel: one tick took N ms: hold acks N ms ## one slow host tick (~60 ms) at the minute summary dump; seen in 4 earlier host logs (pp18-xess)
 SessionN host tunnel: one tick took N ms: hold acks N ms, li ## the same, with the link flush part
+SessionN host tunnel: one tick took N ms: link flush N ms | ## the same, all of it the link flush (pp44 lagrun, fps cap 40: 70 ms, once, while the guest's save upload came in at the join)
 SessionN host tunnel: one tick took N ms: hold acks N ms, ou ## the same, with the outgoing part (pp43-crime: 58 ms, 53.5 of it the "hold acks" group, 7 s after U-e gave ~40 NPCs to the friend's game at once)
 SessionN guest save (PN SN, phase B): guest_own_save=N on th ## notice: the guest plays its own save
 SessionN guest save link: the upload is the root of line NfN ## the first upload of a guest save
