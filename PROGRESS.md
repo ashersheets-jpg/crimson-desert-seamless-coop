@@ -10233,3 +10233,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   catcher and target replaced by the joined player and the opponent of its own SpawnMiniGameCharacterAck). Unit
   tests pass. Research package 6a4079b1 (also has layer 9e6e670's killfriend). chain_j: cs95 (mode 1), cs95b
   (mode 3), cs93b, cs94 on 6a4079b1.
+- 09:25 cs94 also finds 3732's stamina stat id (port-gaps-3732.md: the layer's kStatId_Stamina is 3424's 22, reads 0
+  on 3732, so the partner frame's stamina bar stays hidden): the joined player sprints 6 s with [dev] stat_log=1.
+  PLAN for the next game window (15:00, or once updates are paused): (1) pp44's last step lagrun on 677c87bb, then
+  the re-runs the rule asks for after test-kit fixes (loot, fresh, display, then static / fresh / solostart as the
+  smoke); if clean, post 677c87bb (docs/release/shared-world-playtest/download-677c87bb.txt). (2) chain_j on
+  6a4079b1 (cs95, cs95b, cs93b, cs94).
