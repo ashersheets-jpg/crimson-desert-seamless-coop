@@ -263,6 +263,15 @@ int main() {
               pending.empty());
         auto cack2 = hexs("04" "040210a0" "1f03000000000000" "070000000000000001");
         CHECK(stl::chart_ack_to_twin(2105, cack2, pending, 1500, 3000) == 0);  // used up: the next one is the host's
+        // twin_extra_chart=3: the grip made here (cs92's 55 bytes, catcher and target replaced) and the 2810's opponent
+        const auto grip = stl::catch_result(0xA0100066u, 0xB0100AF8u);
+        CHECK(grip.size() == 5 + 55 && grip[0] == (2562 & 0xFF) && grip[1] == (2562 >> 8));
+        CHECK(stl::rd32(grip.data() + 5) == 0xA0100066u && stl::rd32(grip.data() + 9) == 0xB0100AF8u);
+        CHECK(stl::rd32(grip.data() + 5 + 31) == 0x18F128E3u && stl::rd32(grip.data() + 5 + 50) == 0x63F9EFFDu &&
+              grip[5 + 54] == 0x17);
+        const auto spawn_ack = hexs("04" "660010a0" "2103000000000000" "06000020" "f70a10b0" "050000");
+        CHECK(stl::minigame_opponent(spawn_ack) == 0xB0100AF7u);
+        CHECK(stl::minigame_opponent(hexs("04660010a0")) == 0);
     }
     if (g_failures) {
         std::printf("%d failure(s)\n", g_failures);
