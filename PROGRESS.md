@@ -9735,3 +9735,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     shot shows its inventory, not the Discard question: inconclusive.
   * cs85a (B10, shared quest credit at the camp): 776 shared passes offered the host's events to the friend's quest
     manager, but the host's script killed only one bandit, so the camp step could not complete: inconclusive.
+- 19:20 B19 v3.1's review (read only): B1 closed, nothing changes with the option off, no race; but the commit point
+  of the whole design is wrong (the game writes a slot inside SavePlayerToSlot; the flush names a slot only for some
+  autosaves): manual saves would never get a share file. v4 written up (docs/research/lootr-across-sessions.md):
+  write at SavePlayerToSlot's return, rewrite every slot file without due ids on a failed ledger write, and five more.
+  PARKED (mine, scoped): B19's across-sessions part waits for the owner's save-test answer and a v4; the in-session
+  Lootr (each player takes every item once) is unchanged and released.
