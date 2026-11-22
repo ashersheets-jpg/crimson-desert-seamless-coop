@@ -277,6 +277,7 @@ Config load_config(const std::wstring& ini_path) {
     c.dev_cinema_test = read_uint(ini_path, L"dev", L"cinema_test", 0) != 0;
     c.dev_weather_test = read_uint(ini_path, L"dev", L"weather_test", 0);
     c.dev_versus_test = read_uint(ini_path, L"dev", L"versus_test", 0);
+    c.dev_minigame_probe = read_uint(ini_path, L"dev", L"minigame_probe", 0) != 0;
     c.dev_seat_test = read_uint(ini_path, L"dev", L"seat_test", 0) != 0;
     c.dev_scaling_as_host = read_uint(ini_path, L"dev", L"scaling_as_host", 0) != 0;
     c.dev_join_switch_s = read_uint(ini_path, L"dev", L"join_switch_s", 0);

@@ -13,6 +13,11 @@ test save Out, shipped cdmp.ini restored.
   itself yet, so (1) is not possible now. My recommendation: (2) now, (3) after the release.
   23:27: what each option takes, in docs/research/b13-pvp-armwrestling.md ((2) needs no fix of the joined player's
   own match; (1) does; (3) is (2) plus moving your friend's real character into the NPC's chair).
+- 2026-11-22 02:25 DONE: c7c22497 POSTED in #download-here by me (standing OK; checklist pp43 1068/3 over 26 steps,
+  none of the 3 the package's, then pp43b 182/0 after test-kit-only fixes; both zips checked file by file against the
+  tested folders, 25/25 and 10/10): the joined player's shops in a town whose scenes the host already runs, the
+  minigame opponent rule; the joined player's own arm wrestling still off. Tags Borque; asks whether the friend's voice
+  is heard. Message 1573962557465821224, text: docs/release/shared-world-playtest/download-c7c22497.txt.
 - 2026-11-21 17:54 DONE: cfaa3a69 POSTED in #download-here by me (standing OK; checklist pp42 1064/7 over 26 steps,
   none of the 7 the package's, then pp42b 155/1 and pp42c static 12/0 after test-kit-only fixes): the joined player's
   greet / talk with townsfolk and its shops on 3732, the departure sweep. Tags Borque; a follow-up reply to his "can't
@@ -10051,3 +10056,19 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   alone at the dock while the host stood in Hernand Town (its frame: "Badly hurt, 493 m"), as the step allows. The
   anchored camp scripts (after the pass) keep both runs at the camp. A second read-only audit runs: the Co-op+
   layer's game addresses (the first covered the native base).
+- 01:47 pp43 (c7c22497) DONE: 1068 pass, 3 fail over 26 steps, none the package's (static: Windows Defender detecting
+  a unit-test exe while the step ran; crime: the test script's drift into Serkis Estate, see 23:54). Every step from
+  leave on passed (leave 27, shop 25, farfight 47, farfight2 46, newsave 100, solostart 49, mounts 51, mountfight 47,
+  nosave 7, retry 47, stuck 51, mismatch 9, hostrevive 51, lagrun 48), SAVES OK and 5/5 in each. Test kit applied and
+  committed (aa47a75: the camp scripts from the dock, the capped NpcActivation lines out of the growth count, the
+  ", ou" slow-tick variant listed beside its two siblings (their reason: "a slow host tick at the minute summary
+  dump"), Defender as INFO, the six loose scripts written by prepost.sh (byte-identical: checked), tracked harness
+  copies refreshed). pp43b running (static fresh solostart crime leave). The layer audit: nothing the layer runs in
+  native mode is stale (docs/research/port-gaps-3732.md). vf178_3732.py on the archived 3732 exe: exe+0x5DF500 is
+  2976's judge exactly (`[rcx+0xA0] == [[WorldSystem 0x724B350]+0x30]+0x58 && [rcx+0x94]`, on ClientActor /
+  ClientNormalInGameActor / ClientChildOnlyInGameActor), the "+0x94 alone" one exe+0x9BEEB0 (ClientUserActor, the
+  Common* bases, ServerNormalInGameActor): vf178_fix.py joins the next batch.
+- 02:25 pp43b: 182 pass, 0 fail (static 12, fresh 43, solostart 49, crime 51, leave 27). crime-g3: the joined player
+  stayed at the Rodbel Fishing Dock this time (no bounty, no Serkis Estate). c7c22497 POSTED in #download-here
+  (waiting list DONE line; CHANGELOG). Next: the batch (apply_batch.sh, B19 v4.4 merged switched off, the vf178 port),
+  build, package, chain_h.

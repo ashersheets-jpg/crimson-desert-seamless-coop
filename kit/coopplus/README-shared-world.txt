@@ -167,8 +167,8 @@ after a minute). Each ends with a Victory or Defeat card; most are first to 2 ro
 - Hide and seek: 45 s to hide within 100 m while the seeker's screen is dark, then 3
   minutes to find the hider (within 4 m); "Cold / Warm / Hot" says how close you are.
 - Fishing contest: six minutes; every fish you keep scores (river 1, sea 2, legendary 5).
-- Arm / hand wrestling: offered when you stand within 30 m of a table (mash E; one match).
-  Wrestling each other at the table is not finished yet (see KNOWN ISSUES).
+- Arm / hand wrestling against each other: not yet (see KNOWN ISSUES); the host can play the
+  tables against the townsfolk as usual.
 
 
 GIVING, TRADING, WAGERS, THE SHARED STASH

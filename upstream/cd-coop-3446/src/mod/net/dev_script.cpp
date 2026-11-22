@@ -144,8 +144,10 @@ static void loot_last_killed() {
     }
     std::vector<uint8_t> pl = {0, 0, 0, 0, 0, 1};
     std::memcpy(pl.data(), &key, 4);
-    const bool ok = sniffer_inject_c2s(dev_c2s(2382, pl));
-    log::info("Dev script: lootlast: the body 0x{:08X} looted as our own request (2491){}", key, ok ? "" : " NOT sent");
+    constexpr uint16_t kLootReq = 2382;  // 3732 (2976: 2491)
+    const bool ok = sniffer_inject_c2s(dev_c2s(kLootReq, pl));
+    log::info("Dev script: lootlast: the body 0x{:08X} looted as our own request ({}){}", key, kLootReq,
+              ok ? "" : " NOT sent");
 }
 
 static void log_npcs_near(float radius, float from) {

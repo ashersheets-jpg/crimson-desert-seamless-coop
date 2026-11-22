@@ -2446,6 +2446,7 @@ DWORD WINAPI worker(LPVOID) {
         net::activity_set_skip_test(cfg.dev_skip_test);
         if (cfg.dev_trace_op) net::sniffer_set_trace_op(static_cast<uint16_t>(cfg.dev_trace_op));
         net::activity_set_versus_test(static_cast<int>(cfg.dev_versus_test));
+        net::activity_set_minigame_probe(cfg.dev_minigame_probe);
         net::activity_set_seat_test(cfg.dev_seat_test);
         net::weather_set_enabled(cfg.coop_weather_sync);
         net::weather_set_test(cfg.dev_weather_test);

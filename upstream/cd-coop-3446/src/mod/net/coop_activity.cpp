@@ -19,6 +19,7 @@
 #include <mutex>
 #include <thread>
 
+#include "mod/game/safe_memory.h"
 #include "mod/game/ui_state.h"
 #include "mod/log.h"
 #include "mod/net/session_summary.h"
@@ -119,6 +120,7 @@ bool is_gauge_game(uint32_t stage) {
     }
 }
 std::atomic<bool> g_seat_test{false};     // [dev] seat_test (coop_activity.h)
+std::atomic<bool> g_mg_probe{false};      // [dev] minigame_probe (coop_activity.h; B14 research)
 std::atomic<int> g_versus_test_rate{0};   // [dev] versus_test: a simulated other player pushing this many times/s
 struct Versus {
     bool live = false;          // our match is running (gauge readable, no cutscene)
@@ -398,6 +400,12 @@ void activity_send(uint8_t type, const std::vector<uint8_t>& data) { send(static
 
 void activity_set_skip_test(bool on) { g_skip_test = on; }
 void activity_set_versus_test(int presses_per_s) { g_versus_test_rate = presses_per_s; }
+void activity_set_minigame_probe(bool on) {
+    g_mg_probe = on;
+    if (on)
+        log::info("MiniGameProbe on ([dev] minigame_probe=1, research): the game's minigame holder and gauge twice a "
+                  "second while one exists");
+}
 bool activity_partner_in_menu() { return g_partner_menu.load(); }
 void activity_set_seat_test(bool on) { g_seat_test = on; }
 void activity_set_event_test(uint32_t key) { g_event_test = key; }
@@ -433,6 +441,38 @@ void versus_tick(ActivityTick& out, bool connected, bool host, bool cut, const s
     const uintptr_t ga = game::minigame_gauge_address();
     float g = 0.0f;
     if (ga) g = *reinterpret_cast<volatile float*>(ga);
+    if (g_mg_probe.load(std::memory_order_relaxed)) {  // [dev] minigame_probe (B14 research)
+        static uint32_t last = 0, since = 0, last_e = 0, lines = 0;
+        static uintptr_t last_ga = 0;
+        static float last_g = -1.0f;
+        const uint32_t e = g_e_presses.load();
+        const float dg = g > last_g ? g - last_g : last_g - g;
+        const bool came = ga && ga != last_ga, went = !ga && last_ga;
+        const bool due = ga && (now - last >= 5000 || ((dg > 0.01f || e != last_e) && now - last >= 500));
+        if ((came || went || due) && lines < 600) {
+            ++lines;
+            last = now;
+            if (came) {
+                since = now;
+                float f[16] = {};
+                const bool rd = game::safe_read(ga - 0x30, f, sizeof f);
+                std::string fl;
+                for (int i = 0; i < 16 && rd; ++i) fl += std::format(" {:.3g}", f[i]);
+                log::info("MiniGameProbe: a minigame holder came (gauge at 0x{:X}); the floats from the gauge -0x30 to "
+                          "+0x10:{}", ga, rd ? fl : std::string(" (unreadable)"));
+            }
+            if (went) {
+                log::info("MiniGameProbe: the minigame holder went ({} ms after it came; E presses {})", now - since, e);
+            } else {
+                log::info("MiniGameProbe: gauge {:.2f} (was {:.2f}) | E presses {} (+{}) | match {} stage {} | {} ms "
+                          "since the holder came", g, last_g, e, e - last_e, g_match_on.load() ? "on" : "off",
+                          g_match_stage.load(), now - since);
+            }
+            last_e = e;
+            last_g = ga ? g : -1.0f;
+        }
+        last_ga = ga;
+    }
     const bool live = g_match_on.load() && is_gauge_game(g_match_stage.load()) && !cut && ga && g > 0.0f && g <= 100.0f;
     const std::string game = activity_minigame_name(g_match_stage.load());
     const int test_rate = g_versus_test_rate.load();
@@ -848,9 +888,12 @@ void challenge_tick(ActivityTick& out, bool connected, bool focused, std::option
                     c = Challenge{};
                     c.state = kChPick;
                     c.since = now;
-                    if (const uint32_t table = me ? cinema_minigame_near(*me, kChallengeNearM, kWrestleStages,
-                                                                         std::size(kWrestleStages))
-                                                  : 0) {
+                    // 2026-11-22: not in the shared world until B13 (the versus is the two-worlds one: both players
+                    // in a match at the same table in their own worlds; the joined player cannot start one there yet).
+                    if (const uint32_t table = me && !kNativeLayer
+                                                   ? cinema_minigame_near(*me, kChallengeNearM, kWrestleStages,
+                                                                          std::size(kWrestleStages))
+                                                   : 0) {
                         c.options.push_back(table);
                     }
                     c.options.push_back(kDuelStage);

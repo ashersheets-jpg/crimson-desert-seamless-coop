@@ -73,6 +73,8 @@ void activity_set_skip_test(bool on);
 // [dev] versus_test: one-PC test of versus arm wrestling: a simulated other player in every match of ours, pushing
 // this many times a second (0 = off).
 void activity_set_versus_test(int presses_per_s);
+// [dev] minigame_probe (B14 research, default 0): the game's minigame holder and gauge in the log twice a second.
+void activity_set_minigame_probe(bool on);
 // Co-op+ (T09): the other player is in a menu now (their name tag says so).
 bool activity_partner_in_menu();
 // [dev] seat_test: in any arm / hand wrestling match against the NPC (no versus, no challenge), the other player's

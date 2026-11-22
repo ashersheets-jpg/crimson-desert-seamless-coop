@@ -5,7 +5,11 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-NOT POSTED YET (checklist pending): everything in cfaa3a69 just below, plus:
+POSTED 2026-11-22 02:25: 0.1.0-alpha+c7c22497, for game 1.0.0.3732 (checklist pp43 1068 pass, 3 fail over 26 steps,
+none of the 3 the package's: static's Windows Defender detection of a unit-test exe while the step ran, and crime's log
+growth and one slow network tick, from a test script that walked the joined player out of the bandit camp into Serkis
+Estate's townsfolk (each hop now starts from the dock); then pp43b 182 pass, 0 fail (static, fresh, solostart, crime,
+leave with the test-kit fixes)): everything in cfaa3a69 just below, plus:
 - **The joined player's shops in a town whose scenes the host already runs**: the host's copy of a scene reached the
   joined player's game in two parts, and in one run 21 of 31 town scenes (every shop among them) came "start first,
   scene second" (the scene waits until its people are known on the joined player's game, its start does not). The

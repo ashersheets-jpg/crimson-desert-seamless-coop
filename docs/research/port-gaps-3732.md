@@ -70,6 +70,11 @@ wrongly: the whole layer stays off on any game build it was not made for (mod.cp
 2. Items 6 and 7 (crash risks on a later build or with an option on): fail closed. game_errors installs only on the
    build its addresses are for; guest_sched_route does not install when its teardown guard cannot.
 3. Item 9: nothing to do (see above).
-4. Item 4: port (static analysis of the 3732 exe after the pass); mount seats depend on the veto while the judge is
-   unproven. Item 2: only its comment. Item 5: when its diagnostics are next needed.
+4. Item 4: confirmed on the archived 3732 exe (2026-11-22 01:46, scratchpad vf178_3732.py): exe+0x5DF500 is 2976's
+   0x4FE260 instruction for instruction (`mov rax,[rip -> 0x724B350 WorldSystem]; mov rdx,[rax+0x30]; mov rax,
+   [rcx+0xA0]; cmp [rdx+0x58],rax; jne; cmp byte [rcx+0x94],0; je; mov al,1; ret`), the vf178 of ClientActor,
+   ClientNormalInGameActor and ClientChildOnlyInGameActor; 2976's 0x8A67D0 ("+0x94 alone") is exe+0x9BEEB0, the vf178
+   of ClientUserActor, CommonActor, CommonBaseActor, CommonGamePlayDataObject, CommonUserActor and
+   ServerNormalInGameActor. scratchpad vf178_fix.py (0x5DF500 0x9BEEB0) is in the next batch. Item 2: only its
+   comment. Item 5: when its diagnostics are next needed.
 5. Items 3, 8, 10 and the diagnostic-only list: when their option is next turned on; the log strings when touched.

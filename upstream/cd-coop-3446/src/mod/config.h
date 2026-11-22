@@ -142,6 +142,7 @@ struct Config {
     bool dev_cinema_test = false;  // Co-op+ dev: replay our own stage cutscenes as a guest would ([dev] cinema_test)
     uint32_t dev_weather_test = 0;  // Co-op+ dev: act as a guest whose host has this weather stage ([dev] weather_test)
     uint32_t dev_versus_test = 0;  // Co-op+ dev: simulated versus opponent pushing N times/s ([dev] versus_test)
+    bool dev_minigame_probe = false;  // Co-op+ dev: the minigame gauge in the log ([dev] minigame_probe, B14)
     bool dev_seat_test = false;    // Co-op+ dev: the copy takes the NPC's seat in any wrestling match ([dev] seat_test)
     uint32_t dev_trace_op = 0;  // Co-op+ dev: trace who sends this opcode ([dev] trace_op)
     bool dev_skip_test = false;  // Co-op+ dev: act as if the other player skipped 3 s into our cutscenes ([dev] skip_test)

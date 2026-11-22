@@ -128,7 +128,8 @@ void request_move(float x, float y, float z) {
 // the map in hops and once stopped short. The game's own far move is a pending reload (local notes
 // build/decomp/notes_far_teleport.md, game build 3576): our client sends ReloadStageStartReq 3074 with the position
 // (u32 0 | u32 FieldInfoKey | u32 0 | vec3 pos | quat | vec3 scale | u8 1; with actor 0 the server takes the position
-// as it is), the server keeps it as our destination, and TeleportRevivePointAck 3071 (u32 our key | u32 0) starts our
+// as it is), the server keeps it as our destination, and TeleportRevivePointAck (3732: 3072; 3576: 3071) (u32 our key
+// | u32 0) starts our
 // client's loading screen, which asks the server for the load by itself. A short loading screen, then we stand there.
 // The hops stay for short moves, for the last metres, and as the way out when this does not take.
 // The FieldInfoKey of the field we are in: on the host from the native base (cdmp_field_info_key), on the guest from
@@ -256,7 +257,7 @@ void hop_tick(uint32_t now_ms) {
             std::vector<uint8_t> b(8, 0);
             std::memcpy(b.data(), &own, 4);
             puppet_inject_s2c_batch({{kOpTeleportRevivePointAck, b}});
-            log::info("Teleport: far travel: our loading screen is started (3071)");
+            log::info("Teleport: far travel: our loading screen is started ({})", kOpTeleportRevivePointAck);
         }
         if (static_cast<int32_t>(now_ms - g_far_until) >= 0) {
             log::warn("Teleport: far travel did not take us there in {} s: hops from where we are",
