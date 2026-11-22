@@ -26,6 +26,7 @@
 #include "mod/net/dev_memscan.h"
 #include "mod/net/quest_events.h"
 #include "mod/net/coop_hunt.h"
+#include "mod/net/coop_race.h"
 #include "mod/net/enemy_relay.h"
 #include "mod/net/troc_sniffer.h"
 #include "mod/net/prologue_hold.h"
@@ -196,7 +197,7 @@ static void log_vehicles_near(float radius) {
 namespace {
 
 struct Step {
-    enum Kind { C2S, S2C, Wait, Teleport, Poke, Time, Watch, Day, Pad, KillGame, KillFriend, KillHorse, KillAll, MemScan, MemDiff, MemWatch, Advance, FScan, FFilter, FWatch, WaitFile, DScan, DFilter, DWatch, GSnap, GDiff, VtScan, PtrScan, WatchStatus, Key, ClockScan, RideHorse, PrologueDone, GrantXp, GuestHit, DumpItemMove, TpActor, Npcs, KillNear, LootLast } kind;
+    enum Kind { C2S, S2C, Wait, Teleport, Poke, Time, Watch, Day, Pad, KillGame, KillFriend, KillHorse, KillAll, MemScan, MemDiff, MemWatch, Advance, FScan, FFilter, FWatch, WaitFile, DScan, DFilter, DWatch, GSnap, GDiff, VtScan, PtrScan, WatchStatus, Key, ClockScan, RideHorse, PrologueDone, GrantXp, GuestHit, DumpItemMove, TpActor, Npcs, KillNear, LootLast, TpWaypoint } kind;
     uintptr_t addr = 0;
     float to[3] = {};
     uint16_t op = 0;
@@ -673,6 +674,12 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
             steps.push_back(std::move(st));
             continue;
         }
+        if (kind == "tpfriend") {  // tpfriend: 1 m beside the other player's character (its key from its load here)
+            st.kind = Step::TpActor;
+            st.addr = 0xFFFFFFFBu;
+            steps.push_back(st);
+            continue;
+        }
         if (kind == "tpkill" || kind == "tpactor") {  // tpactor <hex key>: 1 m beside a loaded actor; tpkill: beside
             st.kind = Step::TpActor;                    // the animal the last killgame killed
             st.addr = 0;
@@ -681,6 +688,16 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                 log::warn("Dev script: line {} needs tpactor <hex actor key>", lineno);
                 continue;
             }
+            steps.push_back(st);
+            continue;
+        }
+        // tpwp [dx dz] (T41, 2026-11-22): to the race finish (a map waypoint, the host's first), so a race test can
+        // reach a point it only learns in the run. Its height: the waypoint's when it is within 100 m of where we
+        // started, else ours (a map waypoint's y may be 0).
+        if (kind == "tpwp") {
+            st.kind = Step::TpWaypoint;
+            in >> st.to[0] >> st.to[2];
+            st.to[1] = pos[1];
             steps.push_back(st);
             continue;
         }
@@ -846,7 +863,8 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                 if (st.to[1] < 0.0f) log_vehicles_near(st.to[0]);
                 else log_npcs_near(st.to[0], st.to[1]);
             } else if (st.kind == Step::TpActor) {
-                uint32_t key = st.addr == 0xFFFFFFFFu ? capture_horse_present()
+                uint32_t key = st.addr == 0xFFFFFFFFu   ? capture_horse_present()
+                               : st.addr == 0xFFFFFFFBu ? capture_other_player_key()
                                : st.addr == 0xFFFFFFFEu || st.addr == 0xFFFFFFFDu || st.addr == 0xFFFFFFFCu ? 0
                                : st.addr                ? static_cast<uint32_t>(st.addr)
                                                         : hunt_dev_last_kill();
@@ -920,6 +938,15 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                 if (at) revive_teleport_to(at->x + 1.0f, at->y + 0.5f, at->z, 0.8f);  // right beside it (pp17)
                 log::info("Dev script: teleport beside actor 0x{:08X}: {}", key,
                           at ? std::format("({:.1f}, {:.1f}, {:.1f})", at->x, at->y, at->z) : std::string("NOT loaded"));
+            } else if (st.kind == Step::TpWaypoint) {
+                if (const auto wp = race_any_waypoint()) {
+                    const float y = std::fabs((*wp)[1] - st.to[1]) < 100.0f ? (*wp)[1] : st.to[1];
+                    revive_teleport_to((*wp)[0] + st.to[0], y + 0.5f, (*wp)[2] + st.to[2]);
+                    log::info("Dev script: tpwp: to the waypoint ({:.0f}, {:.0f}, {:.0f}) + ({:.0f}, {:.0f})", (*wp)[0],
+                              (*wp)[1], (*wp)[2], st.to[0], st.to[2]);
+                } else {
+                    log::info("Dev script: tpwp: no map waypoint is set");
+                }
             } else if (st.kind == Step::Teleport) {
                 revive_teleport_to(st.to[0], st.to[1], st.to[2]);
                 log::info("Dev script: teleport to ({:.0f}, {:.0f}, {:.0f})", st.to[0], st.to[1], st.to[2]);

@@ -55,6 +55,11 @@ void race_set_partner_waypoint(std::optional<std::array<float, 3>> pos) {
     g_partner_wp = pos;
 }
 
+std::optional<std::array<float, 3>> race_any_waypoint() {
+    std::lock_guard lock(g_mutex);
+    return g_own_wp ? g_own_wp : g_partner_wp;
+}
+
 void race_on_event(const uint8_t* d, size_t n) {
     if (n < 8) return;
     uint32_t round, ms;

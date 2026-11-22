@@ -28,6 +28,8 @@ test save Out, shipped cdmp.ini restored.
   itself yet, so (1) is not possible now. My recommendation: (2) now, (3) after the release.
   23:27: what each option takes, in docs/research/b13-pvp-armwrestling.md ((2) needs no fix of the joined player's
   own match; (1) does; (3) is (2) plus moving your friend's real character into the NPC's chair).
+  2026-11-22 17:15 update: the joined player's own match now works (B14, cs95b: fee, live bar, a win and its prize),
+  so (1) no longer waits on a fix: each player plays its own table match and one shared bar decides. Still your call.
 - 2026-11-22 02:25 DONE: c7c22497 POSTED in #download-here by me (standing OK; checklist pp43 1068/3 over 26 steps,
   none of the 3 the package's, then pp43b 182/0 after test-kit-only fixes; both zips checked file by file against the
   tested folders, 25/25 and 10/10): the joined player's shops in a town whose scenes the host already runs, the
@@ -10301,3 +10303,52 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   when everything else fails, only when the point is that game's. I clicked the Claude app's empty sidebar once to
   free the front (not the toast). Re-run as pp44c (static fresh solostart loot) at 15:26.
   Discord 15:25: no new feedback; #general: "does dlc work with the mod" (to answer once no test runs).
+- 17:15 chain_j on research package 26a59d8a (15:53-17:08):
+  B14 SOLVED on one PC. cs95 (twin_extra_chart=1, the twin's state-7 chart events forwarded to the host's scene): no
+  grip from the server for the joined player. cs95b (=3, the grip made on the joined player's game): the fee 20, the
+  push, the gauge live with E (57 -> 90), a WON match (MiniGameResultReq 1), the prize 30 (AddItemToInventoryAck), Back
+  to the room with "Try arm wrestling" again; the host untouched. The layer now writes twin_extra=94FEA6AE and
+  twin_extra_chart=3 into the joined player's native ini (native_mode_text.h, next build). cs103 (written) checks it
+  with no dev override: a lost match, Play Again, then the host's own match at the same table.
+  The other seven runs (cs93b, cs94, cs96, cs97, cs98, cs99, cs79c) never got past the title: from 16:15 the Windows
+  Update toast ("will restart ... outside of active hours", the same one as 15:12) held the front again, and actpid's
+  title-bar click did not fire because the OTHER copy's maximised window covered this copy's title bar (both copies
+  sit at the same place). actpid.ps1 now lifts its game window to the top of the z-order (topmost on, then off: no
+  activation needed) before the click, and logs what was under the point when it still cannot click. Checked at 17:09
+  on two stacked test windows with the toast holding the front: "the front was taken back with a click on the game's
+  title bar". cs79c's sweep lines in its output were stale ones from 03:43 (it ran nothing). Re-run as chain_k
+  (the seven runs, same package) from 17:10.
+  Discord 17:15: no new feedback or bug report; #general: a new member, and the cracked-copy talk (with the user).
+- 18:43 chain_k (the seven runs again, 17:10-18:32, package 26a59d8a): SAVES OK and 5/5 after every run, both alive.
+  * cs93b (B10's baseline, quest_shared_credit off): the host's camp step moved (UpdateMissionListAck 0x0F4D39 /
+    0x0F4D3A, UpdateQuestListAck 0x0F42D9 for 0xA0100001 at 301.8 s) and the joined player got NOTHING for 0xA0100066
+    after its login lists; QuestRoute "shared passes 0". So cs93's copy for the joined player was the credit's doing,
+    not the game's own party sharing. B10 works as built; its default stays the user's call.
+  * cs94 (B04 learn on demand + the 3732 stamina stat): LearnKnowledgeByCheatReq A (330 s) and B (345 s) left the
+    host's client with no reply and KnowledgeGrant "learns 0"; C was never sent: the toast took the front between two
+    host steps (actpid only took it back at the start). The joined player's sprint found 3732's stamina: stat 0x19,
+    120000 -> 75698 over the 6 s sprint, full 1 s after (3549's 22 is not in 3732's list). The layer now reads 0x19
+    (offsets_3732.h).
+  * cs96 (B06: the host fights from the saddle): tphorse far and the mount worked (the host mounted, prompt Dismount;
+    the joined player's MountSync saw the host), but the straight ride hit a cliff 64 m short of the camp (rideto
+    "stuck"): no fight. rideto.py now backs off and tries detour points (+-70, +-110 degrees, 25 m) when stuck.
+  * cs97 (T26 list only): the revive asked, the host's server listed the "Money" pouch of each dying player (death 1,
+    10 %) and removed nothing, as set. The pouch holds the camp money and contributions only (10 slots). The coins are
+    item key 1: cs95b's prize AddItemToInventoryAck names item 1 (reason 0x4413 at +5 was read as the item before).
+    The native's death penalty now searches every inventory of the character for the item (trade_probe.cpp) and logs
+    where it found it. cs97b (death_penalty_item=1) is the removal test; the layer's kDeathPenaltyItem stays 0 until
+    it passes.
+  * cs98 (B20 voices): the host's probe hooked all three functions but counted nothing for anyone, the swing sounds
+    (the control) included, both keys 0; the joined player's game logged no VoiceProbe line at all. The probe now
+    counts every call, logs the first six calls' arguments and a "starting" line (voice_probe.cpp); cs98b re-runs it.
+  * cs99 (T25: the horse killed under its rider): the joined player called, mounted 0xB0100068 and rode; killhorse's
+    KillCheatReq on 0xB0100068 changed nothing: two minutes later the host still saw the joined player riding it
+    (MountSync parent 0xB0100068) and shot g1 shows it mounted ("11064 m away" was the horse's unreadable position
+    while ridden). The game ignores the kill cheat for a player's mount: this edge case needs a real death (enemies or
+    a fall), not a script. Left for the hands-on list.
+  * cs79c (B09 talks without the story mode): one Marius / one Ross now (no doubles), and still "nothing taken by the
+    server" at either spot, E and R at 7 angles. The doubles were not what blocked the scripted talks; the cabin talks
+    stay on the hands-on list (as after cs79a). The doubles are still a story-mode defect (research doc).
+  actpid.ps1: the ways to take the front back are one function, used again before any step that finds the game not
+  in front (cs94 and cs79c lost it mid-sequence). Checked 18:37 on test windows: "the front was lost before w:200 and
+  taken back". Queued edits applied (tpwp / tpfriend dev steps, the death screen's cost line, prepost's killfriend).

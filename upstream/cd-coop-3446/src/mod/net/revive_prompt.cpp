@@ -345,6 +345,7 @@ bool send(uint16_t op, const std::vector<uint8_t>& body);
 constexpr uint16_t kOpMoveItem = 3104;
 constexpr uint32_t kDeathPenaltyEntry = 0xC0DE0009;
 uint32_t g_own_deaths = 0;
+std::atomic<int> g_penalty_shown{0};
 void ask_death_penalty(uint32_t own) {
     if (!kNativeLayer || !revive_partner_present()) return;
     ++g_own_deaths;
@@ -362,6 +363,16 @@ void ask_death_penalty(uint32_t own) {
     const bool ok = send(kOpMoveItem, b);
     log::info("Revive: death {}: the host's death penalty asked for our own money{}", g_own_deaths, ok ? "" : " (NOT sent)");
 }
+
+}  // namespace
+
+void revive_set_death_penalty(int percent) {
+    const int p = percent == 10 || percent == 25 || percent == 50 || percent == 100 ? percent : 0;
+    if (g_penalty_shown.exchange(p) != p) log::info("Revive: the host's death penalty this session: {} %", p);
+}
+int revive_death_penalty() { return g_penalty_shown.load(); }
+
+namespace {
 
 // The checkpoint revive (see the header). `move`: also move the client to the checkpoint.
 void ask_checkpoint(uint32_t own, uint32_t now_ms, bool move) {

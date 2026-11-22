@@ -92,7 +92,9 @@ using build_3549::kStatEntry_Id;
 using build_3549::kStatEntry_Max;
 using build_3549::kStatEntry_Size;
 using build_3549::kStatId_Health;
-using build_3549::kStatId_Stamina;
+// 2026-11-22 (cs94, the joined player sprinting 6 s): on 3732 the stamina is stat 0x19 (120000 max: 120000 -> 75698
+// while sprinting, full again 1 s after); 3549's 22 (0x16) is not in 3732's stat list at all.
+inline constexpr uint64_t kStatId_Stamina = 0x19;
 using build_3549::kStatusFlagsChangedHead;
 using build_3549::kStatus_HideFlags;
 using build_3549::kStatus_StatContainer;

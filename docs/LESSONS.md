@@ -614,6 +614,12 @@ the foreground, even minimised, and no SetForegroundWindow, Alt tap or AttachThr
 steps stopped at their first key with "game window is not in front". The screen looked clean. Only a real click
 moves the front from it: the harness now clicks the game window's own title bar as a last try. When a step says
 "not in front", read the front window's process and title, not just the screenshot.
+The same toast came back an hour later (it repeats while a restart is pending) and the fallback did NOT fire: both
+game copies are maximised at the same place, so the point on "our" title bar belonged to the OTHER copy, whose window
+was on top. A last-resort fix has to be checked in the situation that calls it: two stacked windows, not one. The
+fallback now lifts its window first (SetWindowPos topmost then not topmost, allowed without activation) and logs who
+owned the point when it still cannot click; it was tried on two stacked test windows with the toast holding the front.
+A chain of runs should also stop after its first "not in front" instead of spending an hour on runs that cannot start.
 
 ## A local answer that matches the server's can still skip what the server DOES (2026-11-22, B14)
 The arm-wrestling twin answered every chart event with exactly the 2105 the host's server sends, and its match still

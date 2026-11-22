@@ -79,4 +79,9 @@ bool revive_teleport_to(float x, float y, float z, float arrive_m = 3.0f);
 uint32_t revive_own_field_key();
 void revive_set_field_key(uint32_t key);
 
+// T26: the host's death penalty in force this session (10 / 25 / 50 / 100, 0 = none): the host sets its own, the
+// joined player gets it from the host (coop_lobby's kMsgDeathPenalty). The death screen names the cost.
+void revive_set_death_penalty(int percent);
+int revive_death_penalty();
+
 }  // namespace cdmp::net

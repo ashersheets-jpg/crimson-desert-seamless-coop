@@ -20,6 +20,10 @@ inline constexpr uint32_t kRaceStage = 0xD0E10003;  // the challenge "stage" of 
 void race_set_own_waypoint(std::optional<std::array<float, 3>> pos);
 void race_set_partner_waypoint(std::optional<std::array<float, 3>> pos);
 
+// The finish race_tick would pick now: the host's waypoint, else the guest's; with no host flag at hand, ours if we
+// have one, else the other player's (the same point while only one player has set one). The dev script's tpwp.
+std::optional<std::array<float, 3>> race_any_waypoint();
+
 // Activity type 24 from the other player.
 void race_on_event(const uint8_t* data, size_t n);
 

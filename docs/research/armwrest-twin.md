@@ -197,6 +197,20 @@ Not known yet (cs83w3 records every packet of the host's game around "Participat
    0x63F9EFFD @50 | 0x17), catcher = its character, target = the opponent of its own SpawnMiniGameCharacterAck (+17).
    Test: cs95b. The server never hears of that grip: whether the push, the quick-time results and the match's result
    (prize) then go through is what cs95b shows.
+   RESULTS (2026-11-22 15:53-16:13, package 26a59d8a, chain_j): cs95 (=1): the twin's state-7 chart events went to
+   the host's server as the host's scene 0x322 (7/0 and 7/1, re-sent every frame while the twin waited) and NO
+   CatchActionResultAck came for the joined player: the server does not run the table's catch for a requester that is
+   not the scene's own player (the host). cs95b (=3): "answered with a grip made here" (CatchActionResultAck: 0xA0100066
+   and its opponent 0xB0100F17) at 16:12:21.9; the client then ran the push exactly as the host's does (its
+   EchoActionSessionIDReq of the opponent 6 ms later, RequestQuickTimeEventResultReq, LeaveMiniGameReq naming the
+   opponent, MiniGameResultReq 0x4240 | 1 (WON) | the opponent | 1, 0, 1, UnspawnMiniGameCharacterReq); the probe's gauge
+   left NaN and climbed with E (57.48 -> 90.30, then 0 at "we finished arm wrestling"); the fee (RemoveItemToInventoryAck
+   20 at 338.27) and the prize (AddItemToInventoryAck 0x1E = 30 at 363.83) on the joined player's purse; the twin's
+   states 7 -> 8 -> 10 -> 11 -> 0 (Back), the room with "Try arm wrestling" offered again (shot 39). The server never
+   heard of that grip and did not object. The host's layer saw no match of its own. Decision: =3 ships; the layer writes
+   twin_extra=94FEA6AE and twin_extra_chart=3 into the joined player's native ini (native_mode_text.h). cs103 checks it
+   with no dev override, plus a lost match, Play Again (a new opponent spawn resets the grip flag), and the host's own
+   match at the same table after the joined player's.
    If cs87 or cs87b pushes: before twin_extra goes on by default, (e) BOTH players at the table at once (the host's
    own match in its copy, the joined player's in its twin, the server asked for two opponents at one scene id: does it
    spawn a second patron, refuse, or hand the first one over?), and (f) the host's match seen from the joined player's

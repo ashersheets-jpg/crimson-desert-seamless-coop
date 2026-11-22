@@ -131,6 +131,13 @@ account in the browser pane: asked.)
 ### P3 — Fun and stretch (only after everything above)
 
 - [~] **T41 — More challenges.** Horse race, fishing contest, boss rush or arena, hide and seek, scavenger hunt.
+  (2026-11-22, the shared-world re-check, all built and checked in the two-worlds version only: rock-paper-scissors
+  next, cs100 (a real match, hands alternating by the harness's key order: guest invite, host accept + hand, guest two
+  hands, host hand; the host should win 2 - 0 on both games). Race: the finish is the host's map waypoint (a map
+  right-click to script, then both reach it: walk or tp). Hide and seek: its "the friend is hidden from us" reloads the
+  two-worlds COPY without its minimap icon (puppet_minimap); in the shared world the friend is a real character, so
+  the seeker likely still sees its marker and our name tag: to check, and to make the shared world hide those. Hunt:
+  needs game animals at the start spot. Fishing: blocked for the joined player by the known fishing issue.)
 - [~] **T42 — Duel extras.** Wagers, selectable arenas, spectator camera, rematch.
 - [~] **T43 — Cosmetics and recognition.** Titles, co-op bounties and a scoreboard.
 - [x] **T44 — Group photo mode.** Posed shots with both characters. (Done through B16 (1), decided 2026-11-17: the
@@ -273,6 +280,13 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   events with the grip (CatchActionResultAck), which starts the push; the joined player's twin answered those events
   locally, so no grip. Two fixes to test, both research switches (native 2b2eaf2 / 9fb4fa4): forward those events to
   the host's scene (twin_extra_chart=1, cs95) or make the grip on the joined player's game (=3, cs95b).)
+  (2026-11-22 16:13 RESULT, package 26a59d8a, one PC: =1 (cs95) does not grip: the server gets the forwarded events
+  and sends no catch for the joined player. =3 (cs95b) WORKS END TO END: the fee (20, RemoveItemToInventoryAck), the
+  grip, the gauge live with E (57 -> 90), a WON match (MiniGameResultReq 1), the prize (30, AddItemToInventoryAck) on
+  the joined player's own purse, Back to the room with "Try arm wrestling" offered again; the host's game was not pulled
+  into a match. ON BY DEFAULT in the layer from the next build (the guest's native ini: twin_extra=94FEA6AE,
+  twin_extra_chart=3). Left before [x]: cs103 on that build (no dev overrides; a lost match, Play Again, then the
+  host's own match at the same table), then both players in matches at once (B13's question).)
 - [~] **B15 — Duel extras and scoreboard** (wagers, arenas, spectator camera, rematch, titles). (Rematch T42,
   scoreboard and titles T43 exist. 2026-11-16 wagers: from a challenge's invite on, "Stake on the challenge" on the
   inventory's Discard question; when the match ends the loser's game gives its stake to the winner (cs36e, one PC).

@@ -12,6 +12,7 @@
 #include "mod/net/coop.h"
 #include "mod/net/coop_worlds.h"
 #include "mod/net/native_mode.h"
+#include "mod/net/native_mode_text.h"
 #include "mod/net/revive_prompt.h"
 #include "mod/net/troc_sniffer.h"
 
@@ -39,6 +40,8 @@ constexpr uint8_t kMsgGuestIn = 27;
 constexpr uint8_t kMsgSessionEnded = 25;
 // u8 | u32: the FieldInfoKey of the host's field, for the guest's far travel (revive_prompt.cpp)   host -> guest
 constexpr uint8_t kMsgFieldKey = 26;
+// u8 | u8: the host's death penalty in force this session (T26; 0 = none)   host -> guest
+constexpr uint8_t kMsgDeathPenalty = 28;
 constexpr uint64_t kRestartDelayMs = 1500;  // the message goes out before this game closes
 constexpr uint64_t kStuckLineMs = 150000;   // guest: Play pressed this long ago, no world: the waiting screen says what to do
 constexpr uint64_t kStuckTellMs = 240000;   // guest: ... the host is told (its card in the world)
@@ -214,6 +217,8 @@ const char* seed_for(LobbyPlan p) {
 
 std::atomic<bool> g_shared_quest_credit{false};
 std::atomic<int> g_death_penalty{0};  // [coop] death_penalty (T26)
+std::atomic<int> g_death_penalty_session{-1};  // the first value set in this process = the one this launch used
+int g_death_penalty_sent = -1;
 std::atomic<bool> g_story_together{false};  // [coop] story_together (experimental)
 std::atomic<bool> g_world_items_lootr{true};  // [coop] world_items  // B10 option 2 ([coop] shared_quest_credit)
 std::string g_native_extra;                      // dev: [dev] native_extra (set once at start)
@@ -356,6 +361,17 @@ void lobby_tick(const LobbyInput& in) {
             }
         }
         if (!in.connected) g_field_key_sent = 0;
+        // T26: the host's death penalty in force (none while the money item is unknown: kDeathPenaltyItem 0).
+        if (g_native && in.host && in.in_world) {
+            int p = 0;
+            if constexpr (kDeathPenaltyItem != 0) p = g_death_penalty_session.load() > 0 ? g_death_penalty_session.load() : 0;
+            revive_set_death_penalty(p);
+            if (in.connected && p != g_death_penalty_sent) {
+                g_death_penalty_sent = p;
+                send({kMsgDeathPenalty, static_cast<uint8_t>(p)});
+            }
+        }
+        if (!in.connected) g_death_penalty_sent = -1;
         if (g_native && g_phase == Phase::GuestWait && g_play_since && in.connected && !in.in_world && !g_stuck_told &&
             in.now_ms - g_play_since > kStuckTellMs) {
             g_stuck_told = true;
@@ -879,6 +895,9 @@ void lobby_on_message(const std::vector<uint8_t>& b) {
                     revive_set_field_key(key);
                 }
                 break;
+            case kMsgDeathPenalty:
+                if (b.size() >= 2 && !g_in.host) revive_set_death_penalty(b[1]);
+                break;
             case kMsgSessionEnded:
                 if (!g_in.host) bye_at_title_locked();  // in the world: the activity goodbye does the full Leave
                 break;
@@ -939,7 +958,11 @@ std::string lobby_difficulty_card() {
 }
 
 void lobby_set_shared_quest_credit(bool on) { g_shared_quest_credit = on; }
-void lobby_set_death_penalty(int percent) { g_death_penalty = percent; }
+void lobby_set_death_penalty(int percent) {
+    g_death_penalty = percent;
+    int unset = -1;
+    g_death_penalty_session.compare_exchange_strong(unset, percent);
+}
 void lobby_set_story_together(bool on) { g_story_together = on; }
 void lobby_set_world_items_lootr(bool on) { g_world_items_lootr = on; }
 bool lobby_native_guest() { return g_native && g_native_now == NativeMode::Guest; }

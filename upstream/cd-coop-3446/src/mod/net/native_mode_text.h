@@ -204,7 +204,13 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
                               // guard of every working far-world / shop run (tcB194 / 201 / 216 / 223)
                               "guest_schedule_load=1", "guest_x_interaction_stage=1", "seq_actor_restore=1",
                               // B18: the host's combat stream's other half, a short delay for enemies in combat
-                              "remote_interp_combat=1"}) {
+                              "remote_interp_combat=1",
+                              // B14 (2026-11-22, cs95b): the joined player's own arm wrestling at the Hernand inn
+                              // table. The table (resource 0x94FEA6AE) is a host scene: the guest's game gets a twin of
+                              // it like the shops' (twin_extra), and the twin's answer to the match's first chart event
+                              // carries the grip the server would have made (twin_extra_chart=3). cs95b: the fee, the
+                              // live gauge, a won match and its prize (30) on the joined player's own purse.
+                              "twin_extra=94FEA6AE", "twin_extra_chart=3"}) {
             line(k);
         }
     }

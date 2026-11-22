@@ -207,7 +207,7 @@ kit_scripts() {  # the loose dev scripts the steps read (2026-11-22: written her
   printf 'tp -10344.4 535.9 -3991.8\nwait 3000\n' > $N/scan/tp_chest4_host.txt
   printf 'tp -10338 537.4 -3982\nwait 10000\nwait 10000\nwait 10000\nwait 9000\ntp -10343.4 535.9 -3989.6\nwait 3000\n' \
     > $N/scan/chest_far_guest.txt
-  printf 'tp -10343.4 535.9 -3989.6\nwait 10000\nwait 10000\nwait 8000\nc2s 2322 66 00 10 A0 00 00 00 00\nwait 3000\n' \
+  printf 'tp -10343.4 535.9 -3989.6\nwait 10000\nwait 10000\nwait 8000\nkillfriend\nwait 3000\n' \
     > $N/scan/host_kills_guest.txt
   printf 'tp -10243 546 -3955\nwait 3000\n' > $N/scan/tp_dock_guest.txt
   printf 'tp -10239 546 -3957\nwait 9000\nnpcs 40\nwait 9000\nnpcs 40\nwait 8000\nnpcs 40\ntp -10344.4 535.9 -3991.8\nwait 5000\nnpcs 30\n' \

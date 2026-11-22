@@ -27,6 +27,7 @@
 #include "mod/net/coop_travel.h"
 #include "mod/net/coop_story.h"
 #include "mod/net/coop_lobby.h"
+#include "mod/net/revive_prompt.h"
 #include "mod/settings_menu.h"
 #include "mod/net/coop_worlds.h"
 #include "mod/net/session_summary.h"
@@ -562,7 +563,14 @@ void hud_draw(float width, float height) {
                               : d.revive_prompt == 3 ? "Everyone is down.      {ReviveCheckpoint} Revive at Checkpoint"
                                                      : "{ReviveNow} Instant Revive (30% Health)        "
                                                        "{ReviveCheckpoint} Revive at Checkpoint";
-        ui::death_screen(width, height, "Death has found you.", "Return to your path?", choices);
+        // T26: the host's death penalty, when one is in force and getting up alone is a choice here.
+        const int pct = net::revive_death_penalty();
+        const std::string sub = pct > 0 && d.revive_prompt == 1
+                                    ? std::format("Return to your path?   Getting up by yourself costs {} of your "
+                                                  "silver; your friend can revive you for free.",
+                                                  pct == 100 ? std::string("all") : std::format("{} %", pct))
+                                    : std::string("Return to your path?");
+        ui::death_screen(width, height, "Death has found you.", sub.c_str(), choices);
     }
 
     // Co-op+ (T14): the partner frame, whenever connected (not over a full-screen menu or a cutscene).

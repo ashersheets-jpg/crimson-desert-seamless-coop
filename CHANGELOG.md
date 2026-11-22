@@ -5,6 +5,13 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
+NEXT (not built yet; in the layer's source since 2026-11-22 17:15):
+- **The joined player can arm-wrestle at the Hernand inn table** (B14): its game gets its own copy of the table's
+  scene (like the shops' copies), and the match's grip, which the host's server only makes for the host, is made on
+  the joined player's game. One-PC run cs95b: the 20 copper fee, the live strength bar, a won match and its 30 copper
+  prize, all on the joined player's own purse; back in the room after. Still to check on the build: a lost match,
+  "Play Again", and the host's own match at the same table after it (cs103).
+
 POSTED 2026-11-22 15:52 (0.1.0-alpha+677c87bb, for game 1.0.0.3732; checklist pp44 over 27 steps, the re-runs
 pp44b / pp44c / pp44d clean after test-kit-only fixes): everything in c7c22497 just below, plus:
 - **Doors in a place the joined player reaches first now open** (layer 677c87bb, the native base's [session2]
