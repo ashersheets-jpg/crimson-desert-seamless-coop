@@ -196,7 +196,7 @@ static void log_vehicles_near(float radius) {
 namespace {
 
 struct Step {
-    enum Kind { C2S, S2C, Wait, Teleport, Poke, Time, Watch, Day, Pad, KillGame, KillFriend, KillAll, MemScan, MemDiff, MemWatch, Advance, FScan, FFilter, FWatch, WaitFile, DScan, DFilter, DWatch, GSnap, GDiff, VtScan, PtrScan, WatchStatus, Key, ClockScan, RideHorse, PrologueDone, GrantXp, GuestHit, DumpItemMove, TpActor, Npcs, KillNear, LootLast } kind;
+    enum Kind { C2S, S2C, Wait, Teleport, Poke, Time, Watch, Day, Pad, KillGame, KillFriend, KillHorse, KillAll, MemScan, MemDiff, MemWatch, Advance, FScan, FFilter, FWatch, WaitFile, DScan, DFilter, DWatch, GSnap, GDiff, VtScan, PtrScan, WatchStatus, Key, ClockScan, RideHorse, PrologueDone, GrantXp, GuestHit, DumpItemMove, TpActor, Npcs, KillNear, LootLast } kind;
     uintptr_t addr = 0;
     float to[3] = {};
     uint16_t op = 0;
@@ -371,6 +371,13 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
         // its character load; 2026-11-22: pp44-loot had 0xA0100067, the checklist's revive step named 0xA0100066).
         if (kind == "killfriend") {
             st.kind = Step::KillFriend;
+            steps.push_back(st);
+            continue;
+        }
+        // killhorse (T25, 2026-11-22): KillCheatReq on the horse the layer counts as ours (after a horse call), e.g.
+        // while we ride it: does the other game see it die and us on foot?
+        if (kind == "killhorse") {
+            st.kind = Step::KillHorse;
             steps.push_back(st);
             continue;
         }
@@ -799,6 +806,16 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                     const bool ok = sniffer_inject_c2s(make_c2s(2322, pay));
                     log::info("Dev script: killfriend: KillCheatReq on the other player's character 0x{:08X}{}", friend_key,
                               ok ? "" : " NOT sent");
+                }
+            } else if (st.kind == Step::KillHorse) {
+                const uint32_t horse = capture_horse_present();
+                if (!horse) {
+                    log::info("Dev script: killhorse: no horse of ours is known (call it first)");
+                } else {
+                    std::vector<uint8_t> pay(8, 0);  // KillCheatReq: u32 key | u32 option (0 = at once)
+                    std::memcpy(pay.data(), &horse, 4);
+                    const bool ok = sniffer_inject_c2s(make_c2s(2322, pay));
+                    log::info("Dev script: killhorse: KillCheatReq on our horse 0x{:08X}{}", horse, ok ? "" : " NOT sent");
                 }
             } else if (st.kind == Step::KillAll) {
                 int sent = 0;
