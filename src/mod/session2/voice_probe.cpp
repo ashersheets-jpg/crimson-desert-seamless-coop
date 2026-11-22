@@ -31,6 +31,10 @@ SafetyHookInline g_voice_hook, g_sound_hook, g_play_hook;
 // 4 sound posts, 5 accepted]
 std::atomic<uint32_t> g_n[2][6]{};
 std::atomic<uint32_t> g_other_key{0}, g_own_key{0};
+// 2026-11-22 (cs98: every count 0 on the host, both keys 0, the swing sounds too): every call counted, whoever it is
+// for, and the first calls' arguments logged, to see whether the processors run at all on 3732 and what p4 holds.
+std::atomic<uint32_t> g_calls[2]{};  // [0 voice, 1 sound] all calls
+std::atomic<int> g_logged{0};
 thread_local int t_who = -1;
 thread_local int t_kind = -1;  // 0 voice, 1 sound
 
@@ -48,7 +52,14 @@ int who_of(uintptr_t ctx) noexcept {
 
 uintptr_t run(SafetyHookInline& hook, int kind, uintptr_t self, uintptr_t p1, uintptr_t p2, uintptr_t p3,
               uintptr_t p4) {
+    g_calls[kind == 0 ? 0 : 1].fetch_add(1, std::memory_order_relaxed);
     const int w = who_of(p4);
+    if (g_logged.load(std::memory_order_relaxed) < 6 && g_logged.fetch_add(1) < 6) {
+        uintptr_t q[4]{};
+        for (int i = 0; i < 4; ++i) game::fast_read((i == 0 ? p1 : i == 1 ? p2 : i == 2 ? p3 : p4), &q[i], 8);
+        log::info("VoiceProbe: {} call: self {:X} p1 {:X} p2 {:X} p3 {:X} p4 {:X} | *p1 {:X} *p2 {:X} *p3 {:X} *p4 {:X} | "
+                  "who {}", kind == 0 ? "voice" : "sound", self, p1, p2, p3, p4, q[0], q[1], q[2], q[3], w);
+    }
     if (w >= 0) g_n[w][kind == 0 ? 0 : 3].fetch_add(1, std::memory_order_relaxed);
     const int keep_who = t_who, keep_kind = t_kind;
     t_who = w;
@@ -83,8 +94,8 @@ std::string counts(int w) {
 DWORD WINAPI line_thread(LPVOID) {
     for (int i = 0; i < 60; ++i) {
         Sleep(10000);
-        log::info("VoiceProbe: the other player 0x{:08X}: {} || own 0x{:08X}: {}", g_other_key.load(), counts(0),
-                  g_own_key.load(), counts(1));
+        log::info("VoiceProbe: the other player 0x{:08X}: {} || own 0x{:08X}: {} || all calls: voice {} sound {}",
+                  g_other_key.load(), counts(0), g_own_key.load(), counts(1), g_calls[0].load(), g_calls[1].load());
     }
     return 0;
 }
@@ -97,6 +108,7 @@ bool head_ok(uintptr_t rva, const uint8_t* head, size_t n) {
 }  // namespace
 
 void voice_probe_start(bool guest) {
+    log::info("VoiceProbe ({}): starting", guest ? "guest" : "host");
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     g_guest = guest;
     if (head_ok(kPlayEvent, kPlayHead, sizeof kPlayHead))
