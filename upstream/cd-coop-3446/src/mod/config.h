@@ -114,6 +114,10 @@ struct Config {
     bool coop_join_beside_host = true;  // Co-op+ 2026-11-11: [coop] join_beside_host: the guest starts at the host's side
     bool coop_downed_pose = true;  // Co-op+ 2026-11-11: [coop] downed_pose: a downed player lies down (shared world)
     bool coop_shared_quest_credit = false;
+    // Co-op+ 2026-11-22 (T26): [coop] death_penalty = 0 | 10 | 25 | 50 | 100: the share of the silver a player loses
+    // when it gets up by itself after a death (the revive prompt's Q / U; never a friend's revive). Host; applied by
+    // the host's server (native [session2] death_penalty). Anything else is 0 (off).
+    int coop_death_penalty = 0;
     // Co-op+ 2026-11-14 (experimental, off): [coop] story_together: each player's own story steps (the native story mode)
     // and the ready check (a story scene waits until both players are there and pressed). Host.
     bool coop_story_together = false;

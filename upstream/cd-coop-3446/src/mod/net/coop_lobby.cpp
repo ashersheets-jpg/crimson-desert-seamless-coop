@@ -213,6 +213,7 @@ const char* seed_for(LobbyPlan p) {
 }
 
 std::atomic<bool> g_shared_quest_credit{false};
+std::atomic<int> g_death_penalty{0};  // [coop] death_penalty (T26)
 std::atomic<bool> g_story_together{false};  // [coop] story_together (experimental)
 std::atomic<bool> g_world_items_lootr{true};  // [coop] world_items  // B10 option 2 ([coop] shared_quest_credit)
 std::string g_native_extra;                      // dev: [dev] native_extra (set once at start)
@@ -227,6 +228,7 @@ bool native_write(NativeMode mode, LobbyPlan plan) {
     spec.partner_address = g_in.steam ? std::string() : g_in.partner_address;
     spec.player_name = g_in.own_name.empty() ? "Player" : g_in.own_name;
     spec.shared_quest_credit = g_shared_quest_credit.load();
+    spec.death_penalty = g_death_penalty.load();
     spec.world_items_lootr = g_world_items_lootr.load();
     spec.story_together = g_story_together.load();
     spec.extra = g_native_extra;  // dev (research runs); the guest's too since 2026-11-14 (story_gate=client_probe)
@@ -937,6 +939,7 @@ std::string lobby_difficulty_card() {
 }
 
 void lobby_set_shared_quest_credit(bool on) { g_shared_quest_credit = on; }
+void lobby_set_death_penalty(int percent) { g_death_penalty = percent; }
 void lobby_set_story_together(bool on) { g_story_together = on; }
 void lobby_set_world_items_lootr(bool on) { g_world_items_lootr = on; }
 bool lobby_native_guest() { return g_native && g_native_now == NativeMode::Guest; }

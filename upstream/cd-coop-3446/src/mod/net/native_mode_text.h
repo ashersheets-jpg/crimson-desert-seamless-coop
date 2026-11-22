@@ -17,6 +17,10 @@ namespace cdmp::net {
 
 enum class NativeMode : uint8_t { Solo = 0, Host = 1, Guest = 2 };
 
+// T26: the silver's item key in the game's item table (decimal, as the native ini takes it). 0 = not known yet (cs97
+// lists the money pouch with each item's key); the Co-op Settings choice is shown only once it is set.
+inline constexpr uint32_t kDeathPenaltyItem = 0;
+
 struct NativeModeSpec {
     NativeMode mode = NativeMode::Solo;
     bool steam = true;               // the tunnel over Steam (else udp: Radmin VPN / LAN)
@@ -29,6 +33,7 @@ struct NativeModeSpec {
     bool shared_quest_credit = false;  // B10 option 2 (host): [session2] quest_shared_credit
     bool world_items_lootr = true;     // user 2026-11-10 (host): [session2] lootr
     bool story_together = false;       // 2026-11-14 (host, experimental): story mode + [session2] story_gate=hold
+    int death_penalty = 0;             // 2026-11-22 T26 (host): [session2] death_penalty (10 / 25 / 50 / 100)
     std::string extra;                 // dev: "k=v,k=v" appended to [session2] (config dev_native_extra)
     bool record = false;               // dev: [sniffer] record=1 (config dev_native_record; research runs only)
 };
@@ -174,6 +179,13 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
         // The player's choice ([coop] story_together, experimental, off): each player's own story scenes and steps
         // (user2_stages_quest: user 2's story scenes prepared; user2_stages_own_quest: on its own quest manager) and the
         // ready check (story_gate=hold: docs/research/shared-cutscenes.md).
+        // T26, the player's choice ([coop] death_penalty): the host's server takes that share of the silver of a
+        // player who gets up by itself after a death. kDeathPenaltyItem = the silver's item key (0 until cs97 names
+        // it: the server then only lists the money pouch).
+        if (s.death_penalty == 10 || s.death_penalty == 25 || s.death_penalty == 50 || s.death_penalty == 100) {
+            line("death_penalty=" + std::to_string(s.death_penalty));
+            if constexpr (kDeathPenaltyItem != 0) line("death_penalty_item=" + std::to_string(kDeathPenaltyItem));
+        }
         if (s.story_together) {
             line("user2_stages_quest=1");
             line("user2_stages_own_quest=1");

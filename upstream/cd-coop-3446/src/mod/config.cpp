@@ -265,6 +265,10 @@ Config load_config(const std::wstring& ini_path) {
     c.coop_downed_pose = read_uint(ini_path, L"coop", L"downed_pose", 1) != 0;
     c.coop_join_beside_host = read_uint(ini_path, L"coop", L"join_beside_host", 1) != 0;
     c.coop_shared_quest_credit = read_uint(ini_path, L"coop", L"shared_quest_credit", 0) != 0;
+    {
+        const int p = static_cast<int>(read_uint(ini_path, L"coop", L"death_penalty", 0));
+        c.coop_death_penalty = p == 10 || p == 25 || p == 50 || p == 100 ? p : 0;
+    }
     c.coop_story_together = read_uint(ini_path, L"coop", L"story_together", 0) != 0;
     c.coop_world_items_lootr = read_string(ini_path, L"coop", L"world_items", "lootr") != L"first_come";
     c.coop_guest_finishes = read_uint(ini_path, L"coop", L"guest_finishes", 1) != 0;

@@ -1781,6 +1781,14 @@ void test_native_mode_text() {
     CHECK(has(ht, "quest_own_progress=1") && has(ht, "fog_share=1") && has(ht, "anti_grief=1") &&
           has(ht, "user2_stages=1") && has(ht, "user2_world_anchor=1") && !has(ht, "quest_shared_credit=1") &&
           has(ht, "user2_shop_route=1") && has(ht, "interaction_share=1") && has(ht, "npc_activation=1"));  // far shops on (tcB243); S35 on
+    // T26: [coop] death_penalty on the host: the share (and the silver's key once known); off writes nothing.
+    CHECK(!has(native_mode_ini_text(h), "death_penalty="));
+    h.death_penalty = 25;
+    CHECK(has(native_mode_ini_text(h), "death_penalty=25"));
+    CHECK(has(native_mode_ini_text(h), "death_penalty_item=") == (net::kDeathPenaltyItem != 0));
+    h.death_penalty = 33;  // not a setting
+    CHECK(!has(native_mode_ini_text(h), "death_penalty="));
+    h.death_penalty = 0;
     h.shared_quest_credit = true;
     CHECK(has(native_mode_ini_text(h), "quest_shared_credit=1"));
     h.shared_quest_credit = false;

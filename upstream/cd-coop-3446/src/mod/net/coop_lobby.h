@@ -79,6 +79,8 @@ LobbyView lobby_view();
 // Render thread: the menu's actions.
 // B10 option 2: [coop] shared_quest_credit, written into the host's native ini at the next co-op launch.
 void lobby_set_shared_quest_credit(bool on);
+// T26: [coop] death_penalty (0 | 10 | 25 | 50 | 100), written into the host's native ini at the next co-op launch.
+void lobby_set_death_penalty(int percent);
 // 2026-11-14 (experimental): [coop] story_together, written into the host's native ini at the next co-op launch.
 void lobby_set_story_together(bool on);
 // [coop] world_items (host): lootr (default) writes lootr=1 into the host's native ini at the next co-op launch.
