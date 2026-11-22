@@ -618,6 +618,9 @@ struct Config {
     // Co-op+ 2026-11-21 (shop_twin.h, research): twin_watch = hex resource hashes (HOST): its scenes of these resources
     // are watched like its shop scenes and every packet naming one is logged ("ShopTwin [watch]"). Default empty.
     std::string s2_twin_watch;
+    // Co-op+ 2026-11-21 (shop_twin.h, research, B14): twin_extra = hex resource hashes (GUEST): the host's scenes of
+    // these resources get a twin like the shops, answered from a per-resource table. Default empty.
+    std::string s2_twin_extra;
     bool s2_stage_candidate_guard = true;
     bool s2_anti_grief = false;  // Co-op+ 2026-11-09 B19: the guest cannot hit the NPCs the host talks to (anti_grief.h)
     bool s2_knowledge_grant = false;  // Co-op+ 2026-11-16 B04: knowledge one player learns, the other too (knowledge_grant.h)

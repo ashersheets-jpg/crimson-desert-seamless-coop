@@ -1087,6 +1087,7 @@ int* __fastcall guest_send(void* self, int* res, void* pbv) {
                     // Co-op+ 2026-11-09 (shop_twin.h): a request about the guest's own shop scene never reaches the
                     // host's server (which never knew the scene); the server's answers come from here.
                     if (!withheld && !p.empty()) {
+                        shop_twin_rewrite_out(p);  // twin_extra (B14): a minigame request names the host's scene
                         std::vector<std::vector<uint8_t>> tw_answers;
                         if (shop_twin_on_out(p, tw_answers)) {
                             withheld = true;

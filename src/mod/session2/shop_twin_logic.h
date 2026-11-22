@@ -187,6 +187,128 @@ inline std::vector<std::vector<uint8_t>> local_answers(uint16_t op, std::span<co
     return local_answers(op, pl, guest, 0, st);
 }
 
+// ---- twins of other scenes (B14, 2026-11-21: the Hernand inn's arm-wrestling table) --------------------------------
+// [session2] twin_extra (guest) names resources whose host scenes get a twin like the shops. Their branches are
+// answered from a table of the host server's own answers (host captures, docs/research/armwrest-twin.md), not the
+// shop's rule. Per (state, branch) the answers, in order:
+//   AvoidOn / AvoidOff  2698 SetAvoidByCutSceneAck (4 | actor | id | u8 on | actor)
+//   Event               2369 StageOnBranchEventAck (4 | actor | id | branch | u8 = the request's flag)
+//   State               2752 StageBranchStateAck (4 | actor | id | next | branch | root | 0, the 29-byte form); held
+//                       back, with the answers after it, until the client's StageBranchStateDelayEndReq 2654 (id
+//                       u64) when the request's flag (u16 at +12) is set (cs83w3 / cs83w4: Participate's and Play
+//                       Again's branches; the server's 2752 came right after the 2654, its AvoidOff ~20 ms later)
+// A (state, branch) the table lacks: 2369 and 2752 type 0 (the scene back to its start); the caller logs it.
+inline constexpr uint16_t kOpBranchDelayEndReq = 2654;
+enum class Ans : uint8_t { AvoidOn, AvoidOff, Event, State };
+struct ChartStep {
+    uint32_t state, branch, next;
+    uint8_t n;
+    Ans a[6];
+};
+inline constexpr uint32_t kResArmwrest = 0x94FEA6AEu;  // cd_minigame_armwrest_base
+// The Hernand inn table, from the host's own matches (cs83w3: a win; cs83w4: the menu's Back, a loss, Play Again):
+//   0 -b5-> 1 (the menu: Participate b0 / Back b1)        1 -b1-> 2 -b0-> 0 (Back)
+//   1 -b0 (held)-> 3 -b0-> 4 -b1-> 5 -b0-> 6 -b0-> 7 (the match)
+//   7 -b0-> 8 -b0-> 10 (won)                                7 -b1-> 9 -b0-> 10 (lost)
+//   10 (Play Again b6 / Back b7) -b6 (held)-> 3 ...       10 -b7 (held)-> 11 -b0-> 0 (Back)
+inline constexpr ChartStep kArmwrestSteps[] = {
+    {0, 5, 1, 2, {Ans::Event, Ans::State}},
+    {1, 0, 3, 4, {Ans::AvoidOn, Ans::Event, Ans::State, Ans::AvoidOff}},
+    {1, 1, 2, 4, {Ans::AvoidOn, Ans::Event, Ans::State, Ans::AvoidOff}},
+    {2, 0, 0, 2, {Ans::Event, Ans::State}},
+    {3, 0, 4, 4, {Ans::AvoidOn, Ans::Event, Ans::AvoidOff, Ans::State}},
+    {4, 1, 5, 4, {Ans::AvoidOn, Ans::Event, Ans::AvoidOff, Ans::State}},
+    {5, 0, 6, 4, {Ans::AvoidOn, Ans::Event, Ans::AvoidOff, Ans::State}},
+    {6, 0, 7, 2, {Ans::Event, Ans::State}},
+    {7, 0, 8, 2, {Ans::Event, Ans::State}},
+    {7, 1, 9, 2, {Ans::Event, Ans::State}},
+    {8, 0, 10, 2, {Ans::Event, Ans::State}},
+    {9, 0, 10, 2, {Ans::Event, Ans::State}},
+    {10, 6, 3, 4, {Ans::AvoidOn, Ans::Event, Ans::State, Ans::AvoidOff}},
+    {10, 7, 11, 4, {Ans::AvoidOn, Ans::Event, Ans::State, Ans::AvoidOff}},
+    {11, 0, 0, 2, {Ans::Event, Ans::State}},
+};
+inline std::span<const ChartStep> chart_of(uint32_t res) {
+    if (res == kResArmwrest) return kArmwrestSteps;
+    return {};
+}
+struct TableAnswer {
+    std::vector<std::vector<uint8_t>> now;  // to queue for the game at once
+    std::vector<std::vector<uint8_t>> later;  // held for the client's 2654: the 2752 and what follows it
+    bool known = true;                      // the (state, branch) was in the table
+    uint32_t next = 0;
+};
+inline TableAnswer table_answers(std::span<const ChartStep> chart, std::span<const uint8_t> pl, uint32_t guest,
+                                 uint32_t root, uint32_t& state) {
+    TableAnswer out;
+    if (pl.size() < 12) return out;
+    const uint64_t id = id_of_request(pl);
+    const uint32_t branch = rd32(pl.data() + 8);
+    const uint16_t flag = pl.size() >= 14 ? static_cast<uint16_t>(pl[12] | (pl[13] << 8)) : 0;
+    const ChartStep* step = nullptr;
+    for (const ChartStep& s : chart) {
+        if (s.state == state && s.branch == branch) {
+            step = &s;
+            break;
+        }
+    }
+    static constexpr Ans kUnknown[] = {Ans::Event, Ans::State};
+    const std::span<const Ans> seq = step ? std::span<const Ans>(step->a, step->n) : std::span<const Ans>(kUnknown);
+    out.known = step != nullptr;
+    out.next = step ? step->next : 0;
+    bool held = false;  // the State and everything after it wait for the client's 2654
+    for (const Ans a : seq) {
+        if (a == Ans::State && flag) held = true;
+        auto& to = held ? out.later : out.now;
+        if (a == Ans::AvoidOn || a == Ans::AvoidOff) {
+            uint8_t av[18] = {4};
+            wr32(av + 1, guest);
+            wr64(av + 5, id);
+            av[13] = a == Ans::AvoidOn ? 1 : 0;
+            wr32(av + 14, guest);
+            to.push_back(frame(kOpAvoidByCutScene, av));
+        } else if (a == Ans::Event) {
+            uint8_t ev[18] = {4};
+            wr32(ev + 1, guest);
+            wr64(ev + 5, id);
+            wr32(ev + 13, branch);
+            ev[17] = static_cast<uint8_t>(flag);
+            to.push_back(frame(kOpBranchEvent, ev));
+        } else {
+            to.push_back(frame(kOpBranchState, branch_state(guest, id, out.next, branch, true, root)));
+        }
+    }
+    state = out.next;
+    return out;
+}
+
+// The minigame requests that name the table's scene (cs83w3): SpawnMiniGameCharacterReq 2281 and
+// UnspawnMiniGameCharacterReq 2361 (u8 4 | u64 scene id | u16 minigame | ...), and the server's
+// SpawnMiniGameCharacterAck 2810 (u8 4 | u32 actor | u64 scene id | ...). The joined player's game names its twin; the
+// host's server knows only the host's scene.
+inline constexpr uint16_t kOpSpawnMiniGameCharacterReq = 2281, kOpUnspawnMiniGameCharacterReq = 2361,
+                          kOpSpawnMiniGameCharacterAck = 2810;
+// C>S payload: a twin's id at +1 becomes the host's; returns the host's id (0: not such a request, nothing changed).
+inline uint64_t minigame_req_to_host(uint16_t op, std::span<uint8_t> pl) {
+    if ((op != kOpSpawnMiniGameCharacterReq && op != kOpUnspawnMiniGameCharacterReq) || pl.size() < 9 || pl[0] != 4)
+        return 0;
+    const uint64_t id = rd64(pl.data() + 1);
+    if (!is_twin_id(id)) return 0;
+    wr64(pl.data() + 1, id - kTwinIdBase);
+    return id - kTwinIdBase;
+}
+// S>C payload: this client's own 2810 (actor = `own`) naming a host scene `has_twin` says has a twin gets the twin's id;
+// returns the twin's id (0: unchanged).
+template <class HasTwin>
+inline uint64_t minigame_ack_to_twin(uint16_t op, std::span<uint8_t> pl, uint32_t own, HasTwin&& has_twin) {
+    if (op != kOpSpawnMiniGameCharacterAck || pl.size() < 13 || pl[0] != 4 || !own || rd32(pl.data() + 1) != own)
+        return 0;
+    const uint64_t id = rd64(pl.data() + 5);
+    if (is_twin_id(id) || !has_twin(id)) return 0;
+    wr64(pl.data() + 5, twin_of(id));
+    return twin_of(id);
+}
+
 // ---- the shop dialog entries (2026-11-09) --------------------------------------------------------------------------
 // SetQuestDialogAck 3086 (S->C): u8 4 | u32 actor | u32 NPC | n x {u32 group, u32 index}. A shopkeeper's menu choices
 // (Buy / Sell) are the entries of group kShopDialogGroup (Renee 0x0A / 0x0B, tcB116); the NPC's scene functions put

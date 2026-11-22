@@ -25,6 +25,7 @@ namespace {
 bool g_on = false, g_guest = false;
 std::atomic<bool> g_again{false};  // [session2] shop_twin_again
 std::vector<uint32_t> g_watch_res;   // [session2] twin_watch (research, host): set once at start
+std::vector<uint32_t> g_extra_res;   // [session2] twin_extra (research, guest): set once at start
 std::atomic<bool> g_share_all{false};
 uintptr_t g_base = 0;
 std::mutex g_mu;
@@ -39,12 +40,23 @@ struct Twin {
     uint64_t prepared_ms = 0;
     uint8_t missing = 0;
     uint16_t again = 0;
+    // twin_extra (B14): the scene's resource and a 2752 held for the client's StageBranchStateDelayEndReq.
+    uint32_t res = 0;
+    std::vector<std::vector<uint8_t>> later;
 };
 std::unordered_map<uint64_t, Twin> g_twins;  // the host's scene id -> its twin
 std::atomic<uint64_t> c_prepared{0}, c_deleted{0}, c_withheld{0}, c_answered{0}, c_branches{0}, c_again{0};
 std::atomic<uint32_t> g_last_branch{0};
 
 bool is_shop(uint32_t h) { return mul::is_shop_scene(h); }
+bool is_extra(uint32_t h) {
+    for (const uint32_t r : g_extra_res) {
+        if (r == h) return true;
+    }
+    return false;
+}
+bool is_twin_res(uint32_t h) { return is_shop(h) || is_extra(h); }
+std::atomic<uint64_t> c_table{0}, c_table_unknown{0}, c_held{0}, c_mg_out{0}, c_mg_in{0};
 
 // The shop dialog entries: the host's own per NPC (host: collected from its client's 3086s; guest: from state 17).
 std::mutex g_dmu;
@@ -150,6 +162,27 @@ void shop_twin_set_watch(const std::string& hex_list) {
     }
 }
 
+void shop_twin_set_extra(const std::string& hex_list) {
+    std::vector<uint32_t> v;
+    size_t i = 0;
+    while (i < hex_list.size()) {
+        while (i < hex_list.size() && !std::isxdigit(static_cast<unsigned char>(hex_list[i]))) ++i;
+        size_t j = i;
+        while (j < hex_list.size() && std::isxdigit(static_cast<unsigned char>(hex_list[j]))) ++j;
+        if (j > i) {
+            const std::string t = hex_list.substr(i, j - i);
+            if (t.size() <= 8) v.push_back(static_cast<uint32_t>(std::stoul(t, nullptr, 16)));
+        }
+        i = j;
+    }
+    g_extra_res = v;
+    for (const uint32_t h : v) {
+        log::info("ShopTwin [extra] twin_extra (research): the host's scenes of resource 0x{:08X} get a twin too ({})", h,
+                  stl::chart_of(h).empty() ? "NO answer table for it: its branches go back to the start"
+                                           : "answered from its table");
+    }
+}
+
 void shop_twin_set_again(bool on) {
     g_again = on;
     if (on) {
@@ -248,22 +281,24 @@ void shop_twin_on_host(std::vector<uint8_t>& packet, std::vector<std::vector<uin
         }
         if (op == stl::kOpPrepare) {
             const uint32_t me = own_key();
-            const auto t = stl::twin_prepare(pl, me, &is_shop);
+            const auto t = stl::twin_prepare(pl, me, &is_twin_res);
             if (!t) return;
             const uint64_t host_id = stl::rd64(pl.data() + 9);
+            const uint32_t res = stl::rd32(pl.data() + stl::kHashAt);
             {
                 std::lock_guard lk(g_mu);
                 Twin tw;
                 tw.twin = stl::twin_of(host_id);
                 tw.prep = *t;
                 tw.prepared_ms = GetTickCount64();
+                tw.res = res;
                 g_twins[host_id] = std::move(tw);
             }
             after.push_back(stl::frame(stl::kOpPrepare, *t));
             const uint64_t n = c_prepared.fetch_add(1) + 1;
-            if (n <= 40)
-                log::info("ShopTwin [prepared] the host's shop scene 0x{:X} (resource 0x{:08X}) -> twin 0x{:X} for "
-                          "0x{:08X}", host_id, stl::rd32(pl.data() + stl::kHashAt), stl::twin_of(host_id), me);
+            if (n <= 40 || !is_shop(res))
+                log::info("ShopTwin [prepared] the host's {} scene 0x{:X} (resource 0x{:08X}) -> twin 0x{:X} for "
+                          "0x{:08X}", is_shop(res) ? "shop" : "twin_extra", host_id, res, stl::twin_of(host_id), me);
         } else if (op == stl::kOpBranchState) {
             const uint64_t id = stl::id_of_2920(pl);
             std::lock_guard lk(g_mu);
@@ -273,6 +308,17 @@ void shop_twin_on_host(std::vector<uint8_t>& packet, std::vector<std::vector<uin
             it->second.root = stl::root_of_initial_2920(pl);
             it->second.init = stl::twin_branch_state(pl, own_key());
             after.push_back(stl::frame(stl::kOpBranchState, it->second.init));
+        } else if (op == stl::kOpSpawnMiniGameCharacterAck && !g_extra_res.empty() && packet.size() > stl::kHeader) {
+            // twin_extra: this client's own opponent spawn names the host's scene; its game knows the twin.
+            const std::span<uint8_t> mpl(packet.data() + stl::kHeader, packet.size() - stl::kHeader);
+            std::lock_guard lk(g_mu);
+            const uint64_t tid = stl::minigame_ack_to_twin(op, mpl, own_key(), [](uint64_t h) {
+                const auto it = g_twins.find(h);
+                return it != g_twins.end() && is_extra(it->second.res);
+            });
+            if (tid && c_mg_in.fetch_add(1) < 20)
+                log::info("ShopTwin [minigame] the server's SpawnMiniGameCharacterAck for this client names the host's "
+                          "scene 0x{:X}: given to the game as its twin 0x{:X}", tid - stl::kTwinIdBase, tid);
         } else if (op == stl::kOpDelete) {
             const uint64_t id = stl::id_of_2292(pl);
             bool had = false;
@@ -284,6 +330,27 @@ void shop_twin_on_host(std::vector<uint8_t>& packet, std::vector<std::vector<uin
             before.push_back(stl::frame(stl::kOpDelete, stl::twin_delete(pl, own_key())));
             c_deleted.fetch_add(1);
         }
+    } catch (...) {
+    }
+}
+
+void shop_twin_rewrite_out(std::vector<uint8_t>& packet) noexcept {
+    if (!g_on || !g_guest || g_extra_res.empty() || packet.size() <= stl::kHeader) return;
+    try {
+        const uint16_t op = static_cast<uint16_t>(packet[0] | (packet[1] << 8));
+        if (op != stl::kOpSpawnMiniGameCharacterReq && op != stl::kOpUnspawnMiniGameCharacterReq) return;
+        const std::span<uint8_t> pl(packet.data() + stl::kHeader, packet.size() - stl::kHeader);
+        if (pl.size() < 9 || !stl::is_twin_id(stl::rd64(pl.data() + 1))) return;
+        {
+            std::lock_guard lk(g_mu);
+            const auto it = g_twins.find(stl::rd64(pl.data() + 1) - stl::kTwinIdBase);
+            if (it == g_twins.end() || !is_extra(it->second.res)) return;  // only a twin_extra scene's
+        }
+        const uint64_t host = stl::minigame_req_to_host(op, pl);
+        if (host && c_mg_out.fetch_add(1) < 20)
+            log::info("ShopTwin [minigame] {} names twin 0x{:X}: sent to the host's server with its scene 0x{:X}",
+                      op == stl::kOpSpawnMiniGameCharacterReq ? "SpawnMiniGameCharacterReq" : "UnspawnMiniGameCharacterReq",
+                      host + stl::kTwinIdBase, host);
     } catch (...) {
     }
 }
@@ -304,7 +371,42 @@ bool shop_twin_on_out(std::span<const uint8_t> packet, std::vector<std::vector<u
             for (auto& [h, t] : g_twins)
                 if (t.twin == id) tw = &t;
             if (!tw) return false;
-            a = stl::local_answers(op, pl, own_key(), tw->root, tw->state);
+            const auto chart = stl::chart_of(tw->res);
+            if (is_extra(tw->res) && !chart.empty() && op == stl::kOpBranchReq) {
+                // twin_extra (B14): the scene's own table of the server's answers.
+                const uint32_t from = tw->state;
+                auto r = stl::table_answers(chart, pl, own_key(), tw->root, tw->state);
+                // A state still held (its 2654 never came) goes first: the game sees every step, in order.
+                for (auto& f : tw->later) a.push_back(std::move(f));
+                tw->later.clear();
+                for (auto& f : r.now) a.push_back(std::move(f));
+                const bool held = !r.later.empty();
+                if (held) tw->later = std::move(r.later);
+                c_table.fetch_add(1);
+                if (!r.known) c_table_unknown.fetch_add(1);
+                log::info("ShopTwin [table] twin 0x{:X} (resource 0x{:08X}) state {} branch {} -> {}{}{}", id, tw->res,
+                          from, pl.size() >= 12 ? stl::rd32(pl.data() + 8) : 0, r.next,
+                          held ? " (its state held for the client's StageBranchStateDelayEndReq)" : "",
+                          r.known ? "" : "  <-- NOT in the table: the scene back to its start");
+            } else if (is_extra(tw->res) && op == stl::kOpBranchDelayEndReq) {
+                if (!tw->later.empty()) {
+                    a = std::move(tw->later);
+                    tw->later.clear();
+                    c_held.fetch_add(1);
+                    log::info("ShopTwin [table] twin 0x{:X}: the client's StageBranchStateDelayEndReq -> its held state "
+                              "{}", id, tw->state);
+                }
+            } else if (is_extra(tw->res) && chart.empty() && op == stl::kOpBranchReq) {
+                // no table for this resource: back to the start (never the shop's rule for a scene that is no shop)
+                static constexpr stl::ChartStep kNone[] = {{0xFFFFFFFFu, 0xFFFFFFFFu, 0, 0, {}}};
+                auto r = stl::table_answers(kNone, pl, own_key(), tw->root, tw->state);
+                a = std::move(r.now);
+                c_table_unknown.fetch_add(1);
+                log::info("ShopTwin [table] twin 0x{:X} (resource 0x{:08X}) has no answer table: branch {} -> back to "
+                          "the start", id, tw->res, pl.size() >= 12 ? stl::rd32(pl.data() + 8) : 0);
+            } else {
+                a = stl::local_answers(op, pl, own_key(), tw->root, tw->state);
+            }
             type = tw->state;
         }
         c_withheld.fetch_add(1);
@@ -486,12 +588,14 @@ std::string shop_twin_describe() {
     std::lock_guard lk(g_mu);
     return std::format("ShopTwin ({}): live twins {} | prepared {} (again after a load {}) deleted {} | requests "
                        "withheld {} (answered {}, branches {}, last branch {}) | dialogs: host frames out {} in {}, lists "
-                       "rewritten {}, given again {} (marked {})",
+                       "rewritten {}, given again {} (marked {}) | twin_extra: table answers {} (not in a table {}, held "
+                       "states given {}), minigame ids out {} in {}",
                        g_on ? "on" : "off", g_twins.size(), c_prepared.load(), c_again.load(), c_deleted.load(),
                        c_withheld.load(),
                        c_answered.load(), c_branches.load(), g_last_branch.load(), c_dialog_frames_out.load(),
                        c_dialog_frames_in.load(), c_dialog_rewritten.load(), c_redelivered.load(),
-                       c_redeliver_marked.load());
+                       c_redeliver_marked.load(), c_table.load(), c_table_unknown.load(), c_held.load(), c_mg_out.load(),
+                       c_mg_in.load());
 }
 
 }  // namespace cdmp::session2
