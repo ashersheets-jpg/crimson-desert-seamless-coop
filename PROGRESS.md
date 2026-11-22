@@ -10221,3 +10221,15 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   research, default 0) sends the twin's state-7 chart events to the host's server as the host's scene and maps the
   server's answers back to the twin. Research package d1baf948 (the tested 677c87bb stays the post candidate).
   cs95 (cs87 with it, both captures) leads chain_j (cs95, cs93b, cs94) for the next game window.
+- 09:05-09:15 static: docs/compatibility.md 2b (Nexus top 20 by downloads, read in the browser pane, signed out: no
+  download possible, asked in the waiting list); the Nexus page and shot list rewritten for the shared world (not
+  posted); LESSON (a local answer that matches the server's can skip what the server does); layer 9e6e670: [dev]
+  script step killfriend (KillCheatReq on the other player's character by its key here). NEXT BATCH: with a package
+  of 9e6e670 or later in the pass, scratchpad killfriend_kit.py switches the revive step's host script to killfriend.
+- 09:17 B14 hypothesis (f) too (native 9fb4fa4): the chart-event handler of the server most likely grips with the
+  scene's own player binding (the host, in the host's scene), so forwarding (mode 1) may grip the wrong player.
+  twin_extra_chart=3: nothing forwarded; the twin's answer to the match's first chart event (7/0) carries a
+  CatchActionResultAck made on the joined player's game (cs92's full 55 bytes via scratchpad binpkt.py, the
+  catcher and target replaced by the joined player and the opponent of its own SpawnMiniGameCharacterAck). Unit
+  tests pass. Research package 6a4079b1 (also has layer 9e6e670's killfriend). chain_j: cs95 (mode 1), cs95b
+  (mode 3), cs93b, cs94 on 6a4079b1.

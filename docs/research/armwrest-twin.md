@@ -191,6 +191,12 @@ Not known yet (cs83w3 records every packet of the host's game around "Participat
    scene id (shop_twin_rewrite_out), and the server's 2105 for them comes back to the twin (matched by scene and the
    9 event bytes, 5 s); 2 = every chart event of the twin. Test: cs95 (cs87 with it, both captures). Open: whom the
    server makes the catcher (the requester, or the scene's own player binding: the host).
+   Hypothesis (f), native 9fb4fa4: twin_extra_chart=3 forwards nothing; the twin's answer to the match's first chart
+   event (7/0) carries a CatchActionResultAck made on the joined player's game (cs92's 55 bytes: u32 catcher | u32
+   target | u32 2 | ... | f32 0.1 @27 | target action 0x18F128E3 @31 | 0x64528294 @35 | ... | catcher action
+   0x63F9EFFD @50 | 0x17), catcher = its character, target = the opponent of its own SpawnMiniGameCharacterAck (+17).
+   Test: cs95b. The server never hears of that grip: whether the push, the quick-time results and the match's result
+   (prize) then go through is what cs95b shows.
    If cs87 or cs87b pushes: before twin_extra goes on by default, (e) BOTH players at the table at once (the host's
    own match in its copy, the joined player's in its twin, the server asked for two opponents at one scene id: does it
    spawn a second patron, refuse, or hand the first one over?), and (f) the host's match seen from the joined player's
