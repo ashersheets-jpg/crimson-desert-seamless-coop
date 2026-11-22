@@ -93,3 +93,27 @@ On screen (Co-op+ layer, coop_story.h, link Activity type 30; the host reads cdm
 cs8i (2026-11-14 10:10): the whole flow on both games: the host waited (no scene), the guest went to it, both pressed, both released at the same moment, the host's cutscene started 0.4 s later and ran its full 33 s.
 
 Still open: the guest's own cinematic (its client plays none: the missing stage-cinematic flag; when it does, its client needs the same client-side hold, driven from the host's gate); the "go on alone" and "leave the volume" paths in a game test; duplicate story NPCs; a player-facing setting and the full checklist before it can be on by default.
+
+## The talk scenes: two of each story person (2026-11-22, from cs79a / cs79b's logs)
+- With the story mode on (user2_stages_quest + user2_stages_own_quest + story_gate=hold), the cabin's Marius and Ross
+  stand TWICE at one spot on the host's game: 0xB01000AD / 0xB01000B5 (the host's, the same keys in every run) and a
+  second copy with a new key each run (cs79a 0xB0100333 / 0xB0100339, cs79b 0xB0100279 / 0xB010027F), same variant
+  (0xC867, 0xF46FF), same position. The host's log names the second copies as the bound NPCs of the joined player's
+  OWN scenes 0x1CD and 0x1D0 ("HoldSceneOrder ... user 2's own 2661 of scene 0x1CD: bound NPCs (0xA0100123
+  0xB01000AC 0xB0100279)"; "NPC 0xB0100279 is in a scene of user 2's own (its dialog)").
+- The host's scripted talks (facesweepk, E then R at 7 angles, both spots) sent NO talk request (2671) to either copy.
+  Most likely the host's aim settles on the friend's copy, which carries no talk on the host's game. Unproven.
+- cs79c (queued 2026-11-22): cs79b without the story mode (no friend copies). If the host's talks open there, the
+  doubles are the block.
+- Fix options, if so (each its own research switch, off by default):
+  (a) hide the friend's own-scene copies on the host's game (and the host's copies on the friend's). Hard part: a
+      copy's spawn reaches the host's client before the 2661 that binds it to user 2's scene, and the host's client
+      gets its packets outside take_frame (which filters only what goes to the friend). Needs a host-client S->C path
+      (the layer's sniffer drops packets for its own client: revive_filter_s2c is one) plus the native's binding
+      knowledge (observer_seq_copy_user2_scene_holds) exported to it, then a crafted RemoveActorAck 3037
+      (04 | u32 0 | reason | key) for a copy already spawned.
+  (b) leave both visible and point the host's talk at its own copy: the host's 2671 naming a friend's copy rewritten
+      to the host's copy of the same variant within 1 m (the same on the friend's side). Only helps if the client
+      sends a 2671 at all, which cs79b says it did not.
+  (c) the friend's story scenes reuse the host's people instead of their own copies (the server's choice when it
+      prepares a scene for user 2): the cleanest, and the least known.
