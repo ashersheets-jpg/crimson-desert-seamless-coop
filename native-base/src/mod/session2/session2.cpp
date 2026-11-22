@@ -1445,6 +1445,7 @@ bool install(const Options& opt) {
         }
     }
     if (lc.s2_stash_inventory != 0xFFFF) trade_probe_set_stash_inventory(lc.s2_stash_inventory);
+    trade_probe_set_death_penalty(lc.s2_death_penalty, lc.s2_death_penalty_item);  // T26 (host; off by default)
     if (lc.s2_trade_probe && opt.create_session) trade_probe_start();
     if (lc.s2_inter_probe && opt.create_session) inter_probe_start();  // B11 research (read only)
     if (lc.s2_interaction_share && opt.create_session) interaction_share_start();

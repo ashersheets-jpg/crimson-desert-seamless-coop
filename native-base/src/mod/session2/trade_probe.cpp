@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <ctime>
 #include <format>
 #include <string>
 #include <vector>
@@ -15,6 +16,7 @@
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
 #include "mod/session2/ai_handoff.h"
+#include "mod/session2/death_penalty_logic.h"
 #include "mod/session2/lootr.h"
 #include "mod/game/info_row.h"
 
@@ -659,6 +661,158 @@ int lootr_add(uintptr_t base, uintptr_t holder, uint32_t key, uint64_t count) no
     return e;
 }
 
+// ---- Co-op+ T26: the death penalty (death_penalty_logic.h; docs/research/t26-death-penalty.md, route 2), the HOST's
+// setting applied on the server thread to the money of the player whose own request it is.
+std::atomic<int> g_penalty_percent{0};
+std::atomic<uint32_t> g_penalty_item{0};  // the money item's key (0: the pouch is listed, nothing removed)
+struct PenaltySeen {
+    uint32_t key = 0;
+    uint64_t at = 0;
+};
+PenaltySeen g_penalty_seen[4];  // the server thread only
+
+uintptr_t item_row_at(uintptr_t base, uint16_t idx) noexcept {
+    __try {
+        return game::info_row(base + 0x3DB320, idx);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return 0;
+    }
+}
+uint32_t item_key_at(uintptr_t base, uint16_t idx) noexcept {  // lootr.cpp's item_key_of: the item row's key at +8
+    const uintptr_t row = item_row_at(base, idx);
+    uint32_t key = 0;
+    return row && game::fast_read(row + 8, &key, 4) ? key : 0;
+}
+// The row's internal name (a staticstring at +0x00, build/decomp/notes_item_names.md; 3576, a guess on 3732): the
+// printable start of the text behind the pointer there, or one pointer further. For the log only.
+std::string item_name_at(uintptr_t base, uint16_t idx) {
+    const uintptr_t row = item_row_at(base, idx);
+    uintptr_t p = 0;
+    if (!row || !game::fast_read(row, &p, 8) || !p) return {};
+    for (int level = 0; level < 2 && p; ++level) {
+        char t[40] = {};
+        if (!game::fast_read(p, t, sizeof t - 1)) return {};
+        std::string s;
+        for (char c : t) {
+            if (c < 0x20 || c > 0x7E) break;
+            s += c;
+        }
+        if (s.size() >= 3) return s;
+        if (!game::fast_read(p, &p, 8)) return {};
+    }
+    return {};
+}
+uintptr_t inventory_holder(uintptr_t base, uintptr_t actor) noexcept {  // stash_move's src
+    __try {
+        return reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t)>(base + 0x23643B0)(actor);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return 0;
+    }
+}
+
+// The game's own plain delete, as the 3104 handler's discard path does it (3732 exe+0x2E6F367..0x2E6F47B; 3576's in
+// build/decomp/notes_give_paths.md 3.2): `count` out of inventory `inv`, slot `slot`, of `actor`, reason 0x2F.
+int penalty_remove(uintptr_t base, uintptr_t actor, uint16_t inv, uint16_t slot, int64_t count) noexcept {
+    int e = -1;
+    __try {
+        const uintptr_t tls0 = *reinterpret_cast<uintptr_t*>(static_cast<uintptr_t>(__readgsqword(0x58)));
+        alignas(16) static uint8_t entry[0x28];
+        std::memset(entry, 0, sizeof entry);
+        *reinterpret_cast<uint16_t*>(entry + 0x00) = 0xFFFF;
+        *reinterpret_cast<int64_t*>(entry + 0x08) = -1;
+        *reinterpret_cast<uint16_t*>(entry + 0x10) = inv;
+        *reinterpret_cast<int16_t*>(entry + 0x12) = static_cast<int16_t>(slot);
+        *reinterpret_cast<int64_t*>(entry + 0x18) = count;
+        *reinterpret_cast<uint32_t*>(entry + 0x20) = 0x001B0000;
+        *reinterpret_cast<uint16_t*>(entry + 0x24) = 0xFFFF;
+        struct {
+            void* p;
+            uint32_t n, cap;
+        } list = {entry, 1, 1};
+        uint64_t scope[8] = {};
+        reinterpret_cast<void* (__fastcall*)(uintptr_t, uint64_t*)>(base + 0x2EC97A0)(
+            *reinterpret_cast<uintptr_t*>(tls0 + 0x250), scope);
+        const int64_t when = _time64(nullptr) + (*reinterpret_cast<uint8_t*>(tls0 + 0x1EB)
+                                                     ? *reinterpret_cast<int64_t*>(base + 0x71661A8)
+                                                     : *reinterpret_cast<int64_t*>(base + 0x724B5F0));
+        reinterpret_cast<int* (__fastcall*)(uintptr_t, int*, uintptr_t, void*, int64_t, uint8_t, uint16_t, uint8_t)>(
+            base + 0x2A54010)(static_cast<uintptr_t>(scope[2]), &e, actor, &list, when, 0, 0x2F, 1);
+        if (scope[1]) --*reinterpret_cast<int*>(scope[1]);  // the scope's release, as the handler does
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        e = -2;
+    }
+    return e;
+}
+
+void death_penalty_run(uintptr_t base, uintptr_t actor, uint32_t me, uint32_t death_no) noexcept {
+    namespace dp = death_penalty;
+    const char* who = me == kHostCharacter ? "the host" : "the guest";
+    const int pct = dp::valid_percent(g_penalty_percent.load());
+    const uint64_t now = GetTickCount64();
+    PenaltySeen* seen = nullptr;
+    for (PenaltySeen& s : g_penalty_seen) {
+        if (s.key == me) seen = &s;
+    }
+    if (seen && dp::too_soon(seen->at, now)) {
+        log::info("DeathPenalty: {} (0x{:08X}) asked again {} ms after its last charge: refused (one per death)", who,
+                  me, now - seen->at);
+        return;
+    }
+    if (!seen) {
+        seen = &g_penalty_seen[0];
+        for (PenaltySeen& s : g_penalty_seen) {
+            if (s.key == 0) {
+                seen = &s;
+                break;
+            }
+        }
+    }
+    seen->key = me;
+    seen->at = now;
+    if (pct == 0) {
+        log::info("DeathPenalty: {} (0x{:08X}) got up after death {}: the penalty is off on this host", who, me, death_no);
+        return;
+    }
+    const uintptr_t mgr = inventory_manager(base);
+    uint16_t money = 0xFFFF;
+    const uintptr_t holder = inventory_holder(base, actor);
+    if (!mgr || !game::fast_read(mgr + 0x78, &money, 2) || money == 0xFFFF || !holder) {
+        log::info("DeathPenalty: {}'s money pouch is not found (manager {:X}, index {}, holder {:X}): nothing removed",
+                  who, mgr, money, holder);
+        return;
+    }
+    const uint32_t want = g_penalty_item.load();
+    const int16_t slots = inventory_slots(holder, money);
+    std::string line;
+    int at = -1;
+    int64_t have = 0;
+    for (int16_t k = 0; k < slots && k < dp::kMaxSlots; ++k) {
+        const StashSlot x = stash_slot(base, holder, money, static_cast<uint16_t>(k));
+        if (x.idx == 0xFFFF || x.n <= 0) continue;
+        const uint32_t key = item_key_at(base, x.idx);
+        line += std::format(" | slot {}: key {} '{}' x{}", k, key, item_name_at(base, x.idx), x.n);
+        if (want && key == want && at < 0) {
+            at = k;
+            have = x.n;
+        }
+    }
+    log::info("DeathPenalty: {} (0x{:08X}) got up after death {} ({} %): money pouch (inventory {}, {} slots){}", who,
+              me, death_no, pct, money, slots, line.empty() ? std::string(" | empty") : line);
+    if (!want) {
+        log::info("DeathPenalty: no money item set ([session2] death_penalty_item): nothing removed");
+        return;
+    }
+    if (at < 0) {
+        log::info("DeathPenalty: {} holds no item {}: nothing removed", who, want);
+        return;
+    }
+    const int64_t n = dp::share(have, pct);
+    const int e = n > 0 ? penalty_remove(base, actor, money, static_cast<uint16_t>(at), n) : 0;
+    const StashSlot after = stash_slot(base, holder, money, static_cast<uint16_t>(at));
+    log::info("DeathPenalty: {} lost {} of its {} (item {}, {} %): err {} ({}); the slot now holds {}", who, n, have,
+              want, pct, e, err_name(e), after.idx == 0xFFFF ? 0 : after.n);
+}
+
 int* __fastcall worker_detour(uintptr_t self, int* err, uint32_t item, uint16_t b, uint64_t count, uint32_t* giver,
                               uint32_t* receiver, uint16_t inv, uint16_t slot, uint32_t entry) noexcept {
     uint32_t g = 0, r = 0;
@@ -677,6 +831,20 @@ int* __fastcall worker_detour(uintptr_t self, int* err, uint32_t item, uint16_t 
         log::info("Lootr: {}'s copy: item key {} x{} to 0x{:08X}: {} (err {} {})",
                   me == kHostCharacter ? "the host" : "the guest", item, count, me,
                   ok_req ? (e == 0 ? "added" : "NOT added") : "refused (not the player's own request)", e, err_name(e));
+        *err = 0;
+        return err;
+    }
+    if (entry == death_penalty::kEntry) {  // T26: "I died and got up myself" (the player's own request only)
+        const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+        uintptr_t actor = 0;
+        uint32_t me = 0;
+        if (game::fast_read(self + 8, &actor, 8) && actor && game::fast_read(actor + 0x60, &me, 4) &&
+            death_penalty::own_request(me, g, r)) {
+            death_penalty_run(base, actor, me, item);
+        } else {
+            log::info("DeathPenalty: refused a request for 0x{:08X} / 0x{:08X} from 0x{:08X} (not the player's own)",
+                      g, r, me);
+        }
         *err = 0;
         return err;
     }
@@ -945,6 +1113,14 @@ extern "C" __declspec(dllexport) int cdmp_stash_list(uint32_t* gen, uint16_t* sl
 namespace cdmp::session2 {
 
 void trade_probe_set_stash_inventory(int index) { g_stash_inventory_override = index; }
+
+void trade_probe_set_death_penalty(int percent, uint32_t item_key) {
+    g_penalty_percent = death_penalty::valid_percent(percent);
+    g_penalty_item = item_key;
+    if (g_penalty_percent.load() || item_key)
+        log::info("DeathPenalty: {} % of item {} when a player gets up by itself after a death{}", g_penalty_percent.load(),
+                  item_key, item_key ? "" : " (no item: the money pouch is listed, nothing removed)");
+}
 
 void trade_probe_start() {
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));

@@ -555,6 +555,10 @@ struct Config {
     // character, not only the host's (the game zeroes damage 80 m or more from the field owner's character).
     bool s2_damage_range_players = true;
     int s2_stash_inventory = 0xFFFF;  // stash_inventory (research): 0xFFFF = the default
+    // death_penalty / death_penalty_item, HOST (Co-op+ T26, session2/death_penalty_logic.h): the share (10 / 25 / 50 / 100,
+    // else off) of the money item (its decimal key; 0 = the pouch only listed) a player loses when it gets up by itself.
+    int s2_death_penalty = 0;
+    uint32_t s2_death_penalty_item = 0;
     // inter_probe, HOST (session2/trade_probe.h; far-shop research): read-only probes of NPC dynamic interactions.
     bool s2_inter_probe = false;
     // interaction_share = 0 | 1, HOST (session2/interaction_share.h; far shops, tcB239): an NPC's dynamic
