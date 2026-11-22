@@ -25,6 +25,9 @@ void shop_twin_set_watch(const std::string& hex_list);
 // [session2] twin_extra (GUEST, research, default empty): hex resource hashes whose host scenes get a twin like the
 // shops (B14: 94FEA6AE, the Hernand inn's arm-wrestling table), answered from a table of the host server's answers.
 void shop_twin_set_extra(const std::string& hex_list);
+// [session2] early_state_x (GUEST, research, default 0): a host scene's initial state that reached this client before
+// the scene's prepare (the observer copy's order) is given to the game again right after the prepare.
+void shop_twin_set_early_x(bool on);
 // Guest: a packet of the client about to go to the host (wire form): a twin_extra scene's minigame request
 // (SpawnMiniGameCharacterReq / UnspawnMiniGameCharacterReq) names the host's scene instead of the twin.
 void shop_twin_rewrite_out(std::vector<uint8_t>& packet) noexcept;

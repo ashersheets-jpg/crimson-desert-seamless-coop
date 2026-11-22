@@ -45,6 +45,16 @@ struct Twin {
     std::vector<std::vector<uint8_t>> later;
 };
 std::unordered_map<uint64_t, Twin> g_twins;  // the host's scene id -> its twin
+// 2026-11-21 (cs86a): the host's initial 2752 of a scene that has no twin YET (its prepare comes later: the observer
+// copy holds a PrepareSequencerAck until its actors are announced, the state goes at once; 21 of 31 host scenes in
+// cs86a, every shop among them). Given to the twin right after its prepare. Under g_mu; at most kMaxEarly.
+std::unordered_map<uint64_t, std::vector<uint8_t>> g_early;
+constexpr size_t kMaxEarly = 512;
+std::atomic<uint64_t> c_early_kept{0}, c_early_used{0};
+// [session2] early_state_x (guest, research): such an early initial state is also delivered again right after its own
+// scene's prepare (the host's scene copies in X start as on the host's client).
+std::atomic<bool> g_early_x{false};
+std::atomic<uint64_t> c_early_x{0};
 std::atomic<uint64_t> c_prepared{0}, c_deleted{0}, c_withheld{0}, c_answered{0}, c_branches{0}, c_again{0};
 std::atomic<uint32_t> g_last_branch{0};
 
@@ -183,6 +193,13 @@ void shop_twin_set_extra(const std::string& hex_list) {
     }
 }
 
+void shop_twin_set_early_x(bool on) {
+    g_early_x = on;
+    if (on)
+        log::info("ShopTwin [early state x] early_state_x=1 (research): a host scene's initial state that comes before "
+                  "its prepare is given to the game again right after the prepare");
+}
+
 void shop_twin_set_again(bool on) {
     g_again = on;
     if (on) {
@@ -280,11 +297,34 @@ void shop_twin_on_host(std::vector<uint8_t>& packet, std::vector<std::vector<uin
             return;
         }
         if (op == stl::kOpPrepare) {
+            // early_state_x: the scene's own initial state that came before this prepare, again right after it.
+            const uint64_t pid = pl.size() >= 17 ? stl::rd64(pl.data() + 9) : 0;
+            if (pid && g_early_x.load(std::memory_order_relaxed)) {
+                std::vector<uint8_t> replay;
+                {
+                    std::lock_guard lk(g_mu);
+                    if (const auto e = g_early.find(pid); e != g_early.end()) replay = e->second;
+                }
+                if (!replay.empty()) {
+                    after.push_back(stl::frame(stl::kOpBranchState, replay));
+                    if (c_early_x.fetch_add(1) < 40)
+                        log::info("ShopTwin [early state x] the host's scene 0x{:X} (resource 0x{:08X}) sent its initial "
+                                  "state before its prepare: given to the game again right after the prepare", pid,
+                                  pl.size() >= stl::kHashAt + 4 ? stl::rd32(pl.data() + stl::kHashAt) : 0);
+                }
+            }
             const uint32_t me = own_key();
             const auto t = stl::twin_prepare(pl, me, &is_twin_res);
-            if (!t) return;
+            if (!t) {
+                if (pid && g_early_x.load(std::memory_order_relaxed)) {
+                    std::lock_guard lk(g_mu);
+                    g_early.erase(pid);
+                }
+                return;
+            }
             const uint64_t host_id = stl::rd64(pl.data() + 9);
             const uint32_t res = stl::rd32(pl.data() + stl::kHashAt);
+            std::vector<uint8_t> early_init;  // the twin's initial state from a 2752 that came before this prepare
             {
                 std::lock_guard lk(g_mu);
                 Twin tw;
@@ -292,9 +332,22 @@ void shop_twin_on_host(std::vector<uint8_t>& packet, std::vector<std::vector<uin
                 tw.prep = *t;
                 tw.prepared_ms = GetTickCount64();
                 tw.res = res;
+                if (const auto e = g_early.find(host_id); e != g_early.end()) {
+                    tw.initialised = true;
+                    tw.root = stl::root_of_initial_2920(e->second);
+                    tw.init = stl::twin_branch_state(e->second, me);
+                    early_init = tw.init;
+                    g_early.erase(e);
+                }
                 g_twins[host_id] = std::move(tw);
             }
             after.push_back(stl::frame(stl::kOpPrepare, *t));
+            if (!early_init.empty()) {
+                after.push_back(stl::frame(stl::kOpBranchState, early_init));
+                if (c_early_used.fetch_add(1) < 40)
+                    log::info("ShopTwin [early state] the host's scene 0x{:X} sent its initial state before its prepare: "
+                              "given to twin 0x{:X} right after the twin's prepare", host_id, stl::twin_of(host_id));
+            }
             const uint64_t n = c_prepared.fetch_add(1) + 1;
             if (n <= 40 || !is_shop(res))
                 log::info("ShopTwin [prepared] the host's {} scene 0x{:X} (resource 0x{:08X}) -> twin 0x{:X} for "
@@ -303,7 +356,16 @@ void shop_twin_on_host(std::vector<uint8_t>& packet, std::vector<std::vector<uin
             const uint64_t id = stl::id_of_2920(pl);
             std::lock_guard lk(g_mu);
             auto it = g_twins.find(id);
-            if (it == g_twins.end() || it->second.initialised) return;  // only the initial state, never the host's branches
+            if (it == g_twins.end()) {
+                // No twin yet: an initial state is kept for a twin its prepare may still make (cs86a).
+                if (stl::root_of_initial_2920(pl) && !stl::is_twin_id(id)) {
+                    if (g_early.size() >= kMaxEarly) g_early.clear();
+                    g_early[id].assign(pl.begin(), pl.end());
+                    c_early_kept.fetch_add(1);
+                }
+                return;
+            }
+            if (it->second.initialised) return;  // only the initial state, never the host's branches
             it->second.initialised = true;
             it->second.root = stl::root_of_initial_2920(pl);
             it->second.init = stl::twin_branch_state(pl, own_key());
@@ -325,6 +387,7 @@ void shop_twin_on_host(std::vector<uint8_t>& packet, std::vector<std::vector<uin
             {
                 std::lock_guard lk(g_mu);
                 had = g_twins.erase(id) > 0;
+                g_early.erase(id);
             }
             if (!had) return;
             before.push_back(stl::frame(stl::kOpDelete, stl::twin_delete(pl, own_key())));
@@ -589,13 +652,14 @@ std::string shop_twin_describe() {
     return std::format("ShopTwin ({}): live twins {} | prepared {} (again after a load {}) deleted {} | requests "
                        "withheld {} (answered {}, branches {}, last branch {}) | dialogs: host frames out {} in {}, lists "
                        "rewritten {}, given again {} (marked {}) | twin_extra: table answers {} (not in a table {}, held "
-                       "states given {}), minigame ids out {} in {}",
+                       "states given {}), minigame ids out {} in {} | initial states before their prepare: kept {}, "
+                       "given to a twin {}, again to the game {}",
                        g_on ? "on" : "off", g_twins.size(), c_prepared.load(), c_again.load(), c_deleted.load(),
                        c_withheld.load(),
                        c_answered.load(), c_branches.load(), g_last_branch.load(), c_dialog_frames_out.load(),
                        c_dialog_frames_in.load(), c_dialog_rewritten.load(), c_redelivered.load(),
                        c_redeliver_marked.load(), c_table.load(), c_table_unknown.load(), c_held.load(), c_mg_out.load(),
-                       c_mg_in.load());
+                       c_mg_in.load(), c_early_kept.load(), c_early_used.load(), c_early_x.load());
 }
 
 }  // namespace cdmp::session2
