@@ -1,126 +1,72 @@
-# Crimson Desert Seamless Co-op+ (alpha): features
+# Crimson Desert Seamless Co-op+ (alpha): features of the shared world
 
-Two-player co-op for Crimson Desert (Steam, game version 1.0.0.3576). Each of you plays in your own save;
-your friend joins your world as their own character. Unofficial fan mod, built on Crimson Desert Multiplayer by
-ByJunter and its port by nouzert1.
+Two-player co-op for Crimson Desert on Steam, game version 1.0.0.3732, in ONE shared world: the host's game runs the
+world and the friend joins it with their own character. Unofficial fan mod, built on Crimson Desert Multiplayer by
+ByJunter (its NativeServer shared world) and its port by nouzert1. The player's guide is the package's README.txt
+(source: `kit/coopplus/README-shared-world.txt`); this page is the short list with what each status rests on.
+Updated 2026-11-22 (build 677c87bb).
 
 **How to read the Status column**
-- **Works:** checked in the game on one PC against a stand-in second player. It should work, but a report from two
-  real players still helps.
-- **Needs testing:** built, but one PC can't show it. It needs two real players to confirm.
-- **Not yet:** not possible in this version.
+- **Works:** checked in the game by the release checklist (two copies of the game on one PC, Nvidia). A report from
+  two real PCs still helps.
+- **Needs testing:** built, but one PC can't show it (or no test save reaches it). Two real players confirm it.
+- **Not yet:** not in this version.
 
 ## Joining and sessions
 
 | Feature | Status |
 |---|---|
-| NEW: Co-op menu at the title screen: Start Solo / Invite Friends / Start Co-op, your party with a crown on the host | Works, needs testing with two players |
-| NEW: the host picks Continue Our Co-op Save, Start From My Solo Progress or New Co-op Save; the friend follows on the host's difficulty | Works, needs testing with two players |
-| NEW: a Co-op tab in the game's Start menu with every co-op setting and what it does | Works |
-| Invite a Steam friend (Ctrl+F1), or they use "Join Game" on you in Steam | Needs testing |
-| NEW: Radmin VPN / Direct IP in the Co-op menu: Host copies an invite, your friend copies it and presses Join (no Steam needed) | Works, needs testing with two players |
-| Room code as a fallback way to join | Needs testing |
-| Friends-only or invite-only (setting) | Needs testing |
-| Version check: refuses a friend on another Co-op+ build or game version, and says what to update | Works |
-| Automatic reconnect after a crash, a long alt-tab or a dropped connection | Works |
-| Joining while the host is in a fight, a menu or a loading screen | Works |
-| Leaving (Ctrl+F2) returns you to your own world with nothing left behind | Works |
-| "Journey Together" card when you part ways: time, enemies, bosses, revives, challenges, quest steps, distance | Works |
-| Automatic resync when things drift apart, plus a manual resync key | Works |
+| The Co-op menu stands in for the title screen: Start Solo / Invite Friends / Start Co-op, the party with a crown on the host | Works |
+| Invite a Steam friend from the menu, or they use "Join Game" on you in Steam | Needs testing (Steam between two PCs) |
+| Continue Our Co-op Save / Start From My Solo Progress / New Co-op Save (both begin the story; the host picks the difficulty) | Works |
+| Both games restart into co-op; the friend follows the host and lands beside them | Works |
+| A save per friend; your own solo saves are never written in co-op | Works |
+| Different Co-op+ builds or game versions refused at the menu, with the reason | Works |
+| Direct play by IP (no Steam invite) | Works on one PC (the checklist runs over it); over Radmin VPN / LAN between two PCs: needs testing |
+| A second Start Co-op in the same launch; a friend that is not let in is told, the host starts again | Works |
+| Join only from the title screen (not during play); two players | By design |
 
-## Your friend in your world
+## One shared world
 
 | Feature | Status |
 |---|---|
-| Their character walks, runs, climbs, glides, swims and fights, in matching gear that updates live | Works |
-| NEW: much less lag: your friend is drawn about 50 ms after the network (was about 350 ms) | Works |
-| Name tag over their head (fades with distance, hidden over menus) | Works |
-| On your minimap and map; shared map waypoints (fixed: the marker is now there when your friend is near, too) | Works |
-| Partner frame: their name, health and stamina, with a "Badly hurt" warning | Works |
-| Horses (a fixed bug: the horse copy no longer appears where it was first called) | Works |
-| Flying mount (Blackstar) | Needs testing |
-| Partner sounds: footsteps and swings come from the game itself | Needs testing |
-| "In a menu" tag; they can't be hurt while paused | Works |
-| Player colours: the host is gold with a diamond, the guest blue with a round mark; a colour-blind-safe option | Works |
+| The same townsfolk and merchants for both, by the same keys (checked at Hernand and Fort Windridge) | Works |
+| The friend talks to townsfolk and uses shops with their own money and stock, also far from the host | Works |
+| Doors of a building the friend reached first open for both | Works (new in 677c87bb) |
+| Shared enemies: both hit and kill the same ones; an enemy fights the player who fights it; ~1.5x enemy health with a friend | Works |
+| Items in the world each player can take once (plants, ore, chests, bodies' loot), shares kept at the chest | Works |
+| Each player's own quests and story in the shared world | Works |
+| Shared quest credit (a step you are both on is done for both) | Option, new: shown working once (cs93), being confirmed |
+| Story scenes together: a story scene waits for both, then each game plays it | Experimental option: the first scene of a step works; scenes that start from a talk do not wait yet |
+| Time of day and weather follow the host | Works |
+| Crimes and "wanted" are the player's own | Works |
+| Menus (map, inventory, pause) do not pause the shared world | Works |
 
-## Fighting together
-
-| Feature | Status |
-|---|---|
-| Shared enemies near the host: both of you see and hit the same ones | Works |
-| NEW: the host's enemies fight the guest too (they ignored the guest on 1.0.0.3576) | Works, needs testing with two players |
-| NEW: the guest's blows stagger enemies like the host's | Works, needs testing with two players |
-| Tougher enemies with a guest (adjustable in the F8 settings) | Works |
-| Kill feed: "<friend> defeated a Deer"; the Journey Together card credits the guest's kills to the guest | Works |
-| Bosses together; the host lands the final blow so the story is safe | Needs testing |
-| A cutscene you both watch skips when you both press Skip | Needs testing |
-| The host's boss and story cutscenes shown in the guest's game | Off for now: it could skip the guest's own story cutscene (the end of the prologue). [coop] stage_cinema=1 turns it on |
-| Revive your friend (hold Shift+F7 by them) | Works |
-| dying in co-op keeps your HUD, menus and horse (a death used to leave them gone after any revive) | Works |
-| Respawn option: back to your friend after a checkpoint revive | Works |
-| Your friend can't kill your quest NPCs or townsfolk | Works |
-| Loot from shared kills: each your own, host only, or first come | Needs testing |
-| NEW: Shared experience: every skill point either of you earns goes to the other too, anywhere on the map; the guest's kills count | Works, needs testing with two players |
-
-## Communication and travel
+## Together
 
 | Feature | Status |
 |---|---|
-| Text chat (Shift+F2) | Works |
-| Quick messages with map pins: Go here, Danger, Loot here, Follow me, Hold still: photo! | Works |
-| Go to your friend (Ctrl+F4) | Works |
-| Ask your friend to come to you (Shift+F4) | Works |
-| Fast travel: your friend is offered to follow | Needs testing |
-| Notices: your friend's quest steps, world events near them, when they become wanted | Works |
-| Spoiler guard: hide your friend's story (quest names you haven't reached, their story scenes) | Works |
+| The friend's name over their head, their health on screen | Works (their stamina bar is missing on 3732: a fix is being made) |
+| Hold Interact on your friend: challenges, giving and trading, Leave | Works (keyboard and pad) |
+| Mounts: each sees the other ride (own, borrowed or wild horse, Blackstar); fights from the saddle | Works for the friend's mounted fights; the host's from the saddle is being tested |
+| Downed: Q instant revive, U checkpoint revive, or the friend gets you up within 30 s; wait for the friend at a boss | Works |
+| Give an item, trade stacks, stake on a challenge | Works |
+| Shared stash (the host's warehouse) | Needs testing (no test save has a warehouse yet) |
+| Chat and quick messages with map pins | Works |
+| Group photos (the game's photo mode shows the friend; Co-op+ labels hide) | Works |
+| Partner sounds: swings and footsteps heard | Works (voices being checked) |
 
 ## Challenges
 
 | Feature | Status |
 |---|---|
-| Duel: a ring, 3-2-1, first to two rounds, nobody dies; ring size option (hits fixed after the first playtest) | Works, needs testing with two players |
-| Rock, paper, scissors (first to two hands; no hand animation yet) | Works |
-| Hunting contest (3 minutes, the most game wins) | Works |
-| Race to the waypoint (first to the host's map waypoint) | Works |
-| Hide and seek (hide within 100 m, a ring marks the edge; the seeker gets warmer / colder) | Works, needs testing with two players |
-| Fishing contest (6 minutes; river fish 1, sea fish 2, legendary 5; you see what your friend catches) | Works, needs testing with two players |
-| Arm wrestling with your friend in the opponent's chair | Needs testing |
-| Every challenge is one match and ends with a Victory or Defeat card | Works |
-| Lasting scoreboard per friend and titles ("the Duelist") | Works |
-| Quick rematch | Works |
+| Duel on a marked ground (no deaths), rounds and the result the same on both games | Works (cs43b, shared world) |
+| Rock-paper-scissors, hunting contest, race to the waypoint, hide and seek, fishing contest | Built and checked in the older two-worlds version; not yet re-checked in the shared world |
+| Arm / hand wrestling against each other; the game's other minigames against each other | Not yet (the friend's own table match is being fixed) |
 
-## World
+## Not yet / known issues
 
-| Feature | Status |
-|---|---|
-| Time of day and weather follow the host | Works |
-| Focus does not slow the world in co-op (keeps both worlds in step; F8 setting to turn it back on) | Works, needs testing with two players |
-| Resting at a campfire together (the host's Wait moves both clocks) | Needs testing |
-| a co-op save per friend, host and guest (your solo saves untouched); opt in on the first launch or in F8 | Experimental, needs testing |
-| your first session together begins a new journey for both, at the start of the story | Experimental, needs testing |
-| switching between your own save and a co-op save asks first (now, or later from the title screen) | Works |
-| quest steps shared live (go to, defeat, talk): your friend finishes a step you also have, it finishes for you, with rewards | Experimental, needs testing |
-| NEW: the prologue: co-op waits while either of you plays the opening tutorial, then starts by itself (at the latest on the first ride) | Works |
-| Each player keeps their own character and items, and their own quests while playing; nothing leaks into the other save | Works |
-| Item trading or a shared stash | Not yet |
-| Doors, levers and breakable objects in sync | Not yet |
-
-## Comfort and safety
-
-| Feature | Status |
-|---|---|
-| One-click install, uninstall and vanilla on/off | Works |
-| Save backups whenever a session starts, and a warning if the game saves during co-op | Works |
-| Controls card on the first start, and any time with Shift+F1 (controller buttons when a pad is plugged in) | Works |
-| Full controller support (hold View / Touchpad + a button) | Works |
-| F8 panel with settings: loot, revive, difficulty, colours, spoilers, connection readout and more | Works |
-| Rebindable hotkeys, with warnings for clashes | Works |
-| Connection quality: ping and packet loss | Works |
-| Plain error messages that say what to do next | Works |
-| A warning about other mods that can clash | Works |
-| Diagnose: a one-click bug report with personal info removed | Works |
-| Turns itself off safely after a game update, or if an anti-cheat ever appears | Works |
-
-**Known issues:** two players only. Co-op saves and live quests are new and experimental (opt in; first two-player session done, fixes from it are in). In co-op you stay on your feet behind the death screen until you revive. The arm wrestling table can be empty for a guest who
-arrives already connected; leave the pub and come back. Don't save while your friend is in your world (backups
-are made for you).
+Mining with the hand drill and fishing as the joined player; the host's armour dye on the friend's screen; a tree the
+friend cuts can show twice for the host; taming a wild horse as the friend can leave them stuck; bench sitters may
+T-pose on the friend's screen; boss fights with two players are untested; more than two players. The full list is in
+README.txt (KNOWN ISSUES).
