@@ -19,6 +19,9 @@ void shop_twin_start(bool on, bool guest);
 // [session2] shop_twin_again (guest, default 0; 2026-11-21, research): a twin this client's own manager lost (a load
 // or far teleport ends its scenes) is prepared again with its stored packets.
 void shop_twin_set_again(bool on);
+// [session2] twin_watch (HOST, research, default empty): hex resource hashes whose scenes are watched like the shop
+// scenes, every packet naming one logged ("ShopTwin [watch]", 600 lines at most).
+void shop_twin_set_watch(const std::string& hex_list);
 // [session2] dialog_share_all (both roles, B02a experiment): every non-greeting dialog group of the host's NPCs shared.
 void shop_twin_share_all(bool on);
 // Co-op+ 2026-11-15, [session2] dialog_redeliver (guest, default 0): when a host frame changes the host's choices for an

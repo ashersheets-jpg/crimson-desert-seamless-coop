@@ -4,7 +4,9 @@
 #include <windows.h>
 
 #include <atomic>
+#include <cctype>
 #include <format>
+#include <string>
 #include <mutex>
 #include <unordered_map>
 
@@ -22,6 +24,7 @@ namespace {
 
 bool g_on = false, g_guest = false;
 std::atomic<bool> g_again{false};  // [session2] shop_twin_again
+std::vector<uint32_t> g_watch_res;   // [session2] twin_watch (research, host): set once at start
 std::atomic<bool> g_share_all{false};
 uintptr_t g_base = 0;
 std::mutex g_mu;
@@ -124,6 +127,28 @@ void again_check(std::vector<std::vector<uint8_t>>& after, uint64_t deleting) {
 }
 
 }  // namespace
+
+void shop_twin_set_watch(const std::string& hex_list) {
+    std::vector<uint32_t> v;
+    size_t i = 0;
+    while (i < hex_list.size()) {
+        while (i < hex_list.size() && !std::isxdigit(static_cast<unsigned char>(hex_list[i]))) ++i;
+        size_t j = i;
+        while (j < hex_list.size() && std::isxdigit(static_cast<unsigned char>(hex_list[j]))) ++j;
+        if (j > i) {
+            const std::string t = hex_list.substr(i, j - i);
+            if (t.size() <= 8) v.push_back(static_cast<uint32_t>(std::stoul(t, nullptr, 16)));
+        }
+        i = j;
+    }
+    g_watch_res = v;
+    if (!v.empty()) {
+        std::string s;
+        for (const uint32_t h : v) s += std::format(" 0x{:08X}", h);
+        log::info("ShopTwin [watch] twin_watch (research): the host's scenes of{} are watched (their branches, every packet "
+                  "naming them)", s);
+    }
+}
 
 void shop_twin_set_again(bool on) {
     g_again = on;
@@ -307,12 +332,49 @@ bool shop_twin_on_out(std::span<const uint8_t> packet, std::vector<std::vector<u
 // (the twin's table, stl::next_branch_type, comes from these) and to write the harness's stop flag at the menu.
 std::unordered_map<uint64_t, uint32_t> g_host_scenes;
 std::unordered_map<uint64_t, uint32_t> g_host_asked, g_host_state;
+// twin_watch (research): the watched scenes' ids (under g_mu).
+std::unordered_map<uint64_t, uint32_t> g_watch_ids;
+std::atomic<uint32_t> g_watch_lines{0};
+bool watched_res(uint32_t h) {
+    for (const uint32_t w : g_watch_res) {
+        if (w == h) return true;
+    }
+    return false;
+}
+void watch_log(uint16_t op, std::span<const uint8_t> pl, bool s2c) {
+    if (g_watch_res.empty()) return;
+    uint64_t hit = 0;
+    {
+        std::lock_guard lk(g_mu);
+        if (g_watch_ids.empty()) return;
+        for (const size_t off : {size_t{0}, size_t{1}, size_t{4}, size_t{5}, size_t{9}}) {
+            if (pl.size() < off + 8) continue;
+            const uint64_t v = stl::rd64(pl.data() + off);
+            if (g_watch_ids.count(v)) {
+                hit = v;
+                break;
+            }
+        }
+    }
+    if (!hit || g_watch_lines.fetch_add(1) >= 600) return;
+    std::string hex;
+    for (size_t i = 0; i < pl.size() && i < 48; ++i) hex += std::format("{:02X}", pl[i]);
+    log::info("ShopTwin [watch] {} op {} len {} | scene 0x{:X} | {}", s2c ? "S>C" : "C>S", op, pl.size(), hit, hex);
+}
 
 void host_scene_watch(uint16_t op, std::span<const uint8_t> pl, bool s2c) {
     if (s2c && op == stl::kOpPrepare && pl.size() >= stl::kPrepareFixed && pl[0] == 4 &&
-        mul::is_shop_scene(stl::rd32(pl.data() + stl::kHashAt))) {
-        std::lock_guard lk(g_mu);
-        g_host_scenes[stl::rd64(pl.data() + 9)] = stl::rd32(pl.data() + stl::kHashAt);
+        (mul::is_shop_scene(stl::rd32(pl.data() + stl::kHashAt)) || watched_res(stl::rd32(pl.data() + stl::kHashAt)))) {
+        const uint32_t res = stl::rd32(pl.data() + stl::kHashAt);
+        const uint64_t id = stl::rd64(pl.data() + 9);
+        {
+            std::lock_guard lk(g_mu);
+            g_host_scenes[id] = res;
+            if (watched_res(res)) g_watch_ids[id] = res;
+        }
+        if (watched_res(res))
+            log::info("ShopTwin [watch] the host's scene 0x{:X} of resource 0x{:08X} is watched (its 2380: len {})", id, res,
+                      pl.size());
         return;
     }
     if (!s2c && op == stl::kOpBranchReq && pl.size() >= 12) {
@@ -355,6 +417,7 @@ void shop_twin_host_sniffed(const uint8_t* packet, size_t size, bool server_to_c
         uint16_t op = 0;
         std::span<const uint8_t> pl;
         if (!stl::split(std::span<const uint8_t>(packet, size), op, pl)) return;
+        watch_log(op, pl, server_to_client);  // research (twin_watch)
         host_scene_watch(op, pl, server_to_client);
         if (!server_to_client || op != stl::kOpQuestDialogAck) return;
         uint32_t npc = 0;
