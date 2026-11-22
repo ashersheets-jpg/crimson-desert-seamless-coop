@@ -43,6 +43,9 @@ struct Twin {
     // twin_extra (B14): the scene's resource and a 2752 held for the client's StageBranchStateDelayEndReq.
     uint32_t res = 0;
     std::vector<std::vector<uint8_t>> later;
+    // twin_extra_chart=3: this client's minigame opponent for the scene (its 2810) and whether the grip was given.
+    uint32_t opponent = 0;
+    bool caught = false;
 };
 std::unordered_map<uint64_t, Twin> g_twins;  // the host's scene id -> its twin
 // 2026-11-21 (cs86a): the host's initial 2752 of a scene that has no twin YET (its prepare comes later: the observer
@@ -60,7 +63,8 @@ std::atomic<int> g_extra_only{0};
 std::atomic<uint64_t> c_extra_only{0};
 // [session2] twin_extra_chart (guest, research, B14, cs92): 1 = a twin_extra scene's chart events in its match state
 // (kChartState, the table's state 7) go on to the host's server under the host's scene id (the server runs the catch
-// there), the server's 2105 for them comes back to the twin; 2 = every chart event of such a twin. Under g_mu.
+// there), the server's 2105 for them comes back to the twin; 2 = every chart event of such a twin; 3 = nothing goes
+// on, the twin's answer to the match's first chart event carries a grip made here (stl::catch_result). Under g_mu.
 std::atomic<int> g_extra_chart{0};
 constexpr uint32_t kChartState = 7;
 constexpr uint64_t kChartMaxAgeMs = 5000;
@@ -215,8 +219,12 @@ void shop_twin_set_extra_only(int mode) {
 }
 
 void shop_twin_set_extra_chart(int mode) {
-    g_extra_chart = mode == 1 || mode == 2 ? mode : 0;
-    if (g_extra_chart.load())
+    g_extra_chart = mode >= 1 && mode <= 3 ? mode : 0;
+    if (g_extra_chart.load() == 3)
+        log::info("ShopTwin [extra chart] twin_extra_chart=3 (research, B14): the twin's answer to the match's first "
+                  "chart event (7/0) carries a grip made here (CatchActionResultAck, this client's character and its "
+                  "minigame opponent); nothing goes to the server");
+    else if (g_extra_chart.load())
         log::info("ShopTwin [extra chart] twin_extra_chart={} (research, B14): a twin_extra scene's chart events {} go "
                   "to the host's server under the host's scene id (the server runs the table's catch), its answers back "
                   "to the twin",
@@ -432,6 +440,13 @@ void shop_twin_on_host(std::vector<uint8_t>& packet, std::vector<std::vector<uin
                 const auto it = g_twins.find(h);
                 return it != g_twins.end() && is_extra(it->second.res);
             });
+            if (tid) {  // twin_extra_chart=3: the opponent for the grip made at the match's first chart event
+                const auto it = g_twins.find(tid - stl::kTwinIdBase);
+                if (it != g_twins.end()) {
+                    it->second.opponent = stl::minigame_opponent(mpl);
+                    it->second.caught = false;
+                }
+            }
             if (tid && c_mg_in.fetch_add(1) < 20)
                 log::info("ShopTwin [minigame] the server's SpawnMiniGameCharacterAck for this client names the host's "
                           "scene 0x{:X}: given to the game as its twin 0x{:X}", tid - stl::kTwinIdBase, tid);
@@ -459,7 +474,7 @@ void shop_twin_rewrite_out(std::vector<uint8_t>& packet) noexcept {
             // twin_extra_chart: the twin's chart event in its match state goes to the host's scene on the server.
             const int mode = g_extra_chart.load(std::memory_order_relaxed);
             const std::span<uint8_t> cpl(packet.data() + stl::kHeader, packet.size() - stl::kHeader);
-            if (!mode || cpl.size() != 17 || !stl::is_twin_id(stl::rd64(cpl.data()))) return;
+            if (!mode || mode == 3 || cpl.size() != 17 || !stl::is_twin_id(stl::rd64(cpl.data()))) return;
             const uint64_t host = stl::rd64(cpl.data()) - stl::kTwinIdBase;
             uint32_t state = 0;
             {
@@ -508,7 +523,7 @@ bool shop_twin_on_out(std::span<const uint8_t> packet, std::vector<std::vector<u
         const uint64_t id = stl::id_of_request(pl);
         if (!stl::is_twin_id(id)) return false;
         std::vector<std::vector<uint8_t>> a;
-        uint32_t type = 0;
+        uint32_t type = 0, caught_opp = 0;
         {
             std::lock_guard lk(g_mu);
             Twin* tw = nullptr;
@@ -550,9 +565,22 @@ bool shop_twin_on_out(std::span<const uint8_t> packet, std::vector<std::vector<u
                           "the start", id, tw->res, pl.size() >= 12 ? stl::rd32(pl.data() + 8) : 0);
             } else {
                 a = stl::local_answers(op, pl, own_key(), tw->root, tw->state);
+                // twin_extra_chart=3: the match's first chart event (7/0) gets the grip the server would have run.
+                if (is_extra(tw->res) && op == stl::kOpChartEventReq && pl.size() == 17 &&
+                    g_extra_chart.load(std::memory_order_relaxed) == 3 && tw->state == kChartState && !tw->caught &&
+                    tw->opponent && stl::rd32(pl.data() + 8) == kChartState && stl::rd32(pl.data() + 12) == 0) {
+                    if (const uint32_t me = own_key()) {
+                        a.insert(a.begin(), stl::catch_result(me, tw->opponent));
+                        tw->caught = true;
+                        caught_opp = tw->opponent;
+                    }
+                }
             }
             type = tw->state;
         }
+        if (caught_opp)
+            log::info("ShopTwin [extra chart] twin 0x{:X}: the match's first chart event answered with a grip made here "
+                      "(CatchActionResultAck: this client's character and its opponent 0x{:08X})", id, caught_opp);
         c_withheld.fetch_add(1);
         if (!a.empty()) c_answered.fetch_add(1);
         if (op == stl::kOpBranchReq && pl.size() >= 12) {

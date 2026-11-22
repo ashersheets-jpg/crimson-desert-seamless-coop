@@ -323,6 +323,25 @@ inline uint64_t chart_req_to_host(uint16_t op, std::span<uint8_t> pl) {
     wr64(pl.data(), id - kTwinIdBase);
     return id - kTwinIdBase;
 }
+// twin_extra_chart=3 (hypothesis (f)): no forwarding; the twin's own answer to the match's first chart event (7/0) also
+// carries the server's grip, made here: CatchActionResultAck 2562 (3732), 55 B, copied from cs92's host capture
+// (t 363.589) with the catcher (+0) and the target (+4) replaced: u32 catcher | u32 target | u32 2 | ... | f32 0.1 |
+// u32 the target's action 0x18F128E3 | u32 0x64528294 | ... | u32 the catcher's action 0x63F9EFFD (+50) | u8 0x17.
+inline constexpr uint16_t kOpCatchActionResultAck = 2562;
+inline constexpr uint8_t kCatchTemplate[55] = {
+    0x01, 0x00, 0x10, 0xA0, 0xF7, 0x0A, 0x10, 0xB0, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xCD, 0xCC, 0xCC, 0x3D, 0xE3, 0x28, 0xF1, 0x18, 0x94, 0x82, 0x52,
+    0x64, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0xFD, 0xEF, 0xF9, 0x63, 0x17};
+inline std::vector<uint8_t> catch_result(uint32_t catcher, uint32_t target) {
+    std::vector<uint8_t> pl(std::begin(kCatchTemplate), std::end(kCatchTemplate));
+    wr32(pl.data(), catcher);
+    wr32(pl.data() + 4, target);
+    return frame(kOpCatchActionResultAck, pl);
+}
+// The opponent the server spawned for this client's minigame: SpawnMiniGameCharacterAck 2810 payload u8 4 | u32 actor |
+// u64 scene | u32 node | u32 opponent (+17) | ...; 0 when too short.
+inline uint32_t minigame_opponent(std::span<const uint8_t> pl) { return pl.size() >= 21 ? rd32(pl.data() + 17) : 0; }
+
 // A chart event sent on to the host's server for a twin: the host's scene id and its 9 bytes.
 struct ForwardedChart {
     uint64_t host = 0;
