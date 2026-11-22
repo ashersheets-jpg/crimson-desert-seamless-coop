@@ -10265,3 +10265,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   sends "I got up myself" (3104, entry 0xC0DE0009); the host's server lists the player's money pouch and, once
   [session2] death_penalty_item names the silver, removes the share (death_penalty = 10/25/50/100) with the game's
   own delete. cs97 (list only, both players die once) joins the 15:00 window on the new research package.
+- 12:35 B20 voices: native voice_probe (research, off; 3732 voice processor 0x7C72A0 and swing-sound processor
+  0x7C2C60 by the port map from 3576's 0x79A160 / 0x795B20, their context's first field the actor, read in the 3732
+  code; PlayEvent 0x3BD5820): counts per character, a line every 10 s. cs98 (each player swings 30 times) joins the
+  15:00 chain. Unit tests 92 / 14 (the baseline).
