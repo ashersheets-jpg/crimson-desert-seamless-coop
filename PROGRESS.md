@@ -76,6 +76,8 @@ test save Out, shipped cdmp.ini restored.
   replied (yours: the same question as w-ri's). 20:47 check: Burns answered panda (10:38 UTC) "I think thats why they
   use radmin"; still nothing from me on it. EdwardJames (23:36 UTC) asked how far boss fights are; you answered
   his controller question at 05:53 UTC; I left the boss part (B07 not tested yet).
+  2026-11-22 12:01: EdwardJames asked twice more in #general (11:23 UTC "i thought you had to buy", 16:12 UTC "is
+  the mod installation method same for cracked version"). Not replied (the same question, yours).
 - 2026-11-21 09:31 DONE: 4394b014 POSTED in #download-here by me (standing OK; pp41 1017/2, the 2 the lagrun step's
   own test switch, then pp41b 152/0 with the test-kit fix): the running-freeze fix (remote_interp_char), the talk rule
   (an NPC the joined player talks to runs on their game), the taming-freeze logs, frame-hitch logs. Tags Borque.
@@ -10239,3 +10241,16 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   the re-runs the rule asks for after test-kit fixes (loot, fresh, display, then static / fresh / solostart as the
   smoke); if clean, post 677c87bb (docs/release/shared-world-playtest/download-677c87bb.txt). (2) chain_j on
   6a4079b1 (cs95, cs95b, cs93b, cs94).
+- 12:00 Discord: no new feedback; #general: EdwardJames asks again about cracked copies (waiting list, the owner's).
+  Windows still has the restart pending (not paused): no game run before 15:00.
+- 12:13 static. FOUND: the harness copies the BUILD TREE's two DLLs (twocopy.ps1), and the research builds after
+  pp44 (native 9fb4fa4, layer 9e6e670) replaced them, so 677c87bb's re-runs would have tested 6a4079b1's DLLs (and
+  failed static on the hash). New build/native/dllswap.sh (save / put <package> / back / show): before 677c87bb's
+  runs, `put 677c87bb`; after them, `put` the research package again. LESSON added.
+  B06 (the host fighting from the saddle): layer dev step `tphorse far` (goes to our horse wherever it is; the
+  host's stands ~500 m from the dock and does not answer the call), build/native/rideto.py (py:rideto:X,Z[,STOP]:
+  the camera walker rides the mounted host back to the camp) and cs96.sh (the host calls, goes to its horse, rides
+  to the bandit camp and swings 40 times; the joined player waits at the camp: the bandits' hp in both games' npcs
+  lines, the joined player's "seated" line, shots). T26 route 2 (the host's server removes the dead player's silver):
+  the 3732 discard handler's plain delete read (exe+0x2A54010 remove by reason 0x2F, scope exe+0x2EC97A0, time =
+  _time64 + [0x724B5F0] or [0x71661A8] by tls+0x1EB): docs/research/t26-death-penalty.md.

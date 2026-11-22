@@ -41,3 +41,17 @@ surprise. The game's own death rules stay as they are under none (today's behavi
 3. The option on: each player dies once (the checklist's revive step kills the joined player); the right amount goes,
    from the right player, once.
 Not started: the release items come first.
+
+## 3732 addresses for route 2 (2026-11-22, static: build/port3732 fmap from the 3576 notes, capstone on the 3732 exe)
+The discard handler's plain delete (3576 0x2E036A2..0x2E037B6, build/decomp/notes_give_paths.md 3.2) is in the 3732
+handler at 0x2E6F367..0x2E6F47B, the same steps one for one:
+- list grow exe+0x505A90 (3576 0x4DB910); entry 0x28 bytes as in the notes (+0x10 u16 inventory index, +0x12 slot,
+  +0x18 i64 count, +0x20 u32 0x001B0000, +0x00 / +0x24 u16 0xFFFF, +0x08 i64 -1)
+- scope exe+0x2EC97A0(*(tls0 + 0x250), scope) (3576 0x2E5D3B0); scope+8 = refcount (decremented after), +0x10 = tx
+- remove by reason exe+0x2A54010(tx, &err, *(holder + 8), &list, time, u8 0, u16 0x2F, u8 1) (3576 0x29EE820)
+- time = _time64(0) + (*(u8*)(tls0 + 0x1EB) ? [exe+0x71661A8] : [exe+0x724B5F0]) (the handler, 0x2E6F039..0x2E6F06C)
+- the list's free after: exe+0x15972C0, then 0x4B8306C or 0x4B82F6C by *(u8*)(tls0 + 0x1FE)
+Silver is item key 1 in the Money inventory (index at the inventory manager +0x78, trade_probe's stash_dump order);
+its slot and count come from trade_probe's stash_slot(). The map's checks: the same chain turns the 3576 give and
+add into 0x2E5C470 and 0x2E449C0, the 3732 addresses trade_probe already uses. Worker entry: 0xC0DE0009 (0008 is
+the AI hand-over's).

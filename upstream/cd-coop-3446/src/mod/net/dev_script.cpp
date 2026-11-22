@@ -659,8 +659,10 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
             continue;
         }
         if (kind == "tphorse") {  // tphorse: 1 m beside the horse the layer counts as ours (after a horse call)
-            st.kind = Step::TpActor;
-            st.addr = 0xFFFFFFFFu;
+            st.kind = Step::TpActor;  // tphorse far: wherever it is (B06, 2026-11-22: the host's horse stays ~500 m
+            st.addr = 0xFFFFFFFFu;    // from the Rodbel dock and does not answer the call there)
+            std::string w;
+            st.to[0] = (in >> w) && w == "far" ? 1.0f : 0.0f;
             steps.push_back(std::move(st));
             continue;
         }
@@ -891,7 +893,9 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                 if (at && st.addr == 0xFFFFFFFFu) {
                     const auto me = game::actor_world_position(capture_own_player_key());
                     const float d = me ? std::sqrt((at->x - me->x) * (at->x - me->x) + (at->z - me->z) * (at->z - me->z)) : 0.0f;
-                    if (d > 60.0f) {
+                    if (d > 60.0f && st.to[0] > 0.5f) {
+                        log::info("Dev script: tphorse far: our horse 0x{:08X} is {:.0f} m away: going to it", key, d);
+                    } else if (d > 60.0f) {
                         log::info("Dev script: tphorse: our horse 0x{:08X} is {:.0f} m away (it did not come): not teleported", key, d);
                         continue;
                     }

@@ -591,6 +591,13 @@ cdmp.host_<start>.log / cdmp.guest_<start>.log: the files named after the step's
 file from another day). To wait during a step with nothing left to do, the same tab can wait too (`await new
 Promise(r => setTimeout(r, 40000))`; the tool stops a call at 45 s): no process, no focus change, few tokens.
 
+## A build after a candidate's pass changes what its re-runs test (2026-11-22)
+The harness installs the build tree's cdmp.asi / coopplus.asi, not the package's (-PackageIni gives only the ini). A
+research build made while a candidate (677c87bb) still had steps left would have sent those steps the research DLLs;
+only the static step's hash check would have said so, and only if static ran first. Before a candidate's runs:
+`bash build/native/dllswap.sh show` (which package the build tree is) and `put <candidate>`; after them, `put` the
+research package back. A research run's own log says which build it tested only through that same hash.
+
 ## A local answer that matches the server's can still skip what the server DOES (2026-11-22, B14)
 The arm-wrestling twin answered every chart event with exactly the 2105 the host's server sends, and its match still
 never started: on the server, the table's state-7 chart events also run the grip (CatchActionResultAck 2 ms later),
