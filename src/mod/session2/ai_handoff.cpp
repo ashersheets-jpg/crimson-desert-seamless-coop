@@ -94,6 +94,17 @@ size_t talk_slot(uint32_t npc_key) noexcept {
     }
     return kRides;
 }
+// The minigame rule's table (ai_handoff_note_minigame): (opponent key << 32) | player key, 0 = free.
+std::array<std::atomic<uint64_t>, kRides> g_games{};
+std::atomic<uint64_t> c_game_noted{0}, c_game_out{0}, c_game_full{0}, c_game_off{0};
+std::atomic<bool> g_game_on{true};
+uint32_t played_by(uint32_t npc_key) noexcept {
+    for (const auto& g : g_games) {
+        const uint64_t v = g.load(std::memory_order_relaxed);
+        if (v && static_cast<uint32_t>(v >> 32) == npc_key) return static_cast<uint32_t>(v);
+    }
+    return 0;
+}
 // Passengers (ai_handoff_note_passenger): (vehicle key << 32) | rider key, 0 = free.
 std::array<std::atomic<uint64_t>, kRides> g_passengers{};
 std::atomic<uint64_t> c_pass_noted{0}, c_pass_skip{0}, c_pass_full{0};
@@ -133,6 +144,8 @@ int forget_other_player() noexcept {
         if (v && static_cast<uint32_t>(v) != kHostCharacter && g_catches[i].compare_exchange_strong(v, 0)) ++n;
         v = g_passengers[i].load(std::memory_order_acquire);
         if (v && static_cast<uint32_t>(v) != kHostCharacter && g_passengers[i].compare_exchange_strong(v, 0)) ++n;
+        v = g_games[i].load(std::memory_order_acquire);
+        if (v && static_cast<uint32_t>(v) != kHostCharacter && g_games[i].compare_exchange_strong(v, 0)) ++n;
     }
     return n;
 }
@@ -732,6 +745,7 @@ void ai_handoff_server_tick() noexcept {
                 const Fight& f = fights[i];
                 uint32_t rider = ridden_by(f.key);
                 const bool caught = !rider && (rider = caught_by(f.key, now)) != 0;
+                const bool played = !rider && (rider = played_by(f.key)) != 0;  // the minigame rule
                 if (!rider) continue;
                 uint32_t to = 0;
                 for (int k = 0; k < n_players; ++k) {
@@ -756,11 +770,11 @@ void ai_handoff_server_tick() noexcept {
                 }
                 tell(to, host_user, priv);
                 tell(to, host_user, real);
-                const uint64_t h = (caught ? c_catch_out : c_ride_out).fetch_add(1) + 1;
+                const uint64_t h = (caught ? c_catch_out : played ? c_game_out : c_ride_out).fetch_add(1) + 1;
                 if (h <= 60 || h % 100 == 0)
                     log::info("AiHandoff: {} rule: NPC 0x{:08X} (type {}) {} 0x{:08X} -> its game (0x{:08X} -> "
-                              "0x{:08X}; {} so far)", caught ? "catch" : "ride", f.key, f.type,
-                              caught ? "caught by" : "ridden by", rider, f.ctrl, to, h);
+                              "0x{:08X}; {} so far)", caught ? "catch" : played ? "minigame" : "ride", f.key, f.type,
+                              caught ? "caught by" : played ? "the minigame opponent of" : "ridden by", rider, f.ctrl, to, h);
             }
         }
         // The talk rule (ai_handoff.h, 2026-11-21): a person the other player talks to runs on the talker's game.
@@ -881,7 +895,8 @@ void ai_handoff_server_tick() noexcept {
             if (moved.size() > 8000) moved.clear();
             for (int i = 0; i < n_fight && done < kMaxPerTick; ++i) {
                 const Fight& f = fights[i];
-                if (ridden_by(f.key) || caught_by(f.key, now) || talk_slot(f.key) != kRides) continue;  // the ride / catch / talk rule's
+                if (ridden_by(f.key) || caught_by(f.key, now) || played_by(f.key) || talk_slot(f.key) != kRides)
+                    continue;  // the ride / catch / minigame / talk rule's
                 uint64_t hm = 0, gm = 0;
                 if (!anti_grief_last_hits(f.key, hm, gm)) continue;
                 c_fight_seen.fetch_add(1);
@@ -1044,6 +1059,41 @@ void ai_handoff_note_catch(uint32_t catcher_key, uint32_t npc_key, uint32_t inte
                   "to the catcher's game at the next server check ({} so far)", catcher_key, npc_key, interaction, n);
 }
 
+void ai_handoff_set_minigame(bool on) noexcept {
+    g_game_on.store(on);
+    if (!on) log::info("AiHandoff: minigame rule OFF ([session2] ai_handoff_minigame=0)");
+}
+
+void ai_handoff_note_minigame(uint32_t player_key, uint32_t npc_key, bool on) noexcept {
+    if (g_guest || !npc_key || (npc_key >> 28) != 0xB) return;
+    if ((player_key >> 28) != 0xA || player_key == kHostCharacter) return;  // the other player's matches only
+    if (!on) {
+        for (auto& g : g_games) {
+            uint64_t v = g.load(std::memory_order_relaxed);
+            if (v && static_cast<uint32_t>(v >> 32) == npc_key && g.compare_exchange_strong(v, 0)) {
+                c_game_off.fetch_add(1);
+                log::info("AiHandoff: minigame rule: NPC 0x{:08X}, the opponent of 0x{:08X}, unspawned: the rule ends",
+                          npc_key, player_key);
+            }
+        }
+        return;
+    }
+    if (!g_game_on.load(std::memory_order_relaxed) || played_by(npc_key)) return;
+    const uint64_t want = (static_cast<uint64_t>(npc_key) << 32) | player_key;
+    for (auto& g : g_games) {
+        uint64_t v = 0;
+        if (g.compare_exchange_strong(v, want)) {
+            const uint64_t n = c_game_noted.fetch_add(1) + 1;
+            if (n <= 40 || n % 100 == 0)
+                log::info("AiHandoff: minigame rule: the server spawned NPC 0x{:08X} as the minigame opponent of the other "
+                          "player's 0x{:08X}: it goes to that player's game at the next server check ({} so far)", npc_key,
+                          player_key, n);
+            return;
+        }
+    }
+    c_game_full.fetch_add(1);
+}
+
 uint32_t ai_handoff_ridden_by(uint32_t mount_key) noexcept { return mount_key ? ridden_by(mount_key) : 0; }
 
 void ai_handoff_note_ride(uint32_t rider_key, uint32_t mount_key, bool on) noexcept {
@@ -1117,6 +1167,9 @@ std::string ai_handoff_describe() {
                            c_ride_out.load(), c_ride_full.load()) +
                std::format(" | catch rule: catches noted {} handed to the catcher {} table full {}", c_catch_noted.load(),
                            c_catch_out.load(), c_catch_full.load()) +
+               std::format(" | minigame rule{}: opponents noted {} handed to the player {} ended {} table full {}",
+                           g_game_on.load() ? "" : " (OFF)", c_game_noted.load(), c_game_out.load(), c_game_off.load(),
+                           c_game_full.load()) +
                std::format(" | talk rule{}: talks noted {} handed to the talker {} back {} ended {} not a person {} table "
                            "full {}", g_talk_on.load() ? "" : " (OFF)", c_talk_noted.load(), c_talk_out.load(),
                            c_talk_back.load(), c_talk_ended.load(), c_talk_skip.load(), c_talk_full.load()) +

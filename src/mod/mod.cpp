@@ -1268,6 +1268,7 @@ DWORD WINAPI worker(LPVOID) {
             session2::ai_handoff_start(cfg.s2_ai_handoff, cfg.s2_guest, cfg.s2_ai_handoff_fight);
             session2::ai_handoff_set_catch(cfg.s2_ai_handoff_catch);
             session2::ai_handoff_set_talk(cfg.s2_ai_handoff_talk);
+            session2::ai_handoff_set_minigame(cfg.s2_ai_handoff_minigame);
             session2::damage_range_start(cfg.s2_damage_range_players, cfg.s2_guest);
             if (!cfg.s2_guest && cfg.s2_guest_x_research) session2::guest_x_interaction_host_probe_start();  // research
             session2::lootr_set_chests(cfg.s2_lootr_chests);

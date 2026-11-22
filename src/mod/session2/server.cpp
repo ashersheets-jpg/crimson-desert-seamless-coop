@@ -24,6 +24,7 @@
 #include "mod/log.h"
 #include "mod/net/horse_diag.h"
 #include "mod/net/remote_puppet.h"
+#include "mod/session2/ai_handoff.h"
 #include "mod/session2/attach_follow.h"
 #include "mod/session2/combat_follow.h"
 #include "mod/session2/docked_gimmicks.h"
@@ -642,6 +643,18 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
                               "of it is not sent to user 2 ({} so far)", k, opcode == 3008 ? "move" : "action", n);
                 }
                 return;
+            }
+        }
+        // Co-op+ 2026-11-21 (B14, ai_handoff.h's minigame rule): the opponent the server spawns for user 2's minigame
+        // runs on user 2's game until its unspawn (SpawnMiniGameCharacterAck 2810: 4 | player | scene u64 | u32 |
+        // opponent; UnspawnMiniGameCharacterAck 2922: 4 | player | opponent).
+        if (self == live_session2() && (opcode == 2810 || opcode == 2922) && !v->payload.empty() && v->payload[0] == 4) {
+            uint32_t player = 0, npc = 0;
+            const size_t at = opcode == 2810 ? 17 : 5;
+            if (v->payload.size() >= at + 4) {
+                std::memcpy(&player, v->payload.data() + 1, 4);
+                std::memcpy(&npc, v->payload.data() + at, 4);
+                ai_handoff_note_minigame(player, npc, opcode == 2810);
             }
         }
         // P8 S3 (observer_hold_acks.h): a held NPC's packets wait for its 2005; a 2005 is queued with them.
