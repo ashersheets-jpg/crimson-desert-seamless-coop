@@ -196,7 +196,7 @@ static void log_vehicles_near(float radius) {
 namespace {
 
 struct Step {
-    enum Kind { C2S, S2C, Wait, Teleport, Poke, Time, Watch, Day, Pad, KillGame, KillAll, MemScan, MemDiff, MemWatch, Advance, FScan, FFilter, FWatch, WaitFile, DScan, DFilter, DWatch, GSnap, GDiff, VtScan, PtrScan, WatchStatus, Key, ClockScan, RideHorse, PrologueDone, GrantXp, GuestHit, DumpItemMove, TpActor, Npcs, KillNear, LootLast } kind;
+    enum Kind { C2S, S2C, Wait, Teleport, Poke, Time, Watch, Day, Pad, KillGame, KillFriend, KillAll, MemScan, MemDiff, MemWatch, Advance, FScan, FFilter, FWatch, WaitFile, DScan, DFilter, DWatch, GSnap, GDiff, VtScan, PtrScan, WatchStatus, Key, ClockScan, RideHorse, PrologueDone, GrantXp, GuestHit, DumpItemMove, TpActor, Npcs, KillNear, LootLast } kind;
     uintptr_t addr = 0;
     float to[3] = {};
     uint16_t op = 0;
@@ -364,6 +364,13 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
         }
         if (kind == "killgame") {  // killgame: KillCheatReq on a loaded wild animal (coop_hunt.h)
             st.kind = Step::KillGame;
+            steps.push_back(st);
+            continue;
+        }
+        // killfriend: KillCheatReq on the other player's character (the key the server gave it in this session, from
+        // its character load; 2026-11-22: pp44-loot had 0xA0100067, the checklist's revive step named 0xA0100066).
+        if (kind == "killfriend") {
+            st.kind = Step::KillFriend;
             steps.push_back(st);
             continue;
         }
@@ -780,6 +787,17 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                              static_cast<int>(st.to[2]), static_cast<int>(st.wait_ms));
             } else if (st.kind == Step::KillGame) {
                 hunt_dev_kill();
+            } else if (st.kind == Step::KillFriend) {
+                const uint32_t friend_key = capture_other_player_key();
+                if (!friend_key) {
+                    log::info("Dev script: killfriend: the other player's character is not known yet (no load seen)");
+                } else {
+                    std::vector<uint8_t> pay(8, 0);  // KillCheatReq: u32 key | u32 option (0 = at once)
+                    std::memcpy(pay.data(), &friend_key, 4);
+                    const bool ok = sniffer_inject_c2s(make_c2s(2322, pay));
+                    log::info("Dev script: killfriend: KillCheatReq on the other player's character 0x{:08X}{}", friend_key,
+                              ok ? "" : " NOT sent");
+                }
             } else if (st.kind == Step::KillAll) {
                 int sent = 0;
                 for (const auto& [key, variant] : enemy_loaded_variants()) {

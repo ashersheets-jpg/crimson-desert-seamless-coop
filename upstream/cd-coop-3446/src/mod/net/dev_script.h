@@ -13,6 +13,7 @@
 //   watch <hex addr> [len] [hits]  (hardware write breakpoint, dev_watch.h; logs who writes it)
 //   pad <hex buttons> <ms>         (a simulated pad press, input/pad_input.h; e.g. pad 0021 300 = View + D-pad Up)
 //   killall                        (KillCheatReq on every loaded actor but wild animals: live quest research)
+//   killfriend                     (KillCheatReq on the other player's character, its key from its load here)
 //   advance <hex mission key>      (quest server advances that mission, quest_events.h)
 //   waitfile <path>                (wait until a test driver creates the file)
 //   fscan <float> / ffilter <lo> <hi> / fwatch <hits>   (dev_memscan.h)

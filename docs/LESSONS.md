@@ -591,6 +591,14 @@ cdmp.host_<start>.log / cdmp.guest_<start>.log: the files named after the step's
 file from another day). To wait during a step with nothing left to do, the same tab can wait too (`await new
 Promise(r => setTimeout(r, 40000))`; the tool stops a call at 45 s): no process, no focus change, few tokens.
 
+## A local answer that matches the server's can still skip what the server DOES (2026-11-22, B14)
+The arm-wrestling twin answered every chart event with exactly the 2105 the host's server sends, and its match still
+never started: on the server, the table's state-7 chart events also run the grip (CatchActionResultAck 2 ms later),
+which no Ack carries. Found only by putting the host's own capture next to the joined player's (mgdiff.py: message
+types after the same anchor, both sides). When a copy answers requests locally, list what the server sends AFTER each
+request on the host's side, not only the direct Ack: anything there that names the player is a side effect the copy
+never produces.
+
 ## A research switch made a default: its warnings and its test go into the checklist first (2026-11-22)
 scene_level_share fixed the doors in cs88b and went on by default for the host. On 3732 its B part logs one WRN in
 every host log ("B: el marco del 2834 ... B solo observa"), and the checklist fails every step on a warning kind

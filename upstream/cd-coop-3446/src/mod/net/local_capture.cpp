@@ -97,6 +97,9 @@ std::mutex g_mutex;  // templates, keys and sink (never taken on game threads)
 Bytes g_user;        // payload of the user-owned player actor load
 Bytes g_body;        // payload of the player's body load
 uint32_t g_user_key = 0, g_player_key = 0, g_body_key = 0;
+// Co-op+ 2026-11-22: the other player's character (its user-owned character load on this client: one server in the
+// shared world), for the dev script's killfriend. 0 until seen.
+std::atomic<uint32_t> g_other_player_key{0};
 // The player's horse (docs/research/caballo-coop.md): one user-owned
 // ActorLoadDataAck of kind 5, loaded once per session.
 Bytes g_horse;
@@ -870,6 +873,7 @@ void capture_observe_s2c(const uint8_t* packet, size_t size) {
             }
         }
         if (own_player && actor != own_player) {
+            g_other_player_key.store(actor);
             static int said = 0;
             if (said++ < 5) {
                 log::info("Capture: the character load of 0x{:08X} (user 0x{:08X}) is the other player's, not ours "
@@ -1345,6 +1349,8 @@ uint32_t capture_own_body_key() {
     std::lock_guard lock(g_mutex);
     return g_body_key;
 }
+
+uint32_t capture_other_player_key() { return g_other_player_key.load(); }
 
 std::optional<NearbyActor> capture_nearest_actor(const proto::Vec3& from, float max_m) {
     std::optional<NearbyActor> best;
