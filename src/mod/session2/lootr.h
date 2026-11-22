@@ -56,10 +56,13 @@ void lootr_host_recv(uint8_t* packet, uint16_t size) noexcept;
 // less those on the ledger (given_guest.txt: shares the joined player got and then saved). A share waiting at its
 // place goes to its player within 6 m.
 void lootr_set_persist(bool on);
-// guest_save_host.cpp, on the server thread, each after the game's own call went through (result 0):
-void lootr_host_loaded(uint32_t slot) noexcept;   // LoadSlot of a host world slot
-void lootr_host_saved(uint32_t slot) noexcept;    // SavePlayerToSlot of a host world slot: the snapshot
-void lootr_host_flushed(uint32_t slot) noexcept;  // FlushPendingSaveData committed that slot: its file
+// guest_save_host.cpp, on the server thread. v4.2 (the review of v4.1), BEFORE the game's own call:
+void lootr_host_loading() noexcept;                // any LoadSlot of the host's character: disarm, the old world goes
+int64_t lootr_host_saving(uint32_t slot) noexcept;  // SavePlayerToSlot of a host world slot: its files' time (-1: off)
+// ... and each after the game's own call went through (result 0):
+void lootr_host_loaded(uint32_t slot) noexcept;   // the character's 3093 LoadSlot of a host world slot: restore, arm
+void lootr_host_saved(uint32_t slot, int64_t before) noexcept;  // that save: its shares file (v4), `before` as above
+void lootr_host_flushed(uint32_t slot) noexcept;  // FlushPendingSaveData: nothing since v4 (it does no I/O)
 void lootr_guest_saved() noexcept;                // user 2's save went through and was exported: the ledger
 // v3: trade_probe's 0xC0DE0005 worker (the server thread) ran an in-session give's add for `requester` (ok = added).
 void lootr_server_added(uint32_t requester, uint32_t item, uint64_t count, bool ok) noexcept;

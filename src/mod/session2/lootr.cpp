@@ -10,8 +10,11 @@
 #include <cstdio>
 #include <cstring>
 #include <format>
+#include <iterator>
 #include <mutex>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include <safetyhook.hpp>
@@ -525,6 +528,9 @@ struct ChestShare {
     BagSnap before;
     uint64_t share_id = 0;  // B19
     int64_t made = 0;
+    // B19 v4.2 (review of v4.1, item 6): its adds are running (lootr_chest_shares): a save inside one does not list it
+    // (the bag may hold its items already). It leaves the list right after, given or not.
+    bool giving = false;
 };
 void persist_keep(const ChestShare& c, const char* why) noexcept;  // B19: below
 constexpr uint64_t kSettleMs = 1500;
@@ -1040,8 +1046,11 @@ int players_now(PlayerAt* out, int cap) noexcept {
 }
 
 // ---- B19 (lootr_persist, armed): the shares kept across sessions (lootr.h, lootr_persist_logic.h). The game's
-// LoadSlot / SavePlayerToSlot / FlushPendingSaveData (guest_save_host's hooks) and Lootr's entry all run on the server
-// thread; g_near and g_given_guest are also touched by lootr_tick (the network thread), under g_mu.
+// LoadSlot / SavePlayerToSlot (guest_save_host's hooks) and Lootr's entry all run on the server thread; g_near and
+// g_given_guest are also touched by lootr_tick (the network thread), under g_mu. v4 (2026-11-21 late, the review of
+// v3.1): a slot's file is written when the game's SavePlayerToSlot of it returns (no commit hook); a failed ledger
+// write rewrites every slot file without its marks (or sets the file aside, confirmed); the host's own gives are not
+// subtracted at a load (its bag is the slot's).
 std::vector<lpl::Share> g_near;  // guarded by g_mu: shares waiting at their place (6 m)
 struct GivenGuest {
     uint64_t id;
@@ -1062,40 +1071,68 @@ std::atomic<bool> g_ledger_retry{false};
 std::atomic<size_t> g_ledger_due_n{0};  // its size, for the status line (another thread)
 std::unordered_set<uint64_t> g_filed;    // guarded by g_mu: ids ever in a slot file (written or read) in this process
 std::atomic<bool> g_tracking{false};     // armed once in this process (the folder known): gives are tracked
-std::atomic<uint64_t> c_p_unfiled{0}, c_p_setaside{0}, c_p_late_commit{0};
+std::atomic<uint64_t> c_p_unfiled{0}, c_p_setaside{0};
 // v3.1: the server thread: the share ids each slot's CURRENT file lists (written or read here), for setting aside the
 // files that would give a share again whose ledger mark could not be written (review B2).
 std::unordered_map<uint32_t, std::unordered_set<uint64_t>> g_slot_ids;
-std::unordered_set<uint64_t> g_given_host;  // guarded by g_mu: shares given to the host in this process (review B4)
+// v4: v3.1's record of the host's own gives (g_given_host, review B4) is gone: the host's bag is in the slot it loads,
+// so a share the host got after that save is owed to it again there ("a host reload loses shares given in this
+// process", review of v3.1), and one it got before that save is not in that save's file.
+std::atomic<uint64_t> c_p_scrubbed{0}, c_p_aside_failed{0}, c_p_unchanged{0};
+// v4.1 (review of v4, item 3): every persistence entry (LoadSlot, SavePlayerToSlot, the joined player's save, Lootr's
+// 2 s entry) holds this, taken BEFORE g_mu. The logs put them all on one thread (the "server realm" tid of LoadSlot,
+// SavePlayerToSlot and the 0xC0DE entries, cs83w2 / cs86f); the lock keeps it safe if a path ever is not. Recursive: an
+// entry that ends up in another on the same thread does not deadlock.
+// v4.2 (review of v4.1): timed. The server thread holds it across its adds (lootr_add_item); a game hook's entry
+// (pmu_take) waits at most 2 s and then takes its safe path, so a save on another thread that holds a game lock the
+// add needs cannot hang the game; Lootr's own 2 s entry skips a round instead of waiting.
+std::recursive_timed_mutex g_pmu;
+using PmuLock = std::unique_lock<std::recursive_timed_mutex>;
+std::atomic<uint64_t> c_p_lock_missed{0};
+std::atomic<bool> g_guest_save_missed{false};  // a joined player's save could not take g_pmu: its marks later
+// v4.3 (review of v4.2, finding 3): counts clear_world() (a host load); a loop that runs adds checks it after them,
+// since a load inside an add (g_pmu is recursive) would have emptied the lists it walks.
+std::atomic<uint32_t> g_world_gen{0};
+std::atomic<uint32_t> g_guest_marks_runs{0};  // v4.4: counts guest_marks (persist_give undoes a record only if none ran)
+// v4.3 (review of v4.2, finding 7): a failed ledger write is tried again at 2, 4, 8 ... 60 s (two durable writes per
+// try on the server thread; a file a scanner keeps locked must not flush the disk every 2 s).
+int g_ledger_fails = 0;           // g_pmu
+uint64_t g_ledger_next_ms = 0;    // g_pmu: GetTickCount64 of the next try
+std::unordered_set<uint32_t> g_aside_failed;  // g_pmu: slots whose file could not be cleared (said once each)
 std::atomic<int> g_near_n{0};
 std::atomic<bool> g_write_due{false};
 std::wstring g_pdir;  // the server thread: <co-op folder>\cdmp_lootr
-struct PendingSlot {  // the server thread: a host save's snapshot, written at that slot's commit
+struct PendingSlot {  // the server thread: a host save's snapshot whose write failed (tried again every 2 s)
     uint32_t slot = 0;
-    uint64_t snap_ms = 0;  // GetTickCount64 at the snapshot (SavePlayerToSlot)
     std::vector<lpl::Share> list;
-    bool committed = false;  // its commit came and the write failed: Lootr's entry tries again
+    bool committed = false;  // its save went through and the write failed: Lootr's entry tries again
     int64_t stamp = 0;
     int tries = 0;
 };
 std::vector<PendingSlot> g_pending;
-uint32_t g_loaded_slot = 0xFFFFFFFFu;  // the server thread
-uint64_t g_loaded_at = 0;
 std::atomic<uint64_t> c_p_read{0}, c_p_written{0}, c_p_failed{0}, c_p_given{0}, c_p_late{0}, c_p_ledger{0},
     c_p_stale{0};
 
-std::string narrow_path(const std::wstring& w) {
-    if (w.empty()) return {};
-    const int n = WideCharToMultiByte(CP_UTF8, 0, w.data(), static_cast<int>(w.size()), nullptr, 0, nullptr, nullptr);
-    std::string s(static_cast<size_t>(n > 0 ? n : 0), '\0');
-    if (n > 0) WideCharToMultiByte(CP_UTF8, 0, w.data(), static_cast<int>(w.size()), s.data(), n, nullptr, nullptr);
-    return s;
+// v4.2: a game hook's persistence entry takes g_pmu for at most 2 s (see g_pmu); false = not taken (said 10 times).
+bool pmu_take(PmuLock& lk, const char* who) {
+    try {
+        if (lk.try_lock_for(std::chrono::seconds(2))) return true;
+    } catch (...) {
+    }
+    c_p_lock_missed.fetch_add(1);
+    static std::atomic<int> said{0};
+    if (said.fetch_add(1) < 10)
+        log::error("Lootr: {}: the persistence lock was not free in 2 s (thread {}): the safe path is taken", who,
+                   GetCurrentThreadId());
+    return false;
 }
 enum class ReadResult { Ok, Missing, Error };
-ReadResult read_small_file(const std::wstring& path, std::string& out, DWORD& err) {
+// v4.2: `share_write`: read a file another handle may hold open for writing (blank_in_place's check).
+ReadResult read_small_file(const std::wstring& path, std::string& out, DWORD& err, bool share_write = false) {
     err = 0;
-    HANDLE f = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, 0,
-                           nullptr);
+    HANDLE f = CreateFileW(path.c_str(), GENERIC_READ,
+                           FILE_SHARE_READ | FILE_SHARE_DELETE | (share_write ? FILE_SHARE_WRITE : 0), nullptr,
+                           OPEN_EXISTING, 0, nullptr);
     if (f == INVALID_HANDLE_VALUE) {
         err = GetLastError();
         return err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND ? ReadResult::Missing : ReadResult::Error;
@@ -1112,33 +1149,55 @@ ReadResult read_small_file(const std::wstring& path, std::string& out, DWORD& er
     return ok ? ReadResult::Ok : ReadResult::Error;
 }
 // <path>.tmp written whole, then moved over <path>: a crash mid-write leaves the last good file. 0 = written, else the
-// Windows error. (No flush to the disk: the server thread waits for this.)
-DWORD write_small_file(const std::wstring& path, const std::string& text) {
+// Windows error. No flush to the disk (the server thread waits for this) unless `durable` (v4.1: the ledger, written
+// only at the joined player's saves: an OS crash must not bring back an older one, review of v4 item 6).
+DWORD write_small_file(const std::wstring& path, const std::string& text, bool durable = false) {
     CreateDirectoryW(g_pdir.c_str(), nullptr);  // the folder, the first time (an existing one is fine)
     const std::wstring tmp = path + L".tmp";
     HANDLE f = CreateFileW(tmp.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (f == INVALID_HANDLE_VALUE) return GetLastError() ? GetLastError() : ERROR_WRITE_FAULT;
     DWORD put = 0;
-    const bool ok = WriteFile(f, text.data(), static_cast<DWORD>(text.size()), &put, nullptr) && put == text.size();
+    const bool ok = WriteFile(f, text.data(), static_cast<DWORD>(text.size()), &put, nullptr) && put == text.size() &&
+                    (!durable || FlushFileBuffers(f));
     const DWORD e = ok ? 0 : (GetLastError() ? GetLastError() : ERROR_WRITE_FAULT);
     CloseHandle(f);
     if (!ok) {
         DeleteFileW(tmp.c_str());
         return e;
     }
-    if (!MoveFileExW(tmp.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING)) {
+    if (!MoveFileExW(tmp.c_str(), path.c_str(),
+                     MOVEFILE_REPLACE_EXISTING | (durable ? MOVEFILE_WRITE_THROUGH : 0))) {
         const DWORD m = GetLastError() ? GetLastError() : ERROR_WRITE_FAULT;
         DeleteFileW(tmp.c_str());
         return m;
+    }
+    if (durable) {
+        // v4.2 (review of v4.1, item 6): MOVEFILE_WRITE_THROUGH does nothing for a rename on one volume; flushing the
+        // renamed file makes the rename itself durable (NTFS writes its log up to it). v4.3 (review of v4.2, finding
+        // 7): a flush that cannot be made is the write's failure (else an OS crash could bring the older file back).
+        HANDLE d = CreateFileW(path.c_str(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                               nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (d == INVALID_HANDLE_VALUE) return GetLastError() ? GetLastError() : ERROR_WRITE_FAULT;
+        const bool flushed = FlushFileBuffers(d) != 0;
+        const DWORD fe = flushed ? 0 : (GetLastError() ? GetLastError() : ERROR_WRITE_FAULT);
+        CloseHandle(d);
+        if (!flushed) return fe;
     }
     return 0;
 }
 std::wstring slot_path(uint32_t slot) { return g_pdir + L"\\slot" + std::to_wstring(slot) + L".txt"; }
 std::wstring ledger_path() { return g_pdir + L"\\given_guest.txt"; }
-// The newest write time (unix s) of the game's own files of save slot N (<co-op folder>\<account>\slot<N>\*); 0 when
-// none is found.
-int64_t newest_save_time(const std::wstring& coop, uint32_t slot) {
+std::wstring ledger_bak_path() { return g_pdir + L"\\given_guest.bak"; }  // v4.1: a second copy (read and unioned)
+// The newest write time (v4.1: FILETIME ticks, 100 ns; it was unix seconds) of the game's own files of save slot N
+// (<co-op folder>\<account>\slot<N>\*); 0 when none is found. A slot file's stamp is this value measured right after
+// the save it was written for; at a load the slot's files must still show exactly that (review of v4, item 1: a newer
+// save without its file, or OLDER files put back, both mean the file is not that save's).
+// v4.2 (review of v4.1, item 4): -1 when more than one account folder has files in slot<N> (two Steam accounts of one
+// Windows user hosting the same friend share the co-op folder and its cdmp_lootr files): no file is that save's then.
+int64_t newest_save_ticks(const std::wstring& coop, uint32_t slot) {
+    if (coop.empty()) return 0;
     int64_t best = 0;
+    int accounts = 0;
     WIN32_FIND_DATAW a;
     HANDLE ha = FindFirstFileExW((coop + L"\\*").c_str(), FindExInfoBasic, &a, FindExSearchLimitToDirectories, nullptr, 0);
     if (ha == INVALID_HANDLE_VALUE) return 0;
@@ -1148,18 +1207,30 @@ int64_t newest_save_time(const std::wstring& coop, uint32_t slot) {
         WIN32_FIND_DATAW f;
         HANDLE hf = FindFirstFileExW((dir + L"\\*").c_str(), FindExInfoBasic, &f, FindExSearchNameMatch, nullptr, 0);
         if (hf == INVALID_HANDLE_VALUE) continue;
+        bool any = false;
         do {
             if (f.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+            any = true;
             ULARGE_INTEGER u;
             u.LowPart = f.ftLastWriteTime.dwLowDateTime;
             u.HighPart = f.ftLastWriteTime.dwHighDateTime;
-            const int64_t t = static_cast<int64_t>(u.QuadPart / 10000000ull) - 11644473600ll;
+            const int64_t t = static_cast<int64_t>(u.QuadPart & 0x7FFFFFFFFFFFFFFFull);
             if (t > best) best = t;
         } while (FindNextFileW(hf, &f));
         FindClose(hf);
+        if (any) ++accounts;
     } while (FindNextFileW(ha, &a));
     FindClose(ha);
-    return best;
+    return accounts > 1 ? -1 : best;
+}
+// v4.2 (review of v4.1, item 4): the co-op folder's file system keeps 100 ns write times (NTFS, ReFS). On FAT32 (2 s)
+// or exFAT (10 ms) two saves can show the same time, so nothing is kept across sessions there (checked at each load).
+bool fine_file_times(const std::wstring& dir) {
+    wchar_t root[MAX_PATH + 1] = {};
+    wchar_t fs[64] = {};
+    if (!GetVolumePathNameW(dir.c_str(), root, MAX_PATH)) return false;
+    if (!GetVolumeInformationW(root, nullptr, 0, nullptr, nullptr, nullptr, fs, 64)) return false;
+    return _wcsicmp(fs, L"NTFS") == 0 || _wcsicmp(fs, L"ReFS") == 0;
 }
 lpl::Share share_of(const Taken& t) {
     lpl::Share s;
@@ -1206,25 +1277,66 @@ std::vector<lpl::Share> persist_list() {
     }
     for (int k = 0; k < g_share_n; ++k) {
         const ChestShare& c = g_shares[k];
-        if (c.settled && !c.body && c.items > 0) list.push_back(share_of(c));
+        if (c.settled && !c.body && c.items > 0 && !c.giving) list.push_back(share_of(c));
     }
     std::stable_sort(list.begin(), list.end(), [](const lpl::Share& a, const lpl::Share& b) { return a.made < b.made; });
     return list;
 }
-// A slot's file that may no longer be that save's (its newer write failed, or a snapshot came too late): renamed
-// .stale (deleted if that fails), so a load of the slot restores nothing rather than an older save's shares.
+// v4.1 (review of v4, item 4): the line a cleared file holds; no build reads it as shares (a load sets it aside as
+// .unread and restores none).
+constexpr char kAsideLine[] = "cdmp-lootr-set-aside 1\n";
+// A file overwritten IN PLACE with kAsideLine: the handle shares read / write / delete, so a file that another handle
+// keeps open without FILE_SHARE_DELETE (which stops a rename and a delete) can still be truncated; read back to check.
+bool blank_in_place(const std::wstring& path) {
+    HANDLE f = CreateFileW(path.c_str(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
+                           OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (f == INVALID_HANDLE_VALUE) return false;
+    DWORD put = 0;
+    const bool ok = SetFilePointer(f, 0, nullptr, FILE_BEGIN) != INVALID_SET_FILE_POINTER && SetEndOfFile(f) &&
+                    WriteFile(f, kAsideLine, sizeof kAsideLine - 1, &put, nullptr) && put == sizeof kAsideLine - 1 &&
+                    FlushFileBuffers(f);
+    CloseHandle(f);
+    std::string back;
+    DWORD e = 0;
+    // v4.2: read back sharing writes too (the other handle that stopped the rename may be a writer's).
+    return ok && read_small_file(path, back, e, true) == ReadResult::Ok && back == kAsideLine;
+}
+// A slot's file that may no longer be that save's (its newer write failed, it lists a share the joined player saved
+// while the ledger could not be written...): renamed .stale (deleted if that fails, overwritten in place if that fails
+// too), so a load of the slot restores nothing rather than an older save's shares. Confirmed (v4); said once per slot
+// when nothing worked (v4.1).
 void set_aside(uint32_t slot, const char* why) {
     const std::wstring path = slot_path(slot), aside = path + L".stale";
     const bool moved = MoveFileExW(path.c_str(), aside.c_str(), MOVEFILE_REPLACE_EXISTING) != 0;
     const DWORD e = moved ? 0 : GetLastError();
-    if (!moved && e != ERROR_FILE_NOT_FOUND && e != ERROR_PATH_NOT_FOUND) DeleteFileW(path.c_str());
+    const bool absent = !moved && (e == ERROR_FILE_NOT_FOUND || e == ERROR_PATH_NOT_FOUND);
     g_slot_ids.erase(slot);
-    if (moved || (e != ERROR_FILE_NOT_FOUND && e != ERROR_PATH_NOT_FOUND)) {
+    if (absent) return;  // no file: a load of that slot restores nothing anyway
+    const bool deleted = !moved && DeleteFileW(path.c_str()) != 0;
+    const bool gone = GetFileAttributesW(path.c_str()) == INVALID_FILE_ATTRIBUTES;
+    const bool blanked = !gone && blank_in_place(path);
+    if (gone || blanked) {
+        g_aside_failed.erase(slot);
         c_p_setaside.fetch_add(1);
-        log::warn("Lootr: slot {}'s shares file set aside ({}): a load of that slot restores none", slot, why);
+        static std::atomic<int> said{0};
+        if (said.fetch_add(1) < 30)
+            log::warn("Lootr: slot {}'s shares file {} ({}): a load of that slot restores none", slot,
+                      moved ? "set aside (.stale)" : deleted ? "deleted" : "overwritten in place", why);
+        return;
     }
+    c_p_aside_failed.fetch_add(1);
+    if (g_aside_failed.insert(slot).second)
+        log::warn("Lootr: slot {}'s shares file could NOT be moved, deleted or overwritten (error {}; {}): a load of "
+                  "that slot may give its shares again", slot, e, why);
 }
 bool persist_write_slot(PendingSlot& p) {
+    // v4: a share whose give the joined player saved while the ledger could not be written is never filed again (a
+    // later session would give it again if the host quit before the ledger's retry). Both on the server thread.
+    if (!g_ledger_due.empty()) {
+        std::unordered_set<uint64_t> due;
+        for (const lpl::Mark& m : g_ledger_due) due.insert(m.id);
+        std::erase_if(p.list, [&](const lpl::Share& s) { return due.count(s.id) != 0; });
+    }
     {
         std::lock_guard lk(g_mu);
         for (const lpl::Share& s : p.list) g_filed.insert(s.id);  // filed (or about to be): its give is ledgered
@@ -1251,7 +1363,7 @@ bool persist_write_slot(PendingSlot& p) {
     return false;
 }
 // Each waiting share whose player stands within 6 m of its place goes into that player's bag; kinds the add refused
-// (a full bag) stay, under a new id, for another try.
+// (a full bag) stay for another try: the host's under a new id, the joined player's under its own (v4.4, see below).
 void persist_give() {
     if (g_near_n.load() <= 0) return;
     PlayerAt pl[4];
@@ -1271,11 +1383,29 @@ void persist_give() {
                 break;
             }
         }
+        // v4.1 (review of v4): out of the waiting list BEFORE the adds, so a save that happened inside an add could
+        // never list a share whose item the bag already holds (a kind that is not added comes back below).
+        for (const lpl::Share& s : due) std::erase_if(g_near, [&](const lpl::Share& x) { return x.id == s.id; });
+        g_near_n = static_cast<int>(g_near.size());
     }
     if (due.empty()) return;
     const int64_t now = unix_now();
+    // v4.3 (review of v4.2, finding 2): a share for the joined player is recorded as given BEFORE its adds, so a save of
+    // its inside an add marks it too (losing the share beats giving it twice). v4.4 (review of v4.3, item 1): what its
+    // bag did not take comes back under the SAME id (a new id would escape the old id's ledger mark in a slot file
+    // written meanwhile: given twice across sessions), and when nothing at all was added the record is undone, unless
+    // a save of the joined player's took it in during the adds (then the leftover is lost, never given twice).
+    {
+        std::lock_guard lk(g_mu);
+        const uint64_t tick = GetTickCount64();
+        for (const lpl::Share& s : due) {
+            if (!s.for_host) g_given_guest.push_back({s.id, tick});
+        }
+    }
+    const uint32_t gen = g_world_gen.load();
+    const uint32_t marks_before = g_guest_marks_runs.load();
+    std::vector<uint64_t> undo;  // the joined player's shares nothing of which was added
     std::vector<lpl::Share> rest;
-    std::vector<uint64_t> to_guest, host_got;
     static std::atomic<int> said{0};
     for (size_t i = 0; i < due.size(); ++i) {
         const lpl::Share& s = due[i];
@@ -1292,25 +1422,35 @@ void persist_give() {
                 left.n[left.kinds++] = s.n[k];
             }
         }
-        if (left.kinds < s.kinds) {
-            c_p_given.fetch_add(1);
-            if (!s.for_host) to_guest.push_back(s.id);  // what it got is on the ledger at its next save
-            else host_got.push_back(s.id);               // v3.1 (review B4)
-        }
+        if (left.kinds < s.kinds) c_p_given.fetch_add(1);
         if (left.kinds) {
-            if (left.kinds < s.kinds) left.id = next_share_id();  // the part it did not get lives on by itself
+            // the part it did not get lives on by itself: the host's under a new id (its gives are not recorded), the
+            // joined player's under its own (see above)
+            if (left.kinds < s.kinds && s.for_host) left.id = next_share_id();
             rest.push_back(left);
+            if (!s.for_host && left.kinds == s.kinds) undo.push_back(s.id);
         }
         if (left.kinds < s.kinds || said.fetch_add(1) < 20)
             log::info("Lootr: a kept share ({} at ({:.1f}, {:.1f}, {:.1f}), {} h old): 0x{:08X} is there: [{}]",
                       s.chest ? "a chest's" : "a world item", s.x, s.y, s.z, (now - s.made) / 3600, p.key, list);
+        // v4.3 (review of v4.2, finding 3): a load inside an add replaced the world: nothing of the old one comes back
+        // (the shares not reached yet were the old world's too; the joined player's are recorded: lost, never twice).
+        if (g_world_gen.load() != gen) return;
     }
     std::lock_guard lk(g_mu);
-    for (const lpl::Share& s : due) std::erase_if(g_near, [&](const lpl::Share& x) { return x.id == s.id; });
+    if (!undo.empty() && g_guest_marks_runs.load() == marks_before) {
+        // only the record made above (the last one of that id): an earlier give of the same share that did add some
+        // kinds keeps its own record
+        for (const uint64_t id : undo) {
+            for (auto it = g_given_guest.rbegin(); it != g_given_guest.rend(); ++it) {
+                if (it->id == id) {
+                    g_given_guest.erase(std::next(it).base());
+                    break;
+                }
+            }
+        }
+    }
     for (const lpl::Share& r : rest) near_add(r);
-    const uint64_t tick = GetTickCount64();
-    for (const uint64_t id : to_guest) g_given_guest.push_back({id, tick});
-    for (const uint64_t id : host_got) g_given_host.insert(id);
     g_near_n = static_cast<int>(g_near.size());
 }
 // A chest share that would be forgotten (its 3 hours, the list full) waits at its place instead, while armed.
@@ -1334,50 +1474,179 @@ void persist_given_guest(uint64_t id) noexcept {
     } catch (...) {
     }
 }
+// v4: every slot<N>.txt in the folder rewritten without the shares in `marks`, each read back to check; a file that
+// cannot be read, is not one this build reads, cannot be written or does not read back the same is set aside. The
+// server thread (as ledger_write, its only caller).
+void scrub_slot_files(const std::vector<lpl::Mark>& marks) {
+    if (marks.empty() || g_pdir.empty()) return;
+    std::unordered_set<uint64_t> ids;
+    for (const lpl::Mark& m : marks) ids.insert(m.id);
+    std::vector<uint32_t> slots;
+    WIN32_FIND_DATAW f;
+    HANDLE h = FindFirstFileExW((g_pdir + L"\\slot*.txt").c_str(), FindExInfoBasic, &f, FindExSearchNameMatch, nullptr, 0);
+    if (h != INVALID_HANDLE_VALUE) {
+        do {
+            if (f.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+            const std::wstring name = f.cFileName;  // slot<digits>.txt only (not .tmp / .stale / .unread)
+            if (name.size() < 9 || name.compare(0, 4, L"slot") != 0 || name.compare(name.size() - 4, 4, L".txt") != 0)
+                continue;
+            uint32_t n = 0;
+            bool digits = true;
+            for (size_t i = 4; i + 4 < name.size() && digits; ++i) {
+                digits = name[i] >= L'0' && name[i] <= L'9' && n < 100000000u;
+                if (digits) n = n * 10 + static_cast<uint32_t>(name[i] - L'0');
+            }
+            if (digits) slots.push_back(n);
+        } while (FindNextFileW(h, &f));
+        FindClose(h);
+    }
+    const int64_t now = unix_now();
+    for (const uint32_t slot : slots) {
+        std::string text;
+        DWORD e = 0;
+        const ReadResult r = read_small_file(slot_path(slot), text, e);
+        if (r == ReadResult::Missing || (r == ReadResult::Ok && text == kAsideLine)) continue;  // nothing / cleared
+        lpl::Rewrite w;
+        if (r == ReadResult::Ok) w = lpl::without_ids(text, ids, now);
+        if (r == ReadResult::Ok && w.ok && !w.changed) continue;  // it lists none of them
+        bool done = false;
+        if (r == ReadResult::Ok && w.ok && write_small_file(slot_path(slot), w.text) == 0) {
+            std::string back;
+            DWORD e2 = 0;
+            done = read_small_file(slot_path(slot), back, e2) == ReadResult::Ok && back == w.text;
+        }
+        if (done) {
+            if (const auto it = g_slot_ids.find(slot); it != g_slot_ids.end()) {
+                for (const uint64_t id : ids) it->second.erase(id);
+            }
+            c_p_scrubbed.fetch_add(1);
+            log::warn("Lootr: slot {}'s shares file rewritten without the share(s) the joined player saved (the ledger "
+                      "could not be written yet)", slot);
+        } else {
+            set_aside(slot, "it lists a share the joined player saved and could not be rewritten without it");
+        }
+    }
+}
+// v4.1 (review of v4, item 6): the ledger and its second copy (given_guest.bak, written right after it, both flushed),
+// their marks together: an OS crash can leave either one old, zeroed or missing, and a mark in either one counts.
+// v4.2 (review of v4.1, item 3): false (nothing trusted, lpl::ledger_trusted) when a copy exists but cannot be read now
+// (it may be the newer one), or when the only copy there is damaged. A cleared copy (kAsideLine: a .bak whose write
+// failed, see ledger_write) counts as none.
+bool read_ledger(lpl::Ledger& out, DWORD& err, int64_t now) {
+    out = lpl::Ledger{};
+    out.header_ok = true;
+    bool damaged = false, unreadable = false;
+    int good = 0;
+    for (const std::wstring& path : {ledger_path(), ledger_bak_path()}) {
+        std::string text;
+        DWORD e = 0;
+        const ReadResult r = read_small_file(path, text, e);
+        if (r == ReadResult::Missing || (r == ReadResult::Ok && text == kAsideLine)) continue;
+        if (r == ReadResult::Error) {
+            unreadable = true;
+            if (e) err = e;
+            continue;
+        }
+        const lpl::Ledger l = lpl::ledger_parse(text, now);
+        if (!l.header_ok) {
+            damaged = true;
+            continue;
+        }
+        ++good;
+        out.marks.insert(out.marks.end(), l.marks.begin(), l.marks.end());
+        out.bad_lines += l.bad_lines;
+    }
+    return lpl::ledger_trusted(good, damaged, unreadable);
+}
 // The ledger with `add` (and every mark still due) written; false = not written (they all stay due). Server thread.
 bool ledger_write(const std::vector<lpl::Mark>& add) {
     const int64_t now = unix_now();
     std::vector<lpl::Mark> all = g_ledger_due;
     all.insert(all.end(), add.begin(), add.end());
     if (all.empty()) return true;
-    std::string text;
+    lpl::Ledger l;
     DWORD e = 0, w = 0;
-    const ReadResult r = read_small_file(ledger_path(), text, e);
-    const lpl::Ledger l = r == ReadResult::Ok ? lpl::ledger_parse(text, now) : lpl::Ledger{};
-    if (r == ReadResult::Error || (r == ReadResult::Ok && !l.header_ok) ||
-        (w = write_small_file(ledger_path(), lpl::ledger_text(l.marks, all, now))) != 0) {
+    std::string text;
+    bool bak_ok = true;
+    if (read_ledger(l, e, now) &&
+        (w = write_small_file(ledger_path(), text = lpl::ledger_text(l.marks, all, now), true)) == 0) {
+        // The second copy. v4.2 (review of v4.1, item 3): one that could not be written must never be read alone
+        // later (it lacks these marks): deleted, or cleared in place (read as no copy); if neither works the marks stay
+        // due like a failed write (the next try writes both copies again).
+        if (const DWORD wb = write_small_file(ledger_bak_path(), text, true); wb != 0) {
+            const std::wstring bak = ledger_bak_path();
+            bool gone = DeleteFileW(bak.c_str()) != 0;
+            if (!gone) {
+                const DWORD de = GetLastError();
+                gone = de == ERROR_FILE_NOT_FOUND || de == ERROR_PATH_NOT_FOUND;
+            }
+            const bool cleared = !gone && blank_in_place(bak);
+            bak_ok = gone || cleared;
+            w = bak_ok ? 0 : wb;
+            static std::atomic<int> said_bak{0};
+            if (said_bak.fetch_add(1) < 3)
+                log::warn("Lootr: the ledger's second copy could not be written (error {}): {}", wb,
+                          gone      ? "removed (the ledger itself is written)"
+                          : cleared ? "cleared (the ledger itself is written)"
+                                    : "nor removed: the marks stay due");
+        }
+    }
+    if (e != 0 || w != 0 || !bak_ok || text.empty()) {
         g_ledger_due = std::move(all);
         g_ledger_due_n = g_ledger_due.size();
         g_ledger_retry = true;
-        // v3.1 (review B2): until these marks are on the ledger, a slot file listing one of them would give it again in
-        // a later session (the host may quit before the retry succeeds): those files are set aside now.
-        std::vector<uint32_t> slots;
-        for (const auto& [slot, ids] : g_slot_ids) {
-            for (const lpl::Mark& m : g_ledger_due) {
-                if (ids.count(m.id)) {
-                    slots.push_back(slot);
-                    break;
-                }
-            }
-        }
-        for (const uint32_t slot : slots) set_aside(slot, "a share the joined player saved is not on the ledger yet");
+        // v3.1 (review B2) / v4: until these marks are on the ledger, ANY slot file listing one of them (this session's
+        // or an earlier one's, which g_slot_ids does not know) would give it again in a later session (the host may
+        // quit before the retry succeeds): every slot file is rewritten without them, or set aside.
+        scrub_slot_files(g_ledger_due);
         c_p_failed.fetch_add(1);
+        // v4.3: the next try in 2, 4, 8, 16, 32, then every 60 s (a new save of the joined player tries at once)
+        g_ledger_fails = g_ledger_fails < 30 ? g_ledger_fails + 1 : 30;
+        const uint64_t wait_ms = g_ledger_fails >= 6 ? 60000ull : 2000ull << (g_ledger_fails - 1);
+        g_ledger_next_ms = GetTickCount64() + wait_ms;
         static std::atomic<int> said{0};
         if (said.fetch_add(1) < 20)
-            log::warn("Lootr: the ledger could NOT be written (read {} / write {}): its {} mark(s) are tried again every "
-                      "2 s", e, w, g_ledger_due.size());
+            log::warn("Lootr: the ledger could NOT be written (read {} / write {}): its {} mark(s) are tried again in "
+                      "{} s", e, w, g_ledger_due.size(), wait_ms / 1000);
         return false;
     }
-    c_p_ledger.fetch_add(add.size());
+    g_ledger_fails = 0;
+    g_ledger_next_ms = 0;
+    c_p_ledger.fetch_add(all.size());  // v4.2: marks written on a retry count too
     g_ledger_due.clear();
     g_ledger_due_n = 0;
     g_ledger_retry = false;
     return true;
 }
+// The joined player's save went through: the gives recorded before it go on the ledger (g_pmu held). v3: every give
+// recorded before this save (all on the server thread, as this call) is in it: each one whose share was ever in a slot
+// file or waits in a snapshot is marked; the others can never come back (no mark). A failed ledger write keeps the
+// marks due (persist_server_work tries again every 2 s).
+void guest_marks() {
+    g_guest_marks_runs.fetch_add(1);  // v4.4: persist_give undoes a record only when no save took it in meanwhile
+    const int64_t now = unix_now();
+    std::vector<lpl::Mark> add;
+    {
+        std::unordered_set<uint64_t> waiting;
+        for (const PendingSlot& p : g_pending) {
+            for (const lpl::Share& s : p.list) waiting.insert(s.id);
+        }
+        std::lock_guard lk(g_mu);
+        for (const GivenGuest& g : g_given_guest) {
+            if (g_filed.count(g.id) || waiting.count(g.id)) add.push_back({g.id, now});
+            else c_p_unfiled.fetch_add(1);
+        }
+        g_given_guest.clear();
+    }
+    if (!add.empty()) ledger_write(add);
+}
 // Lootr's entry (the server thread, every 2 s while armed with work): a failed write again, the waiting shares.
 void persist_server_work() noexcept {
     try {
-        if (!g_ledger_due.empty()) ledger_write({});
+        // v4.2: a joined player's save whose entry could not take the lock (pmu_take): its marks now (every give
+        // recorded so far: a give it did not save yet costs that share, never a second give).
+        if (g_guest_save_missed.exchange(false)) guest_marks();
+        if (!g_ledger_due.empty() && GetTickCount64() >= g_ledger_next_ms) ledger_write({});  // v4.3: backed off
         bool due = false;
         for (size_t i = 0; i < g_pending.size();) {
             PendingSlot& p = g_pending[i];
@@ -1389,9 +1658,28 @@ void persist_server_work() noexcept {
             ++i;
         }
         g_write_due = due;
-        persist_give();
+        // v4.1 (review of v4, item 2): only while armed. A ledger retry keeps this entry running after a load that could
+        // not arm, and the shares of the world before that load must not be given in this one.
+        if (g_armed.load()) persist_give();
     } catch (...) {
     }
+}
+// A host load: the world before it is gone, and so are its shares (g_pmu held). v4.1 (review of v4, item 2): before any
+// early return of a load that cannot arm (one that left them waiting, and a ledger retry kept giving them).
+void clear_world() {
+    g_armed = false;
+    g_world_gen.fetch_add(1);  // v4.3: a loop with adds running (a load inside an add) stops after them
+    {
+        std::lock_guard lk(g_mu);
+        g_taken.clear();
+        g_near.clear();
+        g_near_n = 0;
+    }
+    for (int k = 0; k < g_share_n; ++k) g_shares[k] = ChestShare{};
+    g_share_n = 0;
+    g_shares_pending = 0;
+    g_pending.clear();
+    g_write_due = false;
 }
 
 }  // namespace
@@ -1402,11 +1690,27 @@ void lootr_set_persist(bool on) { g_persist_on = on; }
 // B19 (lootr.h): the host loaded world slot N. The world is that save's now: what was taken since is not taken any
 // more (the in-memory shares go), and that save's own shares come back, less the ledger and what the joined player got
 // in this process. Arms the persistence (its hooks are live: this call came through them).
+// B19 v4.2 (review of v4.1, item 1): any load of the host's character, whatever its caller, first goes through
+// lootr_host_loading (before the game's call): it disarms and drops the old world's shares, so a save inside the load
+// writes nothing and a load that does not end here gives nothing of the old world. Only the character's own 3093 call
+// that went through ends here.
+void lootr_host_loading() noexcept {
+    if (!g_persist_on || !g_on) return;
+    g_armed = false;  // first, lock or not: nothing is given or written while not armed
+    try {
+        PmuLock plk(g_pmu, std::defer_lock);
+        if (!pmu_take(plk, "a host load")) return;  // its shares stay in memory, never given (not armed)
+        clear_world();
+    } catch (...) {
+    }
+}
 void lootr_host_loaded(uint32_t slot) noexcept {
     if (!g_persist_on || !g_on) return;
+    g_armed = false;
     try {
-        g_loaded_slot = slot;  // v3: called for the host CHARACTER's LoadSlot only (guest_save_host), once a load
-        g_loaded_at = GetTickCount64();
+        PmuLock plk(g_pmu, std::defer_lock);
+        if (!pmu_take(plk, "a host load's restore")) return;  // not armed: nothing kept across sessions in this world
+        clear_world();  // lootr_host_loading did it before the game's call; again (a give may have run since)
         const std::wstring coop = save_hooks_coop_dir();
         if (coop.empty()) {
             static bool said = false;
@@ -1415,21 +1719,30 @@ void lootr_host_loaded(uint32_t slot) noexcept {
                 log::warn("Lootr: lootr_persist is on, but this run saves in no co-op folder: nothing is kept across "
                           "sessions");
             }
-            g_armed = false;
+            return;
+        }
+        // v4.2 (review of v4.1, item 4): FAT32 (2 s) and exFAT (10 ms) file times cannot tell two saves apart.
+        if (!fine_file_times(coop)) {
+            static bool said = false;
+            if (!said) {
+                said = true;
+                log::warn("Lootr: lootr_persist is on, but the co-op folder's drive keeps coarse file times (not NTFS "
+                          "or ReFS): nothing is kept across sessions");
+            }
             return;
         }
         g_pdir = coop + L"\\cdmp_lootr";
-        std::string text, ledger;
+        std::string text;
         DWORD e1 = 0, e2 = 0;
         const ReadResult r1 = read_small_file(slot_path(slot), text, e1);
-        const ReadResult r2 = read_small_file(ledger_path(), ledger, e2);
         const int64_t now = unix_now();
-        const lpl::Ledger l = r2 == ReadResult::Ok ? lpl::ledger_parse(ledger, now) : lpl::Ledger{};
-        if (r1 == ReadResult::Error || r2 == ReadResult::Error || (r2 == ReadResult::Ok && !l.header_ok)) {
-            g_armed = false;  // nothing read, nothing written: a later run reads them as they are
+        lpl::Ledger l;
+        const bool ledger_ok = read_ledger(l, e2, now);
+        if (r1 == ReadResult::Error || !ledger_ok) {
+            // nothing read, nothing written: a later run reads them as they are
             log::warn("Lootr: slot {}'s shares or the ledger could not be read (errors {} / {}{}): nothing is kept "
                       "across sessions in this run", slot, e1, e2,
-                      r2 == ReadResult::Ok && !l.header_ok ? ", the ledger is not one this build reads" : "");
+                      ledger_ok ? "" : ", the ledger (or its copy) is unreadable or not one this build reads");
             return;
         }
         lpl::Parsed p;
@@ -1447,16 +1760,20 @@ void lootr_host_loaded(uint32_t slot) noexcept {
             log::warn("Lootr: slot {}'s shares file is not one this build reads: set aside (.unread), none restored",
                       slot);
         }
-        // A file older than the slot's own save files missed a later save of that slot: its shares are not that
-        // save's (losing them beats giving twice).
-        const int64_t saved = newest_save_time(coop, slot);
-        // v3.1 (review B3): no save files found for the slot = nothing to compare with: restore nothing. The stamp is the
-        // commit hook's clock; the game's own files may be written a little after it (60 s slack).
-        const bool stale = p.header_ok && (saved == 0 || (p.stamp > 0 && saved > p.stamp + 60));
+        // v4.1 (review of v4, item 1): the file's stamp is the slot's newest save-file time right after the save it was
+        // written for; the slot's files must show EXACTLY that now. Newer = a later save whose file is missing; older =
+        // older files put back (a restored backup, the game's own slotN_backup); none = nothing to compare with. In
+        // every such case nothing is restored (losing the shares beats giving them twice).
+        const int64_t saved = newest_save_ticks(coop, slot);
+        const bool stale = p.header_ok && !lpl::stamp_matches(p.stamp, saved);
         if (stale) {
             c_p_stale.fetch_add(1);
-            log::warn("Lootr: slot {}'s shares file (stamp {}) is older than that save ({}): not restored", slot,
-                      p.stamp, saved);
+            log::warn("Lootr: slot {}'s shares file (stamp {}) is not that save's (its files now: {}): not restored", slot,
+                      p.stamp,
+                      saved < 0     ? std::string("more than one account's saves in the co-op folder")
+                      : saved == 0  ? std::string("none found")
+                      : p.stamp <= 0 ? std::format("{}; the file has no stamp", saved)
+                                     : std::format("{}, {}", saved, saved > p.stamp ? "newer" : "older"));
         }
         std::vector<uint64_t> gone = lpl::ids_of(l.marks);
         std::vector<lpl::Share> back;
@@ -1468,101 +1785,113 @@ void lootr_host_loaded(uint32_t slot) noexcept {
             if (p.header_ok) {
                 for (const lpl::Share& s : p.shares) g_filed.insert(s.id);
             }
-            for (const uint64_t id : g_given_host) gone.push_back(id);  // v3.1 (review B4)
             if (p.header_ok && !stale) back = lpl::minus_ids(p.shares, gone);
-            g_taken.clear();
             g_near = back;
             g_near_n = static_cast<int>(g_near.size());
         }
-        for (int k = 0; k < g_share_n; ++k) g_shares[k] = ChestShare{};
-        g_share_n = 0;
-        g_shares_pending = 0;
-        g_pending.clear();
-        g_write_due = false;
         g_armed = true;
         g_tracking = true;
         c_p_read.fetch_add(back.size());
         int for_host = 0;
         for (const lpl::Share& s : back) for_host += s.for_host ? 1 : 0;
         log::info("Lootr: shares kept across sessions ARMED: the host loaded slot {}: {} share(s) wait at their place "
-                  "({} for the host, {} for the friend; in the file {}, on the ledger or given before {}, older than 30 "
-                  "days {}, unreadable lines {})",
+                  "({} for the host, {} for the friend; in the file {}{}, older than 30 days {}, unreadable lines {})",
                   slot, back.size(), for_host, back.size() - static_cast<size_t>(for_host), p.shares.size(),
-                  p.shares.size() - (stale ? p.shares.size() : back.size()), p.expired, p.bad_lines);
+                  stale ? std::string(", none restored: not that save's")
+                        : std::format(", on the ledger or given before {}", p.shares.size() - back.size()),
+                  p.expired, p.bad_lines);
     } catch (...) {
     }
 }
-// B19: the host saved world slot N: what each player is owed at this moment, for that slot's commit.
-void lootr_host_saved(uint32_t slot) noexcept {
-    if (!g_armed.load()) return;
+// B19 v4: the host saved world slot N and SavePlayerToSlot returned 0. The game writes that save's own files INSIDE the
+// call, on this (the server) thread, for an autosave and a manual save alike (the native base's
+// 5-guardado-anfitrion.md section 3; FlushPendingSaveData does no I/O and names a slot only for some autosaves, so v3's
+// commit point missed every manual save, review of v3.1). So what each player is owed at this moment goes to
+// slot<N>.txt now; a failed write sets the slot's old file aside at once and is tried again every 2 s (Lootr's entry)
+// with this snapshot, which stays the save's.
+// v4.1 (review of v4, item 1): the stamp is the slot's newest save-file time measured now (FILETIME ticks).
+// v4.2 (review of v4.1, item 2): compared with the same time measured BEFORE the game's call (lootr_host_saving):
+// the file is written only when the save moved the slot's files; when it did not, the existing file stays only if it
+// is stamped with exactly their time (else it would carry the stamp of files it does not belong to); anything else
+// sets it aside (lpl::after_save). Lock not free: nothing written (the slot's files moved: the old file is stale).
+int64_t lootr_host_saving(uint32_t slot) noexcept {
+    if (!g_armed.load()) return -1;
     try {
-        PendingSlot p;
-        p.slot = slot;
-        p.snap_ms = GetTickCount64();
-        p.list = persist_list();
-        for (PendingSlot& q : g_pending) {
-            if (q.slot == slot) {
-                q = std::move(p);
-                return;
-            }
-        }
-        g_pending.push_back(std::move(p));
+        return newest_save_ticks(save_hooks_coop_dir(), slot);
     } catch (...) {
+        return -1;
     }
 }
-// B19: the game committed world slot N: its snapshot goes to slot<N>.txt (a failed write is tried again every 2 s).
-void lootr_host_flushed(uint32_t slot) noexcept {
+void lootr_host_saved(uint32_t slot, int64_t before) noexcept {
     if (!g_armed.load()) return;
     try {
-        for (size_t i = 0; i < g_pending.size(); ++i) {
-            PendingSlot& p = g_pending[i];
-            if (p.slot != slot || p.committed) continue;
-            if (GetTickCount64() - p.snap_ms > 60000) {  // v3: what the slot holds may differ from the snapshot
-                c_p_late_commit.fetch_add(1);
-                set_aside(slot, "its commit came over 60 s after the snapshot");
-                g_pending.erase(g_pending.begin() + static_cast<std::ptrdiff_t>(i));
-                return;
-            }
-            p.committed = true;
-            p.stamp = unix_now();
-            if (persist_write_slot(p)) {
-                g_pending.erase(g_pending.begin() + static_cast<std::ptrdiff_t>(i));
-            } else {
-                g_write_due = true;
-            }
+        PmuLock plk(g_pmu, std::defer_lock);
+        if (!pmu_take(plk, "a host save")) return;
+        // (v4.4, the review of v4.3: no "only the loaded slot" rule: the host's saves go to other slots as a matter of
+        // course, autosaves rotating 0-2 and manual saves 100-108, and each must get its own shares file.)
+        const int64_t after = newest_save_ticks(save_hooks_coop_dir(), slot);
+        // v4.4 (review of v4.3, item 4): a save that did not move the slot's files while an earlier save's snapshot
+        // still waits to be written for them (its write failed; the old file was set aside then): the snapshot is
+        // still theirs and stays.
+        if (before >= 0 && after > 0 && after == before &&
+            std::any_of(g_pending.begin(), g_pending.end(),
+                        [&](const PendingSlot& q) { return q.slot == slot && q.stamp == after; })) {
+            c_p_unchanged.fetch_add(1);
             return;
         }
-        // v3.1 (review B3): a commit of this slot without a snapshot of that save (its SavePlayerToSlot unreadable or
-        // refused, another slot pending): the old file may list shares given since: set aside, and an older snapshot of
-        // this slot still waiting for its write is dropped (it would bring that file back).
+        int64_t stamp = 0;
+        {
+            std::string old;
+            DWORD e = 0;
+            if (read_small_file(slot_path(slot), old, e) == ReadResult::Ok) {
+                const lpl::Parsed was = lpl::from_text(old, unix_now());
+                if (was.header_ok) stamp = was.stamp;
+            }
+        }
+        const lpl::AfterSave what = lpl::after_save(before, after, stamp);
+        if (what == lpl::AfterSave::Keep) {
+            c_p_unchanged.fetch_add(1);
+            static std::atomic<int> said{0};
+            if (said.fetch_add(1) < 10)
+                log::info("Lootr: slot {}'s save did not change its files: its shares file stays as it is", slot);
+            return;
+        }
+        // an older save's snapshot still waiting for this slot: superseded (Write) or no longer the files' (SetAside)
         std::erase_if(g_pending, [&](const PendingSlot& q) { return q.slot == slot; });
-        set_aside(slot, "its commit came without a snapshot of that save");
+        if (what == lpl::AfterSave::SetAside) {
+            set_aside(slot, after < 0    ? "more than one account's saves in the co-op folder"
+                            : after == 0 ? "the slot's save files were not found after its save"
+                            : before < 0 ? "its save was not measured before the game's call"
+                            : after < before
+                                ? "the slot's save files went back during its save"
+                                : "its save did not change the slot's files, and the shares file is not theirs");
+            return;
+        }
+        PendingSlot p;
+        p.slot = slot;
+        p.list = persist_list();
+        p.committed = true;
+        p.stamp = after;
+        if (!persist_write_slot(p)) {
+            g_pending.push_back(std::move(p));
+            g_write_due = true;
+        }
     } catch (...) {
     }
 }
-// B19: the joined player's save went through: the shares it got (at least 1.5 s ago, so the add has run) go on the
-// ledger. Nothing is dropped until the ledger is written.
-// v3: every give recorded before this save (all on the server thread, as this call) is in it: each one whose share
-// was ever in a slot file or waits in a snapshot is marked; the others can never come back (no mark). A failed
-// ledger write keeps the marks due (persist_server_work tries again every 2 s).
+// B19 v4: no longer a commit point (see lootr_host_saved): nothing to do. Kept for guest_save_host's call.
+void lootr_host_flushed(uint32_t slot) noexcept { (void)slot; }
+// B19: the joined player's save went through: the shares it got go on the ledger (guest_marks). Nothing is dropped
+// until the ledger is written. v4.2: lock not free in 2 s: Lootr's next 2 s entry writes the marks.
 void lootr_guest_saved() noexcept {
     if (!g_tracking.load()) return;
     try {
-        const int64_t now = unix_now();
-        std::vector<lpl::Mark> add;
-        {
-            std::unordered_set<uint64_t> waiting;
-            for (const PendingSlot& p : g_pending) {
-                for (const lpl::Share& s : p.list) waiting.insert(s.id);
-            }
-            std::lock_guard lk(g_mu);
-            for (const GivenGuest& g : g_given_guest) {
-                if (g_filed.count(g.id) || waiting.count(g.id)) add.push_back({g.id, now});
-                else c_p_unfiled.fetch_add(1);
-            }
-            g_given_guest.clear();
+        PmuLock plk(g_pmu, std::defer_lock);
+        if (!pmu_take(plk, "the joined player's save")) {
+            g_guest_save_missed = true;
+            return;
         }
-        if (!add.empty()) ledger_write(add);
+        guest_marks();
     } catch (...) {
     }
 }
@@ -1585,7 +1914,17 @@ void lootr_set_body_share(bool on) { g_body_share_on = on; }
 
 void lootr_chest_shares(uintptr_t host_actor) noexcept {
     if (!g_on || !host_actor) return;
-    if (g_armed.load() || g_ledger_retry.load()) persist_server_work();  // B19
+    // v4.1: with lootr_persist on, this entry (which also walks g_shares, cleared by a host load) holds the persistence
+    // lock; with it off nothing here changes. v4.2: not free (a game hook's entry has it): this round is skipped.
+    PmuLock plock(g_pmu, std::defer_lock);  // (pl is the players' array below)
+    if (g_persist_on) {
+        try {
+            if (!plock.try_lock()) return;
+        } catch (...) {
+            return;
+        }
+    }
+    if (g_armed.load() || g_ledger_retry.load() || g_guest_save_missed.load()) persist_server_work();  // B19
     if (!g_share_n) return;
     PlayerAt pl[4];
     const int n = players_now(pl, 4);
@@ -1629,11 +1968,18 @@ void lootr_chest_shares(uintptr_t host_actor) noexcept {
             static BagSnap bag0, bag1;  // the server thread only
             const bool snap0 = snap_bag(pl[p].actor, bag0);
             std::string list;
+            sh.giving = true;  // B19 v4.2: a save inside an add below does not list this share
+            // B19 v4.3 (review of v4.2, finding 2): recorded as given BEFORE the adds (a save of the joined player's
+            // inside one then marks it; v4: the host's own gives are not recorded)
+            if (pl[p].key != kHostCharacter) persist_given_guest(sh.share_id);
+            const uint32_t gen = g_world_gen.load();
             for (int i = 0; i < sh.items; ++i) {
                 const int e = lootr_add_item(pl[p].holder, sh.item[i], static_cast<uint64_t>(sh.n[i]));
                 list += std::format("{}{} x{}{}", i ? ", " : "", sh.item[i], sh.n[i],
                                     e == 0 ? "" : std::format(" (NOT added, err {})", e));
             }
+            // B19 v4.3 (finding 3): a load inside an add emptied g_shares (clear_world): nothing here is valid now
+            if (g_world_gen.load() != gen) return;
             int64_t gained = -1;
             if (snap0 && snap_bag(pl[p].actor, bag1)) {
                 gained = 0;
@@ -1641,11 +1987,6 @@ void lootr_chest_shares(uintptr_t host_actor) noexcept {
                 for (int i = 0; i < bag0.slots; ++i) gained -= bag0.idx[i] != 0xFFFF && bag0.n[i] > 0 ? bag0.n[i] : 0;
             }
             (sh.body ? c_body_shared : c_chest_shared).fetch_add(1);
-            if (pl[p].key != kHostCharacter) persist_given_guest(sh.share_id);  // B19
-            else if (g_tracking.load() && sh.share_id) {                          // v3.1 (review B4)
-                std::lock_guard lk(g_mu);
-                g_given_host.insert(sh.share_id);
-            }
             if (sh.told && !sh.body) chest_event(2, pl[p].key, sh);
             static std::atomic<int> said_body{0};
             if (!sh.body || said_body.fetch_add(1) < 40)
@@ -1880,7 +2221,9 @@ void lootr_tick(std::vector<std::vector<uint8_t>>& to_server) noexcept {
     try {
         const uint64_t now = GetTickCount64();
         static uint64_t next_share = 0;
-        if ((g_shares_pending.load() > 0 || g_ledger_retry.load() ||
+        // v4.3 (review of v4.2, finding 1): a joined player's save that missed the lock needs this entry too (its marks
+        // are written there), even with nothing else waiting.
+        if ((g_shares_pending.load() > 0 || g_ledger_retry.load() || g_guest_save_missed.load() ||
              (g_armed.load() && (g_near_n.load() > 0 || g_write_due.load()))) &&
             now >= next_share) {  // the host's own request: the server thread
             next_share = now + 2000;
@@ -2034,12 +2377,13 @@ std::string lootr_describe() {
                        c_body_shared.load()) +
            (!g_persist_on ? std::string(" | kept across sessions: off")
                           : std::format(" | kept across sessions: {} | restored {} given {} waiting {} kept late {} | "
-                                        "slot files written {} failed {} stale {} set aside {} (late commits {}) | "
-                                        "ledger marks {} (due {}, unfiled gives {})",
+                                        "slot files written {} failed {} unchanged {} stale {} set aside {} (could not "
+                                        "{}) scrubbed {} | ledger marks {} (due {}, unfiled gives {}) | lock missed {}",
                                         g_armed.load() ? "armed" : "not armed yet", c_p_read.load(), c_p_given.load(),
                                         g_near_n.load(), c_p_late.load(), c_p_written.load(), c_p_failed.load(),
-                                        c_p_stale.load(), c_p_setaside.load(), c_p_late_commit.load(),
-                                        c_p_ledger.load(), g_ledger_due_n.load(), c_p_unfiled.load()));
+                                        c_p_unchanged.load(), c_p_stale.load(), c_p_setaside.load(),
+                                        c_p_aside_failed.load(), c_p_scrubbed.load(), c_p_ledger.load(),
+                                        g_ledger_due_n.load(), c_p_unfiled.load(), c_p_lock_missed.load()));
 }
 
 void lootr_host_recv(uint8_t* packet, uint16_t size) noexcept {

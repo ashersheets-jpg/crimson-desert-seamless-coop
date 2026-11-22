@@ -9,13 +9,16 @@
 // item as taken whoever took it.
 //
 // Files, in <co-op folder>\cdmp_lootr\ (lootr.cpp says when each is written and read):
-//   slot<N>.txt       the shares as of the host's save in slot N (snapshot at SavePlayerToSlot, written when the game
-//                     commits that slot), read when the host loads slot N: a save and its shares go together, so an
-//                     older save brings back its own shares with its own world.
+//   slot<N>.txt       the shares as of the host's save in slot N (written when the game's SavePlayerToSlot of that slot
+//                     returns, stamped with the slot's newest save-file time, FILETIME ticks), read when the host loads
+//                     slot N while the slot's files still show exactly that stamp: a save and its shares go together,
+//                     so an older save brings back its own shares with its own world.
 //   given_guest.txt   the ledger: ids of shares the joined player got AND then saved (its bag holds them now), written
-//                     at each of its saves; a slot file's share on the ledger is not given again.
+//                     at each of its saves (and given_guest.bak, its second copy); a slot file's share on the ledger
+//                     is not given again.
 // Text, one record per line, so a person can read them and a damaged line costs that line only:
 //   cdmp-lootr-shares 1
+//   stamp <FILETIME ticks>
 //   share <id hex> <host|guest> <item|chest> <x> <y> <z> <made, unix s> <kinds> <item key hex>*<count> ...
 //   cdmp-lootr-given 1
 //   given <id hex> <unix s>
@@ -68,9 +71,10 @@ inline std::string line_of(const Share& s) {
     return out;
 }
 
-// A slot file: the header, a comment, the stamp (unix s of the game's commit of that save: a load finds the slot's own
-// save files newer than it when the file missed a later save of that slot), then the usable shares not expired at
-// `now_unix`, in their order; at most kMaxShares (the first ones dropped: callers keep the oldest first).
+// A slot file: the header, a comment, the stamp (v4.1: the slot's newest save-file time in FILETIME ticks, measured
+// right after the save it was written for; a load restores the file only while the slot's files show exactly that,
+// stamp_matches), then the usable shares not expired at `now_unix`, in their order; at most kMaxShares (the first
+// ones dropped: callers keep the oldest first).
 inline std::string to_text(const std::vector<Share>& shares, int64_t now_unix, std::string_view note = {},
                            int64_t stamp = 0) {
     std::vector<const Share*> keep;
@@ -193,6 +197,29 @@ inline std::vector<Share> minus_ids(const std::vector<Share>& shares, const std:
     return out;
 }
 
+// v4: a slot file's text without the shares whose id is in `ids` (a failed ledger write: those shares were given and
+// saved, so no file may give them again). ok false: not a file this build reads (the caller sets it aside); changed
+// false: it lists none of them (the file stays as it is). The stamp is kept; expired and unreadable lines go.
+struct Rewrite {
+    bool ok = false, changed = false;
+    std::string text;
+};
+inline Rewrite without_ids(std::string_view text, const std::unordered_set<uint64_t>& ids, int64_t now_unix) {
+    Rewrite r;
+    const Parsed p = from_text(text, now_unix);
+    if (!p.header_ok) return r;
+    r.ok = true;
+    std::vector<Share> keep;
+    for (const Share& s : p.shares) {
+        if (ids.count(s.id)) r.changed = true;
+        else keep.push_back(s);
+    }
+    if (r.changed)
+        r.text = to_text(keep, now_unix, "rewritten without shares the joined player got and saved (a ledger write failed)",
+                         p.stamp);
+    return r;
+}
+
 // ---- the ledger (given_guest.txt)
 struct Mark {
     uint64_t id = 0;
@@ -237,6 +264,43 @@ inline std::vector<uint64_t> ids_of(const std::vector<Mark>& marks) {
     out.reserve(marks.size());
     for (const Mark& m : marks) out.push_back(m.id);
     return out;
+}
+
+// ---- v4.2 (the review of v4.1): the rules that decide which file still belongs to which save
+
+// At a host load of slot N: its file is that save's only while the slot's files show EXACTLY the file's stamp now
+// (`saved`: their newest write time, FILETIME ticks; 0 = none found, negative = not one account's). Newer = a later
+// save whose file is missing; older = older files put back; nothing to compare with: not that save's either.
+inline bool stamp_matches(int64_t file_stamp, int64_t saved) { return file_stamp > 0 && saved > 0 && saved == file_stamp; }
+
+// At a host save of slot N whose SavePlayerToSlot returned 0: `before` / `after` = the slot's newest save-file time
+// measured right before and right after the game's call (0 = no files, negative = not measured or not one account's),
+// `file_stamp` = the existing slot<N>.txt's stamp (0 = none, or not a file this build reads).
+//   Write: the save reached the slot's files (they moved past `before`): the snapshot taken now is that save's.
+//   Keep: they did not move and the existing file is stamped with exactly their time: it still matches them.
+//   SetAside: anything else (they did not move and the file is not theirs: it would be stamped with files it does not
+//   belong to, review item 2; they went back; none after the save; not measured).
+enum class AfterSave : uint8_t { Write, Keep, SetAside };
+inline AfterSave after_save(int64_t before, int64_t after, int64_t file_stamp) {
+    if (before < 0 || after <= 0) return AfterSave::SetAside;
+    if (after > before) return AfterSave::Write;
+    if (after == before && file_stamp == after) return AfterSave::Keep;
+    return AfterSave::SetAside;
+}
+inline const char* after_save_name(AfterSave a) {
+    switch (a) {
+        case AfterSave::Write: return "write";
+        case AfterSave::Keep: return "keep";
+        case AfterSave::SetAside: return "set aside";
+    }
+    return "?";
+}
+
+// The ledger's two copies read together (review item 3). A copy that exists but cannot be read NOW (a lock, an
+// error) may be the newer one: nothing is trusted. A damaged copy (another first line) is left out while the other one
+// reads; with neither readable and one damaged, nothing is trusted. Both missing: an empty ledger (trusted).
+inline bool ledger_trusted(int good_copies, bool damaged, bool unreadable) {
+    return !unreadable && (good_copies > 0 || !damaged);
 }
 
 // Share ids: the session's start (unix s) in the high bits, a counter in the low 20 (unique across the sessions of

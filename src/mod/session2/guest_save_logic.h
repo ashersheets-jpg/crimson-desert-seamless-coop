@@ -459,9 +459,13 @@ inline Owner classify_owner(const UserFacts& f) {
 }
 
 // The three callers of LoadSlot 0x186F570 (all of them: xref scan of the exe), by return address.
-inline constexpr uint64_t kRetUserLogin = 0x2C17886;      // UserLogin 2490 0x2C17520, call at 0x2C17881
-inline constexpr uint64_t kRetLobby3093 = 0x2C3E1D3;      // 3093 0x2C3E030, the lobby reload, call at 0x2C3E1CE
-inline constexpr uint64_t kRetCharacter3093 = 0x1042ABF8; // 3093, .xtls 0x1042AAF0 (SetupCharacter), call at 0x1042ABF3
+// 2026-11-21 (the 3732 port audit): every return below is 3732's = its call site in guest_save_host.cpp kCallSites + 5
+// (static_assert there; the port had moved the call sites but not these, so every caller read "OTHER"). A login on
+// 3732: exe+0x2F28800 the user actor, exe+0x2F4F576 the user actor, exe+0xE274364 the character (cs86f, pp43-fresh).
+// 2976's in brackets.
+inline constexpr uint64_t kRetUserLogin = 0x2F28800;      // UserLogin 2490, call at 0x2F287FB [2976: 0x2C17886]
+inline constexpr uint64_t kRetLobby3093 = 0x2F4F576;      // 3093, the lobby reload, call at 0x2F4F571 [0x2C3E1D3]
+inline constexpr uint64_t kRetCharacter3093 = 0xE274364;  // 3093, SetupCharacter, call at 0xE27435F [0x1042ABF8]
 enum class LoadCaller : uint8_t { UserLogin, Lobby3093, Character3093, Other };
 inline LoadCaller load_caller(uint64_t return_rva) {
     if (return_rva == kRetUserLogin) return LoadCaller::UserLogin;
@@ -479,9 +483,10 @@ inline const char* load_caller_name(LoadCaller c) {
     return "?";
 }
 
-// The two callers of SavePlayerToSlot 0x186E450.
-inline constexpr uint64_t kRetAutosave = 0xCBD86D3;   // .xtls 0xCBD84D0 (via 0x186E1A0, the 2077 timer), call at 0xCBD86CE
-inline constexpr uint64_t kRetManual2910 = 0x103BE99F; // .xtls 0x103BE8E0 (SaveToFileCurrentPlayerReq 2910), call at 0x103BE99A
+// The two callers of SavePlayerToSlot 0x186E450 (3732's, kCallSites + 5, in the order kCallSites gives them;
+// pp40-newsave: the game's start-of-game saves came from 0xB6A4AA5, the flush after them from 0xE584ACD).
+inline constexpr uint64_t kRetAutosave = 0xB6A4AA5;    // the 2077 timer's, call at 0xB6A4AA0 [2976: 0xCBD86D3]
+inline constexpr uint64_t kRetManual2910 = 0xE214B65;  // SaveToFileCurrentPlayerReq 2910, call at 0xE214B60 [0x103BE99F]
 enum class SaveCaller : uint8_t { Autosave, Manual2910, Other };
 inline SaveCaller save_caller(uint64_t return_rva) {
     if (return_rva == kRetAutosave) return SaveCaller::Autosave;
@@ -497,9 +502,9 @@ inline const char* save_caller_name(SaveCaller c) {
     return "?";
 }
 
-// The two callers of FlushPendingSaveData 0x1871930 (probe only).
-inline constexpr uint64_t kRetFlushLogout = 0x28F273F;  // the character's logout phase 0x28F26C0, call at 0x28F273A
-inline constexpr uint64_t kRetFlushTimer = 0x108393CD;  // .xtls 0x10839370, call at 0x108393C8
+// The two callers of FlushPendingSaveData 0x1871930 (probe only; 3732's, kCallSites + 5).
+inline constexpr uint64_t kRetFlushLogout = 0x2BC548F;  // the character's logout phase, call at 0x2BC548A [0x28F273F]
+inline constexpr uint64_t kRetFlushTimer = 0xE584ACD;   // the flush timer, call at 0xE584AC8 [0x108393CD]
 inline const char* flush_caller_name(uint64_t return_rva) {
     if (return_rva == kRetFlushLogout) return "logout phase";
     if (return_rva == kRetFlushTimer) return "flush timer";

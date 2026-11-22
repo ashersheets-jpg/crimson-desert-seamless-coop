@@ -109,6 +109,24 @@ int main() {
         CHECK(left.size() == 2 && left[0].id == 1 && left[1].id == 3);
         CHECK(lpl::minus_ids(saved, {}).size() == 3);
     }
+    // v4: a slot file rewritten without the shares of a failed ledger write: the others and the stamp kept; a file
+    // listing none of them unchanged; another format refused.
+    {
+        const std::vector<lpl::Share> saved{item_share(1, false, 0x10, 1), item_share(2, true, 0x20, 1),
+                                            item_share(3, false, 0x30, 1)};
+        const std::string t = lpl::to_text(saved, kNow, "slot 4", kNow - 7);
+        const lpl::Rewrite w = lpl::without_ids(t, {3, 9}, kNow);
+        CHECK(w.ok && w.changed);
+        const lpl::Parsed p = lpl::from_text(w.text, kNow);
+        CHECK(p.header_ok && p.stamp == kNow - 7 && p.shares.size() == 2 && p.shares[0].id == 1 && p.shares[1].id == 2);
+        const lpl::Rewrite same = lpl::without_ids(t, {9}, kNow);
+        CHECK(same.ok && !same.changed && same.text.empty());
+        CHECK(!lpl::without_ids("cdmp-lootr-set-aside 1\n", {1}, kNow).ok);
+        CHECK(!lpl::without_ids(lpl::ledger_text({}, {{1, kNow}}, kNow), {1}, kNow).ok);  // the ledger is not a slot file
+        const lpl::Rewrite all = lpl::without_ids(t, {1, 2, 3}, kNow);
+        CHECK(all.ok && all.changed && lpl::from_text(all.text, kNow).shares.empty() &&
+              lpl::from_text(all.text, kNow).header_ok);
+    }
     // The ledger: written, read back, no id twice, old marks and bad lines left out, the cap.
     {
         const std::vector<lpl::Mark> old{{0x11, kNow - 100}, {0x12, kNow - lpl::kLedgerSeconds - 5}};
@@ -124,6 +142,34 @@ int main() {
         for (uint64_t i = 1; i <= lpl::kMaxMarks + 3; ++i) many.push_back({i, kNow});
         const lpl::Ledger capped = lpl::ledger_parse(lpl::ledger_text({}, many, kNow), kNow);
         CHECK(capped.marks.size() == lpl::kMaxMarks && capped.marks.front().id == 4);
+    }
+    // v4.2: which file still belongs to which save (the review of v4.1, items 2 and 3).
+    {
+        using lpl::AfterSave;
+        CHECK(lpl::stamp_matches(500, 500));
+        CHECK(!lpl::stamp_matches(500, 501) && !lpl::stamp_matches(501, 500));  // a newer save / older files put back
+        CHECK(!lpl::stamp_matches(0, 0) && !lpl::stamp_matches(0, 500) && !lpl::stamp_matches(500, 0));
+        CHECK(!lpl::stamp_matches(500, -1));                                    // two accounts' saves in the folder
+        CHECK(lpl::after_save(0, 500, 0) == AfterSave::Write);      // the slot's first save
+        CHECK(lpl::after_save(400, 500, 400) == AfterSave::Write);  // the save wrote its files
+        CHECK(lpl::after_save(400, 500, 0) == AfterSave::Write);    // ... whatever the old file was
+        CHECK(lpl::after_save(500, 500, 500) == AfterSave::Keep);   // it wrote nothing: the old file still matches
+        CHECK(lpl::after_save(500, 500, 400) == AfterSave::SetAside);  // it wrote nothing, the old file is not theirs
+        CHECK(lpl::after_save(500, 500, 0) == AfterSave::SetAside);    // ... or there is none
+        CHECK(lpl::after_save(500, 400, 500) == AfterSave::SetAside);  // the files went back
+        CHECK(lpl::after_save(500, 0, 500) == AfterSave::SetAside);    // no files after the save
+        CHECK(lpl::after_save(-1, 500, 500) == AfterSave::SetAside);   // not measured before
+        CHECK(lpl::after_save(400, -1, 400) == AfterSave::SetAside);   // two accounts' saves in the folder
+        CHECK(lpl::after_save(0, 0, 0) == AfterSave::SetAside);        // no files before or after
+        CHECK(std::string(lpl::after_save_name(AfterSave::Keep)) == "keep");
+        CHECK(std::string(lpl::after_save_name(AfterSave::Write)) == "write");
+        CHECK(std::string(lpl::after_save_name(AfterSave::SetAside)) == "set aside");
+        CHECK(lpl::ledger_trusted(0, false, false));   // no ledger yet
+        CHECK(lpl::ledger_trusted(2, false, false));   // both copies
+        CHECK(lpl::ledger_trusted(1, true, false));    // one damaged, the other reads
+        CHECK(!lpl::ledger_trusted(0, true, false));   // the only one there is damaged
+        CHECK(!lpl::ledger_trusted(1, false, true));   // one cannot be read now: it may be the newer one
+        CHECK(!lpl::ledger_trusted(0, false, true));
     }
     // Ids: distinct per counter, distinct between sessions a second apart, never 0.
     {
