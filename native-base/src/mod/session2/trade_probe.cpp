@@ -791,10 +791,6 @@ void death_penalty_run(uintptr_t base, uintptr_t actor, uint32_t me, uint32_t de
         if (x.idx == 0xFFFF || x.n <= 0) continue;
         const uint32_t key = item_key_at(base, x.idx);
         line += std::format(" | slot {}: key {} '{}' x{}", k, key, item_name_at(base, x.idx), x.n);
-        if (want && key == want && at < 0) {
-            at = k;
-            have = x.n;
-        }
     }
     log::info("DeathPenalty: {} (0x{:08X}) got up after death {} ({} %): money pouch (inventory {}, {} slots){}", who,
               me, death_no, pct, money, slots, line.empty() ? std::string(" | empty") : line);
@@ -802,15 +798,34 @@ void death_penalty_run(uintptr_t base, uintptr_t actor, uint32_t me, uint32_t de
         log::info("DeathPenalty: no money item set ([session2] death_penalty_item): nothing removed");
         return;
     }
+    // 2026-11-22 (cs97): the "Money" pouch (the manager's first index) holds the camp money and the contributions
+    // only. The coins are item key 1 (the arm-wrestling prize's AddItemToInventoryAck names item 1, reason 0x4413),
+    // kept in another of the character's inventories: every inventory of the manager's list is searched for the item.
+    uint16_t inv = 0xFFFF;
+    for (int i = 0; i < 24 && at < 0; ++i) {
+        uint16_t idx = 0xFFFF;
+        if (!game::fast_read(mgr + 0x78 + i * 2, &idx, 2) || idx == 0xFFFF) continue;
+        const int16_t n_slots = inventory_slots(holder, idx);
+        for (int16_t k = 0; k < n_slots && k < 512; ++k) {
+            const StashSlot x = stash_slot(base, holder, idx, static_cast<uint16_t>(k));
+            if (x.idx == 0xFFFF || x.n <= 0 || item_key_at(base, x.idx) != want) continue;
+            inv = idx;
+            at = k;
+            have = x.n;
+            log::info("DeathPenalty: {}'s item {} ('{}') is in inventory {} (the manager's list entry {}), slot {}: x{}",
+                      who, want, item_name_at(base, x.idx), idx, i, k, have);
+            break;
+        }
+    }
     if (at < 0) {
-        log::info("DeathPenalty: {} holds no item {}: nothing removed", who, want);
+        log::info("DeathPenalty: {} holds no item {} in any inventory: nothing removed", who, want);
         return;
     }
     const int64_t n = dp::share(have, pct);
-    const int e = n > 0 ? penalty_remove(base, actor, money, static_cast<uint16_t>(at), n) : 0;
-    const StashSlot after = stash_slot(base, holder, money, static_cast<uint16_t>(at));
-    log::info("DeathPenalty: {} lost {} of its {} (item {}, {} %): err {} ({}); the slot now holds {}", who, n, have,
-              want, pct, e, err_name(e), after.idx == 0xFFFF ? 0 : after.n);
+    const int e = n > 0 ? penalty_remove(base, actor, inv, static_cast<uint16_t>(at), n) : 0;
+    const StashSlot after = stash_slot(base, holder, inv, static_cast<uint16_t>(at));
+    log::info("DeathPenalty: {} lost {} of its {} (item {}, inventory {}, {} %): err {} ({}); the slot now holds {}",
+              who, n, have, want, inv, pct, e, err_name(e), after.idx == 0xFFFF ? 0 : after.n);
 }
 
 int* __fastcall worker_detour(uintptr_t self, int* err, uint32_t item, uint16_t b, uint64_t count, uint32_t* giver,
