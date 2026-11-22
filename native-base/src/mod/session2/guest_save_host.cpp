@@ -23,6 +23,7 @@
 #include "mod/session2/guest_save_wire.h"
 #include "mod/session2/host_save_export.h"
 #include "mod/session2/identity_probe.h"
+#include "mod/session2/lootr.h"
 #include "mod/session2/offsets_s2.h"
 #include "mod/session2/save_hooks.h"
 #include "mod/session2/server.h"
@@ -76,6 +77,14 @@ constexpr CallSite kCallSites[] = {
     {0xB6A4AA0, kSave},     {0xE214B60, kSave},                               // autosave, 2910
     {0x2BC548A, kFlush},    {0xE584AC8, kFlush},                              // logout phase, flush timer
 };
+// 2026-11-21 (the 3732 port audit): the decisions' return addresses (guest_save_logic.h) are these call sites + 5.
+static_assert(kCallSites[0].at + 5 == gsv::kRetUserLogin && kCallSites[1].at + 5 == gsv::kRetLobby3093 &&
+                  kCallSites[2].at + 5 == gsv::kRetCharacter3093,
+              "LoadSlot's callers: gsv::kRet* must be kCallSites + 5");
+static_assert(kCallSites[3].at + 5 == gsv::kRetAutosave && kCallSites[4].at + 5 == gsv::kRetManual2910,
+              "SavePlayerToSlot's callers: gsv::kRet* must be kCallSites + 5");
+static_assert(kCallSites[5].at + 5 == gsv::kRetFlushLogout && kCallSites[6].at + 5 == gsv::kRetFlushTimer,
+              "FlushPendingSaveData's callers: gsv::kRet* must be kCallSites + 5");
 struct ErrorSite {
     uintptr_t at, global;
     const char* what;
@@ -882,11 +891,25 @@ int* __fastcall load_slot_detour(uintptr_t mgr, int* res, uint32_t slot, uintptr
         return res;
     }
     if (d.action == Action::Remap) c_load_remapped.fetch_add(1, std::memory_order_relaxed);
+    // B19 v4.2 (review of v4.1, item 1): ANY load of the host's character (whatever its caller) replaces the world:
+    // the persistence disarms and the old world's shares go before the game's call (a save inside the load then writes
+    // nothing); only the character's own 3093 call below restores a slot's shares and arms again.
+    // (v4.4, the review of v4.3: not an unidentified owner's load: in the guest save's probe and off modes that is
+    // usually the joined player's own character, and it must not drop the host's world state.)
+    if (owner == Owner::Host && !self) lootr_host_loading();
     // Review item 3: the slot phase in 0x20688A0 runs only inside this call, for this actor, when remapped.
     const LoadSlotCall outer = t_load_slot;
     t_load_slot = {outer.depth + 1, actor, d.action == Action::Remap};
     int* r = g_h_load_slot.unsafe_call<int*>(mgr, res, d.slot, actor);
     t_load_slot = outer;
+    // B19 v3: armed once per world load, at the host CHARACTER's LoadSlot (the user actor's login / lobby calls of the
+    // same load come first and do not arm).
+    // v4.1 (review of v4, item 5): only the character's own 3093 call (an "OTHER" load never restores a slot's shares).
+    if (owner == Owner::Host && !self && caller == gsv::LoadCaller::Character3093 && d.action != Action::Remap &&
+        hsv::slot_whitelisted(d.slot)) {
+        int32_t code = -1;
+        if (peek(reinterpret_cast<uintptr_t>(r), code) && code == 0) lootr_host_loaded(d.slot);  // B19
+    }
     if (user2_on) {
         int32_t code = -1;
         if (!peek(reinterpret_cast<uintptr_t>(r), code)) code = -1;
@@ -964,6 +987,10 @@ int* __fastcall save_detour(uintptr_t mgr, int* res, uint32_t slot, uintptr_t ch
         return res;
     }
     if (d.action == Action::Remap) c_save_remapped.fetch_add(1, std::memory_order_relaxed);
+    // B19 v4.2 (review of v4.1, item 2): the slot's save-file time before the game's call (-1: not armed), to tell
+    // whether this save reached the slot's files.
+    const bool lootr_slot = owner == Owner::Host && d.action != Action::Remap && hsv::slot_whitelisted(d.slot);
+    const int64_t lootr_before = lootr_slot ? lootr_host_saving(d.slot) : -1;
     int* r = nullptr;
     {
         // An SEH unwind through here would leave the depth raised: later saves on this thread then read as nested
@@ -978,6 +1005,7 @@ int* __fastcall save_detour(uintptr_t mgr, int* res, uint32_t slot, uintptr_t ch
     ev.result = code;
     ev.redirect_failed = save_hooks_redirect_failed();
     host_save_observe_save(ev);
+    if (code_ok && code == 0 && lootr_slot) lootr_host_saved(d.slot, lootr_before);  // B19
     try {
         if (logged) {
             log::info("Session2 guest save probe: SavePlayerToSlot from {} character 0x{:X} slot {} returned {}",
@@ -992,6 +1020,7 @@ int* __fastcall save_detour(uintptr_t mgr, int* res, uint32_t slot, uintptr_t ch
                           code_ok ? std::format("0x{:X}", static_cast<uint32_t>(code)) : std::string("unreadable"));
             } else if (export_slot(caller, slot, why)) {
                 c_exported.fetch_add(1);
+                lootr_guest_saved();  // B19
             } else {
                 c_export_failed.fetch_add(1);
                 log::error("Session2 guest save: user 2's save to {} succeeded but the export FAILED: {}", g_slot_name,
@@ -1021,6 +1050,10 @@ int* __fastcall flush_detour(uintptr_t mgr, int* res, uintptr_t character, uint6
     {
         const DepthScope depth;
         r = g_h_flush.unsafe_call<int*>(mgr, res, character, counter, opts, slot_out);
+    }
+    if (owner == Owner::Host && pending_ok && pending >= 0 && hsv::slot_whitelisted(static_cast<uint32_t>(pending))) {
+        int32_t code = -1;
+        if (peek(reinterpret_cast<uintptr_t>(r), code) && code == 0) lootr_host_flushed(static_cast<uint32_t>(pending));
     }
     try {
         // P8 S35 phase E: the journal's event. The committed slot is not recorded: with nothing pending the game does

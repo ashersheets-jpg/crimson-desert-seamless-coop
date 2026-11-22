@@ -68,6 +68,9 @@ std::string save_hooks_redirect_describe();
 // P8 session 25 (guest_save_host.h), redirect mode only.
 // The sandbox root as the hooks write it (empty unless redirecting).
 std::wstring save_hooks_sandbox_dir();
+// B19 (lootr_persist): the co-op folder this run saves in (the sandbox when a co-op folder was set before the install);
+// empty without one (a plain sandbox is rotated every run: nothing kept there would last).
+std::wstring save_hooks_coop_dir();
 // Calls failed because a path under the folder could not be rewritten (the
 // line's "FAILED n"; 0 = healthy).
 uint64_t save_hooks_redirect_failed();

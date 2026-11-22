@@ -416,6 +416,11 @@ cdmp_strict(cdmp_tests_optd_fog_share)
 target_link_libraries(cdmp_tests_optd_fog_share PRIVATE cdmp_common)
 add_test(NAME optd_fog_share COMMAND cdmp_tests_optd_fog_share)
 
+add_executable(cdmp_tests_optd_lootr_persist tests/optd_lootr_persist_tests.cpp)
+cdmp_strict(cdmp_tests_optd_lootr_persist)
+target_link_libraries(cdmp_tests_optd_lootr_persist PRIVATE cdmp_common)
+add_test(NAME optd_lootr_persist COMMAND cdmp_tests_optd_lootr_persist)
+
 add_executable(cdmp_tests_optd_story_gate tests/optd_story_gate_tests.cpp)
 cdmp_strict(cdmp_tests_optd_story_gate)
 target_link_libraries(cdmp_tests_optd_story_gate PRIVATE cdmp_common)

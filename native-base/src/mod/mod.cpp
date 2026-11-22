@@ -1261,6 +1261,7 @@ DWORD WINAPI worker(LPVOID) {
             session2::shop_twin_set_watch(cfg.s2_twin_watch);  // research (host), empty = off
             session2::shop_twin_set_extra(cfg.s2_twin_extra);  // research (guest, B14), empty = off
             session2::shop_twin_set_early_x(cfg.s2_early_state_x);  // research (guest), off
+            session2::shop_twin_set_extra_only(cfg.s2_twin_extra_only);  // research (guest, B14), off
             session2::shop_twin_share_all(cfg.s2_dialog_share_all);
             session2::shop_twin_redeliver(cfg.s2_dialog_redeliver);
             session2::stage_candidate_guard_start(cfg.s2_stage_candidate_guard);
@@ -1273,6 +1274,7 @@ DWORD WINAPI worker(LPVOID) {
             if (!cfg.s2_guest && cfg.s2_guest_x_research) session2::guest_x_interaction_host_probe_start();  // research
             session2::lootr_set_chests(cfg.s2_lootr_chests);
             session2::lootr_set_body_share(cfg.s2_lootr_body_share);
+            session2::lootr_set_persist(cfg.s2_lootr_persist);
             session2::lootr_start(cfg.s2_lootr, cfg.s2_lootr_probe, cfg.s2_guest, cfg.s2_lootr_bodies);
             session2::lootr_set_kill_hits(cfg.s2_guest ? 0 : cfg.s2_lootr_kill_hits);
             session2::handle_guard_start();  // both roles (tcB342)

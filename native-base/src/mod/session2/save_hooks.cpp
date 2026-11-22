@@ -1482,6 +1482,10 @@ bool save_hooks_redirecting() { return redirecting(); }
 
 std::wstring save_hooks_sandbox_dir() { return redirecting() && g_redir ? g_redir->sandbox() : std::wstring(); }
 
+std::wstring save_hooks_coop_dir() {
+    return redirecting() && g_redir && !g_coop_dir.empty() ? g_redir->sandbox() : std::wstring();
+}
+
 uint64_t save_hooks_redirect_failed() { return g_redir_failed.load(std::memory_order_relaxed); }
 
 bool save_hooks_watch_folder(const std::wstring& sandbox_folder) {

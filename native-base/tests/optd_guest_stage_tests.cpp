@@ -131,12 +131,17 @@ void test_branch_parse_and_corr() {
     if (host && guest) {
         CHECK(gsd::corr_token(obs::kOpBranch, host->actor, host->seq, host->value) ==
               gsd::corr_token(obs::kOpBranch, guest->actor, guest->seq, guest->value));
-        CHECK(gsd::corr_token(obs::kOpBranch, guest->actor, guest->seq, guest->value) == "corr=2981:A0100001:0x164:0x1");
+        // 2026-11-21: the token carries the logic's own (3732) opcode; 2976's were 2981 / 2661 / 2322.
+        CHECK(gsd::corr_token(obs::kOpBranch, guest->actor, guest->seq, guest->value) ==
+              "corr=" + std::to_string(obs::kOpBranch) + ":A0100001:0x164:0x1");
     }
-    CHECK(gsd::corr_token(obs::kOpPrepare, 0xA0100001u, 0x13, 8) == "corr=2661:A0100001:0x13:0x8");
+    CHECK(gsd::corr_token(obs::kOpPrepare, 0xA0100001u, 0x13, 8) ==
+          "corr=" + std::to_string(obs::kOpPrepare) + ":A0100001:0x13:0x8");
     const auto m = obs::parse_milestone_payload(payload_of(unhex(kM794)));
     CHECK(m && *m == 0xA0100001u);
-    CHECK(gsd::corr_token(obs::kOpMilestone, *m, 0, 0) == "corr=2322:A0100001:0x0:0x0");
+    if (m)
+        CHECK(gsd::corr_token(obs::kOpMilestone, *m, 0, 0) ==
+              "corr=" + std::to_string(obs::kOpMilestone) + ":A0100001:0x0:0x0");
     CHECK(!gsd::parse_branch(std::span<const uint8_t>()).has_value());
 }
 

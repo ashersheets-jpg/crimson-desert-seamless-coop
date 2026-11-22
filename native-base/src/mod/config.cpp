@@ -353,6 +353,7 @@ Config load_config(const std::wstring& ini_path) {
     c.s2_twin_watch = narrow(read_string(ini_path, L"session2", L"twin_watch", ""));
     c.s2_twin_extra = narrow(read_string(ini_path, L"session2", L"twin_extra", ""));
     c.s2_early_state_x = read_uint(ini_path, L"session2", L"early_state_x", 0) != 0;
+    c.s2_twin_extra_only = static_cast<int>(read_uint(ini_path, L"session2", L"twin_extra_only", 0));
     c.s2_dialog_share_all = read_uint(ini_path, L"session2", L"dialog_share_all", 0) != 0;
     c.s2_dialog_redeliver = read_uint(ini_path, L"session2", L"dialog_redeliver", 0) != 0;
     c.s2_stage_candidate_guard = read_uint(ini_path, L"session2", L"stage_candidate_guard", 1) != 0;
@@ -363,6 +364,7 @@ Config load_config(const std::wstring& ini_path) {
     c.s2_lootr_bodies = read_uint(ini_path, L"session2", L"lootr_bodies", 0) != 0;
     c.s2_lootr_chests = read_uint(ini_path, L"session2", L"lootr_chests", 1) != 0;
     c.s2_lootr_body_share = read_uint(ini_path, L"session2", L"lootr_body_share", 1) != 0;
+    c.s2_lootr_persist = read_uint(ini_path, L"session2", L"lootr_persist", 0) != 0;
     c.s2_ai_handoff = narrow(read_string(ini_path, L"session2", L"ai_handoff", "0"));
     c.s2_ai_handoff_fight = read_uint(ini_path, L"session2", L"ai_handoff_fight", c.s2_ai_handoff_fight ? 1 : 0) != 0;
     c.s2_ai_handoff_catch = read_uint(ini_path, L"session2", L"ai_handoff_catch", c.s2_ai_handoff_catch ? 1 : 0) != 0;

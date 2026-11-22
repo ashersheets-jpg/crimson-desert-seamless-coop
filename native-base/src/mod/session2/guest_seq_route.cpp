@@ -1089,6 +1089,38 @@ How owner_of(Point p, const Config& lc) {
 }
 
 void install_sched(std::span<const gad::Section> secs) {
+    const auto mode = static_cast<gsr::Mode>(g_sched_mode.load());
+    // §11: the stage teardown guard (only with guest_sched_route=1: in probe nothing goes into X).
+    // 2026-11-21 (the 3732 port audit, docs/research/port-gaps-3732.md item 7): installed FIRST, and without it
+    // nothing is routed. Its code is 2976's (byte-checked) while the points below were ported: they would route
+    // stages into another character's X with no guard for X's teardown (a use-after-free).
+    if (mode == gsr::Mode::On) {
+        static constexpr uint8_t kTearBytes[] = {0x48, 0x8B, 0x01, 0x41, 0xB0, 0x06, 0xFF, 0x50,
+                                                 0x60, 0x4C, 0x8D, 0xB7, 0x80, 0x01, 0x00, 0x00};  // 0x43B0B6
+        static constexpr uint8_t kTearWake[] = {0x48, 0x8D, 0x57, 0x58, 0x41, 0xBF, 0xFF, 0xFF, 0xFF, 0xFF,
+                                                0x44, 0x39, 0x3A, 0x74, 0x0D, 0x48, 0x8B, 0x4F, 0x28};  // 0x43B0A3
+        static constexpr uint8_t kTearEntry[] = {0x48, 0x89, 0x5C, 0x24, 0x20, 0x48, 0x89, 0x4C, 0x24, 0x08};  // 0x43AE50
+        static constexpr uint8_t kTearRdi[] = {0x48, 0x8B, 0xF9};                                  // 0x43AE71
+        static constexpr uint8_t kTearReload[] = {0x48, 0x8B, 0xBD, 0xC0, 0x00, 0x00, 0x00};       // 0x43B08F
+        const Ctx tear[] = {{0x43B0A3, kTearWake}, {0x43AE50, kTearEntry}, {0x43AE71, kTearRdi}, {0x43B08F, kTearReload}};
+        bool ok = true;
+        for (const Ctx& c : tear) {
+            ok = ok && gad::in_real_code(secs, static_cast<uint32_t>(c.rva), static_cast<uint32_t>(c.bytes.size())) &&
+                 bytes_at(c.rva, c.bytes);
+        }
+        ok = ok && p8_install_mid(g_base, secs, 0x43B0B6, 6, kTearBytes, on_stage_teardown, g_teardown_hook,
+                                  "GuestSchedRoute", "stage teardown guard in 0x43AE50 0x43B0B6");
+        g_teardown_on.store(ok);
+        log::info("GuestSchedRoute: stage teardown guard 0x43B0B6 {}: a stage's last release after its X (the host "
+                  "character's manager) is gone no longer calls into the freed X (its vf12 goes to a do-nothing "
+                  "manager of the mod); other managers untouched",
+                  ok ? "in" : "NOT installed (code not build 2976's or refused)");
+        if (!ok) {
+            log::warn("GuestSchedRoute: guest_sched_route=1 but its stage teardown guard is not in: nothing is "
+                      "routed (no point installed)");
+            return;
+        }
+    }
     std::string on, refused;
     for (const SchedDef& d : sched_points()) {
         const size_t i = static_cast<size_t>(d.point);
@@ -1112,7 +1144,6 @@ void install_sched(std::span<const gad::Section> secs) {
             refused += std::format(" {} ({})", gsr::sched_point_name(d.point), why);
         }
     }
-    const auto mode = static_cast<gsr::Mode>(g_sched_mode.load());
     log::info("GuestSchedRoute {} (guest_sched_route): points:{} | REFUSED:{} | a 2335/2126/2958/2909 naming another "
               "character (0xA...) than this client's field owner's goes to THAT character's ClientSequencerStageManager "
               "X (vtable exe+0x{:X}, X+0x148 present) instead of M, where the NPCs' vf13 0x9ED290 looks for it; a "
@@ -1120,29 +1151,6 @@ void install_sched(std::span<const gad::Section> secs) {
               "or stage+0x178",
               mode == gsr::Mode::On ? "ON" : "PROBE (decides, never writes RAX)", on.empty() ? " none" : on,
               refused.empty() ? " none" : refused, kVtStageManager);
-    // §11: the stage teardown guard (only with guest_sched_route=1: in probe nothing goes into X).
-    if (mode == gsr::Mode::On) {
-        static constexpr uint8_t kTearBytes[] = {0x48, 0x8B, 0x01, 0x41, 0xB0, 0x06, 0xFF, 0x50,
-                                                 0x60, 0x4C, 0x8D, 0xB7, 0x80, 0x01, 0x00, 0x00};  // 0x43B0B6
-        static constexpr uint8_t kTearWake[] = {0x48, 0x8D, 0x57, 0x58, 0x41, 0xBF, 0xFF, 0xFF, 0xFF, 0xFF,
-                                                0x44, 0x39, 0x3A, 0x74, 0x0D, 0x48, 0x8B, 0x4F, 0x28};  // 0x43B0A3
-        static constexpr uint8_t kTearEntry[] = {0x48, 0x89, 0x5C, 0x24, 0x20, 0x48, 0x89, 0x4C, 0x24, 0x08};  // 0x43AE50
-        static constexpr uint8_t kTearRdi[] = {0x48, 0x8B, 0xF9};                                  // 0x43AE71
-        static constexpr uint8_t kTearReload[] = {0x48, 0x8B, 0xBD, 0xC0, 0x00, 0x00, 0x00};       // 0x43B08F
-        const Ctx tear[] = {{0x43B0A3, kTearWake}, {0x43AE50, kTearEntry}, {0x43AE71, kTearRdi}, {0x43B08F, kTearReload}};
-        bool ok = true;
-        for (const Ctx& c : tear) {
-            ok = ok && gad::in_real_code(secs, static_cast<uint32_t>(c.rva), static_cast<uint32_t>(c.bytes.size())) &&
-                 bytes_at(c.rva, c.bytes);
-        }
-        ok = ok && p8_install_mid(g_base, secs, 0x43B0B6, 6, kTearBytes, on_stage_teardown, g_teardown_hook,
-                                  "GuestSchedRoute", "stage teardown guard in 0x43AE50 0x43B0B6");
-        g_teardown_on.store(ok);
-        log::info("GuestSchedRoute: stage teardown guard 0x43B0B6 {}: a stage's last release after its X (the host "
-                  "character's manager) is gone no longer calls into the freed X (its vf12 goes to a do-nothing "
-                  "manager of the mod); other managers untouched",
-                  ok ? "in" : "NOT installed (code not build 2976's or refused)");
-    }
     // guest_sched_bind (needs guest_sched_route=1 and the 2335 point: it arms the bind after 0xA9FEE0).
     guest_sched_bind_install(g_base, secs,
                              g_sched_on[static_cast<size_t>(gsr::SchedPoint::P2335)].load(std::memory_order_acquire));

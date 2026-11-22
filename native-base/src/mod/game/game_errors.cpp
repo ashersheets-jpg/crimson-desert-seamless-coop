@@ -102,8 +102,16 @@ void on_error(safetyhook::Context& ctx) {
 bool game_errors_install() {
     if (g_hook) return true;
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    // 2026-11-21 (the 3732 port audit, docs/research/port-gaps-3732.md item 6): the logger's address and its one-byte
+    // check are 2976's; on another build a jmp that happened to sit there would be hooked. Only on the build they are
+    // for (the warning stays the same line).
+    IMAGE_DOS_HEADER dos{};
+    IMAGE_NT_HEADERS64 nt{};
+    const bool build_ok = g_base == off::kImageBase && safe_read(g_base, &dos, sizeof dos) &&
+                          safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) &&
+                          nt.FileHeader.TimeDateStamp == off::kPeTimestampUnported;
     uint8_t head[1];
-    if (g_base != off::kImageBase || !safe_read(g_base + kErrorLogger, head, 1) || head[0] != kErrorLoggerHead[0]) {
+    if (!build_ok || !safe_read(g_base + kErrorLogger, head, 1) || head[0] != kErrorLoggerHead[0]) {
         log::warn("Game errors: logger not recognised; not hooked");
         return false;
     }
