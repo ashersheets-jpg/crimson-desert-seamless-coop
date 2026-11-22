@@ -82,6 +82,14 @@ void ai_handoff_set_catch(bool on) noexcept;
 // calls ai_handoff_note_catch for every accepted interaction of user 2: the catches go to the catch rule, the rest to
 // this one. [session2] ai_handoff_talk (default 1): 0 turns it off.
 void ai_handoff_set_talk(bool on) noexcept;
+// The MINIGAME rule (2026-11-21, B14 cs86c): the opponent the server spawns for the other player's minigame
+// (SpawnMiniGameCharacterAck to user 2) was driven by the host's game, so the other player's match never started ("E
+// Push" for good). In single player the player's own client runs its opponent. The host's take_frame notes the
+// opponent (on) at that Ack and drops it (off) at its UnspawnMiniGameCharacterAck; meanwhile the server tick hands it
+// to the player's game, and the fight / talk rules leave it alone. Host role only; the other player's matches only.
+void ai_handoff_note_minigame(uint32_t player_key, uint32_t npc_key, bool on) noexcept;
+// [session2] ai_handoff_minigame (default 1): 0 turns the minigame rule off.
+void ai_handoff_set_minigame(bool on) noexcept;
 std::string ai_handoff_describe();
 
 }  // namespace cdmp::session2

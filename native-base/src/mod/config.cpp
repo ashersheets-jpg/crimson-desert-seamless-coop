@@ -367,6 +367,8 @@ Config load_config(const std::wstring& ini_path) {
     c.s2_ai_handoff_fight = read_uint(ini_path, L"session2", L"ai_handoff_fight", c.s2_ai_handoff_fight ? 1 : 0) != 0;
     c.s2_ai_handoff_catch = read_uint(ini_path, L"session2", L"ai_handoff_catch", c.s2_ai_handoff_catch ? 1 : 0) != 0;
     c.s2_ai_handoff_talk = read_uint(ini_path, L"session2", L"ai_handoff_talk", c.s2_ai_handoff_talk ? 1 : 0) != 0;
+    c.s2_ai_handoff_minigame =
+        read_uint(ini_path, L"session2", L"ai_handoff_minigame", c.s2_ai_handoff_minigame ? 1 : 0) != 0;
     c.s2_sim_lag_delay_ms = std::min<uint32_t>(read_uint(ini_path, L"session2", L"sim_lag_delay_ms", 0), 2000);
     c.s2_sim_lag_jitter_ms = std::min<uint32_t>(read_uint(ini_path, L"session2", L"sim_lag_jitter_ms", 0), 2000);
     c.s2_sim_lag_spike_ms = std::min<uint32_t>(read_uint(ini_path, L"session2", L"sim_lag_spike_ms", 0), 5000);

@@ -621,6 +621,8 @@ struct Config {
     // Co-op+ 2026-11-21 (shop_twin.h, research, B14): twin_extra = hex resource hashes (GUEST): the host's scenes of
     // these resources get a twin like the shops, answered from a per-resource table. Default empty.
     std::string s2_twin_extra;
+    // Co-op+ 2026-11-21 (ai_handoff.h, B14): the minigame rule (the other player's minigame opponent runs on its game).
+    bool s2_ai_handoff_minigame = true;
     // Co-op+ 2026-11-21 (shop_twin.h, research): early_state_x (GUEST): a host scene's initial state that came before
     // its prepare is given to the game again right after the prepare. Default 0.
     bool s2_early_state_x = false;
