@@ -55,3 +55,16 @@ Silver is item key 1 in the Money inventory (index at the inventory manager +0x7
 its slot and count come from trade_probe's stash_slot(). The map's checks: the same chain turns the 3576 give and
 add into 0x2E5C470 and 0x2E449C0, the 3732 addresses trade_probe already uses. Worker entry: 0xC0DE0009 (0008 is
 the AI hand-over's).
+
+## Built (2026-11-22, research, off: native 6af91d5, layer revive_prompt.cpp)
+- The dying player's own game: on the revive prompt's Q (instant) or U (checkpoint), in the shared world with the
+  friend present, its layer sends a 3104 on its own connection (30 bytes: death number | FFFF | count 1 | own key |
+  own key | FFFF | FFFF | 0xC0DE0009). A friend's revive (revive_in_place) and a boss's "we get up" send nothing.
+- The host's server (trade_probe's worker, the server thread): only a player's own request (requester = giver =
+  receiver, key class 0xA), once per 20 s per player; [session2] death_penalty = 10 | 25 | 50 | 100 (else off) and
+  death_penalty_item = the money item's decimal key. With no item set it lists the dying player's Money pouch
+  (inventory index from the manager +0x78; slot, key, the row's internal name, count) and removes nothing; with one,
+  it removes the share (rounded down, at least 1, capped) from that slot through the game's own plain delete.
+- Tests: tests/optd_death_penalty_tests.cpp (the share, the once-per-death gap, own requests, the body's layout).
+  cs97 (list only) finds the silver's key; cs97b (that key) the removal; then a Co-op Settings choice (Off, 10 %, 25 %,
+  50 %, All) carried to the host's native ini, and the death screen's note.

@@ -10260,3 +10260,8 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   for 15:00, then: dllswap put 677c87bb, pp44 lagrun, pp44b static fresh solostart loot display, dllswap put
   7befffc8, chain_j (cs95, cs95b, cs93b, cs94, cs96). next_batch_build.sh now deletes both outputs before building
   (a swapped-in package DLL is newer than its objects: the link could be skipped).
+- 12:28 T26 route 2 built as research, off by default (native 6af91d5 + layer revive_prompt.cpp; unit tests:
+  optd_death_penalty passes, 92 run / 14 failing = the baseline, layer tests pass): the revive prompt's own Q / U
+  sends "I got up myself" (3104, entry 0xC0DE0009); the host's server lists the player's money pouch and, once
+  [session2] death_penalty_item names the silver, removes the share (death_penalty = 10/25/50/100) with the game's
+  own delete. cs97 (list only, both players die once) joins the 15:00 window on the new research package.

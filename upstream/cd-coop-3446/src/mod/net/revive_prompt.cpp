@@ -338,6 +338,31 @@ void hop_tick(uint32_t now_ms) {
 
 bool send(uint16_t op, const std::vector<uint8_t>& body);
 
+// T26 (2026-11-22, docs/research/t26-death-penalty.md): we get up by ourselves after a death (the prompt's instant or
+// checkpoint choice; never a friend's revive or a boss's "we get up"). The host's server applies ITS death penalty
+// to our own money (the native's trade_probe worker, entry 0xC0DE0009; native death_penalty_logic.h's request_body):
+// a 3104 on our own connection, giver = receiver = our character. On a host with the penalty off it only logs.
+constexpr uint16_t kOpMoveItem = 3104;
+constexpr uint32_t kDeathPenaltyEntry = 0xC0DE0009;
+uint32_t g_own_deaths = 0;
+void ask_death_penalty(uint32_t own) {
+    if (!kNativeLayer || !revive_partner_present()) return;
+    ++g_own_deaths;
+    std::vector<uint8_t> b(30, 0);
+    const uint16_t none = 0xFFFF;
+    const uint64_t one = 1;
+    std::memcpy(&b[0], &g_own_deaths, 4);
+    std::memcpy(&b[4], &none, 2);
+    std::memcpy(&b[6], &one, 8);
+    std::memcpy(&b[14], &own, 4);
+    std::memcpy(&b[18], &own, 4);
+    std::memcpy(&b[22], &none, 2);
+    std::memcpy(&b[24], &none, 2);
+    std::memcpy(&b[26], &kDeathPenaltyEntry, 4);
+    const bool ok = send(kOpMoveItem, b);
+    log::info("Revive: death {}: the host's death penalty asked for our own money{}", g_own_deaths, ok ? "" : " (NOT sent)");
+}
+
 // The checkpoint revive (see the header). `move`: also move the client to the checkpoint.
 void ask_checkpoint(uint32_t own, uint32_t now_ms, bool move) {
     expect_revive(own, kCheckpoint);
@@ -525,12 +550,14 @@ RevivePrompt revive_prompt_tick(bool connected, float hp, float hp_max, std::opt
         std::memcpy(b.data(), &own, 4);
         b[4] = 0;
         b[5] = kInstant;
+        ask_death_penalty(own);
         const bool ok = send(kOpReviveReq, b);
         g_chosen_at = now_ms ? now_ms : 1;
         log::info("Revive: instant revive asked{}", ok ? "" : " (NOT sent)");
         return RevivePrompt::None;
     }
     if (pressed('U', g_u_was, focused)) {
+        ask_death_penalty(own);
         ask_checkpoint(own, now_ms, /*move=*/true);
         return RevivePrompt::None;
     }
