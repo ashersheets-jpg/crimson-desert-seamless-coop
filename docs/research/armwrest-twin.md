@@ -169,6 +169,14 @@ Not known yet (cs83w3 records every packet of the host's game around "Participat
    ArmWrestling_ChangeStateStartCount / ArmWrestling_ChangeStartCountProgress / ArmWrestling_ChangeStatePlay. The
    joined player's screen showed the countdown, so StartCount came; whether ChangeStatePlay came (and from what: the
    scene's state-7 track or a server message) is the question.
+   RESULTS (2026-11-22 02:42-03:02, af1843c2): cs87 (=1) and cs87b (=2) both end like cs86f: the joined player's talk
+   accepted, the fee, the opponent spawned and handed to its game, the twin to state 7 ("E Push") and no further; the
+   table's people's sequencer components name the host's OWN scenes 0x32C-0x338 (theirs, not the table's 0x322 / its
+   twin), so (d)'s premise does not hold. The probe settles (c): in the host's own match (cs83v) the gauge at
+   [[exe+0x724B3A8]+0x90]+0xD30 is NaN through the intro and countdown and goes live 14 s after the match begins
+   (51 -> 88 with E); in the joined player's matches it stays NaN all match: its client never enters the push phase.
+   Next: cs92 (cs83v with the host's capture) to find the message that starts the push phase on the host's client,
+   against cs87's joined-player capture (no minigame message after the opponent's JoinMiniGameAck).
    If cs87 or cs87b pushes: before twin_extra goes on by default, (e) BOTH players at the table at once (the host's
    own match in its copy, the joined player's in its twin, the server asked for two opponents at one scene id: does it
    spawn a second patron, refuse, or hand the first one over?), and (f) the host's match seen from the joined player's

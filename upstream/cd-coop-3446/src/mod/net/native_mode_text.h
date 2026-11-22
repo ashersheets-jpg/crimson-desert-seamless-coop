@@ -157,7 +157,12 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
                               // 2644 at the end of its cabin scene reached the reload setter in the host's field, which
                               // reset the HOST's stage manager (+0x6A0 -> state 0): the host's next scenes (the bear
                               // fight) never armed and U-1 aborted. F4 answers such a Req with the friend's own manager.
-                              "user2_revive_manager=1"}) {
+                              "user2_revive_manager=1",
+                              // T23 (2026-11-22, cs88a / cs88b): a scene level the joined player's game loads first was
+                              // never marked ready on the server (only the field owner's load does), so its doors
+                              // answered "not ready" to both players until a fast travel (the native base's S43);
+                              // scene_level_share marks user 2's load ready too and keeps a level the other still has.
+                              "scene_level_share=1"}) {
             line(k);
         }
         // B10 option 2, the player's choice ([coop] shared_quest_credit): an objective one player completes also

@@ -10072,3 +10072,88 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   stayed at the Rodbel Fishing Dock this time (no bounty, no Serkis Estate). c7c22497 POSTED in #download-here
   (waiting list DONE line; CHANGELOG). Next: the batch (apply_batch.sh, B19 v4.4 merged switched off, the vf178 port),
   build, package, chain_h.
+- 02:33 Batch built: native 72ebb0d (the port gaps: caller returns = kCallSites + 5 with static_asserts, game_errors
+  and guest_sched_route fail closed, mount_seat's vf178 = 0x5DF500 / 0x9BEEB0), 840f88b (twin_extra_only, shared
+  credit v2), 5ebad92 (tests refreshed for 3732), B19 v4.4 b3fdea7 merged (7dcfc33, no conflicts; lootr_persist
+  default 0); the layer 32e0d84 (arm wrestling hidden in native mode until B13, [dev] minigame_probe, two log labels).
+  Unit tests: 91 programs, 14 failing, all on the baseline; the three refreshed ones pass now (baseline 17 -> 14);
+  lootr persist and guest save pass. native-base synced (af1843c), pushed. Package af1843c2; test-install-fake: all
+  steps passed. Windows Update (read only): active hours 15-9, no reboot pending. chain_h started on af1843c2 (cs87,
+  cs87b, cs83v, cs85d, cs85e, cs77b, cs79b, cs88a, cs88b, cs89, cs90, cs91; ~2 h).
+- 02:44 cs87 (B14, twin_extra_only=1; SAVES OK, 5/5): the host's own copy of the table scene was withheld (only the
+  twin 0x10000322 given); the joined player's talk was accepted, its twin went 0 -> 1 -> 3 -> 4 -> 5 -> 6 -> 7 (the
+  match, 02:41:13) and stayed there; the server's side as in cs86f (Join / Spawn / Apply Acks, the fee, the opponent
+  0xB01006EC joined and handed to the joined player's game by the minigame rule), then no result and no
+  LeaveMiniGame. The table's 12 people's sequencer components name HOST scenes 0x32C-0x336 (their own, not the
+  table's 0x322), so (d)'s premise does not hold as stated. The layer's probe: the joined player's E presses counted
+  (98 in the match) but the "gauge" at [[exe+0x724B3A8]+0x90]+0xD30 read NaN all run, before the match too (that
+  holder existed from 02:34:57). Either that address is not the gauge on 3732 (never checked in a match since the
+  port) or the joined player's match never sets one up: cs83v (the host's own match) decides.
+- 02:53 cs87b (twin_extra_only=2, the twin before the host's copy; SAVES OK, 5/5): the same end (twin 0x10000325 to
+  state 7 at 02:51:11, no result; the people on host scenes 0x32E-0x338; the gauge NaN from the start). Hypothesis (d)
+  in both forms does not make the match go on. The gauge's offsets (holder +0x90, gauge +0xD30) date from build 3479
+  (offsets_3479.h; only the root global was ported since): scratchpad gauge_3732.py finds the code that reads the root
+  on the archived 3732 exe (after the chain).
+- 03:03 cs83v (the host's own match, [dev] versus_test=8; SAVES OK, 5/5; the game's own save from the match moved out
+  of the test world as planned): the gauge address IS right on 3732: NaN through the intro and countdown, then live at
+  03:01:02, 14 s after the match began (51.65 -> 53.6 -> ... -> 88 as E was mashed; the layer's "versus arm wrestling
+  ... we hold the gauge"). So the joined player's NaN all match means its client never reaches the push phase (the
+  twin's state 7, "E Push", never goes on). gauge_3732.py not needed. Next for B14: cs92 = cs83v with the host's
+  packet capture (native_record=1), to see which message starts the push phase on the host's client and compare with
+  cs87's joined-player capture (nothing minigame-related after its opponent's JoinMiniGameAck). B13 groundwork from the
+  same run: the layer's versus works on 3732 for the host's match ("versus arm wrestling with Guest (we hold the
+  gauge)" 03:01:01, "over: we won (98)" 03:01:11, the simulated friend's copy seated in the opponent's chair and out).
+  On the host the gauge went live ~3 s after its intro cutscene ended (the countdown); on the joined player's game the
+  twin's state went 6 -> 7 at the same point (02:41:13) and E was counted, but no gauge ever came up.
+- 03:15 cs85d (B10 shared credit v2; SAVES OK, 5/5): 15 dev-script kills at the camp, QuestRoute's shared pass ran
+  372 times (22 without another manager), the host's camp mission 0x0F461C advanced (56 UpdateMissionListAck naming
+  the host's character, relayed to the joined player); the joined player got no mission message of its own after its
+  login. Inconclusive, not a failure: the joined player's own missions at login (0x0F42DD, 0x0F513A, 0x0F500B,
+  0x0F4AE6, ...) do not show the host's camp mission, and shared credit only counts a step BOTH are on. The test
+  needs both players on one step: a New Co-op Save's first objective (both fresh: the same story step) is the case to
+  script next.
+- 03:23 cs85e (B10 option 3, the joined player's own kills; SAVES OK, 5/5): 18 kills by the joined player's dev
+  script; QuestRoute gave its events to its OWN quest manager 195 times; its capture: no mission update for its own
+  character during the kills, but 40 updates of the HOST's camp mission came during them (the camp's objective moved
+  on the host's side from the joined player's kills: worth a look, the camp's "defeat the enemies" may be a world
+  objective). Same limit as cs85d: the joined player does not have that mission, so neither run can show the credit.
+  The B10 question to the owner waits for a run with both players on one step.
+  Why (03:25, logs): both runs gave the joined player the SAME bandit test save as the host, but the host continued its
+  character from its mailbox ("continues THIS save from its mailbox gen204", %LOCALAPPDATA%\cdmp\guest_saves\
+  local-peer: ~200 test sessions of the test guest's own progress), so its quests had moved on. cs93 (chain_i, after
+  chain_h): cs85c's run with that test-only mailbox set aside for the run and put back after (the run's own kept as
+  cs93-mailbox), so both hold the camp's step.
+- 03:31 cs77b (B06, the host fighting from the saddle; SAVES OK, 5/5): not exercised: "ridehorse" went to the host's
+  horse parked 492 m off and it moved away ("NOT MOUNTED after 3 tries"), so the host never fought from the saddle
+  (host>NPC 0, NPC>host 16). cs77c (chain_i) mounts the way the checklist's mounts step does on 3732 (the
+  horse-call chord with pad_sim, tphorse twice, E three times) at the Rodbel dock, then swings from the saddle.
+- 03:50 cs79b (B09 past the cabin; SAVES OK, 5/5, the test co-op world put back identical): the ready check works
+  (the friend waits, both here, the friend pressed, we pressed: both cutscenes started within 1 s, 03:40:59 / 03:41:00,
+  and ended together). The talks did not: facesweepk at Marius's and at Ross's spots, E then R at 7 angles each:
+  "nothing taken by the server". As in cs79a, each spot has TWO NPCs of the same variant at the same position (0xB01000AD and
+  0xB0100279, variant 0xC867, at (-9840.0, -2824.4); 0xB01000B5 and 0xB010027F, 0xF46FF, at (-9829.0, -2823.5)): a
+  duplicate of the story people in the host's world, a likely reason a talk cannot be aimed (or the talks belong to a
+  step the host's save is not on). B09's hands-on stays the way forward; the duplicates go to B02's list.
+- 03:57 cs88a (T23 doors, scene_level_share=probe; SAVES OK, 5/5): REPRODUCED on 3732. The joined player reached the
+  Hernand tavern first; the host's SceneLevelShare saw its load of the tavern level register first ("[conjunto]
+  usuario2 2720 hash 0xDE7B52AA -> anadido", nine "[would ready] ... sector_-42_-15_* ... actor 0xA0100066"), and
+  every door request of the joined player was refused: DoorTrace 13-15 Req 2928 sent, 13-15 Nak 2953 back, 0 Ack.
+  (DoorTrace's native-result hook is 2976-only: packets only, as planned.) cs88b, the same with scene_level_share=1,
+  is running.
+- 04:05 cs88b (T23 doors, scene_level_share=1; SAVES OK, 5/5): FIXED. The same tavern level of the joined player's
+  load ("usuario2 2720 hash 0xDE7B52AA -> anadido") was marked "[ready for user 2]" for nine sector_-42_-15 levels
+  (actor 0xA0100066), and its door request was answered: DoorTrace Req 1 -> Ack 1 (subject 0xA0100066), Nak 0, on
+  both sides. B (keep a level the other still has) only observes on 3732 (its frame check refused), as in S43's
+  known gap. scene_level_share=1 is now ON by default for the host (layer native_mode_text.h + its test); a
+  checklist door step follows with the next batch.
+- 04:13 cs89 (B16b on 3732, simulated pad; SAVES OK, 5/5): "Hud: the hold-R prompt on the other player opened the
+  interaction menu" (pad 0x1000 held 1.8 s): the hold-interact on the friend works on 3732 with a pad.
+- 04:35 cs90 (B22a, the refusal path; SAVES OK, 5/5): "Co-op REFUSED for this launch" (test flag), the game ran
+  solo with its own saves, the lobby told the partner ("the native base refused co-op for this launch ... the
+  partner is told"), nobody entered the shared world, user install restored.
+- 04:44 cs91 (B04 knowledge_grant=1; SAVES OK, 5/5): inconclusive. KnowledgeGrant ran 6 minutes and saw no learn
+  ("learns 0", faults 0); the host's screen showed the chest's items (Lentils x3) but no "Knowledge Acquired"
+  banner, so this save probably knows Tough Meat already: no learn moment, not a failed grant. The joined player's
+  capture has 1 each of LearnKnowledgeListAck / FollowLearnedKnowledgeDataListAck / ShareKnowledgeSeedAck (login
+  lists). The chest share itself worked (the joined player's own share 8 s later). B04 needs a run with a knowledge
+  the save does not have yet (next: find one near the test spots).

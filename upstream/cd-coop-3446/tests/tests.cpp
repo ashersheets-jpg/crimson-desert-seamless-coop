@@ -1777,6 +1777,7 @@ void test_native_mode_text() {
     CHECK(has(ht, "transport=steam") && has(ht, "role=host") && has(ht, "accept_tunnel=1") && !has(ht, "guest=1"));
     CHECK(has(ht, "peer_steamid=76561198000000001") && has(ht, "save_guard=redirect"));
     // 2026-11-09: the new host defaults, and B10 option 2 only when chosen.
+    CHECK(has(ht, "scene_level_share=1"));  // T23: doors of a level the joined player loaded first
     CHECK(has(ht, "quest_own_progress=1") && has(ht, "fog_share=1") && has(ht, "anti_grief=1") &&
           has(ht, "user2_stages=1") && has(ht, "user2_world_anchor=1") && !has(ht, "quest_shared_credit=1") &&
           has(ht, "user2_shop_route=1") && has(ht, "interaction_share=1") && has(ht, "npc_activation=1"));  // far shops on (tcB243); S35 on

@@ -5,6 +5,26 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
+NOT POSTED YET (af1843c2; research chain chain_h first, then the checklist): everything in c7c22497 just below, plus:
+- The friend menu no longer offers "Arm wrestling" in the shared world (layer 32e0d84): there it started the
+  two-worlds versus (each player at a table in its own world), which cannot finish in one shared world, and the
+  joined player cannot start a table match of its own yet (B14). The host plays the tables against the townsfolk as
+  usual; wrestling each other waits for B13 (README: CHALLENGES and KNOWN ISSUES).
+- The save hooks name their callers again on 3732 (native 72ebb0d): the three LoadSlot, two SavePlayerToSlot and two
+  flush callers were still 2976's return addresses, so every one read "OTHER" (the guest save's manifests said
+  "OTHER (ret ?)"); now 3732's, tied to the hooks' call sites by static checks. Behaviour: only an unidentified user
+  actor at the real UserLogin is now let through, as designed (user 2 is identified there on 3732: unchanged).
+- Mount seats: the "is this rider the local player" judge read 2976's function addresses, so on 3732 every rider
+  counted as local and seating relied on a second guard (native 72ebb0d: 3732's, checked instruction by instruction
+  on the game's exe).
+- Two safety fixes for later game builds and options (native 72ebb0d): the game-error hook installs only on the build
+  its address is for; guest_sched_route (off) routes nothing when its teardown guard cannot be installed.
+- Lootr's shares kept across sessions (B19), switched off ([session2] lootr_persist=0) until its live test: in the
+  build after five independent reviews (native b3fdea7, merged 7dcfc33).
+- Research, off: [session2] twin_extra_only (B14: how the joined player's table copy is prepared), the layer's
+  [dev] minigame_probe (the minigame gauge and E presses), shared quest credit v2 (B10: the other player's own quest
+  component).
+
 POSTED 2026-11-22 02:25: 0.1.0-alpha+c7c22497, for game 1.0.0.3732 (checklist pp43 1068 pass, 3 fail over 26 steps,
 none of the 3 the package's: static's Windows Defender detection of a unit-test exe while the step ran, and crime's log
 growth and one slow network tick, from a test script that walked the joined player out of the bandit camp into Serkis
