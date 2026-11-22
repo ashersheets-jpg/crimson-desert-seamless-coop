@@ -128,7 +128,18 @@ Not known yet (cs83w3 records every packet of the host's game around "Participat
    in a host match the player's own client drives the opponent). Fix: AiHandoff's MINIGAME rule (native, [session2]
    ai_handoff_minigame, default 1): the host notes the opponent at the SpawnMiniGameCharacterAck to user 2 and hands it
    to the joined player's game until its UnspawnMiniGameCharacterAck. Test: cs86e.
-7. cs86d / cs86e: the joined player talks to the organizer (variant 0x000F4B31 at (-10661.5, -3832.5)),
+8. cs86e / cs86f (the minigame rule in, native 9dbab60): the opponent goes to the joined player's game 0.6 s after
+   its spawn and its client drives it; the countdown shows on its screen; but at state 7 its client never does what
+   the host's did at once (CurrentTargetChangeReq on the opponent, EchoActionSessionIDReq of the opponent, the push
+   action 0x63F9EFFD + DoFrameEventReq): its character keeps the grip pose (0x35DD392F, re-sent every 2 s), E taps,
+   E held 4 s, Space and left clicks change nothing, its match camera sits behind a bystander, and Esc does not leave:
+   THE JOINED PLAYER IS STUCK IN THE MATCH. So twin_extra stays OFF by default. Everything the twin answers matches
+   the host server's (the state-7 2752, the chart events' 2105s). Hypotheses for the next round: (a) the hand-over's
+   AI reset (0.6 s after the spawn, the host's client ran the opponent's AI meanwhile) leaves the opponent's
+   minigame AI in a state the match does not accept: hand it over AT its creation instead; (b) the match needs the
+   table's other people (bound to the host's copy of the scene, which never started on the joined player's game);
+   (c) client minigame memory (kMiniGameRoot 0x724B3A8 +0x90) compared between a host match and a joined player's.
+9. (old step list) cs86d / cs86e: the joined player talks to the organizer (variant 0x000F4B31 at (-10661.5, -3832.5)),
    Participates, plays and leaves the menu. Open questions: does the server spawn user 2's opponent for the host's
    scene, take its fee and pay it; does the joined player's game play the intro, the countdown and the match from its
    twin. Still open after it: the twin loss on a far teleport (in play: a fast travel or respawn in the same field,

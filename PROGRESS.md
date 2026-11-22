@@ -9876,3 +9876,31 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   UnspawnMiniGameCharacterAck; the server tick hands it to the joined player's game meanwhile (as the ride / catch
   rules do). early_state_x (cs86c, on): GuestSeqRestore still swapped 6 actors (cs86b off: 5): no sign it helps the
   X copies; cs86d (off, same order) running as the baseline. chain_f stops after cs86d (chain.stop) for the build.
+- 21:35 cs86d (early_state_x off): the same progress as cs86c (talk accepted, the match reached, then "E Push"); the
+  idle swaps 5 (cs86c with it on: 6): early_state_x stays off. Native 9dbab60 (the minigame rule) built (17 known
+  unit failures), synced, pushed (4f96613); chain_g started.
+- 21:46 cs86e (the minigame rule): SAVES OK, 5/5. The rule WORKS: "AiHandoff: minigame rule: NPC 0xB0100F25 ... the
+  minigame opponent of 0xA0100066 -> its game (0x90100000 -> 0x90100065)" 0.6 s after its spawn, and the joined
+  player's client now drives it (C>S StartActionReq / ChangeAIStateReq of it). But the match still stood at "E
+  Push": the joined player's OWN character went to the grip pose (action 0x35DD392F, sent every 2 s) and never to the
+  push (the host's own match: 0x35DD392F -> 0x63F9EFFD 1 s after the countdown, then 0x34E16D07 ...), so its E taps did
+  not start the push; and its match camera sat inside the opponent's body (the host's: a side view of both, shot
+  cs83w4-h6). Next: cs86f, more inputs (E taps, E held 4 s, Space, left click) with a shot after each, its capture.
+  chain_g stops after cs85c (chain.stop); cs77b / cs83v later.
+- 21:56 cs85c (B10 shared credit, the joined player's capture): 17 dev-script kills at the camp; the host's camp
+  mission advanced (76 UpdateMissionListAck of the host's mission 0x000F461C, also relayed to the joined player) and
+  QuestRoute offered the host's events to the joined player's quest manager 376 times, but the joined player got NO
+  mission progress of its own (its only mission messages are the 6 at its login: no SubMissionProgressListAck /
+  UpdateMissionListAck / UpdateQuestListAck for 0xA0100066 during the kills). So option 2 does not credit it yet. Lead:
+  the step's condition likely checks the event's actor (the host's character, not the quest's owner); the native's
+  subject_swap (user2_condition_subject_host) is the nearest existing piece. B10 stays [~]; research later.
+- 22:10 cs86f (B14, more inputs in the joined player's match): SAVES OK, 5/5. Its countdown shows (g3), then "E Push"
+  for good: E taps, E held 4 s, Space and left clicks change nothing (g5-g10), and Esc does not leave (g11): THE
+  JOINED PLAYER IS STUCK IN THE MATCH. At state 7 its client never does what the host's did at once (target the
+  opponent, echo the opponent's action session, the push action and its frame event), although every answer the twin
+  gives matches the host server's. TIMEBOXED (about 3 h on B14 today): twin_extra stays OFF in the release (a stuck
+  match is worse than no match); three hypotheses for the next round in docs/research/armwrest-twin.md (the
+  hand-over's AI reset 0.6 s after the spawn; the table's other people bound to the host's scene copy that never
+  starts on the joined player's game; client minigame memory compared). Kept for the release: the ShopTwin
+  early-state fix (twins start in either message order) and the AiHandoff minigame rule (an opponent the server
+  spawns for the joined player runs on its game: right for any of its minigames).

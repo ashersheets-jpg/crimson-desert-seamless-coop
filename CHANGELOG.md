@@ -5,6 +5,22 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
+NOT POSTED YET (checklist pending): everything in cfaa3a69 just below, plus:
+- **The joined player's shops in a town whose scenes the host already runs**: the host's copy of a scene reached the
+  joined player's game in two parts, and in one run 21 of 31 town scenes (every shop among them) came "start first,
+  scene second" (the scene waits until its people are known on the joined player's game, its start does not). The
+  joined player's own shop copies were then made but never started: no "Shop" prompt at any shopkeeper. They start
+  now (native a484b0a, checked: cs86b-d, every shop copy started and gave its shopkeeper's entries). A real fast travel
+  into the host's town is still to be confirmed by hand.
+- **A minigame opponent the server spawns for the joined player now runs on the joined player's game** (native 9dbab60,
+  [session2] ai_handoff_minigame, on): it ran on the host's game, so the joined player's match could not go on; as in
+  single player, the player's own game drives its opponent now.
+- The joined player's own arm wrestling at the Hernand inn table (B14) is NOT in this build: its own copy of the
+  table now gets it to the organizer's menu, its fee, its opponent, the intro and the countdown, but its match does
+  not start pushing and it could not leave the table, so that copy stays off ([session2] twin_extra, research).
+- Research, off: twin_watch (the host logs every message of listed scenes), twin_extra (the table's copy), early_state_x
+  (the start-order fix for the host's own scene copies: no measurable effect yet).
+
 POSTED 2026-11-21 17:54: 0.1.0-alpha+cfaa3a69, for game 1.0.0.3732 (checklist pp42 1064 pass, 7 fail over 26 steps, two new:
 shop and leave; none of the 7 the package's: two in the static step (an in-progress edit applied to the native tree
 while it ran; Windows Defender quarantining one unit-test exe at that moment) and five test-kit expectations of the two
