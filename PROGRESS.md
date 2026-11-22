@@ -10,7 +10,7 @@ test save Out, shipped cdmp.ini restored.
   677c87bb, the door fix) runs 05:22-~08:50 and stops before its last two steps; I run those only if there is time
   before 09:00. When you are up: either pause updates (Settings > Windows Update) or let it restart when no test runs;
   I change no system setting myself.
-- 2026-11-22 09:20 HANDS-ON (1 minute, not urgent, T28): Nexus downloads need a signed-in account and the built-in
+- 2026-11-22 09:05 HANDS-ON (1 minute, not urgent, T28): Nexus downloads need a signed-in account and the built-in
   browser pane is signed out (I never sign in or type passwords). If you sign in to nexusmods.com there once, I can
   download the most-downloaded code mods (Character Creator, RenoDX, Internal Graphics Overhaul, a manager's loader)
   under your standing OK and test each next to Co-op+. The top-20 list and what each kind means for co-op are in

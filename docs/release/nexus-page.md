@@ -1,67 +1,69 @@
-# Nexus Mods page (NOT POSTED: post after the two-PC playtest, docs/tests/PLAYTEST-1.md)
+# Nexus Mods page (NOT POSTED: for the release, B22; rewritten 2026-11-22 for the shared world)
 
-Paste-ready text for the mod page. Update the version lines and "Known issues" from the playtest first.
-Screenshots: `docs/release/shot-list.md`. Files to upload: the player zip (main file), the `-mod-manager.zip`
-(optional file), never the `-symbols-KEEP-PRIVATE.zip`.
+Paste-ready text for the mod page. Before posting: update the version lines and "Known issues" from the latest
+CHANGELOG and README-shared-world.txt (kit/coopplus), and take the screenshots in `docs/release/shot-list.md`.
+Files to upload: the `...-shared-world.zip` (main file) and the `...-shared-world-mod-manager.zip` (optional file),
+never a `-symbols-KEEP-PRIVATE.zip`. Posting needs the owner's OK (it publishes ByJunter's GPL code too).
 
 **Name:** Crimson Desert Seamless Co-op+
-**Category:** Gameplay. **Tags:** multiplayer, co-op, gameplay. **Version:** 0.1.0-alpha.
-**Game version:** 1.0.0.3576 (Steam). On any other version the mod switches itself off.
+**Category:** Gameplay. **Tags:** multiplayer, co-op, gameplay. **Version:** 0.1.0-alpha (shared world).
+**Game version:** 1.0.0.3732 (Steam). On any other version the mod switches itself off and the game runs normally.
 
 ## Summary (one line, at most 350 characters)
-Play Crimson Desert with a Steam friend. Invite them or use "Join Game", explore and fight the same enemies
-together, chat, duel, revive each other. Each player keeps their own save.
+Play Crimson Desert with a Steam friend in one shared world: your friend joins your actual world with their own
+character. Same townsfolk, same enemies, your own stories, challenges, trading and revives. Your own saves are never
+written in co-op.
 
 ## Description
 
-Crimson Desert Seamless Co-op+ is an unofficial fan mod that brings two-player co-op to the game. Each of you plays
-in your own save. Your friend appears in your world as their own character, with their gear, their name over their
-head and a pin on your map. Near the host you fight the same enemies.
+Crimson Desert Seamless Co-op+ is an unofficial fan mod that brings two-player co-op to the game. The host's game runs
+the world and the friend plays in it with their own character, gear and progress: the same townsfolk, merchants and
+enemies for both of you.
 
-It is built on Crimson Desert Multiplayer (cdmp) by ByJunter and its port to newer game versions by nouzert1. It adds
-Steam joining, a co-op HUD, shared enemies and many co-op features (below).
+It is built on Crimson Desert Multiplayer by ByJunter (its NativeServer shared world) and its port to newer game
+versions by nouzert1. Co-op+ adds Steam joining from the title screen, co-op saves per friend, the shared-world fixes
+and the co-op features below.
 
-**This is an alpha.** Read "Known issues". The installer backs up your saves. Don't save while your friend is in your
-world.
+**This is an alpha.** Read "Known issues". Co-op plays in its own co-op save; the installer backs up your saves anyway.
 
 ### Features
-- **Steam joining:** invite with Ctrl+F1 or use "Join Game" from the friends list. No IPs or ports. You choose
-  friends-only or invite-only. A room code is the fallback.
-- **Your friend in your world:** walking, running, climbing, gliding, riding (horse and flying mount), fighting, and
-  matching gear that updates live. Their name over their head; on the minimap and the map.
-- **Shared enemies:** near the host, both players see and fight the same enemies. Every blow counts. Enemy toughness
-  scales with the party (configurable).
-- **Partner frame:** your friend's health and stamina on screen, with a "Badly hurt" warning.
-- **Revive each other:** stand by a downed friend and hold Shift+F7 (pad: View + LB). Optional respawn back at your
-  friend after a checkpoint revive.
-- **Bosses:** fight together. The host lands the final blow, so the host's story stays intact. Shared boss cutscenes;
-  a shared cutscene skips only when everyone has pressed skip.
-- **Talk:** text chat (Shift+F2) and quick messages (Go here, Danger, Loot here, Follow me...) with map pins.
-- **Travel together:** go to your friend (Ctrl+F4), ask them to come to you (Shift+F4), follow when they fast travel.
-  Shared waypoints.
-- **Challenges:** duel (ring, rounds, nobody dies), rock-paper-scissors, a hunting contest, a race to the map
-  waypoint, and arm wrestling where your friend sits across the table from you.
-- **Shared time and weather** (the host's).
-- **Notices:** your friend's quest steps, world events near them, when they become wanted, when they're in a menu or
-  a cutscene.
-- **Loot:** per player (default), host only, or first come.
-- **Safety:** save backups when a session starts and a warning if the game saves during co-op. Version check on join.
-  Automatic resync. Your friend can't kill your townsfolk or quest NPCs. Your world is left clean when they leave.
-- **Controller support** for everything: hold View or the touchpad button and press a button. Prompts show the
-  buttons of your device.
-- **One-click** install, uninstall and vanilla mode. A diagnose report for bug reports. A notice names other mods that
-  could clash.
+- **Join from the title screen:** the Co-op menu stands in for the title. Invite a Steam friend, then Start Co-op:
+  Continue Our Co-op Save, Start From My Solo Progress, or New Co-op Save. Both games restart once into co-op. No
+  Steam? "Radmin VPN / Direct IP" joins over a VPN or LAN with a one-time invite.
+- **One shared world:** the same townsfolk and merchants for both. The friend talks to them, buys and sells with their
+  own money and stock, also far from the host. Doors and buildings work for whoever gets there first.
+- **Shared enemies:** both of you hit and kill the same enemies; an enemy fights the player who fights it. Enemy
+  health scales with a guest (configurable). No friendly fire.
+- **Items for each of you:** each player can take each plant, ore vein, chest and body's loot once ("each their own").
+  A chest your friend opened keeps your share for you, pinned on your map.
+- **Your own story:** each of you keeps and plays your own quests in the shared world. Optional: shared quest credit
+  (a step you are both on counts for both) and story scenes that wait for both of you.
+- **Mounts:** each sees the other ride (own horse, a borrowed or wild one, Blackstar).
+- **Revive each other:** the game's own revives, plus 30 seconds in which your friend can get you up where you fell
+  by holding Interact by you. At a boss you can wait for your friend.
+- **Challenges:** hold Interact on your friend for duels (a ring, rounds, nobody dies), rock-paper-scissors, a hunting
+  contest, a race to the map waypoint, hide and seek and a fishing contest. Stake items on a challenge.
+- **Giving and trading:** give an item, offer a trade, or put it in the shared stash (the host's warehouse).
+- **Co-op tab** in the game's pause menu: session, travel to / call your friend, quick messages with map pins, the
+  settings, controls and status. Chat with Shift+F2.
+- **Crimes are your own:** what you do makes you wanted, not your friend.
+- **Time of day and weather** follow the host.
+- **Safety:** your own saves are never written in co-op (a co-op save per friend); version check at the menu;
+  automatic resync; your friend can't kill your quest NPCs; the game runs normally after a game update until Co-op+ is
+  updated.
+- **Controller support** throughout. **One-click** install, uninstall, vanilla mode and a diagnose report.
 
 ### Requirements
-- Crimson Desert on Steam, game version 1.0.0.3576. Both players need the **same Co-op+ zip**.
-- Steam friends, with the Steam overlay on.
+- Crimson Desert on Steam, game version 1.0.0.3732. Both players need the **same Co-op+ zip**.
+- Steam friends, with the Steam overlay on (or Radmin VPN / a LAN for Direct Play).
 - Ultimate ASI Loader is included (ThirteenAG, MIT). Nothing else to install.
 
 ### Installation
 1. Close the game. Unzip the main file anywhere.
-2. Double-click `Install Co-op+.cmd`. It finds the game through Steam and backs up your saves. It puts winmm.dll,
-   cdmp.asi, cdmp.ini and cdcoop\config\scaling.toml into the game's bin64 folder, and keeps any file it replaces.
-3. Start the game from Steam and load a save. Ctrl+F1 invites a friend; F8 opens the co-op panel.
+2. Double-click `Install Co-op+.cmd`. It finds the game through Steam, backs up your saves to
+   Documents\CrimsonDesert-CoopPlus-SaveBackups and puts its files into the game's bin64 folder, keeping any file it
+   replaces.
+3. Start the game from Steam. The Co-op menu stands in for the title screen.
 
 **Uninstall:** `Uninstall Co-op+.cmd` removes exactly what it installed and restores anything it replaced.
 **Vanilla mode:** `Vanilla mode on-off.cmd` switches the mod off and on, keeping your settings.
@@ -69,38 +71,26 @@ world.
 CrimsonDesert.exe). Back up your saves yourself.
 
 ### Controls
-
-| Keyboard | Pad (hold View / touchpad +) | Action |
-|---|---|---|
-| Ctrl+F1 | Y / Triangle | invite a friend |
-| Ctrl+F2 | B / Circle | leave (guest) |
-| Ctrl+F3 | D-pad Left | quick messages |
-| Shift+F2 | - | chat |
-| Ctrl+F4 | D-pad Right | go to your friend |
-| Shift+F4 | R3 | ask your friend to come to you |
-| Shift+F5 / Shift+F6 | D-pad Up / Down | challenge, accept / decline |
-| Shift+F7 | LB / L1 (hold) | revive your friend |
-| Shift+F8 | RB / R1 | resync |
-| F8 | X / Square | co-op panel |
-| Ctrl+F8 | A / Cross | name over your friend's head |
-| Shift+F1 | L3 | the controls card |
+Co-op+ adds no hotkeys in the shared world except Chat (Shift+F2): hold the game's Interact (R; pad A) on your friend
+for the challenges and trading menu, and use the Co-op tab in the pause menu for everything else. Optional key bindings
+can be added in coopplus.ini (the README explains how).
 
 ### Known issues
-- Two players only.
-- Quests and story progress aren't shared: each of you keeps your own.
-- The guest gets loot from shared kills, but no XP for them yet.
-- No item trading or gifting, and no death-penalty options.
-- Doors, levers and breakable objects aren't synced.
-- Arm wrestling: if the guest arrives at the pub already connected, the table can be empty for them. Leave the pub
-  and come back.
-- Animals and townsfolk are each player's own: they stand in the same places, but they aren't the same ones.
-- Bosses are finished by the host.
-- After a game update the mod switches itself off until it's updated.
-- (Fill in from the two-PC playtest.)
+- Joining only from the title screen, not during play. Two players only.
+- Arm wrestling and the game's other minigames against each other: not yet.
+- Mining with the hand drill and fishing as the joined player have problems we have not fixed yet.
+- The host's armour dye does not show on the joined player's screen yet.
+- A tree the joined player cuts down can show twice for the host.
+- Taming a wild horse as the joined player can leave them stuck at the end.
+- Story scenes that start from a talk do not wait for both of you yet.
+- Boss fights are not tested with two players yet.
+- After a game update Co-op+ switches itself off until it is updated.
+- (Update from the latest playtest reports before posting.)
 
 ### Other mods
-Most mods work alongside Co-op+. Gameplay mods (stamina, stacks, loot) must be the same on both PCs, and keep only
-one ASI loader. See OTHER-MODS.md in the download.
+Most mods work alongside Co-op+. In the shared world the host's game runs the world's rules, so gameplay mods
+(stamina, stacks, trust, vendors, cooldowns) must be the same on both PCs; cosmetic and interface mods only change your
+own screen. Keep only one ASI loader. See OTHER-MODS.md in the download.
 
 ### Is it safe?
 Crimson Desert has no anti-cheat and no online play of its own. Co-op+ changes only your local game, never your
@@ -108,18 +98,21 @@ account, the store, cross-save or Steam Cloud. It sends nothing anywhere except 
 update ever adds an anti-cheat, Co-op+ installs nothing and tells you.
 
 ### Bug reports
-Use the Bugs tab with BUG-REPORT.txt from the download. Attach the report "Diagnose Co-op+.cmd" puts on your Desktop
-(from both players if you can).
+Use the Bugs tab with BUG-REPORT.txt from the download. Attach the zip "Diagnose Co-op+.cmd" puts on your Desktop,
+from both players if you can (each game knows only its own side).
 
 ### Credits and permissions
-- **ByJunter**: Crimson Desert Multiplayer (cdmp, GPL-3.0), the co-op engine and its research.
+- **ByJunter**: Crimson Desert Multiplayer (GPL-3.0), the NativeServer shared world and its research.
   https://www.nexusmods.com/crimsondesert/mods/3677
 - **nouzert1**: cd-coop-3446 (GPL-3.0), the port to newer game versions.
+- **Plitos**: playtest reports, merged fixes and the save-protection design. **Borque** and the other playtesters:
+  reports, videos and logs.
 - **ThirteenAG**: Ultimate ASI Loader (MIT), included as winmm.dll.
 - Libraries: Dear ImGui (Omar Cornut, MIT), SafetyHook (cursey, BSL-1.0), Zydis / Zycore (MIT), toml++ (Mark
   Gillard, MIT).
 - No other authors' mod files are included. Mods that inspired features are credited in CREDITS.md.
-- Source code (GPL-3.0) is in the download as source.zip.
+- Source code (GPL-3.0) of exactly the build is in the download: source.zip (Co-op+) and source-native.zip (the
+  shared-world base).
 - Not affiliated with or endorsed by Pearl Abyss. Crimson Desert is a trademark of Pearl Abyss Corp.
 
 ### Permissions (for the Nexus "Permissions and credits" tab)
