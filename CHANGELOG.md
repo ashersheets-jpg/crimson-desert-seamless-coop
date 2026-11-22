@@ -5,7 +5,7 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-POSTED 2026-11-22 15:55 (0.1.0-alpha+677c87bb, for game 1.0.0.3732; checklist pp44 over 27 steps, the re-runs
+POSTED 2026-11-22 15:52 (0.1.0-alpha+677c87bb, for game 1.0.0.3732; checklist pp44 over 27 steps, the re-runs
 pp44b / pp44c / pp44d clean after test-kit-only fixes): everything in c7c22497 just below, plus:
 - **Doors in a place the joined player reaches first now open** (layer 677c87bb, the native base's [session2]
   scene_level_share now on for the host): when the joined player's game loaded a building before the host's did, the
