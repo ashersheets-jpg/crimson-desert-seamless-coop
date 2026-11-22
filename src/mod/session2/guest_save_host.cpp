@@ -76,6 +76,14 @@ constexpr CallSite kCallSites[] = {
     {0xB6A4AA0, kSave},     {0xE214B60, kSave},                               // autosave, 2910
     {0x2BC548A, kFlush},    {0xE584AC8, kFlush},                              // logout phase, flush timer
 };
+// 2026-11-21 (the 3732 port audit): the decisions' return addresses (guest_save_logic.h) are these call sites + 5.
+static_assert(kCallSites[0].at + 5 == gsv::kRetUserLogin && kCallSites[1].at + 5 == gsv::kRetLobby3093 &&
+                  kCallSites[2].at + 5 == gsv::kRetCharacter3093,
+              "LoadSlot's callers: gsv::kRet* must be kCallSites + 5");
+static_assert(kCallSites[3].at + 5 == gsv::kRetAutosave && kCallSites[4].at + 5 == gsv::kRetManual2910,
+              "SavePlayerToSlot's callers: gsv::kRet* must be kCallSites + 5");
+static_assert(kCallSites[5].at + 5 == gsv::kRetFlushLogout && kCallSites[6].at + 5 == gsv::kRetFlushTimer,
+              "FlushPendingSaveData's callers: gsv::kRet* must be kCallSites + 5");
 struct ErrorSite {
     uintptr_t at, global;
     const char* what;

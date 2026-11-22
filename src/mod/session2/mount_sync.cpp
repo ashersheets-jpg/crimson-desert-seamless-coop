@@ -2600,7 +2600,8 @@ std::string local_user_selftest() {
     const bool proven = s.vf178 == msl::kVf178Actor && s.local_user && s.rider_user == s.local_user && s.rider_local != 0;
     return std::format(" | local-user self-test (0x{:08X}): vf178 exe+0x{:X}, +0xA0 {} the local user, +0x94 {} -> {}", lk,
                        s.vf178, s.rider_user && s.rider_user == s.local_user ? "IS" : "is NOT", s.rider_local,
-                       proven ? "local user (ok)" : "NOT PROVEN (the reads disagree with 0x4FE260)");
+                       proven ? std::string("local user (ok)")
+                              : std::format("NOT PROVEN (the reads disagree with exe+0x{:X})", msl::kVf178Actor));
 }
 // P8 S26 (montura-regresion.md sections 7.1 and 7.2): relinks, and whether each controller publishes.
 std::string s26_text() {

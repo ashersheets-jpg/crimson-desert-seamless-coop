@@ -1282,7 +1282,9 @@ struct SeatState {
 // P8 S22 [V capstone 0x4FE260]: what the rider's vf178 answers, i.e. whether vf54's tail would launch 0xA45AC0 on the
 // LOCAL player: `[+0xA0] == local user && [+0x94]`. 0x8A67D0 (+0x94 alone) is the account/server realm's, never a
 // client in-game actor's; any other slot (or an unread local user) counts as local, so the seat is refused.
-inline constexpr uint32_t kVf178Actor = 0x4FE260, kVf178User = 0x8A67D0;
+// 2026-11-22 (the 3732 port audit, item 4): 3732's (vf178_3732.py on the archived exe: the same two bodies; the
+// guest's self-test read exe+0x5DF500 on its own character). 2976: 0x4FE260 / 0x8A67D0.
+inline constexpr uint32_t kVf178Actor = 0x5DF500, kVf178User = 0x9BEEB0;
 inline bool seat_local_user(const SeatState& s) {
     if (s.vf178 == kVf178Actor) {
         return s.local_user == 0 || s.rider_user == 0 || (s.rider_user == s.local_user && s.rider_local != 0);
