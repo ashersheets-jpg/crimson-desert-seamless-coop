@@ -5,11 +5,16 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
-- 2026-11-22 05:20 FYI, time-sensitive: Windows has an update RESTART PENDING (read-only check: RebootRequired is
-  set; active hours 15:00-09:00), so it may restart the PC between 09:00 and 15:00. The checklist pass pp44 (build
-  677c87bb, the door fix) runs 05:22-~08:50 and stops before its last two steps; I run those only if there is time
-  before 09:00. When you are up: either pause updates (Settings > Windows Update) or let it restart when no test runs;
-  I change no system setting myself.
+- 2026-11-22 15:55 DONE: 677c87bb POSTED in #download-here by me (standing OK; checklist pp44 over 27 steps with the
+  new door step, its last step lagrun 48 / 0 after a test-kit fix, the re-runs pp44b / pp44c / pp44d clean: static,
+  fresh, solostart, loot, display; both zips checked byte for byte against the tested package): doors of a building
+  the joined player reached first open for both; no arm-wrestling choice in the friend menu. Text:
+  docs/release/shared-world-playtest/download-677c87bb.txt. Also answered "does dlc work with the mod" in #general.
+- 2026-11-22 05:20, updated 15:55. FYI, time-sensitive: Windows still has an update RESTART PENDING (read-only
+  check: RebootRequired is set; active hours 15:00-09:00). Its toast at 15:12 said the PC "will restart to update
+  outside of active hours", so between 09:00 and 15:00 tomorrow, and the toast's leftover window blocked three test
+  steps today (the harness now clicks around it). When you are up: either pause updates (Settings > Windows Update)
+  or restart once when no test runs; I change no system setting myself.
 - 2026-11-22 09:05 HANDS-ON (1 minute, not urgent, T28): Nexus downloads need a signed-in account and the built-in
   browser pane is signed out (I never sign in or type passwords). If you sign in to nexusmods.com there once, I can
   download the most-downloaded code mods (Character Creator, RenoDX, Internal Graphics Overhaul, a manager's loader)
