@@ -9753,3 +9753,8 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   joined player has no prompt there, cs76f). B13's design question now to the owner (waiting list).
 - 19:30 the test co-op world's backup refreshed: the 11-Nov keep-coop-world set aside as keep-coop-world-2026-11-11
   (kept), today's world backed up (coopworld.sh backup). cs79a (B09 cabin talks by script) running.
+- 19:45 cs79a (B09: a new co-op save, the cabin's ready check, then the host's talks with Marius and Ross by script):
+  SAVES OK, 5/5, both alive. The ready check WORKS again: user 2 reached the story trigger, both pressed, both triggers
+  released, the shared cutscene played on both games. The scripted talks did not open (tpnear picked neighbours
+  0xB0100121 / 0xB01000B2; no talk request in the host's log), so "Enter the cabin" was not reached: the B09 hands-on
+  stays on the owner's list.
