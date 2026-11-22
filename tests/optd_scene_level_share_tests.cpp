@@ -30,18 +30,20 @@ std::vector<uint8_t> hex(const char* s) {
     return out;
 }
 
-// Real frames (whole Reqs, 5-byte header), from the captures named.
+// Real frames (whole Reqs, 5-byte header), from the captures named (game 2976). 2026-11-21: their opcodes rewritten to
+// 3732's (the logic's kOpLoad 2720 = a00a, kOpUnload 2948 = 840b, kOpResync 2623 = 3f0a; 2976: 2598 / 2834 / 2104),
+// the payloads as captured (the same layouts on 3732: the logic's parsers).
 // cdmp_packets.guest_20261015-155255.bin t=4458.501: the guest's first 2598 of the tavern's level.
-const char* k2598Tavern = "260a000800010000 00aa527bde";
+const char* k2598Tavern = "a00a000800010000 00aa527bde";
 // ... t=4430.611: one of the four 2598 with u32 = 3 at the game's load.
-const char* k2598Start = "260a000800030000 00ec635e2a";
+const char* k2598Start = "a00a000800030000 00ec635e2a";
 // ... t=4502.479: the guest's 2834 of the tavern's level (type 0, flag 1).
-const char* k2834Tavern = "120b000a00010000 0000aa527bde01";
+const char* k2834Tavern = "840b000a00010000 0000aa527bde01";
 // cdmp_packets.host_20261015-155239.bin t=4416.494: a host 2834 with flag 0.
-const char* k2834Flag0 = "120b000a00010000 0000cca4ef2100";
+const char* k2834Flag0 = "840b000a00010000 0000cca4ef2100";
 // cdmp_packets.host_20261015-083504.bin t=69.252 (offset 22161498): the host's Resync after its 2283/2437, 86 hashes.
 const char* k2104 =
-    "3808005901046dd0f604402d6a98c9269a8b9292fe28ec635e2af4ba161bf4036a058057a8c92599f12bd8fd1f923089109c79bc812976ad"
+    "3f0a005901046dd0f604402d6a98c9269a8b9292fe28ec635e2af4ba161bf4036a058057a8c92599f12bd8fd1f923089109c79bc812976ad"
     "0240cfe54abea8266c1fc76fc8f7a7efbd817fea585d0aa73a510c980254d56b848767dc319e0eeea03a40ce62705bcc5fba01d97d3dd00f"
     "4fb2c1fef74997dd8150682b215ed7ce899629fe1e0fb6a587633171853b5cc484fee86e935da5d6a72e9147969d1fe852f3553e85bf45cd"
     "b9cef2b3f64dcdda76a4985e69d4e098e7b7041fcac8d41da27e50c7590614b361f7b40822edd9b37f9ea661825df4cbad730fa9e7c96047"
@@ -92,20 +94,21 @@ void test_parsers() {
     CHECK(tavern);
     CHECK(sls::le32(p.list.data()) == 0x04F6D06D);
     // The handlers' own rejections are Bad, not tracked.
-    CHECK(frame(make(2598, {1, 0, 0, 0, 0xAA, 0x52, 0x7B})).kind == sls::Kind::Bad);         // 7 bytes
-    CHECK(frame(make(2598, {1, 0, 0, 0, 0, 0, 0, 0})).kind == sls::Kind::Bad);               // hash 0
-    CHECK(frame(make(2598, {0, 0, 0, 0, 0xAA, 0x52, 0x7B, 0xDE})).kind == sls::Kind::Bad);   // u32 0
-    CHECK(frame(make(2834, {1, 0, 0, 0, 4, 0xAA, 0x52, 0x7B, 0xDE, 1})).kind == sls::Kind::Bad);  // type 4
-    CHECK(frame(make(2834, {1, 0, 0, 0, 1, 0xAA, 0x52, 0x7B, 0xDE, 1})).type == 1);
-    CHECK(frame(make(2104, {4, 1, 2, 3})).kind == sls::Kind::Bad);  // 1 + 3
-    CHECK(frame(make(2104, {4})).kind == sls::Kind::Resync && frame(make(2104, {4})).count == 0);
+    CHECK(frame(make(sls::kOpLoad, {1, 0, 0, 0, 0xAA, 0x52, 0x7B})).kind == sls::Kind::Bad);         // 7 bytes
+    CHECK(frame(make(sls::kOpLoad, {1, 0, 0, 0, 0, 0, 0, 0})).kind == sls::Kind::Bad);               // hash 0
+    CHECK(frame(make(sls::kOpLoad, {0, 0, 0, 0, 0xAA, 0x52, 0x7B, 0xDE})).kind == sls::Kind::Bad);   // u32 0
+    CHECK(frame(make(sls::kOpUnload, {1, 0, 0, 0, 4, 0xAA, 0x52, 0x7B, 0xDE, 1})).kind == sls::Kind::Bad);  // type 4
+    CHECK(frame(make(sls::kOpUnload, {1, 0, 0, 0, 1, 0xAA, 0x52, 0x7B, 0xDE, 1})).type == 1);
+    CHECK(frame(make(sls::kOpResync, {4, 1, 2, 3})).kind == sls::Kind::Bad);  // 1 + 3
+    CHECK(frame(make(sls::kOpResync, {4})).kind == sls::Kind::Resync && frame(make(sls::kOpResync, {4})).count == 0);
     auto broken = clean(k2598Tavern);
     broken.pop_back();  // the header's size no longer matches
     CHECK(frame(broken).kind == sls::Kind::Bad);
-    for (const uint16_t op : {uint16_t{2283}, uint16_t{2362}, uint16_t{2437}, uint16_t{2001}})
+    // 3732: reload / revive / game loading / logout (2976's 2283 / 2362 / 2437 / 2001).
+    for (const uint16_t op : {sls::kOpReloadStage, sls::kOpRevive, sls::kOpGameLoading, sls::kOpLogout})
         CHECK(frame(make(op, {1, 2, 3})).kind == sls::Kind::Flush);
-    CHECK(frame(make(2928, {4, 1, 0, 0, 0})).kind == sls::Kind::None);
-    CHECK(!sls::relevant(2928) && sls::relevant(2104));
+    CHECK(frame(make(2772, {4, 1, 0, 0, 0})).kind == sls::Kind::None);  // the door's own request (3732; 2976 2928)
+    CHECK(!sls::relevant(2772) && sls::relevant(sls::kOpResync));
 }
 
 void test_hashes() {
@@ -174,10 +177,10 @@ void test_tracker() {
     CHECK(t.apply(U::User2, unload(0xDE7B52AA)) == sls::Applied::Removed);
     CHECK(t.apply(U::User2, unload(0xDE7B52AA)) == sls::Applied::NotIn);
     CHECK(t.has(U::User2, 0xDE7B52AA) == sls::Has::No);
-    // Emptied at its load (2283 / 2362 / 2437 / 2001).
+    // Emptied at its load (3732's reload / revive / game loading / logout).
     t.apply(U::User2, load(7));
     t.apply(U::User2, load(8));
-    CHECK(t.apply(U::User2, frame(make(2437, {0}))) == sls::Applied::Flushed);
+    CHECK(t.apply(U::User2, frame(make(sls::kOpGameLoading, {0}))) == sls::Applied::Flushed);
     CHECK(t.size(U::User2) == 0 && t.has(U::User2, 7) == sls::Has::No);
     // The Resync list replaces the set (the stale ones go).
     t.apply(U::Host, load(9));
@@ -257,7 +260,7 @@ void test_gate() {
     g.actor = 0x9999;
     CHECK(sls::decide_gate(g) == W::OtherSubject);
     g = gate_base(sls::Mode::On);
-    g.opcode = 2928;
+    g.opcode = 2772;  // the door's own request (3732)
     CHECK(sls::decide_gate(g) == W::WrongOpcode);
 }
 
@@ -368,22 +371,24 @@ void test_delete() {
 }
 
 void test_callers() {
-    CHECK(sls::caller_of(0x29C3049) == sls::Caller::Unload2834);
-    CHECK(sls::caller_of(0x28363D4) == sls::Caller::OwnerLoad);
-    CHECK(sls::caller_of(0x2876460) == sls::Caller::Loader);
-    CHECK(sls::caller_of(0x2877145) == sls::Caller::Other && sls::caller_of(0) == sls::Caller::Other);
+    // 2026-11-21: the logic's 3732 return addresses (2976's were 0x29C3049 / 0x28363D4 / 0x2876460).
+    CHECK(sls::caller_of(sls::kRet2834) == sls::Caller::Unload2834);
+    CHECK(sls::caller_of(sls::kRetOwnerLoad) == sls::Caller::OwnerLoad);
+    CHECK(sls::caller_of(sls::kRetLoader) == sls::Caller::Loader);
+    CHECK(sls::caller_of(sls::kRetLoader + 1) == sls::Caller::Other && sls::caller_of(0) == sls::Caller::Other);
     using P = sls::Who;
     CHECK(sls::provoker_of(sls::Caller::Unload2834, true, true, sls::kOpUnload) == P::User2);
-    CHECK(sls::provoker_of(sls::Caller::Unload2834, true, true, 2598) == P::Unknown);
+    CHECK(sls::provoker_of(sls::Caller::Unload2834, true, true, sls::kOpLoad) == P::Unknown);
     CHECK(sls::provoker_of(sls::Caller::Unload2834, true, false, 0) == P::Host);
     CHECK(sls::provoker_of(sls::Caller::Unload2834, false, false, 0) == P::Unknown);
     CHECK(sls::provoker_of(sls::Caller::OwnerLoad, true, false, 0) == P::Host);
-    CHECK(sls::provoker_of(sls::Caller::OwnerLoad, true, true, 2437) == P::User2);
+    CHECK(sls::provoker_of(sls::Caller::OwnerLoad, true, true, sls::kOpGameLoading) == P::User2);
     CHECK(sls::provoker_of(sls::Caller::Loader, false, false, 0) == P::Nobody);
     CHECK(sls::provoker_of(sls::Caller::Other, true, false, 0) == P::Unknown);
-    // The 2834 handler's frame: name at C + 0x140, type at C + 0x98.
-    CHECK(sls::frame_matches(0x1000, 0x1140, 0x1098));
-    CHECK(!sls::frame_matches(0x1000, 0x1148, 0x1098) && !sls::frame_matches(0, 0x140, 0x98));
+    // The unload handler's frame: name at C + kFrameName, type at C + kFrameType (3732 0x138 / 0x98; 2976 0x140).
+    CHECK(sls::frame_matches(0x1000, 0x1000 + sls::kFrameName, 0x1000 + sls::kFrameType));
+    CHECK(!sls::frame_matches(0x1000, 0x1000 + sls::kFrameName + 8, 0x1000 + sls::kFrameType) &&
+          !sls::frame_matches(0, sls::kFrameName, sls::kFrameType));
     const uint8_t ok[5] = {0x44, 0x88, 0x4C, 0x24, 0x20};
     CHECK(sls::delete_patch_ok(ok));
     CHECK(!sls::delete_patch_ok(std::span<const uint8_t>(ok, 4)));
@@ -428,9 +433,10 @@ void test_scenario() {
     t.apply(U::User2, frame(clean(k2598Tavern)));
     t.apply(U::Host, unload(tavern));
     CHECK(decide(sls::Who::Host, tavern, tavern).verdict == V::Keep);
-    // The guest loads elsewhere (2437 empties its set) and the host's late 2834 of the level comes: the native delete.
+    // The guest loads elsewhere (its game loading empties its set) and the host's late unload of the level comes: the
+    // native delete.
     t.apply(U::Host, load(tavern));
-    t.apply(U::User2, frame(make(2437, {0})));
+    t.apply(U::User2, frame(make(sls::kOpGameLoading, {0})));
     t.apply(U::Host, unload(tavern));
     CHECK(decide(sls::Who::Host, tavern, tavern).verdict == V::Delete);
     // The last user's own 2834 deletes natively.

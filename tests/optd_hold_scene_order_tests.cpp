@@ -35,6 +35,13 @@ constexpr uint32_t kOwn = 0xA0100066;   // user 2's character (p2b)
 constexpr uint32_t kHost = 0xA0100001;  // the host's
 constexpr uint32_t kRenee = 0xB01002EB, kRhett = 0xB01002EC, kOther = 0xB0100010;
 constexpr uint32_t kButcher = 0x978345CA, kSmithy = 0xA7132561, kGrocery = 0x0E965A02;
+// 2026-11-21: the logic's 3732 opcodes under the 2976 names these fixtures were written with.
+constexpr uint16_t k2661 = hso::kOpPrepare, k2981 = hso::kOpBranch, k2524 = hso::kOpOnBranch,
+                   k2810 = hso::kOpDelete, k2516 = hso::kOpRemove, k2174 = hso::kOpMoveField,
+                   k2643 = hso::kOpLoadingField, k2756 = hso::kOpBoundary2756, k2111 = hso::kOpChartEvent;
+// two of oha::kHeldOps: 2976's 2723 is 3039 StartSpawnActionAck (tests/opmap_2976.h); 2404 is not in that map,
+// 3008 MoveActorAck stands in for it
+constexpr uint16_t k2723 = 3039, k2404 = 3008;
 
 void put32(std::vector<uint8_t>& v, size_t at, uint32_t x) { std::memcpy(&v[at], &x, 4); }
 void put64(std::vector<uint8_t>& v, size_t at, uint64_t x) { std::memcpy(&v[at], &x, 8); }
@@ -44,16 +51,16 @@ struct Bind {
     uint8_t type;
 };
 std::vector<uint8_t> p2661(uint32_t owner, uint64_t id, uint32_t hash, std::vector<Bind> binds) {
-    std::vector<uint8_t> p(91 + 11 * binds.size(), 0);
+    std::vector<uint8_t> p(hso::kPreparePrefix + 11 * binds.size(), 0);
     p[0] = 4;
     put32(p, 1, owner);
     put32(p, 5, owner);
     put64(p, 9, id);
     put32(p, 27, hash);
     for (size_t i = 0; i < binds.size(); ++i) {
-        put32(p, 91 + 11 * i, static_cast<uint32_t>(i + 1));
-        put32(p, 91 + 11 * i + 4, binds[i].actor);
-        p[91 + 11 * i + 8] = binds[i].type;
+        put32(p, hso::kPreparePrefix + 11 * i, static_cast<uint32_t>(i + 1));
+        put32(p, hso::kPreparePrefix + 11 * i + 4, binds[i].actor);
+        p[hso::kPreparePrefix + 11 * i + 8] = binds[i].type;
     }
     return p;
 }
@@ -127,15 +134,15 @@ void test_layouts() {
     auto bad = p;
     bad.pop_back();
     CHECK(!hso::parse_prepare(bad).ok);
-    CHECK(hso::scene_id(2981, p2981(0x142)) == 0x142);
-    CHECK(hso::scene_id(2981, p2981(0x142, 3)) == 0x142);
+    CHECK(hso::scene_id(k2981, p2981(0x142)) == 0x142);
+    CHECK(hso::scene_id(k2981, p2981(0x142, 3)) == 0x142);
     const auto full = p2981(0x142);
     const auto truncated = std::vector<uint8_t>(full.begin(), full.begin() + 17);
-    CHECK(!hso::scene_id(2981, truncated));  // a 17-byte prefix is not a 2981
-    CHECK(hso::scene_id(2524, p2524(0x143)) == 0x143);
-    CHECK(!hso::scene_id(2524, p2981(0x143)));
-    CHECK(hso::scene_id(2810, p2810(0x2DE)) == 0x2DE);
-    CHECK(!hso::scene_id(2661, p));
+    CHECK(!hso::scene_id(k2981, truncated));  // a 17-byte prefix is not a 2981
+    CHECK(hso::scene_id(k2524, p2524(0x143)) == 0x143);
+    CHECK(!hso::scene_id(k2524, p2981(0x143)));
+    CHECK(hso::scene_id(k2810, p2810(0x2DE)) == 0x2DE);
+    CHECK(!hso::scene_id(k2661, p));
     std::vector<uint32_t> keys;
     hso::announce_keys(p2005({kRenee, kRhett}), keys);
     CHECK(keys.size() == 2 && keys[0] == kRenee && keys[1] == kRhett);  // the user record is skipped
@@ -145,17 +152,17 @@ void test_layouts() {
     // Boundaries: 2174 17 + 0x38 n, 2643 20 + 0x38 n (3549 records) with append 0, 2756.
     std::vector<uint8_t> b2174(17 + 0x38, 0);
     put32(b2174, 1, kOwn);
-    CHECK(hso::field_boundary(2174, b2174, kOwn));
-    CHECK(!hso::field_boundary(2174, b2174, kHost));
+    CHECK(hso::field_boundary(k2174, b2174, kOwn));
+    CHECK(!hso::field_boundary(k2174, b2174, kHost));
     std::vector<uint8_t> b2643(20, 0);
     put32(b2643, 1, kOwn);
-    CHECK(hso::field_boundary(2643, b2643, kOwn));
+    CHECK(hso::field_boundary(k2643, b2643, kOwn));
     b2643[19] = 1;
-    CHECK(!hso::field_boundary(2643, b2643, kOwn));  // an append: not a new field
+    CHECK(!hso::field_boundary(k2643, b2643, kOwn));  // an append: not a new field
     std::vector<uint8_t> b2756(8, 0);
     put32(b2756, 0, kOwn);
-    CHECK(hso::field_boundary(2756, b2756, kOwn));
-    CHECK(!hso::field_boundary(2756, b2756, 0));
+    CHECK(hso::field_boundary(k2756, b2756, kOwn));
+    CHECK(!hso::field_boundary(k2756, b2756, 0));
 }
 
 void test_p2b_far() {
@@ -164,26 +171,26 @@ void test_p2b_far() {
     Run r;
     r.held = {kRenee, kRhett};
     const uint64_t t0 = 1'000'000;
-    r.feed(2661, p2661(kOwn, 0x142, kButcher, {{kRenee, 4}}), t0);
-    r.feed(2661, p2661(kOwn, 0x143, kSmithy, {{kRhett, 5}}), t0 + 1000);
+    r.feed(k2661, p2661(kOwn, 0x142, kButcher, {{kRenee, 4}}), t0);
+    r.feed(k2661, p2661(kOwn, 0x143, kSmithy, {{kRhett, 5}}), t0 + 1000);
     CHECK(r.ev.size() == 2 && r.ev[0].kind == hso::Kind::WouldHold && r.ev[0].keys.size() == 1 &&
           r.ev[0].keys[0] == kRenee && r.ev[1].id == 0x143);
     CHECK(r.o.size() == 2);
-    r.feed(2981, p2981(0x142), t0 + 5'000);
-    r.feed(2524, p2524(0x142), t0 + 5'100);
-    r.feed(2981, p2981(0x999), t0 + 5'200);  // another scene: not counted
-    r.feed(2981, p2981(0x143), t0 + 6'000);
+    r.feed(k2981, p2981(0x142), t0 + 5'000);
+    r.feed(k2524, p2524(0x142), t0 + 5'100);
+    r.feed(k2981, p2981(0x999), t0 + 5'200);  // another scene: not counted
+    r.feed(k2981, p2981(0x143), t0 + 6'000);
     // A batched 2005 announcing another NPC and Renee: 0x142 released after 344 ms with its opcodes in order.
     r.ev.clear();
     r.feed(2005, p2005({kOther, kRenee}), t0 + 344'000);
     CHECK(r.ev.size() == 1 && r.ev[0].kind == hso::Kind::Released && r.ev[0].id == 0x142);
     CHECK(r.ev[0].delay_us == 344'000);
-    CHECK((r.ev[0].ops == std::vector<uint16_t>{2661, 2981, 2524}));
+    CHECK((r.ev[0].ops == std::vector<uint16_t>{k2661, k2981, k2524}));
     CHECK(r.o.size() == 1);
     r.ev.clear();
     r.feed(2005, p2005({kRhett}), t0 + 1000 + 375'000);
     CHECK(r.ev.size() == 1 && r.ev[0].kind == hso::Kind::Released && r.ev[0].delay_us == 375'000 &&
-          (r.ev[0].ops == std::vector<uint16_t>{2661, 2981}));
+          (r.ev[0].ops == std::vector<uint16_t>{k2661, k2981}));
     CHECK(r.o.size() == 0);
 }
 
@@ -191,22 +198,22 @@ void test_not_held() {
     Run r;
     r.held = {kRenee};
     // The host's own scene (owner = the host): not T2's.
-    r.feed(2661, p2661(kHost, 0x2A2, kButcher, {{kRenee, 4}}), 1);
+    r.feed(k2661, p2661(kHost, 0x2A2, kButcher, {{kRenee, 4}}), 1);
     // Not a trade scene.
-    r.feed(2661, p2661(kOwn, 0x150, kGrocery, {{kRenee, 4}}), 2);
+    r.feed(k2661, p2661(kOwn, 0x150, kGrocery, {{kRenee, 4}}), 2);
     CHECK(r.ev.empty() && r.o.size() == 0);
     // User 2's own trade scene with nothing held: it goes now (NoHold, nothing watched).
-    r.feed(2661, p2661(kOwn, 0x151, kSmithy, {{kRhett, 5}, {kOther, 2}}), 3);
+    r.feed(k2661, p2661(kOwn, 0x151, kSmithy, {{kRhett, 5}, {kOther, 2}}), 3);
     CHECK(r.ev.size() == 1 && r.ev[0].kind == hso::Kind::NoHold && r.ev[0].keys.size() == 1 && r.o.size() == 0);
     // Types other than 4/5 are not waited for.
     r.ev.clear();
     r.held = {kOther};
-    r.feed(2661, p2661(kOwn, 0x152, kSmithy, {{kOther, 2}}), 4);
+    r.feed(k2661, p2661(kOwn, 0x152, kSmithy, {{kOther, 2}}), 4);
     CHECK(r.ev.size() == 1 && r.ev[0].kind == hso::Kind::NoHold);
     // Without user 2's key nothing is T2's.
     hso::SceneOrder o;
     std::vector<hso::Event> ev;
-    o.feed(2661, p2661(kOwn, 0x153, kSmithy, {{kRenee, 4}}), 5, 0, [](uint32_t) { return true; }, ev);
+    o.feed(k2661, p2661(kOwn, 0x153, kSmithy, {{kRenee, 4}}), 5, 0, [](uint32_t) { return true; }, ev);
     CHECK(ev.empty());
 }
 
@@ -214,38 +221,38 @@ void test_endings() {
     // 2810 while held: cancelled with what it held.
     Run r;
     r.held = {kRenee, kRhett};
-    r.feed(2661, p2661(kOwn, 0x142, kButcher, {{kRenee, 4}, {kRhett, 5}}), 0);
+    r.feed(k2661, p2661(kOwn, 0x142, kButcher, {{kRenee, 4}, {kRhett, 5}}), 0);
     r.feed(2005, p2005({kRenee}), 100);  // one of two: still held
     CHECK(r.o.size() == 1);
-    r.feed(2981, p2981(0x142), 200);
+    r.feed(k2981, p2981(0x142), 200);
     r.ev.clear();
-    r.feed(2810, p2810(0x142), 300);
+    r.feed(k2810, p2810(0x142), 300);
     CHECK(r.ev.size() == 1 && r.ev[0].kind == hso::Kind::Cancelled && r.ev[0].keys.size() == 1 &&
-          r.ev[0].keys[0] == kRhett && (r.ev[0].ops == std::vector<uint16_t>{2661, 2981, 2810}) && r.o.size() == 0);
+          r.ev[0].keys[0] == kRhett && (r.ev[0].ops == std::vector<uint16_t>{k2661, k2981, k2810}) && r.o.size() == 0);
     // A pending NPC removed (2516): dropped, with the key.
     r.ev.clear();
-    r.feed(2661, p2661(kOwn, 0x143, kSmithy, {{kRhett, 5}}), 1000);
-    r.feed(2516, p2516({kOther, kRhett}), 2000);
+    r.feed(k2661, p2661(kOwn, 0x143, kSmithy, {{kRhett, 5}}), 1000);
+    r.feed(k2516, p2516({kOther, kRhett}), 2000);
     CHECK(r.ev.size() == 2 && r.ev[1].kind == hso::Kind::Dropped && r.ev[1].keys.size() == 1 &&
           r.ev[1].keys[0] == kRhett && r.o.size() == 0);
     // A field boundary of user 2: every watch dropped, no key.
     r.ev.clear();
-    r.feed(2661, p2661(kOwn, 0x144, kSmithy, {{kRhett, 5}}), 3000);
+    r.feed(k2661, p2661(kOwn, 0x144, kSmithy, {{kRhett, 5}}), 3000);
     std::vector<uint8_t> b(17, 0);
     put32(b, 1, kOwn);
-    r.feed(2174, b, 4000);
+    r.feed(k2174, b, 4000);
     CHECK(r.ev.size() == 2 && r.ev[1].kind == hso::Kind::Dropped && r.ev[1].keys.empty() && r.o.size() == 0);
     // 40 s without the 2005: expired.
     r.ev.clear();
-    r.feed(2661, p2661(kOwn, 0x145, kSmithy, {{kRhett, 5}}), 10'000);
+    r.feed(k2661, p2661(kOwn, 0x145, kSmithy, {{kRhett, 5}}), 10'000);
     r.o.tick(10'000 + 39'999'999, r.ev);
     CHECK(r.o.size() == 1);
     r.o.tick(10'000 + 40'000'000, r.ev);
     CHECK(r.ev.size() == 2 && r.ev[1].kind == hso::Kind::Expired && r.o.size() == 0);
     // The same id again while held: one watch.
     r.ev.clear();
-    r.feed(2661, p2661(kOwn, 0x146, kSmithy, {{kRhett, 5}}), 1);
-    r.feed(2661, p2661(kOwn, 0x146, kSmithy, {{kRhett, 5}}), 2);
+    r.feed(k2661, p2661(kOwn, 0x146, kSmithy, {{kRhett, 5}}), 1);
+    r.feed(k2661, p2661(kOwn, 0x146, kSmithy, {{kRhett, 5}}), 2);
     CHECK(r.ev.size() == 1 && r.o.size() == 1);
     r.o.clear();
     CHECK(r.o.size() == 0);
@@ -257,12 +264,12 @@ void test_bounds() {
     l.max_ops = 2;
     Run r(l);
     r.held = {kRenee, kRhett};
-    r.feed(2661, p2661(kOwn, 0x142, kButcher, {{kRenee, 4}}), 0);
-    r.feed(2661, p2661(kOwn, 0x143, kSmithy, {{kRhett, 5}}), 1);
+    r.feed(k2661, p2661(kOwn, 0x142, kButcher, {{kRenee, 4}}), 0);
+    r.feed(k2661, p2661(kOwn, 0x143, kSmithy, {{kRhett, 5}}), 1);
     CHECK(r.ev.size() == 2 && r.ev[1].kind == hso::Kind::Capacity && r.o.size() == 1);
-    r.feed(2981, p2981(0x142), 2);
-    r.feed(2981, p2981(0x142), 3);
-    r.feed(2524, p2524(0x142), 4);
+    r.feed(k2981, p2981(0x142), 2);
+    r.feed(k2981, p2981(0x142), 3);
+    r.feed(k2524, p2524(0x142), 4);
     r.ev.clear();
     r.feed(2005, p2005({kRenee}), 5);
     CHECK(r.ev.size() == 1 && r.ev[0].ops.size() == 2 && r.ev[0].more_ops == 2);
@@ -356,26 +363,26 @@ void test_t2_hold_release_in_order() {
     // after it, merged with observer_hold_acks' own held packets by their original order.
     Active a;
     CHECK(a.acks.begin(kRenee, 1, 0) == oha::Begin::Started);
-    CHECK(a.send(2723, actor_op(kRenee)) == hso::Take::Held);                                   // oha's (seq 1)
-    CHECK(a.send(2661, p2661(kOwn, 0x142, kButcher, {{kRenee, 4}})) == hso::Take::Held);        // T2 (seq 2)
-    CHECK(a.send(2404, actor_op(kRenee)) == hso::Take::Held);                                   // oha's (seq 3)
-    CHECK(a.send(2981, p2981(0x142)) == hso::Take::Held);                                       // T2 (seq 4)
-    CHECK(a.send(2111, p2111(0x142)) == hso::Take::Held);                                       // T2 (seq 5)
-    CHECK(a.send(2524, p2524(0x142)) == hso::Take::Held);                                       // T2 (seq 6)
-    CHECK(a.send(2981, p2981(0x999)) == hso::Take::Pass);                                       // another id
+    CHECK(a.send(k2723, actor_op(kRenee)) == hso::Take::Held);                                   // oha's (seq 1)
+    CHECK(a.send(k2661, p2661(kOwn, 0x142, kButcher, {{kRenee, 4}})) == hso::Take::Held);        // T2 (seq 2)
+    CHECK(a.send(k2404, actor_op(kRenee)) == hso::Take::Held);                                   // oha's (seq 3)
+    CHECK(a.send(k2981, p2981(0x142)) == hso::Take::Held);                                       // T2 (seq 4)
+    CHECK(a.send(k2111, p2111(0x142)) == hso::Take::Held);                                       // T2 (seq 5)
+    CHECK(a.send(k2524, p2524(0x142)) == hso::Take::Held);                                       // T2 (seq 6)
+    CHECK(a.send(k2981, p2981(0x999)) == hso::Take::Pass);                                       // another id
     CHECK(a.t2.scenes() == 1 && a.t2.kept(0x142) && a.count(hso::Kind::WouldHold) == 1);
-    CHECK((a.ops() == std::vector<uint16_t>{2981}));
+    CHECK((a.ops() == std::vector<uint16_t>{k2981}));
     a.now += 344'000;
     a.send(2005, p2005({kOther, kRenee}));  // batched: another NPC first
-    CHECK((a.ops() == std::vector<uint16_t>{2981, 2005, 2723, 2661, 2404, 2981, 2111, 2524}));
+    CHECK((a.ops() == std::vector<uint16_t>{k2981, 2005, k2723, k2661, k2404, k2981, k2111, k2524}));
     CHECK(a.t2.scenes() == 0 && a.count(hso::Kind::Released) == 1);
     const hso::Event& r = a.ev.back();
     CHECK(r.active && r.kind == hso::Kind::Released && r.id == 0x142 && r.delay_us == 344'000);
-    CHECK((r.ops == std::vector<uint16_t>{2661, 2981, 2111, 2524}));
+    CHECK((r.ops == std::vector<uint16_t>{k2661, k2981, k2111, k2524}));
     CHECK(a.t2.counters().released == 1 && a.t2.counters().packets_released == 4);
     // After the release the id is free: its later packets pass as usual.
-    CHECK(a.send(2981, p2981(0x142)) == hso::Take::Pass);
-    CHECK(a.send(2810, p2810(0x142)) == hso::Take::Pass);
+    CHECK(a.send(k2981, p2981(0x142)) == hso::Take::Pass);
+    CHECK(a.send(k2810, p2810(0x142)) == hso::Take::Pass);
 }
 
 void test_t2_two_keys_and_compacted_2005() {
@@ -383,16 +390,16 @@ void test_t2_two_keys_and_compacted_2005() {
     Active a;
     a.acks.begin(kRenee, 1, 0);
     a.acks.begin(kRhett, 1, 0);
-    CHECK(a.send(2661, p2661(kOwn, 0x143, kSmithy, {{kRenee, 4}, {kRhett, 5}})) == hso::Take::Held);
+    CHECK(a.send(k2661, p2661(kOwn, 0x143, kSmithy, {{kRenee, 4}, {kRhett, 5}})) == hso::Take::Held);
     a.send(2005, p2005({kRhett}));
     CHECK(a.t2.scenes() == 1 && (a.ops() == std::vector<uint16_t>{2005}));
-    a.send(2981, p2981(0x143));
+    a.send(k2981, p2981(0x143));
     a.send(2005, p2005({kRenee}));
-    CHECK(a.t2.scenes() == 0 && (a.ops() == std::vector<uint16_t>{2005, 2005, 2661, 2981}));
+    CHECK(a.t2.scenes() == 0 && (a.ops() == std::vector<uint16_t>{2005, 2005, k2661, k2981}));
     // A 2005 whose records were compacted to the user record only (a retired key filtered out) releases nothing.
     a.queue.clear();
     a.acks.begin(kRhett, 1, 0);
-    a.send(2661, p2661(kOwn, 0x144, kSmithy, {{kRhett, 5}}));
+    a.send(k2661, p2661(kOwn, 0x144, kSmithy, {{kRhett, 5}}));
     a.send(2005, p2005({}));
     CHECK(a.t2.scenes() == 1 && (a.ops() == std::vector<uint16_t>{2005}));
 }
@@ -401,17 +408,17 @@ void test_t2_not_kept() {
     Active a;
     a.acks.begin(kRenee, 1, 0);
     // The host's own scene, a non-trade scene, a bound key not held: all pass at once.
-    CHECK(a.send(2661, p2661(kHost, 0x2A2, kButcher, {{kRenee, 4}})) == hso::Take::Pass);
-    CHECK(a.send(2661, p2661(kOwn, 0x150, kGrocery, {{kRenee, 4}})) == hso::Take::Pass);
-    CHECK(a.send(2661, p2661(kOwn, 0x151, kSmithy, {{kRhett, 5}})) == hso::Take::Pass);
-    CHECK(a.send(2661, p2661(kOwn, 0x152, kSmithy, {{kRenee, 2}})) == hso::Take::Pass);  // type 2: not waited for
+    CHECK(a.send(k2661, p2661(kHost, 0x2A2, kButcher, {{kRenee, 4}})) == hso::Take::Pass);
+    CHECK(a.send(k2661, p2661(kOwn, 0x150, kGrocery, {{kRenee, 4}})) == hso::Take::Pass);
+    CHECK(a.send(k2661, p2661(kOwn, 0x151, kSmithy, {{kRhett, 5}})) == hso::Take::Pass);
+    CHECK(a.send(k2661, p2661(kOwn, 0x152, kSmithy, {{kRenee, 2}})) == hso::Take::Pass);  // type 2: not waited for
     CHECK(a.t2.scenes() == 0 && a.count(hso::Kind::NoHold) == 2 && a.queue.size() == 4);
     // A spilled key is not held (its packets pass natively): not waited for either.
     hso::SceneHold t2;
     std::vector<hso::Event> ev;
-    std::vector<uint8_t> pk = wire(2661, p2661(kOwn, 0x153, kSmithy, {{kRenee, 4}}));
+    std::vector<uint8_t> pk = wire(k2661, p2661(kOwn, 0x153, kSmithy, {{kRenee, 4}}));
     const auto pl = p2661(kOwn, 0x153, kSmithy, {{kRenee, 4}});
-    CHECK(t2.offer(2661, pl, pk, 0, 0, [](uint32_t) { return true; }, [] { return uint64_t{1}; }, ev) ==
+    CHECK(t2.offer(k2661, pl, pk, 0, 0, [](uint32_t) { return true; }, [] { return uint64_t{1}; }, ev) ==
           hso::Take::Pass);  // without user 2's key nothing is T2's
 }
 
@@ -419,14 +426,14 @@ void test_t2_2810_discards() {
     // A 2810 of a kept scene: the scene, the 2810 and what it kept are dropped; no tombstone (the id is over).
     Active a;
     a.acks.begin(kRhett, 1, 0);
-    a.send(2661, p2661(kOwn, 0x143, kSmithy, {{kRhett, 5}}));
-    a.send(2981, p2981(0x143));
-    CHECK(a.send(2810, p2810(0x143)) == hso::Take::Discarded);
+    a.send(k2661, p2661(kOwn, 0x143, kSmithy, {{kRhett, 5}}));
+    a.send(k2981, p2981(0x143));
+    CHECK(a.send(k2810, p2810(0x143)) == hso::Take::Discarded);
     CHECK(a.t2.scenes() == 0 && a.t2.tombs() == 0 && a.count(hso::Kind::Cancelled) == 1 && a.queue.empty());
-    CHECK((a.ev.back().ops == std::vector<uint16_t>{2661, 2981, 2810}));
+    CHECK((a.ev.back().ops == std::vector<uint16_t>{k2661, k2981, k2810}));
     a.send(2005, p2005({kRhett}));
     CHECK((a.ops() == std::vector<uint16_t>{2005}));  // nothing of the scene follows its 2005
-    CHECK(a.send(2981, p2981(0x143)) == hso::Take::Pass);
+    CHECK(a.send(k2981, p2981(0x143)) == hso::Take::Pass);
 }
 
 void test_t2_cap() {
@@ -437,56 +444,56 @@ void test_t2_cap() {
     Active a(l);
     a.acks.begin(kRenee, 1, 0);
     a.acks.begin(kRhett, 1, 0);
-    CHECK(a.send(2661, p2661(kOwn, 0x142, kButcher, {{kRenee, 4}})) == hso::Take::Held);
-    CHECK(a.send(2661, p2661(kOwn, 0x143, kSmithy, {{kRhett, 5}})) == hso::Take::Discarded);
+    CHECK(a.send(k2661, p2661(kOwn, 0x142, kButcher, {{kRenee, 4}})) == hso::Take::Held);
+    CHECK(a.send(k2661, p2661(kOwn, 0x143, kSmithy, {{kRhett, 5}})) == hso::Take::Discarded);
     CHECK(a.count(hso::Kind::Capacity) == 1 && a.t2.tombs() == 1 && a.t2.scenes() == 1);
-    CHECK(a.send(2981, p2981(0x143)) == hso::Take::Discarded);   // its later packets too
-    CHECK(a.send(2810, p2810(0x143)) == hso::Take::Discarded);   // its 2810 ends the tombstone
-    CHECK(a.t2.tombs() == 0 && a.send(2981, p2981(0x143)) == hso::Take::Pass);
+    CHECK(a.send(k2981, p2981(0x143)) == hso::Take::Discarded);   // its later packets too
+    CHECK(a.send(k2810, p2810(0x143)) == hso::Take::Discarded);   // its 2810 ends the tombstone
+    CHECK(a.t2.tombs() == 0 && a.send(k2981, p2981(0x143)) == hso::Take::Pass);
     // Packets per scene: the one over the cap discards the scene with everything it kept.
-    CHECK(a.send(2981, p2981(0x142)) == hso::Take::Held);
-    CHECK(a.send(2524, p2524(0x142)) == hso::Take::Held);       // 3 kept: 2661, 2981, 2524
-    CHECK(a.send(2111, p2111(0x142)) == hso::Take::Discarded);  // the 4th: refused
+    CHECK(a.send(k2981, p2981(0x142)) == hso::Take::Held);
+    CHECK(a.send(k2524, p2524(0x142)) == hso::Take::Held);       // 3 kept: 2661, 2981, 2524
+    CHECK(a.send(k2111, p2111(0x142)) == hso::Take::Discarded);  // the 4th: refused
     CHECK(a.t2.scenes() == 0 && a.count(hso::Kind::Capacity) == 2 && a.t2.tombs() == 1);
     a.send(2005, p2005({kRenee}));
-    CHECK((a.ops() == std::vector<uint16_t>{2981, 2005}));  // nothing of 0x142 is released
+    CHECK((a.ops() == std::vector<uint16_t>{k2981, 2005}));  // nothing of 0x142 is released
     CHECK(a.t2.counters().packets_discarded == 5 && a.t2.counters().tomb_dropped == 2);
     // Bytes in all.
     hso::HoldLimits lb;
     lb.max_bytes_total = 200;
     Active b(lb);
     b.acks.begin(kRenee, 1, 0);
-    CHECK(b.send(2661, p2661(kOwn, 0x160, kButcher, {{kRenee, 4}})) == hso::Take::Held);  // 2 + 102 B
-    CHECK(b.send(2661, p2661(kOwn, 0x161, kButcher, {{kRenee, 4}})) == hso::Take::Discarded);
+    CHECK(b.send(k2661, p2661(kOwn, 0x160, kButcher, {{kRenee, 4}})) == hso::Take::Held);  // 2 + 102 B
+    CHECK(b.send(k2661, p2661(kOwn, 0x161, kButcher, {{kRenee, 4}})) == hso::Take::Discarded);
 }
 
 void test_t2_other_ends() {
     // The hold of a pending key ends without its 2005 (oha drop / expiry / retirement): discarded, tombstoned.
     Active a;
     a.acks.begin(kRenee, 1, 0);
-    a.send(2661, p2661(kOwn, 0x142, kButcher, {{kRenee, 4}}));
+    a.send(k2661, p2661(kOwn, 0x142, kButcher, {{kRenee, 4}}));
     a.acks.drop(kRenee);
     a.t2.key_gone(kRenee, a.now, a.ev);
     CHECK(a.t2.scenes() == 0 && a.t2.tombs() == 1 && a.count(hso::Kind::KeyGone) == 1);
     CHECK(a.ev.back().keys.size() == 1 && a.ev.back().keys[0] == kRenee);
-    CHECK(a.send(2524, p2524(0x142)) == hso::Take::Discarded);
+    CHECK(a.send(k2524, p2524(0x142)) == hso::Take::Discarded);
     // A 2516 of a pending key: discarded (the 2516 itself passes).
     a.acks.begin(kRhett, 1, 0);
-    a.send(2661, p2661(kOwn, 0x143, kSmithy, {{kRhett, 5}}));
-    CHECK(a.send(2516, p2516({kOther, kRhett})) == hso::Take::Pass);
+    a.send(k2661, p2661(kOwn, 0x143, kSmithy, {{kRhett, 5}}));
+    CHECK(a.send(k2516, p2516({kOther, kRhett})) == hso::Take::Pass);
     CHECK(a.t2.scenes() == 0 && a.count(hso::Kind::Dropped) == 1 && a.t2.tombs() == 2);
     CHECK(a.ev.back().keys.size() == 1 && a.ev.back().keys[0] == kRhett);  // the 2516 names the NPC
     // A field boundary of user 2: everything goes, the tombstones too (the boundary passes).
     a.acks.begin(kOther, 1, 0);
-    a.send(2661, p2661(kOwn, 0x144, kSmithy, {{kOther, 4}}));
+    a.send(k2661, p2661(kOwn, 0x144, kSmithy, {{kOther, 4}}));
     std::vector<uint8_t> b(17, 0);
     put32(b, 1, kOwn);
-    CHECK(a.send(2174, b) == hso::Take::Pass);
+    CHECK(a.send(k2174, b) == hso::Take::Pass);
     CHECK(a.t2.scenes() == 0 && a.t2.tombs() == 0 && a.count(hso::Kind::Dropped) == 2);
     CHECK(a.ev.back().keys.empty());  // review B3: a field change, not a 2516 (no key named)
     // 100 s without the 2005: expired and tombstoned; the tombstone ages out after 120 s.
     a.acks.begin(kRenee, 1, 0);
-    a.send(2661, p2661(kOwn, 0x145, kSmithy, {{kRenee, 4}}));
+    a.send(k2661, p2661(kOwn, 0x145, kSmithy, {{kRenee, 4}}));
     a.t2.tick(a.now + 99'999'999, a.ev);
     CHECK(a.t2.scenes() == 1);
     a.t2.tick(a.now + 100'000'000, a.ev);
@@ -494,14 +501,14 @@ void test_t2_other_ends() {
     a.t2.tick(a.now + 220'000'000, a.ev);
     CHECK(a.t2.tombs() == 0);
     // User 2 gone: cleared.
-    a.send(2661, p2661(kOwn, 0x146, kSmithy, {{kRenee, 4}}));
+    a.send(k2661, p2661(kOwn, 0x146, kSmithy, {{kRenee, 4}}));
     a.t2.clear(a.now, a.ev);
     CHECK(a.t2.live() == 0 && a.t2.bytes() == 0);
     for (int i = 0; i < static_cast<int>(hso::Kind::Count); ++i) {
         CHECK(std::strlen(hso::kind_name(static_cast<hso::Kind>(i))) > 0);
     }
-    CHECK(hso::scene_id_t2(2111, p2111(0x115)) == 0x115 && !hso::scene_id_t2(2111, p2981(0x115)));
-    CHECK(!hso::scene_id(2111, p2111(0x115)));  // the probe keeps its own list
+    CHECK(hso::scene_id_t2(k2111, p2111(0x115)) == 0x115 && !hso::scene_id_t2(k2111, p2981(0x115)));
+    CHECK(!hso::scene_id(k2111, p2111(0x115)));  // the probe keeps its own list
 }
 
 // S46 phase 3 review (revision-f3.md, its sim.cpp cases 1 to 4) and the fixes M1, B2, B4.
@@ -514,12 +521,12 @@ void test_t2_review() {
         const uint32_t k = kRhett;
         a.acks.released(std::span<const uint32_t>(&k, 1), 0);
         CHECK(!a.acks.withheld(kRhett) && a.acks.holding(kRhett));
-        CHECK(a.send(2661, p2661(kOwn, 0x143, kSmithy, {{kRhett, 4}})) == hso::Take::Pass);
+        CHECK(a.send(k2661, p2661(kOwn, 0x143, kSmithy, {{kRhett, 4}})) == hso::Take::Pass);
         CHECK(a.t2.scenes() == 0 && a.count(hso::Kind::NoHold) == 1);
         std::vector<oha::AckHold::Gone> gone;
         a.acks.expire(2001, &gone);
         for (const auto& g : gone) a.t2.key_gone(g.key, a.now, a.ev, static_cast<uint8_t>(g.why));
-        CHECK(gone.size() == 1 && a.count(hso::Kind::KeyGone) == 0 && (a.ops() == std::vector<uint16_t>{2661}));
+        CHECK(gone.size() == 1 && a.count(hso::Kind::KeyGone) == 0 && (a.ops() == std::vector<uint16_t>{k2661}));
     }
     // Case 2 (M1): a Spilled key (over 32 packets, its 2005 still to come) IS pending: the 2661 is kept and goes right
     // after the 2005 (before the fix it passed at once: the original 0x3B331F28).
@@ -527,13 +534,13 @@ void test_t2_review() {
         Active a;
         a.acks.begin(kRhett, 1, 0);
         hso::Take last = hso::Take::Held;
-        for (int i = 0; i < 33 && last == hso::Take::Held; ++i) last = a.send(2404, actor_op(kRhett));
+        for (int i = 0; i < 33 && last == hso::Take::Held; ++i) last = a.send(k2404, actor_op(kRhett));
         CHECK(last == hso::Take::Pass && !a.acks.holding(kRhett) && a.acks.withheld(kRhett));  // spilled
         const size_t spilled = a.queue.size();
         CHECK(spilled == 33);
-        CHECK(a.send(2661, p2661(kOwn, 0x143, kSmithy, {{kRhett, 4}})) == hso::Take::Held);
+        CHECK(a.send(k2661, p2661(kOwn, 0x143, kSmithy, {{kRhett, 4}})) == hso::Take::Held);
         a.send(2005, p2005({kRhett}));
-        CHECK(a.queue.size() == spilled + 2 && op_of(a.queue[spilled]) == 2005 && op_of(a.queue[spilled + 1]) == 2661);
+        CHECK(a.queue.size() == spilled + 2 && op_of(a.queue[spilled]) == 2005 && op_of(a.queue[spilled + 1]) == k2661);
         CHECK(a.count(hso::Kind::Released) == 1);
     }
     // Case 3 (B2): a 2810 of 18 B with the kept scene's id discards it (before: it passed and the 2005 released a scene
@@ -541,41 +548,41 @@ void test_t2_review() {
     {
         Active a;
         a.acks.begin(kRhett, 1, 0);
-        a.send(2661, p2661(kOwn, 0x143, kSmithy, {{kRhett, 4}}));
+        a.send(k2661, p2661(kOwn, 0x143, kSmithy, {{kRhett, 4}}));
         auto d = p2810(0x143);
         d.push_back(0);
-        CHECK(a.send(2810, d) == hso::Take::Discarded && a.t2.scenes() == 0 && a.t2.counters().odd_2810 == 1);
+        CHECK(a.send(k2810, d) == hso::Take::Discarded && a.t2.scenes() == 0 && a.t2.counters().odd_2810 == 1);
         a.send(2005, p2005({kRhett}));
         CHECK((a.ops() == std::vector<uint16_t>{2005}));
         std::vector<uint8_t> shortd(11, 0);
-        CHECK(!hso::scene_id_t2(2810, shortd) && hso::scene_id_t2(2810, d) == 0x143);
-        CHECK(!hso::scene_id(2810, d));  // the probe keeps its 17 B rule
+        CHECK(!hso::scene_id_t2(k2810, shortd) && hso::scene_id_t2(k2810, d) == 0x143);
+        CHECK(!hso::scene_id(k2810, d));  // the probe keeps its 17 B rule
     }
     // Case 4 (B4): after a KeyGone tombstone, a 2661 of the same id whose NPC is on the client now passes (decided
     // again); one whose NPC is withheld again is kept again.
     {
         Active a;
         a.acks.begin(kRhett, 1, 0);
-        a.send(2661, p2661(kOwn, 0x143, kSmithy, {{kRhett, 4}}));
+        a.send(k2661, p2661(kOwn, 0x143, kSmithy, {{kRhett, 4}}));
         a.acks.drop(kRhett);
         a.t2.key_gone(kRhett, a.now, a.ev, static_cast<uint8_t>(oha::Discard::Dropped));
         CHECK(a.t2.tombs() == 1 && a.ev.back().kind == hso::Kind::KeyGone &&
               a.ev.back().reason == static_cast<uint8_t>(oha::Discard::Dropped));
         a.acks.begin(kRhett, 1, 6);
         a.send(2005, p2005({kRhett}));  // the NPC comes back and its 2005 goes
-        CHECK(a.send(2661, p2661(kOwn, 0x143, kSmithy, {{kRhett, 4}})) == hso::Take::Pass);
+        CHECK(a.send(k2661, p2661(kOwn, 0x143, kSmithy, {{kRhett, 4}})) == hso::Take::Pass);
         CHECK(a.t2.tombs() == 0 && a.t2.counters().tomb_reopened == 1);
-        a.send(2661, p2661(kOwn, 0x144, kSmithy, {{kRenee, 4}}));  // nothing withheld: passes
+        a.send(k2661, p2661(kOwn, 0x144, kSmithy, {{kRenee, 4}}));  // nothing withheld: passes
         a.acks.begin(kRenee, 1, 7);
         a.t2.key_gone(kRenee, a.now, a.ev);  // no scene waits for it: nothing
         CHECK(a.t2.tombs() == 0);
         // Withheld again: kept again under the same id.
         Active b;
         b.acks.begin(kRhett, 1, 0);
-        b.send(2661, p2661(kOwn, 0x150, kSmithy, {{kRhett, 4}}));
+        b.send(k2661, p2661(kOwn, 0x150, kSmithy, {{kRhett, 4}}));
         b.t2.key_gone(kRhett, b.now, b.ev);
         CHECK(b.t2.tombs() == 1 && b.ev.back().reason == 0xFF);
-        CHECK(b.send(2661, p2661(kOwn, 0x150, kSmithy, {{kRhett, 4}})) == hso::Take::Held && b.t2.tombs() == 0);
+        CHECK(b.send(k2661, p2661(kOwn, 0x150, kSmithy, {{kRhett, 4}})) == hso::Take::Held && b.t2.tombs() == 0);
     }
 }
 
