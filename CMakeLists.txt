@@ -233,6 +233,7 @@ add_library(cdmp_mod SHARED
     src/mod/session2/guest_x_interaction.cpp
     src/mod/session2/shop_probe.cpp
     src/mod/session2/trade_probe.cpp
+    src/mod/session2/voice_probe.cpp
     src/mod/session2/interaction_share.cpp
     src/mod/session2/shop_trade_probe.cpp
     src/mod/session2/observer_hold_scene_order.cpp

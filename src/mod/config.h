@@ -561,6 +561,9 @@ struct Config {
     uint32_t s2_death_penalty_item = 0;
     // inter_probe, HOST (session2/trade_probe.h; far-shop research): read-only probes of NPC dynamic interactions.
     bool s2_inter_probe = false;
+    // voice_probe, host AND guest (Co-op+ B20, session2/voice_probe.h; research, counts only): the other player's voice
+    // and swing sounds, per character.
+    bool s2_voice_probe = false;
     // interaction_share = 0 | 1, HOST (session2/interaction_share.h; far shops, tcB239): an NPC's dynamic
     // interactions stay while a scene of the other player still holds them (the game removes them by key).
     bool s2_interaction_share = false;
