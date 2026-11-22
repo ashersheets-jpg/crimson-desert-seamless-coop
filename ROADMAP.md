@@ -269,6 +269,10 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   (2026-11-21: the table is the host's scene 'cd_minigame_armwrest_base' with no twin, so the joined player's prompt
   there is refused like the host's own shop entries; the way in is a twin like the shops' (research:
   docs/research/armwrest-twin.md; the organizer's menu captured, the match itself next).)
+  (2026-11-22 ROOT CAUSE of the stalled match (cs92 against cs87): the server answers the table's state-7 chart
+  events with the grip (CatchActionResultAck), which starts the push; the joined player's twin answered those events
+  locally, so no grip. Two fixes to test, both research switches (native 2b2eaf2 / 9fb4fa4): forward those events to
+  the host's scene (twin_extra_chart=1, cs95) or make the grip on the joined player's game (=3, cs95b).)
 - [~] **B15 — Duel extras and scoreboard** (wagers, arenas, spectator camera, rematch, titles). (Rematch T42,
   scoreboard and titles T43 exist. 2026-11-16 wagers: from a challenge's invite on, "Stake on the challenge" on the
   inventory's Discard question; when the match ends the loser's game gives its stake to the winner (cs36e, one PC).
