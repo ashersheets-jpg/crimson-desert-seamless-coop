@@ -591,6 +591,12 @@ cdmp.host_<start>.log / cdmp.guest_<start>.log: the files named after the step's
 file from another day). To wait during a step with nothing left to do, the same tab can wait too (`await new
 Promise(r => setTimeout(r, 40000))`; the tool stops a call at 45 s): no process, no focus change, few tokens.
 
+## Check the logs for the step a cause needs before writing the cause (2026-11-22, B09)
+cs79b's doubled Marius / Ross turned out to be the friend's own story copies, and the roadmap note first said the
+host's talk "took the friend's copy (refused)". The host's log had no talk request (2671) at all: nothing was
+refused, the prompt most likely never came. A cause that names a step (a request sent, a reply refused) gets one
+grep for that step first; what is not seen is written as a guess.
+
 ## A build after a candidate's pass changes what its re-runs test (2026-11-22)
 The harness installs the build tree's cdmp.asi / coopplus.asi, not the package's (-PackageIni gives only the ini). A
 research build made while a candidate (677c87bb) still had steps left would have sent those steps the research DLLs;
