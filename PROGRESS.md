@@ -10269,7 +10269,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   0x7C2C60 by the port map from 3576's 0x79A160 / 0x795B20, their context's first field the actor, read in the 3732
   code; PlayEvent 0x3BD5820): counts per character, a line every 10 s. cs98 (each player swings 30 times) joins the
   15:00 chain. Unit tests 92 / 14 (the baseline).
-- 12:52 T26's player setting plumbed (layer df0bedc: [coop] death_penalty -> the host's native ini; the Co-op Settings
+- 12:48 T26's player setting plumbed (layer df0bedc: [coop] death_penalty -> the host's native ini; the Co-op Settings
   choice stays hidden until the silver's key is known). T25 in the shared world: layer dev step killhorse and cs99 (the
   joined player's horse dies under it, then a second call). B09: cs79b's doubled Marius / Ross are the joined
   player's own story-scene copies (ROADMAP B09). README's player steps updated. 677c87bb's post staged (zips checked
