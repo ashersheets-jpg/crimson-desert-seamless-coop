@@ -5,6 +5,12 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- 2026-11-21 19:30 QUESTION (not urgent, B13: player-vs-player arm wrestling in one shared world): who sits where?
+  (1) each player at a table, two matches with one shared strength bar (the faster masher wins on both screens);
+  (2) one match: you wrestle the table's NPC, your friend stands by and mashes too, both screens show the bar and the
+  score; (3) your friend in the opponent's chair (the NPC hidden on your screen, your friend's character posed in its
+  seat): the best look, the most work. Today's runs (cs76f, cs84a): the joined player cannot start a table match by
+  itself yet, so (1) is not possible now. My recommendation: (2) now, (3) after the release.
 - 2026-11-21 17:54 DONE: cfaa3a69 POSTED in #download-here by me (standing OK; checklist pp42 1064/7 over 26 steps,
   none of the 7 the package's, then pp42b 155/1 and pp42c static 12/0 after test-kit-only fixes): the joined player's
   greet / talk with townsfolk and its shops on 3732, the departure sweep. Tags Borque; a follow-up reply to his "can't
@@ -9741,3 +9747,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   write at SavePlayerToSlot's return, rewrite every slot file without due ids on a failed ledger write, and five more.
   PARKED (mine, scoped): B19's across-sessions part waits for the owner's save-test answer and a v4; the in-session
   Lootr (each player takes every item once) is unchanged and released.
+- 19:28 chain_d's end: cs83a (the host's versus gauge): SAVES OK, 5/5, both alive; the host's own arm wrestling
+  STARTED ("we started a minigame (id 0x4240)"; the table's scene 'cd_minigame_armwrest_base' is the host's). cs84a
+  (B13: both at the cellar table): SAVES OK, 5/5, both alive; no match started on either game: inconclusive (the
+  joined player has no prompt there, cs76f). B13's design question now to the owner (waiting list).
+- 19:30 the test co-op world's backup refreshed: the 11-Nov keep-coop-world set aside as keep-coop-world-2026-11-11
+  (kept), today's world backed up (coopworld.sh backup). cs79a (B09 cabin talks by script) running.
