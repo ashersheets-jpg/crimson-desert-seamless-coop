@@ -41,7 +41,10 @@ growth() {  # log, who, limit per minute
   # up to 100 lines a minute that an evening does not have, and they put the busiest step at 386-434 against 420
   # (pp11-farfight2 failed on 434 with nothing wrong). Their caps are checked below; the limit for the rest came
   # down from 420 to 380 (seen without them: 214-346 in the steps, 319 over the 35-minute soak).
-  n=$(grep -vcE "Lootr probe|HorseDiag |User2Stages \[create\]" "$f")
+  # 2026-11-21 (pp43-crime): ByJunter's per-NPC activation diagnostics ("NpcActivation [...]") are capped per kind
+  # (40 lines, then every 25th: user2_stages.cpp npc_probe_drain), so a burst of NPCs given to the friend's game at
+  # once (464 lines in one step) is left out like the other capped diagnostics.
+  n=$(grep -vcE "Lootr probe|HorseDiag |User2Stages \[create\]|NpcActivation \[" "$f")
   local sa=$((10#${a:0:2}*3600 + 10#${a:3:2}*60 + 10#${a:6:2})) sb=$((10#${b:0:2}*3600 + 10#${b:3:2}*60 + 10#${b:6:2}))
   # pp39-lowsave (2026-11-20, 23:54:51 -> 00:00:23): a log that runs past midnight gave a negative span, clamped to
   # 60 s, so 5.5 minutes of lines counted as one minute (8 fails, the real rate 280 a minute). Over midnight: + 24 h.
@@ -174,10 +177,38 @@ run2() {  # the two-copy harness with $1 = PSARGS   (JUDGE_ONLY=1: no game, the 
   ( cd $N && PSARGS="$1" bash run_keep.sh $NAME > /dev/null 2>&1 )
 }
 
+camp_scripts() {  # the bandit camp's fight scripts (crime, leave): each step starts from the dock again
+  # 2026-11-21 (pp43-crime): "tpnear 30" measures from where the player stands, so stepping from bandit to bandit
+  # walked the joined player out of the camp to Serkis Estate's people 122 m off (it fought them, got a bounty and was
+  # downed, and ~40 of the estate's NPCs went to its game at once). Each step now goes back to the dock first, so the
+  # nearest living person is one of the camp's (its bandits are all within 30 m of the dock); with none left the
+  # player waits at the dock ("no living person within 30 m").
+  { echo "tp -10243 546 -3955"; echo "wait 3000"
+    for i in $(seq 1 20); do echo "tp -10243 546 -3955"; echo "wait 500"; echo "tpnear 30 0"; echo "wait 5500"; done
+  } > $N/scan/crime_guest_near.txt
+  { for i in 1 2 3 4; do echo "wait 10000"; done; echo "tp -10239 546 -3957"; echo "wait 3000"; echo "wait 5000"
+    for i in $(seq 1 10); do echo "tp -10239 546 -3957"; echo "wait 500"; echo "tpnear 30 1"; echo "wait 4500"; done
+  } > $N/scan/crime_host_near.txt
+}
+
+kit_scripts() {  # the loose dev scripts the steps read (2026-11-22: written here; build/ is git-ignored)
+  printf 'tp -10344.4 535.9 -3991.8\nwait 3000\n' > $N/scan/tp_chest4_host.txt
+  printf 'tp -10338 537.4 -3982\nwait 10000\nwait 10000\nwait 10000\nwait 9000\ntp -10343.4 535.9 -3989.6\nwait 3000\n' \
+    > $N/scan/chest_far_guest.txt
+  printf 'tp -10343.4 535.9 -3989.6\nwait 10000\nwait 10000\nwait 8000\nc2s 2322 66 00 10 A0 00 00 00 00\nwait 3000\n' \
+    > $N/scan/host_kills_guest.txt
+  printf 'tp -10243 546 -3955\nwait 3000\n' > $N/scan/tp_dock_guest.txt
+  printf 'tp -10239 546 -3957\nwait 9000\nnpcs 40\nwait 9000\nnpcs 40\nwait 8000\nnpcs 40\ntp -10344.4 535.9 -3991.8\nwait 5000\nnpcs 30\n' \
+    > $N/scan/ff_host_lure.txt
+  { echo "tp -10243 546 -3955"; echo "wait 3000"; echo "npcs 40"
+    for i in $(seq 1 12); do echo "wait 9000"; echo "npcs 40"; done; } > $N/scan/ff_guest_watch40.txt
+}
+
 FLOW_G="w:3000_shot:$NAME-g0_k:ESC:120_w:3000_shot:$NAME-g1_k:ESC:120_w:1500"
 FLOW_H="w:500_shot:$NAME-h0"
 BASE="-CoopPlus -Lobby -Fresh -PackageIni $MODW -HostVariant coop-test-bandits"
 
+mkdir -p $N/scan; kit_scripts
 case $STEP in
 static)
   : > "$R"; say "RELEASE CHECKLIST RUN $TAG   package: $(basename "$PKG")"
@@ -195,6 +226,7 @@ static)
   [ "$t" = "All tests passed" ] && ok "layer unit tests: $t" || bad "layer unit tests: $t"
   # native unit tests: 31 of them still carry fixtures of the older game version and fail (docs/tests/
   # native-unit-baseline.txt, the same set since 2026-11-09); only a test OUTSIDE that list failing is a finding.
+  ut_start=$(date '+%Y-%m-%d %H:%M:%S')
   nt=0; nnew=""; nav=""; for t in $ROOT/upstream/cdmp-native/build/bin/RelWithDebInfo/cdmp_tests*.exe; do
     b=$(basename "$t" .exe); nt=$((nt+1)); "$t" > /dev/null 2>&1 || { grep -qx "$b" $ROOT/docs/tests/native-unit-baseline.txt || { [ -f "$t" ] && nnew="$nnew $b" || nav="$nav $b"; }; }
   done 2>/dev/null
@@ -207,6 +239,13 @@ static)
     [ -n "$d" ] && info "native unit test $b: its exe was QUARANTINED by Windows Defender at $d (a heuristic, not a test result): not run; relink and run it by hand" \
                 || bad "native unit test $b: its exe vanished while this step ran (no antivirus detection found)"
   done
+  # 2026-11-21 (pp43): Defender can also quarantine an exe WHILE it runs (hooks_redirect 22:08:43): the run fails, the
+  # file is still there at the check. A failed test with a detection since this step began is the heuristic's too.
+  nnew2=""; for b in $nnew; do
+    d=$(powershell -NoProfile -Command "\$d = Get-MpThreatDetection -ErrorAction SilentlyContinue | Where-Object { (\$_.Resources -join ' ') -like '*$b.exe*' -and \$_.InitialDetectionTime -ge [datetime]'$ut_start' } | Sort-Object InitialDetectionTime -Descending | Select-Object -First 1; if (\$d) { \$d.InitialDetectionTime.ToString('yyyy-MM-dd HH:mm:ss') }" 2>/dev/null | tr -d '\r')
+    if [ -n "$d" ]; then info "native unit test $b: QUARANTINED by Windows Defender at $d while it ran (a heuristic, not a test result): relink and run it by hand"; else nnew2="$nnew2 $b"; fi
+  done
+  nnew=$nnew2
   [ -z "$nnew" ] && ok "native unit tests: $nt run, no failure outside the known old list ($(wc -l < $ROOT/docs/tests/native-unit-baseline.txt) old-fixture tests)" || bad "native unit tests: NEW failures:$nnew"
   o=$(cd $ROOT && powershell -NoProfile -ExecutionPolicy Bypass -File tools/test-install-fake.ps1 -Zip "$(cygpath -w "$PKG.zip")" 2>&1 | tr -d '\r')
   echo "$o" | grep -q "All steps passed" && ok "install / uninstall / vanilla on a fake game folder: All steps passed" || { bad "test-install-fake: $(echo "$o" | tail -2 | tr '\n' ' ')"; }
@@ -329,7 +368,8 @@ crime)
   # 2026-11-18 (pp31, pp31b, pp32 failed, pp31c passed, same binaries): the guest's swings hit only when a bandit
   # happened to come to it (37-55 hits seen when it passed, 2-6 when it failed). Both scripts now step beside a bandit
   # every few seconds (tpnear: the nearest living person, all bandits within 30 m of the dock): the guest the nearest,
-  # the host the second nearest once it arrives.
+  # the host the second nearest once it arrives. 2026-11-21 (pp43): each step from the dock again (camp_scripts).
+  camp_scripts
   run2 "$BASE -Hold 10 -HostScript $SCAN\\crime_host_near.txt -GuestScript $SCAN\\crime_guest_near.txt -GuestKeys w:2000_shot:$NAME-g0_${GA}shot:$NAME-g1 -HostKeys w:1000_shot:$NAME-h0_${HA}shot:$NAME-h1 -GuestAfterWalkKeys w:1000_shot:$NAME-g2_${GA}shot:$NAME-g3"; two_player_checks
   H=$N/$NAME.host.log
   has "$N/$NAME.coopplus.guest.log" "Dev script: tpnear: 0xB" "the guest's script stood beside a bandit (tpnear)"
@@ -360,6 +400,7 @@ leave)
   head_step "the friend's game closes mid-fight: the host plays on, the NPCs the friend's game ran come back to the host's"
   GA=""; for i in $(seq 1 12); do GA="${GA}click:L:90_w:350_kd:E_w:1200_ku:E_w:500_"; done
   { echo "wait 10000"; echo "wait 10000"; echo "wait 10000"; echo "wait 10000"; echo "tp -10239 546 -3957"; echo "wait 10000"; } > $N/scan/leave_host.txt
+  camp_scripts
   run2 "$BASE -Hold 1 -GuestLeave -HostScript $SCAN\\leave_host.txt -GuestScript $SCAN\\crime_guest_near.txt -GuestKeys w:2000_shot:$NAME-g0_${GA}shot:$NAME-g1 -HostKeys w:1000_shot:$NAME-h0 -GuestAfterWalkKeys w:500_${GA}shot:$NAME-g2"
   O=$N/$NAME.out; H=$N/$NAME.host.log; HL=$N/$NAME.coopplus.host.log
   has "$O" "^host in the shared world: True"  "host reached the shared world"

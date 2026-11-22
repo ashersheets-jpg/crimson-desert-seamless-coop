@@ -74,13 +74,14 @@ Steam join/invite/leave and room code, friends-only vs invite-only, join/leave n
 - [x] **T02 — Anti-cheat and terms check.** Research whether the game or its launcher uses anti-cheat or online services that a modded launch could trip. Add a launch guard so co-op never runs alongside any online-integrity feature, and document findings and the safe install path in the README. *Done when:* a findings note exists and the guard is tested.
 - [x] **T03 — Version handshake.** On join, exchange game version and mod version. Refuse mismatches with a message naming both versions and what to update. *Done when:* a simulated mismatch is refused cleanly with no partial state.
 - [x] **T04 — Reconnect and rejoin.** If either side crashes, alt-tabs out for a long time, or loses connection, the player can rejoin (Steam or room code) and be restored with no duplicate characters, duplicate enemies, or stuck UI. *Done when:* kill-and-rejoin works 5 times in a row.
-- [~] **T05 — Drop-in mid-event.** Joining during combat, a boss fight, a cutscene, a loading screen or a menu catches the guest up with no stuck state. *Done when:* each of those five situations is tested.
+- [-] **T05 — Drop-in mid-event.** Joining during combat, a boss fight, a cutscene, a loading screen or a menu catches the guest up with no stuck state. *Done when:* each of those five situations is tested. (DROPPED with B08, the owner 2026-11-07: joining is from the main menu only.)
 - [x] **T06 — Desync detection and resync.** Periodically compare key state (positions, enemy set, health, time/weather). Auto-resync on drift and add a manual "resync me" action. *Done when:* an intentionally induced desync is detected and repaired.
 - [x] **T07 — Host leaves or session ends.** When the host quits or ends the session, the guest returns cleanly to their own world: partner entities removed, hidden enemies restored, UI cleared. *Done when:* both exit paths (host quit, guest leave) leave no leftovers.
 - [x] **T08 — Guest-return state integrity.** After a session, verify the guest's own save and world carry no leaked co-op state (scaling, hidden enemies, loot flags, cutscene flags, time and weather). Build an automated before/after state diff. *Done when:* the diff is clean after three different session types.
 - [~] **T09 — Menus and pause.** Opening the map, inventory or pause menu must not freeze, desync or soft-lock the partner's world. Define and implement the pause behavior. *Done when:* every menu type is tested while a partner is fighting.
 - [~] **T10 — Shared-kill loot and XP for the guest.** The guest receives drops and XP for kills they contribute to, with no duplicates and none missing. Make loot rules configurable (shared, per-player, first come). *Done when:* verified with the stand-in; `[needs-2PC]` for the real guest.
 - [x] **T11 — Network stress and performance.** Test with simulated latency, jitter and packet loss, and with 33+ entities. Measure bandwidth and FPS cost, set entity and bandwidth budgets, and degrade gracefully (lower update rate before dropping features). Record results. *Done when:* a documented stress report exists and no crash occurs under bad networks.
+- [~] **M01 — Constants the ports left at older builds (the 3732 port audit, 2026-11-21).** A read-only audit of the native code found ten groups of game addresses still at 2976's or 3576's values (docs/research/port-gaps-3732.md: the table, the log evidence, the plan). (1) guest_save_logic.h's seven caller returns (every LoadSlot / save / flush caller read "OTHER"): fix written (scratchpad port_gap_rets.py, = kCallSites + 5 tied by static_asserts), next batch. (2) Two crash risks on a later build or with an option on (game_errors' one-byte check; guest_sched_route without its teardown guard): to fail closed. (3) Checked after: U-b's timer returns and user2_shops' protected range are already 3732's (pins73.py; the same range), User2Stages D/S/F/H only count and log. (4) mount_seat's vf178 judge is real (seats rely on the veto while it is unproven): 3732's actor vf178 is exe+0x5DF500 (the self-test reads it); to confirm and port. (5) The rest are off or diagnostic. (6) A second audit of the Co-op+ layer: nothing it runs in native mode is stale; dormant two-worlds puppet constants, a stamina stat id that hides the partner frame's stamina bar (minor), two log labels. *Done when:* (1), (2) and (4) are in a build that passed the checklist.
 
 ### P1 — Core experience
 
@@ -90,17 +91,22 @@ Steam join/invite/leave and room code, friends-only vs invite-only, join/leave n
 - [~] **T15 — Teammate revive.** When downed, a bleed-out timer starts and the partner can revive by interacting. Show revive progress and credit. Keep the existing Q/U revives as fallback. *Done when:* revive works in a normal fight and a boss fight; `[needs-2PC]`.
 - [~] **T16 — Crime, guards and bounty.** Define and implement how guards and NPCs react to the guest's crimes in the host's world, including shared vs per-player bounty (config). The host must never be punished for something only the guest did unless configured. *Done when:* tested with theft and assault.
 - [~] **T17 — Anti-grief protections.** The guest cannot kill essential or quest-critical NPCs, destroy host quest items, or consume story-critical objects. Configurable. *Done when:* each protection is tested.
-- [!] **T18 — Trading and gifting.** Players can send items to each other with a confirmation step. No duplication exploits, a transaction log, and works on controller. *Done when:* duplication attempts (disconnect mid-trade, spam) fail safely.
+- [x] **T18 — Trading and gifting.** Players can send items to each other with a confirmation step. No duplication exploits, a transaction log, and works on controller. *Done when:* duplication attempts (disconnect mid-trade, spam) fail safely. (Delivered as B11 in the shared world: give and trade through the game's own item move, confirm step, pad and keyboard, both directions on 3663 (cs21a / cs34a / cs35b); see B11.)
 - [~] **T19 — Party travel and summon.** Add party fast-travel (both players go, with consent), "summon to me" (with consent and cooldown), and an optional auto catch-up if the partner is too far. Never place players in invalid or underground spots. *Done when:* tested from several regions including cliffs and water.
 - [x] **T20 — World-state persistence rules.** Define and implement what happens to world state changed during co-op (cleared camps, killed bosses, gathered nodes, opened doors) for host and guest. Document the rules in the README. *Done when:* the rules are written and a test confirms host and guest outcomes.
-- [!] **T21 — Fix: empty arm-wrestling table.** The pub table has no NPCs when the stand-in is connected from the start. Find and fix the cause. *Done when:* arm wrestling works regardless of connection timing.
+- [~] **T21 — Fix: empty arm-wrestling table.** The pub table has no NPCs when the stand-in is connected from the start. Find and fix the cause. *Done when:* arm wrestling works regardless of connection timing. (The empty table was the two-worlds design's; in the shared world both games list the same 15 people there (cs33a) and the host's match works. Left, as B14: the joined player's own match.)
 - [~] **T22 — World event sync.** Sieges, faction events and other dynamic events that start in the host's world are visible and participatable for the guest. *Done when:* at least the most common event types are verified.
 - [ ] **T23 — Object interaction sync.** Doors, gates, levers, movable and thrown objects, and destructibles look consistent to both players. *Done when:* each is tested with both players nearby.
+  (2026-11-21: in the shared world the objects are the host server's, one copy for both. Known bug from the native
+  base's S43 (2976): a scene level the JOINED player's game loads first is never marked ready on the server (only the
+  field owner's load does that, and the owner's later load is dropped), so its doors answer "not ready" to BOTH
+  players until a fast travel. ByJunter's fix [session2] scene_level_share (host) is ported to 3732 but off and never
+  run there; cs88a / cs88b (the Hernand tavern door, the joined player first; probe, then on) are queued.)
 - [x] **T24 — Communication.** Add in-session text chat and ping types (danger, loot, go here) with game-styled display. *Done when:* usable on keyboard and controller.
 - [~] **T25 — Mount edge cases.** Mount summon, despawn, death, mount swapping, and flying-mount landing all stay in sync. Two players on one mount only if feasible. *Done when:* each case is tested.
-- [~] **T26 — Death penalty and respawn options.** Config options for penalty (none, partial loss, full) and respawn rules, applied consistently on both sides. *Done when:* every option is tested.
+- [~] **T26 — Death penalty and respawn options.** Config options for penalty (none, partial loss, full) and respawn rules, applied consistently on both sides. *Done when:* every option is tested. (2026-11-22: the respawn option is done; the penalty options were blocked on the two-worlds design (no removal the server accepts). On the native shared world the game's own jail fine removes items on the host's server (RemoveItemToInventoryAck 2481): a lead to a server-side removal; design in docs/research/t26-death-penalty.md.)
 - [~] **T27 — Nexus release package.** README (install, uninstall, requirements, controls, known issues), credits and permissions for all other authors' mods (list as requirements unless permission is on file), license, changelog, bug-report template, compatibility list, screenshot and GIF shot list, and verified manual and Vortex install. Nothing from game files bundled. *Done when:* a clean-machine install-and-uninstall walkthrough passes.
-- [~] **T28 — Mod compatibility testing.** Identify the most-downloaded mods for the game, test alongside the co-op mod, and document conflicts. Detect known conflicts at launch and warn the user. *Done when:* a compatibility table exists.
+- [~] **T28 — Mod compatibility testing.** Identify the most-downloaded mods for the game, test alongside the co-op mod, and document conflicts. Detect known conflicts at launch and warn the user. *Done when:* a compatibility table exists. (The table by KIND of mod exists, docs/compatibility.md, and the launch notice works. Left: real mods. The owner's standing OK of 2026-11-17 covers downloading Nexus mods: the most-downloaded few, each installed into a test copy with Co-op+ for one two-copy run, between other test chains.)
 - [x] **T29 — Error messages.** Audit every failure state (join failed, session lost, version mismatch, network blocked, save backup failed) and make sure each shows a plain-language message with the next step. *Done when:* a list of all states and their messages exists.
 
 ### P2 — Polish
@@ -122,8 +128,11 @@ Steam join/invite/leave and room code, friends-only vs invite-only, join/leave n
 - [~] **T41 — More challenges.** Horse race, fishing contest, boss rush or arena, hide and seek, scavenger hunt.
 - [~] **T42 — Duel extras.** Wagers, selectable arenas, spectator camera, rematch.
 - [~] **T43 — Cosmetics and recognition.** Titles, co-op bounties and a scoreboard.
-- [~] **T44 — Group photo mode.** Posed shots with both characters.
-- [!] **T45 — Shared stash.**
+- [x] **T44 — Group photo mode.** Posed shots with both characters. (Done through B16 (1), decided 2026-11-17: the
+  game's own Photo Mode shows both characters in the shared world, and our partner frame, name tag and hold prompt are
+  hidden while it is open (8a65cf2d, cs38l). Posing / emotes from the game's animations: after the release, B16 (2).)
+- [~] **T45 — Shared stash.** (As B12: built on the host's own warehouse; untested until a save has the warehouse
+  unlocked, asked.)
 - [!] **T46 — Baby wyvern hatching.** Blocked until the game supports it; leave `[!]` unless that changes.
 - [ ] **T47 — Voice chat.** Steam voice integration (low priority, friends usually use Discord).
 - [ ] **T48 — 3-4 player support.** Only if the architecture allows it without destabilizing 2-player play.
@@ -147,7 +156,7 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   is saved (the native host plays in a save sandbox and never writes the real folder; tie it to Co-op+'s co-op
   worlds, one save per friend).
   Shipping it distributes ByJunter's GPL code: ask the user before the release.
-- [ ] **B02 — Same NPCs and townsfolk** (native: one world; check towns, schedules, the playtest's missing NPCs).
+- [~] **B02 — Same NPCs and townsfolk** (native: one world; check towns, schedules, the playtest's missing NPCs). (2026-11-22: the same people by key in both games at Hernand (cs67a: 116-120 of 120 matched in time) and Fort Windridge (cs27e: 55/55, 59/60, 62/64); the far joined player's own townsfolk and shops on by default. Left: more towns, which the test saves' story gates limit; the far joined player meeting the host at one shop in a run.)
   (2026-11-09 evening: the far guest's own townsfolk and shops work (U-1 / U-e / user2_shops, tcB201 / 214 / 216).
   S33 / S35 per-NPC containment ported and WORKING (tcB228/229: no run-wide U-e abort), on by default.
   Far shops FIXED and on by default (2026-11-09 night, interaction_share: the game removed an NPC's shop
@@ -191,6 +200,10 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   worked in the shared world -- fixed in 1c6453e1 (both players' blows, cs55). Left: the host fighting from the
   saddle with the guest watching (cs26a could not script the host's ride).)
 - [ ] **B07 — Boss mechanics for two** (grabs, finishers, phase triggers, arena locks).
+  (2026-11-21: docs/research/boss-audit.md revised for the shared world (its top section): the first boss test reads
+  each mechanic off both screens with the JOINED player landing the final blow, because with each player's own quest
+  progress on (QuestRoute) that kill may credit only the joined player's quest and not move the host's story step;
+  also whether the AI hand-over's fight rule should leave bosses alone. Needs a save at a boss: asked.)
 - [-] **B08 — Join mid-fight, boss, cutscene or loading screen.** DROPPED (user 2026-11-07: "Being able to join
   mid-game is not a priority ... people can only join parties from the main menu screen"). Joining is from the title
   screen only (B01's join flow).
@@ -205,6 +218,11 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
 - [~] **B10 — Quest sharing on by default** (live quest steps, co-op save per friend: out of experimental).
   (2026-11-09: quest_route -- option 3 LIVE in tcB198: the guest's game events go to its OWN quest manager instead
   of the host's; option 2 = quest_shared_credit, built, untested. A guest quest step advancing still to be shown.)
+  (2026-11-21: option 2 gave the joined player no progress in cs85c (its second pass reused the acting player's
+  component); v2 (the other player's own component) is in test (cs85d), and cs85e shows option 3 from the joined
+  player's side (its own cheat kills at the camp). A consequence of option 3 to settle before the release: an
+  objective of the HOST's that the joined player completes (a camp's last kill, a story boss's final blow, B07) only
+  counts for the joined player's own quests, so the host's step may stall unless option 2 is on.)
   **Design (user 2026-11-08, after a Discord poll):** option 3 as the base -- each player keeps and plays their OWN
   quests and story in the shared world (start / finish individually, fight together); option 2 as an optional "do it
   together" bonus -- when both are on the SAME step of the same quest, one completing it checks it off for both
@@ -250,9 +268,11 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
 
 - [~] **B16b — Player interaction menu (user 2026-11-09).** (2026-11-09: built and seen working on the guest,
   tcB209: the hold-R prompt 'Interact' on the other player opens the shop-style menu with every challenge, a greyed
-  'Trade (coming soon)' and 'Leave'; W/S, Space, Esc. Pad (2026-11-09, built, not seen yet): the co-op chord +
-  D-pad Up held fills the same ring. 2026-11-16: the greyed entry became "Give or trade an item" (B11's give and
-  trade, cs35a/b), so trading is in it.) Hold R on the other player (the game's own hold prompt:
+  'Trade (coming soon)' and 'Leave'; W/S, Space, Esc. Pad: SEEN 2026-11-10 (tcB275, simulated pad, two copies, 3576):
+  by the friend the prompt shows "(A) Interact", holding A opens the menu, D-pad moves, A selects, B closes (the
+  chord + D-pad Up version of 11-09 was replaced by the game's own interact). 2026-11-16: the greyed entry became
+  "Give or trade an item" (B11's give and trade, cs35a/b), so trading is in it. Left: the arm-wrestling challenge
+  entry, with B13; a pad re-check on 3732.) Hold R on the other player (the game's own hold prompt:
   the R key in a circle that fills while held, exactly as at shopkeepers and their shop menus -- NOT a plain
   "R Rock, Paper, Scissors" tap prompt) opens a player interaction menu like the shop menu. It holds every minigame
   challenge the two can do (duel, RPS, race, hunt, fishing, hide and seek, arm wrestling...), later trading (B11) and
@@ -277,13 +297,18 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   are per player instead of protected ("Lootr", built and seen working both ways for gathered items, tcB329/332;
   setting "Items in the world"); chests / bodies / across sessions still to do.) (Chests and bodies since done: the
   checklist's chest and loot steps. Across sessions: designed 2026-11-21, docs/research/lootr-across-sessions.md;
-  its test needs one save into the test co-op world: asked.)
+  its test needs one save into the test co-op world: asked. Late 21 Nov: v4 / v4.1 written from two independent
+  reviews (the file written at the save itself, an exact save-time stamp, a durable two-copy ledger, confirmed
+  set-asides), in the worktree, not built yet.)
 - [~] **B20 — Partner audio** (footsteps, combat sounds, voice lines, distance falloff). (2026-11-17 cs42a: the
   host's game plays the friend's swings (peaks to 553 vs ~120 ambient). cs47-cs48c: the friend's FOOTSTEPS are
   played too (every step reaches the game's sound player, ~115 in a 50 s walk) and heard: muting them in
   alternate 4 s windows drops the host's loudness after a step from median 14.1 to 11.7 (= no step). cs42a's "not
   heard" was ambient noise. Falloff: the sounds play at the friend's character (quieter as it walks away).
-  Left: voices (effort / hurt sounds) checked the same way.)
+  Left: voices (effort / hurt sounds) checked the same way. 2026-11-21 reading (3576 decomp): voices are played by
+  the action's frame events (ClientFrameEventVoiceSound, processor 0x79A160), the same frame-event path as the swing
+  sounds (ClientFrameEventSoundEvent 0x795B20) that cs42a heard for the friend; its checks are the character's type
+  and its voice set, no local-player test seen: very likely played, to be confirmed by a count as for the steps.)
 
 **Last (needs the rest stable)**
 - [~] **P1 — Playtest findings (Borque's two-PC session, 2026-11-17, ada1800c).** Each fixed and tested before the
@@ -295,9 +320,16 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
     the host's client's 2292 of a scene of user 2's own is copied to user 2 naming its character). Not yet tested.
   - [~] Horses: the host sees the guest's horse invisible, the guest sees the host's away from the host.
     horse_follow / horse_follow_reverse were still on the 2976 MoveActorAck layout (235 B): every Ack was "bad size",
-    none made, in our runs too. Ported to 239 B / the 3460+ offsets. Not yet tested.
+    none made, in our runs too. Ported to 239 B / the 3460+ offsets. Checked by log (pp30a, 2026-11-18: HorseFollow
+    bad size 0, made 1311; the guest's horse on the host's client 736 delivered, was 0); not yet seen on screen.
+    Borque 20 Nov (26bf2c71): the joined player on a NON-own horse (a bandit's, a wild one) stayed put on the host's
+    screen: the ride rule (native aeb7d33) hands a ridden NPC horse to its rider's game; in 4394b014 and later.
   - [ ] The guest sees city NPCs sitting on benches in a T-pose (the guest only). (Lead: GuestSeqRestore swaps a
     remote NPC's seq_bodyanim_action it cannot find for an idle wait, 31 times in his session; cs58 looks in Hernand.)
+    (2026-11-21 late, from B14's cs86f: the arm-wrestling table's people are bound to the HOST's copy of their scene,
+    which never runs on the joined player's game, and GuestSeqRestore swapped their seat animation for a wait. The
+    bench sitters are most likely the same case. cs87 gives the table's scene to the joined player's game only as its
+    own twin: if their animation comes back there, a twin is also the T-pose fix for the scenes the joined player sees.)
   - [~] The guest cannot interact with townsfolk (Borque 20 Nov video: "client still not able to interact with npcs";
     2026-11-21 afternoon: FIXED for shops and greetings on 3732, both checked (cs82c: the shop alone and with the host
     beside the shopkeeper; cs80c: a townsperson's greeting, "Trust +5"); in cfaa3a69 (checklist step "shop" added).

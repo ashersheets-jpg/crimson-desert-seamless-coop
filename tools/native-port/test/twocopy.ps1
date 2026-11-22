@@ -26,6 +26,8 @@ param([string]$Name = 'tc1', [string]$HostVariant = 'coop-test-bandits', [string
       [string]$HostKeys = '',
       # 'x_z': the guest walks there after the scripts and keys (camwalk\walkto.py, 3 m short)
       [string]$GuestWalkTo = '',
+      # 'x_z': a first point the guest walks to before -GuestWalkTo (0.6 m short), e.g. to line up with a doorway
+      [string]$GuestWalkVia = '',
       # the same for the host (after the guest's walk); then -AfterWalkKeys (actpid steps, _-joined) on the host
       [string]$HostWalkTo = '', [string]$AfterWalkKeys = '', [string]$GuestAfterWalkKeys = '',
       # host ini overrides 'key=value,key=value' (an existing line of that key is replaced)
@@ -34,10 +36,36 @@ param([string]$Name = 'tc1', [string]$HostVariant = 'coop-test-bandits', [string
       [string]$GuestSet = '',
       # -Lobby research runs: k=v,k=v added to the host's native ini by its layer ([dev] native_extra)
       [string]$HostNativeExtra = '',
+      # 2026-11-12 (gn3): a screenshot every 4 s while a copy is waited into the shared world (NAME-W<role><n>), at most 40
+      [switch]$WaitShots,
+      # 2026-11-12 (gn4): the guest has no save: its game says so and goes back to solo. The flow stops there (two
+      # screenshots, NAME-nosave-guest / -host) instead of waiting 19 minutes for a join that cannot come.
+      [switch]$ExpectNoSave,
       # 2026-11-09 (stability pass): -GuestLeave = after -Hold the guest's game is killed (a crash / Alt+F4), the
       # host plays on for 60 s (its final save of the guest's slot, the mailbox). -KeepSlots = the host's co-op
       # folder keeps its other slots (the game's autosaves of earlier runs: 'Continue' loads the newest).
-      [switch]$GuestLeave, [switch]$KeepSlots)
+      [switch]$GuestLeave, [switch]$KeepSlots, [switch]$SecondRound, [switch]$ExpectMismatch,
+      # 2026-11-10 (Steam overlay / invite test): the host alone at the title lobby for -TitleHold seconds (the test
+      # drives it with actpid from outside), its layer on -HostTransport (steam = a real Steam lobby, role auto)
+      [int]$TitleHold = 0, [string]$HostTransport = 'udp',
+      # 2026-11-10: k=v,k=v added to the host layer's [dev] section (e.g. pad_sim=1)
+      [string]$HostDev = '', [string]$GuestDev = '',
+      # 2026-11-11 (testers: no Co-op menu at the title): -Fresh = the layer ini of a first-time player (no onboarded /
+      # experimental_asked marks); -KeepDisplay = the player's own display mode instead of Windowed
+      [switch]$Fresh, [switch]$KeepDisplay,
+      # -FrameGen = frame generation ON in the test copies' settings (and no forced lowest quality / 50% scale)
+      [switch]$FrameGen,
+      # with -FrameGen: the frame generation method and the upscaler by the game's own names, e.g. 'Intel XeSS Frame
+      # Generation' + 'Intel XeSS 3.0', 'AMD FSR Frame Generation'
+      [string]$FrameGenMode = '', [string]$Upscale = '',
+      # -PackageIni <a package's mod folder>: the layer ini of both copies = that package's coopplus.ini (a first-time
+      # player's real defaults) with only the transport / role / port lines changed for two copies on one PC
+      [string]$PackageIni = '',
+      # 2026-11-11: which of the host's "How does your co-op journey begin?" choices the lobby flow takes: 1 = the first
+      # (Continue Our Co-op Save when one exists; what every run before today took, whatever its log line said), 2 = Start
+      # From My Solo Progress, 3 = New Co-op Save (then the difficulty question gets one more Space). 3 REPLACES the
+      # test co-op world: back up %LOCALAPPDATA%\Pearl Abyss\CD\coop_worlds\with_127_0_0_1 first and put it back.
+      [int]$HostChoice = 1)
 $ErrorActionPreference = 'Stop'
 $bin = 'D:\SteamLibrary\steamapps\common\Crimson Desert\bin64'
 $here = $PSScriptRoot; $saves = 'C:\Users\asher\CrimsonDesert-SeamlessCoop\build\test-saves'
@@ -64,7 +92,7 @@ host_loopback_only=1
 enabled=0
 [sniffer]
 enabled=1
-record=1
+record=0
 [coop]
 enabled=0
 [session2]
@@ -131,7 +159,7 @@ peer_port=37015
 enabled=0
 [sniffer]
 enabled=1
-record=1
+record=0
 [coop]
 enabled=0
 [session2]
@@ -186,16 +214,29 @@ if ($CoopPlus) {
         if ($own) { $dev = "[dev]`nscript=$own" }
         # 2026-11-09: -HostNativeExtra 'k=v,k=v' -> the host layer's [dev] native_extra (added to the native ini the
         # lobby writes: research runs with keys the release defaults keep off)
+        if ($HostDev -and $r -eq 'host') { $hd = ($HostDev -split ',') -join "`n"; $dev = $(if ($dev) { "$dev`n$hd" } else { "[dev]`n$hd" }) }
+        if ($GuestDev -and $r -eq 'guest') { $hd = ($GuestDev -split ',') -join "`n"; $dev = $(if ($dev) { "$dev`n$hd" } else { "[dev]`n$hd" }) }
         if ($HostNativeExtra -and $r -eq 'host') { $dev = $(if ($dev) { "$dev`nnative_extra=$HostNativeExtra" } else { "[dev]`nnative_extra=$HostNativeExtra" }) }
+        # 2026-11-14: the owner's PC switched itself off twice during two-copy runs (Kernel-Power 41, bugcheck 0: a
+        # hardware cut-off under load). Every test copy is held to 40 frames a second by the layer ([dev] fps_cap).
+        # 2026-11-18: a cap given with -HostDev / -GuestDev (fps_cap=N, the running-freeze test with different FPS on the two copies) replaces the default 40.
+        if ($dev -notmatch '(?m)^fps_cap=') { $dev = $(if ($dev) { "$dev`nfps_cap=40" } else { "[dev]`nfps_cap=40" }) }
+        if ($PackageIni) {
+            $pk = [IO.File]::ReadAllText((Join-Path $PackageIni 'coopplus.ini'), [Text.Encoding]::Unicode)
+            $tr = $(if ($r -eq 'host') { $HostTransport } else { 'udp' })
+            $ro = $(if ($r -eq 'host' -and $HostTransport -eq 'steam') { 'auto' } else { $r })
+            $pk = $pk -replace '(?m)^player_name=.*$', "player_name=$who" -replace '(?m)^transport=.*$', "transport=$tr" -replace '(?m)^role=.*$', "role=$ro" -replace '(?m)^peer_port=.*$', 'peer_port=37115'
+            Write-Ini "$bin\coopplus.$r.ini" ($pk.TrimEnd() + "`n" + $dev + "`n")
+            "layer ini ($r): the package's coopplus.ini (transport $tr, role $ro)"
+        } else {
         Write-Ini "$bin\coopplus.$r.ini" @"
 [general]
 player_name=$who
-onboarded=1
-experimental_asked=1
+$(if (-not $Fresh) { "onboarded=1`nexperimental_asked=1" })
 [net]
 enabled=1
-transport=udp
-role=$r
+transport=$(if ($r -eq 'host') { $HostTransport } else { 'udp' })
+role=$(if ($r -eq 'host' -and $HostTransport -eq 'steam') { 'auto' } else { $r })
 peer_host=127.0.0.1
 peer_port=37115
 [coop]
@@ -204,6 +245,7 @@ enabled=1
 enabled=1
 $dev
 "@
+        }
     }
     # No relay: Co-op+'s host binds peer_port itself and its guest connects to it (tc34: a relay on the same port kept
     # the host from binding until the relay quit).
@@ -212,12 +254,20 @@ $dev
 
 # The windowed settings (template: the player's own file, read only).
 $xml = [IO.File]::ReadAllText("$cd\save\user_engine_option_save.xml")
-$win = $xml -replace '(<EnumSelectDisplayType Name="_displayType" _select=")[^"]*"', '$1Windowed"'
-if ($win -eq $xml -and $xml -notmatch '_select="Windowed"') { throw 'display type not found in the settings file' }
+$win = $(if ($KeepDisplay) { $xml } else { $xml -replace '(<EnumSelectDisplayType Name="_displayType" _select=")[^"]*"', '$1Windowed"' })
+if (-not $KeepDisplay -and $win -eq $xml -and $xml -notmatch '_select="Windowed"') { throw 'display type not found in the settings file' }
 # Two copies on one GPU: the lowest quality in both test copies (the player's own settings file is never written).
 $win = $win -replace '(<EnumSelectQualityLevel Name="\w+" _select=")[^"]*"', '$1Minimum"'
 $win = $win -replace '(<OptionStringVector Name="_postProcessingQualityLevelSelect" _value=")[^"]*"', '$1Minimum"'
 $win = $win -replace '(<EnumSelectResolutionScale Name="_upscaleResolution" _select=")[^"]*"', '$1 50%"' -replace '_select=" 50%"', '_select="50%"'
+if ($FrameGen) {
+    $win = $(if ($KeepDisplay) { $xml } else { $xml -replace '(<EnumSelectDisplayType Name="_displayType" _select=")[^"]*"', '$1Windowed"' })
+    $win = $win -replace '<OptionBool Name="_enableFrameGeneration"( _value="[^"]*")?', '<OptionBool Name="_enableFrameGeneration" _value="True"'
+    if ($win -notmatch '_enableFrameGeneration" _value="True"') { throw 'frame generation option not found in the settings file' }
+    $FrameGenMode = $FrameGenMode -replace '_', ' '; $Upscale = $Upscale -replace '_', ' '  # PSARGS has no spaces
+    if ($FrameGenMode) { $win = $win -replace '(<OptionStringVector Name="_frameGenerationModeSelect" _value=")[^"]*"', ('$1' + $FrameGenMode + '"') }
+    if ($Upscale) { $win = $win -replace '(<OptionStringVector Name="_upscaleModeSelect" _value=")[^"]*"', ('$1' + $Upscale + '"') }
+}
 [IO.File]::WriteAllText("$here\settings-windowed.xml", $win)
 
 # The guest's own save folder (only ever made by this script; marked).
@@ -226,7 +276,8 @@ if ((Test-Path $g) -and -not (Test-Path "$g\.coopplus-test")) { throw "$g exists
 if (Test-Path $g) { Remove-Item $g -Recurse -Force }
 New-Item -ItemType Directory "$g\$acct" -Force | Out-Null
 Set-Content "$g\.coopplus-test" 'made by build/native/twocopy.ps1'
-Copy-Item "$saves\slot103-$GuestVariant" "$g\$acct\slot103" -Recurse
+# -GuestVariant none (2026-11-11): a guest who has never played: no slot at all in its save folder
+if ($GuestVariant -ne 'none') { Copy-Item "$saves\slot103-$GuestVariant" "$g\$acct\slot103" -Recurse }
 Copy-Item "$here\settings-windowed.xml" "$g\user_engine_option_save.xml"
 Copy-Item "$cd\save\initialize_input.save" "$g\initialize_input.save"
 
@@ -260,21 +311,63 @@ if ($Lobby) {
     "lobby flow: both start solo"
 }
 Remove-Item "$here\$Name.pids" -ErrorAction SilentlyContinue
-$h = Start-Copy 'host' "$saves\slot103-$HostVariant|$acct\slot103;$here\settings-windowed.xml|user_engine_option_save.xml"
+# -HostChoice 3 (New Co-op Save): the host gets NO test slot, or the "new" co-op world would be filled with it and
+# the game would continue that save instead of starting the story (nc1, 2026-11-11).
+# -HostVariant keep (2026-11-12, fs2): the co-op world as the last run left it (Continue of a world a test made).
+$hostAdd = $(if ($HostChoice -eq 3 -or $HostVariant -eq 'keep') { "$here\settings-windowed.xml|user_engine_option_save.xml" } else { "$saves\slot103-$HostVariant|$acct\slot103;$here\settings-windowed.xml|user_engine_option_save.xml" })
+$h = Start-Copy 'host' $hostAdd
 $h = $h | Where-Object { $_ -is [System.Diagnostics.Process] }
 & $shot -Out "$here\shots\$Name-00-host-title.png" | Out-Null
+if ($TitleHold) {
+    "title hold: host pid $($h.Id) for $TitleHold s"
+    if ($HostKeys) {  # 2026-11-11: keys at the title (the lobby menu's own keys)
+        "title keys at $(Get-Date -Format HH:mm:ss.fff)"
+        & "$here/actpid.ps1" -GamePid $h.Id -Seq ($HostKeys -replace "_", " ") | Out-Null
+    }
+    $third = [int]($TitleHold / 3)
+    foreach ($k in 1, 2, 3) { Start-Sleep $third; & $shot -Out "$here\shots\$Name-0$k-title-hold.png" | Out-Null }
+    exit 0
+}
 if ($Lobby) {
     $gp = Start-Copy 'guest' ''
     $gp = $gp | Where-Object { $_ -is [System.Diagnostics.Process] }
     Start-Sleep 15
     & $shot -Out "$here\shots\$Name-L0-both-titles.png" | Out-Null
-    "host: Start Co-op, then the first enabled choice (Start From My Solo Progress) at $(Get-Date -Format HH:mm:ss.fff)"
-    & "$here\actpid.ps1" -GamePid $h.Id -Seq "k:S:80 w:500 k:S:80 w:500 k:S:80 w:700 shot:$Name-L1-host-start-coop k:SPACE:120 w:1500 shot:$Name-L2-host-question k:SPACE:120 w:1000" | Out-Null
+    if ($ExpectMismatch) {
+        # mm1 (2026-11-12): the two copies say they are different builds ([dev] build_id on one): the handshake refuses,
+        # both title menus must say so, nothing starts. A shot of each window, then the usual end.
+        Start-Sleep 15
+        try { & "$here\actpid.ps1" -GamePid $h.Id -Seq "w:1500 shot:$Name-mismatch-host" | Out-Null } catch { "host shot: $($_.Exception.Message)" }
+        try { & "$here\actpid.ps1" -GamePid $gp.Id -Seq "w:1500 shot:$Name-mismatch-guest" | Out-Null } catch { "guest shot: $($_.Exception.Message)" }
+        "lobby flow done (two builds: no start expected)"
+        exit 0
+    }
+    "host: Start Co-op, then choice $HostChoice of the question (1 = the first: Continue Our Co-op Save when one exists) at $(Get-Date -Format HH:mm:ss.fff)"
+    & "$here\actpid.ps1" -GamePid $h.Id -Seq "at:960:462 w:250 at:966:466 w:400 k:S:80 w:500 k:S:80 w:500 k:S:80 w:700 shot:$Name-L1-host-start-coop k:SPACE:120 w:1500 shot:$Name-L2-host-question $(('k:S:80 w:500 ' * [Math]::Max(0, $HostChoice - 1)))shot:$Name-L2b-host-choice k:SPACE:120 w:1000" | Out-Null
+    if ($HostChoice -eq 3) {
+        # nc1 (2026-11-11): after the choice the game may ask one more thing (the difficulty) or restart at once; a
+        # restart takes the window away, which must not stop the test.
+        try { & "$here\actpid.ps1" -GamePid $h.Id -Seq "w:1500 shot:$Name-L2c-after-choice k:SPACE:120 w:1500 shot:$Name-L2d-after-space" | Out-Null } catch { "after the New Co-op Save choice: $($_.Exception.Message)" }
+    }
     # The host restarts, then the guest: wait for both new processes and the guest's connection to the host's world.
-    $t0 = Get-Date; $remote = $false
+    $t0 = Get-Date; $remote = $false; $nosave = $false
     while (((Get-Date) - $t0).TotalSeconds -lt 420) {
         Start-Sleep 5
+        if ($ExpectNoSave -and (Get-ChildItem "$bin\coopplus.guest*.log" -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -gt $t0 } | Select-String -Pattern 'no save of their own' -Quiet)) { $nosave = $true; break }
         if ((Test-Path "$bin\cdmp.guest.log") -and (Select-String -Path "$bin\cdmp.guest.log" -Pattern '-> REMOTE' -Quiet)) { $remote = $true; break }
+    }
+    if ($nosave) {
+        "guest has no save: its game goes back to solo; seen at $(Get-Date -Format HH:mm:ss.fff)"
+        Start-Sleep 50
+        $two = @(Get-Process CrimsonDesert -ErrorAction SilentlyContinue | Sort-Object StartTime | Select-Object -Last 2)
+        Get-Process CrimsonDesert -ErrorAction SilentlyContinue | ForEach-Object { "running: pid $($_.Id) started $($_.StartTime.ToString('HH:mm:ss'))" }
+        if ($two.Count -eq 2) {
+            try { & "$here\actpid.ps1" -GamePid $two[1].Id -Seq "w:1500 shot:$Name-nosave-guest" | Out-Null } catch { "guest shot: $($_.Exception.Message)" }
+            try { & "$here\actpid.ps1" -GamePid $two[0].Id -Seq "w:1500 shot:$Name-nosave-host" | Out-Null } catch { "host shot: $($_.Exception.Message)" }
+        }
+        foreach ($r in 'host', 'guest') { Copy-Item "$bin\coopplus.$r.1.log" "$here\$Name.coopplus.$r.before.log" -ErrorAction SilentlyContinue }
+        "lobby flow done (the guest has no save)"
+        exit 0
     }
     "guest REMOTE: $remote at $(Get-Date -Format HH:mm:ss.fff)"
     Get-Process CrimsonDesert -ErrorAction SilentlyContinue | ForEach-Object { "running: pid $($_.Id) started $($_.StartTime.ToString('HH:mm:ss'))" }
@@ -288,19 +381,67 @@ if ($Lobby) {
         if (Select-String -Path "$bin\coopplus.host.log" -Pattern 'both games start in|loads the shared world first' -Quiet) { break }
     }
     $new = @(Get-Process CrimsonDesert -ErrorAction SilentlyContinue | Sort-Object StartTime | Select-Object -Last 2)
-    if ($new.Count -eq 2) {
-        "countdown seen; host pid $($new[0].Id), guest pid $($new[1].Id): each window in front for its Play"
+    $follow = {
+        param($new, $tag)
+        "countdown seen$tag; host pid $($new[0].Id), guest pid $($new[1].Id): each window in front for its Play"
         # 2026-11-09: on the native base the host loads first, the guest once the host is in: each window in front
         # until its game is in the shared world (a player's window is in front anyway).
         foreach ($k in @(@{ p = $new[0]; r = 'host' }, @{ p = $new[1]; r = 'guest' })) {
-            $t1 = Get-Date
+            $t1 = Get-Date; $step = 0
             while (((Get-Date) - $t1).TotalSeconds -lt 240) {
-                & "$here\actpid.ps1" -GamePid $k.p.Id -Seq "w:4000" | Out-Null
+                # -HostChoice 3 (nc2, 2026-11-11): a new co-op world is a fresh save folder, so the HOST's game shows the
+                # End User License Agreement again, then its own New Game steps. In this TEST copy the harness answers
+                # with Space every 4 s (a shot before each press shows what was on screen).
+                if ($HostChoice -eq 3 -and $k.r -eq 'host') {
+                    $step++
+                    # nc4: the agreement's Accept only works once the text is scrolled to its END (the mod does the same
+                    # for the guest, coop_worlds.cpp worlds_lobby_guest_new): mouse over the text, wheel down, hold Space.
+                    # First three steps: that; afterwards a plain Space (the difficulty's Confirm and whatever follows).
+                    $seq = $(if ($step -le 3) { "shot:$Name-N$('{0:d2}' -f $step) at:960:540 w:300 wheel:-120:200 w:800 k:SPACE:1700 w:2500" } else { "shot:$Name-N$('{0:d2}' -f $step) k:SPACE:400 w:3600" })
+                    try { & "$here\actpid.ps1" -GamePid $k.p.Id -Seq $seq | Out-Null } catch { "new game step ${step}: $($_.Exception.Message)" }
+                    if (Select-String -Path "$bin\coopplus.$($k.r).log" -Pattern 'in the shared world' -Quiet) { break }
+                    continue
+                }
+                $step++
+                & "$here\actpid.ps1" -GamePid $k.p.Id -Seq $(if ($WaitShots -and $step -le 40) { "w:3600 shot:$Name-W$tag$($k.r)$('{0:d2}' -f $step)" } else { "w:4000" }) | Out-Null
                 if (Select-String -Path "$bin\coopplus.$($k.r).log" -Pattern 'in the shared world' -Quiet) { break }
             }
-            "$($k.r) in the shared world: $(Select-String -Path "$bin\coopplus.$($k.r).log" -Pattern 'in the shared world' -Quiet) at $(Get-Date -Format HH:mm:ss.fff)"
-            & $shot -Out "$here\shots\$Name-L3-$($k.r)-in.png" | Out-Null
+            "$($k.r) in the shared world$tag`: $(Select-String -Path "$bin\coopplus.$($k.r).log" -Pattern 'in the shared world' -Quiet) at $(Get-Date -Format HH:mm:ss.fff)"
+            & $shot -Out "$here\shots\$Name-L3$tag-$($k.r)-in.png" | Out-Null
         }
+    }
+    if ($new.Count -eq 2) { & $follow $new '' }
+    if ($SecondRound) {
+        # rt3 (2026-11-12): the recovery after a start that did not work. The host's layer ([dev] lobby_recover=1)
+        # leaves the session once the guest said it is stuck and chooses Start Co-op again at the title; both games
+        # restart a second time. Here: wait for the host's marker, then for the NEW host process's "loads the
+        # shared world first" (its log starts anew at each launch), then the same windows-in-front as above.
+        # First the moment in between: the host has left, both are at the title and still in one party.
+        $t0 = Get-Date
+        while (((Get-Date) - $t0).TotalSeconds -lt 120) {
+            Start-Sleep 1
+            if (Select-String -Path "$bin\coopplus.host.log" -Pattern 'the session ended by a Leave|own Return to Title now' -Quiet) { break }
+        }
+        Start-Sleep 5
+        try { & "$here\actpid.ps1" -GamePid $new[1].Id -Seq "w:800 shot:$Name-R0-guest-after-leave" | Out-Null } catch { "guest shot after the leave: $($_.Exception.Message)" }
+        try { & "$here\actpid.ps1" -GamePid $new[0].Id -Seq "w:800 shot:$Name-R0-host-after-leave" | Out-Null } catch { "host shot after the leave: $($_.Exception.Message)" }
+        $t0 = Get-Date; $marker = $false
+        while (((Get-Date) - $t0).TotalSeconds -lt 180) {
+            Start-Sleep 2
+            if (Select-String -Path "$bin\coopplus.host.log" -Pattern 'lobby_recover: back at the title' -Quiet) { $marker = $true; break }
+        }
+        "second round: the host's new Start Co-op seen: $marker at $(Get-Date -Format HH:mm:ss.fff)"
+        & $shot -Out "$here\shots\$Name-R0-host-chose-again.png" | Out-Null
+        $t0 = Get-Date; $go = $false
+        while (((Get-Date) - $t0).TotalSeconds -lt 300) {
+            Start-Sleep 2
+            if ((Select-String -Path "$bin\coopplus.host.log" -Pattern 'both games start in|loads the shared world first' -Quiet) -and
+                -not (Select-String -Path "$bin\coopplus.host.log" -Pattern 'lobby_recover: back at the title' -Quiet)) { $go = $true; break }
+        }
+        "second round: both games are in co-op again: $go at $(Get-Date -Format HH:mm:ss.fff)"
+        Get-Process CrimsonDesert -ErrorAction SilentlyContinue | ForEach-Object { "running: pid $($_.Id) started $($_.StartTime.ToString('HH:mm:ss'))" }
+        $new = @(Get-Process CrimsonDesert -ErrorAction SilentlyContinue | Sort-Object StartTime | Select-Object -Last 2)
+        if ($new.Count -eq 2) { & $follow $new '2' }
     }
     Start-Sleep $JoinWait
     & $shot -Out "$here\shots\$Name-L4-later.png" | Out-Null
@@ -312,7 +453,7 @@ if ($Lobby) {
     }
     "lobby flow done"
     # 2026-11-09 (B02b release check): the release flow, then the usual scripts / walks on the restarted copies.
-    if (-not ($HostScript -or $GuestScript -or $GuestWalkTo -or $HostWalkTo -or $GuestAfterWalkKeys -or $AfterWalkKeys) -or $new.Count -ne 2) { exit 0 }
+    if (-not ($HostScript -or $GuestScript -or $GuestWalkTo -or $HostWalkTo -or $GuestAfterWalkKeys -or $AfterWalkKeys -or $HostKeys -or $GuestKeys) -or $new.Count -ne 2) { exit 0 }
     $h = $new[0]; $gp = $new[1]
     $JoinWait = 0
     $LobbyGo = $true
@@ -379,6 +520,12 @@ if ($HostKeys) {
     $HostKeys = $HostKeys -replace "_", " "
     "host keys at $(Get-Date -Format HH:mm:ss.fff)"
     & "$here/actpid.ps1" -GamePid $h.Id -Seq "$HostKeys shot:$Name-38c-host-after-keys" | Out-Null
+}
+if ($GuestWalkVia) {
+    $v = $GuestWalkVia -split '_'
+    "guest walks via ($($v[0]), $($v[1])) at $(Get-Date -Format HH:mm:ss.fff)"
+    $env:CD_PID = "$($gp.Id)"; cmd /c "python ""$here/camwalk/walkto.py"" $($v[0]) $($v[1]) 0.6 --walk 2>&1" | Select-Object -Last 2
+    $env:CD_PID = ''
 }
 if ($GuestWalkTo) {
     $xz = $GuestWalkTo -split '_'

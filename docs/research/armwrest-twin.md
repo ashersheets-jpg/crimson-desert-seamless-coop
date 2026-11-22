@@ -136,9 +136,44 @@ Not known yet (cs83w3 records every packet of the host's game around "Participat
    THE JOINED PLAYER IS STUCK IN THE MATCH. So twin_extra stays OFF by default. Everything the twin answers matches
    the host server's (the state-7 2752, the chart events' 2105s). Hypotheses for the next round: (a) the hand-over's
    AI reset (0.6 s after the spawn, the host's client ran the opponent's AI meanwhile) leaves the opponent's
-   minigame AI in a state the match does not accept: hand it over AT its creation instead; (b) the match needs the
-   table's other people (bound to the host's copy of the scene, which never started on the joined player's game);
-   (c) client minigame memory (kMiniGameRoot 0x724B3A8 +0x90) compared between a host match and a joined player's.
+   minigame AI in a state the match does not accept: hand it over AT its creation instead -- UNLIKELY (cs86e's
+   capture: the spawn Ack at 339.257, the hand-over's two ChangeAiControlAck 2152 at 339.756 / 339.780, the client's
+   JoinMiniGameReq of the opponent and its RecoveryActorForMiniGameReq only at 339.891: control first, then the join,
+   the order of a host match, whose client runs the opponent from the start); (b) the match needs the
+   table's other people (bound to the host's copy of the scene, which never started on the joined player's game) --
+   RULED OUT as the whole story: in cs86c (early_state_x on) the host's copy 0x321 got its early state again right
+   after its prepare (so it started) and the match stalled all the same; (c) client minigame memory (kMiniGameRoot
+   0x724B3A8 +0x90) compared between a host match and a joined player's; (d) two live copies of the table on the
+   joined player's game (the host's, at state 0, and the twin, at state 7) binding the same people: whatever the match
+   looks up through those people's sequencer component (it names the host's copy) finds the idle one.
+10. Next round, one build (written 2026-11-21 late as scratchpad patch scripts, applied after checklist pp43):
+   (d) [session2] twin_extra_only=1 (guest, research): a twin_extra scene of the host's is given to the joined
+   player's game only as its twin, so the table's people can bind to the twin alone (cs87: cs86f with it). The
+   premise, from cs86f's own GuestSeqRoute [G5 actor] lines (22:02:37, 5 s after the twin 0x10000322 was made): the
+   table's 7 people 0xB01003B8-0xB01003BE (the organizer 0xB01003B9, whose talk the server accepted, among them) all
+   had their sequencer component on the HOST's copy (scene +0x2E0 0x322, owner 0xA0100001), none on the twin; and at
+   22:02:16 GuestSeqRestore swapped THEIR scene's seat animation (seq_bodyanim_action 0x837487D4, the seat pose both
+   seats play in a match) for an idle wait on three of them (0xB01003BB / BC / BD: "not found" in their chart): the
+   host's copy they belong to never ran on the joined player's game;
+   (c) the layer's [dev] minigame_probe=1: the game's minigame holder and gauge ([[exe+0x724B3A8]+0x90]+0xD30) in the
+   log twice a second, so cs87 shows whether the joined player's match ever goes live, and cs83v (the host's own
+   match, versus_test) gives the host-match baseline.
+   Reading the probe: no "a minigame holder came" line = the client never set up the match's gauge; a holder with the
+   gauge fixed at 50.00 while "E presses" climbs = the match is set up but the presses do not push (cs86's symptom);
+   the gauge moving with E = the push works (then the end of the match, its result and prize decide B14). In cs83v the
+   host's own match gives the same lines with versus_test pushing too.
+   If cs87 still stalls, the next place to read (3576 decomp, build/decomp): the arm wrestling has no
+   MiniGamePhaseData_* classes of its own (the card and dice games do); its client side is the script class
+   ::pa::gameClientScript::MiniGame_ArmWrestling (registered in FUN_140d60dc0 with 0x1459650) and the UI controller
+   UIGamePlayControlRootMiniGameArmWrestlingTimeLimit (vf2 0x11E7B80, 5139 B), which takes the UI events
+   ArmWrestling_ChangeStateStartCount / ArmWrestling_ChangeStartCountProgress / ArmWrestling_ChangeStatePlay. The
+   joined player's screen showed the countdown, so StartCount came; whether ChangeStatePlay came (and from what: the
+   scene's state-7 track or a server message) is the question.
+   If cs87 or cs87b pushes: before twin_extra goes on by default, (e) BOTH players at the table at once (the host's
+   own match in its copy, the joined player's in its twin, the server asked for two opponents at one scene id: does it
+   spawn a second patron, refuse, or hand the first one over?), and (f) the host's match seen from the joined player's
+   screen with twin_extra_only=1 (no host copy there: the host and its opponent play their actions without their
+   scene; how it looks). (e) also answers B13's open "two matches at one table".
 9. (old step list) cs86d / cs86e: the joined player talks to the organizer (variant 0x000F4B31 at (-10661.5, -3832.5)),
    Participates, plays and leaves the menu. Open questions: does the server spawn user 2's opponent for the host's
    scene, take its fee and pay it; does the joined player's game play the intro, the countdown and the match from its

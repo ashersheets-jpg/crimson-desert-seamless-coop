@@ -32,6 +32,15 @@ for ($try = 0; $try -lt 24 -and (FrontPid) -ne $GamePid; $try++) {
   [A]::SetForegroundWindow($h) | Out-Null; Start-Sleep -Milliseconds 500
 }
 if ((FrontPid) -ne $GamePid) {
+  # 2026-11-10 (tcB296): the other copy at its title lobby kept the front. Minimise it and try again.
+  [A]::ShowWindow([A]::GetForegroundWindow(), 6) | Out-Null; Start-Sleep -Milliseconds 700
+  for ($try = 0; $try -lt 8 -and (FrontPid) -ne $GamePid; $try++) {
+    [A]::keybd_event(0x12, 0, 0, [UIntPtr]::Zero); [A]::keybd_event(0x12, 0, 2, [UIntPtr]::Zero)
+    [A]::ShowWindow($h, 9) | Out-Null; [A]::BringWindowToTop($h) | Out-Null
+    [A]::SetForegroundWindow($h) | Out-Null; Start-Sleep -Milliseconds 500
+  }
+}
+if ((FrontPid) -ne $GamePid) {
   $q = Get-Process -Id (FrontPid) -ErrorAction SilentlyContinue
   throw "game window is not in front (in front: pid $(FrontPid) $($q.Name) '$($q.MainWindowTitle)')"
 }
@@ -67,6 +76,8 @@ foreach ($s in $Steps) {
     }
     'at' { [A]::SetCursorPos([int]$a[1], [int]$a[2]) | Out-Null; Start-Sleep -Milliseconds 80 }
     'w' { Start-Sleep -Milliseconds ([int]$a[1]) }
+    'pad' { Set-Content (Join-Path $PSScriptRoot 'scan\pad.txt') "pad $($a[1]) $($a[2])" -Encoding ascii; key 0x11 $false; key 0x10 $false; key 0x75 $false; Start-Sleep -Milliseconds 90; key 0x75 $true; key 0x10 $true; key 0x11 $true; Start-Sleep -Milliseconds ([int]$a[2] + 250) }  # pad:HEX:MS -> a simulated pad press ([dev] pad_sim=1, script=scan\pad.txt)
+    'py' { "== $s $(Get-Date -Format HH:mm:ss.fff)" | Add-Content (Join-Path $PSScriptRoot 'scan\steps.log'); & python (Join-Path $PSScriptRoot ($a[1] + '.py')) $GamePid $a[2] 2>&1 | Add-Content (Join-Path $PSScriptRoot 'scan\steps.log') }  # py:SCRIPT:ARG -> python SCRIPT.py PID ARG, output to scan/steps.log
     'shot' { shot (Join-Path (Join-Path $PSScriptRoot 'shots') ($a[1] + '.png')) }  # shot:NAME -> shots/NAME.png (no drive letters: steps split on ':')
   }
 }

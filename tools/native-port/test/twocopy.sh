@@ -19,8 +19,15 @@ done
 # B01 (-Lobby): the layer restarts the copies (new processes): every CrimsonDesert started after T0 is ours too.
 powershell -NoProfile -Command "Get-Process CrimsonDesert -ErrorAction SilentlyContinue | Where-Object { \$_.StartTime -ge [datetime]'$T0' } | Stop-Process -Force" >/dev/null 2>&1
 sleep 6
+# 2026-11-11 (nc1): a copy that was RESTARTING ITSELF when the test stopped comes up seconds AFTER the kill above (its
+# restart helper waits for the old process to end). That copy then ran on for 17 minutes with the test files in the
+# game folder, and they could not be put back while it ran. So: watch for 20 s more and close whatever of ours appears.
+for i in 1 2 3 4 5 6 7 8 9 10; do
+  powershell -NoProfile -Command "Get-Process CrimsonDesert -ErrorAction SilentlyContinue | Where-Object { \$_.StartTime -ge [datetime]'$T0' } | Stop-Process -Force" >/dev/null 2>&1
+  sleep 2
+done
 for r in host guest; do cp "$BIN/cdmp.$r.log" $N/$NAME.$r.log 2>/dev/null; done
-cp $REL "$BIN/cdmp.asi"; rm -f "$BIN/cdmp.host.ini" "$BIN/cdmp.guest.ini"
+cp $REL "$BIN/cdmp.asi"; rm -f "$BIN/cdmp.host.ini" "$BIN/cdmp.guest.ini" "$BIN/shop_twin_open.flag" "$BIN/cdmp_test_refuse_coop.host.flag" "$BIN/cdmp_test_refuse_coop.guest.flag"
 # Co-op+ layer runs (-CoopPlus): its logs kept, then the DLL, its inis and the relay removed (the player's game
 # must never load coopplus.asi).
 for r in host guest; do cp "$BIN/coopplus.$r.log" $N/$NAME.coopplus.$r.log 2>/dev/null; done

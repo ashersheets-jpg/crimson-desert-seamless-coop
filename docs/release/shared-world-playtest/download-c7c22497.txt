@@ -1,0 +1,15 @@
+**Update: shared world playtest 0.1.0-alpha+c7c22497, for game 1.0.0.3732**
+Use this instead of cfaa3a69; **both players need the same build**. Still about the joined player and NPCs (<@224953308010381312>'s "can't interact with NPCs"):
+
+- **The joined player's shops in a town the host is already in.** The host's town scenes reach the joined player's game in two parts, and often in the wrong order (in one test run 21 of 31 town scenes, every shop among them). The joined player's own shop copies were then made but never started, so no shopkeeper offered "Shop". They start now, whatever the order (seen in three runs at Hernand). A real fast travel into the host's town is still to be checked; if a shop stays closed for you, please tell us.
+- **A minigame opponent the game spawns for the joined player now runs on the joined player's game**, as in single player (it ran on the host's game, so the joined player's match could not go on).
+- Not in this build yet: the joined player's own arm wrestling at the Hernand inn table. It now gets as far as the organizer's menu, the fee, the opponent, the intro and the countdown, but the match itself does not start, so it stays switched off until it does.
+
+Tested with two copies of the game on one PC (Nvidia): the full checklist on 1.0.0.3732 (26 steps). Not covered here: two PCs over Steam, a real internet connection, AMD / Intel cards, long sessions; that is what your reports tell us.
+
+- `...c7c22497-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+One question while you play: do you hear your friend's character's voice (the grunts when attacking, the sounds when hit)? Footsteps and swings are confirmed; voices should play the same way.
+
+Tell us in <#1567319198206525450> how it goes, with the report zip from **both** players (close the game, run **Diagnose Co-op+.cmd**).

@@ -11,6 +11,8 @@ test save Out, shipped cdmp.ini restored.
   score; (3) your friend in the opponent's chair (the NPC hidden on your screen, your friend's character posed in its
   seat): the best look, the most work. Today's runs (cs76f, cs84a): the joined player cannot start a table match by
   itself yet, so (1) is not possible now. My recommendation: (2) now, (3) after the release.
+  23:27: what each option takes, in docs/research/b13-pvp-armwrestling.md ((2) needs no fix of the joined player's
+  own match; (1) does; (3) is (2) plus moving your friend's real character into the NPC's chair).
 - 2026-11-21 17:54 DONE: cfaa3a69 POSTED in #download-here by me (standing OK; checklist pp42 1064/7 over 26 steps,
   none of the 7 the package's, then pp42b 155/1 and pp42c static 12/0 after test-kit-only fixes): the joined player's
   greet / talk with townsfolk and its shops on 3732, the departure sweep. Tags Borque; a follow-up reply to his "can't
@@ -37,12 +39,16 @@ test save Out, shipped cdmp.ini restored.
   (09:25: a first version is written, switched off; an independent review found ways it could give items twice
   across sessions, so it is being reworked and is not in the next build. The test question still stands. Correction 10:10: our tests
   already make the game save the TEST co-op world by itself when the friend's game is killed (the host's final save,
-  cs81a); the B19 test would save there on purpose, which is what the question asks.)
+  cs81a); the B19 test would save there on purpose, which is what the question asks. 2026-11-22 00:20: v4.3 is
+  written after three more independent reviews, switched off, not in a build yet; the question still stands.)
 - 2026-11-21 03:30 SAVE REQUEST (not urgent): B07 (boss mechanics for two) needs a save right before a boss fight
   (any story or world boss you have reached), so two copies of the game can fight it together and I can see grabs,
   phases, the arena and the finish on both screens. None of the test saves is at a boss (the windridge fort's wyvern
   only burned the joined player). If you have one: tell me which save slot; I copy it into the test kit, your own
-  saves stay untouched.
+  saves stay untouched. (22:31 addition, same answer: B12, the shared stash, needs a save whose warehouse / storage is
+  unlocked by the story; if one of your saves has it, name that slot too. 2026-11-22 addition: B02 checks the same
+  townsfolk in both games town by town, and the test saves' story gates keep us around Hernand; a save that has
+  reached a town in another region (Pailune, Demeniss, Delesyia) would cover that too.)
 - 2026-11-20 21:10 HANDS-ON (about 10 min, when you have time): mining and fishing as the joined player (Borque 18 Nov
   items 5 / 6). The mod has no mining or fishing code yet, and the fresh test saves have no hand drill or rod. I need
   a host-only session where you mine one ore block with the hand drill and fish once, with the sniffer recording (I
@@ -63,6 +69,9 @@ test save Out, shipped cdmp.ini restored.
   cabin"; a probe logs which game code starts that scene, so the ready check can hold it for both players.
   2026-11-21: MAYBE NOT NEEDED: the 7 tries held E, and talks start with R while facing the person; a scripted
   version (cs79) runs this morning. If it works, this and the NPC-conversation check below come off the list.
+  19:45 cs79a: the cabin's ready check worked again, but the talks did not open (the script stood the host beside
+  neighbours, not Marius / Ross). 22:31: cs79b (a camera sweep at their 3732 spots, E then R at each angle, the method
+  that opens the arm-wrestling organizer every time) is queued for tonight's chain; still not needed from you yet.
 - 2026-11-17 05:56 QUESTION (not urgent): the public GitHub playtest release (crimson-desert-coop-playtest,
   releases/latest) is still 22e8f365 from 10 Nov; your OK then was for that one release. Discord has had 8a65cf2d
   since 05:54. Should each build that is posted to Discord also go to GitHub (same zips, same notes), or leave
@@ -458,6 +467,16 @@ getting up, the go-to hop to the other player.
 Done: respawn1 (walked away, killed, U): checkpoint revive steps 1-3, "at the checkpoint", then "respawn_at=partner:
 from the checkpoint to the other player". Profile line, README, PLAYTEST 4.4c. [~]
 - Pushed T26 (63d9d7f).
+- 2026-11-22 ~00:05 lead for the penalty options (blocked since T18: no item / silver removal the server accepts, on
+  the two-worlds design). On the native shared world the server runs in the host's game, and the game's own jail
+  wake-up removes items there: the native base's research (upstream/cdmp-native docs/research/s25/s45-datos/carcel.md,
+  the 23:50:22 row) shows the host getting RemoveItemToInventoryAck 2481 twice at the Hernand jail (the fine and the
+  mask), and the message table has an internal DeleteItemFromInventoryOnceTimer 2055 and a dev DeleteItemCheatReq
+  2844. To find: the server function behind the jail's fine (the caller of the 2481 writer), then call it on the
+  server thread like Lootr's add (0xC0DE0005) for a death penalty of either player. A simpler route to try first: the
+  dying player's own game asks for the removal the way its Discard does (RemoveItemToInventoryReq, 2976 2630, per user
+  on ServerInventoryActorComponent: p8-sistemas-juego.md), if the server takes it for silver. Not started (the
+  release items first).
 
 ## T28 -- Mod compatibility testing
 Plan: no downloads of other authors' mods, so (1) list the kinds of mods in use (nexus survey) and what each means
@@ -9894,7 +9913,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   UpdateMissionListAck / UpdateQuestListAck for 0xA0100066 during the kills). So option 2 does not credit it yet. Lead:
   the step's condition likely checks the event's actor (the host's character, not the quest's owner); the native's
   subject_swap (user2_condition_subject_host) is the nearest existing piece. B10 stays [~]; research later.
-- 22:10 cs86f (B14, more inputs in the joined player's match): SAVES OK, 5/5. Its countdown shows (g3), then "E Push"
+- 22:06 cs86f (B14, more inputs in the joined player's match): SAVES OK, 5/5. Its countdown shows (g3), then "E Push"
   for good: E taps, E held 4 s, Space and left clicks change nothing (g5-g10), and Esc does not leave (g11): THE
   JOINED PLAYER IS STUCK IN THE MATCH. At state 7 its client never does what the host's did at once (target the
   opponent, echo the opponent's action session, the push action and its frame event), although every answer the twin
@@ -9904,3 +9923,131 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   starts on the joined player's game; client minigame memory compared). Kept for the release: the ShopTwin
   early-state fix (twins start in either message order) and the AiHandoff minigame rule (an opponent the server
   spawns for the joined player runs on its game: right for any of its minigames).
+- 22:08 package 0.1.0-alpha+c7c22497 (cdmp.asi = native 9dbab60, the tree's build; the layer unchanged since
+  cfaa3a69; twin_extra / early_state_x / twin_watch off); test-install-fake: all steps passed. pp43 started (the 26
+  steps, ~5 h): no native edits, builds or harness edits until it ends.
+- 22:12 pp43 static: 11 pass, 1 fail: "native unit tests: NEW failures: cdmp_tests_optd_hooks_redirect". Not the
+  package: Windows Defender quarantined that exe at 22:08:43 WHILE it ran (Get-MpThreatDetection: ThreatID 251867, the
+  same machine-learning guess as at 13:36 and 17:13); the exe was still on disk at the check, so the test kit's
+  vanished-exe rule did not apply. Test-kit fix written (scratchpad static_av_fix2.py: a failed test with a Defender
+  detection since the step began is INFO), to apply after the pass with the static + smoke re-run. Also written for
+  after the pass (native, scratchpad shared_credit_v2.py): B10's second pass with the OTHER player's own quest
+  component (cs85c: the apply functions take the component's character as the event's actor, so the joined player's
+  steps saw the host as the doer).
+- 22:22 pp43 real 14 pass / 0 fail, fresh 43 / 0 (SAVES OK, 5/5); the other 23 steps running. (Times of the three
+  entries above corrected from the files: cs86f ended 22:05, the package 22:08, pp43 began 22:08.) Static work for
+  after the pass: B14 hypothesis (a) UNLIKELY from cs86e's capture (the opponent's hand-over, 2152 at 339.756, came
+  before the joined player's client joined it at 339.891: the order of a host match). One build for the next round,
+  as scratchpad patch scripts: twin_extra_only.py (native, guest, research: the host's copy of a twin_extra scene not
+  given to the joined player's game, hypothesis (d)), layer_mg_probe.py (layer, [dev] minigame_probe: the game's
+  minigame gauge in the log, hypothesis (c)), shared_credit_v2.py (B10); test chain build/native/chain_h.sh (cs87 (d)
+  with the probe on both, cs83v the host-match baseline with the probe, cs85d B10 v2, cs77b B06).
+- 22:36 pp43 xess 44 / 0, fsr 44 / 0 (SAVES OK, 5/5 each). Discord (~22:33, JS reads only): nothing new in
+  #play-testing-feedback (the last post my 17:55 reply to Borque), #general (join notices), #bug-reports,
+  #find-a-co-op-partner. More for chain_h, written during the steps (Read / Write only): cs79b (B09: the cabin talks
+  by camera sweep, E then R at each angle, facesweepk.py; cs79a's own "npcs 4" put Marius at (-9840.0, -2824.4) as
+  0xB01000AD and Ross at (-9829.0, -2823.5) as 0xB01000B5 on 3732), cs85e (B10 option 3: the joined player's own
+  cheat kills at the camp, its own step should move, the host's not), cs88a / cs88b (T23 doors: the native base's
+  S43 found on 2976 that a level the joined player loads first is never "ready" on the server, so its doors stay shut
+  for BOTH players until a fast travel; the fix [session2] scene_level_share is ported to 3732 but off and never run
+  there: the Hernand tavern door with the joined player first, probe then 1, door_trace on both).
+- 22:45 pp43 latehook 59 / 0, display 7 / 0. Static, in the worktree upstream/cdmp-native-wip (wip-b19-v3, not built,
+  nothing in the main tree): B19 v4 written from the v3.1 review: the slot's shares file written when the game's
+  SavePlayerToSlot of it returns (the game writes the save inside that call, the native base's S34 research; v3's
+  FlushPendingSaveData commit missed every manual save), a failed ledger write rewrites EVERY slot file without its
+  marks (read back) or sets it aside (confirmed gone, else overwritten unreadable), due marks never filed again, the
+  host's own gives no longer subtracted at a load (its bag is in the slot it loads: v3.1 lost them on a reload), stale
+  check 10 s after the stamp; a unit test for the new rewrite helper. An independent read-only review is running.
+  Also: cs89 (B16b on a simulated pad, 3732) added to chain_h; ROADMAP B16b corrected (the pad was seen 10 Nov,
+  tcB275), the horses item (checked by log 18 Nov), B20 voices (the frame-event path the friend's swings use; a tester
+  question added to the c7c22497 post), T23 (the S43 door bug and its fix).
+- 23:03 pp43 lowsave 48 / 0, chest 47 / 0 (shots sampled: fresh / latehook / lowsave views right). chain_h grew:
+  cs87b (B14 (d) gentler: the twin prepared BEFORE the host's copy, twin_extra_only=2; cs86f's own GuestSeqRoute lines
+  show the table's 7 people, the organizer among them, on the HOST's copy 0x322), cs85e, cs88a/b (door_trace's native
+  hook is 2976-only, so the test reads the server's Ack / Nak per player), cs89. Unit tests (tests/ only, not built):
+  optd_npc_probe_client (2976 motion opcodes -> the logic's 3732 ones), optd_scene_level_share (fixtures renumbered,
+  3732 return addresses and frame offsets), optd_guest_stage (its tokens carry the logic's opcode); a script for
+  optd_hold_scene_order (scratchpad refresh_hso_test.py). Checked at the next build.
+- 23:12 pp43 revive 49 / 0. B19 v4's independent review (read-only, 20 min) came back: six findings, two ways to give
+  twice in failure cases (a stale file accepted when OLDER save files were put back; a failed re-load leaving the old
+  world's shares active while a ledger retry kept giving them), an unverified thread question (the logs answer it:
+  LoadSlot, SavePlayerToSlot and Lootr's entries all run on the server-realm thread), three low; it agreed with v4's
+  main change (the host's own gives not subtracted). v4.1 handles each one (exact save-file stamp, clears first,
+  gives only while armed, durable two-copy ledger, in-place set-aside, arming only at the character's 3093 call with
+  its 3732 return address, one recursive lock), in the worktree, not built; docs/research/lootr-across-sessions.md
+  says what is left. Also docs/research/boss-audit.md: a shared-world revision at the top (the first B07 test plan;
+  the joined player's final blow on a host story boss may only credit its own quest under option 3).
+- 23:18 chain_h grew again: cs90 (B22a's "co-op refused, solo safe" on 3732; tcB188 was 3576's) and cs91 (B04's
+  knowledge share at last has a moment to act on: the checklist's chest step teaches the host "Tough Meat", shot
+  pp43-chest-h1 "Knowledge Acquired"; cs91 is that step with knowledge_grant=1 and the joined player's capture). cs89
+  rewritten: the pad steps run the layer's [dev] script file, so the joined player's script IS scan\pad.txt and neither
+  player has a dev script (tcB275's way). B22a otherwise done since 9 Nov (installer 11-08, refusal tcB188).
+- 23:21 pp43 loot 48 / 0 (12 of 26 steps done; only static's Defender item so far). Plan after the pass: the test-kit
+  fix + pp43b (static, fresh, solostart), the c7c22497 post, then one build (twin_extra_only, shared credit v2, the
+  layer's minigame probe, the refreshed unit tests) and chain_h (13 runs). What its results decide, for the NEXT
+  release batch: twin_extra on for the joined player if cs87 / cs87b push (then the table with both players, and the
+  armwrest checklist step); scene_level_share on for the host if cs88a shows the door bug and cs88b fixes it;
+  knowledge_grant on if cs91 shares the chest's knowledge (B04 is the owner's pick: a learn counts for both); B06 /
+  B09 / B16b / B22a closed if cs77b / cs79b / cs89 / cs90 show them; the B10 question (shared credit by default) to
+  the owner with cs85d / cs85e's evidence. Then one full checklist for that batch.
+- 23:23 ROADMAP tidied (section 4 lines the B tasks had overtaken): T05 dropped with B08 (join from the main menu
+  only), T18 done as B11, T21 = B14's open part (the table is full in the shared world), T44 done through B16 (1),
+  T45 = B12. docs/research/t23-doors.md: the native base's door research in English. Two read-only agents running:
+  a review of B19 v4.1, and an audit for game addresses the 3732 port missed (the three LoadSlot return addresses
+  found tonight were such).
+- 23:25 Found by reading (release UX): in the shared world the friend menu still offers "Arm wrestling" within 30 m
+  of a table, but that is the two-worlds versus (both players in a match at one table in their own worlds) and the
+  joined player cannot start a match of its own (B14): a challenge that can never finish. Patch for the next batch
+  (scratchpad hide_wrestle_native.py): hidden in native mode until B13, the README's challenge list says so.
+- 23:33 pp43 crime: 49 pass, 2 FAIL, neither the package's: (1) host native log growth 409 a minute (limit 380;
+  pp40-42 crime 272-288): at 23:28:52 the NPC-control part of the far-friend logic (U-e) gave ~40 people of one
+  schedule stage (data 0xD63D02B3) to the joined player's game at once, and ByJunter's activation diagnostics followed
+  (NpcActivation [primera petición / acción OnServer / retorno externo]: 464 lines vs 24 in pp42-crime; capped per
+  kind in user2_stages.cpp, 40 lines then every 25th); the same bursts were in pp42's leave (412) and shop (466).
+  Without them: ~346 a minute. (2) a warning kind never seen: "Session2 host tunnel: one tick took 58.4 ms: hold acks
+  53.5 ms" at 23:28:59, the observer hold releasing those people's held packets. Neither touches c7c22497's changes
+  (the guest-side twin start order, the minigame rule). Test-kit fix written (scratchpad crime_growth_fix.py: the
+  capped NpcActivation lines left out of the growth count like the other capped diagnostics; the slow tick listed with
+  its reason); crime joins the re-run (static, fresh, solostart, crime) after the pass. Also: no ripgrep over
+  build/decomp during a step from now on (a multi-threaded search over gigabytes can slow the games; not the cause
+  here, the tick's 53.5 ms were the hold's own work).
+- 23:54 (time from the farfight step's log) pp43 leave 27 / 0, shop 25 / 0. The crime burst's cause, from pp43-crime-g3:
+  the joined player was downed 122 m from the host at Serkis Estate with a bounty. The step's scripts step beside "the
+  nearest living person within 30 m" of where the player STANDS (tpnear), so going from bandit to bandit walked it out
+  of the camp to the estate's townsfolk (it fought them; U-e gave ~40 of them to its game at once). Test-kit fix
+  written (scratchpad crime_anchor_fix.py: prepost.sh writes both camp scripts itself, each step back at the dock
+  first; leave uses the same script), with crime_growth_fix.py, for the re-run. Two read-only reviews came back:
+  (1) B19 v4.1: three ways left to give twice under conditions not ruled out (no disarm after the narrowed arming; a
+  save that writes nothing could stamp files it does not belong to; a lagging ledger copy trusted when the other
+  cannot be read) + edge cases (two accounts in one co-op folder, FAT32). v4.2 written in the worktree (not built):
+  disarm before any host character load, before/after save times (lpl::after_save), an unreadable ledger copy =
+  untrusted, a failed .bak removed, one account only, NTFS / ReFS only, a timed lock (no hang), unit tests for the
+  new rules (docs/research/lootr-across-sessions.md). (2) the 3732 port audit: ten groups of addresses left at 2976 /
+  3576 values (docs/research/port-gaps-3732.md, ROADMAP M01). For the next batch: port_gap_rets.py (the seven save /
+  load caller returns = the call sites + 5, static_asserts; checked against pp40-newsave / pp43-fresh logs) and
+  port_gap_failclosed.py (game_errors only on its own build; guest_sched_route routes nothing without its teardown
+  guard). Mount seats' vf178 judge, U-b's timer returns and User2Stages D/S/F/H need 3732 addresses (later).
+- ~00:00 Checked the audit before acting: U-b's timer returns and user2_shops' protected range are
+  already 3732's (pins73.py; the same .text1 range), User2Stages D/S/F/H only count and log; only the mount-seat judge
+  is a real gap (3732's actor vf178 is exe+0x5DF500: scratchpad vf178_3732.py disassembles it from the archived exe
+  after the pass). Correction to 23:33: the slow tick's "hold acks 53.5 ms" part times a dozen network-thread
+  sub-ticks (the hold's expiry, seq copy, AI hand-off, Lootr, the once-a-minute summaries), so which one was slow is
+  not known; it came 7 s after the U-e burst. One in 26 steps; the known-warnings reason now says so. Discord (JS
+  reads): nothing new in #play-testing-feedback or #bug-reports; #general only joins. B19 v4.2's read-only review is
+  running.
+- 00:15 (the browser's clock) pp43 farfight 47 / 0, farfight2 46 / 0. B19 v4.2's review: the four findings closed,
+  nothing changes with the option off; one real gap (a joined player's save that missed the lock could wait forever
+  for its catch-up: Lootr's 2 s entry was not requested for it) and six smaller ones. v4.3 written in the worktree
+  (docs/research/lootr-across-sessions.md lists each), its deltas under a second short review (00:19: two of my v4.3
+  rules were wrong, an "only the loaded slot" check that would have set aside nearly every save's file and a new id
+  that opened a double give; v4.4 undoes both, LESSONS entry; its deltas in a third short check). Test kit for after the
+  pass, also: kit_scripts_fix.py (prepost.sh writes the six loose dev scripts the checklist reads; build/ is
+  git-ignored) and tracked copies of run_keep.sh / coopworld.sh / run_pp.sh (apply_testkit.sh). T26 lead noted (the
+  game's jail fine removes items on the host's server).
+- 00:25 Shots of the passed steps: shop right (the joined player at Renee's: Buy / Sell / Leave, the host beside it).
+  leave: the joined player was downed by the camp's bandits before its game was closed (shot 40, "Guest is down"),
+  and the idle host was then killed by them (shot 70; pp42's host stood at 100%): the fight's luck in a step whose
+  host never fights; its checks are the departure sweep's, all passed. farfight2: the joined player died fighting
+  alone at the dock while the host stood in Hernand Town (its frame: "Badly hurt, 493 m"), as the step allows. The
+  anchored camp scripts (after the pass) keep both runs at the camp. A second read-only audit runs: the Co-op+
+  layer's game addresses (the first covered the native base).

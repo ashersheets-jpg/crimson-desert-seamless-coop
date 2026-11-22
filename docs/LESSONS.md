@@ -230,6 +230,13 @@ topic BEFORE testing or guessing about it.
   the build links, and read the code while it runs.
 - Compare a new run with the SAME scenario on the old build (logdiff.py), numbers masked; a different scenario
   drowns the real differences.
+- (2026-11-22, after 3732) The address tools only rewrite what they recognise: values with no recorded bytes and a
+  consumer that byte-checks or compares them stay at an older build's and fail SILENTLY (a hook "REFUSED", a caller
+  that always reads "OTHER", a self-test "NOT PROVEN"). guest_save_logic.h's seven caller returns had been 2976's
+  since the 3549 port, two months of logs naming every caller "OTHER". After each port, before calling it done:
+  list every install / self-check line of the first checklist's logs that refuses or does not prove something, tie
+  derived constants to their source (the returns are kCallSites + 5: static_asserts now), and run a read-only audit
+  of the remaining literals (docs/research/port-gaps-3732.md) with the pins checked first.
 
 ## A shared byte pattern for two functions breaks on the next game build (2026-11-13)
 - Give compared two handlers against ONE 16-byte head. The update recompiled one of them with another prologue; a tool that refreshes patterns from the exe then made the pattern match only that one. Keep one pattern per function, and after any pattern refresh check every USE of the pattern, not only its definition.
@@ -368,6 +375,19 @@ copy's animation.
 The harness sends keys only to the game in front and throws "game lost focus" the moment another window is in front
 (pp34 farfight and farfight2 both lost their run that way; the second matched a python edit script I started). During
 a running step, use only the Read / Grep / Write tools; save edits, builds and shell commands for between steps.
+- Read-only does not mean light: a Grep over build/decomp (gigabytes, a multi-threaded ripgrep on every core) during a
+  step competes with both games for CPU and disk. pp43-crime had one 58 ms network tick a minute after such searches
+  (its own cause was a burst of NPC hand-overs; the searches may have stretched it). Search the decomp between steps,
+  or narrow it to one file.
+- Waiting on a pass: a step takes 8-10 minutes and its result line appears only at its end. My sense of elapsed time
+  runs far ahead of the clock while I read and write (2026-11-21: "23:40" guessed at 23:25); the clock is the newest
+  [hh:mm:ss] line of bin64\cdmp.host.log or the running step's .out. Poll the pass file every few minutes, not after
+  every small task.
+- An Edit of an .html file also opens it in the app's browser pane (a hook: "now visible in the Browser pane"; pp43
+  lowsave, 2026-11-21 22:52, a new tab with the upload staging page). Edit .html files between steps only.
+- That includes `date`, `tail`, `ls` and `cat` (2026-11-21 late: I ran them during pp43's xess step out of habit;
+  nothing broke, but each is a process launch). The time for a PROGRESS entry during a step comes from the running
+  step's own output (build/native/<pass>-<step>.out has timestamped lines), read with the Read tool.
 
 ## Stopping a checklist pass between steps (2026-11-18)
 
@@ -539,3 +559,41 @@ The arm-wrestling menu's opening made the game save the host (SavePlayerToSlot s
 world, creating a slot0 the backup did not have, so the next runs would have loaded the host where that save left
 it. After a run that opens a minigame, a shop's purchase or anything else that may save, compare the test world with
 its backup (bash coopworld.sh backup says "backup is current" when nothing changed) and move a new save out of it.
+
+## Before building a test for a timing hypothesis, read the capture you already have (2026-11-21)
+B14's hypothesis (a) said the joined player's stuck match came from the opponent being handed to its game too late
+(0.6 s after the spawn), and a build to hand it over at once was the next step. cs86e's own packet capture already
+answered it: the hand-over (ChangeAiControlAck at 339.756) came BEFORE the client joined the opponent (339.891), the
+same order as a host match. Ten minutes of reading saved a build and a run. Before writing a fix for "X happens too
+late / too early", line up X and the events around it in an existing capture of the failing run and of a working one.
+
+## A script step "beside the nearest person" must start from a fixed place each time (2026-11-21)
+The crime step's scripts repeated `tpnear 30 0` (the nearest living person within 30 m of where the player STANDS)
+every 6 s. As bandits died, each hop landed beside someone farther out, and in pp43 the joined player walked from the
+bandit camp to Serkis Estate (122 m) and fought townsfolk: a bounty, a downed player, 40 NPCs handed to its game at
+once and two checklist FAILs that had nothing to do with the build. A repeated "nearest X" step needs the anchor
+again before each search (`tp <dock>` then `tpnear`), so the radius is measured from the scene, not from the last hop.
+
+## A fix for a review finding needs its own review: check it against the design's facts (2026-11-22)
+B19 v4.3 answered two findings with rules that broke the feature: "only the loaded slot's saves write a shares file"
+(the host's saves go to OTHER slots as a matter of course: autosaves rotate 0-2, manual saves 100-108, so nearly
+every file would have been set aside) and "a new id for the joined player's leftover" (it escaped the old id's ledger
+mark: a new way to give twice). A four-minute delta review caught both. Before writing a guard, list the facts it must
+not contradict (which slots saves go to, which ids the ledger can cancel) and send every fix round, however small,
+back to a reviewer with the deltas named.
+
+## The time during a step: ask the browser, not a guess (2026-11-22)
+During pp43's farfight2 I believed it was 00:17 and that both games had stopped logging at 00:07; the browser tab's
+clock (javascript_tool: `new Date().toString()`) said 00:08: the logs were current and nothing was stuck. Elapsed time
+inside a long turn feels much longer than it is. Before concluding a step is hung, read the clock that way (no
+process is started, nothing takes the focus) and compare it with the newest line of the live logs (bin64
+cdmp.host_<start>.log / cdmp.guest_<start>.log: the files named after the step's start; bin64\cdmp.log can be an old
+file from another day). To wait during a step with nothing left to do, the same tab can wait too (`await new
+Promise(r => setTimeout(r, 40000))`; the tool stops a call at 45 s): no process, no focus change, few tokens.
+
+## Check an audit's "stale address" list against the port tools and the logs first (2026-11-21)
+A read-only audit listed ten groups of addresses "left at 2976 / 3576 values". Two were already 3732's (pins73.py had
+pinned them; only the code comments still named the old build) and one only fed diagnostics. Before fixing an item:
+grep tools/native-port (pins*, p73_hand, fix73) for the old value, read the feature's counters in a recent log (a
+route that counts 28/38/38 is working), and check what the hook does when it fires. When a port pins a value, update
+the comment that names the build too, or the next audit reads it as stale.

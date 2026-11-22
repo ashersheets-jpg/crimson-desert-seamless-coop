@@ -1,5 +1,31 @@
 # Boss mechanics audit for two players (roadmap T13, 2026-11-03)
 
+## 2026-11-21: the shared world changes most of this table (read this first)
+
+The table further down is the TWO-WORLDS design (each player in its own world, the guest fighting a relayed copy). The
+release is the native SHARED world: one server (the host's game), ONE boss, both players hitting the same actor. What
+that changes, by mechanic (from the shared-world work so far; nothing below is checked on a boss yet: B07 needs a save
+at a boss, asked):
+
+| Mechanic | In the shared world | Risk | What to check first (B07) |
+|---|---|---|---|
+| Damage, phases (`BossPhase`), health bars | The boss's health is the server's; both players' blows land there (B06 / B18: the joined player's blows hurt and kill the host's enemies, from the saddle too) | Low | Both bars drop for blows of either player; phase changes once |
+| Who runs the boss's AI | The controller client: the host's by default; AiHandoff's fight rule (on) hands an enemy the joined player fights to the joined player's game (B18, cs40f) | A boss handed back and forth between two games mid-phase (AI reset at each hand-over) | Does the fight rule hand a BOSS over? If its scripted AI misbehaves after a hand-over, exclude bosses (`Actor_Enemy_Boss` / FieldBoss / QuestBoss classes) from the rule |
+| Killing blow and the battle's end | The boss dies on the server whoever lands the blow; the stage that runs the fight lives in the host's manager (the field owner's) | **Quest credit:** with quest_own_progress=1 (on in the release) each player's game events go to its OWN quest manager (QuestRoute): a final blow by the joined player may credit only the joined player's quest, and the host's story step may not move. Whether the boss stage's own end (not the kill event) moves the host's quest is not known | The joined player lands the final blow on a host story boss: does the host's quest step move? If not: a boss kill (or every kill of a QuestBoss) also offered to the stage owner's manager (QuestRoute shared credit has the mechanism, v2 in test) |
+| Finisher / fatal state | Executed by the player who triggers it; server-side state | A finisher started by one player while the other hits | Each player can finish; no double finisher |
+| Grabs / paired attacks | The boss's controller game starts a paired action on a player; the victim's own game must play its side | A grab on the joined player while the boss runs on the host's game (or the reverse) may play only one side, or hang | A grab on each player, both screens |
+| Entrance / phase / end cinematics | Host story scenes are NOT copied to the joined player any more (native 781dba6, the black screen); "Story scenes together" (experimental) holds a story trigger for both | The joined player sees the boss frozen / idle during the host's cinematic, or a cinematic only on one screen | Both screens during each cinematic |
+| Arena barrier / lock | A stage object of the host's scene; the joined player's game has the host's scene copy (X) | The joined player locked out of (or into) the arena, or the barrier invisible but solid | Enter and leave the arena with each player |
+| Player death in the arena | Both are in one world: the downed player waits for a revive (B17: hold E by the downed friend) or the death screen | A respawn far from the fight; the fight resetting when one player dies | Down one player mid-fight, revive, go on |
+| Area effects (Kearush's fog) | One world: the effect is there for both | Fine (the two-worlds "softer fight" note is gone) | Both take the fog's effect |
+| Difficulty | One boss for two players (`scaling.toml` was the two-worlds relay's) | Too easy | Time to kill with two vs one |
+| Loot | One boss, one drop on the server; Lootr's chest / body shares give the other player its own copy (B19, on) | A boss drop given twice, or once | Both players' bags after the kill |
+
+So the first boss test (B07) is: both players fight one story boss; the JOINED player lands the final blow; then
+every row above is read off the two screens and both logs.
+
+(The two-worlds table, kept for the record:)
+
 A boss fight in Crimson Desert is a scripted **stage** run by the client of the player whose world it is (the host):
 the stage owns the phases, the cinematics, the arena barrier and the "battle end" that closes the fight and moves the
 quest on (net/boss_safe.h). The guest fights a **copy** of the boss (the host's enemy relayed), so every mechanic

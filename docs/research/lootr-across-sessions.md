@@ -22,6 +22,91 @@ v3 written (2026-11-21 13:45, worktree upstream/cdmp-native-wip branch wip-b19-v
 
 v3.1 reviewed (2026-11-21 19:20, read only): B1 closed; no new way to give twice opened, nothing changes with the option off, no race; but the design's commit point is wrong: per the native base's save research (5-guardado-anfitrion.md §3) the game writes the slot inside SavePlayerToSlot, and FlushPendingSaveData names a slot (+0x5C) only for autosaves with options&4 (progreso-invitado.md §2.1): MANUAL saves (slots 100-108) never get a share file, so loading one restores nothing; an autosave without &4 gets no commit and leaves an older file in place. Also left: a failed ledger write sets aside only this process's known files (other slots of the earlier session still list the id); set_aside does not check the file is really gone; a snapshot taken before a give can be written after a failed ledger write; the host's phase-2b copy is not in g_given_host; a host reload loses shares given in this process; a failed ledger write drops whole files. v4 (parked until the owner's save-test answer): write the slot file when SavePlayerToSlot returns 0 (its I/O is done there), drop the flush hook; on a failed ledger write rewrite every slot*.txt without the due ids (verify, else set aside); filter due ids from every write; confirm a set-aside; the host's 2b copy recorded; g_given_host only for shares whose slot file was written after the give.
 
+v4 + v4.1 (2026-11-21 late, worktree upstream/cdmp-native-wip, branch wip-b19-v3, uncommitted, NOT built; the live
+test still needs the owner's save-test answer):
+- the commit point: a slot's file is written when the game's SavePlayerToSlot of that slot returns 0 (the game writes
+  the save's own files inside that call: S34 research section 3); FlushPendingSaveData no longer does anything here;
+- the stamp (v4.1, review of v4 item 1) is the slot's newest save-file time in FILETIME ticks, measured right after
+  the save; at a load the slot's files must show EXACTLY that (newer: a later save lost its file; older: files put back;
+  none: nothing to compare): otherwise nothing is restored. A save that did not move the files keeps the old file; one
+  whose files went back sets it aside;
+- a failed ledger write rewrites EVERY slot*.txt in the folder without its marks (read back), or sets the file aside;
+  marks still due are never filed again; the ledger is written durably (flush + write-through) with a second copy
+  (given_guest.bak), and both are read and joined (v4.1, item 6);
+- set-aside is confirmed: renamed, else deleted, else overwritten in place through a handle that shares everything,
+  else said once for that slot (v4.1, item 4);
+- the host's own gives are no longer subtracted at a load (the host's bag is in the slot it loads; v3.1 lost them
+  after a reload; the v4 review checked this reasoning and agreed);
+- a host load clears the old world's shares before anything can fail, and the waiting shares are given only while
+  armed (v4.1, item 2); a share leaves the waiting list before its adds (a save inside an add cannot list it);
+- arming only at the host character's own LoadSlot (its 3732 return exe+0xE274364; kRetCharacter3093 / kRetLobby3093
+  were still 3576's, so every load logged "OTHER") (v4.1, item 5);
+- every persistence entry holds one recursive lock before g_mu (v4.1, item 3: the review asked whether LoadSlot, the
+  saves and Lootr's 2 s entry share a thread; cs83w2 / cs86f logs show them all on the "server realm" thread, the lock
+  is insurance).
+Left from the v4 review (losing, never giving twice): the host's phase-2b copy between its queued add and the
+worker's run, and a partial give (marks per share, not per kind). kRetUserLogin is still 3576's (it changes
+decide_load_on for an Unidentified actor: its own check). Next: build the worktree, its unit tests, a read-only review
+of v4.1, then the live test when the owner answers.
+
+v4.1 reviewed (2026-11-21 ~23:50, read only): compiles as read, no crash or stall, nothing changes with the option off;
+items 2, 3, 5 correct, 4 and 6 correct with notes; three ways left to give twice, each needing a condition not ruled
+out: (1) the narrowed arming had no disarm: a host character load from another caller kept the old world's shares
+armed in the new one; (2) a save that returns 0 without rewriting the slot could stamp a snapshot with files it does
+not belong to (no valid file, or an older stamp); (3) the two ledger copies were joined even when one could not be
+read now and the other lagged (its write had failed, only logged). Edge cases: two Steam accounts hosting the same
+friend share the co-op folder; FAT32 / exFAT times are too coarse. v4.2 (same worktree, uncommitted, NOT built):
+- any host character load (any caller) disarms and drops the old world's shares BEFORE the game's call
+  (lootr_host_loading); only the character's 3093 call restores and arms (item 1);
+- the slot's save-file time is measured before AND after the game's SavePlayerToSlot: written only when the files
+  moved; when they did not, the old file stays only if its stamp is exactly their time; anything else sets it aside
+  (lpl::after_save, unit-tested; item 2);
+- a ledger copy that cannot be read now means nothing is trusted (lpl::ledger_trusted, unit-tested); a .bak whose write
+  failed is deleted or cleared, else the marks stay due (item 3);
+- more than one account folder with files in the slot = no file is that save's; persistence stays off on a drive that
+  is not NTFS / ReFS (item 4);
+- the lock is timed: a game hook's entry waits at most 2 s, then takes its safe path (a missed joined-player save writes
+  its marks at Lootr's next 2 s entry); Lootr's entry skips a round instead of waiting (the review's hang caveat);
+- a chest share being given is not listed by a save inside its add; the durable ledger write flushes the renamed file
+  (MOVEFILE_WRITE_THROUGH does nothing for a rename on one volume); marks written on a retry are counted; dead code gone;
+  the stale and ARMED lines say what happened; the logic header's comments describe FILETIME stamps.
+kRetUserLogin: the 3732 port audit (same night) found all seven caller returns of guest_save_logic.h still 2976's; the
+fix (scratchpad port_gap_rets.py, kCallSites + 5 tied by static_asserts) goes to the main tree and this worktree alike.
+
+v4.2 reviewed (2026-11-22 ~00:10, read only): the four findings closed, nothing changes with the option off, no new
+crash or deadlock path; seven smaller findings. v4.3 (same worktree, not built):
+- a joined player's save that missed the lock now also requests Lootr's 2 s entry (else its catch-up never ran when
+  nothing else waited: a share could be given twice) (finding 1);
+- a give to the joined player is recorded BEFORE its adds (persist_give and the chest shares), and what its bag did not
+  take comes back under a new id (finding 2);
+- a world generation counter: a loop with adds stops after them when a load inside an add cleared the lists
+  (finding 3, theoretical: it would have written g_shares[-1]);
+- an unidentified owner's character load disarms too; only the armed slot's saves write a shares file, another
+  slot's file is set aside (finding 4);
+- a snapshot still waiting for its slot is kept on Keep (finding 6); a durable write whose flush fails is a failure,
+  and a failed ledger write is retried at 2, 4, 8, 16, 32, then 60 s (finding 7); a shadowed lock renamed; tests for
+  the remaining after_save cases.
+Accepted, with reasons: (5) Keep trusting the newest time only: the game rewrites slot<N> as a whole folder
+(slot<N>_new renamed over it; save.save always new, lobby.save copied with its old time: pp40-newsave's redirect log),
+so an unchanged newest time after a real save needs the new save.save's write time to equal the old one to 100 ns;
+the game's own recovery from slot<N>_backup (a damaged save) would restore the newer save's shares into the older
+world (rare; to watch in the live test's logs); a junction to another drive can name the wrong volume for the NTFS
+check.
+v4.3's deltas reviewed (2026-11-22 ~00:19): two of my changes were wrong, v4.4 (same worktree, not built):
+- the "only the loaded slot's saves" rule is gone: the host's saves go to other slots as a matter of course (autosaves
+  rotate 0-2, manual saves 100-108), so it set aside nearly every save's file;
+- the joined player's leftover (its bag full) keeps its own id again: a new id escaped the old id's ledger mark in a
+  slot file written meanwhile (given twice across sessions); when nothing at all was added, the record made before the
+  adds is undone (only that record, and only if no save of the joined player's ran during the adds);
+- the disarm is again for the host's own character loads only: in the guest save's probe / off modes an unidentified
+  owner's load is usually the joined player's;
+- a save that did not move the files keeps a snapshot still waiting for them (stamp equal).
+Left open from finding 4: a world started without the host character's LoadSlot (no such path in the co-op flow:
+every co-op world starts in a fresh game process through Start Co-op; to check in the live test's logs).
+v4.4's deltas reviewed (~00:23): no new way to give twice, no crash, no compile issue (one stale comment fixed,
+<iterator> made explicit). Next: build it with its unit tests (merged into the next batch, switched off, or in the
+worktree), then the live test when the owner answers.
+
 v3 plan (2026-11-21 12:30; v2's patch is the base):
 1. Ledger, complete: every give is recorded ON THE SERVER THREAD once its add has run (persist_give and the chest
    shares add synchronously there; the in-session "guest took it too" path records at its server-thread add, not in
