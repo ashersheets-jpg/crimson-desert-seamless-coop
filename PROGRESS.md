@@ -10254,3 +10254,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   lines, the joined player's "seated" line, shots). T26 route 2 (the host's server removes the dead player's silver):
   the 3732 discard handler's plain delete read (exe+0x2A54010 remove by reason 0x2F, scope exe+0x2EC97A0, time =
   _time64 + [0x724B5F0] or [0x71661A8] by tls+0x1EB): docs/research/t26-death-penalty.md.
+- 12:25 research package 7befffc8 (native 9fb4fa4 as 6a4079b1, layer 7befffc: tphorse far). pp44's test-kit fixes
+  re-judged on pp44's own files (JUDGE_ONLY, tag pj44): chest 47/0, crime 51/0, shop 25/0, door 47/0, loot 48/0
+  (was the jkey fail), fresh 43/0 (was the warning-order fail). build/native/window_1500.sh waits in the background
+  for 15:00, then: dllswap put 677c87bb, pp44 lagrun, pp44b static fresh solostart loot display, dllswap put
+  7befffc8, chain_j (cs95, cs95b, cs93b, cs94, cs96). next_batch_build.sh now deletes both outputs before building
+  (a swapped-in package DLL is newer than its objects: the link could be skipped).
