@@ -177,6 +177,20 @@ Not known yet (cs83w3 records every packet of the host's game around "Participat
    (51 -> 88 with E); in the joined player's matches it stays NaN all match: its client never enters the push phase.
    Next: cs92 (cs83v with the host's capture) to find the message that starts the push phase on the host's client,
    against cs87's joined-player capture (no minigame message after the opponent's JoinMiniGameAck).
+   cs92 RESULT (2026-11-22 04:58, the host's own match with its capture; scratchpad mgdiff.py against cs87): in the
+   host's match the table's state 7 (363.541) is followed by the client's two UpdateStageChartEventReq 2200 for the
+   scene (events 7/0 and 7/1, 363.587) and 2 ms later by the server's CatchActionResultAck 2562 (catcher 0xA0100001,
+   target the opponent 0xB0100AF7, action hashes 0x18F128E3 / 0x64528294): the server's grip. Only then does the host's
+   client run the push: EchoActionSessionIDReq of the opponent, ReleaseActionPointReq, StartActionReq 0x35DD392F ->
+   0x63F9EFFD (host) / -> 0x18F128E3 (opponent), DoFrameEventReq; CatchNak and PostProcessAttackResult follow, the
+   quick-time results (RequestQuickTimeEventResultReq) 4 s later, LeaveMiniGameReq at +23 s, MiniGameResultReq at +30 s.
+   The joined player's capture (cs87) has none of it after its opponent's spawn: its TWIN answered the two chart events
+   locally (with the 2105 the server would send), so the server never ran the catch. Hypothesis (e): the twin's chart
+   events of state 7 must reach the server for the host's scene. Native 2b2eaf2: [session2] twin_extra_chart (guest,
+   research, default 0): 1 = a twin_extra scene's chart events in state 7 go to the host's server under the host's
+   scene id (shop_twin_rewrite_out), and the server's 2105 for them comes back to the twin (matched by scene and the
+   9 event bytes, 5 s); 2 = every chart event of the twin. Test: cs95 (cs87 with it, both captures). Open: whom the
+   server makes the catcher (the requester, or the scene's own player binding: the host).
    If cs87 or cs87b pushes: before twin_extra goes on by default, (e) BOTH players at the table at once (the host's
    own match in its copy, the joined player's in its twin, the server asked for two opponents at one scene id: does it
    spawn a second patron, refuse, or hand the first one over?), and (f) the host's match seen from the joined player's

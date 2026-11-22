@@ -10,6 +10,11 @@ test save Out, shipped cdmp.ini restored.
   677c87bb, the door fix) runs 05:22-~08:50 and stops before its last two steps; I run those only if there is time
   before 09:00. When you are up: either pause updates (Settings > Windows Update) or let it restart when no test runs;
   I change no system setting myself.
+- 2026-11-22 09:20 HANDS-ON (1 minute, not urgent, T28): Nexus downloads need a signed-in account and the built-in
+  browser pane is signed out (I never sign in or type passwords). If you sign in to nexusmods.com there once, I can
+  download the most-downloaded code mods (Character Creator, RenoDX, Internal Graphics Overhaul, a manager's loader)
+  under your standing OK and test each next to Co-op+. The top-20 list and what each kind means for co-op are in
+  docs/compatibility.md (section 2b).
 - 2026-11-21 19:30 QUESTION (not urgent, B13: player-vs-player arm wrestling in one shared world): who sits where?
   (1) each player at a table, two matches with one shared strength bar (the faster masher wins on both screens);
   (2) one match: you wrestle the table's NPC, your friend stands by and mashes too, both screens show the bar and the
@@ -10203,3 +10208,16 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   its run on pp44-loot's files gives 0xA0100067; known-warnings: the "the owner" variant). hostrevive started
   (08:44-~08:57). lagrun and the re-runs the rule asks for (loot and fresh, then static / fresh / solostart as the
   smoke) wait for the update restart to be dealt with (after 15:00, or once updates are paused).
+- 08:57 pp44 hostrevive 51/0: pp44 at 1068 pass, 2 fail over 26 of 27 steps (lagrun left). No game run from 09:00.
+  display_fix.py applied (the display step passes -HostKeys w:1500 so the harness brings the game's window forward
+  before its title shots). Discord 08:58: one #general line ("i thought you had to buy", most likely about the
+  pirated-copies question that waits on the owner): nothing to answer.
+- 09:00 B14 ROOT CAUSE (mgdiff.py, cs92 against cs87): in the host's own match the table's state 7 is followed by the
+  client's two UpdateStageChartEventReq (7/0, 7/1) and, 2 ms later, the server's CatchActionResultAck (the grip of
+  host and opponent); only then does the client start the push (EchoActionSessionIDReq, DoFrameEventReq), with the
+  quick-time results 4 s later and the result at +30 s. The joined player's twin answered those chart events locally,
+  so the server never ran the catch: "E Push" forever. Native 2b2eaf2 (unit tests pass; one unrelated test exe,
+  hooks_redirect, removed by Windows Defender while it ran, as on 21 Nov): [session2] twin_extra_chart (guest,
+  research, default 0) sends the twin's state-7 chart events to the host's server as the host's scene and maps the
+  server's answers back to the twin. Research package d1baf948 (the tested 677c87bb stays the post candidate).
+  cs95 (cs87 with it, both captures) leads chain_j (cs95, cs93b, cs94) for the next game window.
