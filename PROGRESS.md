@@ -10157,3 +10157,17 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   capture has 1 each of LearnKnowledgeListAck / FollowLearnedKnowledgeDataListAck / ShareKnowledgeSeedAck (login
   lists). The chest share itself worked (the joined player's own share 8 s later). B04 needs a run with a knowledge
   the save does not have yet (next: find one near the test spots).
+- 04:45-04:52 Layer 677c87bb: [session2] scene_level_share=1 on the host by default (T23) + its layer test; native
+  91 unit tests (the 14 old failures only), layer tests pass; package 677c87bb. chain_i (cs92, cs93, cs77c) on it.
+  The checklist gets a `door` step (scratchpad door_step.py, applied after chain_i: prepost.sh is a harness script)
+  and the B frame warning scene_level_share now logs in every host log goes to known-warnings.
+- 04:58 cs92 (B14, the host's own arm-wrestling match with the host's packet capture; SAVES OK, 5/5): the host's
+  match ran and won as in cs83v (gauge held 04:57:41, "over: we won (98)" 04:57:52); capture 69 MB
+  (packets/cs92). The joined player's capture of cs87 is the other side; mgdiff.py compares them after chain_i.
+- 05:08 cs93 (B10 shared quest credit v2, both on the bandit save, the test guest's mailbox set aside; SAVES OK, 5/5,
+  mailbox put back): the joined player played the fresh upload ("ACCEPTED the upload ... plays YOUR save"), 16 kills
+  by the host's script. CREDIT SEEN: the host's camp mission moved at capture t 305.603 (UpdateMissionListAck
+  0x0F4D39 / 0x0F4D3A, UpdateQuestListAck 0x0F42D9 for 0xA0100001) and 257 ms later the JOINED player's own
+  character got the same three (0xA0100066, t 305.860). QuestRoute: 561 shared passes. The host's next mission
+  (0x0F429A, t 306.421) did not follow for the joined player. To be sure the credit did it and not the game's own
+  party rules: cs93b, the same run with the credit off (written; next chain).

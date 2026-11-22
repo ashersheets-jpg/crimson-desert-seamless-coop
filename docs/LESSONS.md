@@ -591,6 +591,15 @@ cdmp.host_<start>.log / cdmp.guest_<start>.log: the files named after the step's
 file from another day). To wait during a step with nothing left to do, the same tab can wait too (`await new
 Promise(r => setTimeout(r, 40000))`; the tool stops a call at 45 s): no process, no focus change, few tokens.
 
+## A research switch made a default: its warnings and its test go into the checklist first (2026-11-22)
+scene_level_share fixed the doors in cs88b and went on by default for the host. On 3732 its B part logs one WRN in
+every host log ("B: el marco del 2834 ... B solo observa"), and the checklist fails every step on a warning kind
+tools/known-warnings.txt does not list. Before the pass of a build that turns a switch on: grep the research runs'
+logs for the switch's WRN / ERR lines (the source's log::warn list says which can appear), add the expected ones to
+known-warnings with the reason, and give the fix its own checklist step (here `door`), or the pass only proves that
+nothing else broke. Test-only probes the step needs (door_trace's 2976-only hook ERR) are allowed in that step only
+(ERR_ALLOW / WRN_ALLOW), never in the known lists.
+
 ## Check an audit's "stale address" list against the port tools and the logs first (2026-11-21)
 A read-only audit listed ten groups of addresses "left at 2976 / 3576 values". Two were already 3732's (pins73.py had
 pinned them; only the code comments still named the old build) and one only fed diagnostics. Before fixing an item:

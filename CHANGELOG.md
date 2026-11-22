@@ -5,7 +5,12 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-NOT POSTED YET (af1843c2; research chain chain_h first, then the checklist): everything in c7c22497 just below, plus:
+NOT POSTED YET (677c87bb; the checklist with its new door step first): everything in c7c22497 just below, plus:
+- **Doors in a place the joined player reaches first now open** (layer 677c87bb, the native base's [session2]
+  scene_level_share now on for the host): when the joined player's game loaded a building before the host's did, the
+  host's server never marked its level ready, so its doors refused BOTH players until a fast travel (reproduced on
+  3732 at the Hernand tavern, cs88a: every door request refused). With it on, the level is made ready for the joined
+  player too and the door opens (cs88b). ByJunter's fix from the native base, now ported and tested on 3732.
 - The friend menu no longer offers "Arm wrestling" in the shared world (layer 32e0d84): there it started the
   two-worlds versus (each player at a table in its own world), which cannot finish in one shared world, and the
   joined player cannot start a table match of its own yet (B14). The host plays the tables against the townsfolk as

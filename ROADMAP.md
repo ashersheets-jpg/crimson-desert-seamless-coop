@@ -101,7 +101,10 @@ Steam join/invite/leave and room code, friends-only vs invite-only, join/leave n
   base's S43 (2976): a scene level the JOINED player's game loads first is never marked ready on the server (only the
   field owner's load does that, and the owner's later load is dropped), so its doors answer "not ready" to BOTH
   players until a fast travel. ByJunter's fix [session2] scene_level_share (host) is ported to 3732 but off and never
-  run there; cs88a / cs88b (the Hernand tavern door, the joined player first; probe, then on) are queued.)
+  run there; cs88a / cs88b (the Hernand tavern door, the joined player first; probe, then on) are queued.
+  2026-11-22: cs88a REPRODUCED it on 3732 (the joined player's door requests: 13-15 Nak, 0 Ack); cs88b with
+  scene_level_share=1 FIXED it (the levels "[ready for user 2]", the door's Req -> Ack, Nak 0). On by default for the
+  host since 677c87bb. Left: a checklist door step; gates, levers, movable / thrown objects and destructibles.)
 - [x] **T24 — Communication.** Add in-session text chat and ping types (danger, loot, go here) with game-styled display. *Done when:* usable on keyboard and controller.
 - [~] **T25 — Mount edge cases.** Mount summon, despawn, death, mount swapping, and flying-mount landing all stay in sync. Two players on one mount only if feasible. *Done when:* each case is tested.
 - [~] **T26 — Death penalty and respawn options.** Config options for penalty (none, partial loss, full) and respawn rules, applied consistently on both sides. *Done when:* every option is tested. (2026-11-22: the respawn option is done; the penalty options were blocked on the two-worlds design (no removal the server accepts). On the native shared world the game's own jail fine removes items on the host's server (RemoveItemToInventoryAck 2481): a lead to a server-side removal; design in docs/research/t26-death-penalty.md.)
@@ -187,7 +190,10 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   it shows the host's explored land (cs50d), without it only its own (cs50e); docs/drafts/b04-fog-share-2026-11-17.png.
   A brand-new character has no map yet (it unlocks in the story). Knowledge: 2026-11-16 knowledge_grant built (native 9160d19, [session2] knowledge_grant, default 0):
   a learn by one player is learned by the other through the game's own learn entry; installs cleanly on 3663,
-  no learn happened in cs29a / cs28c to prove it -- needs a moment where the game teaches a knowledge.)
+  no learn happened in cs29a / cs28c to prove it -- needs a moment where the game teaches a knowledge.
+  2026-11-22 cs91 on 3732 (the chest step that taught "Tough Meat" in pp43): installs, 6 minutes, learns 0, faults 0;
+  no "Knowledge Acquired" on the host's screen, so the test save already knew it. Still needs a knowledge the save
+  does not have.)
 - [~] **B05 — Other mounts and vehicles** (bears, wolves, raptors...; wagon, skiff, mech) seen and ridden.
   (2026-11-15/16: Blackstar works both ways in the shared world -- the guest calls and flies it and the host sees
   it (cs18i); the host calls and flies it and the guest's game loads it and seats the host on it (cs32e/f, by log).
@@ -272,7 +278,8 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   by the friend the prompt shows "(A) Interact", holding A opens the menu, D-pad moves, A selects, B closes (the
   chord + D-pad Up version of 11-09 was replaced by the game's own interact). 2026-11-16: the greyed entry became
   "Give or trade an item" (B11's give and trade, cs35a/b), so trading is in it. Left: the arm-wrestling challenge
-  entry, with B13; a pad re-check on 3732.) Hold R on the other player (the game's own hold prompt:
+  entry, with B13. The pad re-check on 3732 is done: cs89 2026-11-22, simulated pad, "the hold-R prompt on the other
+  player opened the interaction menu".) Hold R on the other player (the game's own hold prompt:
   the R key in a circle that fills while held, exactly as at shopkeepers and their shop menus -- NOT a plain
   "R Rock, Paper, Scissors" tap prompt) opens a player interaction menu like the shop menu. It holds every minigame
   challenge the two can do (duel, RPS, race, hunt, fishing, hide and seek, arm wrestling...), later trading (B11) and
@@ -418,6 +425,8 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
     (solo stays usable, the reason shown) when any required save-redirection hook fails to install -- on native that
     is the native base's save guard (the redirect to the co-op folder), not Co-op+'s save_io. Reference: Plitos's
     C606D401 handoff (Setup-Direct.ps1, save_io ready guard); credit Plitos in the changelog.
+    (2026-11-22 cs90 on 3732: the refusal path works end to end -- with the save redirect counted as failed, "Co-op
+    REFUSED for this launch", the game ran solo on its own saves, the partner was told, user install restored 5/5.)
 - [~] 2026-11-18 Scene Req handlers with an unchecked field-owner stage manager (vf48 -> lock, no null test), found with
   Borque's host crash (2808, guarded by SceneReqGuard 12c9bc8): 2644, 2654, 3141, 2672, 2678, 2563, 2313, 2546, 2924,
   2125 (sites in build/decomp/notes_host_unload_crash_3663.md, private). 2026-11-19 on 3732: 2808, 2678 and 3141

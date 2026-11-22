@@ -4,7 +4,7 @@
 #
 #   bash tools/prepost.sh TAG "<package folder>" STEP        STEP = static | real | fresh | xess | fsr | display |
 #                                                                   lowsave | chest | revive | loot | crime | leave | shop | farfight | farfight2 | newsave | solostart | mounts | mountfight | nosave |
-#                                                                   retry | stuck | mismatch | hostrevive |
+#                                                                   retry | stuck | mismatch | hostrevive | lagrun | door |
 #                                                                   summary
 #
 # TAG names the run (pp1 ...): the test names are TAG-STEP, the report is build/native/prepost-TAG.txt.
@@ -724,8 +724,32 @@ lagrun)
   info "host: $(echo "$m" | grep -o 'holds a new.*' | cut -c1-260)"
   info "host: $(grep -h 'remote character delay\]' "$H" | tail -1 | grep -o 'delay now.*' | cut -c1-120)"
   ;;
+door)
+  head_step "doors: the joined player reaches the Hernand tavern door first and opens it (scene_level_share, on by default)"
+  # 2026-11-22 (T23, cs88a / cs88b): a scene level the joined player's game loads first was never marked ready on the
+  # host's server (only the field owner's load does that), so its doors answered "not ready" to BOTH players until a
+  # fast travel (cs88a: the joined player's door requests 13-15 Nak, 0 Ack). scene_level_share (the native base's S43,
+  # on for the host by default since 677c87bb) marks user 2's load ready too (cs88b: Req -> Ack 1, Nak 0). door_trace
+  # only counts the door's packets; its native-result hook is 2976's, so on 3732 it logs one ERR (allowed here only).
+  # The host starts at its own save's spot ~300 m off and comes after ~110 s; the joined player is at the door at once.
+  { for i in $(seq 1 11); do echo "wait 10000"; done; echo "tp -10666.0 618.5 -3835.0"; echo "wait 2000"; echo "npcs 6"; echo "wait 10000"; } > $N/scan/door_host.txt
+  { echo "wait 8000"; echo "tp -10667.1 618.5 -3836.4"; echo "wait 3000"; echo "npcs 6"; echo "wait 10000"; } > $N/scan/door_guest.txt
+  DOOR="-10668.8,-3838.3"
+  GK="w:15000_py:faceto:${DOOR}_w:500_shot:$NAME-g0_kd:E_w:1500_ku:E_w:1500_shot:$NAME-g1_kd:W_w:2000_ku:W_shot:$NAME-g2_kd:E_w:1500_ku:E_w:1500_shot:$NAME-g3_kd:W_w:3000_ku:W_shot:$NAME-g4"
+  HK="w:4000_py:faceto:${DOOR}_w:500_shot:$NAME-h0_kd:E_w:1500_ku:E_w:1500_shot:$NAME-h1"
+  ERR_ALLOW='DoorTrace REFUSED'
+  run2 "-CoopPlus -Lobby -Fresh -PackageIni $MODW -HostVariant usercopy -HostNativeExtra door_trace=1 -GuestDev native_extra=door_trace=1 -Hold 10 -HostScript $SCAN\\door_host.txt -GuestScript $SCAN\\door_guest.txt -GuestKeys $GK -HostKeys $HK"; two_player_checks
+  ERR_ALLOW=
+  H=$N/$NAME.host.log; G=$N/$NAME.guest.log
+  has "$H" "SceneLevelShare ON \(scene_level_share=1\)"                           "host: scene_level_share on (the release default)"
+  has "$H" "SceneLevelShare \[ready for user 2\].*sector_-42_-15.*actor 0xA0100066" "host: the tavern's levels the joined player loaded first were made ready for it"
+  m=$(grep -h "DoorTrace \[resumen\] invitado-entrega" "$G" | tail -1)
+  ack=$(echo "$m" | sed -n 's/.*Ack2145 \([0-9]*\).*/\1/p'); nak=$(echo "$m" | sed -n 's/.*Nak2953 \([0-9]*\).*/\1/p')
+  if [ -n "$ack" ] && [ "$ack" -ge 1 ]; then ok "guest: the server answered its door request (Ack $ack)"; else bad "guest: no door Ack (last summary: '${m:-none}')"; fi
+  if [ "${nak:-x}" = "0" ]; then ok "guest: no door request refused (Nak 0)"; else bad "guest: door requests refused (Nak ${nak:-none}): the T23 bug"; fi
+  info "guest: $(echo "$m" | grep -o 'candidata:.*' | cut -c1-90)" ;;
 summary)
-  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c '^== ' "$R") (25 in the list)"; exit 0 ;;
+  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c '^== ' "$R") (27 in the list)"; exit 0 ;;
 *) echo "unknown step $STEP"; exit 2 ;;
 esac
 sed -n "/^== $STEP /,\$p" "$R"

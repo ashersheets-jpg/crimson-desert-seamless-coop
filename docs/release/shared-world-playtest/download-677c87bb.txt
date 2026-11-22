@@ -1,0 +1,13 @@
+**Update: shared world playtest 0.1.0-alpha+677c87bb, for game 1.0.0.3732**
+Use this instead of c7c22497; **both players need the same build**.
+
+- **Doors that stayed shut.** When the joined player reached a building before the host did (for example the Hernand tavern), the door refused to open for BOTH of you until someone fast travelled. The host's game now treats the joined player's arrival the same as its own, so the door opens (checked at the Hernand tavern door). This is ByJunter's fix from the native base, now on by default for game 1.0.0.3732. If a door, gate or lever still won't move for one of you, please tell us where.
+- The friend menu no longer offers "Arm wrestling" in the shared world: it started a match that cannot finish there. Wrestling each other comes later; the host can still play the inn tables against the townsfolk as usual.
+- Behind the scenes: the save code and the horse-riding code now recognise this game version properly (they were still partly using older addresses and relied on a backup check).
+
+Tested with two copies of the game on one PC (Nvidia): the full checklist on 1.0.0.3732 (27 steps, the new door step included). Not covered here: two PCs over Steam, a real internet connection, AMD / Intel cards, long sessions; that is what your reports tell us.
+
+- `...677c87bb-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tell us in <#1567319198206525450> how it goes, with the report zip from **both** players (close the game, run **Diagnose Co-op+.cmd**).
