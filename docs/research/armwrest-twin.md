@@ -116,7 +116,20 @@ Not known yet (cs83w3 records every packet of the host's game around "Participat
    actors are announced; states go at once) and ShopTwin only took an initial state that came after the prepare.
    21 of 31 host scenes came state-first in that run, every shop among them (docs/research/shop-twin-again.md).
    Fix: an early initial state is kept and given to the twin right after its prepare ("ShopTwin [early state]").
-5. cs86b (on that fix, with guest_x_research=1 to log the twin's SetInteraction adds): the joined player talks to
-   the organizer, Participates, plays and leaves the menu. Open questions it answers: does the server spawn user 2's
-   opponent for the host's scene, take its fee and pay it; does the joined player's game play the intro, the countdown
-   and the match from its twin.
+5. cs86b (on that fix, guest_x_research=1): the twins now start (the table's twin added one entry, component index
+   0x114), but the joined player's own scripted teleport into the cellar, 13 s after they were made, ended them all
+   (a far teleport ends every scene of its own manager). Test order fixed: the joined player goes to the cellar
+   first, the host comes 22 s later (cs86c with early_state_x, cs86d without).
+6. cs86c (the joined player first, the host 1 s later): THE JOINED PLAYER'S OWN MATCH STARTED. Its talk was
+   accepted by the host's server ("USER 2 asked ... 0x000F431C ... ACCEPTED"), its twin answered the menu, Participate
+   (held, given at the 2654) and the steps to the match (state 7); the server took its 20 copper, spawned its opponent
+   for the host's scene (the id swap) and joined both; its screen played the intro with the opponent. The match then
+   stood at "E Push": the opponent's actions came from the HOST's game (S>C ChangeAIStateAck / StartActionAck only;
+   in a host match the player's own client drives the opponent). Fix: AiHandoff's MINIGAME rule (native, [session2]
+   ai_handoff_minigame, default 1): the host notes the opponent at the SpawnMiniGameCharacterAck to user 2 and hands it
+   to the joined player's game until its UnspawnMiniGameCharacterAck. Test: cs86e.
+7. cs86d / cs86e: the joined player talks to the organizer (variant 0x000F4B31 at (-10661.5, -3832.5)),
+   Participates, plays and leaves the menu. Open questions: does the server spawn user 2's opponent for the host's
+   scene, take its fee and pay it; does the joined player's game play the intro, the countdown and the match from its
+   twin. Still open after it: the twin loss on a far teleport (in play: a fast travel or respawn in the same field,
+   unless the host re-sends its scenes then).

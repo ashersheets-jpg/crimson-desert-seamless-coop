@@ -9839,4 +9839,40 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   for a scene it does not have yet, those copies never start on the joined player's screen either (presentation of
   the host's scenes: NPC sequencer actions, e.g. the T-pose bench NPCs P1 item, whose lead is GuestSeqRestore swapping
   actions it cannot find). A guest-side replay of an early initial state right after its prepare would cover X too;
-  first find a scene whose X copy visibly misbehaves to check it against.
+  first find a scene whose X copy visibly misbehaves to check it against. EVIDENCE (cs86a's own log): GuestSeqRestore
+  swapped the sequencer actions of exactly the table's 5 NPCs (0xB0100370 / 72 ..., bound to the host's 0x322) for
+  idle waits all run long: their scene copy never started on the joined player's game.
+- 21:02 cs85b (B10 shared credit, the camp's bandits killed by the host's dev script, killnear 40 every 3 s): SAVES
+  OK, 5/5, both alive; 18 KillCheatReq kills (the camp's 14 within 11 m, then farther ones); the game SAVED the host
+  (slot0 moved out again: the camp step done for the host, most likely); QuestRoute: 565 shared passes offered the
+  host's events to the joined player's quest manager. Whether ITS step moved is not visible (no quest line on either
+  screen, no log of its quest state): cs85c adds the joined player's packet capture (the server's quest messages to
+  it).
+- 21:04 native a484b0a built (90 unit tests: the same 17 known; shop_twin's pass): the early-state fix for twins
+  ("ShopTwin [early state]") and [session2] early_state_x (research, guest, off: the same early state given again to
+  the host's own scene copies). Synced, pushed (e558c76). chain_f started: cs86b (B14 + guest_x_research), cs86c
+  (+ early_state_x, the A/B for the table's NPCs' idle swaps), cs75w4 (a shop after a teleport into the host's town),
+  cs85c (B10 with the joined player's capture), cs77b (B06 ride by ridehorse), cs83v (B13 versus gauge).
+- 21:15 cs86b (B14 on a484b0a, guest_x_research): SAVES OK, 5/5, both alive. THE EARLY-STATE FIX WORKS: "ShopTwin
+  [early state] ... given to twin" for 10 host scenes (every shop and the table, 0x326), and the twins STARTED: their
+  SetInteraction added the shopkeepers' entries (7 / 6 / 9 as in cs75p5) and the table's twin added one (component
+  0x366B65EB200 index 0x114). But all of them were REMOVED 13 s later (21:11:10.008), the moment the joined player's
+  own script teleported it 330 m into the cellar (its game ends every scene of its own manager on a far teleport: the
+  known twin loss); the host's Hernand scenes had reached it while it was still 330 m away. So its sweep again had
+  nothing ("nothing taken"). Test-design fix: the joined player goes to the cellar FIRST and the host comes 22 s later
+  (cs86c, patched before it started; cs86d = the same without early_state_x, the A/B baseline, run in cs75w4's slot:
+  cs75w4 would fail the same test-only way, its original kept as cs75w4-orig.sh). The organizer is the same person in
+  every run: variant 0x000F4B31 at (-10661.5, -3832.5), 2.5 m from the standing spot.
+- 21:25 *** cs86c: THE JOINED PLAYER STARTED ITS OWN ARM-WRESTLING MATCH *** (SAVES OK, 5/5, both alive). Its talk
+  reached the host's server: "USER 2 asked: requester 0xA0100066 ... NPC 0xB0100368 interaction 0x000F431C ...
+  ACCEPTED"; its twin answered the menu (0 -> 1), Participate (1 -> 3 held, given at its 2654), 3 -> 4 -> 5 -> 6 -> 7;
+  its SpawnMiniGameCharacterReq went to the server with the host's scene 0x321 and the server SPAWNED its opponent
+  (0xB01005A0), took its 20 copper (RemoveItemToInventoryAck to user 2) and joined both (JoinMiniGameAck x2); its
+  screen played the table's intro cinematic with the opponent (shot g2). But the match stood at "E Push" (g3-g5): no
+  Leave / Result. Cause (its capture): the opponent's actions came only as S>C ChangeAIStateAck / StartActionAck /
+  MoveActorAck, i.e. the HOST's game drove it (the field's controller); in a host match the player's own client sends
+  the opponent's actions. Fix written (native, AiHandoff's new MINIGAME rule, [session2] ai_handoff_minigame default
+  1): the host's take_frame notes the opponent at the SpawnMiniGameCharacterAck to user 2 and drops it at its
+  UnspawnMiniGameCharacterAck; the server tick hands it to the joined player's game meanwhile (as the ride / catch
+  rules do). early_state_x (cs86c, on): GuestSeqRestore still swapped 6 actors (cs86b off: 5): no sign it helps the
+  X copies; cs86d (off, same order) running as the baseline. chain_f stops after cs86d (chain.stop) for the build.
