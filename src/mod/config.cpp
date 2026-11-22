@@ -353,6 +353,7 @@ Config load_config(const std::wstring& ini_path) {
     c.s2_twin_watch = narrow(read_string(ini_path, L"session2", L"twin_watch", ""));
     c.s2_twin_extra = narrow(read_string(ini_path, L"session2", L"twin_extra", ""));
     c.s2_early_state_x = read_uint(ini_path, L"session2", L"early_state_x", 0) != 0;
+    c.s2_twin_extra_only = static_cast<int>(read_uint(ini_path, L"session2", L"twin_extra_only", 0));
     c.s2_dialog_share_all = read_uint(ini_path, L"session2", L"dialog_share_all", 0) != 0;
     c.s2_dialog_redeliver = read_uint(ini_path, L"session2", L"dialog_redeliver", 0) != 0;
     c.s2_stage_candidate_guard = read_uint(ini_path, L"session2", L"stage_candidate_guard", 1) != 0;

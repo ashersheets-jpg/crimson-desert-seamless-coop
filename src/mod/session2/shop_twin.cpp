@@ -54,6 +54,10 @@ std::atomic<uint64_t> c_early_kept{0}, c_early_used{0};
 // [session2] early_state_x (guest, research): such an early initial state is also delivered again right after its own
 // scene's prepare (the host's scene copies in X start as on the host's client).
 std::atomic<bool> g_early_x{false};
+// [session2] twin_extra_only (guest, research, B14 hypothesis (d)): 1 = a twin_extra scene's own prepare is not given to
+// the game (only the twin): the scene's people bind to the twin alone; 2 = the twin's prepare goes BEFORE the host's.
+std::atomic<int> g_extra_only{0};
+std::atomic<uint64_t> c_extra_only{0};
 std::atomic<uint64_t> c_early_x{0};
 std::atomic<uint64_t> c_prepared{0}, c_deleted{0}, c_withheld{0}, c_answered{0}, c_branches{0}, c_again{0};
 std::atomic<uint32_t> g_last_branch{0};
@@ -191,6 +195,14 @@ void shop_twin_set_extra(const std::string& hex_list) {
                   stl::chart_of(h).empty() ? "NO answer table for it: its branches go back to the start"
                                            : "answered from its table");
     }
+}
+
+void shop_twin_set_extra_only(int mode) {
+    g_extra_only = mode == 1 || mode == 2 ? mode : 0;
+    if (g_extra_only.load())
+        log::info("ShopTwin [extra only] twin_extra_only={} (research): a twin_extra scene of the host's is {}",
+                  g_extra_only.load(), g_extra_only.load() == 1 ? "given to the game only as its twin"
+                                                                 : "prepared after its twin");
 }
 
 void shop_twin_set_early_x(bool on) {
@@ -341,9 +353,19 @@ void shop_twin_on_host(std::vector<uint8_t>& packet, std::vector<std::vector<uin
                 }
                 g_twins[host_id] = std::move(tw);
             }
-            after.push_back(stl::frame(stl::kOpPrepare, *t));
+            const int only = is_extra(res) ? g_extra_only.load(std::memory_order_relaxed) : 0;
+            // twin_extra_only=2: the twin (and its early state) ahead of the host's own prepare of the scene.
+            std::vector<std::vector<uint8_t>>& into = only == 2 ? before : after;
+            into.push_back(stl::frame(stl::kOpPrepare, *t));
+            if (only == 1) {
+                packet.clear();  // twin_extra_only=1: the host's own copy is not made here (guest.cpp skips an empty packet)
+            }
+            if (only && c_extra_only.fetch_add(1) < 20)
+                log::info("ShopTwin [extra only] the host's scene 0x{:X} (resource 0x{:08X}): {}", host_id, res,
+                          only == 1 ? std::format("NOT given to the game, only its twin 0x{:X}", stl::twin_of(host_id))
+                                    : std::format("its twin 0x{:X} prepared BEFORE it", stl::twin_of(host_id)));
             if (!early_init.empty()) {
-                after.push_back(stl::frame(stl::kOpBranchState, early_init));
+                into.push_back(stl::frame(stl::kOpBranchState, early_init));
                 if (c_early_used.fetch_add(1) < 40)
                     log::info("ShopTwin [early state] the host's scene 0x{:X} sent its initial state before its prepare: "
                               "given to twin 0x{:X} right after the twin's prepare", host_id, stl::twin_of(host_id));

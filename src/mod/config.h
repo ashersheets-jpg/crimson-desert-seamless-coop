@@ -626,6 +626,7 @@ struct Config {
     // Co-op+ 2026-11-21 (shop_twin.h, research): early_state_x (GUEST): a host scene's initial state that came before
     // its prepare is given to the game again right after the prepare. Default 0.
     bool s2_early_state_x = false;
+    int s2_twin_extra_only = 0;  // [session2] twin_extra_only = 0 | 1 | 2 (guest, research, B14)
     bool s2_stage_candidate_guard = true;
     bool s2_anti_grief = false;  // Co-op+ 2026-11-09 B19: the guest cannot hit the NPCs the host talks to (anti_grief.h)
     bool s2_knowledge_grant = false;  // Co-op+ 2026-11-16 B04: knowledge one player learns, the other too (knowledge_grant.h)

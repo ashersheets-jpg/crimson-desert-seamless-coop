@@ -1905,7 +1905,8 @@ void deliver_body(std::vector<uint8_t>&& packet) {
     {
         std::lock_guard lk(g_in_mutex);
         for (auto& b : tw_before) (void)g_from_host.push(std::move(b), probe_queued_us);
-        pushed = g_from_host.push(std::move(packet), probe_queued_us);
+        // shop_twin_on_host empties a packet the game must not get (twin_extra_only=1): nothing queued for it.
+        pushed = packet.empty() ? gin::Push::Queued : g_from_host.push(std::move(packet), probe_queued_us);
         for (auto& a : tw_after)
             if (pushed == gin::Push::Queued) (void)g_from_host.push(std::move(a), probe_queued_us);
     }

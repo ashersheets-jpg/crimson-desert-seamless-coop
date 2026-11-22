@@ -60,17 +60,22 @@ uintptr_t other_character(uintptr_t actor, bool* actor_is_u2) {
     return 0;
 }
 
+// The quest component of a character (0: none or not the expected class).
+uintptr_t quest_component_of(uintptr_t character) {
+    const uintptr_t comp = rdp(rdp(character + kActorComponents) + kComponentsQuest);
+    return comp && rdp(comp) == g_base + kVtQuestComponent ? comp : 0;
+}
+
 void on_point(safetyhook::Context& ctx) {
     const uintptr_t actor = rdp(ctx.rbx + kCompActor);
     if (!actor) return;
-    if (t_pass == 2) {  // the other player's pass: its manager, or none (rax 0: the callback skips)
-        const uintptr_t other = other_character(actor, nullptr);
-        const uintptr_t mgr = other ? manager_of(other) : 0;
+    if (t_pass == 2) {  // the other player's pass (v2): rbx is the OTHER player's component, actor its character
+        const uintptr_t mgr = manager_of(actor);
         if (!mgr) {
             c_shared_skipped.fetch_add(1, std::memory_order_relaxed);
         } else if (c_shared.fetch_add(1, std::memory_order_relaxed) < 5) {
-            log::info("QuestRoute [shared] a game event of character 0x{:08X} also offered to the other player's quest "
-                      "manager 0x{:X}", static_cast<uint32_t>(rdp(actor + 0x60)), mgr);
+            log::info("QuestRoute [shared] a game event also offered to the other player 0x{:08X} as its own (its quest "
+                      "manager 0x{:X})", static_cast<uint32_t>(rdp(actor + 0x60)), mgr);
         }
         ctx.rax = mgr;
         return;
@@ -98,8 +103,17 @@ uintptr_t thunk_detour(uintptr_t a, uintptr_t b, uintptr_t c, uintptr_t d) {
     t_pass = 1;
     const uintptr_t r = g_thunk.unsafe_call<uintptr_t>(a, b, c, d);
     if (g_shared && outer == 0) {
-        t_pass = 2;
-        g_thunk.unsafe_call<uintptr_t>(a, b, c, d);
+        // v2 (cs85c): the other player's OWN component, so the game's apply functions see that player as the event's
+        // actor (with the acting player's component its steps saw the host as the doer and none moved).
+        const uintptr_t actor = rdp(a + kCompActor);
+        const uintptr_t other = actor ? other_character(actor, nullptr) : 0;
+        const uintptr_t other_comp = other ? quest_component_of(other) : 0;
+        if (other_comp) {
+            t_pass = 2;
+            g_thunk.unsafe_call<uintptr_t>(other_comp, b, c, d);
+        } else {
+            c_shared_skipped.fetch_add(1, std::memory_order_relaxed);
+        }
     }
     t_pass = outer;
     return r;

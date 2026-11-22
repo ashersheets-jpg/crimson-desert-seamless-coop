@@ -28,6 +28,9 @@ void shop_twin_set_extra(const std::string& hex_list);
 // [session2] early_state_x (GUEST, research, default 0): a host scene's initial state that reached this client before
 // the scene's prepare (the observer copy's order) is given to the game again right after the prepare.
 void shop_twin_set_early_x(bool on);
+// [session2] twin_extra_only (GUEST, research, default 0): 1 = a twin_extra scene of the host's is given to the game
+// only as its twin; 2 = its twin is prepared before it.
+void shop_twin_set_extra_only(int mode);
 // Guest: a packet of the client about to go to the host (wire form): a twin_extra scene's minigame request
 // (SpawnMiniGameCharacterReq / UnspawnMiniGameCharacterReq) names the host's scene instead of the twin.
 void shop_twin_rewrite_out(std::vector<uint8_t>& packet) noexcept;
