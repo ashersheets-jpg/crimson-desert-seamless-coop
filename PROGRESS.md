@@ -9724,3 +9724,14 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   taming step was not reached (user 2's branch requests 0). The friend's E on two bandit horses (0x000F4244) ACCEPTED.
   Inconclusive again: the taming freeze waits for a tester's zips (the probe is in the posted build) or a wild-horse
   spot.
+- 18:38-19:07 chain_d continued (all SAVES OK, 5/5, both alive):
+  * cs79a NOT RUN: coopworld.sh found keep-coop-world (the 11-Nov backup) different from today's test co-op world and
+    would not overwrite it. The test world drifts: the host's lost-link save writes it whenever the friend's game is
+    killed (the checklist's leave step, cs81a). DECISION (mine, small): keep today's world (pp42 passed on it); once no
+    game runs, keep-coop-world goes aside as keep-coop-world-2026-11-11 and a fresh backup is made; then cs79a.
+  * cs77a (B06, the host fighting from the saddle): the host's horse never came (492 m, not teleported), so it fought
+    on foot: inconclusive (a horse call by script is still unreliable).
+  * cs78a (B12, the shared stash with the usercopy save's warehouse): the host's warehouse sent 0 stacks; the friend's
+    shot shows its inventory, not the Discard question: inconclusive.
+  * cs85a (B10, shared quest credit at the camp): 776 shared passes offered the host's events to the friend's quest
+    manager, but the host's script killed only one bandit, so the camp step could not complete: inconclusive.
