@@ -9758,3 +9758,9 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   released, the shared cutscene played on both games. The scripted talks did not open (tpnear picked neighbours
   0xB0100121 / 0xB01000B2; no talk request in the host's log), so "Enter the cabin" was not reached: the B09 hands-on
   stays on the owner's list.
+- 19:50 B14 research (the joined player's own arm wrestling): the patrons of the Hernand inn cellar are bound by the
+  host's 'cd_minigame_armwrest_base' (resource 0x94FEA6AE, computed with the game's dictionary hash and matching the
+  patrons' +0x2EC in ChildHold), a scene with no twin, so the joined player's prompt there has nothing it can use. The
+  host's own match starts with interaction 0x000F431C accepted (cs83a). Native 3d4092c twin_watch (research, host,
+  default empty): logs every message about the listed scenes during a host match, to learn what a twin of it would
+  have to answer. Built; cs83w1 (the host's match with twin_watch on the three minigame scenes) running.
