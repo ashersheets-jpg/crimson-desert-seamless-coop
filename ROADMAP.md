@@ -371,7 +371,7 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
     own manager, the twins too (8 -> 0); nothing made them again. Fixed in ShopTwin (prepared again). The far shop
     (the joined player's own scene) works on 3732 (cs82a). (2) Greet / talk with townsfolk: NpcCategory's table read
     empty on 3732 (3663's offsets; 3732 is back at 3576's), so the joined player's greet / talk condition failed:
-    fixed. (3) Still open: talks that belong to a host scene (B02a's "twin for the NPC scenes with dialogs").
+    fixed. (3) Still open: talks that belong to a host scene (B02a's "twin for the NPC scenes with dialogs"). 2026-11-22: the only such talks seen failing are the arm-wrestling table's (cs76c-e at the inn patrons), and with twin_extra (B14) the joined player's talk to its organizer is accepted (cs86f, cs87, cs87b); so (3) closes with B14's twin unless a report names another scene.
   - [~] The guest's "interact" opens the NPC's menu but the NPC keeps walking (the host's NPCs stop and look).
     (2026-11-21: the talk rule, native 9b9bad7, [session2] ai_handoff_talk=1: the person the guest interacts with runs
     on the guest's game while it stands within 6 m, then back; in single player the talker's game runs the NPC and its
