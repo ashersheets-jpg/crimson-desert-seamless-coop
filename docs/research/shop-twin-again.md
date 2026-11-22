@@ -45,4 +45,13 @@ butcher; with shop_twin_again=1 its R must reach the host's server).
 
 Round 2 review (14:05, read only): six more faults (the host's delete names the generation-0 id, so a re-made twin is orphaned when the host's scene ends; a forgotten twin loses its generation, so the same id can be prepared twice later; the known X are not validated and live twins are never compared with X; the host's 2380 again can make a second twin while a re-make is queued; every refused try uses a generation, so after ~2 h the shop is lost; the initial 2920 names the generation-0 id). Not fixed in round 2: the better route is the host's own. Its ObserverSeqCopy already sends its live scenes again after the joined player's field move (a "trip", user 2's MoveFieldAck); a same-field far teleport is not one, and no tester log has a fast travel of the joined player (GuestFastTravel calls 0 everywhere), so whether a real fast travel loses the twins is not known. Round 3: first a real fast travel of the joined player (hands-on or a scripted world map), then, if it loses them, make the host send its live shop scenes again after it (host-confirmed liveness) and make ShopTwin take a repeated host 2380 safely (a fresh id only for a dead twin, kept when live or just queued).
 
+Update 20:58 (cs86a, the joined player's packet capture): a second way the twins never work, which the teleport tests
+may have been hitting all along. When the joined player arrives where the host's scenes already live, the host's
+observer copy sends each scene's StageBranchStateAck at once but holds its PrepareSequencerAck until the scene's actors
+are announced to user 2: 21 of 31 host scenes, every shop among them, reached the joined player state-first, 3.4 to
+4.9 s apart. ShopTwin gave a twin only an initial state that came after its prepare, so those twins were prepared but
+never started (no SetInteraction: no "R Shop"). Fixed (native, 2026-11-21 evening): an initial-form state of a scene
+with no twin yet is kept and given to the twin right after its prepare ("ShopTwin [early state]"). cs75w4 retakes
+cs75w2's teleport into the host's town on that build.
+
 Update 14:15: the native base's fast-travel research (native-base/docs/research/pendientes/p8-impl-viaje-rapido.md §0: after user 2's 2283 the server's 2437 takes the same-field path, SendMoveFieldAck) says a real fast travel ends with a MoveFieldAck to the joined player: the host's ObserverSeqCopy counts that as a trip and sends its live scenes again, so ShopTwin makes the twins again through its normal path. The loss seen in cs75p5 / cs75w2 is then the test's cheat teleport (opcode 3018, no MoveFieldAck) only. Unverified in a game (the research says so too): one hands-on fast travel decides whether round 3 is needed at all.

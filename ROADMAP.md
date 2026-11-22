@@ -251,7 +251,8 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
 - [~] **B16b — Player interaction menu (user 2026-11-09).** (2026-11-09: built and seen working on the guest,
   tcB209: the hold-R prompt 'Interact' on the other player opens the shop-style menu with every challenge, a greyed
   'Trade (coming soon)' and 'Leave'; W/S, Space, Esc. Pad (2026-11-09, built, not seen yet): the co-op chord +
-  D-pad Up held fills the same ring. To do: trading (B11) in it.) Hold R on the other player (the game's own hold prompt:
+  D-pad Up held fills the same ring. 2026-11-16: the greyed entry became "Give or trade an item" (B11's give and
+  trade, cs35a/b), so trading is in it.) Hold R on the other player (the game's own hold prompt:
   the R key in a circle that fills while held, exactly as at shopkeepers and their shop menus -- NOT a plain
   "R Rock, Paper, Scissors" tap prompt) opens a player interaction menu like the shop menu. It holds every minigame
   challenge the two can do (duel, RPS, race, hunt, fishing, hide and seek, arm wrestling...), later trading (B11) and
@@ -301,7 +302,8 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
     2026-11-21 afternoon: FIXED for shops and greetings on 3732, both checked (cs82c: the shop alone and with the host
     beside the shopkeeper; cs80c: a townsperson's greeting, "Trust +5"); in cfaa3a69 (checklist step "shop" added).
     Left: the twins lost to a far teleport into a town whose shop scenes the host already runs (shop_twin_again, round
-    2 in the worktree); the inn patrons' arm wrestling (cs76, to retake with the category fix); talks that belong to a
+    2 in the worktree); the inn patrons' arm wrestling (B14: the table is a host scene with no twin; a twin of it,
+    [session2] twin_extra, built 2026-11-21 evening, in test cs86); talks that belong to a
     host scene (B02a's twin for dialog scenes); pp42-shop's one "User2Shops [nested vf48]" (inside a routed 2808 of
     the joined player's OWN shop scene a nested lookup kept the host's manager: check what it touched; none in
     cs82a-c);

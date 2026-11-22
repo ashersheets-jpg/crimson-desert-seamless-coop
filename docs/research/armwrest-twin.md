@@ -53,19 +53,33 @@ server's answers in order; 2698 = SetAvoidByCutSceneAck 4 | actor | id | u8 on |
 4 | actor | id | branch u32 | u8 (the request's flag), 2752 = StageBranchStateAck 4 | actor | id | type | branch | root
 0x22B6EC91 | 0, always the 29-byte form here):
 
-| state | branch (flag) | answers | new state |
+| state | branch (flag) | answers (then the 2752 of the new state unless noted) | new state |
 |---|---|---|---|
-| 0 | 5 (0) | 2369 | 1 (the menu) |
-| 1 | 0 (1) | 2698 on, 2369 (flag 1); the 2752 only when the client sends StageBranchStateDelayEndReq 2654 (id) 2 s later | 3 |
-| 3 | 0 (0) | 2698 off, 2698 on, 2369, 2698 off | 4 (the minigame requests follow) |
+| 0 | 5 (0) | 2369 | 1 (the menu: Participate / Back) |
+| 1 | 1 (0) | 2698 on, 2369, 2752, 2698 off | 2 (Back) |
+| 2 | 0 (0) | 2369 | 0 |
+| 1 | 0 (1) | 2698 on, 2369 (flag 1); the 2752 and a 2698 off only after the client's StageBranchStateDelayEndReq 2654 (id), ~2 s later | 3 (Participate) |
+| 3 | 0 (0) | 2698 on, 2369, 2698 off | 4 (the minigame requests follow) |
 | 4 | 1 (0) | 2698 on, 2369, 2698 off | 5 |
 | 5 | 0 (0) | 2698 on, 2369, 2698 off | 6 |
-| 6 | 0 (0) | 2369 | 7 |
-| 7 | 0 (0) | 2369 | 8 (Leave follows) |
-| 8 | 0 (0) | 2369 | 10 ("Play Again", after a win; Result and Unspawn follow) |
+| 6 | 0 (0) | 2369 | 7 (the match) |
+| 7 | 0 (0) | 2369 | 8 (won; Leave follows) |
+| 7 | 1 (0) | 2369 | 9 (lost) |
+| 8 / 9 | 0 (0) | 2369 | 10 ("Play Again (20)" / "Back"; Result and Unspawn follow) |
+| 10 | 6 (1) | 2698 on, 2369 (flag 1); the 2752 and a 2698 off after the 2654 | 3 (Play Again) |
+| 10 | 7 (1) | 2698 on, 2369 (flag 1); the 2752 after the 2654, a 2698 off ~4 s later | 11 (Back) |
+| 11 | 0 (0) | 2369 | 0 |
+
+(cs83w3's 2698 off before the (3, 0) answers was the tail of the held (1, 0) step: cs83w4 shows it ~20 ms after the
+delayed 2752, before the client's next request.)
 
 Scenes 0x321-0x323 (prepared with the table) get a branch 1 every ~17 s from the host's client (2752 of 37 bytes with
 a counter): the spectators' loop, not part of the match.
+
+cs83w4's minigame requests on the other paths: Back from the menu = DeactivateMiniGameReq (2584, the minigame id);
+a lost match = MiniGameResultReq with 0 (no prize); Play Again = SpawnMiniGameCharacterReq + ApplyMiniGameReq again
+(another 20 copper taken); a won match = the prize's AddItemToInventoryAck (0x1E = 30 of item 0x4413: the stake back
+plus 10); Back after a match = LeaveMiniGameReq naming the player + DeactivateMiniGameReq.
 
 The host won (shot h6: "E Play Again (20)", the purse 114.64 top right). The match is driven by the CLIENT's
 minigame requests, which name the minigame, the player and the opponent; only the opponent's spawn and unspawn name
@@ -75,8 +89,8 @@ MiniGameResultReq), so a joined player sending them pays and is paid from its ow
 ## What a twin would have to do
 
 Everything about the scene except the talk itself is a request a twin withholds and answers locally, as ShopTwin does
-for the shops: the branch (2369 + 2752 with this scene's own form: type 1, the branch, the root, no 2698), the chart
-events (2105, the shop's form), and silence for 2672 / 2808. The talk (2642) names the NPC and the interaction, not
+for the shops: the branches (the table above, held steps included), the chart events (2105, the shop's form), and
+silence for 2672 / 2808. The talk (2642) names the NPC and the interaction, not
 the scene: the server checks the entry's stage in the field owner's manager, finds the host's 0x31F and accepts, as it
 does for the shop twins' talks.
 
@@ -90,13 +104,19 @@ Not known yet (cs83w3 records every packet of the host's game around "Participat
 
 1. DONE cs83w3: the host's full match, every packet recorded; the fee (ApplyMiniGameReq) and the prize
    (MiniGameResultReq) are the player's own requests, so a twin does not stop them.
-2. cs83w4: the other paths of the table (the menu's Back, a lost match, Play Again, Back after a win) for the table.
-3. Native (written 2026-11-21 evening, not built yet): ShopTwin generalized. [session2] twin_extra = resource list
+2. DONE cs83w4: the other paths (the menu's Back, a lost match, Play Again, Back after a match).
+3. DONE native 892384b (built, unit-tested): ShopTwin generalized. [session2] twin_extra = resource list
    (guest, research, default empty): a host scene of a listed resource gets a twin like the shops; its branches are
    answered from a per-resource table (`stl::kArmwrestSteps`, `stl::table_answers`), the 2752 held for the client's
    StageBranchStateDelayEndReq when the request's flag is set; a (state, branch) the table lacks sends the scene back
    to its start (logged "NOT in the table"); SpawnMiniGameCharacterReq / UnspawnMiniGameCharacterReq of the twin go to
    the host's server naming the host's scene, the server's SpawnMiniGameCharacterAck to this client names the twin.
-4. cs86: the joined player talks to the organizer, Participates, plays and leaves the menu, with the host 5 m off.
-   Open questions it answers: does the server spawn user 2's opponent for the host's scene, take its fee and pay it;
-   does the joined player's game play the intro, the countdown and the match from its twin.
+4. cs86a: the twin was prepared but never started, so no talk prompt ("E Greet" only): the host's initial state of
+   the table reached the joined player 4.4 s BEFORE the table's prepare (the observer copy holds a prepare until its
+   actors are announced; states go at once) and ShopTwin only took an initial state that came after the prepare.
+   21 of 31 host scenes came state-first in that run, every shop among them (docs/research/shop-twin-again.md).
+   Fix: an early initial state is kept and given to the twin right after its prepare ("ShopTwin [early state]").
+5. cs86b (on that fix, with guest_x_research=1 to log the twin's SetInteraction adds): the joined player talks to
+   the organizer, Participates, plays and leaves the menu. Open questions it answers: does the server spawn user 2's
+   opponent for the host's scene, take its fee and pay it; does the joined player's game play the intro, the countdown
+   and the match from its twin.

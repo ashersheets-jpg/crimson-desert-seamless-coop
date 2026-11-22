@@ -22,6 +22,9 @@ test save Out, shipped cdmp.ini restored.
   no fast travel of the joined player). Expected to work (14:15): per the native base's research a fast travel ends
   with a MoveFieldAck, which the host's copy logic counts as a trip and answers by sending its live scenes again, so the
   twins come back by themselves; only the test's cheat teleport skips that. The hands-on confirms it.
+  2026-11-21 20:58 update: a second cause found by capture (cs86a): when the joined player arrives where the host's
+  scenes already live, their start states reach it before the scenes themselves, and its shop copies never started.
+  Fixed in the next build (being tested: cs75w4); the hands-on stays useful as the final check, not urgent.
 - 2026-11-21 13:45 FYI (nothing to do unless you want to): Windows Defender quarantined one of the mod's own unit-test
   programs (build\bin\...\cdmp_tests_optd_host_save.exe, "Program:Win32/Wacapew.A!ml", a machine-learning guess, at
   13:36). Only that test program; the game DLLs we ship were not flagged. I changed no security setting. If you want
@@ -49,7 +52,8 @@ test save Out, shipped cdmp.ini restored.
 - 2026-11-20 21:10 QUESTION (not urgent): in #general, w-ri (21:55 UTC) offers to test daily over Radmin with an
   "offline steam account", which may mean an unofficial copy. I have not replied. Reply yourself, or tell me what to say.
   2026-11-21 03:27: also in #general, panda (07:49 UTC) asks whether the mod works with cracked / pirated copies. Not
-  replied (yours: the same question as w-ri's). EdwardJames (23:36 UTC) asked how far boss fights are; you answered
+  replied (yours: the same question as w-ri's). 20:47 check: Burns answered panda (10:38 UTC) "I think thats why they
+  use radmin"; still nothing from me on it. EdwardJames (23:36 UTC) asked how far boss fights are; you answered
   his controller question at 05:53 UTC; I left the boss part (B07 not tested yet).
 - 2026-11-21 09:31 DONE: 4394b014 POSTED in #download-here by me (standing OK; pp41 1017/2, the 2 the lagrun step's
   own test switch, then pp41b 152/0 with the test-kit fix): the running-freeze fix (remote_interp_char), the talk rule
@@ -9806,3 +9810,33 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   research, guest, default empty) written in the main tree, not built yet: ShopTwin for listed resources with this
   table (stl::kArmwrestSteps), the held answers, the minigame id swap. Next: build, then chain_e (cs86 the joined
   player's own match, cs85b B10 with dev-script kills, cs83v the B13 versus gauge).
+- 20:41 native 892384b (twin_extra) built: 90 unit tests, the same 17 known failures, shop_twin's new checks pass;
+  synced and pushed (2f81301). chain_e started 20:42 (cs86a first). Noted for a quiet window (no game running: a
+  compile slows the two copies): the 17 known-failing unit tests mostly still expect 3576 / 3663 message numbers
+  (e.g. optd_c4 wants "MoveFieldAck 2174"; 3732's is 2364; optd_user2_road's req offsets of 2223 / 2556): a tests-only
+  pass to 3732's numbers would shrink the baseline.
+- 20:55 cs86a (B14, the joined player at the table with twin_extra=94FEA6AE): its twin of the table WAS made ("the
+  host's twin_extra scene 0x322 (resource 0x94FEA6AE) -> twin 0x10000322"), but its 18-angle R sweep from the host's
+  cs83w3 spot got nothing to the server ("nothing taken"): the only prompt on the table's people was the plain "E
+  Greet" (shots g0 / g2); Participate / the mash / Esc then did nothing (Esc opened its inventory: no menu was up).
+  So the twin does not (yet) give the organizer's talk entry 0x000F431C to the joined player. For shops the twin's
+  SetInteraction adds the shopkeeper's entries (cs75p5's "[node ADD] index 7/6/9 | scene 0x1000032F"); here the
+  table's people stay "sequencer component: owner 0xA0100001, scene 0x322". Next: cs86b, the same with
+  guest_x_research=1 ([node ADD] lines: does the twin's chart add any entry, for whom), queued after chain_e.
+- 20:58 CAUSE (the joined player's capture, scratchpad prep_order.py): the host's INITIAL STATE (2752) of the table
+  reached the joined player's game 4.4 s BEFORE the table's PrepareSequencerAck, and ShopTwin only gives a twin an
+  initial state that comes after its prepare: the twin was prepared but never started (no SetInteraction, no prompt).
+  Not only the table: 21 of 31 host scenes came state-first in cs86a, EVERY SHOP SCENE among them (3.4-4.9 s: the
+  host's observer copy holds a prepare until its actors are announced to user 2, the state goes at once). So when
+  the joined player arrives where the host already is (both teleported into Hernand here; in play: a fast travel
+  into the host's town), its shop twins never start either: very likely the "twins lost after a far teleport" of
+  cs75p5 / cs75w2. The shop step passes because the friend is in town first and the host's scenes come after.
+  Fix written (native, not built: chain_e's cs85b running): an initial-form 2752 of a scene with no twin yet is kept
+  (at most 512, dropped with its delete) and given to the twin right after its prepare ("ShopTwin [early state]").
+  chain_e stops after cs85b (scan/chain.stop); then the build, cs86b (B14 + research) and a shop retake.
+  LEAD (not acted on): the host's OWN scene copies on the joined player's game (manager X) get the same order: cs86a's
+  0x322 got its initial 2752 at 258.8 s, its prepare at 263.2 s and no state after it, so if the client drops a state
+  for a scene it does not have yet, those copies never start on the joined player's screen either (presentation of
+  the host's scenes: NPC sequencer actions, e.g. the T-pose bench NPCs P1 item, whose lead is GuestSeqRestore swapping
+  actions it cannot find). A guest-side replay of an early initial state right after its prepare would cover X too;
+  first find a scene whose X copy visibly misbehaves to check it against.

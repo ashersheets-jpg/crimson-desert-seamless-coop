@@ -513,6 +513,21 @@ The arm-wrestling organizer's "E Participate" ignored a 200 ms E and 20 s of E t
 looked unreachable by script. Held for 2 s, E started the match at once (cs83w3). When a menu ignores a tap, try a
 2 s hold, then other confirm keys (Space, left click, F), with a shot after each, in one run.
 
+## A client-side copy of a server scene must not assume the server's message order (2026-11-21)
+ShopTwin made a twin's start state only from a StageBranchStateAck that came AFTER the scene's PrepareSequencerAck,
+as the host's own client gets them. On the joined player's game the order depends on the host's observer copy, which
+holds a prepare until the scene's actors are announced to user 2 but passes states at once: in cs86a 21 of 31 scenes
+came state-first, so every shop twin and the arm-wrestling twin was prepared but never started. The shop step passed
+only because its friend is in town before the host's scenes exist. When a mod rebuilds a scene from another client's
+messages, keep what arrives early and apply it in the order the game needs, and test the arrival order both ways
+(the friend arriving first AND the friend teleporting into scenes that already live).
+
+## Packet captures in two-copy runs: the file names and the joined player's switch (2026-11-21)
+The sniffer's capture files are bin64\cdmp_packets.host_<stamp>.log/.bin (a dot and the role, not "cdmp_packets_"):
+cs83w3's move-out glob missed them and they stayed in the game folder until moved by hand. For the HOST, twocopy's
+-HostNativeExtra takes "k=v,k=v" (sniffer_record=1 among them); for the JOINED player, -GuestDev splits on commas
+into separate [dev] lines, so its capture is the layer's own [dev] key native_record=1, next to native_extra=k=v.
+
 ## A log line that marks a step's request is not the step done: look at the shot (2026-11-21)
 cs83a was written up as "the host's arm wrestling STARTED" from the layer's "we started a minigame" line. That line is
 the client's ActivateMiniGameReq, sent when the organizer's "Participate" menu OPENS; the shots of cs83w2 show the
