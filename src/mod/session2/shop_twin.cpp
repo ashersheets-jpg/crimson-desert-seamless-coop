@@ -58,6 +58,15 @@ std::atomic<bool> g_early_x{false};
 // the game (only the twin): the scene's people bind to the twin alone; 2 = the twin's prepare goes BEFORE the host's.
 std::atomic<int> g_extra_only{0};
 std::atomic<uint64_t> c_extra_only{0};
+// [session2] twin_extra_chart (guest, research, B14, cs92): 1 = a twin_extra scene's chart events in its match state
+// (kChartState, the table's state 7) go on to the host's server under the host's scene id (the server runs the catch
+// there), the server's 2105 for them comes back to the twin; 2 = every chart event of such a twin. Under g_mu.
+std::atomic<int> g_extra_chart{0};
+constexpr uint32_t kChartState = 7;
+constexpr uint64_t kChartMaxAgeMs = 5000;
+constexpr size_t kMaxForwardedCharts = 64;
+std::vector<stl::ForwardedChart> g_fwd_charts;
+std::atomic<uint64_t> c_chart_out{0}, c_chart_back{0};
 std::atomic<uint64_t> c_early_x{0};
 std::atomic<uint64_t> c_prepared{0}, c_deleted{0}, c_withheld{0}, c_answered{0}, c_branches{0}, c_again{0};
 std::atomic<uint32_t> g_last_branch{0};
@@ -205,6 +214,15 @@ void shop_twin_set_extra_only(int mode) {
                                                                  : "prepared after its twin");
 }
 
+void shop_twin_set_extra_chart(int mode) {
+    g_extra_chart = mode == 1 || mode == 2 ? mode : 0;
+    if (g_extra_chart.load())
+        log::info("ShopTwin [extra chart] twin_extra_chart={} (research, B14): a twin_extra scene's chart events {} go "
+                  "to the host's server under the host's scene id (the server runs the table's catch), its answers back "
+                  "to the twin",
+                  g_extra_chart.load(), g_extra_chart.load() == 1 ? std::format("in state {}", kChartState) : "(all)");
+}
+
 void shop_twin_set_early_x(bool on) {
     g_early_x = on;
     if (on)
@@ -306,6 +324,20 @@ void shop_twin_on_host(std::vector<uint8_t>& packet, std::vector<std::vector<uin
                               "0x{:08X} (first group 0x{:X} index 0x{:X})", host.size(), npc, host[0].group,
                               host[0].index);
             }
+            return;
+        }
+        if (op == stl::kOpChartEventAck && g_extra_chart.load(std::memory_order_relaxed)) {
+            // twin_extra_chart: the server's answer to a chart event this client sent on for a twin goes to the twin.
+            const std::span<uint8_t> mpl(packet.data() + stl::kHeader, packet.size() - stl::kHeader);
+            uint64_t tid = 0;
+            {
+                std::lock_guard lk(g_mu);
+                if (!g_fwd_charts.empty())
+                    tid = stl::chart_ack_to_twin(op, mpl, g_fwd_charts, GetTickCount64(), kChartMaxAgeMs);
+            }
+            if (tid && c_chart_back.fetch_add(1) < 40)
+                log::info("ShopTwin [extra chart] the server's UpdateStageChartEventAck (actor 0x{:08X}) for scene 0x{:X} "
+                          "given to the game as its twin 0x{:X}", stl::rd32(mpl.data() + 1), tid - stl::kTwinIdBase, tid);
             return;
         }
         if (op == stl::kOpPrepare) {
@@ -423,6 +455,33 @@ void shop_twin_rewrite_out(std::vector<uint8_t>& packet) noexcept {
     if (!g_on || !g_guest || g_extra_res.empty() || packet.size() <= stl::kHeader) return;
     try {
         const uint16_t op = static_cast<uint16_t>(packet[0] | (packet[1] << 8));
+        if (op == stl::kOpChartEventReq) {
+            // twin_extra_chart: the twin's chart event in its match state goes to the host's scene on the server.
+            const int mode = g_extra_chart.load(std::memory_order_relaxed);
+            const std::span<uint8_t> cpl(packet.data() + stl::kHeader, packet.size() - stl::kHeader);
+            if (!mode || cpl.size() != 17 || !stl::is_twin_id(stl::rd64(cpl.data()))) return;
+            const uint64_t host = stl::rd64(cpl.data()) - stl::kTwinIdBase;
+            uint32_t state = 0;
+            {
+                std::lock_guard lk(g_mu);
+                const auto it = g_twins.find(host);
+                if (it == g_twins.end() || !is_extra(it->second.res)) return;
+                state = it->second.state;
+                if (mode == 1 && state != kChartState) return;
+                if (stl::chart_req_to_host(op, cpl) != host) return;
+                stl::ForwardedChart f;
+                f.host = host;
+                std::memcpy(f.ev, cpl.data() + 8, sizeof f.ev);
+                f.at_ms = GetTickCount64();
+                if (g_fwd_charts.size() >= kMaxForwardedCharts) g_fwd_charts.erase(g_fwd_charts.begin());
+                g_fwd_charts.push_back(f);
+            }
+            if (c_chart_out.fetch_add(1) < 40)
+                log::info("ShopTwin [extra chart] twin 0x{:X} (state {}): chart event {}/{} ({}) sent to the host's server "
+                          "as its scene 0x{:X}", stl::twin_of(host), state, stl::rd32(cpl.data() + 8),
+                          stl::rd32(cpl.data() + 12), cpl[16], host);
+            return;
+        }
         if (op != stl::kOpSpawnMiniGameCharacterReq && op != stl::kOpUnspawnMiniGameCharacterReq) return;
         const std::span<uint8_t> pl(packet.data() + stl::kHeader, packet.size() - stl::kHeader);
         if (pl.size() < 9 || !stl::is_twin_id(stl::rd64(pl.data() + 1))) return;
@@ -674,14 +733,15 @@ std::string shop_twin_describe() {
     return std::format("ShopTwin ({}): live twins {} | prepared {} (again after a load {}) deleted {} | requests "
                        "withheld {} (answered {}, branches {}, last branch {}) | dialogs: host frames out {} in {}, lists "
                        "rewritten {}, given again {} (marked {}) | twin_extra: table answers {} (not in a table {}, held "
-                       "states given {}), minigame ids out {} in {} | initial states before their prepare: kept {}, "
-                       "given to a twin {}, again to the game {}",
+                       "states given {}), minigame ids out {} in {}, chart events to the host's server {} answers back "
+                       "{} | initial states before their prepare: kept {}, given to a twin {}, again to the game {}",
                        g_on ? "on" : "off", g_twins.size(), c_prepared.load(), c_again.load(), c_deleted.load(),
                        c_withheld.load(),
                        c_answered.load(), c_branches.load(), g_last_branch.load(), c_dialog_frames_out.load(),
                        c_dialog_frames_in.load(), c_dialog_rewritten.load(), c_redelivered.load(),
                        c_redeliver_marked.load(), c_table.load(), c_table_unknown.load(), c_held.load(), c_mg_out.load(),
-                       c_mg_in.load(), c_early_kept.load(), c_early_used.load(), c_early_x.load());
+                       c_mg_in.load(), c_chart_out.load(), c_chart_back.load(), c_early_kept.load(), c_early_used.load(),
+                       c_early_x.load());
 }
 
 }  // namespace cdmp::session2

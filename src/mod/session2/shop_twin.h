@@ -31,6 +31,10 @@ void shop_twin_set_early_x(bool on);
 // [session2] twin_extra_only (GUEST, research, default 0): 1 = a twin_extra scene of the host's is given to the game
 // only as its twin; 2 = its twin is prepared before it.
 void shop_twin_set_extra_only(int mode);
+// [session2] twin_extra_chart (GUEST, research, default 0; 2026-11-22, B14 cs92): 1 = a twin_extra scene's chart events
+// in its match state (7) go to the host's server under the host's scene id (the server runs the table's catch, which
+// starts the push phase) and the server's answers come back to the twin; 2 = every chart event of such a twin.
+void shop_twin_set_extra_chart(int mode);
 // Guest: a packet of the client about to go to the host (wire form): a twin_extra scene's minigame request
 // (SpawnMiniGameCharacterReq / UnspawnMiniGameCharacterReq) names the host's scene instead of the twin.
 void shop_twin_rewrite_out(std::vector<uint8_t>& packet) noexcept;

@@ -244,6 +244,25 @@ int main() {
               stl::rd64(ack.data() + 5) == aid);
         auto ack2 = hexs("04" "010010a0" "1f03000000000000" "06000020" "5c0a10b0" "050000");  // the host's own: no
         CHECK(stl::minigame_ack_to_twin(2810, ack2, own, [](uint64_t) { return true; }) == 0);
+        // twin_extra_chart (cs92): the twin's state-7 chart event to the host's scene, the server's 2105 back to the twin
+        auto creq = hexs("1f03001000000000" "070000000000000001");
+        CHECK(stl::chart_req_to_host(2200, creq) == 0x31F && stl::rd64(creq.data()) == 0x31F);
+        CHECK(stl::chart_req_to_host(2200, creq) == 0);  // the host's id already: unchanged
+        auto chart_short = hexs("1f03001000000000" "0700000000000000");
+        CHECK(stl::chart_req_to_host(2200, chart_short) == 0);
+        CHECK(stl::chart_req_to_host(2644, creq) == 0);
+        std::vector<stl::ForwardedChart> pending(1);
+        pending[0].host = 0x31F;
+        std::memcpy(pending[0].ev, creq.data() + 8, 9);
+        pending[0].at_ms = 1000;
+        auto cack = hexs("04" "040210a0" "1f03000000000000" "070000000000000001");
+        auto other = hexs("04" "040210a0" "1f03000000000000" "070000000100000001");  // event 7/1: not forwarded
+        CHECK(stl::chart_ack_to_twin(2105, other, pending, 1500, 3000) == 0 && pending.size() == 1);
+        CHECK(stl::chart_ack_to_twin(2105, cack, pending, 5000, 3000) == 0 && pending.size() == 1);  // too old
+        CHECK(stl::chart_ack_to_twin(2105, cack, pending, 1500, 3000) == aid && stl::rd64(cack.data() + 5) == aid &&
+              pending.empty());
+        auto cack2 = hexs("04" "040210a0" "1f03000000000000" "070000000000000001");
+        CHECK(stl::chart_ack_to_twin(2105, cack2, pending, 1500, 3000) == 0);  // used up: the next one is the host's
     }
     if (g_failures) {
         std::printf("%d failure(s)\n", g_failures);

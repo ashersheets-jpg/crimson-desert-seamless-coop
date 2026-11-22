@@ -309,6 +309,42 @@ inline uint64_t minigame_ack_to_twin(uint16_t op, std::span<uint8_t> pl, uint32_
     return twin_of(id);
 }
 
+// twin_extra_chart (2026-11-22, B14, cs92 against cs87): the server runs a scene's chart event on its own side. In the
+// host's own match the client's two UpdateStageChartEventReq of the table's state 7 (events 7/0 and 7/1) are answered
+// 2 ms later by CatchActionResultAck (the server's grip of player and opponent), the client then starts the push
+// (EchoActionSessionIDReq, DoFrameEventReq) and the quick-time results follow. A twin answers its chart events locally,
+// so for the joined player the server never ran the catch: its match stood at "E Push". Forms: 2200 C>S id u64 |
+// 9 bytes (17 B); 2105 S>C u8 4 | u32 actor | id u64 | the same 9 bytes (22 B).
+// C>S payload: a twin's chart event names the host's scene; returns the host's id (0: not such a request, unchanged).
+inline uint64_t chart_req_to_host(uint16_t op, std::span<uint8_t> pl) {
+    if (op != kOpChartEventReq || pl.size() != 17) return 0;
+    const uint64_t id = rd64(pl.data());
+    if (!is_twin_id(id)) return 0;
+    wr64(pl.data(), id - kTwinIdBase);
+    return id - kTwinIdBase;
+}
+// A chart event sent on to the host's server for a twin: the host's scene id and its 9 bytes.
+struct ForwardedChart {
+    uint64_t host = 0;
+    uint8_t ev[9] = {};
+    uint64_t at_ms = 0;
+};
+// S>C payload: a 2105 naming the host's scene and the 9 bytes of a forwarded chart event (sent within `max_age_ms`)
+// gets the twin's id; the entry is used up. Returns the twin's id (0: unchanged).
+inline uint64_t chart_ack_to_twin(uint16_t op, std::span<uint8_t> pl, std::vector<ForwardedChart>& pending,
+                                  uint64_t now_ms, uint64_t max_age_ms) {
+    if (op != kOpChartEventAck || pl.size() != 22 || pl[0] != 4) return 0;
+    const uint64_t id = rd64(pl.data() + 5);
+    if (is_twin_id(id)) return 0;
+    for (auto it = pending.begin(); it != pending.end(); ++it) {
+        if (it->host != id || now_ms - it->at_ms > max_age_ms || std::memcmp(it->ev, pl.data() + 13, 9) != 0) continue;
+        pending.erase(it);
+        wr64(pl.data() + 5, twin_of(id));
+        return twin_of(id);
+    }
+    return 0;
+}
+
 // ---- the shop dialog entries (2026-11-09) --------------------------------------------------------------------------
 // SetQuestDialogAck 3086 (S->C): u8 4 | u32 actor | u32 NPC | n x {u32 group, u32 index}. A shopkeeper's menu choices
 // (Buy / Sell) are the entries of group kShopDialogGroup (Renee 0x0A / 0x0B, tcB116); the NPC's scene functions put
