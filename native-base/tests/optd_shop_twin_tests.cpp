@@ -166,6 +166,85 @@ int main() {
     const auto g1 = hexs("04e50110a0340410b0" "0100000018110000");
     const auto m1 = stl::with_shop_dialogs(g1, d);
     CHECK(m1 && m1->size() == g1.size() + 24 && stl::rd32(m1->data() + 25) == 0xF435Bu);
+    // twin_extra (B14): the arm-wrestling table's answers (cs83w3, the host's won match)
+    {
+        const uint64_t aid = 0x31F + stl::kTwinIdBase;
+        const uint32_t root = 0x22B6EC91u;
+        uint32_t ast = 0;
+        auto req = [&](uint32_t branch, uint16_t flag) {
+            std::vector<uint8_t> r(14, 0);
+            stl::wr64(r.data(), aid);
+            stl::wr32(r.data() + 8, branch);
+            r[12] = static_cast<uint8_t>(flag);
+            r[13] = static_cast<uint8_t>(flag >> 8);
+            return r;
+        };
+        const auto chart = stl::chart_of(stl::kResArmwrest);
+        CHECK(!chart.empty() && stl::chart_of(0x978345CAu).empty());
+        auto r = stl::table_answers(chart, req(5, 0), guest, root, ast);  // the talk: the menu
+        CHECK(r.known && ast == 1 && r.now.size() == 2 && r.later.empty());
+        uint16_t op = 0;
+        std::span<const uint8_t> p;
+        if (r.now.size() == 2) {
+            CHECK(stl::split(r.now[0], op, p) && op == 2369 && stl::rd32(p.data() + 13) == 5 && p[17] == 0 &&
+                  stl::rd64(p.data() + 5) == aid);
+            CHECK(stl::split(r.now[1], op, p) && op == 2752 && p.size() == 29 && stl::rd32(p.data() + 13) == 1 &&
+                  stl::rd32(p.data() + 17) == 5 && stl::rd32(p.data() + 21) == root && stl::rd32(p.data() + 1) == guest);
+        }
+        r = stl::table_answers(chart, req(0, 1), guest, root, ast);  // Participate: the state held for the 2654
+        CHECK(r.known && ast == 3 && r.now.size() == 2 && r.later.size() == 2);
+        if (r.now.size() == 2) {
+            CHECK(stl::split(r.now[0], op, p) && op == 2698 && p[13] == 1);
+            CHECK(stl::split(r.now[1], op, p) && op == 2369 && stl::rd32(p.data() + 13) == 0 && p[17] == 1);
+        }
+        if (r.later.size() == 2) {
+            CHECK(stl::split(r.later[0], op, p) && op == 2752 && stl::rd32(p.data() + 13) == 3 &&
+                  stl::rd32(p.data() + 17) == 0);
+            CHECK(stl::split(r.later[1], op, p) && op == 2698 && p[13] == 0);  // its AvoidOff after it
+        }
+        r = stl::table_answers(chart, req(0, 0), guest, root, ast);  // 3 -> 4: on, event, off, state
+        CHECK(r.known && ast == 4 && r.now.size() == 4 && r.later.empty());
+        if (r.now.size() == 4) {
+            CHECK(stl::split(r.now[0], op, p) && op == 2698 && p[13] == 1);
+            CHECK(stl::split(r.now[2], op, p) && op == 2698 && p[13] == 0);
+            CHECK(stl::split(r.now[3], op, p) && op == 2752 && stl::rd32(p.data() + 13) == 4);
+        }
+        for (const auto& [b, want] : {std::pair<uint32_t, uint32_t>{1, 5}, {0, 6}, {0, 7}, {1, 9}, {0, 10}}) {
+            r = stl::table_answers(chart, req(b, 0), guest, root, ast);  // a lost match
+            CHECK(r.known && ast == want);
+        }
+        r = stl::table_answers(chart, req(6, 1), guest, root, ast);  // Play Again: held again
+        CHECK(r.known && ast == 3 && r.now.size() == 2 && r.later.size() == 2);
+        for (const auto& [b, want] : {std::pair<uint32_t, uint32_t>{0, 4}, {1, 5}, {0, 6}, {0, 7}, {0, 8}, {0, 10}}) {
+            r = stl::table_answers(chart, req(b, 0), guest, root, ast);  // a won match
+            CHECK(r.known && ast == want);
+        }
+        r = stl::table_answers(chart, req(7, 1), guest, root, ast);  // Back after the win: held, then 11 -> 0
+        CHECK(r.known && ast == 11 && r.now.size() == 2 && r.later.size() == 2);
+        r = stl::table_answers(chart, req(0, 0), guest, root, ast);
+        CHECK(r.known && ast == 0);
+        r = stl::table_answers(chart, req(3, 0), guest, root, ast);  // not in the table: back to the start
+        CHECK(!r.known && ast == 0 && r.now.size() == 2);
+        if (r.now.size() == 2) CHECK(stl::split(r.now[1], op, p) && op == 2752 && stl::rd32(p.data() + 13) == 0);
+        r = stl::table_answers(chart, req(5, 0), guest, root, ast);  // the menu again, then Back
+        r = stl::table_answers(chart, req(1, 0), guest, root, ast);
+        CHECK(r.known && ast == 2 && r.now.size() == 4);
+        r = stl::table_answers(chart, req(0, 0), guest, root, ast);
+        CHECK(r.known && ast == 0);
+        // the minigame requests: the twin's id -> the host's, and the client's own Ack back
+        auto spawn = hexs("041f030010000000004042" "51d50000" "06000020");
+        CHECK(stl::minigame_req_to_host(2281, spawn) == 0x31F && stl::rd64(spawn.data() + 1) == 0x31F);
+        CHECK(stl::minigame_req_to_host(2281, spawn) == 0);  // the host's id already: unchanged
+        auto unsp = hexs("041f03001000000000" "4042" "5c0a10b0");
+        CHECK(stl::minigame_req_to_host(2361, unsp) == 0x31F);
+        CHECK(stl::minigame_req_to_host(2204, unsp) == 0);
+        auto ack = hexs("04" "040210a0" "1f03000000000000" "06000020" "5c0a10b0" "050000");
+        const uint32_t own = 0xA0100204u;
+        CHECK(stl::minigame_ack_to_twin(2810, ack, own, [](uint64_t h) { return h == 0x31F; }) == aid &&
+              stl::rd64(ack.data() + 5) == aid);
+        auto ack2 = hexs("04" "010010a0" "1f03000000000000" "06000020" "5c0a10b0" "050000");  // the host's own: no
+        CHECK(stl::minigame_ack_to_twin(2810, ack2, own, [](uint64_t) { return true; }) == 0);
+    }
     if (g_failures) {
         std::printf("%d failure(s)\n", g_failures);
         return 1;

@@ -1258,6 +1258,8 @@ DWORD WINAPI worker(LPVOID) {
             if (cfg.s2_guest && cfg.s2_story_gate == "client_probe") session2::story_gate_set_mode(cfg.s2_story_gate);
             session2::shop_twin_start(cfg.s2_shop_twin, cfg.s2_guest);
             session2::shop_twin_set_again(cfg.s2_shop_twin_again);
+            session2::shop_twin_set_watch(cfg.s2_twin_watch);  // research (host), empty = off
+            session2::shop_twin_set_extra(cfg.s2_twin_extra);  // research (guest, B14), empty = off
             session2::shop_twin_share_all(cfg.s2_dialog_share_all);
             session2::shop_twin_redeliver(cfg.s2_dialog_redeliver);
             session2::stage_candidate_guard_start(cfg.s2_stage_candidate_guard);
