@@ -17,6 +17,9 @@
 #include "mod/log.h"
 #include "mod/session2/merchant_unhide_logic.h"
 
+// 2026-11-23 (T09b, csfz): every read here is game::fast_read (SEH only): these run in hooks on the game's main
+// thread (on_tick_mgr every client tick), and safe_read's VirtualQuery waited seconds on the address-space lock
+// while the joined player loaded in (the host froze ~4-15 s; FreezeWatch: on_tick_mgr -> safe_read -> VirtualQuery).
 namespace cdmp::session2 {
 namespace {
 
@@ -52,7 +55,7 @@ std::atomic<uint64_t> g_tick_calls{0};
 void on_tick_mgr(safetyhook::Context& ctx) {
     g_tick_calls.fetch_add(1, std::memory_order_relaxed);
     uint32_t owner = 0;
-    if (game::safe_read(ctx.rcx + 0x180, &owner, 4)) {
+    if (game::fast_read(ctx.rcx + 0x180, &owner, 4)) {
         g_tick_owner.store(owner, std::memory_order_relaxed);
         g_tick_field.store(ctx.rcx, std::memory_order_relaxed);
     }
@@ -74,15 +77,15 @@ std::atomic<uint64_t> c_login_remote{0}, c_login_restored{0};
 std::atomic<uint32_t> g_last_restored_key{0};
 uintptr_t local_user() {
     uintptr_t g = 0, g30 = 0, user = 0;
-    if (game::safe_read(g_base + 0x724B350, &g, 8) && g && game::safe_read(g + 0x30, &g30, 8) && g30 &&
-        game::safe_read(g30 + 0x58, &user, 8))
+    if (game::fast_read(g_base + 0x724B350, &g, 8) && g && game::fast_read(g + 0x30, &g30, 8) && g30 &&
+        game::fast_read(g30 + 0x58, &user, 8))
         return user;
     return 0;
 }
 uintptr_t mgr_of(uintptr_t ch) {
     uintptr_t comps = 0, seq = 0, mgr = 0;
-    if (!ch || !game::safe_read(ch + 0x68, &comps, 8) || !comps || !game::safe_read(comps + 0xA8, &seq, 8) || !seq ||
-        !game::safe_read(seq + 0x18, &mgr, 8))
+    if (!ch || !game::fast_read(ch + 0x68, &comps, 8) || !comps || !game::fast_read(comps + 0xA8, &seq, 8) || !seq ||
+        !game::fast_read(seq + 0x18, &mgr, 8))
         return 0;
     return mgr;
 }
@@ -94,9 +97,9 @@ uintptr_t own_manager() {
         if (const auto ch = game::find_actor(0xA0100001u); ch && *ch) return mgr_of(*ch);
     const uintptr_t user = local_user();
     uintptr_t ch = 0, comps = 0, seq = 0, mgr = 0;
-    if (!user || !game::safe_read(user + 0xD0, &ch, 8) || !ch) return 0;
-    if (!game::safe_read(ch + 0x68, &comps, 8) || !comps || !game::safe_read(comps + 0xA8, &seq, 8) || !seq ||
-        !game::safe_read(seq + 0x18, &mgr, 8))
+    if (!user || !game::fast_read(user + 0xD0, &ch, 8) || !ch) return 0;
+    if (!game::fast_read(ch + 0x68, &comps, 8) || !comps || !game::fast_read(comps + 0xA8, &seq, 8) || !seq ||
+        !game::fast_read(seq + 0x18, &mgr, 8))
         return 0;
     return mgr;
 }
@@ -105,20 +108,20 @@ void on_login_pre(safetyhook::Context& ctx) {  // 0x99C17A: rcx = the character 
     t_login_remote = false;
     uint32_t key = 0;
     uintptr_t owner = 0;
-    if (!game::safe_read(ctx.rcx + 0x60, &key, 4) || (key >> 28) != 0xA) return;
-    game::safe_read(ctx.rcx + 0xA0, &owner, 8);
+    if (!game::fast_read(ctx.rcx + 0x60, &key, 4) || (key >> 28) != 0xA) return;
+    game::fast_read(ctx.rcx + 0xA0, &owner, 8);
     const uintptr_t me = local_user();
     if (!me || owner == me) return;  // this client's own character: its real field load
     t_login_remote = true;
     t_login_mgr = own_manager();
-    if (t_login_mgr) game::safe_read(t_login_mgr + 0x261 /* 3663 (3576 0x259) */, &t_login_state, 1);
+    if (t_login_mgr) game::fast_read(t_login_mgr + 0x261 /* 3663 (3576 0x259) */, &t_login_state, 1);
     c_login_remote.fetch_add(1);
     g_last_restored_key.store(key);
 }
 void on_login_post(safetyhook::Context&) {  // 0x99C17F: back from 0x1928650
     if (!t_login_remote || !t_login_mgr) return;
     uint8_t now = 0;
-    game::safe_read(t_login_mgr + 0x261 /* 3663 (3576 0x259) */, &now, 1);
+    game::fast_read(t_login_mgr + 0x261 /* 3663 (3576 0x259) */, &now, 1);
     g_dbg_mgr.store(t_login_mgr);
     g_dbg_before.store(t_login_state);
     g_dbg_after.store(now);
@@ -137,9 +140,9 @@ void on_login_post(safetyhook::Context&) {  // 0x99C17F: back from 0x1928650
 uint32_t local_user_key() {
     uintptr_t g = 0, g30 = 0, user = 0;
     uint32_t k = 0;
-    if (game::safe_read(g_base + 0x724B350, &g, 8) && g && game::safe_read(g + 0x30, &g30, 8) && g30 &&
-        game::safe_read(g30 + 0x58, &user, 8) && user)
-        game::safe_read(user + 0x60, &k, 4);
+    if (game::fast_read(g_base + 0x724B350, &g, 8) && g && game::fast_read(g + 0x30, &g30, 8) && g30 &&
+        game::fast_read(g30 + 0x58, &user, 8) && user)
+        game::fast_read(user + 0x60, &k, 4);
     return k;
 }
 
@@ -148,7 +151,7 @@ uint32_t local_user_key() {
 template <class T>
 T rv(uintptr_t a) {
     T v{};
-    if (a) game::safe_read(a, &v, sizeof v);
+    if (a) game::fast_read(a, &v, sizeof v);
     return v;
 }
 std::string snapshot(uint32_t key) {
@@ -191,7 +194,7 @@ std::atomic<uint64_t> c_noted{0}, c_unhidden{0}, c_failed{0};
 
 template <class T>
 bool rd(uintptr_t a, T& v) {
-    return a && game::safe_read(a, &v, sizeof v);
+    return a && game::fast_read(a, &v, sizeof v);
 }
 
 void note(uintptr_t raw) {
@@ -363,14 +366,14 @@ void merchant_unhide_start(bool on, bool guest, bool diag_only, bool guard) {
         return;
     }
     uint8_t h[sizeof kSetterHead] = {};
-    if (!game::safe_read(g_base + kSetter, h, sizeof h) || std::memcmp(h, kSetterHead, sizeof h) != 0) {
+    if (!game::fast_read(g_base + kSetter, h, sizeof h) || std::memcmp(h, kSetterHead, sizeof h) != 0) {
         log::warn("MerchantUnhide NOT started: the hide setter 0x{:X} has other bytes", kSetter);
         return;
     }
     g_setter = reinterpret_cast<SetterFn>(g_base + kSetter);
     if (!guest) {  // the guest: guest_seq_route's hook of the same point feeds merchant_unhide_note_2380
         uint8_t b[sizeof k2380Bytes] = {};
-        if (!game::safe_read(g_base + k2380Point, b, sizeof b) || std::memcmp(b, k2380Bytes, sizeof b) != 0) {
+        if (!game::fast_read(g_base + k2380Point, b, sizeof b) || std::memcmp(b, k2380Bytes, sizeof b) != 0) {
             log::warn("MerchantUnhide NOT started: the 2380 point 0x{:X} has other bytes", k2380Point);
             return;
         }
@@ -383,13 +386,13 @@ void merchant_unhide_start(bool on, bool guest, bool diag_only, bool guard) {
     {
         constexpr uint8_t kTickHead[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x6C, 0x24, 0x18};
         uint8_t th[sizeof kTickHead] = {};
-        if (game::safe_read(g_base + 0xAE0FC0, th, sizeof th) && std::memcmp(th, kTickHead, sizeof th) == 0)
+        if (game::fast_read(g_base + 0xAE0FC0, th, sizeof th) && std::memcmp(th, kTickHead, sizeof th) == 0)
             g_tick_hook = safetyhook::create_mid(reinterpret_cast<void*>(g_base + 0xAE0FC0), &on_tick_mgr);
     }
     if (g_guard) {
         constexpr uint8_t kPre[] = {0xE8, 0xE1, 0x3F, 0xFC, 0x00, 0x48, 0x8B, 0x06, 0xC6, 0x80, 0xC2, 0x00, 0x00, 0x00, 0x01};
         uint8_t got[sizeof kPre] = {};
-        if (game::safe_read(g_base + 0x9CBA8A, got, sizeof got) && std::memcmp(got, kPre, sizeof kPre) == 0) {
+        if (game::fast_read(g_base + 0x9CBA8A, got, sizeof got) && std::memcmp(got, kPre, sizeof kPre) == 0) {
             g_login_pre = safetyhook::create_mid(reinterpret_cast<void*>(g_base + 0x9CBA8A), &on_login_pre);
             g_login_post = safetyhook::create_mid(reinterpret_cast<void*>(g_base + 0x9CBA8F), &on_login_post);
         }
