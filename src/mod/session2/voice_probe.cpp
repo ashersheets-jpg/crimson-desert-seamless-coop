@@ -2,11 +2,13 @@
 
 #include <windows.h>
 
+#include <algorithm>
 #include <atomic>
 #include <cstdint>
 #include <cstring>
 #include <format>
 #include <string>
+#include <vector>
 
 #include <safetyhook.hpp>
 
@@ -215,9 +217,44 @@ std::string watched_events() {
     }
     return s;
 }
+// 2026-11-23 (cs98h: FE5BE4B4 spikes at each player's load-in, not at its swings; the swings post on no player's
+// character object at all): every post counted by event id in 10-s windows (an open-addressed table, 512 slots), the
+// top events of each window logged, to find the events that rise while one player swings and see whether they rise on
+// the other game too.
+struct EvSlot {
+    std::atomic<uint32_t> id{0}, n{0};
+};
+EvSlot g_win[512];
+std::atomic<uint32_t> g_win_dropped{0};
+void note_window(uintptr_t ev) noexcept {
+    uint32_t id = 0;
+    if (!ev || !game::fast_read(ev, &id, 4) || !id) return;
+    for (uint32_t i = 0, h = (id * 2654435761u) >> 23; i < 512; ++i, h = (h + 1) & 511) {
+        uint32_t cur = g_win[h].id.load(std::memory_order_relaxed);
+        if (!cur && g_win[h].id.compare_exchange_strong(cur, id, std::memory_order_relaxed)) cur = id;
+        if (cur == id) {
+            g_win[h].n.fetch_add(1, std::memory_order_relaxed);
+            return;
+        }
+    }
+    g_win_dropped.fetch_add(1, std::memory_order_relaxed);
+}
+std::string window_top_and_reset() {
+    std::vector<std::pair<uint32_t, uint32_t>> v;
+    for (auto& s : g_win) {
+        const uint32_t n = s.n.exchange(0, std::memory_order_relaxed);
+        const uint32_t id = s.id.load(std::memory_order_relaxed);
+        if (id && n) v.emplace_back(n, id);
+    }
+    std::sort(v.begin(), v.end(), [](auto& a, auto& b) { return a.first > b.first; });
+    std::string s = std::format(" {} kinds", v.size());
+    for (size_t i = 0; i < v.size() && i < 16; ++i) s += std::format(" {:08X} x{}", v[i].second, v[i].first);
+    return s;
+}
 uintptr_t __fastcall play_detour(uintptr_t mgr, uint32_t obj, uintptr_t emitter, uintptr_t ev, uintptr_t params) {
     const uintptr_t r = g_play_hook.call<uintptr_t>(mgr, obj, emitter, ev, params);
     note_any_object(ev, obj);
+    note_window(ev);
     if (t_who >= 0 && t_kind >= 0) {
         const int at = t_kind == 0 ? 1 : 4;
         g_n[t_who][at].fetch_add(1, std::memory_order_relaxed);
@@ -264,6 +301,7 @@ DWORD WINAPI line_thread(LPVOID) {
                   g_obj_host.load(), g_posts[0].load(), g_posts_ok[0].load(), events(0), g_obj_u2.load(),
                   g_posts[1].load(), g_posts_ok[1].load(), events(1));
         log::info("VoiceProbe attack events by object (every object):{}", watched_events());
+        log::info("VoiceProbe all posts in the last 10 s by event:{}", window_top_and_reset());
     }
     return 0;
 }
