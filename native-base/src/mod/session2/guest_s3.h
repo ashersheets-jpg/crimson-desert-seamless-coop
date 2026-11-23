@@ -59,6 +59,10 @@ namespace cdmp::session2 {
 void guest_s3_start(bool diag, bool crash_dump, bool update_guard, bool actor_diag = false,
                     bool update_site_taken = false);
 bool guest_s3_wanted();
+// The HOST (2026-11-22, pp45 armwrest crash): only the movement update's null guard (exe+0x8257C2), as the guest has it.
+// From session2's install on the host; its own thread waits for the game's code. No-op on a guest.
+void host_move_guard_start();
+uint64_t host_move_guard_skips() noexcept;
 // Every 5 s from the guest's diagnostics thread (guest_diag_worker.h; not a
 // game thread, not the network thread): formats the new records. One caller.
 void guest_s3_tick() noexcept;

@@ -1,5 +1,6 @@
 // Co-op+ (2026-11-11, build 1.0.0.3576): ai_handoff.h.
 #include "mod/session2/ai_handoff.h"
+#include "mod/session2/guest_s3.h"
 
 #include "mod/session2/anti_grief.h"
 
@@ -96,12 +97,33 @@ size_t talk_slot(uint32_t npc_key) noexcept {
 }
 // The minigame rule's table (ai_handoff_note_minigame): (opponent key << 32) | player key, 0 = free.
 std::array<std::atomic<uint64_t>, kRides> g_games{};
-std::atomic<uint64_t> c_game_noted{0}, c_game_out{0}, c_game_full{0}, c_game_off{0};
+// 2026-11-22 (pp45 armwrest: the HOST's game crashed, exe+0x8257C6 reading 0x116, 0.5 s after the hand-over): the
+// opponent was handed to the other player's game 89 ms after the server spawned it, before its action layer was set
+// up (HorseDiag: a0 / a8 / cur / play all false); cs95b / cs103 handed it over after 744 / 634 ms and never crashed.
+// The hand-over now waits until the opponent has existed kGameSettleMs (the match's intro runs ~10 s before the grip,
+// so the opponent is still on the other player's game well before the match). The table's other uses (keeping the
+// NPC out of the other rules) start at once.
+constexpr uint64_t kGameSettleMs = 1500;
+std::array<std::atomic<uint64_t>, kRides> g_game_ms{};
+std::atomic<uint64_t> c_game_noted{0}, c_game_out{0}, c_game_full{0}, c_game_off{0}, c_game_waited{0};
 std::atomic<bool> g_game_on{true};
 uint32_t played_by(uint32_t npc_key) noexcept {
     for (const auto& g : g_games) {
         const uint64_t v = g.load(std::memory_order_relaxed);
         if (v && static_cast<uint32_t>(v >> 32) == npc_key) return static_cast<uint32_t>(v);
+    }
+    return 0;
+}
+// The player whose minigame opponent this NPC is, once the NPC has existed kGameSettleMs; else 0.
+uint32_t played_settled(uint32_t npc_key, uint64_t now) noexcept {
+    for (size_t i = 0; i < kRides; ++i) {
+        const uint64_t v = g_games[i].load(std::memory_order_acquire);
+        if (!v || static_cast<uint32_t>(v >> 32) != npc_key) continue;
+        if (now - g_game_ms[i].load(std::memory_order_relaxed) < kGameSettleMs) {
+            c_game_waited.fetch_add(1, std::memory_order_relaxed);
+            return 0;
+        }
+        return static_cast<uint32_t>(v);
     }
     return 0;
 }
@@ -745,7 +767,7 @@ void ai_handoff_server_tick() noexcept {
                 const Fight& f = fights[i];
                 uint32_t rider = ridden_by(f.key);
                 const bool caught = !rider && (rider = caught_by(f.key, now)) != 0;
-                const bool played = !rider && (rider = played_by(f.key)) != 0;  // the minigame rule
+                const bool played = !rider && (rider = played_settled(f.key, now)) != 0;  // the minigame rule
                 if (!rider) continue;
                 uint32_t to = 0;
                 for (int k = 0; k < n_players; ++k) {
@@ -1080,14 +1102,16 @@ void ai_handoff_note_minigame(uint32_t player_key, uint32_t npc_key, bool on) no
     }
     if (!g_game_on.load(std::memory_order_relaxed) || played_by(npc_key)) return;
     const uint64_t want = (static_cast<uint64_t>(npc_key) << 32) | player_key;
-    for (auto& g : g_games) {
+    for (size_t i = 0; i < kRides; ++i) {
+        if (g_games[i].load(std::memory_order_acquire) != 0) continue;  // another match's slot: its time stays
+        g_game_ms[i].store(GetTickCount64(), std::memory_order_relaxed);  // before the entry: a reader sees its time
         uint64_t v = 0;
-        if (g.compare_exchange_strong(v, want)) {
+        if (g_games[i].compare_exchange_strong(v, want)) {
             const uint64_t n = c_game_noted.fetch_add(1) + 1;
             if (n <= 40 || n % 100 == 0)
                 log::info("AiHandoff: minigame rule: the server spawned NPC 0x{:08X} as the minigame opponent of the other "
-                          "player's 0x{:08X}: it goes to that player's game at the next server check ({} so far)", npc_key,
-                          player_key, n);
+                          "player's 0x{:08X}: it goes to that player's game once it has existed {} ms ({} so far)", npc_key,
+                          player_key, kGameSettleMs, n);
             return;
         }
     }
@@ -1167,9 +1191,11 @@ std::string ai_handoff_describe() {
                            c_ride_out.load(), c_ride_full.load()) +
                std::format(" | catch rule: catches noted {} handed to the catcher {} table full {}", c_catch_noted.load(),
                            c_catch_out.load(), c_catch_full.load()) +
-               std::format(" | minigame rule{}: opponents noted {} handed to the player {} ended {} table full {}",
+               std::format(" | minigame rule{}: opponents noted {} handed to the player {} ended {} table full {} "
+                           "(checks that waited for a new opponent to settle {})",
                            g_game_on.load() ? "" : " (OFF)", c_game_noted.load(), c_game_out.load(), c_game_off.load(),
-                           c_game_full.load()) +
+                           c_game_full.load(), c_game_waited.load()) +
+               std::format(" | host movement guard skips {}", host_move_guard_skips()) +
                std::format(" | talk rule{}: talks noted {} handed to the talker {} back {} ended {} not a person {} table "
                            "full {}", g_talk_on.load() ? "" : " (OFF)", c_talk_noted.load(), c_talk_out.load(),
                            c_talk_back.load(), c_talk_ended.load(), c_talk_skip.load(), c_talk_full.load()) +

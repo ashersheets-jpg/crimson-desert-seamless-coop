@@ -53,6 +53,7 @@
 #include "mod/session2/shop_probe.h"
 #include "mod/session2/trade_probe.h"
 #include "mod/session2/voice_probe.h"
+#include "mod/session2/guest_s3.h"
 #include "mod/session2/interaction_share.h"
 #include "mod/session2/shop_trade_probe.h"
 #include "mod/session2/observer_hold_scene_order.h"
@@ -1450,6 +1451,8 @@ bool install(const Options& opt) {
     if (lc.s2_trade_probe && opt.create_session) trade_probe_start();
     if (lc.s2_inter_probe && opt.create_session) inter_probe_start();  // B11 research (read only)
     if (lc.s2_voice_probe) voice_probe_start(!opt.create_session);  // B20 research (counts only), both roles
+    // 2026-11-22 (pp45 armwrest): the movement update's null guard on the host too (guest_s3.h; always on).
+    if (opt.create_session) host_move_guard_start();
     if (lc.s2_interaction_share && opt.create_session) interaction_share_start();
     // P8 option U, U-0 (research/s25/mundo-escenarios-propios.md): read-only probe of the stage managers.
     const auto key_on = [](const std::string& v) { return !v.empty() && v != "0"; };
