@@ -49,6 +49,7 @@
 #include "mod/session2/travel_probe.h"
 #include "mod/session2/freeze_watchdog.h"
 #include "mod/session2/guest.h"
+#include "mod/session2/voice_probe.h"
 #include "mod/session2/guest_diag_worker.h"
 #include "mod/session2/guest_reload_wait.h"
 #include "mod/session2/guest_save_guest.h"
@@ -1304,6 +1305,8 @@ DWORD WINAPI worker(LPVOID) {
                                       cfg.s2_guest_layer_guard, cfg.s2_guest_s3_diag, cfg.s2_guest_crash_dump,
                                       cfg.s2_guest_update_guard);
                 session2::guest_clock_fix_start(cfg.s2_guest_clock_fix);  // Co-op+ 2026-11-21 (guest.h)
+                // Co-op+ 2026-11-23 (B20, cs98 / cs98c): the guest never reaches session2::install's voice probe start.
+                if (cfg.s2_voice_probe) session2::voice_probe_start(/*guest=*/true);
                 // P8 S1/S2 read-only probes (pendientes/p8-impl-s1s2.md): their own thread.
                 session2::p8_probes_start({cfg.s2_load_diag, cfg.s2_s1_diag, /*host=*/false});
                 // NPC schedule files (pendientes/p8-impl-horarios.md §8): read-only self-check, its own thread.

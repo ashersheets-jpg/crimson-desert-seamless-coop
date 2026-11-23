@@ -48,6 +48,13 @@ constexpr size_t kMoveTs = 0xD5;
 constexpr size_t kStartActionTs = 0x15F;
 constexpr size_t kRotateTs = 0x9C;
 
+// Co-op+ 2026-11-23 (T41 race): our own map waypoint (cdmp_own_waypoint at the end of the file).
+constexpr uint16_t kOpSelfDestinationReq = 2285;  // CreateOrChangeSelfDestinationReq: vec3 | u8 flag
+std::mutex g_wp_mutex;
+float g_wp[3]{};
+uint8_t g_wp_set = 0;
+uint32_t g_wp_seq = 0;
+
 uint64_t steady_ms() {
     return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
                                      std::chrono::steady_clock::now().time_since_epoch())
@@ -642,6 +649,13 @@ void capture_observe_c2s(const uint8_t* packet, size_t size) {
     if (size < 5 + 4) return;
     uint16_t op = 0;
     std::memcpy(&op, packet, 2);
+    if (op == kOpSelfDestinationReq && size >= 5 + 13) {  // Co-op+ 2026-11-23 (T41 race): our map waypoint
+        std::lock_guard lock(g_wp_mutex);
+        std::memcpy(g_wp, packet + 5, sizeof g_wp);
+        g_wp_set = packet[5 + 12];
+        ++g_wp_seq;
+        return;
+    }
     proto::EventKind kind;
     size_t expected = 0, ts_off = 0;
     if (op == off::kOpMoveActorReq) {
@@ -946,4 +960,20 @@ uint64_t event_timestamp(const proto::GameEvent& ev) {
     return ts;
 }
 
+// Co-op+ 2026-11-23 (T41 race, cs101): our own map waypoint, from this client's CreateOrChangeSelfDestinationReq.
+uint32_t own_waypoint_read(float* out3, uint8_t* set) noexcept {
+    std::lock_guard lock(g_wp_mutex);
+    if (out3) std::memcpy(out3, g_wp, sizeof g_wp);
+    if (set) *set = g_wp_set;
+    return g_wp_seq;
+}
+
 }  // namespace cdmp::net
+
+// Co-op+ 2026-11-23 (T41 race, cs101): in the shared world the layer's own sniffer is off, so its race never saw the
+// host's map waypoint ("Dev script: tpwp: no map waypoint is set" on both games, no "Race: round 1"). The layer polls
+// this: out3 = x, y, z of our last CreateOrChangeSelfDestinationReq (2285, the same on 3663 and 3732), *set = its
+// flag (0 = removed); returns how many were seen (0 = none yet; a change = a new waypoint).
+extern "C" __declspec(dllexport) uint32_t cdmp_own_waypoint(float* out3, uint8_t* set) {
+    return cdmp::net::own_waypoint_read(out3, set);
+}
