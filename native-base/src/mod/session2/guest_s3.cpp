@@ -87,6 +87,15 @@ constexpr uintptr_t kSpawnCall = 0x55EA85;
 constexpr uint8_t kMoveNullBytes[] = {0x48, 0x8B, 0x50, 0x10, 0x44, 0x38, 0xBA, 0x16, 0x01, 0x00, 0x00};
 constexpr uintptr_t kMoveNullResume = 0x825C13;
 constexpr Site kMoveNull{0x8257C2, kMoveNullBytes, 11, "0x8257C2 (movement update, current action read)"};
+// 2026-11-23 (pp46 lagrun: the JOINED player's game crashed at exe+0x37E45B1 reading 0xC with the TEST lag on, 12 s
+// after the host teleported nearby): in the actor update at exe+0x37E4290, the component from vcall +0x3C0 gives
+// +0xA0 -> +0x40 -> [0], whose +0xC is stored at this+0x1D8; when +0xA0 is missing the code takes rbp, which is ZERO in
+// this function (xor ebp, ebp at 0x37E42BB), so a missing +0xA0 and a null [+0x40] both read null+0xC. In single player
+// they are always set; a remote actor mid-change in co-op can lack them. A null skips the read and the store, as the
+// code itself does when the component is missing (0x37E4583 -> 0x37E45BA).
+constexpr uint8_t kCompNullBytes[] = {0x8B, 0x40, 0x0C, 0x89, 0x86, 0xD8, 0x01, 0x00, 0x00};
+constexpr uintptr_t kCompNullResume = 0x37E45BA;
+constexpr Site kCompNull{0x37E45B1, kCompNullBytes, 9, "0x37E45B1 (actor update, a component's +0xA0/+0x40 read)"};
 
 // Offsets (build 2976; p8-raiz-invitado.md §5, companeros.md).
 constexpr uint32_t kCc_Actor = 0x08, kCc_Ack60 = 0x60, kCc_Default0 = 0x70, kCc_Default1 = 0x78, kCc_Layer0 = 0x88,
@@ -120,8 +129,11 @@ uint8_t* g_ret = nullptr;  // a lone `ret`
 
 SafetyHookMid g_h_null, g_h_update, g_h_spawn, g_h_spawn_al, g_h_ack;
 SafetyHookMid g_h_move_null;
+SafetyHookMid g_h_comp_null;
 std::atomic<bool> g_move_null_on{false};
 std::atomic<uint64_t> c_move_null{0};
+std::atomic<uint64_t> c_comp_null{0};
+std::atomic<bool> g_comp_null_on{false};
 SafetyHookInline g_h_start;
 
 s3::Ring<kRingSize> g_ring;
@@ -333,6 +345,13 @@ void on_move_null(safetyhook::Context& ctx) noexcept {
     if (fp(ctx.rax + 0x10, action) && action) return;
     c_move_null.fetch_add(1, std::memory_order_relaxed);
     ctx.rip = g_base + kMoveNullResume;
+}
+
+// The actor update's component read (kCompNull): a null pointer skips the read and the store.
+void on_comp_null(safetyhook::Context& ctx) noexcept {
+    if (ctx.rax) return;
+    c_comp_null.fetch_add(1, std::memory_order_relaxed);
+    ctx.rip = g_base + kCompNullResume;
 }
 
 void on_spawn_al(safetyhook::Context& ctx) noexcept {
@@ -590,6 +609,9 @@ DWORD WINAPI install_thread(LPVOID) {
             g_move_null_on = make_mid(kMoveNull, g_h_move_null, on_move_null);
             log::info("GuestS3 guard (Co-op+, 3549): the movement update's current-action read exe+0x{:X} {}",
                       kMoveNull.rva, g_move_null_on.load() ? "guarded (a null action skips to exe+0x825C13)" : "OFF");
+            g_comp_null_on = make_mid(kCompNull, g_h_comp_null, on_comp_null);
+            log::info("GuestS3 guard (Co-op+, 3732): the actor update's component read exe+0x{:X} {}", kCompNull.rva,
+                      g_comp_null_on.load() ? "guarded (a null skips the read and its store)" : "OFF");
             if (g_diag.load()) {
                 // One owner per entry: with guest_remote_update_guard=1, horse_diag hooks 0x85FBA0.
                 if (!g_update_taken.load()) g_update_on = make_mid(kUpdate, g_h_update, on_update);
@@ -1397,6 +1419,10 @@ DWORD WINAPI host_move_thread(LPVOID) {
     log::info("HostMoveGuard (Co-op+, host): the movement update's current-action read exe+0x{:X} {}", kMoveNull.rva,
               g_move_null_on.load() ? "guarded (a null action skips to exe+0x825C13: an NPC changing games mid-setup)"
                                     : "OFF");
+    for (int i = 0; i < 24000 && !bytes_match(kCompNull.rva, kCompNull.bytes); ++i) Sleep(5);
+    g_comp_null_on = make_mid(kCompNull, g_h_comp_null, on_comp_null);
+    log::info("HostMoveGuard (Co-op+, host): the actor update's component read exe+0x{:X} {}", kCompNull.rva,
+              g_comp_null_on.load() ? "guarded (a null skips the read and its store)" : "OFF");
     return 0;
 }
 }  // namespace
@@ -1406,7 +1432,9 @@ void host_move_guard_start() {
     CloseHandle(CreateThread(nullptr, 0, host_move_thread, nullptr, 0, nullptr));
 }
 
-uint64_t host_move_guard_skips() noexcept { return c_move_null.load(std::memory_order_relaxed); }
+uint64_t host_move_guard_skips() noexcept {
+    return c_move_null.load(std::memory_order_relaxed) + c_comp_null.load(std::memory_order_relaxed);
+}
 
 void guest_s3_start(bool diag, bool crash_dump, bool update_guard, bool actor_diag, bool update_site_taken) {
     if (!diag && !crash_dump && !update_guard) return;
@@ -1434,10 +1462,12 @@ void guest_s3_tick() noexcept {
 std::string guest_s3_describe() {
     if (!g_started.load()) return {};
     return std::format(" | GuestS3 diag {} guard {} crash {} | local 0x{:08X} | null actions {} (remote {}) | guard "
-                       "skips {} keys {} recovered {} stuck {} | 2723 vf188 false {} | dumps {} | move null skips {}",
+                       "skips {} keys {} recovered {} stuck {} | 2723 vf188 false {} | dumps {} | move null skips {} | component "
+                       "null skips {}",
                        g_diag.load() ? "on" : "off", g_guard.load() ? (g_null_on.load() ? "ON" : "OFF") : "off",
                        g_crash_on.load() ? "on" : "off", local(), c_null.load(), c_null_remote.load(), c_skips.load(),
-                       g_guard_tab.size(), c_recovered.load(), c_stuck.load(), c_spawn_al0.load(), c_dumps.load(), c_move_null.load());
+                       g_guard_tab.size(), c_recovered.load(), c_stuck.load(), c_spawn_al0.load(), c_dumps.load(), c_move_null.load(),
+                       c_comp_null.load());
 }
 
 void guest_s3_on_host_packet(uint16_t opcode, std::span<const uint8_t> payload, uint64_t epoch) noexcept {
