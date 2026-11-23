@@ -191,6 +191,14 @@ std::string snapshot(uint32_t key) {
 std::mutex g_mu;
 std::vector<Bound> g_bound;  // at most 64, newest kept
 std::atomic<uint64_t> c_noted{0}, c_unhidden{0}, c_failed{0};
+// 2026-11-23 (Brycecco, two PCs, 7d0d63b2: at an early boss fight the joined player saw the boss's health bar and
+// its effects but not the boss or its minions; the host saw them). HideWatch for the scenes NOT on the list, log
+// only (nothing is written): an NPC such a scene binds whose hide bit 9 is still set kStuckMs after the binding is
+// logged with the scene's hash, then again when the bit clears (or after two minutes), on both games. A tester's
+// zips then name the scene and show whether the host's copy cleared the bit while the joined player's kept it.
+// Its own list (at most 64, newest kept), so the shop NPCs' entries are never pushed out by a story scene's.
+std::vector<Bound> g_watch;
+std::atomic<uint64_t> c_watch_noted{0}, c_watch_hidden{0}, c_watch_cleared{0};
 
 template <class T>
 bool rd(uintptr_t a, T& v) {
@@ -200,22 +208,24 @@ bool rd(uintptr_t a, T& v) {
 void note(uintptr_t raw) {
     uint16_t len = 0;
     uint32_t scene = 0;
-    if (!rd(raw + 3, len) || !rd(raw + kHeader + kResourceAt, scene) || !mul::is_unhide_scene(scene)) return;
+    if (!rd(raw + 3, len) || !rd(raw + kHeader + kResourceAt, scene)) return;
+    const bool listed = mul::is_unhide_scene(scene);
     std::lock_guard lk(g_mu);
+    std::vector<Bound>& list = listed ? g_bound : g_watch;
     for (uint32_t o = kBindingsAt; o + kBindingSize <= len; o += kBindingSize) {
         uint32_t key = 0;
         if (!rd(raw + kHeader + o + 4, key) || (key >> 28) != 0xB) continue;
         bool known = false;
-        for (Bound& b : g_bound)
+        for (Bound& b : list)
             if (b.key == key) {
                 b = {key, scene, GetTickCount64(), false};
                 known = true;
             }
         if (!known) {
-            if (g_bound.size() >= 64) g_bound.erase(g_bound.begin());
-            g_bound.push_back({key, scene, GetTickCount64(), false});
+            if (list.size() >= 64) list.erase(list.begin());
+            list.push_back({key, scene, GetTickCount64(), false});
         }
-        c_noted.fetch_add(1);
+        (listed ? c_noted : c_watch_noted).fetch_add(1);
     }
 }
 
@@ -335,6 +345,50 @@ void worker() {
             for (Bound& x : g_bound)
                 if (x.key == b.key) x.done = true;
         }
+        // HideWatch (log only): the NPCs of the scenes not on the list. diag 0 = not looked at yet, 1 = seen hidden.
+        std::vector<Bound> watch;
+        {
+            std::lock_guard lk(g_mu);
+            for (const Bound& b : g_watch)
+                if (!b.done) watch.push_back(b);
+        }
+        for (const Bound& b : watch) {
+            const uint64_t age = now >= b.at_ms ? now - b.at_ms : 0;
+            if (age < mul::kStuckMs) continue;
+            const auto a = game::find_actor(b.key);
+            uintptr_t comps = 0, info = 0;
+            uint64_t hide = 0;
+            const bool read = a && *a && rd(*a + 0x68, comps) && rd(comps + 0x20, info) && rd(info + 0x3B8, hide);
+            uint8_t diag = b.diag;
+            bool done = false;
+            if (!read) {
+                done = age > 120000;
+            } else if ((hide & mul::kHideBit) && diag == 0) {
+                diag = 1;
+                c_watch_hidden.fetch_add(1);
+                log::info("MerchantUnhide [watch] NPC 0x{:08X} of scene 0x{:08X} (not on the list) still hidden {} ms "
+                          "after its binding on this {} (hide 0x{:X}; nothing done): {}",
+                          b.key, b.scene, age, g_guest ? "guest" : "host", hide, snapshot(b.key));
+            } else if (!(hide & mul::kHideBit)) {
+                if (diag == 1) {
+                    c_watch_cleared.fetch_add(1);
+                    log::info("MerchantUnhide [watch] NPC 0x{:08X} of scene 0x{:08X}: hide bit 9 cleared by the game "
+                              "{} ms after its binding (hide 0x{:X})", b.key, b.scene, age, hide);
+                }
+                done = true;
+            } else if (age > 120000) {
+                log::info("MerchantUnhide [watch] NPC 0x{:08X} of scene 0x{:08X}: STILL hidden two minutes after its "
+                          "binding on this {} (hide 0x{:X}): {}",
+                          b.key, b.scene, g_guest ? "guest" : "host", hide, snapshot(b.key));
+                done = true;
+            }
+            std::lock_guard lk(g_mu);
+            for (Bound& x : g_watch)
+                if (x.key == b.key && x.at_ms == b.at_ms) {
+                    x.diag = diag;
+                    x.done = done;
+                }
+        }
     }
 }
 
@@ -409,8 +463,10 @@ void merchant_unhide_start(bool on, bool guest, bool diag_only, bool guard) {
 }
 
 std::string merchant_unhide_describe() {
-    return std::format("MerchantUnhide ({}): shop NPCs noted {}, unhidden {}, setter faults {}", g_on ? "on" : "off",
-                       c_noted.load(), c_unhidden.load(), c_failed.load());
+    return std::format("MerchantUnhide ({}): shop NPCs noted {}, unhidden {}, setter faults {} | watch (other scenes, "
+                       "log only): NPCs noted {}, seen hidden after {} ms {}, cleared later {}",
+                       g_on ? "on" : "off", c_noted.load(), c_unhidden.load(), c_failed.load(), c_watch_noted.load(),
+                       mul::kStuckMs, c_watch_hidden.load(), c_watch_cleared.load());
 }
 
 }  // namespace cdmp::session2

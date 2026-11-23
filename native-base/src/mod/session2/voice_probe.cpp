@@ -62,6 +62,18 @@ std::string keys_in(uintptr_t obj) {
     }
     return s.empty() ? std::string(" none") : s;
 }
+// A player's sound object id (the u32 the game posts its sounds with): [[[[actor+0x68]+0x60]+0x18]+0x70]+0x18 (the
+// 3576 voice processor's path; see play_detour). 0 = not readable.
+std::atomic<uint32_t> g_obj_host{0}, g_obj_u2{0};
+uint32_t sound_obj_of(uintptr_t actor) noexcept {
+    uintptr_t holder = 0, x = 0, s = 0, o = 0;
+    uint32_t id = 0;
+    if (!actor || !game::fast_read(actor + 0x68, &holder, 8) || !holder || !game::fast_read(holder + 0x60, &x, 8) ||
+        !x || !game::fast_read(x + 0x18, &s, 8) || !s || !game::fast_read(s + 0x70, &o, 8) || !o ||
+        !game::fast_read(o + 0x18, &id, 4))
+        return 0;
+    return id;
+}
 void refresh_players() noexcept {
     uint32_t u2 = 0;
     if (g_guest) {
@@ -75,6 +87,8 @@ void refresh_players() noexcept {
     g_actor_host.store(h ? *h : 0, std::memory_order_relaxed);
     const auto g = u2 ? game::find_actor(u2) : std::nullopt;
     g_actor_u2.store(g ? *g : 0, std::memory_order_relaxed);
+    g_obj_host.store(sound_obj_of(h ? *h : 0), std::memory_order_relaxed);
+    g_obj_u2.store(sound_obj_of(g ? *g : 0), std::memory_order_relaxed);
 }
 
 // 0 the other player, 1 this game's own player, -1 anyone else.
@@ -126,6 +140,23 @@ uintptr_t __fastcall voice_detour(uintptr_t self, uintptr_t p1, uintptr_t p2, ui
 uintptr_t __fastcall sound_detour(uintptr_t self, uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4) {
     return run(g_sound_hook, 1, self, p1, p2, p3, p4);
 }
+// 2026-11-23 (cs98e: in ~820 voice and ~10000 sound processor calls none was on a player's actor): every post is
+// counted by its sound object instead, whatever posted it. The 3576 decomp of the voice processor posts with
+// FUN_143b577d0(manager, u32 [obj+0x18], obj+0x20, &event, ...), obj = [[[[actor+0x68]+0x60]+0x18]+0x70]: so each
+// player's object id is read from its actor (refresh_players) and the posts for it are counted, with the first event
+// ids, on both games. The friend's posts on this game vs its own posts on its game says whether its sounds play here.
+std::atomic<uint32_t> g_posts[2]{}, g_posts_ok[2]{};  // [0 the host's character, 1 user 2's]
+std::atomic<uint32_t> g_ev[2][8]{};                    // the first distinct event ids posted for each
+void note_event(int who, uintptr_t ev) noexcept {
+    uint32_t id = 0;
+    if (!ev || !game::fast_read(ev, &id, 4) || !id) return;
+    for (auto& slot : g_ev[who]) {
+        uint32_t cur = slot.load(std::memory_order_relaxed);
+        if (cur == id) return;
+        if (!cur && slot.compare_exchange_strong(cur, id, std::memory_order_relaxed)) return;
+        if (cur == id) return;
+    }
+}
 uintptr_t __fastcall play_detour(uintptr_t mgr, uint32_t obj, uintptr_t emitter, uintptr_t ev, uintptr_t params) {
     const uintptr_t r = g_play_hook.call<uintptr_t>(mgr, obj, emitter, ev, params);
     if (t_who >= 0 && t_kind >= 0) {
@@ -133,7 +164,23 @@ uintptr_t __fastcall play_detour(uintptr_t mgr, uint32_t obj, uintptr_t emitter,
         g_n[t_who][at].fetch_add(1, std::memory_order_relaxed);
         if (r & 0xFFFFFFFFull) g_n[t_who][at + 1].fetch_add(1, std::memory_order_relaxed);
     }
+    if (obj) {
+        const uint32_t oh = g_obj_host.load(std::memory_order_relaxed), ou = g_obj_u2.load(std::memory_order_relaxed);
+        const int who = obj == oh ? 0 : obj == ou ? 1 : -1;
+        if (who >= 0) {
+            g_posts[who].fetch_add(1, std::memory_order_relaxed);
+            if (r & 0xFFFFFFFFull) g_posts_ok[who].fetch_add(1, std::memory_order_relaxed);
+            note_event(who, ev);
+        }
+    }
     return r;
+}
+std::string events(int who) {
+    std::string s;
+    for (auto& slot : g_ev[who]) {
+        if (const uint32_t id = slot.load(std::memory_order_relaxed)) s += std::format(" {:08X}", id);
+    }
+    return s.empty() ? std::string(" none") : s;
 }
 
 std::string counts(int w) {
@@ -152,6 +199,10 @@ DWORD WINAPI line_thread(LPVOID) {
                   g_other_key.load(), counts(0), g_own_key.load(), counts(1), g_calls[0].load(), g_calls[1].load(),
                   g_char_calls[0].load(), g_char_calls[1].load(), g_actor_host.load(), g_key_u2.load(),
                   g_actor_u2.load());
+        log::info("VoiceProbe posts by sound object: the host's character (object 0x{:X}) {} ({} accepted), events{} || "
+                  "user 2's (object 0x{:X}) {} ({} accepted), events{}",
+                  g_obj_host.load(), g_posts[0].load(), g_posts_ok[0].load(), events(0), g_obj_u2.load(),
+                  g_posts[1].load(), g_posts_ok[1].load(), events(1));
     }
     return 0;
 }
