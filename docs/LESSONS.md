@@ -679,12 +679,22 @@ in a controller change belongs on the host too (HostMoveGuard). Timing luck hide
 run proves little; a checklist step that repeats the path is what found it.
 
 ## In the shared world, know which packets reach the layer before porting a feature (2026-11-23)
-The race to the waypoint (cs101) never started in the shared world although the host's map destination was set. My
-first reading ("the layer's sniffer is off, so it sees no packets") was half right and cost a build: the native
-base's sniffer forwards EVERY packet to the layer (coopplus_observe in local_capture.cpp), but its client-to-server
-branch feeds only activity / duel / weather, while server-to-client packets get the whole capture_observe_s2c (so
-the kill feed and the hunt's kill notices work). The export I added (cdmp_own_waypoint) saw no 2285 either (cs101b):
-the 3732 map's right-click sends something else. Before porting a two-worlds feature: grep coopplus_observe for its
-observer, and record the packets of the action (native_record) before assuming an opcode from an older build.
-The dev script's tpfriend had a real gap of this kind (the joined player never learns the other player's key from a
-load): fixed with the host's fixed key.
+The race to the waypoint (cs101) never started in the shared world although the host's map destination was set. The
+native base's sniffer forwards EVERY packet to the layer (coopplus_observe in local_capture.cpp), but its
+client-to-server branch feeds only activity / duel / weather, while server-to-client packets get the whole
+capture_observe_s2c (so the kill feed and the hunt's kill notices work). The race's own waypoint is a client-to-server
+2285, so it never arrived; the fix (the native base keeps our last 2285, cdmp_own_waypoint, the layer polls it) works
+(cs101c: both games raced to the same point and agreed on the winner). Before porting a two-worlds feature: grep
+coopplus_observe for its observer. And look at the shot of the action before judging a fix: cs101b "failed" only
+because its scripted right-click never placed a destination (no red X on the map), which I first read as "the
+export sees no 2285" and nearly reverted a working fix. The dev script's tpfriend had a gap of the same kind (the
+joined player never learns the other player's key from a load): fixed with the host's fixed key.
+
+## A VirtualQuery in a game-thread hook can freeze the host for seconds (2026-11-23)
+The host froze ~4-15 s (three ~5 s main-loop gaps) whenever the joined player loaded in, in most checklist logs, and
+nobody looked closer for days (cs74h parked it as "the join"). FreezeWatch ([session2] freeze_watchdog=1) named it in
+one run: merchant_unhide's per-tick hook called game::safe_read, whose VirtualQuery waits on the process's
+address-space lock while the loader maps memory. safe_memory.h already said safe_read is for the mod's threads and
+fast_read for hooks on game threads; one hook broke the contract. When a freeze repeats, turn FreezeWatch on before
+theorizing (my first theory, the window in the background, cost a test run), and keep every game-thread hook on
+fast_read.

@@ -64,7 +64,8 @@ Updated 2026-11-22 (build 677c87bb).
 | Duel on a marked ground (no deaths), rounds and the result the same on both games | Works (cs43b, shared world) |
 | Rock-paper-scissors between the two players | Works (cs100, shared world: a 2 - 0 match, the same result and the Victory banner on both games) |
 | Hide and seek between the two players | Works (cs102b, shared world: a three-round match, the same rounds and result on both games) |
-| Hunting contest, race to the waypoint, fishing contest | Built and checked in the older two-worlds version; not yet working in the shared world (being fixed) |
+| Race to the host's map waypoint | Works (cs101c, shared world: both games race to the same point and agree on the winner) |
+| Hunting contest, fishing contest | Built and checked in the older two-worlds version; not yet re-checked in the shared world |
 | Arm wrestling at an inn's table against the townsfolk, for each player (the fee and the prize their own) | Works (cs103, shared world: a loss, Play Again, a win, Back, then the host's match) |
 | Arm / hand wrestling against each other; the game's other minigames against each other | Not yet |
 

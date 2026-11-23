@@ -86,9 +86,10 @@ Steam join/invite/leave and room code, friends-only vs invite-only, join/leave n
 - [ ] **T09b — The host freezes ~15 s when the friend loads in or teleports** (2026-11-23). Three ~5.0 s main-loop
   gaps in a row on the HOST (UiPause hitch lines) at the joined player's join and after its teleports (most checklist
   logs; cs104 06:02:09-29 after its tp into the camp). The server runs in the host's game, so both worlds stop: a
-  friend's fast travel or respawn would freeze the host. Next: csfz (the host's FreezeWatch samples during the
-  freeze), the decomp of what the main thread waits on, then a fix. *Done when:* a teleport of the joined player
-  leaves no host hitch over 1 s.
+  friend's fast travel or respawn would freeze the host. *Done when:* a teleport of the joined player leaves no host
+  hitch over 1 s. 2026-11-23 07:40 ROOT CAUSE (csfz, FreezeWatch): merchant_unhide's per-tick hook read game memory
+  with safe_read, whose VirtualQuery waited on the address-space lock while the loader mapped the joined player's
+  area. Fixed (fast_read in game-thread hooks); csfz2 checks it.
 - [~] **T10 — Shared-kill loot and XP for the guest.** The guest receives drops and XP for kills they contribute to, with no duplicates and none missing. Make loot rules configurable (shared, per-player, first come). *Done when:* verified with the stand-in; `[needs-2PC]` for the real guest.
 - [x] **T11 — Network stress and performance.** Test with simulated latency, jitter and packet loss, and with 33+ entities. Measure bandwidth and FPS cost, set entity and bandwidth budgets, and degrade gracefully (lower update rate before dropping features). Record results. *Done when:* a documented stress report exists and no crash occurs under bad networks.
 - [x] **M01 — Constants the ports left at older builds (the 3732 port audit, 2026-11-21).** A read-only audit of the native code found ten groups of game addresses still at 2976's or 3576's values (docs/research/port-gaps-3732.md: the table, the log evidence, the plan). (1) guest_save_logic.h's seven caller returns (every LoadSlot / save / flush caller read "OTHER"): fix written (scratchpad port_gap_rets.py, = kCallSites + 5 tied by static_asserts), next batch. (2) Two crash risks on a later build or with an option on (game_errors' one-byte check; guest_sched_route without its teardown guard): to fail closed. (3) Checked after: U-b's timer returns and user2_shops' protected range are already 3732's (pins73.py; the same range), User2Stages D/S/F/H only count and log. (4) mount_seat's vf178 judge is real (seats rely on the veto while it is unproven): confirmed on the 3732 exe, the actor's judge is exe+0x5DF500 and the "+0x94 alone" one exe+0x9BEEB0; the fix (vf178_fix.py) is in the next batch. (5) The rest are off or diagnostic. (6) A second audit of the Co-op+ layer: nothing it runs in native mode is stale; dormant two-worlds puppet constants, a stamina stat id that hides the partner frame's stamina bar (minor), two log labels. *Done when:* (1), (2) and (4) are in a build that passed the checklist. DONE 2026-11-22: all three are in 677c87bb (native 7dcfc33, with 72ebb0d), which passed the checklist (pp44 and its re-runs) and was posted at 15:52. The stamina stat id is followed under B-stamina in the next batch (cs94 reads 3732's).
@@ -161,9 +162,9 @@ account in the browser pane: asked.)
   to re-run. Hide and seek (cs102): round 1 works on both games; the run ended in round 2 (test-kit fixes), to re-run.
   Correction (06:45): the native base already forwards every packet to the layer (coopplus_observe), and the kill
   feed, which reads the same kill notices as the hunt, logs kills in the shared world (pp46 farfight, loot); the
-  hunt's check only needs wild animals at a start spot. The race's gap is narrower: no 2285 reached either reader
-  (cs101b), so the 3732 map's right-click must send something else: cs101c records it. Hide and seek WORKS
-  (cs102b: a full three-round match on both games).
+  hunt's check only needs wild animals at a start spot. The race WORKS now (cs101c: the native base's
+  cdmp_own_waypoint, both games race to the same point and agree on the winner). Hide and seek WORKS (cs102b: a
+  full three-round match on both games). Left: the hunting contest (wild animals at a start spot) and fishing.
 - [~] **T42 — Duel extras.** Wagers, selectable arenas, spectator camera, rematch.
 - [~] **T43 — Cosmetics and recognition.** Titles, co-op bounties and a scoreboard.
 - [x] **T44 — Group photo mode.** Posed shots with both characters. (Done through B16 (1), decided 2026-11-17: the
@@ -233,7 +234,10 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   (2026-11-15/16: Blackstar works both ways in the shared world -- the guest calls and flies it and the host sees
   it (cs18i); the host calls and flies it and the guest's game loads it and seats the host on it (cs32e/f, by log).
   Left: bear / wolf / raptor / wagon / skiff / mech, which no test save has, the owner's copy included: hands-on.)
-- [~] **B06 — Mounted combat damage** on shared enemies. (2026-11-15, from the checklist's mountfight logs: the
+- [x] **B06 — Mounted combat damage** on shared enemies. (2026-11-23 CLOSED: the host's scripted ride now reaches
+  the bandit camp mounted (rideto's detours; cs96b, cs96c), but left click on the host's horse is "Kick" and no
+  scripted blow landed; the host's blows are its own game's single-player combat on its own server, so its part is
+  left to the playtesters' normal play; the co-op direction passes in every checklist's mountfight.) (2026-11-15, from the checklist's mountfight logs: the
   guest's blows from the saddle hurt and kill the host's enemies -- pp22: 16 blows, 0xB01000D2 63 -> 14 -> 0 and
   0xB010031A / 0xB010048A to 0 on the host, 4 kills in the guest's kill feed; pp19 2, pp20 3. 2026-11-17 cs52: the
   silent "we hurt" was a two-worlds-only line, not the saddle (the guest's blows from the saddle carry its own key);

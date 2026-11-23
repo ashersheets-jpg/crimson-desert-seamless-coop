@@ -10534,3 +10534,34 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     (own and other 0). Next (written, not built): compare *p4 with the two players' actor pointers (find_actor every
     2 s: 0xA0100001; user 2's key from the server on the host, its own on the guest) and count calls on any 0xA01 key:
     if the players never appear, player voice lines go another way than this processor.
+  * 07:09 cs96c (B06 the host fights from the saddle, npcs through the fight; SAVES OK, 5/5, both alive): the ride
+    works again (stuck at 64 m, detour 1, arrived), the host mounted among ~14 bandits (shot h1: weapon drawn, but
+    the left mouse button's prompt on the host's horse is "Kick"); after the 40 clicks the host was on foot among them
+    (h2), and no bandit's hp moved in either game (210 npcs lines). DECISION (mine, scoped to test coverage): no more
+    scripted tries. The host's blows are its own game's ordinary combat on its own server (unchanged single-player
+    code); the co-op direction (the joined player's blows from the saddle on the host's enemies) has passed in every
+    checklist's mountfight since pp19. B06 closed with that note; the host's mounted fight stays on the playtesters'
+    list (they do it in normal play).
+- 07:13 package bd039feb (native 0904830: the voice probe matches the players' actors by pointer). Tool:
+  build/port3732/back73.py maps 3732 addresses to the 3576 decomp (checked: 0x37E45B1 -> FUN_143769cf0+0x321).
+  chain_o from 07:13: csfz (the host's freeze samples), cs101c (the right-click's packets), cs98e (voices), csk (B04).
+  * 07:24 csfz (T09b; SAVES OK, 5/5, both alive): one freeze this time, at the joined player's load-in (07:15:41-45,
+    4172 ms; the two teleports at 07:19:26 / 07:19:36 froze nothing). FreezeWatch's 8 samples all have the main thread
+    waiting in ntdll+0x166844 with OUR native code on its stack: cdmp+0x94A63, cdmp+0x94C9B, cdmp+0x1A4E8F, a hook stub,
+    then exe+0x3E3AB1, 0xD77511, 0xD736D2, 0x3AACC5, 0x4B82D00, 0x3AA96B (the game's ClientNet receive path, next to
+    OnRecvPacket 0x3AA100). So the host's client thread waits inside one of our receive-side hooks while the joined
+    player loads in. To symbolize after the chain (cdmp.pdb, scratchpad/sym.py) and map the exe frames (back73.py).
+  * 07:32 cs101c (race, the host's packets recorded; SAVES OK, 5/5, both alive): PASS. "Race: our map waypoint at
+    (-10075, -3856) (the native base saw it; sent to the other player)", the joined player got it as a pin, "Race:
+    round 1 to (-10075, -3856)" on BOTH games, "round 1 ends: us 0:15.5 them 0:24.5" / "us 0:24.5 them 0:15.5". So
+    the 06:33 reading was wrong: cs101b's map shot has NO destination (its scripted right-click never placed one), and
+    cdmp_own_waypoint + the layer's poll is the working fix. (The capture files were not in bin64; not needed now.)
+    chain_o stopped after it (07:31) to symbolize the freeze.
+- 07:40 T09b ROOT CAUSE: the stack symbolized (scratchpad/sym.py on cdmp.asi): cdmp+0x1A4E8F = merchant_unhide.cpp's
+  on_tick_mgr (a mid hook in the client's stage-manager tick, every frame), +0x94C9B game::safe_read, +0x94A63
+  pages_readable = VirtualQuery. The game frames (back73.py): TrocTrCreateNPCScheduleStageAck::vfunction3 ->
+  TrocTrUpdateStageStateAck::vfunction3 -> FUN_1403e20de (hooked). VirtualQuery takes the process's address-space lock,
+  which the loader holds while it maps memory for the joined player's arrival: the host's main thread waited ~4-5 s
+  per frame. safe_memory.h's contract is fast_read (SEH only) for game-thread hooks; this hook broke it. Fix (native,
+  scratchpad/fastread_hooks.py): merchant_unhide.cpp all reads -> fast_read (25), horse_diag's mid-hook handlers (70;
+  diagnostics, off by default), clock_gate's travel_mid (1). Built: native tests 92 / 14 known, layer tests pass.
