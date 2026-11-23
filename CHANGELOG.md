@@ -5,7 +5,12 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-NEXT (built as 40de0201 for research; the posted build follows the full checklist):
+POSTED 2026-11-23 04:49 (0.1.0-alpha+7d0d63b2, for game 1.0.0.3732; checklist pp46 over 28 steps with the new
+armwrest step, its two failed steps re-run clean in pp46b: revive (the Discord overlay had broken its join) and
+lagrun; pp46c's lagrun missed one hold threshold (6 / 3); pp46's lagrun saw the joined player's game crash once at an
+old game-code spot, guarded in the next build). Also in it: the HOST's game no longer crashes when the joined
+player's arm-wrestling opponent is handed to its game right after it spawns (the hand-over waits 1.5 s; the host has
+the movement update's null guard too). The rest:
 - **The joined player can arm-wrestle at the Hernand inn table** (B14): its game gets its own copy of the table's
   scene (like the shops' copies), and the match's grip, which the host's server only makes for the host, is made on
   the joined player's game. One-PC run cs95b: the 20 copper fee, the live strength bar, a won match and its 30 copper

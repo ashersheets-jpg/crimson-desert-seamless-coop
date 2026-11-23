@@ -5,11 +5,19 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
-- 2026-11-22 19:40 FYI (nothing to do unless it recurs): your Discord desktop app's in-game overlay popped up over a
-  test game at 19:12 ("Use Discord from the overlay while playing" / "Invite friends to play") and broke one test run
-  in the lobby. The harness copes better now. If it keeps happening I will ask you to turn off Discord's game
-  overlay for Crimson Desert (Discord > User Settings > Game Overlay) or to close Discord while tests run; I do not
-  change Discord's settings myself.
+- 2026-11-23 04:49 DONE: 7d0d63b2 POSTED in #download-here by me (standing OK; pp46 over 28 steps, revive and lagrun
+  re-run clean in pp46b, both zips checked file by file against the tested folders 25/25 and 10/10, the build tree's
+  cdmp.asi = the package's): the joined player's own arm wrestling (B14), the death penalty option (T26, off by
+  default), the stamina bar on 3732, the host-crash fix for the minigame hand-over. Tags Borque. The post says one
+  simulated-lag run crashed the joined player's game (an old game-code spot) and that a guard comes next. Message
+  1574361193198649456, text: docs/release/shared-world-playtest/download-7d0d63b2.txt.
+- 2026-11-22 19:40, updated 2026-11-23 01:12 REQUEST (when you are back; small): your Discord desktop app's in-game
+  overlay pops up over a test game's window now and then ("Use Discord from the overlay while playing" / "Invite
+  friends to play", window "Discord Overlay Input Trap") and the host's lobby keys never reach the game: the join
+  fails and the whole step is lost (cs98b 19:12, pp46-revive 01:00; about 2 of ~50 launches). Could you turn off
+  Discord's game overlay for Crimson Desert (Discord > User Settings > Game Overlay, or the game's entry under
+  Registered Games), or close Discord while I test? I do not change Discord's settings myself. Until then I re-run
+  the steps it breaks.
 - 2026-11-22 15:52 DONE: 677c87bb POSTED in #download-here by me (standing OK; checklist pp44 over 27 steps with the
   new door step, its last step lagrun 48 / 0 after a test-kit fix, the re-runs pp44b / pp44c / pp44d clean: static,
   fresh, solostart, loot, display; both zips checked byte for byte against the tested package): doors of a building
@@ -10420,3 +10428,26 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   mid-setup cannot crash the host there. Test kit: the armwrest step allows the town's host log rate (480 a minute,
   as shop; NATIVE_GROWTH). A mod-code change: the full pass again (pp46) on the new package, after an armwrest-only
   check first. Not posted.
+- 04:25 package 7d0d63b2 (outer 7d0d63b, native 6f90aec). pp46a armwrest 49 / 1: the host's HostMoveGuard "guarded",
+  the opponent handed over 2.05 s after its spawn (the settle), the joined player's grip and WIN, the host's own match:
+  no crash; the one fail a warning kind first seen there (GuestXInter [entry]: the joined player's interaction check
+  redirected to the host's stage manager, by design; cs103 logs it too): added to tools/known-warnings.txt.
+  pp46 (00:06-04:16, 28 steps): 1153 pass, 17 fail. 26 steps clean, armwrest 50 / 0 and crime 51 / 0 among them.
+  * revive 37 / 12: the Discord overlay popup again (01:00, L2b: the host's window shrunk, its lobby keys lost): the
+    join never happened. Not the mod.
+  * lagrun 45 / 5: the JOINED PLAYER's game crashed at exe+0x37E45B1 reading 0xC (04:03:58), 12 s after the host's
+    script teleported it to the dock, with the step's TEST lag on (30 + 0..60 ms, 400 ms spikes). First time in any
+    lagrun (pp41-pp46). Nothing on the joined player's side changed in this batch (the native changes are host-only;
+    the layer's only guest change is the table twin, at arm-wrestling tables). Mapped to 3576: FUN_143769cf0 (+0x321),
+    called from FUN_14376b500 / FUN_14376a980 / FUN_1438e8760 / FUN_142909680: an actor update walking its components
+    (several of its pointers may be null mid-change). Most likely a rare crash already in the posted build that the
+    lag surfaced; under investigation. pp46b (revive, lagrun) and pp46c (lagrun) on the same package from 04:25.
+- 04:50 pp46b: revive 49 / 0, lagrun 48 / 0; pp46c: lagrun 47 / 1 (host: longer mid-run holds 6, wanted <= 3: the
+  running freeze's metric under the TEST lag, close to its line; no crash). So every one of the 28 steps passed on
+  7d0d63b2. The crash site, read in the 3732 exe: exe+0x37E45B1 `mov eax, [rax+0xc]` in the actor update at
+  exe+0x37E4290: the component from vcall +0x3C0 gives +0xA0 -> +0x40 -> [0], whose +0xC goes to this+0x1D8; when
+  +0xA0 is missing the code takes rbp, which is ZERO in this function (xor ebp, ebp at 0x37E42BB), so both a missing
+  +0xA0 and a null [+0x40] read null+0xC. Fix written (scratchpad comp_null_guard.py, both roles, a null skips the read
+  and the store as the code does for a missing component), for the next batch.
+  04:49 POSTED 7d0d63b2 (see the waiting list). Next: the guard into native, a research build, chain_m (cs98c voices,
+  cs94b learn, cs96b the host's saddle fight, cs100-cs102 the challenges, cs104 menus), then the next batch's pass.

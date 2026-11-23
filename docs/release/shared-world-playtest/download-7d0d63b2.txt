@@ -5,9 +5,10 @@ Use this instead of 677c87bb; **both players need the same build**.
 - **New option, off by default: a death penalty.** Co-op tab > Reviving > "Silver lost when you get up by yourself after a death" (none, 10 %, 25 %, half, all). It is the host's choice and applies to both of you from the next Start Co-op. Getting up by yourself after a death costs that share of your own silver; your friend getting you up costs nothing. The death screen says what it costs.
 - The friend's stamina bar in the party frame shows again on game 1.0.0.3732 (the game had moved it).
 
-Tested with two copies of the game on one PC (Nvidia): the full checklist on 1.0.0.3732 (28 steps, a new arm-wrestling step included), plus the death penalty through the Co-op tab setting. Not covered here: two PCs over Steam, a real internet connection, AMD / Intel cards, long sessions; that is what your reports tell us.
+Tested with two copies of the game on one PC (Nvidia): the full checklist on 1.0.0.3732 (28 steps, a new arm-wrestling step included), plus the death penalty through the Co-op tab setting. Not covered here: two PCs over Steam, a real internet connection, AMD / Intel cards, long sessions; that is what your reports tell us. Known: in one of three runs with simulated lag the joined player's game crashed (an old spot in the game's code, not new in this build); a guard for it comes in the next build.
 
 - `...7d0d63b2-shared-world.zip`: the one you want. Run its installer with the game closed.
 - `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
 
 Tell us in <#1567319198206525450> how it goes, with the report zip from **both** players (close the game, run **Diagnose Co-op+.cmd**).
+<@224953308010381312> the inn's arm wrestling for the joined player, from your "can't interact with NPCs" report, is in this one.
