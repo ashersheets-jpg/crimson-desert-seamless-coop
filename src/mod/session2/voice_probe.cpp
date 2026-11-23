@@ -10,8 +10,12 @@
 
 #include <safetyhook.hpp>
 
+#include "mod/game/actor_lookup.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
+#include "mod/net/local_capture.h"
+#include "mod/session2/guest_seq_route.h"
+#include "mod/session2/server.h"
 
 namespace cdmp::session2 {
 namespace {
@@ -39,20 +43,14 @@ thread_local int t_who = -1;
 thread_local int t_kind = -1;  // 0 voice, 1 sound
 
 // 2026-11-23 (cs98c: who -1 on every call; the 3576 decomp of ClientFrameEventVoiceSound::vfunction2 0x79A160 reads
-// plVar1 = *param_4 = *p4, plVar1+0x60 an id it matches against a list's +0x38, plVar1+0x68 a component holder):
-// a character key (0xA01xxxxx) in the first 0x100 bytes of *p4, else of [*p4+0x68], is the speaker's. Research:
-// the first calls log where it was found (keys_in), to pin the offset down.
-uint32_t first_char_key(uintptr_t obj, int* at) noexcept {
-    uint32_t buf[0x40]{};
-    if (!obj || !game::fast_read(obj, buf, sizeof buf)) return 0;
-    for (int i = 0; i < 0x40; ++i) {
-        if ((buf[i] >> 20) == 0xA01) {
-            if (at) *at = i * 4;
-            return buf[i];
-        }
-    }
-    return 0;
-}
+// plVar1 = *param_4 = *p4). cs98d's key scan: *p4 is an ACTOR (+0x60 its key, +0x90 its controller user), every
+// logged call an NPC's (0xB01... keys). Now each call's *p4 is compared with the two players' actor pointers (found
+// by key every 2 s: 0xA0100001 the host's; user 2's from the server on the host, its own key on the guest), and the
+// calls on any 0xA01 key are counted: if the players never appear, their voices go another way.
+std::atomic<uintptr_t> g_actor_host{0}, g_actor_u2{0};
+std::atomic<uint32_t> g_key_u2{0};
+std::atomic<uint32_t> g_char_calls[2]{};  // calls whose *p4+0x60 is any character key (0xA01...) [voice, sound]
+std::atomic<int> g_player_logged{0};
 std::string keys_in(uintptr_t obj) {
     uint32_t buf[0x40]{};
     if (!obj || !game::fast_read(obj, buf, sizeof buf)) return " (unreadable)";
@@ -64,41 +62,54 @@ std::string keys_in(uintptr_t obj) {
     }
     return s.empty() ? std::string(" none") : s;
 }
-std::atomic<int> g_key_at{-1};  // 0x000-0x0FF: in *p4, 0x100-0x1FF: in [*p4+0x68] (+0x100); -1 not found yet
+void refresh_players() noexcept {
+    uint32_t u2 = 0;
+    if (g_guest) {
+        u2 = guest_seq_route_own_key();
+        if (!u2) u2 = net::capture_own_player_key();
+    } else {
+        u2 = server_user2_player_key();
+    }
+    g_key_u2.store(u2, std::memory_order_relaxed);
+    const auto h = game::find_actor(kHostCharacter);
+    g_actor_host.store(h ? *h : 0, std::memory_order_relaxed);
+    const auto g = u2 ? game::find_actor(u2) : std::nullopt;
+    g_actor_u2.store(g ? *g : 0, std::memory_order_relaxed);
+}
 
-int who_of(uintptr_t ctx) noexcept {
-    uintptr_t actor = 0, holder = 0;
+// 0 the other player, 1 this game's own player, -1 anyone else.
+int who_of(uintptr_t ctx, int kind) noexcept {
+    uintptr_t actor = 0;
     uint32_t key = 0;
     if (!ctx || !game::fast_read(ctx, &actor, sizeof actor) || !actor) return -1;
-    if (!game::fast_read(actor + kActorKey, &key, sizeof key) || (key >> 28) != 0xA) {
-        int at = -1;
-        key = first_char_key(actor, &at);
-        if (!key && game::fast_read(actor + 0x68, &holder, sizeof holder) && holder) {
-            key = first_char_key(holder, &at);
-            if (key) at += 0x100;
-        }
-        if (!key) return -1;
-        int expect = -1;
-        g_key_at.compare_exchange_strong(expect, at, std::memory_order_relaxed);
-    }
-    const bool other = g_guest ? key == kHostCharacter : key != kHostCharacter;
-    (other ? g_other_key : g_own_key).store(key, std::memory_order_relaxed);
+    game::fast_read(actor + kActorKey, &key, sizeof key);
+    if ((key >> 20) == 0xA01) g_char_calls[kind].fetch_add(1, std::memory_order_relaxed);
+    const uintptr_t ha = g_actor_host.load(std::memory_order_relaxed), ua = g_actor_u2.load(std::memory_order_relaxed);
+    const uint32_t uk = g_key_u2.load(std::memory_order_relaxed);
+    int host_char = -1;  // 1 the host's character, 0 user 2's
+    if ((ha && actor == ha) || key == kHostCharacter) host_char = 1;
+    else if ((ua && actor == ua) || (uk && key == uk)) host_char = 0;
+    if (host_char < 0) return -1;
+    const bool other = g_guest ? host_char == 1 : host_char == 0;  // the guest's other is the host, and the reverse
+    (other ? g_other_key : g_own_key).store(host_char ? kHostCharacter : uk, std::memory_order_relaxed);
     return other ? 0 : 1;
 }
 
 uintptr_t run(SafetyHookInline& hook, int kind, uintptr_t self, uintptr_t p1, uintptr_t p2, uintptr_t p3,
               uintptr_t p4) {
     g_calls[kind == 0 ? 0 : 1].fetch_add(1, std::memory_order_relaxed);
-    const int w = who_of(p4);
-    if (g_logged.load(std::memory_order_relaxed) < 6 && g_logged.fetch_add(1) < 6) {
+    const int w = who_of(p4, kind == 0 ? 0 : 1);
+    const bool first_player_call = w >= 0 && g_player_logged.load(std::memory_order_relaxed) < 4 &&
+                                   g_player_logged.fetch_add(1) < 4;
+    if (first_player_call || (g_logged.load(std::memory_order_relaxed) < 4 && g_logged.fetch_add(1) < 4)) {
         uintptr_t q[4]{};
         for (int i = 0; i < 4; ++i) game::fast_read((i == 0 ? p1 : i == 1 ? p2 : i == 2 ? p3 : p4), &q[i], 8);
         uintptr_t holder = 0;
         if (q[3]) game::fast_read(q[3] + 0x68, &holder, sizeof holder);
-        log::info("VoiceProbe: {} call: self {:X} p1 {:X} p2 {:X} p3 {:X} p4 {:X} | *p1 {:X} *p2 {:X} *p3 {:X} *p4 {:X} | "
+        log::info("VoiceProbe: {}{} call: self {:X} p1 {:X} p2 {:X} p3 {:X} p4 {:X} | *p1 {:X} *p2 {:X} *p3 {:X} *p4 {:X} | "
                   "who {} | keys in *p4:{} | in [*p4+0x68] {:X}:{} | in p3:{}",
-                  kind == 0 ? "voice" : "sound", self, p1, p2, p3, p4, q[0], q[1], q[2], q[3], w, keys_in(q[3]), holder,
-                  keys_in(holder), keys_in(p3));
+                  first_player_call ? "a PLAYER's " : "", kind == 0 ? "voice" : "sound", self, p1, p2, p3, p4, q[0], q[1],
+                  q[2], q[3], w, keys_in(q[3]), holder, keys_in(holder), keys_in(p3));
     }
     if (w >= 0) g_n[w][kind == 0 ? 0 : 3].fetch_add(1, std::memory_order_relaxed);
     const int keep_who = t_who, keep_kind = t_kind;
@@ -132,14 +143,15 @@ std::string counts(int w) {
 }
 
 DWORD WINAPI line_thread(LPVOID) {
-    for (int i = 0; i < 60; ++i) {
-        Sleep(10000);
-        log::info("VoiceProbe: the other player 0x{:08X}: {} || own 0x{:08X}: {} || all calls: voice {} sound {} | "
-                  "key found at {}",
+    for (int i = 0; i < 300; ++i) {
+        Sleep(2000);
+        refresh_players();
+        if (i % 5 != 4) continue;
+        log::info("VoiceProbe: the other player 0x{:08X}: {} || own 0x{:08X}: {} || all calls: voice {} sound {} | on a "
+                  "character key (0xA01...): voice {} sound {} | players: host's actor {:X}, user 2 0x{:08X} actor {:X}",
                   g_other_key.load(), counts(0), g_own_key.load(), counts(1), g_calls[0].load(), g_calls[1].load(),
-                  g_key_at.load() < 0 ? std::string("+0x60 or nowhere")
-                  : g_key_at.load() < 0x100 ? std::format("*p4+0x{:X}", g_key_at.load())
-                                            : std::format("[*p4+0x68]+0x{:X}", g_key_at.load() - 0x100));
+                  g_char_calls[0].load(), g_char_calls[1].load(), g_actor_host.load(), g_key_u2.load(),
+                  g_actor_u2.load());
     }
     return 0;
 }
