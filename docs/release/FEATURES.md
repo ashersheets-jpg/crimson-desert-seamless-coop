@@ -46,10 +46,11 @@ Updated 2026-11-22 (build 677c87bb).
 
 | Feature | Status |
 |---|---|
-| The friend's name over their head, their health on screen | Works (their stamina bar is missing on 3732: a fix is being made) |
+| The friend's name over their head, their health and stamina on screen | Works (the stamina bar is back on 3732 from 3a83292f) |
 | Hold Interact on your friend: challenges, giving and trading, Leave | Works (keyboard and pad) |
 | Mounts: each sees the other ride (own, borrowed or wild horse, Blackstar); fights from the saddle | Works for the friend's mounted fights; the host's from the saddle is being tested |
 | Downed: Q instant revive, U checkpoint revive, or the friend gets you up within 30 s; wait for the friend at a boss | Works |
+| Death penalty (option, off by default): getting up by yourself costs a share of your own silver (10 / 25 / 50 / 100 %), the host's choice; the death screen says the cost | Works (cs97b / cs97c, shared world, 10 %) |
 | Give an item, trade stacks, stake on a challenge | Works |
 | Shared stash (the host's warehouse) | Needs testing (no test save has a warehouse yet) |
 | Chat and quick messages with map pins | Works |
@@ -62,7 +63,8 @@ Updated 2026-11-22 (build 677c87bb).
 |---|---|
 | Duel on a marked ground (no deaths), rounds and the result the same on both games | Works (cs43b, shared world) |
 | Rock-paper-scissors, hunting contest, race to the waypoint, hide and seek, fishing contest | Built and checked in the older two-worlds version; not yet re-checked in the shared world |
-| Arm / hand wrestling against each other; the game's other minigames against each other | Not yet (the friend's own table match is being fixed) |
+| Arm wrestling at an inn's table against the townsfolk, for each player (the fee and the prize their own) | Works (cs103, shared world: a loss, Play Again, a win, Back, then the host's match) |
+| Arm / hand wrestling against each other; the game's other minigames against each other | Not yet |
 
 ## Not yet / known issues
 

@@ -173,7 +173,7 @@ two_player_checks() {  # [round]: "2" = the harness's second round of restarts (
     # native log errors: the known ones (the harness's own sandbox copy, three far-world hooks not ported to this
     # game build, the guest's guarded reads) are counted; any other is a FAIL.
     no_recording $N/$NAME.$r.log "$r"
-    growth $N/$NAME.$r.log "$r native" 380
+    growth $N/$NAME.$r.log "$r native" ${NATIVE_GROWTH:-380}  # a step in a busy town sets NATIVE_GROWTH (as shop's 480)
     growth "$L" "$r layer" 240
     new_wrn "$r" "$L" $N/$NAME.coopplus.$r.before.log $N/$NAME.$r.log
     local e; e=$(unknown_errs $N/$NAME.$r.log | grep -c .)
@@ -777,7 +777,11 @@ armwrest)
   MASH=""; for i in $(seq 1 240); do MASH="${MASH}k:E:40_w:43_"; done
   GK="w:15000_py:facesweep:${AIM},-180,160,20,82,1500,u2_w:500_w:4000_shot:$NAME-g0_kd:E_w:2000_ku:E_w:12000_shot:$NAME-g1_${MASH}shot:$NAME-g2_w:8000_shot:$NAME-g3_k:ESC:150_w:3000_shot:$NAME-g4"
   HK="w:60000_shot:$NAME-h0_py:facesweep:${AIM},-180,160,20,82,1500,host_w:500_w:4000_shot:$NAME-h1_kd:E_w:2000_ku:E_w:6000_shot:$NAME-h2_${MASH}shot:$NAME-h3_w:8000_shot:$NAME-h4_k:ESC:150_w:3000_shot:$NAME-h5"
+  # pp45: in the Hernand inn the host's native log runs ~390 lines a minute (the door fix's level lines, the town's
+  # story stages), the same town as the shop step, whose own check allows 480.
+  NATIVE_GROWTH=480
   run2 "-CoopPlus -Lobby -Fresh -PackageIni $MODW -HostVariant usercopy -Hold 10 -HostScript $SCAN\\armwrest_host.txt -GuestScript $SCAN\\armwrest_guest.txt -GuestKeys $GK -HostKeys $HK"; two_player_checks
+  NATIVE_GROWTH=
   H=$N/$NAME.host.log; G=$N/$NAME.guest.log
   has "$G" "ShopTwin \\[extra\\] twin_extra .*0x94FEA6AE"                    "guest: the table's twin is on (from the layer's ini)"
   has "$G" "ShopTwin \\[extra chart\\] twin_extra_chart=3"                     "guest: the grip is made on its own game (twin_extra_chart=3)"

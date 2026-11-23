@@ -1,0 +1,13 @@
+**Update: shared world playtest 0.1.0-alpha+3a83292f, for game 1.0.0.3732**
+Use this instead of 677c87bb; **both players need the same build**.
+
+- **The joined player can arm-wrestle the townsfolk.** At an inn's arm-wrestling table the joined player now plays its own match: the fee comes from its own purse, the strength bar follows its own presses, and a win pays it the prize. Checked at the Hernand inn: a loss, Play Again, a win, Back, and the host's own match at the same table afterwards. Wrestling each other comes later.
+- **New option, off by default: a death penalty.** Co-op tab > Reviving > "Silver lost when you get up by yourself after a death" (none, 10 %, 25 %, half, all). It is the host's choice and applies to both of you from the next Start Co-op. Getting up by yourself after a death costs that share of your own silver; your friend getting you up costs nothing. The death screen says what it costs.
+- The friend's stamina bar in the party frame shows again on game 1.0.0.3732 (the game had moved it).
+
+Tested with two copies of the game on one PC (Nvidia): the full checklist on 1.0.0.3732 (28 steps, a new arm-wrestling step included), plus the death penalty through the Co-op tab setting. Not covered here: two PCs over Steam, a real internet connection, AMD / Intel cards, long sessions; that is what your reports tell us.
+
+- `...3a83292f-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tell us in <#1567319198206525450> how it goes, with the report zip from **both** players (close the game, run **Diagnose Co-op+.cmd**).

@@ -10396,3 +10396,27 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   Test kit: the checklist step "armwrest" (prepost.sh, 28 steps now). Layer: kDeathPenaltyItem 1, the setting's
   Co-op page tag, the death screen's cost on "Everyone is down"; tests.cpp's death_penalty_item check matched a whole
   line (it only passed while the key was 0): fixed. Build: native 92 / 14 known, layer all pass.
+- 19:52 release candidate 3a83292f (outer 3a83292, native 40f0c15; committed and pushed 19:41). rc_run from 19:41:
+  cs97c (T26 through the PLAYER's setting: [coop] death_penalty=10 in the package ini's own [coop], no research
+  switch) PASSED: the host's layer wrote "DeathPenalty: 10 % of item 1" into its native ini; the joined player's death
+  screen read "Getting up by yourself costs 10 % of your silver; your friend can revive you for free" (shot g0: the
+  host's setting reached it), the host's the same (h0); each lost 1145 of 11454 copper, err 0, once per death. The
+  lobby had no Discord popup this time. Then the full checklist pp45 (28 steps) on 3a83292f.
+- 23:52 pp45 on 3a83292f (19:52-23:46): 1156 pass, 13 fail over 28 steps; SAVES OK and 5/5 in every step. 26 steps
+  clean (static 12, real 14, fresh 43, xess 44, fsr 44, latehook 59, display 7, lowsave 48, chest 47, revive 49, loot
+  48, leave 27, shop 25, door 47, farfight 47, farfight2 46, newsave 100, solostart 49, mounts 51, mountfight 47,
+  nosave 7, retry 47, stuck 51, mismatch 9, hostrevive 51, lagrun 48). Two not:
+  * crime 49 / 2: the joined player was killed by the camp's bandits before its held E met a calm bandit (shot g1:
+    "Host can revive you"; its hits seen 7-11, pp44's 36-65), so no assassination crime was booked to skip and the
+    heal-back had nothing to give back: the step's known luck (pp31 / pp32), to re-run.
+  * armwrest (NEW) 40 / 11: the HOST's game CRASHED at exe+0x8257C6 reading 0x116 (23:45:34.651), the movement update's
+    current-action read, 0.5 s after the AI hand-over's minigame rule gave the joined player's just-spawned opponent
+    (0xB0100BC1) to its game: 89 ms after the server spawned it, its action layer not set up yet (HorseDiag: a0 / a8 /
+    cur / play all false). cs95b / cs103 handed theirs over after 744 / 634 ms (the server check's luck) and never
+    crashed. The joined player's table then waited at state 5 for a server that was gone. A real bug, not luck.
+  Fix (native, built 23:52): the minigame rule hands an opponent over only once it has existed 1.5 s (the match's
+  intro runs ~10 s before the grip); and the host gets the joined player's guard for that one site (HostMoveGuard:
+  exe+0x8257C2, a null action skips to 0x825C13, as GuestS3 does on the guest since 3549), so an NPC changing games
+  mid-setup cannot crash the host there. Test kit: the armwrest step allows the town's host log rate (480 a minute,
+  as shop; NATIVE_GROWTH). A mod-code change: the full pass again (pp46) on the new package, after an armwrest-only
+  check first. Not posted.
