@@ -147,14 +147,37 @@ uintptr_t __fastcall sound_detour(uintptr_t self, uintptr_t p1, uintptr_t p2, ui
 // ids, on both games. The friend's posts on this game vs its own posts on its game says whether its sounds play here.
 std::atomic<uint32_t> g_posts[2]{}, g_posts_ok[2]{};  // [0 the host's character, 1 user 2's]
 std::atomic<uint32_t> g_ev[2][8]{};                    // the first distinct event ids posted for each
+// 2026-11-23 (cs98f: each game posts 5 event ids on its own player's object and only 3-4 on the other player's;
+// 8AB4ADF9, which starts with the first swing, never on the other's, both ways): a count per event, and the call chain
+// of each event's first post on each player's object (exe-relative return addresses), to find what posts 8AB4ADF9 for
+// the own player and why that path skips the other one.
+std::atomic<uint32_t> g_ev_n[2][8]{};
+void log_chain(int who, uint32_t id) noexcept {
+    void* frames[8]{};
+    const USHORT n = RtlCaptureStackBackTrace(2, 8, frames, nullptr);  // past note_event and play_detour
+    std::string s;
+    for (USHORT i = 0; i < n; ++i) {
+        const uintptr_t a = reinterpret_cast<uintptr_t>(frames[i]);
+        s += a > g_base && a < g_base + 0x10000000 ? std::format(" exe+0x{:X}", a - g_base) : std::format(" {:X}", a);
+    }
+    log::info("VoiceProbe event {:08X}: first post on {}'s sound object on this {}; call chain:{}", id,
+              who == 0 ? "the host's character" : "user 2's character", g_guest ? "guest" : "host", s);
+}
 void note_event(int who, uintptr_t ev) noexcept {
     uint32_t id = 0;
     if (!ev || !game::fast_read(ev, &id, 4) || !id) return;
-    for (auto& slot : g_ev[who]) {
+    for (int i = 0; i < 8; ++i) {
+        auto& slot = g_ev[who][i];
         uint32_t cur = slot.load(std::memory_order_relaxed);
-        if (cur == id) return;
-        if (!cur && slot.compare_exchange_strong(cur, id, std::memory_order_relaxed)) return;
-        if (cur == id) return;
+        if (!cur && slot.compare_exchange_strong(cur, id, std::memory_order_relaxed)) {
+            g_ev_n[who][i].fetch_add(1, std::memory_order_relaxed);
+            log_chain(who, id);
+            return;
+        }
+        if (cur == id) {
+            g_ev_n[who][i].fetch_add(1, std::memory_order_relaxed);
+            return;
+        }
     }
 }
 uintptr_t __fastcall play_detour(uintptr_t mgr, uint32_t obj, uintptr_t emitter, uintptr_t ev, uintptr_t params) {
@@ -177,8 +200,9 @@ uintptr_t __fastcall play_detour(uintptr_t mgr, uint32_t obj, uintptr_t emitter,
 }
 std::string events(int who) {
     std::string s;
-    for (auto& slot : g_ev[who]) {
-        if (const uint32_t id = slot.load(std::memory_order_relaxed)) s += std::format(" {:08X}", id);
+    for (int i = 0; i < 8; ++i) {
+        if (const uint32_t id = g_ev[who][i].load(std::memory_order_relaxed))
+            s += std::format(" {:08X} x{}", id, g_ev_n[who][i].load(std::memory_order_relaxed));
     }
     return s.empty() ? std::string(" none") : s;
 }

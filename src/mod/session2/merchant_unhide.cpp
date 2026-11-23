@@ -346,6 +346,14 @@ void worker() {
                 if (x.key == b.key) x.done = true;
         }
         // HideWatch (log only): the NPCs of the scenes not on the list. diag 0 = not looked at yet, 1 = seen hidden.
+        if (static uint64_t seen_noted = 0, last_ms = 0; c_watch_noted.load() != seen_noted && now - last_ms >= 60000) {
+            seen_noted = c_watch_noted.load();
+            last_ms = now;
+            log::info("MerchantUnhide [watch] totals on this {}: NPCs bound by scenes not on the list {}, still hidden "
+                      "{} ms after the binding {}, cleared by the game later {}",
+                      g_guest ? "guest" : "host", seen_noted, mul::kStuckMs, c_watch_hidden.load(),
+                      c_watch_cleared.load());
+        }
         std::vector<Bound> watch;
         {
             std::lock_guard lk(g_mu);
