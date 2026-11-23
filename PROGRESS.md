@@ -10557,7 +10557,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     the 06:33 reading was wrong: cs101b's map shot has NO destination (its scripted right-click never placed one), and
     cdmp_own_waypoint + the layer's poll is the working fix. (The capture files were not in bin64; not needed now.)
     chain_o stopped after it (07:31) to symbolize the freeze.
-- 07:40 T09b ROOT CAUSE: the stack symbolized (scratchpad/sym.py on cdmp.asi): cdmp+0x1A4E8F = merchant_unhide.cpp's
+- 07:33 T09b ROOT CAUSE: the stack symbolized (scratchpad/sym.py on cdmp.asi): cdmp+0x1A4E8F = merchant_unhide.cpp's
   on_tick_mgr (a mid hook in the client's stage-manager tick, every frame), +0x94C9B game::safe_read, +0x94A63
   pages_readable = VirtualQuery. The game frames (back73.py): TrocTrCreateNPCScheduleStageAck::vfunction3 ->
   TrocTrUpdateStageStateAck::vfunction3 -> FUN_1403e20de (hooked). VirtualQuery takes the process's address-space lock,
@@ -10565,3 +10565,24 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   per frame. safe_memory.h's contract is fast_read (SEH only) for game-thread hooks; this hook broke it. Fix (native,
   scratchpad/fastread_hooks.py): merchant_unhide.cpp all reads -> fast_read (25), horse_diag's mid-hook handlers (70;
   diagnostics, off by default), clock_gate's travel_mid (1). Built: native tests 92 / 14 known, layer tests pass.
+- 07:37 package 0f519102 (native c012de8). Windows Update: RebootRequired still set (read-only check; active hours
+  15:00-09:00, so a restart may come 09:00-15:00; it did not come yesterday while tests ran). chain_p from 07:37:
+  csfz2 (the freeze fix: expect no host hitch > 1 s at the join), cs104b (the camp tp that froze the host in cs104),
+  cs98e (voices by actor pointer), csk (B04 knowledge). Then the next batch's full checklist (28 steps) on it: the
+  guest crash guard (exe+0x37E45B1), the load-in freeze fix, the race, plus the research-only voice probe.
+  * 07:47 csfz2 (T09b on 0f519102; SAVES OK, 5/5, both alive): FIXED. No host "UiPause: hitch" (> 0.5 s) and no
+    FreezeWatch episode (> 300 ms) at all, through the joined player's load-in (07:41:13) and both teleports
+    (07:44:13, 07:44:23). On 499b8923 / bd039feb the same run froze the host 4-5 s at the load-in (csfz), and the
+    checklists showed ~15 s freezes. The checklist on 0f519102 checks it across 28 steps.
+  * 07:57 cs104b (T09 + T09b on 0f519102; SAVES OK, 5/5, both alive): PASS, T09 closed. No host hitch at all, the
+    joined player's tp into the camp (07:53:48) and away (07:54:55) included (cs104 froze 15 s there). The host's menus
+    (map h1, inventory, game menu; 07:54:09): pauses BLOCKED, the game clock +5006 ms in 5015 ms, the joined player
+    regenerating then hit (159 -> 148). The joined player's menus (inventory g4 etc.; 07:54:41): its pauses BLOCKED,
+    clock at full speed, the host hit by the bandits meanwhile (214 -> 170).
+  * 08:08 cs98e (B20 voices by actor pointer; SAVES OK, 5/5, both alive): on BOTH games the probe found both players'
+    actors (host 0xA0100001, user 2 0xA0100066) and counted 0 voice / 0 sound processor calls on them or on any
+    character key, while the processors ran ~740 / ~8900 times (host) and ~280 / ~3900 (guest) during the swings. So
+    the players' own sounds never pass through these per-actor frame-event processors (they serve NPCs). Next probe
+    (written, built after the checklist, the voice_probe.cpp edit is stashed for it): every sound POST counted by each
+    player's sound object id ([[[[actor+0x68]+0x60]+0x18]+0x70]+0x18, the decomp's post path), with the first event
+    ids, on both games: the friend's posts on this game vs its own posts on its game.
