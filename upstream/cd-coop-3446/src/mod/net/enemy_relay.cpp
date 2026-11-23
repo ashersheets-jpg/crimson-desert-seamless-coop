@@ -139,6 +139,11 @@ std::map<uint32_t, Bytes> g_last_hp;  // world NPC key -> its last VaryHPAck pay
 // Every actor of our world we saw loaded (any record of any ActorLoadDataAck)
 // and its record type: a copy must not name any of them.
 std::map<uint32_t, uint8_t> g_known;
+// 2026-11-23 (cs105 / cs105c, T41 in the shared world): the joined player's client gets most world actors in BATCHED
+// ActorLoadDataAck records, which g_loads skips (single-record packets only), so it knew no variant for the host's
+// geese: its hunting-contest kills of them would count as "not game". The variant (record +0x18) of every NPC record
+// (type 3 / 6, a world key, no owner) of a batch, for enemy_variant_any (the hunt and the kill feed's names).
+std::map<uint32_t, uint32_t> g_batch_variant;
 std::deque<proto::GameEvent> g_out_events;  // actions of copied enemies
 
 // Co-op+ low latency (2026-11-06): an action of a copied enemy goes out from the fast lane at once (fast_lane.h); the
@@ -1121,6 +1126,26 @@ std::vector<std::pair<uint32_t, uint32_t>> enemy_loaded_variants() {
     return out;
 }
 
+uint32_t enemy_variant_any(uint32_t key) {
+    std::lock_guard lock(g_mutex);
+    auto l = g_loads.find(key);
+    if (l != g_loads.end() && l->second.size() >= 0x1C) return u32_at(l->second.data() + 0x18);
+    auto b = g_batch_variant.find(key);
+    return b != g_batch_variant.end() ? b->second : 0;
+}
+
+std::vector<std::pair<uint32_t, uint32_t>> enemy_any_variants() {
+    std::lock_guard lock(g_mutex);
+    std::vector<std::pair<uint32_t, uint32_t>> out;
+    for (const auto& [key, load] : g_loads) {
+        if (load.size() >= 0x1C) out.emplace_back(key, u32_at(load.data() + 0x18));
+    }
+    for (const auto& [key, variant] : g_batch_variant) {
+        if (!g_loads.count(key)) out.emplace_back(key, variant);
+    }
+    return out;
+}
+
 std::vector<uint32_t> enemy_announced_world_keys() {
     std::lock_guard lock(g_mutex);
     std::vector<uint32_t> out;
@@ -1234,12 +1259,17 @@ void enemy_observe_s2c(const uint8_t* packet, size_t size) {
     if (op == kOpActorLoadDataAck && n >= 7) {
         std::lock_guard lock(g_mutex);
         if (g_known.size() > 20000) g_known.clear();
+        if (g_batch_variant.size() > 20000) g_batch_variant.clear();
         for (size_t at = 0; at + 7 <= n;) {
             uint16_t rl;
             std::memcpy(&rl, p + at, 2);
             if (rl < 5 || at + 2 + rl > n) break;
             const uint32_t k = u32_at(p + at + 3);
             if (!is_network_key(k)) g_known[k] = p[at + 2];
+            const uint8_t type = p[at + 2];
+            if (static_cast<size_t>(rl) + 2 >= 0x1C && (type == 3 || type == 6) && keys::is_game_world_key(k) &&
+                u32_at(p + at + 7) == 0)
+                g_batch_variant[k] = u32_at(p + at + 0x18);
             at += 2 + static_cast<size_t>(rl);
         }
     }
@@ -1269,6 +1299,7 @@ void enemy_observe_s2c(const uint8_t* packet, size_t size) {
             g_pose_of.erase(key);
             g_last_hp.erase(key);
             g_known.erase(key);
+            g_batch_variant.erase(key);
             g_refused.erase(key);
             remove_locked(key);
         }

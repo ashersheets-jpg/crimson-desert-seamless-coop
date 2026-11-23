@@ -36,6 +36,11 @@ void enemy_observe_c2s(const uint8_t* packet, size_t size);
 uint32_t enemy_variant(uint32_t key);
 // Every world NPC whose load we kept, with its variant (Co-op+ hunting contest test).
 std::vector<std::pair<uint32_t, uint32_t>> enemy_loaded_variants();
+// 2026-11-23: enemy_variant, else the variant from a BATCHED ActorLoadDataAck record (the joined player's client gets
+// most world actors that way); and every NPC with a variant from either. For the hunt and the kill feed's names only
+// (enemy_variant's other users treat "a load we kept" as "one of our enemies").
+uint32_t enemy_variant_any(uint32_t key);
+std::vector<std::pair<uint32_t, uint32_t>> enemy_any_variants();
 // Every 0xB... key any ActorLoadDataAck 2005 announced to our client (also the batched ones, which
 // enemy_loaded_variants skips: it keeps single-record 2005s only). For the dev script's npcs (cs27d: the guest's list
 // missed the host server's batched records).

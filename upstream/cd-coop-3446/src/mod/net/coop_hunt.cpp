@@ -67,7 +67,7 @@ uint32_t hunt_dev_last_kill() { return g_dev_last_kill.load(); }
 
 bool hunt_dev_kill(const std::string& prefer) {
     static std::vector<uint32_t> tried;
-    const auto loaded = enemy_loaded_variants();
+    const auto loaded = enemy_any_variants();  // the batched loads too (the joined player's geese, cs105c)
     int animals = 0;
     for (const auto& [key, variant] : loaded) animals += animal(variant) != nullptr;
     log::info("Hunt: [dev] {} actors loaded, {} wild animals{}", loaded.size(), animals,
@@ -114,12 +114,12 @@ void hunt_observe_s2c(const uint8_t* packet, size_t size) {
     const uint32_t own = capture_own_player_key();
     if (!own || victim == own) return;
     if (killer != own && !guest_hits_we_hit(victim, kOursWithinMs) && !g_test) return;
-    const Animal* a = animal(enemy_variant(victim));
+    const Animal* a = animal(enemy_variant_any(victim));
     std::lock_guard lock(g_mutex);
     if (g.phase != kHunt || victim == g.last_victim) return;  // the two notices of one death count once
     g.last_victim = victim;
     if (!a) {
-        log::info("Hunt: we killed 0x{:08X} (variant 0x{:08X}): not game", victim, enemy_variant(victim));
+        log::info("Hunt: we killed 0x{:08X} (variant 0x{:08X}): not game", victim, enemy_variant_any(victim));
         return;
     }
     g.ours += a->points;

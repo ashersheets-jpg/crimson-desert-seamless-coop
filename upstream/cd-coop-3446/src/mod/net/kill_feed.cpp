@@ -75,7 +75,7 @@ void kill_feed_observe_s2c(const uint8_t* packet, size_t size) {
         return;
     }
     if (killer == own) xp_share_note_our_kill(enemy_variant(victim));  // learns this kind's kill experience
-    const char* name = hunt_animal_name(enemy_variant(victim));
+    const char* name = hunt_animal_name(enemy_variant_any(victim));  // batched loads too (the joined player)
     std::lock_guard lock(g_mutex);
     g_lines.push_back({0, name ? name : "", true});
     g_to_send.push_back(name ? name : "");

@@ -10717,3 +10717,36 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   chain of each event's first post on each player's object, to find what posts 8AB4ADF9 for the own player and why
   it skips the other one. Also: merchant_unhide's [watch] logged nothing in cs98f (no unlisted scene kept an NPC
   hidden 4 s, or none bound); a totals line once a minute added (same batch) to see that it is fed.
+- 17:09 cs105 (T41 hunt, SAVES OK, 5/5, both alive): the challenge ran in the shared world (the guest invited, the
+  host accepted: "challenge action 1 / 2 sent (a hunting contest)", "round 1 on" on both); the host's two killgame
+  geese died and counted ("Hunt: we brought down Goose (+1), score 1 / 2", kill feed); the round ended "2 - 0" on
+  the host and "0 - 2" on the guest (the same result). The guest's killgame picked a PARROT (the first wild animal
+  in its list), which nothing happened to, so the guest's own kill credit is not shown yet: killgame takes a name
+  now (layer 1aa82b4), cs105b uses "killgame Goose" on both.
+- 17:18 cs106 (T19 summon / travel, SAVES OK, 5/5, both alive): the guest's far trip told the host ("Travel: the
+  friend travelled far away"); the host's Summon reached the guest ("the friend asks us to come to them"); the
+  guest's go-to brought it from Fort Windridge (4032 m) to 1.0 m from the host. The follow after the host's jump to
+  Hernand was NOT tested: the guest's second Ctrl+F4 came ~8 s BEFORE the host's jump. cs106b times it after.
+- 17:22 package 1aa82b4d (native 51e1e55: the voice probe's per-event counts and first-post call chains, the
+  [watch] totals; layer: killgame <name>). chain_r from 17:22: cs98g, cs105b, cs106b.
+- 17:32 cs98g (B20, SAVES OK, 5/5, both alive): per-event counts over the run (each swings 30 times):
+    host game, own:          FE5BE4B4 x54  C833656B x18  22D10317 x21  866C9077 x194  8AB4ADF9 x4
+    host game, user 2's:     FE5BE4B4 x2   C833656B x18  22D10317 x0   866C9077 x77   8AB4ADF9 x0
+    guest game, own:         FE5BE4B4 x34  C833656B x20  22D10317 x14  866C9077 x92   8AB4ADF9 x4
+    guest game, the host's:  FE5BE4B4 x9   C833656B x13  22D10317 x3   866C9077 x144  8AB4ADF9 x0
+  So the other player's 866C9077 (the most frequent: steps?) and C833656B play, but its attack-time sounds mostly do
+  NOT: FE5BE4B4 (2 of 34, 9 of 54), 22D10317 (0 of 14, 3 of 21), 8AB4ADF9 (never). Two posting paths (call chains,
+  the same on both games): A) PlayEvent <- exe+0x1337A52 <- 0x3098560 <- 0x30982A9 <- 0x973B53 <- 0x97329B <-
+  0x9CF833 (FE5BE4B4, C833656B, 866C9077: runs for the other player too); B) PlayEvent <- exe+0xB9A590 (22D10317) or
+  exe+0xB9AF7A <- 0xB9AB4F (8AB4ADF9), both <- 0xB9BE37 <- 0x973E90 <- 0x9736BD <- 0x9CF833. B ran for the host's
+  character on the guest's game (22D10317 x3) but never 0xB9AB4F's 8AB4ADF9 there, and nothing of B for user 2 on the
+  host. Next: the 3576 names of these (back73.py) and what B and path A's FE5BE4B4 check (after chain_r).
+- 17:42 cs105b: the join FAILED again the pp48-crime way (shot L1: Discord's overlay popup over a host window that
+  had come out of maximised, moved right and down); the new twocopy stop worked ("lobby flow stopped: the guest never
+  connected", no title keys, 7 min lost instead of 20; SAVES OK; the test world untouched), and chain_r stopped
+  there (cs106b not run). Second time today, so a test-kit fix: actpid.ps1 (1) when the window in front is the game
+  process's but not its main window and its title names Discord ("Discord Overlay Input Trap" lives in the game's
+  process, so the old pid check passed while the keys went to it), the main window is put in front, logged; (2) a
+  step "maxmain" (the main window maximised again if it is not); twocopy's Start Co-op sequence begins with it.
+  Both scripts parse. Native fdb01f1: the attack-time events counted on EVERY object (does the other player's swing
+  sound go to another object?). Package 8b592d08; chain_s from 17:46: cs98h, cs105c (= cs105b), cs106b.
