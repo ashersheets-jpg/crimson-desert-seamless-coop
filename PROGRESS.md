@@ -10,6 +10,11 @@ test save Out, shipped cdmp.ini restored.
   new (csk), and the game's cheat route crashes its server (cs94b). Next time you play with a friend (or in a two-copy
   run I set up), tell me when either of you gets a "Knowledge Acquired" notice (a book, an NPC's lesson, examining
   something new); with [session2] knowledge_grant=1 the other should get the same entry. No action needed now.
+- 2026-11-23 16:42 DONE: ee4cf8e5 POSTED in #download-here by me (standing OK; all 28 checklist steps passed across
+  pp48 / pp48d / pp48e / pp48f, the fails were the environment (Discord's overlay at Start Co-op), bandit AI (farfight,
+  clean on its re-run) and one new harmless warning; both zips checked file by file, 25/25 and 10/10; the build tree's
+  DLLs = the package's): no host freeze at the friend's join, the lag crash guarded, race to the waypoint works.
+  Message 1574540718498644048, text: docs/release/shared-world-playtest/download-ee4cf8e5.txt.
 - 2026-11-23 04:49 DONE: 7d0d63b2 POSTED in #download-here by me (standing OK; pp46 over 28 steps, revive and lagrun
   re-run clean in pp46b, both zips checked file by file against the tested folders 25/25 and 10/10, the build tree's
   cdmp.asi = the package's): the joined player's own arm wrestling (B14), the death penalty option (T26, off by
@@ -10689,3 +10694,10 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   added to tools/known-warnings.txt with the reason (test kit only). Windows: past 15:00 now (active hours), so no
   update restart until 09:00. Discord 14:42: nothing new.
 - 16:16 pp48e: static, farfight, stuck (the re-runs).
+- 16:40 pp48e: farfight 47/0 (kills host 0 guest 3: bandit AI it was), stuck 51/0 (the warning known now), static
+  11/1 only on "uncommitted changes" (known-warnings.txt): committed 5da5149, pp48f static 12/0. Every one of the 28
+  steps has a clean run on ee4cf8e5. Zips: 25/25 and 10/10 identical to the tested folders (the mod-manager zip's four
+  CoopPlus-* docs = the tested README / LICENSE / CREDITS / NOTICES by content); build tree cdmp 19420e08 = the
+  package's.
+- 16:42 POSTED ee4cf8e5 in #download-here (message 1574540718498644048, 1786 chars, both zips; the upload-staging
+  page as before, window.name cleared after, the server stopped). No tag (no tester's report is fixed by it alone).

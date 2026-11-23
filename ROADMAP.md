@@ -87,7 +87,8 @@ Steam join/invite/leave and room code, friends-only vs invite-only, join/leave n
   181 -> 56), its pauses blocked; the host's menus: both pause requests blocked, the server ran (the joined player's
   regen went on). The host's window in the background does NOT stall it (csbg: covered, unfocused, minimised: no
   hitch).)
-- [ ] **T09b — The host freezes ~15 s when the friend loads in or teleports** (2026-11-23). Three ~5.0 s main-loop
+- [x] **T09b — The host freezes ~15 s when the friend loads in or teleports** (2026-11-23). DONE: the fix is in
+  ee4cf8e5, which passed all 28 checklist steps (pp48 / pp48d / pp48e / pp48f) and was posted 2026-11-23 16:42. Three ~5.0 s main-loop
   gaps in a row on the HOST (UiPause hitch lines) at the joined player's join and after its teleports (most checklist
   logs; cs104 06:02:09-29 after its tp into the camp). The server runs in the host's game, so both worlds stop: a
   friend's fast travel or respawn would freeze the host. *Done when:* a teleport of the joined player leaves no host

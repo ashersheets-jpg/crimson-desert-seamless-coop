@@ -5,8 +5,9 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-NOT POSTED YET (candidate ee4cf8e5, for game 1.0.0.3732; its checklist is next. pp47 on 0f519102 was stopped: its
-"no player blow lands" failures were the test harness's cursor, the posted build failed them the same way):
+Posted 2026-11-23 16:42 as 0.1.0-alpha+ee4cf8e5, for game 1.0.0.3732 (checklist pp48 / pp48d / pp48e / pp48f: all 28
+steps, one PC; both zips checked file by file against the tested folder, 25/25 and 10/10; message 1574540718498644048,
+text docs/release/shared-world-playtest/download-ee4cf8e5.txt):
 - **The host no longer freezes 4-15 s when the friend loads in or teleports** (T09b): merchant_unhide's per-tick hook
   read game memory with safe_read, whose VirtualQuery waited on the address-space lock while the game loaded the
   friend's area (FreezeWatch samples, csfz); it reads with fast_read now. csfz2: no host hitch over 0.5 s at the join
