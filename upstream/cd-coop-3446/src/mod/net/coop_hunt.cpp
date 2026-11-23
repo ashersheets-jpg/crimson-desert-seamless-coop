@@ -63,6 +63,20 @@ void hunt_set_test(bool on) { g_test = on; }
 
 std::atomic<uint32_t> g_dev_last_kill{0};
 
+// 2026-11-23 (cs105d: the joined player's killgame picked the goose the host had killed 20 s before): every death
+// notice's victim, which the dev pick skips.
+static std::mutex g_dead_mu;
+static std::vector<uint32_t> g_dead;
+static void note_dead(uint32_t victim) {
+    std::lock_guard lock(g_dead_mu);
+    if (g_dead.size() > 512) g_dead.erase(g_dead.begin(), g_dead.begin() + 256);
+    g_dead.push_back(victim);
+}
+static bool seen_dead(uint32_t key) {
+    std::lock_guard lock(g_dead_mu);
+    return std::find(g_dead.begin(), g_dead.end(), key) != g_dead.end();
+}
+
 uint32_t hunt_dev_last_kill() { return g_dev_last_kill.load(); }
 
 bool hunt_dev_kill(const std::string& prefer) {
@@ -78,7 +92,8 @@ bool hunt_dev_kill(const std::string& prefer) {
         for (const auto& [key, variant] : loaded) {
             const Animal* a = animal(variant);
             // Each one once (a far one gets no answer: try the next).
-            if (!a || (pass == 0 && prefer != a->name) || std::find(tried.begin(), tried.end(), key) != tried.end())
+            if (!a || (pass == 0 && prefer != a->name) || std::find(tried.begin(), tried.end(), key) != tried.end() ||
+                seen_dead(key))
                 continue;
             tried.push_back(key);
             std::vector<uint8_t> pkt(5 + 8, 0);
@@ -111,6 +126,7 @@ void hunt_observe_s2c(const uint8_t* packet, size_t size) {
     uint32_t victim, killer;
     std::memcpy(&victim, packet + 5, 4);
     std::memcpy(&killer, packet + 9, 4);
+    note_dead(victim);
     const uint32_t own = capture_own_player_key();
     if (!own || victim == own) return;
     if (killer != own && !guest_hits_we_hit(victim, kOursWithinMs) && !g_test) return;

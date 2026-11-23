@@ -10750,3 +10750,31 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   step "maxmain" (the main window maximised again if it is not); twocopy's Start Co-op sequence begins with it.
   Both scripts parse. Native fdb01f1: the attack-time events counted on EVERY object (does the other player's swing
   sound go to another object?). Package 8b592d08; chain_s from 17:46: cs98h, cs105c (= cs105b), cs106b.
+- 18:18 chain_s: cs98h done (SAVES OK, 5/5): on the host's game FE5BE4B4 goes only to the host's own object and
+  user 2's (0x18729), no other object; with the key times (voice_timeline.py) FE5BE4B4 spikes at each player's
+  LOAD-IN (own 2 -> 41 in the first minute) and barely moves during either player's 30 swings, so it is not a swing
+  sound (gear / spawn foley?); 22D10317 is posted on many NPC objects (hundreds: common foley); so the five events of
+  cs98f/g are not the attack sounds, and the swings post on NO player's character object at all. back73: path A =
+  3576 FUN_1412f83b0 <- FUN_14302a420 <- FUN_14302a120 <- FUN_140945980 <- FUN_1409451e0 <- FUN_14099fc50; path B
+  = FUN_140b61bf0 / FUN_140b62f90 <- FUN_140b63f90 <- FUN_140945cc0 <- FUN_1409451e0. Next probe (native 65abcf4):
+  every post by event id in 10-s windows (top 16), to find the events that rise during a player's swings.
+  cs105c (SAVES OK, 5/5): the host's two geese counted, both games "2 - 0" / "0 - 2"; the guest's "killgame Goose"
+  found NO goose: its client keeps variants only from single-record ActorLoadDataAck packets, and the host's server
+  sends it most actors in BATCHED records. A real bug for the joined player (its hunting-contest kills of such
+  animals would be "not game", the kill feed without names): layer 16326c9 keeps the batched records' variants
+  (enemy_variant_any, for the hunt and the kill feed's names only). cs106b: join failed (Discord's overlay a third
+  time; actpid's "maxmain" maximised MainWindowHandle but the moved "Crimson Desert" window stayed where it was:
+  MainWindowHandle is not that window then). Test kit: winsize.py "list" (this pid's windows, titles, rects) and
+  "fixmain" (a "Crimson Desert" window away from the screen's corner is moved to it and maximised; nothing in the
+  usual case); twocopy's Start Co-op sequence runs both instead of maxmain (maxmain also fired in GOOD runs and
+  changed the usual window size: removed from the sequence). Package 16326c91; chain_t from 18:24: cs105d, cs106c,
+  cs98i.
+- 18:36 cs105d (SAVES OK, 5/5): the batched variants WORK: the guest's list now has the geese ("126 actors loaded, 94
+  wild animals", was 67 / 35) and its "killgame Goose" took a goose, but 0xB01000DB, which the host had killed 20 s
+  before (both games picked the first goose in key order). The host's two kills counted, "2 - 0" on both. Dev pick now
+  skips every death notice's victim (layer, next build); winsize list showed the one host window at (0, 0, 1936, 1119)
+  and fixmain left it alone (the usual case).
+- 18:46 cs106c (T19, SAVES OK, 5/5): THE FOLLOW WORKS in the shared world: the host's jump to Hernand (1766 m,
+  18:44:47) told the guest "the friend travelled far away"; the guest's second Ctrl+F4 put it at (-9004.0, 479.6,
+  -5064.0) at 18:45:06, 1.0 m from the host (-9005.0, 479.1, -5064.0), on the ground. With cs106 (summon, go-to from
+  4 km: 1.0 m): summon, go-to and follow all checked on one PC. Not yet: cliffs, water (T19's "several regions").
