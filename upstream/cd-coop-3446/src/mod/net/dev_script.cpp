@@ -363,8 +363,12 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
             steps.push_back(st);
             continue;
         }
-        if (kind == "killgame") {  // killgame: KillCheatReq on a loaded wild animal (coop_hunt.h)
+        if (kind == "killgame") {  // killgame [animal name]: KillCheatReq on a loaded wild animal (coop_hunt.h)
             st.kind = Step::KillGame;
+            std::string name;
+            std::getline(in >> std::ws, name);
+            while (!name.empty() && (name.back() == '\r' || name.back() == ' ')) name.pop_back();
+            st.payload.assign(name.begin(), name.end());
             steps.push_back(st);
             continue;
         }
@@ -812,7 +816,7 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                 dev_memwatch(static_cast<int>(st.to[0]), st.payload, static_cast<int>(st.to[1]),
                              static_cast<int>(st.to[2]), static_cast<int>(st.wait_ms));
             } else if (st.kind == Step::KillGame) {
-                hunt_dev_kill();
+                hunt_dev_kill(std::string(st.payload.begin(), st.payload.end()));
             } else if (st.kind == Step::KillFriend) {
                 const uint32_t friend_key = capture_other_player_key();
                 if (!friend_key) {

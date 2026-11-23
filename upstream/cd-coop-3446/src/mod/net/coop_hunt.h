@@ -46,8 +46,9 @@ HuntHud hunt_hud();
 // no killer), and the echo of our score is ignored.
 void hunt_set_test(bool on);
 
-// [dev] script step "killgame": KillCheatReq on up to 4 loaded wild animals (false if none is loaded).
-bool hunt_dev_kill();
+// [dev] script step "killgame [animal name]": KillCheatReq on one loaded wild animal, that kind first when a name is
+// given (false if none is loaded).
+bool hunt_dev_kill(const std::string& prefer = {});
 // [dev] script step "tpkill": the first animal the last "killgame" killed (0 = none yet).
 uint32_t hunt_dev_last_kill();
 

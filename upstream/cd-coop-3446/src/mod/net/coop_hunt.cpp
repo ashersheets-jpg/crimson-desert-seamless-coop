@@ -65,29 +65,33 @@ std::atomic<uint32_t> g_dev_last_kill{0};
 
 uint32_t hunt_dev_last_kill() { return g_dev_last_kill.load(); }
 
-bool hunt_dev_kill() {
+bool hunt_dev_kill(const std::string& prefer) {
     static std::vector<uint32_t> tried;
     const auto loaded = enemy_loaded_variants();
     int animals = 0;
     for (const auto& [key, variant] : loaded) animals += animal(variant) != nullptr;
-    log::info("Hunt: [dev] {} actors loaded, {} wild animals", loaded.size(), animals);
-    int sent = 0;
-    for (const auto& [key, variant] : loaded) {
-        const Animal* a = animal(variant);
-        // Each one once (a far one gets no answer: try the next).
-        if (!a || std::find(tried.begin(), tried.end(), key) != tried.end()) continue;
-        tried.push_back(key);
-        std::vector<uint8_t> pkt(5 + 8, 0);
-        const uint16_t op = 2322, len = 8;  // KillCheatReq: u32 key | u32 option
-        std::memcpy(pkt.data(), &op, 2);
-        std::memcpy(pkt.data() + 3, &len, 2);
-        std::memcpy(pkt.data() + 5, &key, 4);
-        const bool ok = sniffer_inject_c2s(std::move(pkt));
-        log::info("Hunt: [dev] KillCheatReq on 0x{:08X} ({}){}", key, a->name, ok ? "" : " NOT sent");
-        if (sent == 0) g_dev_last_kill = key;
-        if (++sent == 1) return ok;  // one body (tests walk to it)
+    log::info("Hunt: [dev] {} actors loaded, {} wild animals{}", loaded.size(), animals,
+              prefer.empty() ? "" : std::format(" ({} first)", prefer));
+    // 2026-11-23 (cs105: the joined player's first pick was a parrot, which nothing happened to; the host's geese
+    // died): with a name, that kind first (pass 0), then any.
+    for (int pass = prefer.empty() ? 1 : 0; pass < 2; ++pass) {
+        for (const auto& [key, variant] : loaded) {
+            const Animal* a = animal(variant);
+            // Each one once (a far one gets no answer: try the next).
+            if (!a || (pass == 0 && prefer != a->name) || std::find(tried.begin(), tried.end(), key) != tried.end())
+                continue;
+            tried.push_back(key);
+            std::vector<uint8_t> pkt(5 + 8, 0);
+            const uint16_t op = 2322, len = 8;  // KillCheatReq: u32 key | u32 option
+            std::memcpy(pkt.data(), &op, 2);
+            std::memcpy(pkt.data() + 3, &len, 2);
+            std::memcpy(pkt.data() + 5, &key, 4);
+            const bool ok = sniffer_inject_c2s(std::move(pkt));
+            log::info("Hunt: [dev] KillCheatReq on 0x{:08X} ({}){}", key, a->name, ok ? "" : " NOT sent");
+            g_dev_last_kill = key;
+            return ok;  // one body (tests walk to it)
+        }
     }
-    if (sent) return true;
     log::info("Hunt: [dev] no wild animal loaded");
     return false;
 }

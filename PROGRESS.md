@@ -10701,3 +10701,19 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   package's.
 - 16:42 POSTED ee4cf8e5 in #download-here (message 1574540718498644048, 1786 chars, both zips; the upload-staging
   page as before, window.name cleared after, the server stopped). No tag (no tester's report is fixed by it alone).
+- 16:45 native 8435d22 (stash popped: voice probe posts by sound object; hidewatch_all.py: merchant_unhide's [watch]
+  for the scenes NOT on its list, log only, its own 64-entry list, a line when still hidden 4 s after the binding and
+  one when the game clears it or at 2 min, both games). Native 92 tests, the known 14 failing; layer tests pass.
+  native-base synced (a52f496), pushed. Research package a52f4965 (build tree = it). chain_q from 16:45: cs98f (B20
+  voices by sound object), cs105 (T41 hunt), cs106 (T19 summon / travel).
+- 16:56 cs98f (B20, SAVES OK, 5/5, both alive): the posts by sound object WORK (each player's object id read from its
+  actor: 0x186A1 is each game's own player, the other's 0x18720 on the host / 0x186A4 on the guest). Over the run:
+  host game: own 268 posts (events C833656B 22D10317 FE5BE4B4 866C9077 8AB4ADF9), user 2's 81 (FE5BE4B4 C833656B
+  866C9077 only); guest game: own 159 (all five), the host's 187 (866C9077 FE5BE4B4 22D10317 C833656B). So the other
+  player's character DOES get sounds posted on each game (swing / step class), but 8AB4ADF9, which starts with each
+  player's first swing on its own game, is NEVER posted for the other player (both ways), and 22D10317 not for user 2
+  on the host. The voice processor is never called on a player key at all (0 of ~600-1000 calls, own player too): the
+  players' grunts come from another poster. Next probe (written, built after chain_q): a count per event and the call
+  chain of each event's first post on each player's object, to find what posts 8AB4ADF9 for the own player and why
+  it skips the other one. Also: merchant_unhide's [watch] logged nothing in cs98f (no unlisted scene kept an NPC
+  hidden 4 s, or none bound); a totals line once a minute added (same batch) to see that it is fed.
