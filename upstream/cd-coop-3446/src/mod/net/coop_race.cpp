@@ -11,6 +11,7 @@
 
 #include "mod/log.h"
 #include "mod/net/coop_activity.h"
+#include "mod/net/local_capture.h"
 
 namespace cdmp::net {
 namespace {
@@ -53,6 +54,27 @@ void race_set_own_waypoint(std::optional<std::array<float, 3>> pos) {
 void race_set_partner_waypoint(std::optional<std::array<float, 3>> pos) {
     std::lock_guard lock(g_mutex);
     g_partner_wp = pos;
+}
+
+void race_poll_native_waypoint() {
+    using Fn = uint32_t (*)(float*, uint8_t*);
+    static Fn fn = nullptr;
+    static bool looked = false;
+    static uint32_t seen = 0;
+    if (!looked) {
+        looked = true;
+        if (HMODULE m = GetModuleHandleW(L"cdmp.asi")) fn = reinterpret_cast<Fn>(GetProcAddress(m, "cdmp_own_waypoint"));
+    }
+    if (!fn) return;
+    float p[3]{};
+    uint8_t set = 0;
+    const uint32_t seq = fn(p, &set);
+    if (seq == seen) return;
+    seen = seq;
+    race_set_own_waypoint(set ? std::optional<std::array<float, 3>>({p[0], p[1], p[2]}) : std::nullopt);
+    capture_emit_waypoint(p[0], p[1], p[2], set != 0);
+    log::info("Race: our map waypoint {} ({:.0f}, {:.0f}) (the native base saw it; sent to the other player)",
+              set ? "at" : "removed", p[0], p[2]);
 }
 
 std::optional<std::array<float, 3>> race_any_waypoint() {

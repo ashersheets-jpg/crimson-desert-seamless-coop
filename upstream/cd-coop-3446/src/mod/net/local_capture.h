@@ -56,6 +56,9 @@ bool capture_carried_for(uint64_t ms, uint32_t* parent);
 
 // Co-op+: Ctrl+F3 "ping": our position goes to the other player (EventKind::Waypoint, flag 2).
 void capture_emit_ping(float x, float y, float z);
+// Co-op+ 2026-11-23 (T41 race, shared world): our map waypoint to the other player (EventKind::Waypoint, flag 1 set /
+// 0 removed), as the two-worlds sniffer sends it from our CreateOrChangeSelfDestinationReq.
+void capture_emit_waypoint(float x, float y, float z, bool set);
 // Co-op+: an EventKind::Activity payload for the other player (coop_activity.h).
 void capture_emit_activity(std::vector<uint8_t> payload);
 // Co-op+: our weather stages to the other player (weather_sync.h).

@@ -1391,6 +1391,7 @@ ActivityTick activity_tick(bool connected, bool host, bool focused, std::optiona
     if (!h.banner.empty()) out.banner = std::move(h.banner);
     if (!h.toast.empty() && out.toast.empty()) out.toast = std::move(h.toast);
     // Co-op+ (T41): the race.
+    race_poll_native_waypoint();  // 2026-11-23 (cs101): the shared world's own waypoint (the native base's)
     bool race_on = false;
     {
         std::lock_guard lock(g_mutex);

@@ -20,6 +20,11 @@ inline constexpr uint32_t kRaceStage = 0xD0E10003;  // the challenge "stage" of 
 void race_set_own_waypoint(std::optional<std::array<float, 3>> pos);
 void race_set_partner_waypoint(std::optional<std::array<float, 3>> pos);
 
+// Co-op+ 2026-11-23 (cs101): the shared world (the native base next to us): our sniffer is off there, so our own
+// waypoint comes from the native base's cdmp_own_waypoint; a new one is ours (race_set_own_waypoint) and goes to the
+// other player as a pin (capture_emit_waypoint). No-op without the native base. Any tick, before race_tick.
+void race_poll_native_waypoint();
+
 // The finish race_tick would pick now: the host's waypoint, else the guest's; with no host flag at hand, ours if we
 // have one, else the other player's (the same point while only one player has set one). The dev script's tpwp.
 std::optional<std::array<float, 3>> race_any_waypoint();

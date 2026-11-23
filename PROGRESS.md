@@ -10451,3 +10451,46 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   and the store as the code does for a missing component), for the next batch.
   04:49 POSTED 7d0d63b2 (see the waiting list). Next: the guard into native, a research build, chain_m (cs98c voices,
   cs94b learn, cs96b the host's saddle fight, cs100-cs102 the challenges, cs104 menus), then the next batch's pass.
+- 04:52 research package 499b8923 (native fb39b20: the second null guard, exe+0x37E45B1, both roles; "guarded" in
+  both games' logs). chain_m from 04:52.
+  * cs98c (B20 voices; SAVES OK, 5/5): the host's voice and sound processors DO run: "all calls" voice 2393, sound
+    34624 in ~4 minutes (every character). The probe's who_of() reads p4 as {actor ...}: wrong on 3732 (who -1 on every
+    call; p3 is an object with an exe vtable (0x598C8F0), p4 = p3 + 0x30). The joined player's game never started the
+    probe at all: it starts from mod.cpp's guest branch, and voice_probe_start sits in session2::install (host). Both
+    to fix (scratchpad voice_guest_start.py; the actor path from the decomp next). The decomp (3576 0x79A160,
+    ClientFrameEventVoiceSound::vfunction2): the detour's p4 IS the 5th argument (param_4), plVar1 = *param_4;
+    plVar1 + 0x60 is an id the processor matches against a list's +0x38 (not an actor key on 3732: who -1), plVar1 +
+    0x68 the component holder (+0x20 timing, +0x40 -> +0x140 -> +0x4A4 the voice id, +0x60 -> +0x18 the emitter),
+    plVar1 + 0x88 -> +1 the kind (1, 3-6, 8, 9 voice). The 3732 offsets to read from its disassembly
+    (build/port3732/voice73.py) after the chain.
+  * cs94b (B04 learn by cheat; SAVES OK, 5/5): form A (10 bytes) no reply again; form B (11 bytes, a leading 04)
+    CRASHED THE HOST's game 0.1 s after it was sent (exe+0x2E03DB9 reading 0x68, our injection path in the stack). So
+    cs94's "focus failure" was this crash too. The crafted cheat request is malformed for the server: a test packet,
+    not a player path. The cheat route is closed; knowledge sharing needs a real learn moment (a knowledge a save does
+    not have yet).
+  * 05:29 cs96b (B06 the host fights from the saddle; SAVES OK, 5/5, both alive): the ride WORKS now: tphorse far,
+    E mounts, rideto stuck once at 64 m, took detour 1 (+70 deg) and arrived 8 m from the camp (05:24-05:25). Shots
+    h1-h3: the host in the saddle among the awake bandits, weapon drawn ("Stow Weapon", "Dismount"), "Defeat the
+    enemies", the joined player beside it "Badly hurt" (the bandits fight it). NOT shown: hits on the bandits. The test's
+    npcs rounds (30 / 32 x 9 s) ended near 05:24:40, before the swings, and the joined player's shots ended at 05:24:09.
+    Test-kit fix: 60 / 62 rounds, three more guest shots (cs96.sh); cs96c after the chain.
+  * 05:36 cs100 (T41 rock-paper-scissors between the two players in the shared world, no simulated opponent; SAVES OK,
+    5/5, both alive): PASS. The joined player's invite, the host's accept, "paper vs scissors (lost)" x2 and "match:
+    they won (0 - 2)" on the joined player, "scissors vs paper (won)" x2 and "match: we won (2 - 0)" on the host; shot
+    h3 the "Victory" banner ("You win rock, paper, scissors 2 - 0! Series: you 1 - 0 Guest"); no game fault.
+  * 05:50 cs101 (T41 race to the waypoint; SAVES OK, 5/5, both alive): FAIL, no race. The invite and accept went
+    through and the banner asked the host for a waypoint; the host's right-click DID set the map destination (shot h3:
+    the red X, "Remove Destination"), but neither game logged "Race: round 1" and both tpwp said "no map waypoint is
+    set". Cause: the race takes our waypoint from the layer's sniffer (C2S 2285 CreateOrChangeSelfDestinationReq), and
+    in the shared world the layer's sniffer is OFF (the native base owns the hooks). Fix written (not built yet, a test
+    is running): the native base's sniffer (on in the shared world) keeps our last 2285 and exports cdmp_own_waypoint;
+    the layer's activity tick polls it (race_poll_native_waypoint): a new one is ours and goes to the other player as a
+    pin (capture_emit_waypoint, flag 1), as the two-worlds version did. Re-run cs101 on the next build.
+  * 05:58 cs102 (T41 hide and seek; SAVES OK, 5/5, both alive): round 1 WORKS on both games in step: the joined
+    player counts ("Counting 2 ... Eyes closed. Host is hiding", shot g2), "the friend is hidden from us", the search
+    ("Find Host! 2:53 Warm", g3: the partner frame says "hiding", no distance; the host not in view), "round 1 ends:
+    ours (found)" / "theirs (found)", "the friend is shown again", round 2 starts the other way round. Not finished:
+    the joined player's tpfriend found no friend key in the shared world ("teleport beside actor 0x00000000: NOT
+    loaded"; the host's tpfriend ended round 1 instead), so round 2 began late and the run closed in its count.
+    Test-kit fixes: tpfriend falls back to 0xA0100001 on the joined player (dev_script.cpp, layer), 40 s more on both
+    scripts (cs102.sh). Re-run on the next build.

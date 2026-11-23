@@ -868,6 +868,13 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                                : st.addr == 0xFFFFFFFEu || st.addr == 0xFFFFFFFDu || st.addr == 0xFFFFFFFCu ? 0
                                : st.addr                ? static_cast<uint32_t>(st.addr)
                                                         : hunt_dev_last_kill();
+                // 2026-11-23 (cs102): in the shared world the joined player's layer never learns the other player's
+                // key from a load ("teleport beside actor 0x00000000: NOT loaded"); the host's character is 0xA0100001
+                // in every run, so a game whose own character is another key is the joined one: the friend is that.
+                if (st.addr == 0xFFFFFFFBu && !key) {
+                    const uint32_t own = capture_own_player_key();
+                    if (own && own != 0xA0100001u) key = 0xA0100001u;
+                }
                 if (st.addr == 0xFFFFFFFEu) {  // tpnear: the n-th nearest living person
                     std::optional<proto::Vec3> me;
                     int loaded = 0, n = static_cast<int>(st.to[1]);

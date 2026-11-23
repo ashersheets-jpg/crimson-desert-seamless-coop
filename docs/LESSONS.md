@@ -677,3 +677,12 @@ guard has covered since 3549): the NPC had no action layer yet. A rule that move
 must not act on a freshly spawned one (the minigame rule now waits 1.5 s), and a guard that keeps the GUEST alive
 in a controller change belongs on the host too (HostMoveGuard). Timing luck hides such races: one passing research
 run proves little; a checklist step that repeats the path is what found it.
+
+## In the shared world the layer sees no packets: re-check every layer feature that read them (2026-11-23)
+The race to the waypoint (cs101) never started in the shared world although the host's map destination was set: the
+race takes "our waypoint" from the layer's sniffer (C2S 2285), and on the native base the layer's sniffer is off
+(the native base owns the packet hooks; "Native layer ... off whatever the ini says: sniffer ..."). The same gap hit
+the dev script's tpfriend on the joined player (the other player's key comes from a load packet). A two-worlds
+feature that passed its checks there can be silently dead in the shared world. When porting one, list what it reads
+from the layer's capture (own / other keys, waypoints, loads, Reqs) and give each a native source: the native base's
+own sniffer IS on and sees this client's packets, so a small export (cdmp_own_waypoint) is enough.
