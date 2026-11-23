@@ -2,7 +2,7 @@
 Use this instead of 7d0d63b2; **both players need the same build**.
 
 - **No more long freeze of the host when the friend joins or travels.** While the joined player was loading in (and after some of its teleports), the host's game stood still for 4 to 15 seconds, and both worlds with it. One part of the mod checked memory the slow way on the game's main thread, which had to wait for the game's loading; it reads it the fast way now.
-- **Crash fix for the joined player under lag**: the spot named in the last post (an actor update reading a part that was missing) is guarded on both games.
+- **Crash fix for the joined player under lag**: the spot named in the last post (an actor update reading a part that was missing) is guarded on both games, without changing the game's code there.
 - **Race to the waypoint works in the shared world.** Hold R on your friend > Race to the waypoint; the host sets a map destination (right-click on the map); after 3, 2, 1 the first within 12 m of it wins. Checked with two copies: both games took the same finish and agreed on the winner.
 - Re-checked in the shared world: rock-paper-scissors and hide and seek between the two players (whole matches, the same result on both games).
 

@@ -709,3 +709,10 @@ a known-good step starts failing, run the last posted build on it FIRST: it spli
 one run, before any theory or rebuild; (2) a harness change that moves the cursor (or focus) must put it back;
 (3) read which half of a tally a number is ("blows from the guest's client" counts its own swings; "from the host's
 client" counts blows that landed) before concluding anything from it.
+
+## A step whose join failed must stop, not play its keys at the title menus (2026-11-23)
+pp48-crime's join failed (Discord's overlay over an un-maximised host window at Start Co-op). The harness still ran
+the step's 15 minutes of keys and clicks on both title menus; one of them started a New Co-op Save, which set the
+test co-op world aside, and the checklist runner then stopped the whole pass before its next step. A test step's
+input belongs only where its precondition holds: twocopy.ps1 now ends the lobby flow at "guest REMOTE: False". When a
+pass stops early, look at what the failed step did AFTER its failure point, not only at the failure itself.

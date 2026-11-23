@@ -13,6 +13,7 @@ Crash log: exception X at cdmp.asi+X (thread N) reading X | ## the base's guarde
 Game errors: logger not recognised; not hooked ## a base probe not ported to game build 3576 (every run)
 GuestSN crash capture: the top-level exception filter had be ## notice: the crash capture was put back (every run)
 Net: one loop took N ms (> N ms; mostly host tunnel): receiv ## one slow network loop (4 in 25 runs)
+Net: one loop took N ms (> N ms; mostly receive): receive N ## one slow receive on the host's net thread (302 ms, no datagram) while the stuck step restarted co-op for its second round (pp48d-stuck)
 NpcProbe: build distinta de N o cabecera ilegible; no se lee ## a base probe not ported to 3576 (every run)
 Role guest: save REDIRECT ON: everything under Q goes to Q ( ## notice: the guest writes to its own folder
 Role guest: the ini has no [sessionN] enabled=N guest=N; thi ## step nosave

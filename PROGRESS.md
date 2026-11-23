@@ -16,10 +16,10 @@ test save Out, shipped cdmp.ini restored.
   default), the stamina bar on 3732, the host-crash fix for the minigame hand-over. Tags Borque. The post says one
   simulated-lag run crashed the joined player's game (an old game-code spot) and that a guard comes next. Message
   1574361193198649456, text: docs/release/shared-world-playtest/download-7d0d63b2.txt.
-- 2026-11-22 19:40, updated 2026-11-23 01:12 REQUEST (when you are back; small): your Discord desktop app's in-game
+- 2026-11-22 19:40, updated 2026-11-23 13:30 REQUEST (when you are back; small): your Discord desktop app's in-game
   overlay pops up over a test game's window now and then ("Use Discord from the overlay while playing" / "Invite
   friends to play", window "Discord Overlay Input Trap") and the host's lobby keys never reach the game: the join
-  fails and the whole step is lost (cs98b 19:12, pp46-revive 01:00; about 2 of ~50 launches). Could you turn off
+  fails and the whole step is lost (cs98b 19:12, pp46-revive 01:00, pp48-crime 13:02; about 3 of ~80 launches). Could you turn off
   Discord's game overlay for Crimson Desert (Discord > User Settings > Game Overlay, or the game's entry under
   Registered Games), or close Discord while I test? I do not change Discord's settings myself. Until then I re-run
   the steps it breaks.
@@ -10662,3 +10662,30 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     came from the E-hold attacks (keyboard); every click:L blow failed. No title-bar click happened in pp48b, so the
     cursor was still where an earlier fallback had left it (on a title bar). Second test-kit fix: every actpid key
     sequence starts with the cursor in the middle of its game's window. pp48c (farfight) from 11:40.
+  * 11:49 pp48c farfight 47/0: "kills host 0 guest 7", the joined player's landed blows 6. FIXED (test kit only).
+    Discord 11:51: a short thanks to Brycecco for the boss detail (zips later; boss fights next on our list).
+- 11:52 pp48 started: the full checklist (28 steps) on ee4cf8e5 (build tree = dll-ee4cf8e5 = the package).
+- 13:25 pp48 stopped after 12 steps: 452 pass, 14 fail. The 11 steps through loot passed clean (static 12/0, real 14/0,
+  fresh 43/0, xess 44/0, fsr 44/0, latehook 59/0, display 7/0, lowsave 48/0, chest 47/0, revive 49/0, loot 48/0;
+  every step SAVES OK and 5/5). crime 37/14: the join never happened (guest REMOTE False): at Start Co-op the host's
+  window was NOT maximised (shifted right and down, shot L1) with Discord's overlay popup ("Use Discord from the
+  overlay while playing") over it and a Windows Update toast ("will restart to update outside of active hours")
+  in L0, so the host's S / Space presses never reached its menu. Environment, not the build. Then the step's keys
+  ran at the two title menus for 15 minutes and one started a NEW test co-op world (13:24); run_pp stopped before
+  leave on the world set aside. coopworld.sh restore: "TEST CO-OP WORLD BACK, identical to the backup".
+  Test-kit fix (twocopy.ps1): when the guest never connects, the lobby flow stops there (no step keys at title
+  menus). RebootRequired is still set (read-only). Static work meanwhile: scratchpad hidewatch_all.py, a log-only
+  [watch] in merchant_unhide for the scenes NOT on its list (Brycecco's invisible boss: which scene keeps an NPC
+  hidden on which game), to apply after the checklist.
+- 13:26 pp48d started: static, crime again, then the 16 steps pp48 did not reach (leave .. armwrest).
+- 16:14 pp48d done: 763 pass, 2 fail over 18 steps, every step SAVES OK and 5/5. Clean: static 12/0, crime 51/0 (the
+  join worked; pp48's crime is replaced), leave 27/0, shop 25/0, door 47/0, farfight2 46/0, newsave 100/0,
+  solostart 49/0, mounts 51/0, mountfight 47/0, nosave 7/0, retry 47/0, mismatch 9/0, hostrevive 51/0, lagrun 48/0
+  (the lag run that crashed the joined player on 7d0d63b2), armwrest 50/0. Fails: (1) farfight 46/1, no guest kill:
+  the joined player was killed 5.5 s after its attacks began (6 bandit blows; its client logged 3 of its own blows),
+  revived with Q and killed again; pp48c on the same package and kit: 70 blows, 7 kills, never down. Bandit AI, to
+  confirm by a re-run. (2) stuck 50/1: a new warning kind on the host, "Net: one loop took 306.5 ms (> 250 ms; mostly
+  receive): receive 302.3 ms (0 datagrams)" at 15:32:09, while the step restarted co-op for its recovery round:
+  added to tools/known-warnings.txt with the reason (test kit only). Windows: past 15:00 now (active hours), so no
+  update restart until 09:00. Discord 14:42: nothing new.
+- 16:16 pp48e: static, farfight, stuck (the re-runs).
