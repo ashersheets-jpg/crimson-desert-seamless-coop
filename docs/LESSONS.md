@@ -668,3 +668,12 @@ steps clicked at a title screen). actpid now restores only a minimised window (I
 A chain also stops at the first failed join now ("guest REMOTE: False") instead of spending the rest of its runs.
 Other people's apps on the test PC (Discord, Steam, Windows toasts) can start popups at any game launch: check the
 first lobby shots (L1 / L2) of a stuck run before anything else.
+
+## An NPC handed to the other game right after it spawns can crash the host (2026-11-22)
+The AI hand-over's minigame rule moved the joined player's arm-wrestling opponent "at the next server check": 744 and
+634 ms after the spawn in the research runs (no crash), 89 ms in the checklist's first armwrest step, and the HOST's
+game crashed 0.5 s later in the movement update's current-action read (exe+0x8257C6, the site the guest's GuestS3
+guard has covered since 3549): the NPC had no action layer yet. A rule that moves an actor between the two games
+must not act on a freshly spawned one (the minigame rule now waits 1.5 s), and a guard that keeps the GUEST alive
+in a controller change belongs on the host too (HostMoveGuard). Timing luck hides such races: one passing research
+run proves little; a checklist step that repeats the path is what found it.
