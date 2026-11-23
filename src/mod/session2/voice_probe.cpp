@@ -180,8 +180,44 @@ void note_event(int who, uintptr_t ev) noexcept {
         }
     }
 }
+// 2026-11-23 (cs98g: the other player's FE5BE4B4 / 22D10317 / 8AB4ADF9 are rare or absent on ITS character's object,
+// while the own player's swing posts them on its own): those events counted by EVERY object they are posted on, to
+// see whether the other player's swing sounds go to another object (its weapon, a scene emitter) or nowhere.
+constexpr uint32_t kWatchEv[3] = {0xFE5BE4B4u, 0x22D10317u, 0x8AB4ADF9u};
+std::atomic<uint32_t> g_wev_obj[3][8]{}, g_wev_n[3][8]{};
+void note_any_object(uintptr_t ev, uint32_t obj) noexcept {
+    uint32_t id = 0;
+    if (!ev || !obj || !game::fast_read(ev, &id, 4)) return;
+    for (int e = 0; e < 3; ++e) {
+        if (id != kWatchEv[e]) continue;
+        for (int i = 0; i < 8; ++i) {
+            uint32_t cur = g_wev_obj[e][i].load(std::memory_order_relaxed);
+            if (!cur && g_wev_obj[e][i].compare_exchange_strong(cur, obj, std::memory_order_relaxed)) cur = obj;
+            if (cur == obj) {
+                g_wev_n[e][i].fetch_add(1, std::memory_order_relaxed);
+                return;
+            }
+        }
+        return;
+    }
+}
+std::string watched_events() {
+    std::string s;
+    for (int e = 0; e < 3; ++e) {
+        s += std::format(" | {:08X}:", kWatchEv[e]);
+        bool any = false;
+        for (int i = 0; i < 8; ++i)
+            if (const uint32_t o = g_wev_obj[e][i].load(std::memory_order_relaxed)) {
+                s += std::format(" obj 0x{:X} x{}", o, g_wev_n[e][i].load(std::memory_order_relaxed));
+                any = true;
+            }
+        if (!any) s += " none";
+    }
+    return s;
+}
 uintptr_t __fastcall play_detour(uintptr_t mgr, uint32_t obj, uintptr_t emitter, uintptr_t ev, uintptr_t params) {
     const uintptr_t r = g_play_hook.call<uintptr_t>(mgr, obj, emitter, ev, params);
+    note_any_object(ev, obj);
     if (t_who >= 0 && t_kind >= 0) {
         const int at = t_kind == 0 ? 1 : 4;
         g_n[t_who][at].fetch_add(1, std::memory_order_relaxed);
@@ -227,6 +263,7 @@ DWORD WINAPI line_thread(LPVOID) {
                   "user 2's (object 0x{:X}) {} ({} accepted), events{}",
                   g_obj_host.load(), g_posts[0].load(), g_posts_ok[0].load(), events(0), g_obj_u2.load(),
                   g_posts[1].load(), g_posts_ok[1].load(), events(1));
+        log::info("VoiceProbe attack events by object (every object):{}", watched_events());
     }
     return 0;
 }
