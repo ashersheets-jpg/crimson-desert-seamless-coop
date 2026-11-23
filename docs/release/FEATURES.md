@@ -40,7 +40,8 @@ Updated 2026-11-22 (build 677c87bb).
 | Story scenes together: a story scene waits for both, then each game plays it | Experimental option: the first scene of a step works; scenes that start from a talk do not wait yet |
 | Time of day and weather follow the host | Works |
 | Crimes and "wanted" are the player's own | Works |
-| Menus (map, inventory, pause) do not pause the shared world | Works |
+| Menus (map, inventory, pause) do not pause the shared world | Works (cs104b: each game's three menus while the other was fighting) |
+| No freeze of the host when the friend joins or travels | Works (fixed in the build after 7d0d63b2: the host had stood still 4-15 s) |
 
 ## Together
 
@@ -48,7 +49,7 @@ Updated 2026-11-22 (build 677c87bb).
 |---|---|
 | The friend's name over their head, their health and stamina on screen | Works (the stamina bar is back on 3732 from 3a83292f) |
 | Hold Interact on your friend: challenges, giving and trading, Leave | Works (keyboard and pad) |
-| Mounts: each sees the other ride (own, borrowed or wild horse, Blackstar); fights from the saddle | Works for the friend's mounted fights; the host's from the saddle is being tested |
+| Mounts: each sees the other ride (own, borrowed or wild horse, Blackstar); fights from the saddle | Works for the friend's mounted fights (every checklist); the host's mounted fights are its own game's combat (needs testing in play) |
 | Downed: Q instant revive, U checkpoint revive, or the friend gets you up within 30 s; wait for the friend at a boss | Works |
 | Death penalty (option, off by default): getting up by yourself costs a share of your own silver (10 / 25 / 50 / 100 %), the host's choice; the death screen says the cost | Works (cs97b / cs97c, shared world, 10 %) |
 | Give an item, trade stacks, stake on a challenge | Works |

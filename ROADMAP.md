@@ -170,6 +170,8 @@ account in the browser pane: asked.)
   hunt's check only needs wild animals at a start spot. The race WORKS now (cs101c: the native base's
   cdmp_own_waypoint, both games race to the same point and agree on the winner). Hide and seek WORKS (cs102b: a
   full three-round match on both games). Left: the hunting contest (wild animals at a start spot) and fishing.
+  The usercopy start has geese on the ground 20-45 m off (cs18g, cs104b npcs lines): cs105 (written) scripts a hunt
+  there with the dev step killgame, after the checklist.
 - [~] **T42 — Duel extras.** Wagers, selectable arenas, spectator camera, rematch.
 - [~] **T43 — Cosmetics and recognition.** Titles, co-op bounties and a scoreboard.
 - [x] **T44 — Group photo mode.** Posed shots with both characters. (Done through B16 (1), decided 2026-11-17: the

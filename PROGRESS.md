@@ -5,6 +5,11 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- 2026-11-23 08:19 HANDS-ON (2 minutes, not urgent, B04 shared knowledge): the "knowledge one of you learns counts for
+  both" switch is built but never saw a real learn: kills, loot and trips to far places teach the test saves nothing
+  new (csk), and the game's cheat route crashes its server (cs94b). Next time you play with a friend (or in a two-copy
+  run I set up), tell me when either of you gets a "Knowledge Acquired" notice (a book, an NPC's lesson, examining
+  something new); with [session2] knowledge_grant=1 the other should get the same entry. No action needed now.
 - 2026-11-23 04:49 DONE: 7d0d63b2 POSTED in #download-here by me (standing OK; pp46 over 28 steps, revive and lagrun
   re-run clean in pp46b, both zips checked file by file against the tested folders 25/25 and 10/10, the build tree's
   cdmp.asi = the package's): the joined player's own arm wrestling (B14), the death penalty option (T26, off by
@@ -10586,3 +10591,40 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     (written, built after the checklist, the voice_probe.cpp edit is stashed for it): every sound POST counted by each
     player's sound object id ([[[[actor+0x68]+0x60]+0x18]+0x70]+0x18, the decomp's post path), with the first event
     ids, on both games: the friend's posts on this game vs its own posts on its game.
+  * 08:18 csk (B04 knowledge, knowledge_grant=1 on the host; SAVES OK, 5/5, both alive): learns 0 through four kills
+    with loot and both players' trips to Fort Windridge and Hernand: none of it teaches these saves anything new. B04
+    needs a real learn moment: on the hands-on list (top). Also: no host hitch through the far teleports (T09b).
+- 08:19 pp47 started: the full checklist (28 steps) on 0f519102 (the build tree = the package, dllswap show). The voice
+  probe's next edit is in native `git stash` ("next batch: voice probe posts by sound object (after pp47)").
+  * 09:42 so far: static 12/0, real 14/0, fresh 43/0, xess 44/0, fsr 44/0, latehook 59/0, display 7/0, lowsave 48/0,
+    revive 49/0. No host "UiPause: hitch" in any step (pp46 had 1-3 in most). Failures:
+    - chest 43/4: the host's walk ended ON the Greymane shrine's roof (y 540.6; 536.1 in pp44-pp46), so no chest
+      prompt; a walker flake. Re-run.
+    - loot 46/1: the known roll (none of 20 loot requests dropped an item). Re-run.
+    - crime 49/2: no blow of either player registered (host "Scaling: x1.50 | gave back 0" all run; every bandit the
+      joined player's tpnear stood beside was 63/63, where pp44 / pp46 saw damaged ones 10 / 7 times). SUSPICION: cs96b
+      / cs96c (499b8923 / caa7a7af) showed no player damage either, and the only game-side change since pp46 is the
+      exe+0x37E45B1 guard (fb39b20), though it never fired (0 skips). farfight / mountfight in this pass check player
+      damage directly: if they fail too, an A/B without that hook next.
+    - 09:50 (WRONG, see 10:24) "false alarm": I stopped pp47 after leave (13 steps, 485 / 7) with a stop marker (a
+      with_127_0_0_1_old_* folder: run_pp.sh stops before its next step; removed right after) to A/B the guard, and
+      then read leave's "guest>NPC 13" as player blows registering and resumed. The guard's site (jumpin73.py): the only branch to it is the jmp at 0x37E4598 to its START; nothing
+      jumps into the patched pair. Resumed 09:51: pp47 shop .. armwrest (15 steps), then pp47b chest, loot, crime.
+      (scratchpad/comp_null_veh.py, a patch-free guard, stays unused.)
+    - 10:02 shop 24/1: a warning kind never seen: "Teleport: 4 s after the far travel we are 11371 m from the goal and
+      11009 m from where we started: left as it is" (host). 11371 m = the distance from the goal to (0, 0): the read
+      was still the loading screen's placeholder; nothing done, the host arrived 21 s later ("arrived (-10677,
+      -3906)"). First seen now that the host no longer freezes during loads (T09b). Test-kit fix: added to
+      tools/known-warnings.txt with that reason; shop to re-run (with a smoke step) after the pass. Also in this log:
+      "Travel: the friend travelled far away" (T19's notice, in the shared world).
+    - door 47/0. farfight 46/1: "the guest killed at least one enemy far from the host" FAILED.
+    - 10:24 THE REGRESSION IS REAL. The DamageRange tally has two halves: "blows from the host's client" (what the
+      host's game got back from the server: blows that LANDED) and "blows from the guest's client" (the joined player's
+      own count of its swings at NPCs). pp47: crime 0 / 0, farfight 0 / 0, leave 0 / 13: no player blow landed on an
+      NPC in any step. pp46 (7d0d63b2): farfight 2-3 / 17-29 and 3 kills, crime 9 + host 6, leave 2 / 34. cs104 on
+      499b8923 (the host swung 20 times among bandits): host>NPC 0. The only game-side change from 7d0d63b2 to
+      499b8923 is the mid hook at exe+0x37E45B1 (fb39b20); it never fired, so the PATCH itself breaks player damage
+      (likely the game's protection checking that code and reacting silently). The posted 7d0d63b2 does not have it.
+      Plan: pp47 stops after farfight2 (stop marker again, also to answer two playtesters); the guard becomes a
+      vectored handler with no code patch (scratchpad/comp_null_veh.py); crime + farfight on that build; then a new
+      full pass. 0f519102 is NOT to be posted.

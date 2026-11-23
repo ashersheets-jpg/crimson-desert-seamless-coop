@@ -164,7 +164,7 @@ after a minute). Each ends with a Victory or Defeat card; most are first to 2 ro
 - Rock, paper, scissors: U (scissors), F (paper), E (rock); pad X, Y, B.
 - Hunting contest: 3-minute rounds; small game 1 point, deer and foxes 2, bears,
   wolves and boars 3.
-- Race to the waypoint: the host's map waypoint (right-click on the map) is the finish;
+- Race to the waypoint: the host's map destination (right-click on the map) is the finish;
   the first within 12 m wins the round.
 - Hide and seek: 45 s to hide within 100 m while the seeker's screen is dark, then 3
   minutes to find the hider (within 4 m); "Cold / Warm / Hot" says how close you are.

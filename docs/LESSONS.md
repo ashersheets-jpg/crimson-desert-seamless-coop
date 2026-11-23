@@ -698,3 +698,14 @@ address-space lock while the loader maps memory. safe_memory.h already said safe
 fast_read for hooks on game threads; one hook broke the contract. When a freeze repeats, turn FreezeWatch on before
 theorizing (my first theory, the window in the background, cost a test run), and keep every game-thread hook on
 fast_read.
+
+## A mid hook in the game's protected code broke player damage silently; read a counter's halves (2026-11-23)
+pp47 (0f519102): no player blow damaged an NPC in any step, and research runs on every build since 499b8923 showed the
+same. The only game-side change from the posted 7d0d63b2 was a mid hook at exe+0x37E45B1 (an actor update's null
+guard) that never fired: the PATCH itself is what broke it, most likely the game's protection checking that code and
+reacting without a crash. Two lessons. (1) A guard for a rare crash should not patch code at all when it can be a
+vectored handler that acts only on the faulting instruction (it costs nothing in normal play and changes no bytes);
+and every new hook in game code needs one fight check (players hurting NPCs) before the checklist, not after.
+(2) I first called it a false alarm because the leave step showed "guest>NPC 13": that was the half of the DamageRange
+tally the JOINED player's game counts (its own swings), not the host's half (blows that landed: 0). Read which half
+a number is before concluding, and grep the same counter across the last good pass (pp46-*) and this one first.
