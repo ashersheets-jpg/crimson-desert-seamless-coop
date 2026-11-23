@@ -5,13 +5,14 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-NOT POSTED YET (0.1.0-alpha+0f519102 candidate, for game 1.0.0.3732; its checklist is next):
+NOT POSTED YET (candidate ee4cf8e5, for game 1.0.0.3732; its checklist is next. pp47 on 0f519102 was stopped: its
+"no player blow lands" failures were the test harness's cursor, the posted build failed them the same way):
 - **The host no longer freezes 4-15 s when the friend loads in or teleports** (T09b): merchant_unhide's per-tick hook
   read game memory with safe_read, whose VirtualQuery waited on the address-space lock while the game loaded the
   friend's area (FreezeWatch samples, csfz); it reads with fast_read now. csfz2: no host hitch over 0.5 s at the join
   and two teleports (it froze 4-5 s before; most checklist logs had ~15 s).
 - **The joined player's crash under lag is guarded** (exe+0x37E45B1, an actor update reading a missing component;
-  pp46 lagrun), on both games.
+  pp46 lagrun), on both games, by a vectored exception handler (no game code is changed at that spot).
 - **Race to the waypoint works in the shared world** (T41; cs101c): the host's map destination reaches the race
   through the native base (cdmp_own_waypoint); both games race to the same point and agree on the winner. Also
   re-checked in the shared world: rock-paper-scissors (cs100) and hide and seek (cs102b), whole matches.

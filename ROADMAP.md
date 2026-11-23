@@ -392,6 +392,14 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
 **Last (needs the rest stable)**
 - [~] **P1 — Playtest findings (Borque's two-PC session, 2026-11-17, ada1800c).** Each fixed and tested before the
   release (the ship rule: the guest sees and uses what the host does).
+  - [ ] (Brycecco, 2026-11-23, two PCs, 7d0d63b2) At an early boss fight the joined player saw the boss's health bar
+    and the attack particles but NOT the boss or its minions (the host did). Before that, with Story scenes together
+    on, the joined player got no quest credit (the host did; shared quest credit is a separate, off-by-default option).
+    Zips promised for the evening. Invisible NPCs for the joined player: the hard-blocker class; boss fights (B07)
+    are untested on two games. Hypothesis to check in the zips: merchant_unhide's case (hide bit 9 of
+    [[npc+0x68]+0x20]+0x3B8 set after a scene binds the NPC, cleared only by its AI; in co-op the clear never comes,
+    so the shop / function scenes on its list are unhidden by the mod): a boss bound by a STORY scene is not on that
+    list and would stay hidden on the joined player's game while its health and effects show.
   - [~] The guest's progress was not kept: the host's PC has 3 Steam accounts' save folders and guest_own_save was
     forced off. Fixed (native af4cdfb: Steam's ActiveUser picks the folder). Not yet run with several folders.
   - [~] A failed horse taming (minigame 0x4242) left the guest with no input: the server sent the 2292 of the

@@ -699,13 +699,13 @@ fast_read for hooks on game threads; one hook broke the contract. When a freeze 
 theorizing (my first theory, the window in the background, cost a test run), and keep every game-thread hook on
 fast_read.
 
-## A mid hook in the game's protected code broke player damage silently; read a counter's halves (2026-11-23)
-pp47 (0f519102): no player blow damaged an NPC in any step, and research runs on every build since 499b8923 showed the
-same. The only game-side change from the posted 7d0d63b2 was a mid hook at exe+0x37E45B1 (an actor update's null
-guard) that never fired: the PATCH itself is what broke it, most likely the game's protection checking that code and
-reacting without a crash. Two lessons. (1) A guard for a rare crash should not patch code at all when it can be a
-vectored handler that acts only on the faulting instruction (it costs nothing in normal play and changes no bytes);
-and every new hook in game code needs one fight check (players hurting NPCs) before the checklist, not after.
-(2) I first called it a false alarm because the leave step showed "guest>NPC 13": that was the half of the DamageRange
-tally the JOINED player's game counts (its own swings), not the host's half (blows that landed: 0). Read which half
-a number is before concluding, and grep the same counter across the last good pass (pp46-*) and this one first.
+## "No player blow lands" was the test harness's cursor, not the build: A/B the posted build first (2026-11-23)
+pp47 (0f519102): no player blow damaged an NPC in crime, farfight or leave, and research runs since ~05:00 showed the
+same. I blamed, in turn, the newest game-code hook (a mid hook that never fired) and rebuilt it as a vectored handler;
+pp48a failed the same way, and only then the decisive A/B ran: the POSTED 7d0d63b2, which passed this step at 01:40,
+failed it at 11:16. The cause was the harness: its focus fallback for the Windows Update toast clicks the game's
+title bar and left the mouse cursor there, so every later click:L (an attack) went to the title bar. Lessons: (1) when
+a known-good step starts failing, run the last posted build on it FIRST: it splits "our code" from "the test PC" in
+one run, before any theory or rebuild; (2) a harness change that moves the cursor (or focus) must put it back;
+(3) read which half of a tally a number is ("blows from the guest's client" counts its own swings; "from the host's
+client" counts blows that landed) before concluding anything from it.

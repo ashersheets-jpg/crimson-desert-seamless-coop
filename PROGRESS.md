@@ -10628,3 +10628,37 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
       Plan: pp47 stops after farfight2 (stop marker again, also to answer two playtesters); the guard becomes a
       vectored handler with no code patch (scratchpad/comp_null_veh.py); crime + farfight on that build; then a new
       full pass. 0f519102 is NOT to be posted.
+    - 10:30 pp47 paused after farfight2 (46/0): 17 steps, 648 pass, 9 fail. Discord (#general, read 10:20): Brycecco
+      (first two-PC run: with Story scenes together on, the joined player got no quest credit, the host did; with it
+      off, the joined player saw no NPCs the host saw) and Burns (@ me: is the climbing animation solved?). Replied
+      10:31 (tagged): Brycecco: the Shared quest credit option (host, Co-op tab > Saves & Story), keep the experimental
+      scenes off, and the NPC problem to #bug-reports with BOTH zips and where they were; Burns: climbing is synced by
+      the base, not every climb checked in the shared world, a clip and zips if the friend slides or floats.
+      EdwardJames's "how close is 3-4 players / a final version" was answered by JackyChan004; not repeated.
+      10:33 Brycecco: "Will upload when im home from work"; it was a BOSS fight (early, among the story's intros): the
+      joined player saw the boss's health bar and the attack particles but not the boss or its minions. Invisible
+      NPCs for the joined player = the hard-blocker class; boss fights are untested (B07). Zips to come. To acknowledge
+      after pp48a (no key input during a test).
+- 10:32 package ee4cf8e5 (native 2bb4557: the exe+0x37E45B1 guard as a vectored handler, no code patch). pp48a from
+  10:32: crime + farfight (blows must land: the host-side tally and the guest's kill).
+  * 10:42 pp48a crime 49/2: the SAME two failures (no heal-back, no guest hit booked), host-side tally 0 / 0. So the
+    patch at exe+0x37E45B1 was NOT the cause (the vectored guard changes no code). The 10:24 conclusion was wrong too.
+  * pp48a farfight: the join FAILED (guest REMOTE False at 10:51, both "in the shared world" False): a Windows Update
+    toast ("Your device will restart to update outside of active hours (estimate: 6 min)") sat over the lobby (L0
+    shot 10:42) and the host's window was left un-maximised; 12 checks failed with it, the install restored 5/5.
+    Notified the user by push (I never click the toast or pause updates). The restart has not come yet (11:08).
+  * 11:08 A/B: the build tree's DLLs saved (dllswap save ee4cf8e5) and 7d0d63b2's put in; ab46 = crime on the posted
+    build. Blows land there -> the regression is in today's code; not -> the test world / environment changed.
+  * 11:17 ab46 (crime on 7d0d63b2's DLLs): 49/2, the SAME two failures, landed blows host 1 / guest 0. So the posted
+    build is fine and the cause is the test PC, since ~04:00. Found: actpid.ps1's focus fallback (added 2026-11-22 for
+    the Windows Update toast) clicks the game's title bar at (120, 12) to take the front back and LEFT THE CURSOR
+    THERE; every later click:L (the attacks) went to the title bar. steps.log has "the front was taken back with a
+    click on the game's title bar" many times today (the update toasts came back this morning). Test-kit fix: the
+    cursor goes back to the window's middle after that click. pp48b (crime + farfight on ee4cf8e5) checks it from
+    11:18. The vectored guard stays (no code patch is better anyway) and needs its full pass like any mod-code change.
+  * 11:28 pp48b crime 51/0 (host-side landed blows: the host's 5+, the crime and heal-back checks pass). The cursor was
+    the cause. farfight next, then the full pass pp48 on ee4cf8e5.
+  * 11:38 pp48b farfight 46/1: still no kill, the joined player's landed blows 0, and it was down by g1. The crime pass
+    came from the E-hold attacks (keyboard); every click:L blow failed. No title-bar click happened in pp48b, so the
+    cursor was still where an earlier fallback had left it (on a title bar). Second test-kit fix: every actpid key
+    sequence starts with the cursor in the middle of its game's window. pp48c (farfight) from 11:40.
