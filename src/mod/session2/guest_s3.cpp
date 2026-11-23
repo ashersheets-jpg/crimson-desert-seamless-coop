@@ -129,7 +129,6 @@ uint8_t* g_ret = nullptr;  // a lone `ret`
 
 SafetyHookMid g_h_null, g_h_update, g_h_spawn, g_h_spawn_al, g_h_ack;
 SafetyHookMid g_h_move_null;
-SafetyHookMid g_h_comp_null;
 std::atomic<bool> g_move_null_on{false};
 std::atomic<uint64_t> c_move_null{0};
 std::atomic<uint64_t> c_comp_null{0};
@@ -347,11 +346,20 @@ void on_move_null(safetyhook::Context& ctx) noexcept {
     ctx.rip = g_base + kMoveNullResume;
 }
 
-// The actor update's component read (kCompNull): a null pointer skips the read and the store.
-void on_comp_null(safetyhook::Context& ctx) noexcept {
-    if (ctx.rax) return;
+// The actor update's component read (kCompNull): a null pointer skips the read and the store. 2026-11-23 (pp47: no
+// player blow on an NPC registered while this site was patched with a mid hook, fb39b20 -> 0f519102): a vectored
+// handler now, the code is never patched. An access violation AT the instruction with rax == 0 (the read of null+0xC)
+// resumes at 0x37E45BA, as the code does for a missing component; anything else is passed on.
+PVOID g_comp_null_veh = nullptr;
+LONG CALLBACK comp_null_veh(EXCEPTION_POINTERS* ep) noexcept {
+    const EXCEPTION_RECORD* r = ep ? ep->ExceptionRecord : nullptr;
+    CONTEXT* c = ep ? ep->ContextRecord : nullptr;
+    if (!r || !c || r->ExceptionCode != EXCEPTION_ACCESS_VIOLATION) return EXCEPTION_CONTINUE_SEARCH;
+    if (!g_base || c->Rip != g_base + kCompNull.rva || c->Rax != 0) return EXCEPTION_CONTINUE_SEARCH;
+    if (r->NumberParameters >= 2 && r->ExceptionInformation[1] != 0xC) return EXCEPTION_CONTINUE_SEARCH;
     c_comp_null.fetch_add(1, std::memory_order_relaxed);
-    ctx.rip = g_base + kCompNullResume;
+    c->Rip = g_base + kCompNullResume;
+    return EXCEPTION_CONTINUE_EXECUTION;
 }
 
 void on_spawn_al(safetyhook::Context& ctx) noexcept {
@@ -479,6 +487,17 @@ bool bytes_match(uintptr_t rva, std::span<const uint8_t> expected) {
     std::vector<uint8_t> actual(expected.size());
     return game::safe_read(g_base + rva, actual.data(), actual.size()) &&
            std::memcmp(actual.data(), expected.data(), expected.size()) == 0;
+}
+
+// Once per process (the guest's install thread and the host's guard thread both arm it); the site's bytes checked.
+bool arm_comp_null_veh() noexcept {
+    static std::atomic<bool> armed{false};
+    if (armed.load()) return true;
+    if (!bytes_match(kCompNull.rva, kCompNull.bytes)) return false;
+    if (armed.exchange(true)) return true;
+    g_comp_null_veh = AddVectoredExceptionHandler(1, comp_null_veh);
+    if (!g_comp_null_veh) armed.store(false);
+    return g_comp_null_veh != nullptr;
 }
 
 // The patch SafetyHook chose must be exactly the verified instructions.
@@ -609,9 +628,11 @@ DWORD WINAPI install_thread(LPVOID) {
             g_move_null_on = make_mid(kMoveNull, g_h_move_null, on_move_null);
             log::info("GuestS3 guard (Co-op+, 3549): the movement update's current-action read exe+0x{:X} {}",
                       kMoveNull.rva, g_move_null_on.load() ? "guarded (a null action skips to exe+0x825C13)" : "OFF");
-            g_comp_null_on = make_mid(kCompNull, g_h_comp_null, on_comp_null);
+            g_comp_null_on = arm_comp_null_veh();
             log::info("GuestS3 guard (Co-op+, 3732): the actor update's component read exe+0x{:X} {}", kCompNull.rva,
-                      g_comp_null_on.load() ? "guarded (a null skips the read and its store)" : "OFF");
+                      g_comp_null_on.load() ? "guarded by a vectored handler (a null read there resumes past its "
+                                              "store; the code is not patched)"
+                                            : "OFF");
             if (g_diag.load()) {
                 // One owner per entry: with guest_remote_update_guard=1, horse_diag hooks 0x85FBA0.
                 if (!g_update_taken.load()) g_update_on = make_mid(kUpdate, g_h_update, on_update);
@@ -1420,9 +1441,11 @@ DWORD WINAPI host_move_thread(LPVOID) {
               g_move_null_on.load() ? "guarded (a null action skips to exe+0x825C13: an NPC changing games mid-setup)"
                                     : "OFF");
     for (int i = 0; i < 24000 && !bytes_match(kCompNull.rva, kCompNull.bytes); ++i) Sleep(5);
-    g_comp_null_on = make_mid(kCompNull, g_h_comp_null, on_comp_null);
+    g_comp_null_on = arm_comp_null_veh();
     log::info("HostMoveGuard (Co-op+, host): the actor update's component read exe+0x{:X} {}", kCompNull.rva,
-              g_comp_null_on.load() ? "guarded (a null skips the read and its store)" : "OFF");
+              g_comp_null_on.load() ? "guarded by a vectored handler (a null read there resumes past its store; the "
+                                      "code is not patched)"
+                                    : "OFF");
     return 0;
 }
 }  // namespace
