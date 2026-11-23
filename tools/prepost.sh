@@ -4,7 +4,7 @@
 #
 #   bash tools/prepost.sh TAG "<package folder>" STEP        STEP = static | real | fresh | xess | fsr | display |
 #                                                                   lowsave | chest | revive | loot | crime | leave | shop | farfight | farfight2 | newsave | solostart | mounts | mountfight | nosave |
-#                                                                   retry | stuck | mismatch | hostrevive | lagrun | door |
+#                                                                   retry | stuck | mismatch | hostrevive | lagrun | door | armwrest |
 #                                                                   summary
 #
 # TAG names the run (pp1 ...): the test names are TAG-STEP, the report is build/native/prepost-TAG.txt.
@@ -763,8 +763,33 @@ door)
   if [ -n "$ack" ] && [ "$ack" -ge 1 ]; then ok "guest: the server answered its door request (Ack $ack)"; else bad "guest: no door Ack (last summary: '${m:-none}')"; fi
   if [ "${nak:-x}" = "0" ]; then ok "guest: no door request refused (Nak 0)"; else bad "guest: door requests refused (Nak ${nak:-none}): the T23 bug"; fi
   info "guest: $(echo "$m" | grep -o 'candidata:.*' | cut -c1-90)" ;;
+armwrest)
+  head_step "arm wrestling: the joined player plays its own match at the Hernand inn table (the twin, on by default), then the host its own"
+  # 2026-11-22 (B14, cs95b / cs103): the host's server makes a table match's grip only for the host, so the joined
+  # player's game gets its own copy of the table's scene (ShopTwin twin_extra=94FEA6AE) and makes the grip itself
+  # (twin_extra_chart=3); the layer writes both into its native ini (no dev override here). The joined player talks to
+  # the organizer (R), Participate (E held 2 s), mashes E (a win), Back (Esc); then, off the spot, the host does the same.
+  AIM=$(cat $N/scan/b13_aim.txt 2>/dev/null || echo -10662.0,-3831.1)
+  { for i in 1 2 3; do echo "wait 10000"; done; echo "tp -10657.5 619 -3826.5"; for i in $(seq 1 12); do echo "wait 10000"; done
+    echo "wait 5000"; echo "tp -10661.5 619 -3830.0"; for i in $(seq 1 10); do echo "wait 10000"; done; } > $N/scan/armwrest_host.txt
+  { echo "wait 8000"; echo "tp -10661.5 619 -3830.0"; for i in $(seq 1 12); do echo "wait 10000"; done; echo "wait 2000"
+    echo "tp -10657.5 619 -3826.5"; for i in $(seq 1 12); do echo "wait 10000"; done; } > $N/scan/armwrest_guest.txt
+  MASH=""; for i in $(seq 1 240); do MASH="${MASH}k:E:40_w:43_"; done
+  GK="w:15000_py:facesweep:${AIM},-180,160,20,82,1500,u2_w:500_w:4000_shot:$NAME-g0_kd:E_w:2000_ku:E_w:12000_shot:$NAME-g1_${MASH}shot:$NAME-g2_w:8000_shot:$NAME-g3_k:ESC:150_w:3000_shot:$NAME-g4"
+  HK="w:60000_shot:$NAME-h0_py:facesweep:${AIM},-180,160,20,82,1500,host_w:500_w:4000_shot:$NAME-h1_kd:E_w:2000_ku:E_w:6000_shot:$NAME-h2_${MASH}shot:$NAME-h3_w:8000_shot:$NAME-h4_k:ESC:150_w:3000_shot:$NAME-h5"
+  run2 "-CoopPlus -Lobby -Fresh -PackageIni $MODW -HostVariant usercopy -Hold 10 -HostScript $SCAN\\armwrest_host.txt -GuestScript $SCAN\\armwrest_guest.txt -GuestKeys $GK -HostKeys $HK"; two_player_checks
+  H=$N/$NAME.host.log; G=$N/$NAME.guest.log
+  has "$G" "ShopTwin \\[extra\\] twin_extra .*0x94FEA6AE"                    "guest: the table's twin is on (from the layer's ini)"
+  has "$G" "ShopTwin \\[extra chart\\] twin_extra_chart=3"                     "guest: the grip is made on its own game (twin_extra_chart=3)"
+  has "$G" "ShopTwin \\[table\\] twin 0x1[0-9A-F]+ \\(resource 0x94FEA6AE\\) state 6 branch 0 -> 7" "guest: its match started (state 7)"
+  has "$G" "answered with a grip made here"                                   "guest: the match's grip made on its game"
+  has "$G" "ShopTwin \\[table\\] twin 0x1[0-9A-F]+ \\(resource 0x94FEA6AE\\) state 7 branch 0 -> 8" "guest: it WON (state 8)"
+  has "$G" "ShopTwin \\[table\\] twin 0x1[0-9A-F]+ \\(resource 0x94FEA6AE\\) state 1[01] branch [0-9] -> (11|0)" "guest: Back from the table (state 11 / 0)"
+  n=$(grep -cE "host asked: requester 0xA0100001 .* ACCEPT" "$H" 2>/dev/null)
+  [ "${n:-0}" -ge 1 ] && ok "host: its own talk to the organizer accepted after the joined player's match ($n)" || bad "host: no talk of its own accepted at the table"
+  info "screenshots to LOOK AT (g2: the joined player's won match, h3: the host's): $(cd $N/shots && ls $NAME-*.png 2>/dev/null | tr '\n' ' ')" ;;
 summary)
-  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c '^== ' "$R") (27 in the list)"; exit 0 ;;
+  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c '^== ' "$R") (28 in the list)"; exit 0 ;;
 *) echo "unknown step $STEP"; exit 2 ;;
 esac
 sed -n "/^== $STEP /,\$p" "$R"

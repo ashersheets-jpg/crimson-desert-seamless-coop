@@ -94,7 +94,7 @@ Steam join/invite/leave and room code, friends-only vs invite-only, join/leave n
 - [x] **T18 — Trading and gifting.** Players can send items to each other with a confirmation step. No duplication exploits, a transaction log, and works on controller. *Done when:* duplication attempts (disconnect mid-trade, spam) fail safely. (Delivered as B11 in the shared world: give and trade through the game's own item move, confirm step, pad and keyboard, both directions on 3663 (cs21a / cs34a / cs35b); see B11.)
 - [~] **T19 — Party travel and summon.** Add party fast-travel (both players go, with consent), "summon to me" (with consent and cooldown), and an optional auto catch-up if the partner is too far. Never place players in invalid or underground spots. *Done when:* tested from several regions including cliffs and water.
 - [x] **T20 — World-state persistence rules.** Define and implement what happens to world state changed during co-op (cleared camps, killed bosses, gathered nodes, opened doors) for host and guest. Document the rules in the README. *Done when:* the rules are written and a test confirms host and guest outcomes.
-- [~] **T21 — Fix: empty arm-wrestling table.** The pub table has no NPCs when the stand-in is connected from the start. Find and fix the cause. *Done when:* arm wrestling works regardless of connection timing. (The empty table was the two-worlds design's; in the shared world both games list the same 15 people there (cs33a) and the host's match works. Left, as B14: the joined player's own match.)
+- [x] **T21 — Fix: empty arm-wrestling table.** The pub table has no NPCs when the stand-in is connected from the start. Find and fix the cause. *Done when:* arm wrestling works regardless of connection timing. (The empty table was the two-worlds design's; in the shared world both games list the same 15 people there (cs33a) and the host's match works. Left, as B14: the joined player's own match. DONE 2026-11-22 with B14: cs103, both players' matches at the table, every path.)
 - [~] **T22 — World event sync.** Sieges, faction events and other dynamic events that start in the host's world are visible and participatable for the guest. *Done when:* at least the most common event types are verified.
 - [ ] **T23 — Object interaction sync.** Doors, gates, levers, movable and thrown objects, and destructibles look consistent to both players. *Done when:* each is tested with both players nearby.
   (2026-11-21: in the shared world the objects are the host server's, one copy for both. Known bug from the native
@@ -106,8 +106,13 @@ Steam join/invite/leave and room code, friends-only vs invite-only, join/leave n
   scene_level_share=1 FIXED it (the levels "[ready for user 2]", the door's Req -> Ack, Nak 0). On by default for the
   host since 677c87bb. Left: a checklist door step; gates, levers, movable / thrown objects and destructibles.)
 - [x] **T24 — Communication.** Add in-session text chat and ping types (danger, loot, go here) with game-styled display. *Done when:* usable on keyboard and controller.
-- [~] **T25 — Mount edge cases.** Mount summon, despawn, death, mount swapping, and flying-mount landing all stay in sync. Two players on one mount only if feasible. *Done when:* each case is tested.
-- [~] **T26 — Death penalty and respawn options.** Config options for penalty (none, partial loss, full) and respawn rules, applied consistently on both sides. *Done when:* every option is tested. (2026-11-22: the respawn option is done; the penalty options were blocked on the two-worlds design (no removal the server accepts). On the native shared world the game's own jail fine removes items on the host's server (RemoveItemToInventoryAck 2481): a lead to a server-side removal; design in docs/research/t26-death-penalty.md. 2026-11-22: route 2 built as research, off (native 6af91d5: the host's server takes a player's own "I got up myself" request and removes the host's share of its money with the game's own delete; layer: the revive prompt's Q / U send it); cs97 lists the money pouch to find the silver's key, cs97b the removal; then the setting.)
+- [~] **T25 — Mount edge cases.** Mount summon, despawn, death, mount swapping, and flying-mount landing all stay in sync. Two players on one mount only if feasible. *Done when:* each case is tested. (2026-11-22 cs99: a horse killed under its rider cannot be scripted: the game ignores KillCheatReq on a player's mount (two minutes later both games still showed the joined player riding it). That case goes to the hands-on list: a real death by enemies or a fall.)
+- [~] **T26 — Death penalty and respawn options.** Config options for penalty (none, partial loss, full) and respawn rules, applied consistently on both sides. *Done when:* every option is tested. (2026-11-22: the respawn option is done; the penalty options were blocked on the two-worlds design (no removal the server accepts). On the native shared world the game's own jail fine removes items on the host's server (RemoveItemToInventoryAck 2481): a lead to a server-side removal; design in docs/research/t26-death-penalty.md. 2026-11-22: route 2 built as research, off (native 6af91d5: the host's server takes a player's own "I got up myself" request and removes the host's share of its money with the game's own delete; layer: the revive prompt's Q / U send it); cs97 lists the money pouch to find the silver's key, cs97b the removal; then the setting.) (2026-11-22 cs97: the request reached the host's server for both players and the "Money" pouch was listed; it holds the camp money and contributions only. The coins are item key 1 (the arm-wrestling prize names item 1), in another inventory: the native now searches every inventory for the item (40f0c15). cs97b (item 1) is the removal test; the layer passes item 1 to the host only after it passes.) (2026-11-22 19:11 cs97b
+PASSED: item 1 is 'Money_Copper', in the character's bag (inventory 1, slot 6); the joined player and then the host
+each lost exactly 10 % (1145 of 11454), err 0, once per death; SAVES OK, the test world unchanged. The layer now passes
+item 1 (kDeathPenaltyItem), so the Co-op tab shows the choice (Reviving); the death screen says the cost, "Everyone is
+down" too. Left before [x]: cs97c on the build (the player's own setting path, no research switch), then the
+checklist.)
 - [~] **T27 — Nexus release package.** README (install, uninstall, requirements, controls, known issues), credits and permissions for all other authors' mods (list as requirements unless permission is on file), license, changelog, bug-report template, compatibility list, screenshot and GIF shot list, and verified manual and Vortex install. Nothing from game files bundled. *Done when:* a clean-machine install-and-uninstall walkthrough passes.
 - [~] **T28 — Mod compatibility testing.** Identify the most-downloaded mods for the game, test alongside the co-op mod, and document conflicts. Detect known conflicts at launch and warn the user. *Done when:* a compatibility table exists. (The table by KIND of mod exists, docs/compatibility.md, and the launch notice works. Left: real mods. The owner's standing OK of 2026-11-17 covers downloading Nexus mods: the most-downloaded few, each installed into a test copy with Co-op+ for one two-copy run, between other test chains. 2026-11-22: the top 20 by
 downloads read and classified for the shared world (docs/compatibility.md 2b); downloading needs a signed-in Nexus
@@ -233,6 +238,7 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   scenes that start from a TALK (design question to the user), a hands-on / tester check of the fix.
   2026-11-21: the talk scenes were decided (option 2, 11-17); a script may reach them now: talks start with R while
   the camera faces the person, every scripted try had held E (cs79: faceto + R at Marius and Ross). 2026-11-22, from cs79b's logs: each of Marius / Ross stood TWICE at one spot on the host's game, and the second copies (0xB0100279, 0xB010027F) are the bound NPCs of the joined player's OWN story scenes (0x1CD, 0x1D0; "Story scenes together" prepares them on its own quest manager): the host's game shows the friend's copies too, and in cs79b the host's game sent NO talk request (2671) to either copy: most likely its aim settled on the friend's copy, which has no talk on the host's game (unproven). Next: the friend's own-scene people hidden on the host's game (and the host's on the friend's), then the talks by script again.)
+  (2026-11-22 cs79c, the story mode off: one Marius and one Ross, and the scripted talks still took nothing. The doubles were not the block; the cabin talks stay on the hands-on list. The doubles remain a story-mode defect to fix before that mode can be on by default.)
 - [~] **B10 — Quest sharing on by default** (live quest steps, co-op save per friend: out of experimental).
   (2026-11-09: quest_route -- option 3 LIVE in tcB198: the guest's game events go to its OWN quest manager instead
   of the host's; option 2 = quest_shared_credit, built, untested. A guest quest step advancing still to be shown.)
@@ -252,6 +258,7 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   cutscenes) and host-only missions.
 
 **Items** (decomp: the bag's item transaction, docs/research/reverse-engineering-3576.md "Items")
+  (2026-11-22 cs93b, the same run with quest_shared_credit OFF: the host's camp step moved and the joined player got nothing after its login lists. cs93's copy for the joined player was the credit's doing, not the game's. Built and shown; on by default or not is the user's call.)
 - [x] **B11 — Item gifting and trading** (confirm step, no duplication, a log, controller). (2026-11-10: the inventory's
   Discard next to the friend asks Give to <name> / Discard / Cancel, pad and keyboard, tcB299; the give reaches the
   host's server both ways, tcB300; 2026-11-10 tcB321: host -> guest give WORKS through the game's own whole-record
@@ -271,7 +278,7 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   the order is: the guest's own match at the Hernand table (B14, cs76c), then both players in a match at once (one
   server: does it allow two matches at one table, or at two tables?), then the shared gauge; [dev] versus_test checks
   the gauge on one game.)
-- [~] **B14 — The empty arm-wrestling table** (T21). (2026-11-16 cs33a: on native both games list the same 15
+- [x] **B14 — The empty arm-wrestling table** (T21). (2026-11-16 cs33a: on native both games list the same 15
   people at the Hernand inn table and both screens show them; left: the guest's own "Try arm wrestling" there.)
   (2026-11-21: the table is the host's scene 'cd_minigame_armwrest_base' with no twin, so the joined player's prompt
   there is refused like the host's own shop entries; the way in is a twin like the shops' (research:
@@ -287,6 +294,12 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   into a match. ON BY DEFAULT in the layer from the next build (the guest's native ini: twin_extra=94FEA6AE,
   twin_extra_chart=3). Left before [x]: cs103 on that build (no dev overrides; a lost match, Play Again, then the
   host's own match at the same table), then both players in matches at once (B13's question).)
+  (2026-11-22 18:59 DONE, cs103 on 40de0201 with no dev override: the joined player's twin from the layer's ini; two
+  fees (RemoveItemToInventoryAck 20 each), the grip made on its game both times, a LOSS (MiniGameResultReq 0, no
+  prize), Play Again (10 -> 3), a WIN (MiniGameResultReq 1, prize 30), Back (10 -> 11 -> 0); then the host's own
+  match at the same table: talk accepted, fee, grip, gauge 50 -> 96, a win and its prize; the joined player's game not
+  pulled into it. Both players in matches at the same moment belongs to B13 (its seat question). A checklist step
+  "armwrest" guards it from the next pass on.)
 - [~] **B15 — Duel extras and scoreboard** (wagers, arenas, spectator camera, rematch, titles). (Rematch T42,
   scoreboard and titles T43 exist. 2026-11-16 wagers: from a challenge's invite on, "Stake on the challenge" on the
   inventory's Discard question; when the match ends the loser's game gives its stake to the winner (cs36e, one PC).

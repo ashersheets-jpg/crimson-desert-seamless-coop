@@ -565,11 +565,15 @@ void hud_draw(float width, float height) {
                                                        "{ReviveCheckpoint} Revive at Checkpoint";
         // T26: the host's death penalty, when one is in force and getting up alone is a choice here.
         const int pct = net::revive_death_penalty();
-        const std::string sub = pct > 0 && d.revive_prompt == 1
-                                    ? std::format("Return to your path?   Getting up by yourself costs {} of your "
-                                                  "silver; your friend can revive you for free.",
-                                                  pct == 100 ? std::string("all") : std::format("{} %", pct))
-                                    : std::string("Return to your path?");
+        const std::string cost = pct == 100 ? std::string("all") : std::format("{} %", pct);
+        // 2026-11-22: "Everyone is down" (3) charges too (its U is a revive by ourselves), so it says so; only the
+        // friend's revive is free, and there is none to offer then.
+        const std::string sub =
+            pct > 0 && d.revive_prompt == 1
+                ? std::format("Return to your path?   Getting up by yourself costs {} of your silver; your friend can "
+                              "revive you for free.", cost)
+            : pct > 0 && d.revive_prompt == 3 ? std::format("Return to your path?   Getting up costs {} of your silver.", cost)
+                                               : std::string("Return to your path?");
         ui::death_screen(width, height, "Death has found you.", sub.c_str(), choices);
     }
 

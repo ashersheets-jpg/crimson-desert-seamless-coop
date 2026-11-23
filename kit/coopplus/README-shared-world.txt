@@ -109,7 +109,7 @@ The host's game runs the world; the friend plays in it with their own character.
 - Quests and story: each of you keeps and plays your OWN story in the shared world;
   you can do your own steps and fight together. Optional (Co-op tab > Saves & Story):
   "Shared quest credit" (a step you are BOTH on is done for both when one of you does
-  it; new, not proven yet) and "Story scenes together (experimental)" (a story scene
+  it) and "Story scenes together (experimental)" (a story scene
   waits until both of you are there and both press, then each game plays it).
 - Time of day and weather follow the host.
 - Mounts: each of you sees the other ride (your own horse, a borrowed or wild one,
@@ -146,7 +146,9 @@ Co-op tab.
   revive (30% health), U / Y revive at the checkpoint. For 30 seconds your friend can
   also get you up where you fell, with full health: they stand by you and hold
   Interact for 3 seconds. At a boss you can wait for your friend instead ("Your
-  partner is still fighting the boss"; Co-op tab > Reviving).
+  partner is still fighting the boss"; Co-op tab > Reviving). If the host turned on the
+  silver penalty (Co-op tab > Reviving), getting up by yourself costs that share of
+  your own silver; the death screen says how much.
 - Group photos: the game's photo mode (pause menu) shows your friend too; Co-op+'s own
   labels hide while it is open. The quick message "Hold still: photo!" asks them to pose.
 - Menus: opening the map, inventory or pause menu does not pause the shared world.
@@ -167,8 +169,9 @@ after a minute). Each ends with a Victory or Defeat card; most are first to 2 ro
 - Hide and seek: 45 s to hide within 100 m while the seeker's screen is dark, then 3
   minutes to find the hider (within 4 m); "Cold / Warm / Hot" says how close you are.
 - Fishing contest: six minutes; every fish you keep scores (river 1, sea 2, legendary 5).
-- Arm / hand wrestling against each other: not yet (see KNOWN ISSUES); the host can play the
-  tables against the townsfolk as usual.
+- Arm / hand wrestling against each other: not yet (see KNOWN ISSUES). Each of you can play
+  the arm-wrestling tables against the townsfolk (checked at the Hernand inn): talk to the
+  organizer; the fee comes from your own purse and the prize goes to it.
 
 
 GIVING, TRADING, WAGERS, THE SHARED STASH
@@ -196,7 +199,10 @@ THE CO-OP TAB'S SETTINGS
 - Combat & Loot: Tougher enemies with a guest; Enemy health with a guest; Boss health
   with a guest (the host's values count).
 - Reviving: Revive each other; After a checkpoint revive: stay at the checkpoint, or
-  back to my friend; Wait for my friend if I die at a boss.
+  back to my friend; Wait for my friend if I die at a boss; Silver lost when you get up
+  by yourself after a death (none, 10 %, 25 %, half, all; off by default; the host's
+  choice applies to both of you from the next Start Co-op; your friend getting you up
+  costs nothing).
 - World: Items in the world (each their own, or first come); Weather follows the host.
 - Display: Ping and packet loss on screen; Player colours (gold host / blue guest, or
   colour-blind safe); My friend's map pin colour; Name over my friend.

@@ -78,8 +78,8 @@ a counter): the spectators' loop, not part of the match.
 
 cs83w4's minigame requests on the other paths: Back from the menu = DeactivateMiniGameReq (2584, the minigame id);
 a lost match = MiniGameResultReq with 0 (no prize); Play Again = SpawnMiniGameCharacterReq + ApplyMiniGameReq again
-(another 20 copper taken); a won match = the prize's AddItemToInventoryAck (0x1E = 30 of item 0x4413: the stake back
-plus 10); Back after a match = LeaveMiniGameReq naming the player + DeactivateMiniGameReq.
+(another 20 copper taken); a won match = the prize's AddItemToInventoryAck (0x1E = 30 of item 1, the coins; 0x4413
+at +5 is the message's reason, not the item: corrected 2026-11-22; the stake back plus 10); Back after a match = LeaveMiniGameReq naming the player + DeactivateMiniGameReq.
 
 The host won (shot h6: "E Play Again (20)", the purse 114.64 top right). The match is driven by the CLIENT's
 minigame requests, which name the minigame, the player and the opponent; only the opponent's spawn and unspawn name

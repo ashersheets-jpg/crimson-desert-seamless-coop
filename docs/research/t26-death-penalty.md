@@ -52,7 +52,13 @@ handler at 0x2E6F367..0x2E6F47B, the same steps one for one:
 - time = _time64(0) + (*(u8*)(tls0 + 0x1EB) ? [exe+0x71661A8] : [exe+0x724B5F0]) (the handler, 0x2E6F039..0x2E6F06C)
 - the list's free after: exe+0x15972C0, then 0x4B8306C or 0x4B82F6C by *(u8*)(tls0 + 0x1FE)
 Silver is item key 1 in the Money inventory (index at the inventory manager +0x78, trade_probe's stash_dump order);
-its slot and count come from trade_probe's stash_slot(). The map's checks: the same chain turns the 3576 give and
+its slot and count come from trade_probe's stash_slot(). CORRECTION 2026-11-22 (cs97): key 1 is the Money
+INVENTORY's key (stash_dump: "Money 0/key 1"); that pouch holds the camp money and the contributions (10 slots:
+Contribution_Hernandian, Money_Camp_Money / Food / Wood / Stone / Weapon, Contribution_Graymane, Specialty_Oil, Cog,
+Small_Mechanical_Powerplant). The coins are ITEM key 1: the arm-wrestling prize's AddItemToInventoryAck (cs95b,
+363.83) reads, by coop_fishing.cpp's offsets, reason 0x4413 at +5 and item 1 at +20, count 30 (the copper unit: the
+purse's 114.64 is 11464). Which inventory holds item 1 is not known yet, so the native searches every inventory of the
+manager's list for the item (40f0c15) and logs where it found it; cs97b (death_penalty_item=1) is the removal. The map's checks: the same chain turns the 3576 give and
 add into 0x2E5C470 and 0x2E449C0, the 3732 addresses trade_probe already uses. Worker entry: 0xC0DE0009 (0008 is
 the AI hand-over's).
 

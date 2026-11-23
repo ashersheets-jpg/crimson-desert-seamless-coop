@@ -644,3 +644,27 @@ pinned them; only the code comments still named the old build) and one only fed 
 grep tools/native-port (pins*, p73_hand, fix73) for the old value, read the feature's counters in a recent log (a
 route that counts 28/38/38 is working), and check what the hook does when it fires. When a port pins a value, update
 the comment that names the build too, or the next audit reads it as stale.
+
+## A message field is not an item key until one more message agrees (2026-11-22)
+The death penalty's notes said "silver is item key 1 in the Money inventory". Key 1 was the Money INVENTORY's key, and
+the arm-wrestling notes had read the prize's 0x4413 as an item, when it is the reason code at +5. cs97 then listed a
+pouch with no coins in it. Before a key goes into a setting: read the field at the same offset the code already parses
+(coop_fishing.cpp reads the item at +20 of AddItemToInventoryAck's body), and check it against a second message or a
+listing that names it. Where an item lives is a separate question: search every inventory of the character rather than
+trust one index.
+
+## A cheat request the server takes for one target may do nothing for another (2026-11-22)
+KillCheatReq kills NPCs and players on the host's server in every test, so cs99 used it on the joined player's horse:
+nothing happened, and the run's "11064 m away" (the horse's unreadable position while ridden) looked like a result.
+After any scripted cheat, check the target's state on both games (MountSync's parent key, the npcs hp line) before
+reading anything into what follows.
+
+## SW_RESTORE un-maximises; another app's overlay can hold a game's input (2026-11-22)
+cs98b failed in the lobby: the Discord desktop app's overlay ("Use Discord from the overlay while playing", its
+"Discord Overlay Input Trap" window) came up over the host's game; actpid's way of taking the front back called
+ShowWindow(h, SW_RESTORE), which also takes a MAXIMISED window out of maximised, so the lobby's cursor points and every
+shot after it missed the game (the host never left its title; the join timed out after 7 minutes and the run's later
+steps clicked at a title screen). actpid now restores only a minimised window (IsIconic) and otherwise just shows it.
+A chain also stops at the first failed join now ("guest REMOTE: False") instead of spending the rest of its runs.
+Other people's apps on the test PC (Discord, Steam, Windows toasts) can start popups at any game launch: check the
+first lobby shots (L1 / L2) of a stuck run before anything else.

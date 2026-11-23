@@ -19,7 +19,9 @@ enum class NativeMode : uint8_t { Solo = 0, Host = 1, Guest = 2 };
 
 // T26: the silver's item key in the game's item table (decimal, as the native ini takes it). 0 = not known yet (cs97
 // lists the money pouch with each item's key); the Co-op Settings choice is shown only once it is set.
-inline constexpr uint32_t kDeathPenaltyItem = 0;
+// 2026-11-22 (cs97b): item 1 = 'Money_Copper' (the purse counts copper: 11454 = 114.54), in the character's bag
+// (inventory 1, slot 6 in the test saves); both players lost exactly 10 % with err 0 (native 40f0c15).
+inline constexpr uint32_t kDeathPenaltyItem = 1;
 
 struct NativeModeSpec {
     NativeMode mode = NativeMode::Solo;

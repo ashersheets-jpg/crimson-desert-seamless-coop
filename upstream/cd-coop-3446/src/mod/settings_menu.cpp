@@ -69,6 +69,10 @@ constexpr Tag kTags[] = {
      "Where you stand after reviving at a checkpoint: there, or back beside your friend."},
     {"Wait for my friend if I die at a boss", "Reviving",
      "Falling in a boss fight while your friend still fights: wait for them instead of reviving at once."},
+    // 2026-11-22 (T26, shown once kDeathPenaltyItem is set): without a tag the item has no section on the Co-op page.
+    {"Silver lost when you get up by yourself after a death", "Reviving",
+     "The host's choice, for both of you: getting up by yourself after a death costs that share of your own silver. "
+     "Your friend getting you up costs nothing. Takes effect at the next co-op start."},
     {"Weather follows the host", "World", "The guest's sky, rain and time of day follow the host's."},
     {"Slow motion (Focus) in co-op", "World",
      "Off: Focus does not slow the world while you play together, so both worlds keep the same speed."},

@@ -5,6 +5,11 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- 2026-11-22 19:40 FYI (nothing to do unless it recurs): your Discord desktop app's in-game overlay popped up over a
+  test game at 19:12 ("Use Discord from the overlay while playing" / "Invite friends to play") and broke one test run
+  in the lobby. The harness copes better now. If it keeps happening I will ask you to turn off Discord's game
+  overlay for Crimson Desert (Discord > User Settings > Game Overlay) or to close Discord while tests run; I do not
+  change Discord's settings myself.
 - 2026-11-22 15:52 DONE: 677c87bb POSTED in #download-here by me (standing OK; checklist pp44 over 27 steps with the
   new door step, its last step lagrun 48 / 0 after a test-kit fix, the re-runs pp44b / pp44c / pp44d clean: static,
   fresh, solostart, loot, display; both zips checked byte for byte against the tested package): doors of a building
@@ -30,6 +35,10 @@ test save Out, shipped cdmp.ini restored.
   own match; (1) does; (3) is (2) plus moving your friend's real character into the NPC's chair).
   2026-11-22 17:15 update: the joined player's own match now works (B14, cs95b: fee, live bar, a win and its prize),
   so (1) no longer waits on a fix: each player plays its own table match and one shared bar decides. Still your call.
+- 2026-11-22 18:50 QUESTION (not urgent, B10): the shared quest credit (when one of you finishes a step you both
+  have, the other gets it too) is built and proven: on, the joined player's step moved 257 ms after the host's (cs93);
+  off, nothing moved for it (cs93b). It is a Co-op Settings choice now, OFF by default. On by default, or keep it off?
+  My recommendation: on (otherwise the host's step can stall when the joined player lands the last kill).
 - 2026-11-22 02:25 DONE: c7c22497 POSTED in #download-here by me (standing OK; checklist pp43 1068/3 over 26 steps,
   none of the 3 the package's, then pp43b 182/0 after test-kit-only fixes; both zips checked file by file against the
   tested folders, 25/25 and 10/10): the joined player's shops in a town whose scenes the host already runs, the
@@ -96,6 +105,10 @@ test save Out, shipped cdmp.ini restored.
   19:45 cs79a: the cabin's ready check worked again, but the talks did not open (the script stood the host beside
   neighbours, not Marius / Ross). 22:31: cs79b (a camera sweep at their 3732 spots, E then R at each angle, the method
   that opens the arm-wrestling organizer every time) is queued for tonight's chain; still not needed from you yet.
+  2026-11-22 18:50: NEEDED after all: cs79b and cs79c (the story mode off, one Marius and one Ross) took no talk by
+  script either. One more for the same session, if you can (T25): ride the joined player's horse into enemies until
+  it dies under it (a scripted kill does nothing to a player's horse, cs99): does the rider land on foot on both
+  screens? Both fit in one two-copy session with the fast-travel check above.
 - 2026-11-17 05:56 QUESTION (not urgent): the public GitHub playtest release (crimson-desert-coop-playtest,
   releases/latest) is still 22e8f365 from 10 Nov; your OK then was for that one release. Discord has had 8a65cf2d
   since 05:54. Should each build that is posted to Discord also go to GitHub (same zips, same notes), or leave
@@ -10352,3 +10365,34 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   actpid.ps1: the ways to take the front back are one function, used again before any step that finds the game not
   in front (cs94 and cs79c lost it mid-sequence). Checked 18:37 on test windows: "the front was lost before w:200 and
   taken back". Queued edits applied (tpwp / tpfriend dev steps, the death screen's cost line, prepost's killfriend).
+- 18:45 research package 40de0201 (outer 40de020, native 40f0c15: the death penalty searches every inventory, the
+  voice probe counts every call; layer: B14 on by default, stamina 0x19, tpwp / tpfriend). Native 92 tests, the
+  known 14 failing; layer tests all pass. chain_l from 18:47: cs103, cs97b, cs98b, cs94b, cs96b, cs100, cs101, cs102.
+  Discord 18:50: nothing new (no feedback, no bug report; #general's last: a new member at 16:38).
+- 19:01 cs103 (B14 on 40de0201, NO dev override; SAVES OK, 5/5, both alive): PASSED every path. The joined player's
+  twin from the layer's ini ("ShopTwin [extra] ... 0x94FEA6AE", "twin_extra_chart=3"); its capture: two fees
+  (RemoveItemToInventoryAck 20 at 338.1 and 380.5), the grip made on its game twice, a LOSS (no presses: state 7 -> 9,
+  MiniGameResultReq 00, no prize), Play Again (10 -> 3), a WIN (mashed, gauge 54 -> 99: 7 -> 8, MiniGameResultReq 01,
+  AddItemToInventoryAck of item 1 x30), Back (10 -> 11 -> 0). Then the host at the same table: talk accepted, its fee,
+  grip, gauge 50 -> 96, a win and its prize; the joined player's game started no minigame of its own meanwhile.
+  B14 and T21 [x]. README (CHALLENGES): each player can play the tables against the townsfolk. Next: a checklist step
+  "armwrest" (scratchpad prepost_armwrest.py, applied when no test runs).
+- 19:12 cs97b (T26 the removal: -HostNativeExtra death_penalty=10, death_penalty_item=1; the test guest's mailbox set
+  aside and put back; SAVES OK, 5/5, the test world unchanged): PASSED. Item 1 is 'Money_Copper' in the character's
+  BAG (inventory 1, the manager's list entry 1, slot 6; the "Money" pouch, entry 0, holds the camp money). The joined
+  player got up at the checkpoint after killfriend: "lost 1145 of its 11454 (item 1, inventory 1, 10 %): err 0; the
+  slot now holds 10309"; the host, after the dock's bandits: the same for its own coins. One charge per death each.
+  Source (no test running, Edit only): the layer's kDeathPenaltyItem = 1 (native_mode_text.h), the setting's Co-op
+  page tag (Reviving; an untagged item has no section there), the death screen's cost on "Everyone is down" too
+  (hud.cpp: its U charges as well); README and CHANGELOG. cs97c (written, ini_variant.ps1) checks the player's own
+  setting path on the next build.
+- 19:40 cs98b (B20 voices) FAILED IN THE LOBBY, not a mod fault: the Discord desktop app (yours, running) showed its
+  overlay popup ("Use Discord from the overlay while playing", window "Discord Overlay Input Trap") over the host's
+  game at launch; actpid took the front back with SW_RESTORE, which un-maximised the host's window, and the host never
+  left its title (join timeout 19:20, both "in the shared world: False"). SAVES OK, 5/5, the test world unchanged; the
+  leftover steps only clicked at title menus (no solo start: g1 still "You are in Host's party"). chain_l stopped by
+  scan/chain.stop after it (cs94b, cs96b, cs100-cs102 not run). actpid.ps1: restore only a minimised window (checked
+  19:38 on a maximised test window with a focus thief: still maximised, "taken back"); rc_run stops at a failed join.
+  Test kit: the checklist step "armwrest" (prepost.sh, 28 steps now). Layer: kDeathPenaltyItem 1, the setting's
+  Co-op page tag, the death screen's cost on "Everyone is down"; tests.cpp's death_penalty_item check matched a whole
+  line (it only passed while the key was 0): fixed. Build: native 92 / 14 known, layer all pass.

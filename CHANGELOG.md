@@ -5,12 +5,21 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-NEXT (not built yet; in the layer's source since 2026-11-22 17:15):
+NEXT (built as 40de0201 for research; the posted build follows the full checklist):
 - **The joined player can arm-wrestle at the Hernand inn table** (B14): its game gets its own copy of the table's
   scene (like the shops' copies), and the match's grip, which the host's server only makes for the host, is made on
   the joined player's game. One-PC run cs95b: the 20 copper fee, the live strength bar, a won match and its 30 copper
-  prize, all on the joined player's own purse; back in the room after. Still to check on the build: a lost match,
-  "Play Again", and the host's own match at the same table after it (cs103).
+  prize, all on the joined player's own purse; back in the room after. Checked on 40de0201 with no test override
+  (cs103): a lost match (no prize), "Play Again" (a second fee), a won match and its prize, Back, then the host's own
+  match at the same table, won and paid.
+- **New option, off by default: a death penalty** (T26; Co-op tab > Reviving, "Silver lost when you get up by
+  yourself after a death": none, 10 %, 25 %, half, all; the host's choice applies to both players from the next Start
+  Co-op). Getting up by yourself (instant or checkpoint revive) costs that share of your own coins, taken by the
+  host's game with the game's own delete; your friend getting you up costs nothing; the death screen says what it
+  costs. One-PC run cs97b (research switches, 10 %): the joined player and then the host each lost exactly 10 % of
+  their own copper (1145 of 11454), once per death, no error.
+- **The partner frame's stamina bar is back** on game 1.0.0.3732: the game moved its stamina stat (22 -> 0x19), so
+  the friend's stamina was never read (cs94: 0x19 drains while sprinting and refills, 22 is no longer in the list).
 
 POSTED 2026-11-22 15:52 (0.1.0-alpha+677c87bb, for game 1.0.0.3732; checklist pp44 over 27 steps, the re-runs
 pp44b / pp44c / pp44d clean after test-kit-only fixes): everything in c7c22497 just below, plus:

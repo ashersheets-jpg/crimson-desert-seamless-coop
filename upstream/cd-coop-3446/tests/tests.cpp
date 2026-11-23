@@ -1785,7 +1785,9 @@ void test_native_mode_text() {
     CHECK(!has(native_mode_ini_text(h), "death_penalty="));
     h.death_penalty = 25;
     CHECK(has(native_mode_ini_text(h), "death_penalty=25"));
-    CHECK(has(native_mode_ini_text(h), "death_penalty_item=") == (net::kDeathPenaltyItem != 0));
+    // (has() matches whole lines: the full "death_penalty_item=<key>" line; 2026-11-22, the key became 1.)
+    CHECK(has(native_mode_ini_text(h), "death_penalty_item=" + std::to_string(net::kDeathPenaltyItem)) ==
+          (net::kDeathPenaltyItem != 0));
     h.death_penalty = 33;  // not a setting
     CHECK(!has(native_mode_ini_text(h), "death_penalty="));
     h.death_penalty = 0;
