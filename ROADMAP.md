@@ -79,6 +79,16 @@ Steam join/invite/leave and room code, friends-only vs invite-only, join/leave n
 - [x] **T07 — Host leaves or session ends.** When the host quits or ends the session, the guest returns cleanly to their own world: partner entities removed, hidden enemies restored, UI cleared. *Done when:* both exit paths (host quit, guest leave) leave no leftovers.
 - [x] **T08 — Guest-return state integrity.** After a session, verify the guest's own save and world carry no leaked co-op state (scaling, hidden enemies, loot flags, cutscene flags, time and weather). Build an automated before/after state diff. *Done when:* the diff is clean after three different session types.
 - [~] **T09 — Menus and pause.** Opening the map, inventory or pause menu must not freeze, desync or soft-lock the partner's world. Define and implement the pause behavior. *Done when:* every menu type is tested while a partner is fighting.
+  (2026-11-23 cs104: the joined player's map / inventory / game menu: the world kept running (the host's hp fell
+  181 -> 56), its pauses blocked; the host's menus: both pause requests blocked, the server ran (the joined player's
+  regen went on). The host's window in the background does NOT stall it (csbg: covered, unfocused, minimised: no
+  hitch).)
+- [ ] **T09b — The host freezes ~15 s when the friend loads in or teleports** (2026-11-23). Three ~5.0 s main-loop
+  gaps in a row on the HOST (UiPause hitch lines) at the joined player's join and after its teleports (most checklist
+  logs; cs104 06:02:09-29 after its tp into the camp). The server runs in the host's game, so both worlds stop: a
+  friend's fast travel or respawn would freeze the host. Next: csfz (the host's FreezeWatch samples during the
+  freeze), the decomp of what the main thread waits on, then a fix. *Done when:* a teleport of the joined player
+  leaves no host hitch over 1 s.
 - [~] **T10 — Shared-kill loot and XP for the guest.** The guest receives drops and XP for kills they contribute to, with no duplicates and none missing. Make loot rules configurable (shared, per-player, first come). *Done when:* verified with the stand-in; `[needs-2PC]` for the real guest.
 - [x] **T11 — Network stress and performance.** Test with simulated latency, jitter and packet loss, and with 33+ entities. Measure bandwidth and FPS cost, set entity and bandwidth budgets, and degrade gracefully (lower update rate before dropping features). Record results. *Done when:* a documented stress report exists and no crash occurs under bad networks.
 - [x] **M01 — Constants the ports left at older builds (the 3732 port audit, 2026-11-21).** A read-only audit of the native code found ten groups of game addresses still at 2976's or 3576's values (docs/research/port-gaps-3732.md: the table, the log evidence, the plan). (1) guest_save_logic.h's seven caller returns (every LoadSlot / save / flush caller read "OTHER"): fix written (scratchpad port_gap_rets.py, = kCallSites + 5 tied by static_asserts), next batch. (2) Two crash risks on a later build or with an option on (game_errors' one-byte check; guest_sched_route without its teardown guard): to fail closed. (3) Checked after: U-b's timer returns and user2_shops' protected range are already 3732's (pins73.py; the same range), User2Stages D/S/F/H only count and log. (4) mount_seat's vf178 judge is real (seats rely on the veto while it is unproven): confirmed on the 3732 exe, the actor's judge is exe+0x5DF500 and the "+0x94 alone" one exe+0x9BEEB0; the fix (vf178_fix.py) is in the next batch. (5) The rest are off or diagnostic. (6) A second audit of the Co-op+ layer: nothing it runs in native mode is stale; dormant two-worlds puppet constants, a stamina stat id that hides the partner frame's stamina bar (minor), two log labels. *Done when:* (1), (2) and (4) are in a build that passed the checklist. DONE 2026-11-22: all three are in 677c87bb (native 7dcfc33, with 72ebb0d), which passed the checklist (pp44 and its re-runs) and was posted at 15:52. The stamina stat id is followed under B-stamina in the next batch (cs94 reads 3732's).
@@ -149,8 +159,11 @@ account in the browser pane: asked.)
   Race (cs101): dead in the shared world: it reads our waypoint from the layer's sniffer, which is off on the native
   base; fixed (the native base's cdmp_own_waypoint, polled by the layer; also sends our waypoint as the friend's pin),
   to re-run. Hide and seek (cs102): round 1 works on both games; the run ended in round 2 (test-kit fixes), to re-run.
-  Hunting contest: the same gap as the race: its kills come from the layer's capture (S2C 2863 / 2316 and our blows):
-  needs a native source of deaths and of our blows before its shared-world check.
+  Correction (06:45): the native base already forwards every packet to the layer (coopplus_observe), and the kill
+  feed, which reads the same kill notices as the hunt, logs kills in the shared world (pp46 farfight, loot); the
+  hunt's check only needs wild animals at a start spot. The race's gap is narrower: no 2285 reached either reader
+  (cs101b), so the 3732 map's right-click must send something else: cs101c records it. Hide and seek WORKS
+  (cs102b: a full three-round match on both games).
 - [~] **T42 — Duel extras.** Wagers, selectable arenas, spectator camera, rematch.
 - [~] **T43 — Cosmetics and recognition.** Titles, co-op bounties and a scoreboard.
 - [x] **T44 — Group photo mode.** Posed shots with both characters. (Done through B16 (1), decided 2026-11-17: the

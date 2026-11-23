@@ -10494,3 +10494,43 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
     loaded"; the host's tpfriend ended round 1 instead), so round 2 began late and the run closed in its count.
     Test-kit fixes: tpfriend falls back to 0xA0100001 on the joined player (dev_script.cpp, layer), 40 s more on both
     scripts (cs102.sh). Re-run on the next build.
+  * 06:06 cs104 (T09 menus while the partner is attacked; SAVES OK, 5/5, both alive): the joined player's menus
+    (06:03:02, ~45 s): the host's hp fell 181 -> 56 (the bandits kept fighting it) and the joined player's UiPause
+    BLOCKED its pauses ("game clock +5016 ms in 5016 ms of wall time"): PASS for that half. The host's menus
+    (06:02:27, ~32 s): UiPause BLOCKED both pause requests ("the game gets 1.0"), the joined player's hp kept
+    regenerating (133 -> 157: the server ran); the bandits did not attack the joined player then (no damage to see).
+    NEW FINDING: the host's log has "UiPause: hitch: main loop stood still ~5000 ms" three times in a row, and in
+    cs104 the joined player's server-side hp regen stalled in step (06:02:12-27: +2 hp in 15 s instead of +12): the
+    server runs in the host's game, so a host freeze freezes both worlds. First guess (the host's window in the
+    background): disproved by csbg at 06:24 (see there: it follows the joined player's loading / teleports).
+- 06:12 package caa7a7af (native 68670b6: cdmp_own_waypoint, the voice probe on the guest with a key scan; layer: the
+  race's native waypoint, tpfriend's fallback). The 3732 voice processor reads the same offsets as the 3576 decomp
+  (build/port3732/voice73.py). chain_n from 06:12: csbg, cs101b, cs102b, cs98d, cs96c.
+  * 06:24 csbg (the host's window states; SAVES OK, 5/5, both alive): the 06:06 guess was WRONG. With the host's
+    window covered (A), visible but unfocused (B), minimised (C) and in front (D), the host logged NO hitch, and the
+    joined player's server-side regen ran +4 hp per 5 s throughout (06:20:03-21:38). The only hitch: 3.9 s at
+    06:15:49, the joined player loading in. The real pattern (every checklist log: pp46 shop 02:00:22-38, armwrest
+    00:00:48-01:05 and 00:02:49-03:06, farfight2 02:28:32-46; cs104 06:02:09-29): a run of three ~5.0 s main-loop
+    gaps (~15 s) on the HOST when the joined player loads in or teleports (cs104: its tp into the camp at 06:02:07;
+    SceneLevelShare lines for user 2's sectors at that moment). cs74h (18:10) saw it at the join and parked it. For
+    real players: the friend's fast travel / respawn / join would freeze the host (and so both worlds) ~15 s.
+    Next: csfz (after chain_n): the host's FreezeWatch on (the existing [session2] freeze_watchdog: the frozen main
+    thread's rip and return addresses), the joined player teleporting twice; then the 3576 decomp of those addresses.
+  * 06:33 cs101b (race, with cdmp_own_waypoint; SAVES OK, 5/5, both alive): STILL no race: no "Race: our map waypoint"
+    line, tpwp "no map waypoint" on both. So the native base never saw a 2285 either. Found meanwhile: the native
+    sniffer already forwards EVERY packet to the layer (coopplus_observe; the layer's c2s branch only feeds activity /
+    duel / weather), so the export was not needed; the open question is what the 3732 map's right-click sends
+    (2285 is CreateOrChangeSelfDestinationReq on 3732 by the opcode table, build/port3732/troc_3663_3732.csv; the
+    "Set Destination" route may be client-only, or come later). cs101.sh now records the host's packets
+    (native_record) and lists its C>S around the right-click: cs101c after chain_n.
+  * 06:43 cs102b (hide and seek, both rounds; SAVES OK, 5/5, both alive): PASS. A whole match on both games in step:
+    round 1 the joined player seeks (its tpfriend now finds 0xA0100001: "teleport beside actor 0xA0100001"), round 2
+    the host seeks, round 3 the joined player; "the Hide and seek is over (we won 2 - 1)" / "(they won 1 - 2)". The
+    seeker's view (h2): "Seek! Find Guest: warmer and colder tell you how close you are", the partner frame "hiding"
+    with no distance, the hider not in view. Left to look at: the minimap corner at full size (a friend marker?).
+  * 06:55 cs98d (B20 voices; SAVES OK, 5/5, both alive): the probe now starts on BOTH games ("VoiceProbe (guest):
+    starting"). The key scan: *p4 is an ACTOR (+0x60 its key, +0x90 its controller user 0x90100000), and every logged
+    call was an NPC's (0xB01... keys); in ~560 host voice calls and ~870 guest ones, none had a player's key at +0x60
+    (own and other 0). Next (written, not built): compare *p4 with the two players' actor pointers (find_actor every
+    2 s: 0xA0100001; user 2's key from the server on the host, its own on the guest) and count calls on any 0xA01 key:
+    if the players never appear, player voice lines go another way than this processor.

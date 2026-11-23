@@ -678,11 +678,13 @@ must not act on a freshly spawned one (the minigame rule now waits 1.5 s), and a
 in a controller change belongs on the host too (HostMoveGuard). Timing luck hides such races: one passing research
 run proves little; a checklist step that repeats the path is what found it.
 
-## In the shared world the layer sees no packets: re-check every layer feature that read them (2026-11-23)
-The race to the waypoint (cs101) never started in the shared world although the host's map destination was set: the
-race takes "our waypoint" from the layer's sniffer (C2S 2285), and on the native base the layer's sniffer is off
-(the native base owns the packet hooks; "Native layer ... off whatever the ini says: sniffer ..."). The same gap hit
-the dev script's tpfriend on the joined player (the other player's key comes from a load packet). A two-worlds
-feature that passed its checks there can be silently dead in the shared world. When porting one, list what it reads
-from the layer's capture (own / other keys, waypoints, loads, Reqs) and give each a native source: the native base's
-own sniffer IS on and sees this client's packets, so a small export (cdmp_own_waypoint) is enough.
+## In the shared world, know which packets reach the layer before porting a feature (2026-11-23)
+The race to the waypoint (cs101) never started in the shared world although the host's map destination was set. My
+first reading ("the layer's sniffer is off, so it sees no packets") was half right and cost a build: the native
+base's sniffer forwards EVERY packet to the layer (coopplus_observe in local_capture.cpp), but its client-to-server
+branch feeds only activity / duel / weather, while server-to-client packets get the whole capture_observe_s2c (so
+the kill feed and the hunt's kill notices work). The export I added (cdmp_own_waypoint) saw no 2285 either (cs101b):
+the 3732 map's right-click sends something else. Before porting a two-worlds feature: grep coopplus_observe for its
+observer, and record the packets of the action (native_record) before assuming an opcode from an older build.
+The dev script's tpfriend had a real gap of this kind (the joined player never learns the other player's key from a
+load): fixed with the host's fixed key.
