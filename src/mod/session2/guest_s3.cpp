@@ -1366,6 +1366,48 @@ void install_crash() {
 
 // ---------------------------------------------------------------- public
 
+namespace {
+// 2026-11-22 (pp45 armwrest: the HOST's game crashed at exe+0x8257C6 reading 0x116, in this same movement update,
+// 0.5 s after the AI hand-over gave the joined player's just-spawned minigame opponent to its game: the NPC had no
+// current action yet). In single player no NPC changes controller mid-setup; in co-op the host's client can run the
+// update for one in that state. The host gets the guest's guard for this one site only (no other GuestS3 point).
+std::atomic<bool> g_host_move_started{false};
+DWORD WINAPI host_move_thread(LPVOID) {
+    g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    IMAGE_DOS_HEADER dos{};
+    IMAGE_NT_HEADERS64 nt{};
+    if (g_base != off::kImageBase || !game::safe_read(g_base, &dos, sizeof dos) ||
+        !game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestamp) {
+        log::error("HostMoveGuard: unsupported game build; off");
+        return 0;
+    }
+    if (!read_rsrc()) {
+        log::error("HostMoveGuard: the game's section table has no .rsrc; off");
+        return 0;
+    }
+    // The game's code is decrypted in place after start: wait (2 minutes at most) for the guarded read itself.
+    bool ready = false;
+    for (int i = 0; i < 24000 && !(ready = bytes_match(kMoveNull.rva, kMoveNull.bytes)); ++i) Sleep(5);
+    if (!ready) {
+        log::error("HostMoveGuard: exe+0x{:X} is not the expected movement-update read after 2 minutes; off",
+                   kMoveNull.rva);
+        return 0;
+    }
+    g_move_null_on = make_mid(kMoveNull, g_h_move_null, on_move_null);
+    log::info("HostMoveGuard (Co-op+, host): the movement update's current-action read exe+0x{:X} {}", kMoveNull.rva,
+              g_move_null_on.load() ? "guarded (a null action skips to exe+0x825C13: an NPC changing games mid-setup)"
+                                    : "OFF");
+    return 0;
+}
+}  // namespace
+
+void host_move_guard_start() {
+    if (g_started.load() || g_host_move_started.exchange(true)) return;  // a guest has its own (guest_s3_start)
+    CloseHandle(CreateThread(nullptr, 0, host_move_thread, nullptr, 0, nullptr));
+}
+
+uint64_t host_move_guard_skips() noexcept { return c_move_null.load(std::memory_order_relaxed); }
+
 void guest_s3_start(bool diag, bool crash_dump, bool update_guard, bool actor_diag, bool update_site_taken) {
     if (!diag && !crash_dump && !update_guard) return;
     if (g_started.exchange(true)) return;
