@@ -151,7 +151,7 @@ void travel_mid(safetyhook::Context& ctx) noexcept {
         const bool copied = clock_user2_travel(g_game, ts, field);
         const WorldTime after = world_now();
         uint8_t mine[clk::kFieldTimeSize] = {};
-        game::safe_read(ts + clk::kTsFieldTime, mine, sizeof mine);
+        game::fast_read(ts + clk::kTsFieldTime, mine, sizeof mine);
         if (!copied) g_travel_failed.fetch_add(1);
         if (moved(before, after)) g_world_moved.fetch_add(1);
         uint32_t owner = 0;

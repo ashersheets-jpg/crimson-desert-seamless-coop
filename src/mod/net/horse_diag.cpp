@@ -396,12 +396,12 @@ void sc_on_mission_ok(safetyhook::Context&) { c_sc_mission_ok.fetch_add(1, std::
 void sc_on_found(safetyhook::Context& ctx) {  // rdi = the scene instance
     c_sc_found.fetch_add(1, std::memory_order_relaxed);
     uint32_t v = 0;
-    if (game::safe_read(ctx.rdi + 0x168, &v, 4) && v) c_sc_168.fetch_add(1, std::memory_order_relaxed);
+    if (game::fast_read(ctx.rdi + 0x168, &v, 4) && v) c_sc_168.fetch_add(1, std::memory_order_relaxed);
 }
 void sc_on_focus_ok(safetyhook::Context& ctx) {  // r14 = the scene: its mission [+0x78]
     c_sc_focus_ok.fetch_add(1, std::memory_order_relaxed);
     uint32_t m = 0xFFFFFFFF;
-    game::safe_read(ctx.r14 + 0x78, &m, 4);
+    game::fast_read(ctx.r14 + 0x78, &m, 4);
     if (m == 0xFFFFFFFF) c_sc_no_mission.fetch_add(1, std::memory_order_relaxed);
     else g_sc_mission.store(m, std::memory_order_relaxed);
 }
@@ -440,7 +440,7 @@ void ip_on_entry(safetyhook::Context& ctx) {
     if (IpSlot* sl = ip_slot(ip_key_of(ctx.rdx))) sl->calls.fetch_add(1, std::memory_order_relaxed);
     {
         uintptr_t pl = 0;
-        if (game::safe_read(ctx.rcx + 8, &pl, 8) && pl) g_ip_player_key.store(ip_key_of(pl), std::memory_order_relaxed);
+        if (game::fast_read(ctx.rcx + 8, &pl, 8) && pl) g_ip_player_key.store(ip_key_of(pl), std::memory_order_relaxed);
     }
     // The player's "controlled by this client" test (vf178 0x5B3AA0, and inline in 0xABF5A0): [player+0xA0] ==
     // [[exe+0x71C0100]+0x30]+0x58 and byte [player+0x94] != 0. Logged a few times (rcx = the player's interaction
@@ -454,17 +454,17 @@ void ip_on_entry(safetyhook::Context& ctx) {
         const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
         uintptr_t player = 0, owner = 0, g = 0, g30 = 0, local = 0, local_key_obj = 0;
         uint8_t b94 = 0;
-        game::safe_read(ctx.rcx + 8, &player, 8);
+        game::fast_read(ctx.rcx + 8, &player, 8);
         if (player) {
-            game::safe_read(player + 0xA0, &owner, 8);
-            game::safe_read(player + 0x94, &b94, 1);
+            game::fast_read(player + 0xA0, &owner, 8);
+            game::fast_read(player + 0x94, &b94, 1);
         }
-        game::safe_read(base + 0x724B350, &g, 8);
-        if (g) game::safe_read(g + 0x30, &g30, 8);
-        if (g30) game::safe_read(g30 + 0x58, &local, 8);
+        game::fast_read(base + 0x724B350, &g, 8);
+        if (g) game::fast_read(g + 0x30, &g30, 8);
+        if (g30) game::fast_read(g30 + 0x58, &local, 8);
         uint32_t owner_key = 0, local_key = 0;
-        if (owner) game::safe_read(owner + 0x60, &owner_key, 4);
-        if (local) game::safe_read(local + 0x60, &local_key, 4);
+        if (owner) game::fast_read(owner + 0x60, &owner_key, 4);
+        if (local) game::fast_read(local + 0x60, &local_key, 4);
         (void)local_key_obj;
         log::info("InteractProbe [is local] player 0x{:08X} +0xA0 0x{:X} (key 0x{:08X}) +0x94 {} | client local "
                   "[[0x724B350]+0x30]+0x58 0x{:X} (key 0x{:08X}) -> {}", ip_key_of(player), owner, owner_key, b94, local,
@@ -571,29 +571,29 @@ SafetyHookMid g_hw_2380;
 void hw_on_2380(safetyhook::Context& ctx) {
     if ((ctx.r14 & 0xFF) != 4 || g_hw_armed.load()) return;
     uintptr_t wrap = 0, raw = 0;
-    if (!game::safe_read(ctx.rbp + 0x100, &wrap, 8) || !wrap || !game::safe_read(wrap + 0x18, &raw, 8) || !raw) return;
+    if (!game::fast_read(ctx.rbp + 0x100, &wrap, 8) || !wrap || !game::fast_read(wrap + 0x18, &raw, 8) || !raw) return;
     const uintptr_t pl = raw + 5;
     uint32_t hash = 0;
     uint16_t len = 0;
-    game::safe_read(pl + 27, &hash, 4);
-    game::safe_read(raw + 3, &len, 2);
+    game::fast_read(pl + 27, &hash, 4);
+    game::fast_read(raw + 3, &len, 2);
     if (hash != 0x978345CAu) return;
     for (uint32_t o = 92; o + 11 <= len; o += 11) {
         uint32_t key = 0;
-        if (!game::safe_read(pl + o + 4, &key, 4) || (key >> 28) != 0xB) continue;
+        if (!game::fast_read(pl + o + 4, &key, 4) || (key >> 28) != 0xB) continue;
         const auto a = game::find_actor(key);
         uintptr_t comps = 0, info = 0;
         uint64_t lo = 0, hi = 0;
-        if (a && *a && game::safe_read(*a + 0x68, &comps, 8) && comps && game::safe_read(comps + 0x20, &info, 8) && info) {
-            game::safe_read(info + 0x3B8, &lo, 8);
-            game::safe_read(info + 0x3C0, &hi, 8);
+        if (a && *a && game::fast_read(*a + 0x68, &comps, 8) && comps && game::fast_read(comps + 0x20, &info, 8) && info) {
+            game::fast_read(info + 0x3B8, &lo, 8);
+            game::fast_read(info + 0x3C0, &hi, 8);
         }
         log::info("HideWatch [2380 butcher scene] NPC 0x{:08X} actor 0x{:X} info 0x{:X}: masks before the binding "
                   "+0x3B8 0x{:016X} +0x3C0 0x{:016X}", key, a ? *a : 0, info, lo, hi);
         uintptr_t play = 0;
         uint8_t wait = 0;
-        if (comps) game::safe_read(comps + 0xB0, &play, 8);
-        if (play) game::safe_read(play + 0x3E0, &wait, 1);
+        if (comps) game::fast_read(comps + 0xB0, &play, 8);
+        if (play) game::fast_read(play + 0x3E0, &wait, 1);
         log::info("HideWatch [2380 butcher scene] NPC 0x{:08X}: scene component 0x{:X} +0x3E0 {} before the binding", key,
                   play, wait);
         const uintptr_t target = g_hw_mode == 3 ? 0 : g_hw_mode == 2 ? (play ? play + 0x3E0 : 0) : (info ? info + 0x3B8 : 0);
@@ -621,7 +621,7 @@ void ip_on_gate(safetyhook::Context& ctx) {  // 0xAC027B cmp [rax],r12d (r15 = t
     if (!sl) return;
     sl->reached.fetch_add(1, std::memory_order_relaxed);
     uint32_t code = 0;
-    if (game::safe_read(ctx.rax, &code, 4) && code) {
+    if (game::fast_read(ctx.rax, &code, 4) && code) {
         sl->gate_fail.fetch_add(1, std::memory_order_relaxed);
         sl->gate_code.store(code, std::memory_order_relaxed);
         // 2026-11-08: eErrNoInteractionTargetIsHidden (0x741F3E3F; co-op hides the merchants, tcB113). 0x22E6C70's
@@ -631,11 +631,11 @@ void ip_on_gate(safetyhook::Context& ctx) {  // 0xAC027B cmp [rax],r12d (r15 = t
             uintptr_t comps = 0, info = 0, kind_obj = 0;
             uint64_t lo = 0, hi = 0;
             uint8_t kind = 0;
-            if (game::safe_read(ctx.r15 + 0x68, &comps, 8) && comps && game::safe_read(comps + 0x20, &info, 8) && info) {
-                game::safe_read(info + 0x3B8, &lo, 8);
-                game::safe_read(info + 0x3C0, &hi, 8);
+            if (game::fast_read(ctx.r15 + 0x68, &comps, 8) && comps && game::fast_read(comps + 0x20, &info, 8) && info) {
+                game::fast_read(info + 0x3B8, &lo, 8);
+                game::fast_read(info + 0x3C0, &hi, 8);
             }
-            if (game::safe_read(ctx.r15 + 0x88, &kind_obj, 8) && kind_obj) game::safe_read(kind_obj + 1, &kind, 1);
+            if (game::fast_read(ctx.r15 + 0x88, &kind_obj, 8) && kind_obj) game::fast_read(kind_obj + 1, &kind, 1);
             static std::atomic<uint32_t> s_lines{0};
             static std::atomic<uint64_t> s_last_mask{0};
             const uint64_t mask = lo ^ (hi * 0x9E3779B97F4A7C15ull) ^ ip_key_of(ctx.r15);
@@ -654,7 +654,7 @@ uint32_t g_st_seen[48] = {};
 void ip_on_count(safetyhook::Context& ctx) {  // 0xAC02E4 (after 0x22EAE00): count [rbp-0x78]
     IpSlot* sl = ip_slot(ip_key_of(ctx.r15));
     uint32_t n = 0;
-    if (sl && game::safe_read(ctx.rbp - 0x78, &n, 4)) sl->entries.fetch_add(n, std::memory_order_relaxed);
+    if (sl && game::fast_read(ctx.rbp - 0x78, &n, 4)) sl->entries.fetch_add(n, std::memory_order_relaxed);
     // The NPC's control state, which picks its owner-condition list (0x22E7A90: [[target+0x68]+0x30], u16 index at
     // +0x48 -> 0x3DE240 -> 0x194DEA0): once per talkable NPC (entries > 0), to compare host and guest.
     const uint32_t key = ip_key_of(ctx.r15);
@@ -666,10 +666,10 @@ void ip_on_count(safetyhook::Context& ctx) {  // 0xAC02E4 (after 0x22EAE00): cou
     uintptr_t comps = 0, ctrl = 0;
     uint16_t st = 0xFFFF;
     uint32_t owner = 0;
-    game::safe_read(ctx.r15 + 0x68, &comps, 8);
-    if (comps) game::safe_read(comps + 0x30, &ctrl, 8);
-    if (ctrl) game::safe_read(ctrl + 0x48, &st, 2);
-    game::safe_read(ctx.r15 + off::kActor_OwnerUser, &owner, 4);
+    game::fast_read(ctx.r15 + 0x68, &comps, 8);
+    if (comps) game::fast_read(comps + 0x30, &ctrl, 8);
+    if (ctrl) game::fast_read(ctrl + 0x48, &st, 2);
+    game::fast_read(ctx.r15 + off::kActor_OwnerUser, &owner, 4);
     g_st_lines.fetch_add(1, std::memory_order_relaxed);
     const auto pos = game::actor_world_position(key);
     log::info("InteractProbe [npc state] 0x{:08X} control state index 0x{:04X} (entries {}, controller 0x{:08X}) at "
@@ -693,25 +693,25 @@ void ip_on_eval(safetyhook::Context& ctx) {  // 0x1940AD0 entry: rcx target, dl 
     uintptr_t comps = 0, icomp = 0, ai = 0, state = 0, graph = 0;
     uint32_t count = 0, want = 0;
     uint16_t idx = 0;
-    game::safe_read(ctx.rcx + 0x68, &comps, 8);
+    game::fast_read(ctx.rcx + 0x68, &comps, 8);
     if (comps) {
-        game::safe_read(comps + 0x98, &icomp, 8);
-        game::safe_read(comps + 0x58, &ai, 8);
+        game::fast_read(comps + 0x98, &icomp, 8);
+        game::fast_read(comps + 0x58, &ai, 8);
     }
-    if (icomp) game::safe_read(icomp + 0x98, &count, 4);
-    if (ai) game::safe_read(ai + 0x90, &state, 8);
+    if (icomp) game::fast_read(icomp + 0x98, &count, 4);
+    if (ai) game::fast_read(ai + 0x90, &state, 8);
     if (state) {
-        game::safe_read(state + 8, &graph, 8);
+        game::fast_read(state + 8, &graph, 8);
         uintptr_t ip = 0;
-        if (game::safe_read(state + 0x10, &ip, 8) && ip) game::safe_read(ip, &idx, 2);
+        if (game::fast_read(state + 0x10, &ip, 8) && ip) game::fast_read(ip, &idx, 2);
     }
-    game::safe_read(ctx.r8, &want, 4);
+    game::fast_read(ctx.r8, &want, 4);
     log::info("InteractProbe [eval 0x19A7FC0] target 0x{:08X} filter {} want 0x{:X} | server list {} | AI 0x{:X} state 0x{:X} "
               "graph 0x{:X} index 0x{:04X}", key, static_cast<uint32_t>(ctx.rdx & 0xFF), want, count, ai, state, graph, idx);
 }
 void ip_on_call(safetyhook::Context& ctx) {  // 0xAC0330 call 0xABF5A0 (r8 = the entry)
     uint16_t idx = 0xFFFF;
-    game::safe_read(ctx.r8 + 0x10, &idx, 2);
+    game::fast_read(ctx.r8 + 0x10, &idx, 2);
     t_entry_idx = idx;
 }
 std::string cond_dump(uintptr_t c, uintptr_t base);
@@ -729,10 +729,10 @@ void tc_on_fail(safetyhook::Context& ctx) {  // 0x25FA549: the store of eErrNoIn
     {
         const auto base1 = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
         uintptr_t g = 0, g30 = 0, local = 0, ch = 0;
-        game::safe_read(base1 + 0x724B350, &g, 8);
-        if (g) game::safe_read(g + 0x30, &g30, 8);
-        if (g30) game::safe_read(g30 + 0x58, &local, 8);
-        if (local) game::safe_read(local + 0x50, &ch, 8);  // the local user's character (0x99EA20)
+        game::fast_read(base1 + 0x724B350, &g, 8);
+        if (g) game::fast_read(g + 0x30, &g30, 8);
+        if (g30) game::fast_read(g30 + 0x58, &local, 8);
+        if (local) game::fast_read(local + 0x50, &ch, 8);  // the local user's character (0x99EA20)
         const uint32_t pk = ip_key_of(t_oc_player);
         (void)ch;
         // The host's character is 0xA0100001 in every two-copy run; any other 0xA... player here is user 2's.
@@ -928,7 +928,7 @@ void oc_on_entry(safetyhook::Context& ctx) {  // 0x25FA200
     if (g_subject_swap_client.load(std::memory_order_relaxed) && !ks_server_thread()) {
         // The guest's client: its own character as the subject -> the host's character's copy on this client.
         uint32_t pkey = 0;
-        game::safe_read(ctx.rdx + off::kActor_Key, &pkey, 4);
+        game::fast_read(ctx.rdx + off::kActor_Key, &pkey, 4);
         if ((pkey >> 28) == 0xA && pkey != 0xA0100001u) {
             if (const auto host = game::find_actor(0xA0100001u); host && *host) {
                 ctx.rdx = *host;
@@ -938,12 +938,12 @@ void oc_on_entry(safetyhook::Context& ctx) {  // 0x25FA200
     }
     if (g_subject_swap.load(std::memory_order_relaxed) && ks_server_thread()) {
         uint32_t pkey = 0, powner = 0;
-        game::safe_read(ctx.rdx + off::kActor_Key, &pkey, 4);
-        game::safe_read(ctx.rdx + off::kActor_OwnerUser, &powner, 4);
+        game::fast_read(ctx.rdx + off::kActor_Key, &pkey, 4);
+        game::fast_read(ctx.rdx + off::kActor_OwnerUser, &powner, 4);
         if ((pkey >> 28) == 0xA && pkey != 0xA0100001u && powner != 0x90100000u) {
             const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
             uintptr_t sam = 0;
-            game::safe_read(base + session2::off::kSamSlot, &sam, 8);
+            game::fast_read(base + session2::off::kSamSlot, &sam, 8);
             if (const auto host = session2::sam_find_actor(sam, 0xA0100001u); host && *host) {
                 ctx.rdx = *host;
                 g_subject_swapped.fetch_add(1, std::memory_order_relaxed);
@@ -1064,8 +1064,8 @@ void oc_on_fail(safetyhook::Context& ctx) {  // 0x25FA3DA: the store of eErrNoIn
     // Both sub-conditions: c+0 and c+8 point to a pointer to the condition object, whose [0] is its exe vtable.
     auto cls = [](uintptr_t slot) -> uintptr_t {
         uintptr_t p1 = 0, obj = 0, vt = 0;
-        if (!game::safe_read(slot, &p1, 8) || !p1 || !game::safe_read(p1, &obj, 8) || !obj ||
-            !game::safe_read(obj, &vt, 8))
+        if (!game::fast_read(slot, &p1, 8) || !p1 || !game::fast_read(p1, &obj, 8) || !obj ||
+            !game::fast_read(obj, &vt, 8))
             return 0;
         return vt;
     };
@@ -1090,24 +1090,24 @@ void oc_on_fail(safetyhook::Context& ctx) {  // 0x25FA3DA: the store of eErrNoIn
     std::string macro;
     for (uintptr_t slot : {c, c + 8}) {
         uintptr_t p1 = 0, obj = 0, vt = 0;
-        if (!game::safe_read(slot, &p1, 8) || !p1 || !game::safe_read(p1, &obj, 8) || !obj ||
-            !game::safe_read(obj, &vt, 8) || rva(vt) != 0x5D8A8D8)
+        if (!game::fast_read(slot, &p1, 8) || !p1 || !game::fast_read(p1, &obj, 8) || !obj ||
+            !game::fast_read(obj, &vt, 8) || rva(vt) != 0x5D8A8D8)
             continue;
         uint16_t idx = 0;
         uintptr_t table = 0, arr = 0, info = 0, inner = 0, inner_vt = 0;
-        game::safe_read(obj + 8, &idx, 2);
-        game::safe_read(base + 0x724D4A0, &table, 8);
-        if (table) game::safe_read(table + 0x58, &arr, 8);
-        if (arr) game::safe_read(arr + 8ull * idx, &info, 8);
-        if (info) game::safe_read(info + 0x10, &inner, 8);
-        if (inner) game::safe_read(inner, &inner_vt, 8);
+        game::fast_read(obj + 8, &idx, 2);
+        game::fast_read(base + 0x724D4A0, &table, 8);
+        if (table) game::fast_read(table + 0x58, &arr, 8);
+        if (arr) game::fast_read(arr + 8ull * idx, &info, 8);
+        if (info) game::fast_read(info + 0x10, &inner, 8);
+        if (inner) game::fast_read(inner, &inner_vt, 8);
         macro += std::format(" | MACRO index {} info 0x{:X} inner class vtable 0x{:X} | info:", idx, info, rva(inner_vt));
         for (uint32_t o = 0; info && o < 0x60; o += 8) {
             uintptr_t q = 0;
-            game::safe_read(info + o, &q, 8);
+            game::fast_read(info + o, &q, 8);
             macro += std::format(" +{:X}={:X}", o, q);
             char str[48] = {};
-            if (q > 0x10000 && game::safe_read(q, str, sizeof str - 1)) {
+            if (q > 0x10000 && game::fast_read(q, str, sizeof str - 1)) {
                 bool text = str[0] >= 0x20 && str[0] < 0x7F;
                 for (int i = 0; text && str[i]; ++i) text = str[i] >= 0x20 && str[i] < 0x7F;
                 if (text && std::strlen(str) >= 3) macro += std::format("('{}')", str);
@@ -1117,7 +1117,7 @@ void oc_on_fail(safetyhook::Context& ctx) {  // 0x25FA3DA: the store of eErrNoIn
             macro += " | inner:";
             for (uint32_t o = 0; o < 0x40; o += 8) {
                 uintptr_t q = 0;
-                game::safe_read(inner + o, &q, 8);
+                game::fast_read(inner + o, &q, 8);
                 macro += std::format(" +{:X}={:X}", o, rva(q));
             }
         }
@@ -1128,9 +1128,9 @@ void oc_on_fail(safetyhook::Context& ctx) {  // 0x25FA3DA: the store of eErrNoIn
 void ip_on_keep(safetyhook::Context& ctx) {  // 0xAC0335 cmp byte [rsp+0x30],0
     IpSlot* sl = ip_slot(ip_key_of(ctx.r15));
     uint8_t ok = 0;
-    if (sl && game::safe_read(ctx.rsp + 0x30, &ok, 1) && ok) sl->kept.fetch_add(1, std::memory_order_relaxed);
+    if (sl && game::fast_read(ctx.rsp + 0x30, &ok, 1) && ok) sl->kept.fetch_add(1, std::memory_order_relaxed);
     uint32_t why = 0;  // a refused entry: 0xABF5A0's reason code (result + 4)
-    if (sl && !ok && game::safe_read(ctx.rsp + 0x34, &why, 4)) sl->why.store(why, std::memory_order_relaxed);
+    if (sl && !ok && game::fast_read(ctx.rsp + 0x34, &why, 4)) sl->why.store(why, std::memory_order_relaxed);
     // Per (NPC, entry index): kept or the refusal code, once each (rbx = the entry, its u16 index at +0x10).
     static std::atomic<uint32_t> s_lines{0};
     static uint64_t s_seen[700] = {};
@@ -1140,7 +1140,7 @@ void ip_on_keep(safetyhook::Context& ctx) {  // 0xAC0335 cmp byte [rsp+0x30],0
     const uint32_t calls = sl ? sl->reached.load() : 0;
     if (sl && calls) n_entries = sl->entries.load() / calls;
     const bool shop = session2::merchant_unhide_is_shop_npc(key);  // 2026-11-09: the shop NPCs' 5 entries too
-    if (!sl || (key >> 28) != 0xB || (n_entries < 20 && !shop) || !game::safe_read(ctx.rbx + 0x10, &idx, 2) ||
+    if (!sl || (key >> 28) != 0xB || (n_entries < 20 && !shop) || !game::fast_read(ctx.rbx + 0x10, &idx, 2) ||
         s_lines.load() >= 700)
         return;
     const uint64_t sig = (static_cast<uint64_t>(key) << 32) | (static_cast<uint64_t>(idx) << 16) |
