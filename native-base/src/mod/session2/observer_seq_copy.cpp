@@ -25,6 +25,9 @@ std::atomic<osq::Mode> g_mode{osq::Mode::Off};
 std::mutex g_mu;  // leaf lock: under it only the outgoing queue's own lock is taken (server_push_extra)
 osq::Ledger g_ledger;  // under g_mu
 osq::Copier g_copier;  // under g_mu
+// Co-op+ 2026-11-24: the last 2292 the host's client got (whole packet, u32 actor | u64 sequencer | u32 | u8), the
+// template of the refused own scenes' release (observer_seq_copy_user2_branch_result). Under g_mu.
+std::vector<uint8_t> g_last_2292;
 uint32_t g_trip_epoch = 0;  // under g_mu: the guest epoch of the current trip
 std::atomic<uint64_t> g_milestone_hold_ms{0};  // review M2: the host's 2322 hold after user 2's 2762 (0 = off)
 // observer_sched_copy (p8-impl-horarios-snapshot.md): the host's schedule stages. Fixed size (no allocation),
@@ -635,6 +638,7 @@ void observer_seq_copy_sniffed(const uint8_t* packet, size_t size, uint64_t t_us
         const std::span<const uint8_t> raw(packet, size);
         uint64_t seq = 0;
         std::lock_guard lock(g_mu);
+        if (op == osq::kOpDelete && raw.size() == osq::kHeader + 17) g_last_2292.assign(raw.begin(), raw.end());
         if (sched || (op == osq::kOpMoveField && sched_on())) {
             sched_sniffed_locked(raw, t_us);
             if (sched) {
@@ -1005,9 +1009,59 @@ bool observer_seq_copy_filter_req(uint16_t opcode, std::span<const uint8_t> payl
     }
 }
 
+void observer_seq_copy_user2_branch_result(uint64_t seq, uint32_t then, uint32_t result) noexcept {
+    if (!observer_seq_copy_sends()) return;
+    try {
+        std::lock_guard lock(g_mu);
+        g_copier.on_user2_own_branch(seq, result == 0, p8_now_us(), then, result);
+    } catch (...) {
+    }
+}
+
+namespace {
+// The refused own scenes now due (Copier::on_user2_own_branch): each one's 2292 naming user 2's character, to its queue.
+void release_refused_own_scenes() {
+    std::lock_guard lock(g_mu);
+    if (!g_copier.own_refused_waiting()) return;
+    const uint64_t now_us = p8_now_us();
+    const std::vector<osq::Copier::OwnRefused> due = g_copier.take_own_refused_due(now_us);
+    for (const auto& d : due) {
+        const uint32_t me = server_user2_player_key();
+        const bool from_template = g_last_2292.size() == osq::kHeader + 17;
+        bool ok = false;
+        if (me && !probe() && !server_logout_requested()) {
+            std::vector<uint8_t> pk;
+            if (from_template) {
+                pk = g_last_2292;
+            } else {  // none seen yet: the whole-packet layout with a 0 tail (u32 0 | u8 0)
+                pk.assign(osq::kHeader + 17, 0);
+                pk[0] = static_cast<uint8_t>(osq::kOpDelete);
+                pk[1] = static_cast<uint8_t>(osq::kOpDelete >> 8);
+                pk[2] = 0xFF;
+                pk[3] = 17;
+            }
+            for (int i = 0; i < 4; ++i) pk[5 + i] = static_cast<uint8_t>(me >> (8 * i));
+            for (int i = 0; i < 8; ++i) pk[9 + i] = static_cast<uint8_t>(d.seq >> (8 * i));
+            ok = server_push_extra(pk);
+            if (ok) {
+                g_copier.on_user2_own_deleted(d.seq);  // its NPCs are free again
+                g_own_binds_live.store(static_cast<uint32_t>(g_copier.own_binds()), std::memory_order_relaxed);
+            }
+        }
+        log::warn("ObserverSeqCopy [own refused] the server refused user 2's branch of its own scene 0x{:X} to 0x{:X} "
+                  "(result 0x{:08X}) {} ms ago and the scene neither went on nor ended: its 2292 naming 0x{:08X} ({}) {} "
+                  "(user 2's game leaves that scene instead of staying stuck in it)",
+                  d.seq, d.then, d.result, now_us >= d.us ? (now_us - d.us) / 1000 : 0, me,
+                  from_template ? "the last 2292's tail" : "no 2292 seen yet: a 0 tail",
+                  ok ? "SENT to user 2's queue" : "NOT sent");
+    }
+}
+}  // namespace
+
 void observer_seq_copy_tick() noexcept {
     if (!observer_seq_copy_wanted()) return;
     try {
+        release_refused_own_scenes();
         bool active = false;
         {
             std::lock_guard lock(g_mu);

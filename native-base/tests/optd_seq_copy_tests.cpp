@@ -455,6 +455,47 @@ void test_filter() {
     CHECK(n.judge_req(osq::kOpBranchReq, hex("ad01000000000000000000000000"), l) == osq::Copier::Req::HostSequencer);
 }
 
+// Co-op+ 2026-11-24 (Borque's two-PC taming): a refused branch of user 2's own scene that nothing follows -> its 2292.
+void test_own_refused_release() {
+    osq::Copier c;
+    c.on_user2_own(0x29D);
+    c.on_user2_own_branch(0x300, false, 1'000'000, 2, 0xFF9EA4EBu);  // not user 2's own: ignored
+    CHECK(c.own_refused_waiting() == 0);
+    c.on_user2_own_branch(0x29D, true, 1'000'000, 0, 0);  // accepted: nothing
+    CHECK(c.own_refused_waiting() == 0);
+    c.on_user2_own_branch(0x29D, false, 2'000'000, 2, 0xFF9EA4EBu);
+    CHECK(c.own_refused_waiting() == 1);
+    CHECK(c.take_own_refused_due(7'999'999).empty());
+    c.on_user2_own_branch(0x29D, false, 5'000'000, 2, 0xFF9EA4EBu);  // again: the first time counts
+    const auto d = c.take_own_refused_due(8'000'000);
+    CHECK(d.size() == 1 && d[0].seq == 0x29D && d[0].then == 2 && d[0].result == 0xFF9EA4EBu && d[0].us == 2'000'000);
+    CHECK(c.own_refused_waiting() == 0);
+    // Once: marked own-deleted, so the host-targeted 2292 at logout is not copied again and a new refusal is ignored.
+    CHECK(!c.take_user2_own_delete(0x29D));
+    c.on_user2_own_branch(0x29D, false, 9'000'000, 2, 1);
+    CHECK(c.own_refused_waiting() == 0);
+    // An accepted branch after the refusal: the scene went on.
+    c.on_user2_own(0x2A0);
+    c.on_user2_own_branch(0x2A0, false, 10'000'000, 1, 5);
+    c.on_user2_own_branch(0x2A0, true, 11'000'000, 1, 0);
+    CHECK(c.take_own_refused_due(30'000'000).empty());
+    // Its native 2292 meanwhile: the scene ended.
+    c.on_user2_own(0x2A4);
+    c.on_user2_own_branch(0x2A4, false, 10'000'000, 1, 5);
+    c.on_user2_own_delete_native(0x2A4);
+    CHECK(c.take_own_refused_due(30'000'000).empty() && c.own_refused_waiting() == 0);
+    // Its host-targeted 2292 copied meanwhile (take_user2_own_delete): the same.
+    c.on_user2_own(0x2A8);
+    c.on_user2_own_branch(0x2A8, false, 10'000'000, 1, 5);
+    CHECK(c.take_user2_own_delete(0x2A8));
+    CHECK(c.take_own_refused_due(30'000'000).empty());
+    // A new server: nothing waits.
+    c.on_user2_own(0x2B0);
+    c.on_user2_own_branch(0x2B0, false, 10'000'000, 1, 5);
+    c.clear_server();
+    CHECK(c.own_refused_waiting() == 0);
+}
+
 void test_guest_route() {
     gsr::RouteFacts f;
     f.mode = gsr::Mode::On;
@@ -1659,6 +1700,11 @@ void test_guest_sched_kinds_and_teardown() {
 }
 
 int main() {
+    // Unbuffered: a crash in a later test (the baseline lists this suite as failing) keeps the lines before it.
+    std::setvbuf(stdout, nullptr, _IONBF, 0);
+    std::printf("own_refused_release first\n");
+    test_own_refused_release();
+    std::printf("own_refused_release: %d failure(s) so far\n", g_failures);
     test_mode_and_filter();
     test_parsers();
     test_ledger();
