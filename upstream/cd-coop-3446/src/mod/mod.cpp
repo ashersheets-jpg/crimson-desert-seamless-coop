@@ -56,6 +56,7 @@
 #include "mod/net/coop_sync.h"
 #include "mod/net/coop_revive.h"
 #include "mod/net/coop_travel.h"
+#include "mod/net/landing_spot.h"
 #include "mod/net/coop_story.h"
 #include "mod/net/coop_chat.h"
 #include "mod/net/kill_feed.h"
@@ -1164,7 +1165,22 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
                                         s.position.z);
                 }
                 script_was_down = script_down;
-                // Co-op+: Ctrl+F4 takes us to the other player (alive, not in a menu, 1 m beside them).
+                // Co-op+ (T19): the friend's recent path, for where a hop to it lands (net/landing_spot.h): Go to
+                // my friend, the join beside the host, respawn_at=partner.
+                static net::LandingTrail landing;
+                if (!linked) {
+                    landing.clear();
+                } else if (const auto& rs = session.remote_state(); rs && rs->health > 0.0f) {
+                    landing.note(rs->pos.x, rs->pos.y, rs->pos.z, now);
+                }
+                const auto hop_to_friend = [&](const proto::Vec3& p) {
+                    const net::LandingSpot ls = landing.spot(p.x, p.y, p.z, now);
+                    net::revive_teleport_to(ls.x, ls.y, ls.z);
+                    log::info("Co-op: the hop lands {} ({:.1f} m from them, {:+.1f} m up)",
+                              ls.from_path ? "on their path a moment ago" : "on their own spot",
+                              std::sqrt((ls.x - p.x) * (ls.x - p.x) + (ls.z - p.z) * (ls.z - p.z)), ls.y - p.y);
+                };
+                // Co-op+: Ctrl+F4 takes us to the other player (alive, not in a menu, beside them on their path).
                 static bool go_was_down = false;
                 const bool go_down = linked && input::action_down(input::Action::GoToFriend, game_has_focus());
                 if (go_down && !go_was_down && net::hideseek_active()) {
@@ -1172,7 +1188,7 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
                     toast_until = now + 4000;
                 } else if (go_down && !go_was_down && s.health > 0.0f) {
                     if (const auto& rs = session.remote_state(); rs && rs->health > 0.0f) {
-                        net::revive_teleport_to(rs->pos.x + 1.0f, rs->pos.y + 0.5f, rs->pos.z);
+                        hop_to_friend(rs->pos);
                         log::info("Co-op: to the other player at ({:.0f}, {:.0f})", rs->pos.x, rs->pos.z);
                     }
                 }
@@ -1200,7 +1216,7 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
                             const float dx = rs->pos.x - s.position.x, dz = rs->pos.z - s.position.z;
                             const float d = std::sqrt(dx * dx + dz * dz);
                             if (d > 30.0f) {
-                                net::revive_teleport_to(rs->pos.x + 1.0f, rs->pos.y + 0.5f, rs->pos.z);
+                                hop_to_friend(rs->pos);
                                 toast = "Co-op\nYou joined " + session.peer_name();
                                 toast_until = now + 5000;
                                 log::info("Co-op: joined: our save's place was {:.0f} m from the host: moved to its side "
@@ -1258,7 +1274,7 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
                         const float dx = s.position.x - died_at.x, dz = s.position.z - died_at.z;
                         const auto& rs = session.remote_state();
                         if (settings::respawn_at_partner() && linked && rs && rs->health > 0 && dx * dx + dz * dz > 50.0f * 50.0f) {
-                            net::revive_teleport_to(rs->pos.x + 1.0f, rs->pos.y + 0.5f, rs->pos.z);
+                            hop_to_friend(rs->pos);
                             toast = "Co-op\nBack to " + session.peer_name();
                             toast_until = now + 4000;
                             log::info("Co-op: respawn_at=partner: from the checkpoint to the other player");

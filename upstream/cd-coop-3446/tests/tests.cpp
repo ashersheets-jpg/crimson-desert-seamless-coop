@@ -32,6 +32,7 @@
 #include "common/party_scaling.h"
 #include "common/nameplate.h"
 #include "mod/net/boss_rules.h"
+#include "mod/net/landing_spot.h"
 
 #include <cctype>
 
@@ -1900,6 +1901,35 @@ void test_direct_knock() {
     CHECK(n && *n == 4 && host.admitted() == admitted);
 }
 
+// T19: where a hop to the friend lands.
+void test_landing_spot() {
+    net::LandingTrail t;
+    auto s = t.spot(10, 5, 20, 1000);  // nothing kept: the friend's own spot, half a metre up
+    CHECK(!s.from_path && s.x == 10 && s.y == 5.5f && s.z == 20);
+    for (int i = 0; i <= 40; ++i) t.note(i * 0.25f, 5, 0, 1000 + i * 50);  // walks east 0 -> 10 m (kept every 0.5 m)
+    CHECK(t.size() == 21);
+    s = t.spot(10, 5, 0, 4000);  // the newest point 1 to 4 m back: x 9
+    CHECK(s.from_path && s.x == 9.0f && s.y == 5.5f && s.z == 0);
+    net::LandingTrail ledge;  // came along a ledge 3 m up, jumped down: nothing of the ledge
+    for (int i = 0; i <= 10; ++i) ledge.note(i * 0.5f, 8, 0, 1000 + i * 100);
+    ledge.note(6, 5, 0, 3000);
+    s = ledge.spot(6, 5, 0, 3500);
+    CHECK(!s.from_path && s.x == 6 && s.y == 5.5f);
+    net::LandingTrail far;  // a fast travel: the old path is far away
+    for (int i = 0; i <= 4; ++i) far.note(i * 0.5f, 0, 0, 1000 + i * 100);
+    far.note(100, 0, 0, 2000);
+    CHECK(!far.spot(100, 0, 0, 2100).from_path);
+    net::LandingTrail old;  // older than ten minutes: not used
+    old.note(0, 0, 0, 1000);
+    old.note(2, 0, 0, 1100);
+    CHECK(old.spot(0, 0, 0, 1200).from_path && !old.spot(0, 0, 0, 1100 + 600001).from_path);
+    net::LandingTrail ring;  // wraps: the last 48 points
+    for (int i = 0; i < 100; ++i) ring.note(i * 0.5f, 0, 0, 1000 + i);
+    CHECK(ring.size() == net::LandingTrail::kSize);
+    s = ring.spot(49.5f, 0, 0, 2000);
+    CHECK(s.from_path && s.x == 48.5f);
+}
+
 int main() {    test_pattern();
     test_byte_ring();
     test_direct_invite();
@@ -1932,6 +1962,7 @@ int main() {    test_pattern();
     test_join_args();
     test_party_scaling();
     test_nameplate();
+    test_landing_spot();
     test_game_save();
     if (g_failures == 0) std::printf("All tests passed\n");
     return g_failures == 0 ? 0 : 1;
