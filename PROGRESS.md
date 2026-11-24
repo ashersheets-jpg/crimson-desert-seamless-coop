@@ -10797,3 +10797,15 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   own kills do give it death notices (pp48e-farfight's guest: "Kill feed: we took down 0xB01000D8 ..." x3). The real
   case is the joined player's OWN kill: cs105g puts it beside a goose (tpanimal 60 7578) and has it swing in six
   directions; the host kills one goose only. From 19:28.
+- 19:39 cs105g (SAVES OK, 5/5): the guest's tpanimal took a "critter (variant unknown)" 0xB0100149 (npcs_near still
+  used the single-record variants, so no goose for it) whose position the guest read as (-0.0, 1.8, 0.2): the guest
+  went to the WORLD'S ORIGIN and swung at nothing (round 1 "1 - 0" on both: the host's goose). Dev fixes (layer
+  1274e78): npcs_near / tpanimal use the batched variants; a tp target within 100 m of (0, 0) is refused. Discord
+  19:29: no new bug report or feedback (Brycecco's zips not yet). cs105h (the same test) from 19:43.
+- 19:54 cs105h (SAVES OK, 5/5): the guest's tpanimal now takes a GOOSE by its batched variant (0xB01000E6 "Goose",
+  0.8 m away after the hop; 0xB01000E7 1.9 m) and the contest's banner reads on its screen ("Hunting contest vs Host
+  2:11 You 0 - 1 Host"); it drew its sword and swung in six directions, but the geese fled at the hop (none in shot
+  g2b), so no kill: round "0 - 1" on both (the host's goose). T41 status: the joined player's game now knows the
+  host's animals (the batched-variant fix, verified by its lists); its own kill credit (guest_hits_we_hit / killer)
+  is not shown by a script (the server ignores its cheat kill, a sword cannot catch a fleeing goose): a hands-on
+  check (a bow) or a tester's report.
