@@ -10951,4 +10951,12 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   frame_probe, log only, default 0): a mid hook at 0xA0CB80's entry on both games (per gimmick: runs, would stop,
   controller vs this game's user) and the host server's 2594 / 2304 by origin. Test cs113 (written): a Continue
   with -GuestVariant fishing3 (the joined player IS the fishing3 character with the rod; cs112a ran a New Co-op Save,
-  whose joined player most likely got a new character without the rod: the likely reason its keys did nothing). After pp52: build, package, cs113.
+  whose joined player most likely got a new character without the rod: the likely reason its keys did nothing).
+- 03:59 pp52 STOPPED after chest (9 steps, 318 pass, 0 fail: static, real, fresh, xess, fsr, latehook, display,
+  lowsave, chest): pp52-lowsave's join hop (the guest's save 1321 m off) "lands on their own spot (0.0 m)": with no
+  path point yet the guest landed ON the host, the two characters inside each other in the host's shot 39. The
+  fallback goes back to the old +1 m on x (the path landing unchanged); that is a mod change, so 9a16282e will not
+  be posted and its pass was stopped (stop mark, removed after).
+- 04:01 built: native 8ee7424 (frame_probe, log only, default 0; the 0xA0CB80 head and its +0x57 / +0x5B / +0x6E
+  instructions checked in the 3732 exe first), layer: the fallback (tests pass), native 92 tests, the 14 known
+  failing. Package c0fa5540 (= the build tree). cs113a (the fishing probe) first, then the full checklist pp53. After pp52: build, package, cs113.
