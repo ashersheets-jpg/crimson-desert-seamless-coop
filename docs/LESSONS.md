@@ -761,6 +761,25 @@ jmp's target, a relocated copy far out in the exe: readable code, its error code
 at start from hashed names (`mov eax, [rip+X]`, X = 0 in the file). Follow the jmp, then the call that writes the
 result; to name an error code, find the global its name's hash goes into, then who loads that global.
 
+## A Discord message holds 2000 characters: count the post before staging it (2026-11-24, 527e283a)
+The first draft of the 527e283a post was 2362 characters; Discord would have refused it or cut it after the files
+were attached. The staging script prints the length (json.dump of the text): keep the post under ~1900 (mentions grow
+when Discord renders them). Long explanations go to the feedback reply, which has its own 2000.
+
+## Guide key names are not this build's: look at the first shot before scripting a whole sequence (2026-11-24, cs116a)
+The web guides said "hold F2, the mouse wheel to the rod". cs116a scripted the whole fishing sequence on that and ran
+it for minutes; the first shot already showed no wheel. For an unknown key, run the key alone with a shot right after
+it (cs116b's sweep), then build the sequence on what the shot shows.
+
+## Git Bash rewrites Windows "/X" switches into paths (2026-11-24, cs120a)
+`tasklist /FI "IMAGENAME eq ..." /FO CSV` from a bash script got "Invalid argument - 'C:/Program Files/Git/FI'": MSYS
+turns an argument that looks like a POSIX path into a Windows one. Prefix such commands with MSYS_NO_PATHCONV=1 (or
+write //FI). Run a sampler line once by hand before a 40-minute run depends on it: cs120a lost its memory data.
+
+## A long hold lets the game autosave the test world (2026-11-24, cs120a)
+In 40 minutes the host's game wrote slot0 AND slot1 into the test co-op world; the scripts moved only slot0 out, so
+the backup check refused ("a different backup exists"). Long runs move every new slotN out (cs120.sh: slot0-2).
+
 ## A unit-test exe that crashes hides the new test's result (2026-11-24, seq_copy)
 cdmp_tests_optd_seq_copy crashes partway (a baseline failure) and its stdout was buffered into a file, so the
 crash lost every line, the new test's too: "old failure" said nothing about the new code. Now the suite sets

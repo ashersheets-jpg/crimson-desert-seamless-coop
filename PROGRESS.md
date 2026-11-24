@@ -11083,3 +11083,46 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   mounts with no held frame (pp53-mounts: 36 "update skipped" lines). 13:57 errglobal73: the taming's refusal code is
   global 0x71BB2E8, loaded at 2C0BFD7 / 2C0C03A in the branch step (the staged probe's two hooks; their bytes match
   the exe). pp55b (static as smoke + farfight) started 13:57.
+- 14:09 pp55b: static 12/0, farfight 49/0 (the join worked). All 28 steps passed on 527e283a; posted 14:11 (above).
+- 14:22 cs116a (fishing, -GuestVariant fishing3, the guides' keys; SAVES OK, 5/5): F2 held ~2 min of game time opened
+  NO wheel (shots w0-w8), so no rod came out; the camera sweep round the Nas River pond worked (fishsweep: 7 angles,
+  the pond by the wagon at -60), but Q + the left button were plain swings: 0 frame-event runs, 0 summons. A second
+  guide (Beebom, via a fetch agent) says F2 opens the wheel and the ARROW keys cycle it; PowerPyx (pad): hold D-pad
+  left. cs116b (14:24) presses 1-8, Z (switch weapons), B (use equipment) with a shot after each.
+- 14:31 cs116b: no rod in hand after any of 1-8, Z, B (the shots show the joined player's back unchanged at this
+  size). Scripting the cast blind stays stuck on the first key; the 5-minute hands-on (top of this list) is still the
+  quick way. cs117a (the chest step with knowledge_grant=1) started.
+- 14:41 cs117a: the host's game quit during start-up right after cs116b's games closed (exit -1, nothing logged: a
+  launch-timing glitch); cs117b (re-run; SAVES OK, 5/5, both alive): KnowledgeGrant installed, the chest opened (5
+  item kinds, the joined player's own share 55 pieces), but learns 0 in 6 minutes: coop-test-bandits already knows
+  what this chest teaches (pp43's "Tough Meat" was before the test save was refreshed). B04 still needs a knowledge
+  neither test character has.
+- 14:43 built native 65f00c9 (the next batch's diagnostics: shop_probe BF1 / BF2 at the branch step's two loads of
+  0x71BB2E8, the scene and the target node's object types, read only; HorseDiag's held actors by key), 92 tests (14
+  known failing), layer tests pass; synced; package db220af7 (= the build tree). cs118a (the ride run on it; SAVES OK,
+  5/5, both alive): "ShopProbe: BF 0x2C0BFDD/0x2C0C040 ... hooked/hooked". Not posted: diagnostics only, it waits for
+  the next batch and a full pass. 14:54 cs119a: T19's water case at the Nas River pond (cs119.sh).
+- 15:02 cs119a (SAVES OK, 5/5, both alive): the joined player's far travel (4 km) then Go to my friend: "the hop lands
+  on their path a moment ago (1.4 m from them, +0.5 m up)", next to the host -- but the host stood in flowers, not in
+  the pond (shot h2): the pond estimate was off (cs116a's pond view came from the joined player's spot, 5 m north of
+  the host's). cs119b retries at (-10353.5, -3917.0) with a 0.9 s walk. #general 14:58: Burns (building their own
+  game, not a user of the mod) replied to an older message with a tip; nothing to answer.
+- 15:11 cs119b (SAVES OK, 5/5, both alive): "the hop lands on their path a moment ago (1.3 m from them, +0.5 m up)",
+  the two side by side (shot h2) at the marsh's edge: wet ground, not water you swim in. The test start has no deep
+  water within reach (cs111a found none at the dock either), so T19's water case stays open at "shallow only"; the
+  landing rule needs nothing special for water (the friend's own path is where it lands).
+- 15:13 cs120a started: a LONG SESSION (every post says "not covered: long sessions"): both players parked by the
+  Hernand tavern door for 40 minutes of -Hold on db220af7, a sampler in cs120.sh recording both games' working sets
+  every 2 minutes; then the slow-loop / warning / error counts, RTT and fps at the start and the end.
+- 16:03 cs120a done: A 45-MINUTE SESSION IN TOWN IS CLEAN (both parked by the Hernand tavern, 40 min of hold): both
+  games alive at the end, SAVES OK, 5/5; 0 slow loops, 0 slow ticks on either game; warnings 9 / 8 / 7 / 7 and errors
+  5 / 4 / 0 / 0 (native host / guest, layer host / guest), all the start-up kinds every run logs; RTT 1.7 / 1.0 ms, 0
+  lost, ~50,000 position updates each way; ~40 fps on both from the first minute to the last (frames 3332 -> 111592 in
+  44.8 min). Memory NOT recorded: Git Bash turned tasklist's /FI into a path (fixed: MSYS_NO_PATHCONV=1). The game
+  autosaved the test world twice in the hold (slot0, slot1, moved out; the backup check is current again; cs120.sh now
+  moves slot0-2). cs120b (the same, with the memory sampler) next.
+- 16:54 cs120b (the same 45 minutes, memory sampled; SAVES OK, 5/5, both alive): clean again: 0 slow loops / slow
+  ticks, warnings 10 / 8 / 7 / 1, errors 5 / 1 / 0 / 0 (start-up kinds), RTT 2.2 / 2.5 ms, 0 lost, ~50,000 updates each
+  way, ~40 fps both from start to end. MEMORY DOES NOT GROW: working sets 10.15 -> 5.70 GB (host) and 8.05 -> 4.30 GB
+  (joined player) over 40 minutes (Windows trimming idle games; never a climb). Two-copy, one PC, idle in town: no
+  leak and no slow-down in 45 minutes. Not covered: two PCs, fights, travel during a long session.
