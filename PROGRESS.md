@@ -10931,3 +10931,24 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   still (the same event hashes as at the camp: 0x0F86C0FC, 0x128B06E9, 0x1E3E141C, 0x5CB19FE2). Whatever those
   events do (plants pushed aside, birds, water?), they never run on the joined player's screen. Fishing waits for
   the agent's report (how a cast is made, which check stops it).
+- 03:08 pp52 started: the full checklist (28 steps) on candidate 9a16282e (native bd6164e: the T23 port, off by
+  default; layer 9a16282: T19's landing on the friend's path, used by every join beside the host and Go to my
+  friend), the build tree = the package (dllswap show). Started now so it ends before 09:00 (the update restart
+  window). No builds and no native edits until it ends: fixes are written as scripts to apply after.
+- 03:18 pp52 static 12/0, real 14/0, fresh 43/0.
+- 03:20 The research agent's report (build/decomp/notes_gimmick_handoff.md, private; read-only, nothing run):
+  (1) no game message moves a controller: AiHandoff writes the server's actor+0x90 itself and sends a private 12-byte
+  notice; the server write and the notice would carry over to a gimmick, the game's cheat steps would not (type 7
+  refused, null components). (2) The game's gimmick "OwnershipState" is one byte (+0x61 of the component), told to
+  clients by OverriedOwnershipStateTypeyAck 2850, and never changes a controller. (3) FISHING IS STOPPED ON THE
+  JOINED PLAYER'S OWN PC: the fish is summoned with 2594, built only inside 0xA0CB80 (the client's gimmick
+  frame-event runner), which returns silently unless [gimmick+0x90] is this game's user; the server's 2594 handler
+  never sees who asked. Not known statically: whether the cast's event belongs to the fishing spot or to the rod's
+  own device (docked to the player: then docked_gimmicks=1, the joined player's own devices run on its own game,
+  could already fix it). (4) Design if it is the spot: hand the gimmick to user 2 while it uses it (the server's
+  +0x90 and the notice), drop the server-unchecked requests from the other user meanwhile, hand it back after.
+  Next, the probe it recommends, written (scratchpad frame_probe.h / .cpp, apply_frame_probe.py, [session2]
+  frame_probe, log only, default 0): a mid hook at 0xA0CB80's entry on both games (per gimmick: runs, would stop,
+  controller vs this game's user) and the host server's 2594 / 2304 by origin. Test cs113 (written): a Continue
+  with -GuestVariant fishing3 (the joined player IS the fishing3 character with the rod; cs112a ran a New Co-op Save,
+  whose joined player most likely got a new character without the rod: the likely reason its keys did nothing). After pp52: build, package, cs113.

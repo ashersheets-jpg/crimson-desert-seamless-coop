@@ -1904,8 +1904,8 @@ void test_direct_knock() {
 // T19: where a hop to the friend lands.
 void test_landing_spot() {
     net::LandingTrail t;
-    auto s = t.spot(10, 5, 20, 1000);  // nothing kept: the friend's own spot, half a metre up
-    CHECK(!s.from_path && s.x == 10 && s.y == 5.5f && s.z == 20);
+    auto s = t.spot(10, 5, 20, 1000);  // nothing kept: 1 m beside the friend on x, half a metre up
+    CHECK(!s.from_path && s.x == 11 && s.y == 5.5f && s.z == 20);
     for (int i = 0; i <= 40; ++i) t.note(i * 0.25f, 5, 0, 1000 + i * 50);  // walks east 0 -> 10 m (kept every 0.5 m)
     CHECK(t.size() == 21);
     s = t.spot(10, 5, 0, 4000);  // the newest point 1 to 4 m back: x 9
@@ -1914,7 +1914,7 @@ void test_landing_spot() {
     for (int i = 0; i <= 10; ++i) ledge.note(i * 0.5f, 8, 0, 1000 + i * 100);
     ledge.note(6, 5, 0, 3000);
     s = ledge.spot(6, 5, 0, 3500);
-    CHECK(!s.from_path && s.x == 6 && s.y == 5.5f);
+    CHECK(!s.from_path && s.x == 7 && s.y == 5.5f);
     net::LandingTrail far;  // a fast travel: the old path is far away
     for (int i = 0; i <= 4; ++i) far.note(i * 0.5f, 0, 0, 1000 + i * 100);
     far.note(100, 0, 0, 2000);

@@ -1177,7 +1177,7 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
                     const net::LandingSpot ls = landing.spot(p.x, p.y, p.z, now);
                     net::revive_teleport_to(ls.x, ls.y, ls.z);
                     log::info("Co-op: the hop lands {} ({:.1f} m from them, {:+.1f} m up)",
-                              ls.from_path ? "on their path a moment ago" : "on their own spot",
+                              ls.from_path ? "on their path a moment ago" : "beside them (no path yet)",
                               std::sqrt((ls.x - p.x) * (ls.x - p.x) + (ls.z - p.z) * (ls.z - p.z)), ls.y - p.y);
                 };
                 // Co-op+: Ctrl+F4 takes us to the other player (alive, not in a menu, beside them on their path).
