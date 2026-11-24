@@ -47,8 +47,9 @@ test save Out, shipped cdmp.ini restored.
   fresh, solostart, loot, display; both zips checked byte for byte against the tested package): doors of a building
   the joined player reached first open for both; no arm-wrestling choice in the friend menu. Text:
   docs/release/shared-world-playtest/download-677c87bb.txt. Also answered "does dlc work with the mod" in #general.
-- 2026-11-22 05:20, updated 15:53. FYI, time-sensitive: Windows still has an update RESTART PENDING (read-only
-  check: RebootRequired is set; active hours 15:00-09:00). Its toast at 15:12 said the PC "will restart to update
+- 2026-11-22 05:20, updated 2026-11-24 03:08 (still set; last boot 21 Nov 00:49). FYI, time-sensitive: Windows still
+  has an update RESTART PENDING (read-only check: RebootRequired is set; active hours 15:00-09:00, so today 09:00-15:00
+  is when it may restart by itself; I keep long runs out of that window unless you pause or restart). Its toast at 15:12 said the PC "will restart to update
   outside of active hours", so between 09:00 and 15:00 tomorrow, and the toast's leftover window blocked three test
   steps today (the harness now clicks around it). When you are up: either pause updates (Settings > Windows Update)
   or restart once when no test runs; I change no system setting myself.
