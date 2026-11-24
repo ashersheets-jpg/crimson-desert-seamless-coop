@@ -448,17 +448,17 @@ void test_mode_and_bytes() {
         CHECK(h.size() >= dgl::kEntryPatch);
         CHECK((h[0] == 0x48 || h[0] == 0x4C) && h[1] == 0x89 && h[3] == 0x24);
     }
-    // 0x2792A7B: mov [r14+0x90],eax (7 bytes), then mov rax,[rsi]; 0x2792A70 reads the field owner +0x180.
+    // 0x2A31BBB (3732): mov [r14+0x90],eax (7 bytes), then mov rax,[rsi]; 0x2A31BB1 reads the field owner +0x180.
     const uint8_t mov[7] = {0x41, 0x89, 0x86, 0x90, 0x00, 0x00, 0x00};
     static_assert(dgl::kControllerWritePatch == 7);
     CHECK(std::memcmp(dgl::kControllerWriteBytes, mov, 7) == 0);
     static_assert(dgl::kFieldOwnerReadBytes[2] == 0x80 && dgl::kFieldOwnerReadBytes[3] == 0x01);  // 3663: mov eax,[rdi+0x180], no REX
     static_assert(dgl::kFieldOwnerRead + 10 == dgl::kControllerWrite);
-    // 0x2970ADF: E8 rel32 -> 0x28AD170.
+    // 0x2C4FCD4 (3732): E8 rel32 -> 0x2B734B0.
     const int32_t rel = static_cast<int32_t>(dgl::le32(&dgl::kDockEquipCall[1]));
     CHECK(dgl::kDockEquipCall[0] == 0xE8 &&
           static_cast<uintptr_t>(static_cast<intptr_t>(dgl::kDockEquipCallSite) + 5 + rel) == dgl::kDockEquip);
-    static_assert(dgl::kClientGimmickRequestSlot == dgl::kClientGimmickVtbl + 0x740);
+    static_assert(dgl::kClientGimmickRequestSlot == dgl::kClientGimmickVtbl + 0x748);  // 3732 (2976 +0x740)
     static_assert(dgl::kErrNotController == 0xD65F8D70u);
 }
 
