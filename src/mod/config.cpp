@@ -388,6 +388,7 @@ Config load_config(const std::wstring& ini_path) {
     c.s2_npc_dialog_share = read_uint(ini_path, L"session2", L"npc_dialog_share", 0) != 0;
     c.s2_merchant_unhide = read_uint(ini_path, L"session2", L"merchant_unhide", 0);
     c.s2_hide_mirror = read_uint(ini_path, L"session2", L"hide_mirror", 1);
+    c.s2_frame_probe = read_uint(ini_path, L"session2", L"frame_probe", 0);
     c.s2_guest_shop_check = read_uint(ini_path, L"session2", L"guest_shop_check", 0) != 0;
     c.s2_npc_category_share = read_uint(ini_path, L"session2", L"npc_category_share", 1) != 0;
     c.s2_guest_condition_subject_host = read_uint(ini_path, L"session2", L"guest_condition_subject_host", 0) != 0;
