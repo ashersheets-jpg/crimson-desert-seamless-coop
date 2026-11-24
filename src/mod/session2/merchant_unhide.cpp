@@ -100,7 +100,7 @@ std::atomic<uint32_t> g_dbg_before{0}, g_dbg_after{0};
 uintptr_t own_manager() {
     // the host: its character is always 0xA0100001; the guest: the local user's main character [user+0xD0]
     if (!g_guest)
-        if (const auto ch = game::find_actor(0xA0100001u); ch && *ch) return mgr_of(*ch);
+        if (const auto ch = game::find_actor_fast(0xA0100001u); ch && *ch) return mgr_of(*ch);
     const uintptr_t user = local_user();
     uintptr_t ch = 0, comps = 0, seq = 0, mgr = 0;
     if (!user || !game::fast_read(user + 0xD0, &ch, 8) || !ch) return 0;
@@ -161,7 +161,7 @@ T rv(uintptr_t a) {
     return v;
 }
 std::string snapshot(uint32_t key) {
-    const auto a = game::find_actor(key);
+    const auto a = game::find_actor_fast(key);
     if (!a || !*a) return "not in this client";
     const uintptr_t act = *a, comps = rv<uintptr_t>(act + 0x68);
     const uintptr_t info = rv<uintptr_t>(comps + 0x20), play = rv<uintptr_t>(comps + 0xB0);
@@ -285,7 +285,7 @@ void worker() {
                 // this client's character's manager (0xA0100001 on the host; any 0xA key of ours on the guest is
                 // not needed: the host's is the one whose shop scenes stall)
                 uintptr_t mgr = 0;
-                if (const auto ch = game::find_actor(0xA0100001u); ch && *ch) {
+                if (const auto ch = game::find_actor_fast(0xA0100001u); ch && *ch) {
                     const uintptr_t comps = rv<uintptr_t>(*ch + 0x68), seq = rv<uintptr_t>(comps + 0xA8);
                     mgr = rv<uintptr_t>(seq + 0x18);
                 }
@@ -329,7 +329,7 @@ void worker() {
             // their login, +0xCF) never comes. After kStuckMs: the byte cleared as that step does; the hide bit 9
             // (their AI runs on the host only) with the game's setter.
             if (now - b.at_ms >= mul::kStuckMs) {
-                if (const auto a = game::find_actor(b.key); a && *a) {
+                if (const auto a = game::find_actor_fast(b.key); a && *a) {
                     uintptr_t comps = 0, play = 0, vt = 0;
                     uint8_t wait = 0;
                     if (rd(*a + 0x68, comps) && rd(comps + 0xB0, play) && rd(play, vt) && vt == g_base + 0x59D0850 &&
@@ -348,7 +348,7 @@ void worker() {
                     if (x.key == b.key) x.done = true;
                 continue;
             }
-            const auto a = game::find_actor(b.key);
+            const auto a = game::find_actor_fast(b.key);
             uintptr_t comps = 0, info = 0;
             uint64_t hide = 0;
             if (!a || !*a || !rd(*a + 0x68, comps) || !rd(comps + 0x20, info) || !rd(info + 0x3B8, hide)) continue;
@@ -384,7 +384,7 @@ void worker() {
                         due.push_back(k);
             }
             for (const uint32_t k : due) {
-                const auto a = game::find_actor(k);
+                const auto a = game::find_actor_fast(k);
                 uintptr_t comps = 0, info = 0;
                 uint64_t hide = 0;
                 if (!a || !*a || !rd(*a + 0x68, comps) || !rd(comps + 0x20, info) || !rd(info + 0x3B8, hide)) continue;
@@ -413,7 +413,7 @@ void worker() {
         for (const Bound& b : watch) {
             const uint64_t age = now >= b.at_ms ? now - b.at_ms : 0;
             if (age < mul::kStuckMs) continue;
-            const auto a = game::find_actor(b.key);
+            const auto a = game::find_actor_fast(b.key);
             uintptr_t comps = 0, info = 0;
             uint64_t hide = 0;
             const bool read = a && *a && rd(*a + 0x68, comps) && rd(comps + 0x20, info) && rd(info + 0x3B8, hide);
@@ -481,7 +481,7 @@ void merchant_unhide_host_tick(troc::TrocLink& link) {
         }
         std::vector<uint32_t> keys;
         for (const uint32_t k : cands) {
-            const auto a = game::find_actor(k);
+            const auto a = game::find_actor_fast(k);
             uintptr_t comps = 0, info = 0;
             uint64_t hide = 0;
             if (!a || !*a || !rd(*a + 0x68, comps) || !rd(comps + 0x20, info) || !rd(info + 0x3B8, hide)) continue;

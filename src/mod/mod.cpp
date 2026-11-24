@@ -495,14 +495,30 @@ void run_network(const Config& cfg, LocalSource& local) {
                                              : "");
         }
         if (s2_link) session2::tunnel_tick(*s2_link, now);
-        // P8 S25 weather (weather_sync.h): the host's newest weather sample as control state 12 (weather_sync=1 and a
-        // guest that announced caps 0x04; nothing otherwise). Flushed by the next tunnel_tick.
-        if (s2_link) session2::weather_sync_host_tick(*s2_link, now);
-        // Co-op+ (npc_category.h): the host's NPC quest-dialog categories as control state 16.
-        if (s2_link) session2::npc_category_host_tick(*s2_link, now);
-        if (s2_link) session2::shop_twin_host_tick(*s2_link);
-        // Co-op+ (merchant_unhide.h): the hide mirror, the visible NPCs of unlisted scenes as control state 18.
-        if (s2_link) session2::merchant_unhide_host_tick(*s2_link);
+        // Co-op+ 2026-11-24 (Borque's two-PC log: "one loop took 0.5-2.4 s, mostly host tunnel" while tunnel_tick itself
+        // took at most 34 ms): the ticks after it are timed one by one; one over 100 ms names itself (the first 20 of
+        // each, then every 100th).
+        const auto timed_host_tick = [&](const char* name, auto&& fn) {
+            const uint64_t t0 = now_us();
+            fn();
+            const uint64_t dt = now_us() - t0;
+            if (dt > 100000) {
+                static std::atomic<uint32_t> slow{0};
+                const uint32_t k = slow.fetch_add(1) + 1;
+                if (k <= 20 || k % 100 == 0)
+                    log::warn("Net: host tick {} took {} ms ({} so far over 100 ms)", name, dt / 1000, k);
+            }
+        };
+        if (s2_link) {
+            // P8 S25 weather (weather_sync.h): the host's newest weather sample as control state 12 (weather_sync=1 and a
+            // guest that announced caps 0x04; nothing otherwise). Flushed by the next tunnel_tick.
+            timed_host_tick("weather_sync", [&] { session2::weather_sync_host_tick(*s2_link, now); });
+            // Co-op+ (npc_category.h): the host's NPC quest-dialog categories as control state 16.
+            timed_host_tick("npc_category", [&] { session2::npc_category_host_tick(*s2_link, now); });
+            timed_host_tick("shop_twin", [&] { session2::shop_twin_host_tick(*s2_link); });
+            // Co-op+ (merchant_unhide.h): the hide mirror, the visible NPCs of unlisted scenes as control state 18.
+            timed_host_tick("hide_mirror", [&] { session2::merchant_unhide_host_tick(*s2_link); });
+        }
         health.mark(Phase::HostTunnel, now_us());
         if (!s2_guest_link && !coop && session2::guest_active()) {
             s2_guest_link = std::make_unique<troc::TrocLink>(
