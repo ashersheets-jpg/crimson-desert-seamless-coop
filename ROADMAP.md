@@ -435,6 +435,8 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
     the unlisted scenes' NPCs that are visible on its game (tunnel control state 18); the joined player's game clears
     bit 9 on those that are still hidden there. pp50c: the host's list of 6, and all 6 un-hidden on the guest
     (0x200 -> 0x0). Nothing hidden on the host is shown. To confirm on a boss: a tester's two-PC boss fight.
+    2026-11-24 SEEN ON TWO REAL PCs (Borque's session on 2451dff5, over Steam): the host's "first host list: 19
+    NPC(s)", then the joined player's game cleared bit 9 on them one by one (77 [mirror] lines). A boss still unchecked.
   - [~] The guest's progress was not kept: the host's PC has 3 Steam accounts' save folders and guest_own_save was
     forced off. Fixed (native af4cdfb: Steam's ActiveUser picks the folder). Not yet run with several folders.
   - [~] A failed horse taming (minigame 0x4242) left the guest with no input: the server sent the 2292 of the

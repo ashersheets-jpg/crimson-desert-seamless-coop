@@ -10981,4 +10981,18 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   from the host" (it fought: hits counted with the guest in range, 68 health samples below full, but only 1 blow
   landed and no kill: the bandit fight's variance, as pp48d). Every other step clean, SAVES OK and 5/5 everywhere.
   pp53b (farfight again) 08:22: 47 / 0. So all 28 steps passed on c0fa5540, which is the validated base; NOT posted on its own (2451dff5 went out at
-  01:53; the only player-visible change is the landing, "post less often"): it goes out with the next fixes. After pp52: build, package, cs113.
+  01:53; the only player-visible change is the landing, "post less often"): it goes out with the next fixes.
+- 08:25 Discord: two new reports. (a) #bug-reports, EdwardJamesThe3:rdCosmicEnder (06:15): "When I mash X for
+  armwrestling the character starts jumping and it never ends", "I pressed solo to play", with a photo of the match
+  (controller, the X prompt). The mod should change nothing in solo: replied (tagged) asking whether it happens
+  without the mod, the build and a report zip. (b) #play-testing-feedback, Borque (07:15, two PCs, 2451dff5, both
+  zips): his friend's own horse: the host saw him riding an invisible horse while a frozen copy of him and the horse
+  stayed where he mounted; after talking to NPCs "a big global desync", NPCs teleporting even on the host; the horse
+  taming left the joined player stuck (game closed). Replied (tagged), zips downloaded (standing OK; logs only, read
+  with python -I). FIRST TWO-PC EVIDENCE FOR THE HIDE MIRROR: the host sent "first host list: 19 NPC(s)" and the
+  joined player's game un-hid them one by one (77 [mirror] lines, "visible on the host, hidden here ... cleared bit
+  9"): the invisible-NPC fix works over Steam on real PCs (a boss still unchecked). His horse: the joined player's
+  own mount was published and seated on the host (MountApply APPLIED, HorseFollowReverse 6680 samples); the AiHandoff
+  talk rule noted his horse (interaction 0x190) and handed 4 townsfolk to his game and back at 12:58-13:00 (each
+  switch can make an NPC jump: a lead for "NPCs teleporting"). A research agent reads the rest (the frozen copy, the
+  desync, the taming); cs114a (the guest rides its own horse 18 s away, host shots every 4 s) runs meanwhile. After pp52: build, package, cs113.

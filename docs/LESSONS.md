@@ -739,3 +739,18 @@ virtual was added before it. The refusal's global confirmed the client and serve
 window. Also: constants whose comment names an older build may already be the new build's (the controller write
 matched 3732, not 3663): check the bytes in each exe before "porting" them again. The tools are
 tools/native-port/port3732/gimmick73.py / gimmick73b.py.
+
+## A test save's items reach the joined player only in a Continue (2026-11-24, cs112a / cs113a)
+cs112a gave the joined player the fishing3 test save (a rod) with -GuestVariant, but in a New Co-op Save (-Fresh)
+the joined player gets a new character: no rod, and the scripted "take out the rod and cast" did nothing, which
+looked like a fishing bug. Only a Continue uploads the joined player's own slot103 into the host's world (cs18a's
+note). Before reading a joined player's failure as a game or mod fault, check that its character IS the save the
+test meant: its name, equipment or level in a shot or log line. A second trap in the same runs: the quick-slot
+key from an old session's notes ("2") brought up another item on that save; input notes go stale with saves and
+patches, so a shot after each input step is what tells.
+
+## A placement change: look at the first shot where it acts, not only its log line (2026-11-24, pp52-lowsave)
+The T19 landing logged "lands on their own spot (0.0 m)" and the step passed, but the host's shot showed the two
+characters inside each other. The unit tests checked the arithmetic; only the shot showed what that arithmetic
+looks like in the game. The fallback went back to the old +1 m beside the friend. For anything that places a
+character, read one shot from each game of the first run that exercises it.
