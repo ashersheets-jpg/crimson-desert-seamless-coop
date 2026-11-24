@@ -10995,4 +10995,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   own mount was published and seated on the host (MountApply APPLIED, HorseFollowReverse 6680 samples); the AiHandoff
   talk rule noted his horse (interaction 0x190) and handed 4 townsfolk to his game and back at 12:58-13:00 (each
   switch can make an NPC jump: a lead for "NPCs teleporting"). A research agent reads the rest (the frozen copy, the
-  desync, the taming); cs114a (the guest rides its own horse 18 s away, host shots every 4 s) runs meanwhile. After pp52: build, package, cs113.
+  desync, the taming); cs114a (the guest rides its own horse 18 s away, host shots every 4 s) runs meanwhile.
+- 08:37 cs114a (SAVES OK, 5/5, both alive): the guest called its horse, mounted (the host: MountApply APPLIED,
+  seated; child hold released after 438 ms; HorseFollowReverse 1431 samples) and rode ~30 m; g1 shows it in the
+  saddle 29 m from the host. Not answered: the host's camera faced away in every host shot, so whether a frozen
+  copy stays at the mount spot is unseen; a rerun needs the host turned toward the mount spot (a mouse move in its
+  keys). On the shots at ~08:36: a Windows Update toast "Your device will restart to update outside of active hours
+  (estimate: 6 min)". Everything pushed at 08:38 (273635e), no test running, a phone notice sent; no OS dialog
+  touched. No new test until the restart is past or the user pauses it. After pp52: build, package, cs113.
