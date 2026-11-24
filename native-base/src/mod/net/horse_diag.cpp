@@ -186,23 +186,12 @@ bool layer_without_action(const State& s) {
 // Last shape seen per watched actor (2 slots: copy, real).
 std::atomic<uint32_t> g_last_shape[3] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
 
-// P8 guest (S34): the CC's actor is controlled by another user and a layer has
-// a chart and no action. Runs for every character every frame: the local key
-// first, then the controller (most actors stop there), the layers last.
-// Guarded reads of scalars only (no struct copy: no CRT memcpy in a mid hook).
-bool remote_without_action(uintptr_t cc, uint32_t local, uint32_t& key, uint32_t& ctrl) {
+// The game's own layer rule (from its per-frame layer tick 0xA12C00; see remote_without_action's notes): which of the
+// two layers the update would really fault on. Unreadable: neither (not held), as before the rule had its own function.
+void layer_rule(uintptr_t cc, bool& lacks0, bool& lacks1) {
     __try {
-        const auto actor = *reinterpret_cast<const uintptr_t*>(cc + 0x08);
-        if (!actor) return false;
-        ctrl = *reinterpret_cast<const uint32_t*>(actor + off::kActor_OwnerUser);
-        if (!gad::remote_user_controlled(ctrl, local)) return false;
-        // Co-op+ (2026-11-08, 3576: the guest's NPCs stood frozen in the bind pose, "actors held 623"): the game's own
-        // rule from its per-frame layer tick 0xA12C00 (decomp; Co-op+'s copy_tick_would_fault): a layer with flag 2 is
-        // skipped; one without flag 1 whose entry (the CC's +0x80 array, 0x78 bytes each: int n, ..., int16 a, b, c at
-        // +0x20) is empty or unset is skipped; only a layer the tick really reads with its current action (+0x10) null
-        // would fault. The old test (a chart and no action, 2976) also held idle NPCs whose second layer is unused, and
-        // a held character is never updated: it stood in the bind pose.
-        bool lacks0 = false, lacks1 = false;
+        lacks0 = false;
+        lacks1 = false;
         const auto entries = *reinterpret_cast<const uintptr_t*>(cc + 0x80);
         for (int i = 0; i < 2; ++i) {
             const auto layer = *reinterpret_cast<const uintptr_t*>(cc + off::kControl_Layer0 + 8ull * i);
@@ -241,6 +230,39 @@ bool remote_without_action(uintptr_t cc, uint32_t local, uint32_t& key, uint32_t
             const auto deep = play ? *reinterpret_cast<const uintptr_t*>(play + 0x28) : 0;
             if (!info || !deep) (sel == 1 ? lacks1 : lacks0) = true;
         }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        lacks0 = lacks1 = false;
+    }
+}
+
+// Co-op+ (2026-11-24, Borque's two-PC log and cs114a): the HOST held user 2's own horse on every frame while it
+// was ridden (the crude test: a chart and no action), so the horse never moved or animated on the host: a frozen
+// pair at the mount spot. User 2's actors on the host are held by the game's layer rule now, as the guest's
+// remote actors have been since 2026-11-08.
+bool guest_actor_would_fault(uintptr_t cc) {
+    bool lacks0 = false, lacks1 = false;
+    layer_rule(cc, lacks0, lacks1);
+    return lacks0 || lacks1;
+}
+
+// P8 guest (S34): the CC's actor is controlled by another user and a layer has
+// a chart and no action. Runs for every character every frame: the local key
+// first, then the controller (most actors stop there), the layers last.
+// Guarded reads of scalars only (no struct copy: no CRT memcpy in a mid hook).
+bool remote_without_action(uintptr_t cc, uint32_t local, uint32_t& key, uint32_t& ctrl) {
+    __try {
+        const auto actor = *reinterpret_cast<const uintptr_t*>(cc + 0x08);
+        if (!actor) return false;
+        ctrl = *reinterpret_cast<const uint32_t*>(actor + off::kActor_OwnerUser);
+        if (!gad::remote_user_controlled(ctrl, local)) return false;
+        // Co-op+ (2026-11-08, 3576: the guest's NPCs stood frozen in the bind pose, "actors held 623"): the game's own
+        // rule from its per-frame layer tick 0xA12C00 (decomp; Co-op+'s copy_tick_would_fault): a layer with flag 2 is
+        // skipped; one without flag 1 whose entry (the CC's +0x80 array, 0x78 bytes each: int n, ..., int16 a, b, c at
+        // +0x20) is empty or unset is skipped; only a layer the tick really reads with its current action (+0x10) null
+        // would fault. The old test (a chart and no action, 2976) also held idle NPCs whose second layer is unused, and
+        // a held character is never updated: it stood in the bind pose.
+        bool lacks0 = false, lacks1 = false;
+        layer_rule(cc, lacks0, lacks1);
         if (!gad::contain_remote_update(ctrl, local, lacks0, lacks1)) return false;
         key = *reinterpret_cast<const uint32_t*>(actor + off::kActor_Key);
         return true;
@@ -1336,7 +1358,8 @@ void on_cc_update(safetyhook::Context& ctx) {
     if (last.exchange(sh, std::memory_order_relaxed) != sh) log_state("update", s);
     // Containment: a copy whose main layer has a chart but no current action
     // crashed three different functions of this update (INFORME §5).
-    if (g_contain && (is_copy(key) || owned_by_guest(ctx.rcx)) && layer_without_action(s)) {
+    if (g_contain && (is_copy(key) ? layer_without_action(s)
+                                   : (owned_by_guest(ctx.rcx) && guest_actor_would_fault(ctx.rcx)))) {
         g_skipped.fetch_add(1, std::memory_order_relaxed);
         ctx.rip = reinterpret_cast<uintptr_t>(g_ret);
     }
@@ -1352,7 +1375,7 @@ void on_cc_post(safetyhook::Context& ctx) {
     if (!read_key(ctx.rcx, key) || !(is_copy(key) || owned_by_guest(ctx.rcx))) return;
     State s;
     if (!read_state(ctx.rcx, s)) return;
-    if (layer_without_action(s)) {
+    if (is_copy(key) ? layer_without_action(s) : guest_actor_would_fault(ctx.rcx)) {
         g_skipped_post.fetch_add(1, std::memory_order_relaxed);
         ctx.rip = reinterpret_cast<uintptr_t>(g_ret);
     }

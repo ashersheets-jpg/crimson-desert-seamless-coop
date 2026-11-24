@@ -12,6 +12,10 @@
 namespace cdmp::game {
 
 std::optional<uintptr_t> find_actor(uint32_t key);
+// The same lookup with fast reads (SEH-guarded, no VirtualQuery): for loops over many keys on a busy thread.
+// Co-op+ 2026-11-24: find_actor's ~12 VirtualQuery-checked reads per key cost the host's network loop seconds
+// while the game streams a town (Borque's two-PC log; LESSONS "A VirtualQuery in a game-thread hook").
+std::optional<uintptr_t> find_actor_fast(uint32_t key) noexcept;
 
 // World position of the actor's TransformSync (what is drawn), Y up.
 std::optional<proto::Vec3> actor_world_position(uint32_t key);

@@ -60,6 +60,37 @@ std::optional<uintptr_t> find_actor(uint32_t key) {
     return std::nullopt;
 }
 
+std::optional<uintptr_t> find_actor_fast(uint32_t key) noexcept {
+    static const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    if (base != off::kImageBase) return std::nullopt;
+    const auto world = fast_ptr(base + off::kWorldSystemSlot);
+    if (!world) return std::nullopt;
+    const auto manager = fast_ptr(*world + off::kWorldSystem_ActorManager);
+    if (!manager) return std::nullopt;
+    const auto table = fast_ptr(*manager + kManager_Table);
+    if (!table) return std::nullopt;
+    const auto buckets = fast<uint32_t>(*table + kTable_BucketCount);
+    if (!buckets || *buckets == 0 || *buckets > (1u << 24)) return std::nullopt;
+    const auto bucket_base = fast_ptr(*table + kTable_Buckets);
+    const auto nodes = fast_ptr(*table + kTable_Nodes);
+    if (!bucket_base || !nodes) return std::nullopt;
+    const uintptr_t bucket = *bucket_base + static_cast<uintptr_t>(key % *buckets) * kBucketStride;
+    const auto count = fast<uint32_t>(bucket);
+    if (!count) return std::nullopt;
+    for (uint32_t i = 0; i < *count && i < kBucketMaxEntries; ++i) {
+        const auto k = fast<uint32_t>(bucket + 8 + i * 8);
+        if (!k || *k != key) continue;
+        const auto idx = fast<uint32_t>(bucket + 0xC + i * 8);
+        if (!idx) return std::nullopt;
+        const auto node = fast_ptr(*nodes + static_cast<uintptr_t>(*idx) * 8);
+        if (!node) return std::nullopt;
+        const auto nk = fast<uint32_t>(*node + kNode_Key);
+        if (!nk || *nk != key) return std::nullopt;
+        return fast_ptr(*node + kNode_Actor);
+    }
+    return std::nullopt;
+}
+
 std::optional<proto::Vec3> actor_world_position(uint32_t key) {
     auto actor = find_actor(key);
     if (!actor) return std::nullopt;

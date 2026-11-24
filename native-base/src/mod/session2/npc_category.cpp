@@ -60,7 +60,9 @@ std::atomic<uint32_t> g_last_size{0};
 
 template <class T>
 bool rd(uintptr_t a, T& v) {
-    return a && game::safe_read(a, &v, sizeof v);
+    // Co-op+ 2026-11-24: fast_read (SEH-guarded, no VirtualQuery). safe_read's VirtualQuery per read made the host's
+    // network loop take 0.5-2.4 s with ~200 NPCs in the table while the game streamed a town (Borque's two-PC log).
+    return a && game::fast_read(a, &v, sizeof v);
 }
 
 uint32_t key_of(uintptr_t actor) {
