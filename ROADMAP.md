@@ -121,7 +121,13 @@ Steam join/invite/leave and room code, friends-only vs invite-only, join/leave n
   run there; cs88a / cs88b (the Hernand tavern door, the joined player first; probe, then on) are queued.
   2026-11-22: cs88a REPRODUCED it on 3732 (the joined player's door requests: 13-15 Nak, 0 Ack); cs88b with
   scene_level_share=1 FIXED it (the levels "[ready for user 2]", the door's Req -> Ack, Nak 0). On by default for the
-  host since 677c87bb. Left: a checklist door step; gates, levers, movable / thrown objects and destructibles.)
+  host since 677c87bb. Left: a checklist door step; gates, levers, movable / thrown objects and destructibles.
+  2026-11-23: the checklist's door step exists and passes (pp48d door 47/0). cs108: gimmick_event_dedup=probe on
+  both games while the joined player swings around the bandit camp (the duplicated-tree lead): the probe never ran,
+  "DockedGimmicks: unsupported game build (not 1.0.0.2976)": docked_gimmicks / gimmick_event_dedup were never ported
+  past 2976 (about ten sites: the client's gimmick requests 0x8E59D0 / 0x8E5F60, the docking spawns, the server's
+  gimmick event / update, the controller write), so no run since 3460 could see a doubled gimmick event. Next for
+  destructibles: port it to 3732 (the fmap chain 2976 -> 3460 -> ... -> 3732), then the probe in the camp.)
 - [x] **T24 — Communication.** Add in-session text chat and ping types (danger, loot, go here) with game-styled display. *Done when:* usable on keyboard and controller.
 - [~] **T25 — Mount edge cases.** Mount summon, despawn, death, mount swapping, and flying-mount landing all stay in sync. Two players on one mount only if feasible. *Done when:* each case is tested. (2026-11-22 cs99: a horse killed under its rider cannot be scripted: the game ignores KillCheatReq on a player's mount (two minutes later both games still showed the joined player riding it). That case goes to the hands-on list: a real death by enemies or a fall.)
 - [x] **T26 — Death penalty and respawn options.** Config options for penalty (none, partial loss, full) and respawn rules, applied consistently on both sides. *Done when:* every option is tested. (2026-11-22: the respawn option is done; the penalty options were blocked on the two-worlds design (no removal the server accepts). On the native shared world the game's own jail fine removes items on the host's server (RemoveItemToInventoryAck 2481): a lead to a server-side removal; design in docs/research/t26-death-penalty.md. 2026-11-22: route 2 built as research, off (native 6af91d5: the host's server takes a player's own "I got up myself" request and removes the host's share of its money with the game's own delete; layer: the revive prompt's Q / U send it); cs97 lists the money pouch to find the silver's key, cs97b the removal; then the setting.) (2026-11-22 cs97: the request reached the host's server for both players and the "Money" pouch was listed; it holds the camp money and contributions only. The coins are item key 1 (the arm-wrestling prize names item 1), in another inventory: the native now searches every inventory for the item (40f0c15). cs97b (item 1) is the removal test; the layer passes item 1 to the host only after it passes.) (2026-11-22 19:11 cs97b
@@ -173,6 +179,12 @@ account in the browser pane: asked.)
   full three-round match on both games). Left: the hunting contest (wild animals at a start spot) and fishing.
   The usercopy start has geese on the ground 20-45 m off (cs18g, cs104b npcs lines): cs105 (written) scripts a hunt
   there with the dev step killgame, after the checklist.
+  2026-11-23 evening (cs105-cs105h): the HUNTING CONTEST runs in the shared world: the invite / accept, the round,
+  the host's kills ("we brought down Goose (+1)", the kill feed), the same result on both games, the contest banner on
+  the joined player's screen. Found and fixed: the joined player's game knew no species for most of the host's
+  animals (they come in batched load records), so its kills of them would not have counted (layer 16326c9,
+  enemy_variant_any; its lists now name the geese). Not shown by a script: the joined player's own kill scoring (the
+  server ignores its cheat kill; a sword cannot catch a fleeing goose): hands-on (a bow) or a tester. Left: fishing.
 - [~] **T42 — Duel extras.** Wagers, selectable arenas, spectator camera, rematch.
 - [~] **T43 — Cosmetics and recognition.** Titles, co-op bounties and a scoreboard.
 - [x] **T44 — Group photo mode.** Posed shots with both characters. (Done through B16 (1), decided 2026-11-17: the

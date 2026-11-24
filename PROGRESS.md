@@ -5,6 +5,11 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- 2026-11-23 19:58 HANDS-ON (5 minutes, not urgent, T41 hunting contest): the contest runs in the shared world and
+  the host's kills count; a fix makes the joined player's game know the host's animals, but its OWN kill scoring
+  cannot be scripted (the server ignores its test kill, and a scripted sword cannot catch a goose). Next time you
+  play with a friend (or in a two-copy run I set up): the joined player challenges the host to a Hunting contest
+  (hold R on the friend), then shoots a goose or deer with a bow; its score should go up on both screens.
 - 2026-11-23 08:19 HANDS-ON (2 minutes, not urgent, B04 shared knowledge): the "knowledge one of you learns counts for
   both" switch is built but never saw a real learn: kills, loot and trips to far places teach the test saves nothing
   new (csk), and the game's cheat route crashes its server (cs94b). Next time you play with a friend (or in a two-copy
