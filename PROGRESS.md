@@ -5,6 +5,13 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- 2026-11-24 04:16 HANDS-ON (5 minutes, not urgent, P1 Borque (6) fishing for the joined player): research shows
+  the joined player's own game drops the fish summon (it runs a gimmick's summon only if that game controls the
+  gimmick, and the host's game controls all of them), but my scripted casts never got the rod out: the quick slot
+  "2" brings up another item on this save and I do not know this build's fishing keys. In a two-copy run I set up
+  (the joined player = the test save with a rod, a probe logging the summon), you take out the rod in the joined
+  player's window and cast once into water; that one cast tells which gimmick the summon belongs to and what the fix
+  must hand over. Or tell me the keys (take out the rod, aim, cast) and a spot with water near Nas River.
 - 2026-11-23 19:58 HANDS-ON (5 minutes, not urgent, T41 hunting contest): the contest runs in the shared world and
   the host's kills count; a fix makes the joined player's game know the host's animals, but its OWN kill scoring
   cannot be scripted (the server ignores its test kill, and a scripted sword cannot catch a goose). Next time you
@@ -10959,4 +10966,19 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   be posted and its pass was stopped (stop mark, removed after).
 - 04:01 built: native 8ee7424 (frame_probe, log only, default 0; the 0xA0CB80 head and its +0x57 / +0x5B / +0x6E
   instructions checked in the 3732 exe first), layer: the fallback (tests pass), native 92 tests, the 14 known
-  failing. Package c0fa5540 (= the build tree). cs113a (the fishing probe) first, then the full checklist pp53. After pp52: build, package, cs113.
+  failing. Package c0fa5540 (= the build tree). cs113a (the fishing probe) first, then the full checklist pp53.
+- 04:11 cs113a (Continue, -GuestVariant fishing3, frame_probe=1 + docked_gimmicks=probe; SAVES OK, 5/5): the probe
+  installs on both games ("FrameProbe ON"), but 0xA0CB80 ran 0 times on EITHER game in 4 minutes (it is not a
+  general per-gimmick runner: only special events like a summon go through it). The joined player started beside
+  the host (its save's place not used), "2" put a paper-like item in its hand (g1), not the rod, and the two casts did
+  nothing (g3 / g4). Scripting a cast blind is not working: a hands-on cast asked (waiting list).
+- 04:13 pp53 started: the full checklist (28 steps) on c0fa5540 (= the build tree): the T19 landing with the +1 m
+  fallback, the T23 port and frame_probe off by default. Ends about 08:45, before the update window.
+- 05:46 pp53 so far 12 steps, 0 fail: static 12, real 14, fresh 43, xess 44, fsr 44, latehook 59, display 7, lowsave
+  48 ("the hop lands beside them (no path yet) (1.0 m from them, +0.5 m up)": the fallback works), chest 47, revive
+  49, loot 48, crime 51, leave 27. Discord at 04:58: nothing new.
+- 08:11 pp53 done: 1167 pass, 1 fail over 28 steps. The one fail: farfight "the guest killed at least one enemy far
+  from the host" (it fought: hits counted with the guest in range, 68 health samples below full, but only 1 blow
+  landed and no kill: the bandit fight's variance, as pp48d). Every other step clean, SAVES OK and 5/5 everywhere.
+  pp53b (farfight again) 08:22: 47 / 0. So all 28 steps passed on c0fa5540, which is the validated base; NOT posted on its own (2451dff5 went out at
+  01:53; the only player-visible change is the landing, "post less often"): it goes out with the next fixes. After pp52: build, package, cs113.

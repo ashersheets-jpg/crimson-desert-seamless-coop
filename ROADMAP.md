@@ -478,6 +478,15 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
     (2026-11-21: the talk rule, native 9b9bad7, [session2] ai_handoff_talk=1: the person the guest interacts with runs
     on the guest's game while it stands within 6 m, then back; in single player the talker's game runs the NPC and its
     AI is what stops it. To test: cs75 at the butcher; a walking NPC by hand.)
+  - [ ] The joined player cannot fish or mine (Borque (5)(6)). 2026-11-24 (research agent, build/decomp/
+    notes_gimmick_handoff.md, private; cs108c / cs112a measurements): every world gimmick's controller is the host's
+    user, and a client runs a gimmick's events only when it is the controller: the joined player's game refuses ~500
+    of its own gimmick events a minute (cs112a). The fish is summoned by 2594, built only inside 0xA0CB80 (silent
+    return unless this game controls the gimmick); the server never checks who sent a 2594. Open: whether the summon
+    belongs to the fishing spot (then: hand the spot to user 2 while it fishes, the AiHandoff way: the server's +0x90
+    and a private notice) or to the rod's own device (then docked_gimmicks=1, already built, may be enough).
+    frame_probe (native 8ee7424, log only) answers it at one real cast; scripted casts never got the rod out
+    (cs112a / cs113a): a hands-on cast asked.
   - [ ] The host's armour dye is not seen by the guest.
     (Lead: DyeItemListByEquipSlotAck 3042 / DyeItemByInventoryAck 2911 are ToTarget writers, owner_fanout_writers.h:
     only the dyer's client gets them; the guest needs the host's item re-sent with its dye, e.g. an OtherEquipItemAck.
