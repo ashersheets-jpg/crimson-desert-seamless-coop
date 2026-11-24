@@ -29,7 +29,9 @@ test save Out, shipped cdmp.ini restored.
 - 2026-11-22 19:40, updated 2026-11-23 13:30 REQUEST (when you are back; small): your Discord desktop app's in-game
   overlay pops up over a test game's window now and then ("Use Discord from the overlay while playing" / "Invite
   friends to play", window "Discord Overlay Input Trap") and the host's lobby keys never reach the game: the join
-  fails and the whole step is lost (cs98b 19:12, pp46-revive 01:00, pp48-crime 13:02; about 3 of ~80 launches). Could you turn off
+  fails and the whole step is lost (cs98b 19:12, pp46-revive 01:00, pp48-crime 13:02, cs105b 17:34, cs106b 18:11,
+  pp49-xess 20:19: six of ~110 launches; today the popup also moves the host's window off its place, so the harness
+  cannot work around it). Could you turn off
   Discord's game overlay for Crimson Desert (Discord > User Settings > Game Overlay, or the game's entry under
   Registered Games), or close Discord while I test? I do not change Discord's settings myself. Until then I re-run
   the steps it breaks.
@@ -10814,3 +10816,23 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   host's animals (the batched-variant fix, verified by its lists); its own kill credit (guest_hits_we_hit / killer)
   is not shown by a script (the server ignores its cheat kill, a sword cannot catch a fleeing goose): a hands-on
   check (a bow) or a tester's report.
+- 20:05 cs108 (T23, SAVES OK, 5/5): "DockedGimmicks: unsupported game build (not 1.0.0.2976)" on both games: the
+  gimmick event probe was never ported past 2976 (ROADMAP T23: the port is the next step for destructibles). The
+  guest killed 5 bandits in the camp (guest>NPC 80 swings, 6 landed on the host's client).
+- 20:07 pp49 started: the full checklist (28 steps) on candidate 446d8a69 (native 65abcf4: merchant_unhide's
+  [watch] for the scenes not on its list (Brycecco's invisible boss: which scene hides which NPC on which game) and
+  the voice probe (research, off); layer: the joined player knows the host's animals (hunt, kill-feed names), dev
+  killgame / tpanimal fixes). Test kit: winsize list / fixmain at Start Co-op. If it passes: the next playtest post
+  (the [watch] lines in testers' zips are what the boss blocker needs).
+- 20:17 pp49-fresh 43/0, and the [watch] REPRODUCES the invisible-NPC class on one PC: a host scene 0x2BC74C06
+  (owner 0xA0100001, scene 0x1BE) binds three critters 0xB010017A/B/C; on the HOST none is still hidden 4 s later
+  ("still hidden ... 0"), on the GUEST all three are still hidden at 4 s AND at two minutes (hide 0x200, login +0xCF 0,
+  stage 0). The merchants' mechanism, on a scene that is not on the list: Brycecco's invisible boss is most likely the
+  same. Fix written (scratchpad hide_mirror.py, to apply after pp49, no native edits during a checklist): the HIDE
+  MIRROR: the host sends the keys of the unlisted scenes' NPCs that are visible on its game (tunnel control state 18,
+  every 2 s on a change / 6 s), the guest clears bit 9 with the game's setter on such an NPC still hidden 4 s after
+  its binding; nothing hidden on the host is ever shown ([session2] hide_mirror, default 1; payload unit tests).
+- 20:27 pp49-xess 38/6: the join failed the Discord-overlay way again (L1: the popup over the host window, which
+  winsize list saw at (1696, 1019, 3632, 2138), nearly off screen; fixmain moved it to (-8, -8)-(1928, 1040), and it
+  was back where it was in the next shot: something moves it again while the popup is up). The failed-join stop ended
+  it in 7 min, no title keys. Re-run at the end. (5 of ~35 launches today.)
