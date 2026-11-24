@@ -500,6 +500,8 @@ void run_network(const Config& cfg, LocalSource& local) {
         // Co-op+ (npc_category.h): the host's NPC quest-dialog categories as control state 16.
         if (s2_link) session2::npc_category_host_tick(*s2_link, now);
         if (s2_link) session2::shop_twin_host_tick(*s2_link);
+        // Co-op+ (merchant_unhide.h): the hide mirror, the visible NPCs of unlisted scenes as control state 18.
+        if (s2_link) session2::merchant_unhide_host_tick(*s2_link);
         health.mark(Phase::HostTunnel, now_us());
         if (!s2_guest_link && !coop && session2::guest_active()) {
             s2_guest_link = std::make_unique<troc::TrocLink>(
@@ -1283,6 +1285,7 @@ DWORD WINAPI worker(LPVOID) {
             session2::fog_share_start(cfg.s2_fog_share, cfg.s2_guest);
             session2::knowledge_grant_start(cfg.s2_knowledge_grant, cfg.s2_guest);
             session2::quest_route_start(cfg.s2_quest_own_progress, cfg.s2_quest_shared_credit, cfg.s2_guest);
+            session2::merchant_unhide_set_mirror(cfg.s2_hide_mirror != 0);
             session2::merchant_unhide_start(cfg.s2_merchant_unhide != 0, cfg.s2_guest, cfg.s2_merchant_unhide == 2 ||
                                                 cfg.s2_merchant_unhide == 3,
                                             cfg.s2_merchant_unhide == 1 || cfg.s2_merchant_unhide == 3);

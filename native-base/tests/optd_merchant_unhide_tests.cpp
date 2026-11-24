@@ -43,6 +43,24 @@ int main() {
     CHECK(!mul::should_unhide(0x002, 1000, 9000));   // not hidden by bit 9
     CHECK(!mul::should_unhide(0, 1000, 9000));
     CHECK(!mul::should_unhide(0x200, 9000, 1000));   // a clock that went back: never
+    // the hide mirror's payload (state 18)
+    {
+        const std::vector<uint32_t> keys = {0xB010017Au, 0xB010017Bu, 0x12345678u};
+        const auto p = mul::make_visible_payload(keys);
+        CHECK(p.size() == 2 + 4 * 3 && p[0] == 18 && p[1] == 3 && p[2] == 0x7A && p[5] == 0xB0);
+        const auto back = mul::parse_visible_payload(p);
+        CHECK(back && *back == keys);
+        CHECK(mul::parse_visible_payload(mul::make_visible_payload({})) && mul::parse_visible_payload(mul::make_visible_payload({}))->empty());
+        auto bad = p;
+        bad.pop_back();
+        CHECK(!mul::parse_visible_payload(bad));        // short
+        bad = p;
+        bad[0] = 17;
+        CHECK(!mul::parse_visible_payload(bad));        // another state
+        std::vector<uint32_t> many(200, 0xB0000001u);
+        CHECK(mul::make_visible_payload(many).size() == 2 + 4 * mul::kVisibleMax);  // capped
+        CHECK(!mul::parse_visible_payload(std::vector<uint8_t>{18}));
+    }
     if (g_failures) {
         std::printf("%d failure(s)\n", g_failures);
         return 1;
