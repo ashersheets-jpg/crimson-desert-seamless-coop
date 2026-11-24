@@ -15,6 +15,12 @@ test save Out, shipped cdmp.ini restored.
   new (csk), and the game's cheat route crashes its server (cs94b). Next time you play with a friend (or in a two-copy
   run I set up), tell me when either of you gets a "Knowledge Acquired" notice (a book, an NPC's lesson, examining
   something new); with [session2] knowledge_grant=1 the other should get the same entry. No action needed now.
+- 2026-11-24 01:53 DONE: 2451dff5 POSTED in #download-here by me (standing OK; all 28 checklist steps passed across
+  pp51 / pp51b, the fails were the environment (Discord's overlay at Start Co-op: farfight, newsave) and one lag-hold
+  count at its line (lagrun), each clean on its re-run; both zips checked file by file, 25/25 and 10/10; the build
+  tree's DLLs = the package's): the hide mirror (invisible NPCs for the joined player), the hunting contest knows the
+  host's animals, summon / follow re-checked; asks testers whether they hear the friend's grunts. Tags Brycecco.
+  Message 1574679393542869023, text: docs/release/shared-world-playtest/download-2451dff5.txt.
 - 2026-11-23 16:42 DONE: ee4cf8e5 POSTED in #download-here by me (standing OK; all 28 checklist steps passed across
   pp48 / pp48d / pp48e / pp48f, the fails were the environment (Discord's overlay at Start Co-op), bandit AI (farfight,
   clean on its re-run) and one new harmless warning; both zips checked file by file, 25/25 and 10/10; the build tree's
@@ -30,8 +36,9 @@ test save Out, shipped cdmp.ini restored.
   overlay pops up over a test game's window now and then ("Use Discord from the overlay while playing" / "Invite
   friends to play", window "Discord Overlay Input Trap") and the host's lobby keys never reach the game: the join
   fails and the whole step is lost (cs98b 19:12, pp46-revive 01:00, pp48-crime 13:02, cs105b 17:34, cs106b 18:11,
-  pp49-xess 20:19: six of ~110 launches; today the popup also moves the host's window off its place, so the harness
-  cannot work around it). Could you turn off
+  pp49-xess 20:19, pp51-farfight 22:58, pp51-newsave 23:20: eight of ~140 launches; the popup also moves the host's
+  window off its place; since 01:07 the harness keeps putting it back for 12 s, untested on a real popup yet).
+  Could you turn off
   Discord's game overlay for Crimson Desert (Discord > User Settings > Game Overlay, or the game's entry under
   Registered Games), or close Discord while I test? I do not change Discord's settings myself. Until then I re-run
   the steps it breaks.
@@ -10847,3 +10854,33 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   It binds in about half the runs (guest-side in pp49-fresh and pp49-fsr, host-side only in pp50a, none in pp50b /
   cs105h / cs106c; host-side in cs108 / cs105g). pp50c..e: fresh until one binds (the host's first-look line says
   why pp50a sent nothing).
+- ~21:05 pp50c fresh: the HIDE MIRROR WORKS on one PC: the host's list of 6 NPCs visible on its game, all 6 un-hidden
+  on the guest (bit 9, 0x200 -> 0x0, by the game's setter); nothing hidden on the host was shown (ROADMAP P1
+  Brycecco). To confirm on a boss: a tester's two-PC boss fight.
+- 21:08 pp51 started: the full checklist (28 steps) on candidate 2451dff5 (native 6f90262 with the hide mirror;
+  layer 1274e78), the build tree = the package (dllswap show).
+- 2026-11-24 01:06 pp51 done: 1148 pass, 20 fail; 25 of the 28 steps clean. farfight 37/10 and newsave 91/9: the
+  join failed the Discord-overlay way (the host window at (1696, 1019); fixmain put it back, it came back; 7th time
+  in two days); lagrun 47/1: "longer mid-run holds 4 (wanted <= 3)", longest 301 ms, under the TEST lag's random
+  stalls (pp46c had 6 and passed on its re-run). pp51-fresh: the mirror fired again ("first list to the guest: 3
+  NPC(s)"; the guest cleared bit 9 on 0xB0100174 / 175 / 176). SAVES OK and 5/5 in every step.
+- 01:07 test kit: winsize fixmain now keeps putting the host window back for up to 12 s until it has stayed at the
+  corner 3 s (nothing changes when the window is in place). T23: tools/native-port/port3732/gimmick73.py and
+  gimmick73b.py found every point of docked_gimmicks / gimmick_event_dedup on 3732, each through its caller:
+  the client request 0xA00E40 (ClientGimmickActorComponent vtable 0x59C8840, slot +0x748: one slot down from
+  2976's +0x740; its check +0x71 / refusal +0x79 as on 2976), the second request 0xA01370 (called from vf +0x7E8; its
+  head lost a mov [rsp+8],rcx), the error global 0x71D5CC4 (both refusals store it), the docking spawns 0x2B734B0 /
+  0x2B741D0 (called from TrocTrOnDemandEquipDockingGimmickSpawnReq / TrocTrOnDemandDockingGimmickSpawnReq vf2, the
+  2249 call at 0x2C4FCD4), ServerGimmick_ExecuteFrameEvent 0x2DBEBA0 and _Update 0x2DBE130 (from the
+  TrocTrGimmickExecuteFrameEventReq / TrocTrUpdateGimmickReq handlers; same tests, +8 -> +0x90 against +0xA0 ->
+  +0x60). The controller write / block / field-owner read were already 3732's (only their comments said 3663 /
+  3576). Port written (scratchpad port_gimmicks73.py: checks every head and the call against the 3732 exe first),
+  for after pp51b. T19: hops to the friend landed at +1 m on x (over a cliff's edge or inside a rock face beside
+  one); written (scratchpad apply_landing.py, net/landing_spot.h + unit tests): the newest point of the friend's own
+  path 1 to 4 m from it and within 2 m up / down, else the friend's spot. Both go in the next batch.
+- 01:11 pp51b (static as smoke, then the three steps): static 12/0; farfight 47/0 at 01:22 (joined normally).
+- 01:51 pp51b done: 207 pass, 0 fail (newsave 100/0, lagrun 48/0). So every one of the 28 steps passed on 2451dff5.
+  Both zips checked file by file against the tested folders (25/25, 10/10), post 1991 characters.
+- 01:53 POSTED 2451dff5 in #download-here (message 1574679393542869023; two attachments; tags Brycecco; the grunts
+  question for B20). Next: the T23 port and the T19 landing into a build (native + layer tests), cs108 (the gimmick
+  event probe at the bandit camp) on it, a landing test at a cliff edge and in water.

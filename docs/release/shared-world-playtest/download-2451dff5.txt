@@ -1,0 +1,13 @@
+**Update: shared world playtest 0.1.0-alpha+2451dff5, for game 1.0.0.3732**
+Use this instead of ee4cf8e5; **both players need the same build**.
+
+- **Invisible characters for the joined player** (like the boss whose health bar showed but not the boss, reported by <@816395856902357032>): characters placed by one of the host's scenes could stay hidden on the joined player's game for good, because only the host's game ever un-hides them. Now the host's game tells the joined player's game which of them it shows, and they appear there too. Found and checked with two copies on some small animals at the start; not yet checked on a boss, so if a boss or anyone else stays invisible for you, send both report zips.
+- **Hunting contest for the joined player**: its game did not know what most of the host's animals were, so its kills of them could count for nothing. It knows them now. The contest, the host's kills and the same score on both screens are checked; the joined player's own bow kill could not be scripted, so tell us if your score does not go up.
+- Re-checked in the shared world: **summon and follow** (unbound by default: add `Summon=` and `GoToFriend=` keys in coopplus.ini, see the README's SHORTCUTS): a summoned friend 4 km away landed 1 m from the host, and following the host's far jump landed 1 m from them.
+
+Tested with two copies of the game on one PC (Nvidia): the full checklist on 1.0.0.3732 (all 28 steps). Not covered here: two PCs over Steam, a real internet connection, AMD / Intel cards, long sessions; that is what your reports tell us.
+
+- `...2451dff5-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tell us in <#1567319198206525450> how it goes, with the report zip from **both** players (close the game, run **Diagnose Co-op+.cmd**). One question for anyone playing together: do you hear your friend's grunts and shouts when they attack or get hit?

@@ -5,6 +5,24 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
+Posted 2026-11-24 01:53 as 0.1.0-alpha+2451dff5, for game 1.0.0.3732 (checklist pp51 over 28 steps, its three
+failed steps re-run clean in pp51b with static as smoke: farfight and newsave (the Discord overlay had broken their
+joins) and lagrun (one hold over its line under the random TEST lag); both zips checked file by file against the
+tested folders, 25/25 and 10/10; message 1574679393542869023, text
+docs/release/shared-world-playtest/download-2451dff5.txt; tags Brycecco):
+- **The hide mirror: characters a host scene places no longer stay invisible on the joined player's game**
+  (Brycecco's boss whose health bar showed but not the boss). Such an NPC gets hide bit 9 when the scene binds it and
+  only the host's game, which runs the scene's AI, ever clears it. The host now sends the keys of those NPCs that are
+  visible on its game (tunnel control state 18, on a change or every 6 s); the joined player's game clears bit 9 with
+  the game's own setter on any still hidden there 4 s later ([session2] hide_mirror, default 1). Nothing hidden on the
+  host is shown. pp50c / pp51-fresh: 6 and 3 critters of a start scene shown on the guest. Not yet seen on a boss.
+- **Hunting contest: the joined player's game knows the host's animals** (T41): the variants of batched
+  ActorLoadDataAck records count, so its kills of them score and the kill feed names them. The joined player's own
+  bow kill is a hands-on check.
+- Re-checked in the shared world (T19): summon from 4 km and following a far jump, both landing 1 m from the host.
+- Test kit: a failed join stops the step (no title keys into a new world); the host window is put back at the
+  screen's corner for up to 12 s when Discord's overlay moves it.
+
 Posted 2026-11-23 16:42 as 0.1.0-alpha+ee4cf8e5, for game 1.0.0.3732 (checklist pp48 / pp48d / pp48e / pp48f: all 28
 steps, one PC; both zips checked file by file against the tested folder, 25/25 and 10/10; message 1574540718498644048,
 text docs/release/shared-world-playtest/download-ee4cf8e5.txt):
