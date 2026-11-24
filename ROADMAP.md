@@ -419,6 +419,12 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
     [[npc+0x68]+0x20]+0x3B8 set after a scene binds the NPC, cleared only by its AI; in co-op the clear never comes,
     so the shop / function scenes on its list are unhidden by the mod): a boss bound by a STORY scene is not on that
     list and would stay hidden on the joined player's game while its health and effects show.
+    2026-11-23 evening: REPRODUCED on one PC by merchant_unhide's new [watch] (pp49-fresh / fsr): a host scene binds
+    three critters at the test start; visible on the host within 4 s, hidden (bit 9) on the joined player's game for
+    good. Fixed by the HIDE MIRROR (native aa9bd2f / 6f90262, [session2] hide_mirror=1): the host sends the keys of
+    the unlisted scenes' NPCs that are visible on its game (tunnel control state 18); the joined player's game clears
+    bit 9 on those that are still hidden there. pp50c: the host's list of 6, and all 6 un-hidden on the guest
+    (0x200 -> 0x0). Nothing hidden on the host is shown. To confirm on a boss: a tester's two-PC boss fight.
   - [~] The guest's progress was not kept: the host's PC has 3 Steam accounts' save folders and guest_own_save was
     forced off. Fixed (native af4cdfb: Steam's ActiveUser picks the folder). Not yet run with several folders.
   - [~] A failed horse taming (minigame 0x4242) left the guest with no input: the server sent the 2292 of the

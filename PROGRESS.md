@@ -10836,3 +10836,14 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   winsize list saw at (1696, 1019, 3632, 2138), nearly off screen; fixmain moved it to (-8, -8)-(1928, 1040), and it
   was back where it was in the next shot: something moves it again while the popup is up). The failed-join stop ended
   it in 7 min, no title keys. Re-run at the end. (5 of ~35 launches today.)
+- 20:36 pp49 STOPPED after fsr (44/0; 151 pass, 6 fail over 5 steps: xess's join) for the hide mirror: a pass of a
+  candidate without it would be spent. native aa9bd2f (the hide mirror, payload tests pass), package 45fcf338.
+- 20:46 pp50a fresh 43/0, but no [mirror] line on either game: the host's tick sent nothing (no "first list"), and
+  this time the guest noted no binding of the critters' scene at all (no [watch] line), so it had nothing to act on.
+  Round 2 (native 6f90262): the guest acts on the host's list itself (a key listed for 4 s whose copy here still has
+  bit 9), no own binding note needed; the host logs its first look (candidates, visible, link, user 2 in the world)
+  and a failed push. Package 2451dff5; pp50b fresh from 20:52.
+- 20:57 pp50b fresh 43/0: no [watch] / [mirror] line at all: the critters' scene bound on neither game this time.
+  It binds in about half the runs (guest-side in pp49-fresh and pp49-fsr, host-side only in pp50a, none in pp50b /
+  cs105h / cs106c; host-side in cs108 / cs105g). pp50c..e: fresh until one binds (the host's first-look line says
+  why pp50a sent nothing).
