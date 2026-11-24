@@ -661,9 +661,13 @@ public:
     // follow within kOwnRefusedReleaseUs becomes due, and user 2 then gets the scene's 2292 naming its own character (a
     // delete released him when he was thrown off). Once per scene; the first refusal's time counts.
     static constexpr uint64_t kOwnRefusedReleaseUs = 6'000'000;
+    static constexpr uint64_t kOwnRefusedRetryUs = 500'000;  // a push the queue refused: again this much later
+    static constexpr uint32_t kOwnRefusedTries = 20;          // ... at most this many times (10 s)
     struct OwnRefused {
         uint64_t seq = 0, us = 0;
         uint32_t then = 0, result = 0;
+        uint64_t next_us = 0;  // not before (a retry)
+        uint32_t tries = 0;    // pushes refused so far
     };
     void on_user2_own_branch(uint64_t seq, bool accepted, uint64_t now_us, uint32_t then, uint32_t result) {
         if (!own_.count(seq) || own_deleted_.count(seq)) return;
@@ -674,23 +678,39 @@ public:
         if (own_refused_.size() >= 64 && !own_refused_.count(seq)) return;
         own_refused_.try_emplace(seq, OwnRefused{seq, now_us ? now_us : 1, then, result});
     }
+    // A StageBranchStateAck of `seq` went to user 2's queue: the server moved the scene on (a refused branch it then
+    // took another way): it is not stuck, nothing to release (review of 2026-11-24, finding 1).
+    void on_user2_own_branch_went(uint64_t seq) { own_refused_.erase(seq); }
     size_t own_refused_waiting() const { return own_refused_.size(); }
-    // The refused own scenes now due, each marked own-deleted (no other 2292 copy of it follows); the ones whose 2292
-    // went meanwhile are dropped.
-    std::vector<OwnRefused> take_own_refused_due(uint64_t now_us) {
+    // The refused own scenes now due (refused kOwnRefusedReleaseUs ago, and a retry's wait over); the ones whose 2292
+    // went meanwhile are dropped. Nothing is marked here: own_refused_sent / own_refused_failed after the push.
+    std::vector<OwnRefused> own_refused_due(uint64_t now_us) {
         std::vector<OwnRefused> out;
         for (auto it = own_refused_.begin(); it != own_refused_.end();) {
             if (own_deleted_.count(it->first)) {
                 it = own_refused_.erase(it);
-            } else if (now_us >= it->second.us && now_us - it->second.us >= kOwnRefusedReleaseUs) {
-                if (own_deleted_.size() < l_.max_own) own_deleted_.insert(it->first);
-                out.push_back(it->second);
-                it = own_refused_.erase(it);
-            } else {
-                ++it;
+                continue;
             }
+            if (now_us >= it->second.us && now_us - it->second.us >= kOwnRefusedReleaseUs && now_us >= it->second.next_us)
+                out.push_back(it->second);
+            ++it;
         }
         return out;
+    }
+    // Its 2292 went to user 2 (or, in probe, would have): marked own-deleted (no other copy of it follows), dropped.
+    void own_refused_sent(uint64_t seq) {
+        own_refused_.erase(seq);
+        if (own_.count(seq) && own_deleted_.size() < l_.max_own) own_deleted_.insert(seq);
+    }
+    // The push was refused (the queue over half its budget, no character key yet): again kOwnRefusedRetryUs later;
+    // true = given up after kOwnRefusedTries (the entry goes).
+    bool own_refused_failed(uint64_t seq, uint64_t now_us) {
+        const auto it = own_refused_.find(seq);
+        if (it == own_refused_.end()) return false;
+        it->second.next_us = now_us + kOwnRefusedRetryUs;
+        if (++it->second.tries < kOwnRefusedTries) return false;
+        own_refused_.erase(it);
+        return true;
     }
     // Co-op+ (2026-11-09, tcB225/226) conflict hold: user 2's OWN live scenes (U-1's, prepared while it was far) and
     // the NPCs they bind (types 4 / 5). A copy of the host's scene requiring one of those NPCs stays pending until

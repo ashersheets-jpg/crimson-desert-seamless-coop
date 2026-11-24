@@ -830,6 +830,7 @@ void observer_seq_copy_on_out(uint16_t opcode, std::span<const uint8_t> payload,
                 const uint64_t h = osq::payload_hash(payload);
                 std::lock_guard lock(g_mu);
                 g_copier.on_user2_branch(*seq, h);
+                g_copier.on_user2_own_branch_went(*seq);  // a refused own scene the server moved on: not stuck
                 return;
             }
             case osq::kOpPrepare: {  // user 2's own scene (its ESC item view): its Reqs about it always pass
@@ -1024,11 +1025,11 @@ void release_refused_own_scenes() {
     std::lock_guard lock(g_mu);
     if (!g_copier.own_refused_waiting()) return;
     const uint64_t now_us = p8_now_us();
-    const std::vector<osq::Copier::OwnRefused> due = g_copier.take_own_refused_due(now_us);
+    const std::vector<osq::Copier::OwnRefused> due = g_copier.own_refused_due(now_us);
     for (const auto& d : due) {
         const uint32_t me = server_user2_player_key();
         const bool from_template = g_last_2292.size() == osq::kHeader + 17;
-        bool ok = false;
+        bool ok = false, gave_up = false;
         if (me && !probe() && !server_logout_requested()) {
             std::vector<uint8_t> pk;
             if (from_template) {
@@ -1044,16 +1045,25 @@ void release_refused_own_scenes() {
             for (int i = 0; i < 8; ++i) pk[9 + i] = static_cast<uint8_t>(d.seq >> (8 * i));
             ok = server_push_extra(pk);
             if (ok) {
+                g_copier.own_refused_sent(d.seq);
                 g_copier.on_user2_own_deleted(d.seq);  // its NPCs are free again
                 g_own_binds_live.store(static_cast<uint32_t>(g_copier.own_binds()), std::memory_order_relaxed);
             }
         }
-        log::warn("ObserverSeqCopy [own refused] the server refused user 2's branch of its own scene 0x{:X} to 0x{:X} "
-                  "(result 0x{:08X}) {} ms ago and the scene neither went on nor ended: its 2292 naming 0x{:08X} ({}) {} "
-                  "(user 2's game leaves that scene instead of staying stuck in it)",
-                  d.seq, d.then, d.result, now_us >= d.us ? (now_us - d.us) / 1000 : 0, me,
-                  from_template ? "the last 2292's tail" : "no 2292 seen yet: a 0 tail",
-                  ok ? "SENT to user 2's queue" : "NOT sent");
+        if (probe()) g_copier.own_refused_sent(d.seq);  // probe: said once, nothing sent
+        else if (!ok) gave_up = g_copier.own_refused_failed(d.seq, now_us);
+        // A line when it went, in probe, at the first refused push and when given up (not at every retry).
+        if (ok || probe() || gave_up || d.tries == 0) {
+            log::warn("ObserverSeqCopy [own refused] the server refused user 2's branch of its own scene 0x{:X} to 0x{:X} "
+                      "(result 0x{:08X}) {} ms ago and the scene neither went on nor ended: its 2292 naming 0x{:08X} ({}) "
+                      "{} (user 2's game leaves that scene instead of staying stuck in it)",
+                      d.seq, d.then, d.result, now_us >= d.us ? (now_us - d.us) / 1000 : 0, me,
+                      from_template ? "the last 2292's tail" : "no 2292 seen yet: a 0 tail",
+                      ok         ? "SENT to user 2's queue"
+                      : probe()  ? "not sent (probe)"
+                      : gave_up  ? "NOT sent: given up after 20 refused pushes (10 s)"
+                                 : "NOT sent yet (the queue is busy or user 2 has no character key): again every 0.5 s");
+        }
     }
 }
 }  // namespace
