@@ -11126,3 +11126,17 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   way, ~40 fps both from start to end. MEMORY DOES NOT GROW: working sets 10.15 -> 5.70 GB (host) and 8.05 -> 4.30 GB
   (joined player) over 40 minutes (Windows trimming idle games; never a climb). Two-copy, one PC, idle in town: no
   leak and no slow-down in 45 minutes. Not covered: two PCs, fights, travel during a long session.
+- 16:56 FULL CHECKLIST pp56 on db220af7 (the diagnostics build) started, so it can go out at short notice if a
+  tester's next taming still fails (its log would then name the failing condition). Not to be posted on its own.
+- 17:40 pp56 so far 8 steps, 0 fail (static 12, real 14, fresh 45, xess 46, fsr 46, latehook 61, display 7, lowsave
+  50). Discord at 17:40: nothing new in feedback or bug reports since 14:11; #general: only Burns' 14:58 note (not a
+  user). Static meanwhile: Edward's solo arm-wrestling jump loop read through the layer's input code (the pad filter,
+  the hold prompts' A mask / tap hand-back, the cutscene skip's Esc / B / Start hold, the versus gauge, the
+  challenge prompt): every one of them needs a connected friend or a Co-op+ screen, and the hand-back cannot feed
+  itself (the mod reads the pad through the unhooked XInput). No cause found without his log. Written for after the
+  pass: scratchpad cond73.py (the taming's branch condition 0x25C82A0 and its callees, with strings).
+- 18:38 STOPPED pp56 for the user's restart (they play after it): a stop mark, then the door step's two test games
+  closed at its start; it restored the user's install (SAVES OK, 5/5) and the run stopped at 18:39 (stop mark
+  removed, no game running). pp56: 14 steps clean (static 12 ... crime 53, leave 27, shop 25: all 0 fail), the door
+  step's 11 fails are the stop. The other 13 steps (door, farfight ... armwrest) are still to run on db220af7 when
+  the PC is free again.
