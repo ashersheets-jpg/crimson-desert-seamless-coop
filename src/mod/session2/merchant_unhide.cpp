@@ -5,17 +5,23 @@
 
 #include <safetyhook.hpp>
 
+#include <algorithm>
 #include <atomic>
 #include <cstring>
 #include <format>
 #include <mutex>
+#include <span>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
+#include "common/troc_frame.h"
+#include "common/troc_link.h"
 #include "mod/game/actor_lookup.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
 #include "mod/session2/merchant_unhide_logic.h"
+#include "mod/session2/server.h"
 
 // 2026-11-23 (T09b, csfz): every read here is game::fast_read (SEH only): these run in hooks on the game's main
 // thread (on_tick_mgr every client tick), and safe_read's VirtualQuery waited seconds on the address-space lock
@@ -199,6 +205,16 @@ std::atomic<uint64_t> c_noted{0}, c_unhidden{0}, c_failed{0};
 // Its own list (at most 64, newest kept), so the shop NPCs' entries are never pushed out by a story scene's.
 std::vector<Bound> g_watch;
 std::atomic<uint64_t> c_watch_noted{0}, c_watch_hidden{0}, c_watch_cleared{0};
+// The hide mirror (merchant_unhide_logic.h): the guest's copy of the host's last lists (key -> when last listed).
+bool g_mirror = true;
+std::mutex g_vis_mu;
+std::unordered_map<uint32_t, uint64_t> g_host_visible;
+std::atomic<uint64_t> c_mirror_sent{0}, c_mirror_in{0}, c_mirror_unhidden{0};
+bool host_shows(uint32_t key) {
+    std::lock_guard lk(g_vis_mu);
+    const auto it = g_host_visible.find(key);
+    return it != g_host_visible.end() && GetTickCount64() - it->second < 15000;
+}
 
 template <class T>
 bool rd(uintptr_t a, T& v) {
@@ -371,6 +387,17 @@ void worker() {
             bool done = false;
             if (!read) {
                 done = age > 120000;
+            } else if ((hide & mul::kHideBit) && g_guest && g_mirror && !g_diag_only && host_shows(b.key)) {
+                // the hide mirror: visible on the host, still hidden here: cleared as the NPC's AI does solo
+                const bool ok = call_setter(info);
+                uint64_t after = 0;
+                rd(info + 0x3B8, after);
+                (ok ? c_mirror_unhidden : c_failed).fetch_add(1);
+                log::info("MerchantUnhide [mirror] NPC 0x{:08X} of scene 0x{:08X}: visible on the host, still hidden "
+                          "here {} ms after its binding (hide 0x{:X}): {} -> 0x{:X}", b.key, b.scene, age, hide,
+                          ok ? "the game's setter cleared bit 9" : "the setter FAULTED", after);
+                diag = 1;
+                done = true;
             } else if ((hide & mul::kHideBit) && diag == 0) {
                 diag = 1;
                 c_watch_hidden.fetch_add(1);
@@ -401,6 +428,64 @@ void worker() {
 }
 
 }  // namespace
+
+void merchant_unhide_set_mirror(bool on) { g_mirror = on; }
+
+void merchant_unhide_host_tick(troc::TrocLink& link) {
+    if (!g_on || g_guest || !g_mirror) return;
+    try {
+        static uint64_t last_sent = 0, last_look = 0;
+        static std::vector<uint32_t> last_keys;
+        const uint64_t now = GetTickCount64();
+        if (now - last_look < 2000) return;
+        last_look = now;
+        std::vector<uint32_t> cands;
+        {
+            std::lock_guard lk(g_mu);
+            for (const Bound& b : g_watch)
+                if (now >= b.at_ms && now - b.at_ms < 180000) cands.push_back(b.key);
+        }
+        std::vector<uint32_t> keys;
+        for (const uint32_t k : cands) {
+            const auto a = game::find_actor(k);
+            uintptr_t comps = 0, info = 0;
+            uint64_t hide = 0;
+            if (!a || !*a || !rd(*a + 0x68, comps) || !rd(comps + 0x20, info) || !rd(info + 0x3B8, hide)) continue;
+            if (!(hide & mul::kHideBit)) keys.push_back(k);
+        }
+        std::sort(keys.begin(), keys.end());
+        keys.erase(std::unique(keys.begin(), keys.end()), keys.end());
+        if (keys.empty() && last_keys.empty()) return;
+        if (keys == last_keys && now - last_sent < 6000) return;
+        if (!link.connected() || link.broken() || !server_user2_in_world()) return;
+        if (link.push(troc::make(troc::kControlOpcode, -1, mul::make_visible_payload(keys)))) {
+            if (c_mirror_sent.fetch_add(1) == 0)
+                log::info("MerchantUnhide [mirror] first list to the guest: {} NPC(s) of unlisted scenes visible "
+                          "here", keys.size());
+            last_sent = now;
+            last_keys = std::move(keys);
+        }
+    } catch (...) {
+    }
+}
+
+bool merchant_unhide_guest_on_control(std::span<const uint8_t> payload) {
+    if (payload.empty() || payload[0] != mul::kVisibleState) return false;
+    try {
+        if (auto keys = mul::parse_visible_payload(payload)) {
+            const uint64_t t = GetTickCount64();
+            std::lock_guard lk(g_vis_mu);
+            for (const uint32_t k : *keys) g_host_visible[k] = t;
+            if (g_host_visible.size() > 2048)
+                std::erase_if(g_host_visible, [&](const auto& e) { return t - e.second > 30000; });
+            if (c_mirror_in.fetch_add(1) == 0)
+                log::info("MerchantUnhide [mirror] first host list: {} NPC(s) of unlisted scenes visible on the "
+                          "host", keys->size());
+        }
+    } catch (...) {
+    }
+    return true;
+}
 
 bool merchant_unhide_is_shop_npc(uint32_t key) noexcept {
     if (!g_on || !key) return false;
@@ -472,9 +557,11 @@ void merchant_unhide_start(bool on, bool guest, bool diag_only, bool guard) {
 
 std::string merchant_unhide_describe() {
     return std::format("MerchantUnhide ({}): shop NPCs noted {}, unhidden {}, setter faults {} | watch (other scenes, "
-                       "log only): NPCs noted {}, seen hidden after {} ms {}, cleared later {}",
+                       "log only): NPCs noted {}, seen hidden after {} ms {}, cleared later {} | mirror: lists out {} in {}, "
+                       "unhidden {}",
                        g_on ? "on" : "off", c_noted.load(), c_unhidden.load(), c_failed.load(), c_watch_noted.load(),
-                       mul::kStuckMs, c_watch_hidden.load(), c_watch_cleared.load());
+                       mul::kStuckMs, c_watch_hidden.load(), c_watch_cleared.load(), c_mirror_sent.load(),
+                       c_mirror_in.load(), c_mirror_unhidden.load());
 }
 
 }  // namespace cdmp::session2

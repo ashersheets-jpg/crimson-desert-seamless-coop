@@ -43,6 +43,7 @@
 #include "mod/session2/guest_x_interaction.h"
 #include "mod/session2/shop_trade_probe.h"
 #include "mod/session2/guest_x_veto.h"
+#include "mod/session2/merchant_unhide.h"
 #include "mod/session2/shop_twin.h"
 #include "mod/session2/guest_x_veto_logic.h"
 #include "mod/session2/load_trip.h"
@@ -1746,6 +1747,11 @@ void guest_deliver(std::vector<uint8_t>&& packet) {
         // Co-op+ (shop_twin.h): the host's shopkeepers' menu choices, state 17. Only while playing on the host.
         if (!v->payload.empty() && v->payload[0] == 17) {
             if (remote_live_for_keys()) (void)shop_twin_guest_on_control(v->payload);
+            return;
+        }
+        // Co-op+ (merchant_unhide.h): the hide mirror, the host's visible scene-bound NPCs, state 18.
+        if (!v->payload.empty() && v->payload[0] == 18) {
+            if (remote_live_for_keys()) (void)merchant_unhide_guest_on_control(v->payload);
             return;
         }
         const uint8_t state = v->payload.empty() ? 0 : v->payload[0];
