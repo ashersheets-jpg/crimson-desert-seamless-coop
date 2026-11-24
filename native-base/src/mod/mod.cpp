@@ -44,6 +44,7 @@
 #include "mod/session2/rope_probe.h"
 #include "mod/session2/tree_bend.h"
 #include "mod/session2/docked_gimmicks.h"
+#include "mod/session2/frame_probe.h"
 #include "mod/session2/clock_push.h"
 #include "mod/session2/fast_travel.h"
 #include "mod/session2/travel_probe.h"
@@ -1348,6 +1349,7 @@ DWORD WINAPI worker(LPVOID) {
                 // P8 session 28 (s25/gimmicks-dueno.md): its own character's docked gimmicks (local drive with 1) and
                 // the log-only probes; its own thread installs the hooks once the world is up. Nothing with 0.
                 session2::docked_gimmicks_start(cfg.s2_docked_gimmicks, /*guest=*/true);
+                session2::frame_probe_start(cfg.s2_frame_probe, /*guest=*/true);  // log only, default 0
                 // P8 session 29 (s25/gimmicks-dueno.md section 8): the same for the host's character (its rope drawn
                 // here). Needs docked_gimmicks on. Nothing with 0.
                 session2::docked_gimmicks_other_start(cfg.s2_docked_gimmicks_other, /*guest=*/true);
@@ -1377,6 +1379,7 @@ DWORD WINAPI worker(LPVOID) {
         if (session2) session2::tree_bend_start(cfg.s2_tree_bend, /*guest=*/false);
         // P8 session 28 (s25/gimmicks-dueno.md): the host side is log only (never rewritten); nothing with 0.
         if (session2) session2::docked_gimmicks_start(cfg.s2_docked_gimmicks, /*guest=*/false);
+        if (session2) session2::frame_probe_start(cfg.s2_frame_probe, /*guest=*/false);  // log only, default 0
         // P8 session 29: a guest key; the host logs that it ignores it.
         if (session2) session2::docked_gimmicks_other_start(cfg.s2_docked_gimmicks_other, /*guest=*/false);
         // P8 session 28 (s25/gimmicks-dueno.md section 7): the 2779 / 2250 duplicates, log only on the host.

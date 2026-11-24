@@ -183,6 +183,7 @@ add_library(cdmp_mod SHARED
     src/mod/session2/rope_probe.cpp
     src/mod/session2/tree_bend.cpp
     src/mod/session2/docked_gimmicks.cpp
+    src/mod/session2/frame_probe.cpp
     src/mod/session2/companion_probe.cpp
     src/mod/session2/field_share.cpp
     src/mod/session2/guest_lifecycle.cpp

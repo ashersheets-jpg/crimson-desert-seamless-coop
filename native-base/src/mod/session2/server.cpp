@@ -28,6 +28,7 @@
 #include "mod/session2/attach_follow.h"
 #include "mod/session2/combat_follow.h"
 #include "mod/session2/docked_gimmicks.h"
+#include "mod/session2/frame_probe.h"
 #include "mod/session2/door_trace.h"
 #include "mod/session2/scene_level_share.h"
 #include "mod/session2/child_hold.h"
@@ -920,6 +921,7 @@ void on_server_recv(safetyhook::Context& ctx) {
     // P8 S28 (docked_gimmicks.h, probe / 1): the 2221 unspawns and who still uses each gimmick (counts only).
     if (in_sized) {
         docked_gimmicks_server_ingress(op, pkt, in_size, from_user2);
+        frame_probe_server_ingress(op, pkt, in_size, from_user2);  // log only, off by default
         door_trace_ingress(op, pkt, in_size, from_user2);
         // S43 (scene_level_share.h): the SceneLevels each client has loaded (2598 / 2834 / 2104 and its loads). The
         // host's own Reqs are the ones of session 1 (before session 2 exists, the only session there is).
