@@ -25,6 +25,13 @@ test save Out, shipped cdmp.ini restored.
   new (csk), and the game's cheat route crashes its server (cs94b). Next time you play with a friend (or in a two-copy
   run I set up), tell me when either of you gets a "Knowledge Acquired" notice (a book, an NPC's lesson, examining
   something new); with [session2] knowledge_grant=1 the other should get the same entry. No action needed now.
+- 2026-11-24 14:11 DONE: 527e283a POSTED in #download-here by me (standing OK; all 28 checklist steps passed across
+  pp55 / pp55b: pp55 1202 / 10, the 10 all farfight's lost join (Discord's overlay popup), farfight 49 / 0 on its
+  re-run with static as smoke; both zips checked file by file, 25/25 and 10/10; the build tree's DLLs = the
+  package's): the host's network loop in towns (Borque's desync), the host no longer freezes the joined player's
+  horse, the taming release (untested: not scriptable), the landing on the friend's path. Tags Borque; a findings
+  reply to his 24 Nov zips in #play-testing-feedback (14:11, message 1574865024709693643). Message
+  1574864934821433446, text: docs/release/shared-world-playtest/download-527e283a.txt.
 - 2026-11-24 01:53 DONE: 2451dff5 POSTED in #download-here by me (standing OK; all 28 checklist steps passed across
   pp51 / pp51b, the fails were the environment (Discord's overlay at Start Co-op: farfight, newsave) and one lag-hold
   count at its line (lagrun), each clean on its re-run; both zips checked file by file, 25/25 and 10/10; the build
@@ -46,8 +53,9 @@ test save Out, shipped cdmp.ini restored.
   overlay pops up over a test game's window now and then ("Use Discord from the overlay while playing" / "Invite
   friends to play", window "Discord Overlay Input Trap") and the host's lobby keys never reach the game: the join
   fails and the whole step is lost (cs98b 19:12, pp46-revive 01:00, pp48-crime 13:02, cs105b 17:34, cs106b 18:11,
-  pp49-xess 20:19, pp51-farfight 22:58, pp51-newsave 23:20: eight of ~140 launches; the popup also moves the host's
-  window off its place; since 01:07 the harness keeps putting it back for 12 s, untested on a real popup yet).
+  pp49-xess 20:19, pp51-farfight 22:58, pp51-newsave 23:20, pp55-farfight 2026-11-24 11:50: nine of ~170 launches;
+  the popup also moves the host's window off its place; the harness's 12 s put-back did not save pp55-farfight: its
+  shot L1 shows the popup on the host's window, left at the screen's bottom right, its Start Co-op keys lost).
   Could you turn off
   Discord's game overlay for Crimson Desert (Discord > User Settings > Game Overlay, or the game's entry under
   Registered Games), or close Discord while I test? I do not change Discord's settings myself. Until then I re-run
@@ -11056,3 +11064,22 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   1146 ms ("mostly host tunnel", the same signature as Borque's log), from the joined player's arrival in Hernand.
   Fishing: the web guides' keys (hold F2 + mouse wheel to the rod, Q, hold / release the left button) are scripted in
   cs116.sh with a new helper fishsweep.py (walkto's camera aim round the pond by the Nas River start), for after the pass.
+- 09:55 an independent review of the taming release (read-only agent): no deadlock, crash path or packet error; one
+  important gap: a refused own scene the server then moves on another way was still released after 6 s; minor: a
+  refused push lost the release for good, plus four design notes (docs/research/taming-refusal-3732.md). Borque's log
+  has no branch of 0x29D to user 2 after the refusal, so dropping on a later branch keeps his case. pp54 stopped with a
+  stop mark after 4 steps (armwrest 50/0, shop 25/0, real 14/0, static 11/1: my uncommitted kit README edit).
+- 09:58 native c63f8b4 (the two fixes; tests extended, 0 failures; 92 native, the 14 known failing; layer tests pass),
+  synced; checklist: every two-player step now FAILS on more than 10 "Net: one loop took" lines (pp53-armwrest passed
+  with 196); README / Nexus page: the taming known issue says what happens now. Outer 527e283, package 527e283a (= the
+  build tree). 09:59 FULL CHECKLIST pp55 on 527e283a started (28 steps, about 4 h; static 12/0, real 14/0 by 10:01).
+- 10:10 static work while pp55 runs: GimmickHandoff's decision logic and tests drafted (docs/drafts/gimmick-handoff/;
+  the trigger waits for cs116: the joined player's game refuses ~500 ambient gimmick events a minute, so a refusal
+  alone cannot mean "it uses K"); HorseDiag's held actors by key staged for the next batch (scratchpad
+  apply_held_keys.py); cs117.sh written (B04: the chest step with knowledge_grant=1; pp43's chest taught the host
+  "Tough Meat"). After pp55: errglobal73.py (which global holds the taming's refusal code), the post, cs116, cs117.
+- 13:55 pp55 done: 1202 pass, 10 fail, 28 steps. All 10 fails are farfight's lost join (Discord's overlay popup on the
+  host's window, shot L1); every other step clean, incl. the new slow-loop check (0 over the limit anywhere) and
+  mounts with no held frame (pp53-mounts: 36 "update skipped" lines). 13:57 errglobal73: the taming's refusal code is
+  global 0x71BB2E8, loaded at 2C0BFD7 / 2C0C03A in the branch step (the staged probe's two hooks; their bytes match
+  the exe). pp55b (static as smoke + farfight) started 13:57.

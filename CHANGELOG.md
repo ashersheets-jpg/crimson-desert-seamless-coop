@@ -5,8 +5,10 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-Candidate 0.1.0-alpha+365e7b50, for game 1.0.0.3732 (native 52ef13e, layer c0fa5540's; checklist pp54 running; not
-posted yet; text docs/release/shared-world-playtest/download-365e7b50.txt). From Borque's two-PC session of 24 Nov:
+Posted 2026-11-24 14:11 as 0.1.0-alpha+527e283a, for game 1.0.0.3732 (native c63f8b4, layer c0fa5540's; checklist
+pp55 over 28 steps, 1202 / 10, the 10 all farfight's join lost to Discord's overlay popup, farfight 49 / 0 on its
+re-run in pp55b with static as smoke; both zips checked file by file, 25/25 and 10/10; message 1574864934821433446,
+text docs/release/shared-world-playtest/download-527e283a.txt; tags Borque). From Borque's two-PC session of 24 Nov:
 - **The host's network loop no longer stalls in towns**: npc_category's table read and the hide mirror's actor
   lookups used VirtualQuery-checked reads, which cost the host's network loop 0.5-2.4 s per pass while the game
   streamed a town, so everything to the joined player went out in bursts (the "big desync, NPCs teleporting"). Fast
@@ -17,7 +19,9 @@ posted yet; text docs/release/shared-world-playtest/download-365e7b50.txt). From
   now, as on the guest since 2026-11-08. cs114c: 0 held frames through a 38 m ride.
 - **A refused step of the joined player's own scene no longer strands them** (Borque's taming): when the host's
   server refuses a branch of user 2's own scene and no accepted branch or delete follows within 6 s, user 2 gets that
-  scene's 2292 naming its character (observer_seq_copy, "[own refused]"). Unit-tested; a taming is not scriptable.
+  scene's 2292 naming its character (observer_seq_copy, "[own refused]"). After an independent review: a refused
+  scene the server then moves on (a StageBranchStateAck of it to user 2) is left alone, and a push the queue refuses
+  is retried every 0.5 s (20 times). Unit-tested; a taming is not scriptable.
 - **Hops to the friend land on the friend's recent path** (T19, layer 9a16282 / c0fa5540): the newest point 1-4 m
   from the friend within 2 m up / down, else 1 m beside them (pp52-lowsave: the friend's own spot overlapped).
 

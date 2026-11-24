@@ -537,6 +537,13 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
     attach_follow ported (f9791c4) and carry on by default (914e7d7 / aeb7d33), see "Carryable animals" below; (9) the
     ride rule hands a ridden NPC vehicle to its rider's game (aeb7d33), a cart not yet seen. enemy_relay /
     local_capture / remote_puppet are the base's two-worlds puppets, not used in the shared world.
+    2026-11-24 (4): taming's last step is REFUSED by the host's server (eErrNoFailedStageChartBranchCondition; Borque
+    24 Nov); native c63f8b4 frees the joined player 6 s after such a refusal (docs/research/taming-refusal-3732.md).
+    (5) / (6): the joined player's game runs no world gimmick's events (every world gimmick's controller is the host's
+    user; private notes_gimmick_handoff.md: the design "GimmickHandoff", a draft of its decision logic and tests in
+    docs/drafts/gimmick-handoff/). cs116 casts by script with the keys the web guides give (F2 wheel, Q, the left button) and
+    the frame probe on: it shows which gimmick a cast's fish summon belongs to and what "the joined player uses K" can
+    be told by (its game refuses ~500 ambient gimmick events a minute, so a refusal alone is not intent).
   - [~] JackyChan004 / D3vils (2026-11-18, 9e85b891): after "Enter the cabin" the friend's 2644 reset the host's
     stage manager (F4 off in the release): no bear fight for the host, the friend's stages off for the run, NPCs
     idle on the friend's screen. Fix: user2_revive_manager=1 (in 62f49d19 and every build since; cs44j: "1 LIVE",

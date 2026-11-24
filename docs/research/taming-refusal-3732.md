@@ -18,6 +18,20 @@ branch of user 2's own scene that no accepted branch and no 2292 follow within 6
 2's character ("ObserverSeqCopy [own refused]"), once per scene. Tester logs so far: 5 branch answers for user 2,
 4 accepted, the taming's one refused.
 
+### Independent review of the release (2026-11-24)
+- Fixed in native c63f8b4: (1) a refused scene that the server then moved on another way (a StageBranchStateAck of
+  it to user 2's queue) was still released after 6 s: it is dropped now (Borque's log has no branch of 0x29D to user
+  2 after the refusal, so his case still releases); (2) a push the queue refused (over half its budget) or no
+  character key lost the release for good: retried every 0.5 s, given up after 20 tries.
+- Open, minor: (3) B2 knows user 2's branches by sequencer id only (a ring of 32), so a host scene with the same id
+  as a recent own scene of user 2 could be confused (unlikely); (4) the 2292's u32 | u8 tail comes from the last
+  2292 the host's client saw, not from this scene (the "[own 2292]" copy uses the scene's own): the client's
+  acceptance is to be confirmed in a two-PC log; (5) only user 2's client is released: the server's scene stays
+  alive, still binding user 2's character, until the host logs out (a later taming may meet it); (6) own_ /
+  own_deleted_ hold at most 4096 ids per server instance and are never pruned (an existing limit of "[own 2292]"
+  too). It needs shop_probe=1 and observer_seq_copy=1: the host's co-op settings the layer writes (net/native_mode_text.h)
+  set both.
+
 ## The code path (3732 addresses)
 - 0x2B56870 is a protection stub: a 5-byte jmp to 0xE169180, a relocated but readable body (LESSONS: "a function that
   disassembles to junk after a jmp").
@@ -29,10 +43,20 @@ branch of user 2's own scene that no accepted branch and no 2292 follow within 6
   scratchpad errglobal73.py (the name's string, the code that stores its hash, every load of that global, and the
   path from 0x2C0B8B0), to run after the checklist.
 
+- CONFIRMED 2026-11-24 13:58 (errglobal73.py / errglobal73b.py): the game registers eErrNoFailedStageChartBranchCondition
+  at 0x2443149..0x2443169 with the global 0x71BB2E8 (lea rcx,[0x71BB2E8]; mov [rsp+0x20],rcx; lea rdx,[the name];
+  call 0x164E060). 0x2C0B8B0 loads that global at exactly two places: 2C0BFD7 (a node entry of kind 2 with the
+  element's [+0x88]+0x75 set) and 2C0C03A (the condition call 0x25C82A0 at 2C0C02D said no).
+- The condition call gets the target node, [scene+0x28] (the scene's owner actor: for this scene the JOINED
+  player's character, per its PrepareSequencerAck "owner actor 0xA0100066"), a context object and the scene.
+
 ## Hypothesis
-The scene lives in the host's manager, so the branch condition is evaluated in the host's context (the manager's
-owner is the host's character, who is not riding the horse). Branch 0 has no such condition, which fits it being
-accepted. Not proven.
+First thought: the scene lives in the host's manager, so the condition is evaluated in the host's context. The
+condition call's actor argument is the scene's own owner (the joined player's character), which speaks against that.
+More likely the condition reads a state the host's server never got from the joined player's game (the taming's
+progress on the horse, whose AI the ride rule handed to the joined player's game). Not proven: the next batch's
+log-only probe (scratchpad apply_branch_fail_probe.py; bytes checked in the 3732 exe) names which of the two places
+refused and the target node's object types, from a tester's taming.
 
 ## Next
 1. errglobal73.py: confirm 0x71BB2E8 (or another global) is eErrNoFailedStageChartBranchCondition and which path sets it.

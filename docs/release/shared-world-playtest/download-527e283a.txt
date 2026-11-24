@@ -1,0 +1,15 @@
+**Update: shared world playtest 0.1.0-alpha+527e283a, for game 1.0.0.3732**
+Use this instead of 2451dff5; **both players need the same build**.
+
+Fixes from <@224953308010381312>'s two-PC session (thanks for the logs):
+- **Everything jumping around after the join, NPCs teleporting even on the host's screen**: in towns, part of the mod's work on the host took 0.5-2.4 s per pass, so everything for the joined player went out in bursts. In our town test the host's slow passes went from 196 to none.
+- **The joined player's horse frozen on the host's screen** (a frozen copy where they mounted): an old crash guard held that horse still on the host. In our test the host now saw the joined player ride 38 m on it.
+- **Taming a wild horse left the joined player stuck**: the host's game refused the taming's last step and never ended it. Now their game is told the scene is over 6 s after such a refusal, so they can move again (the horse is most likely not tamed). Untested, since taming can't be scripted: tell us if it still happens. Why the step is refused is being looked into.
+- **Going to your friend lands you on their path** (Go to my friend, joining beside the host, respawning at your friend), not 1 m to the side, which could be open air at a cliff or inside a rock.
+
+Tested with two copies of the game on one PC (Nvidia): the full checklist on 1.0.0.3732 (all 28 steps). Not covered: two PCs over Steam, real internet, AMD / Intel cards, long sessions; your reports tell us those.
+
+- `...527e283a-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tell us in <#1567319198206525450> how it goes, with the report zip from **both** players (close the game, run **Diagnose Co-op+.cmd**).
