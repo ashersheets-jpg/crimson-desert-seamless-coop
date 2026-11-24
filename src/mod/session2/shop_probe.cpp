@@ -84,6 +84,18 @@ constexpr uint8_t kB2Bytes[] = {0x8B, 0x5D, 0x80, 0x85, 0xDB};
 constexpr uint8_t kBCtxBytes[] = {0xFF, 0x50, 0x48, 0x0F, 0xB6, 0x8D, 0x80, 0x00, 0x00, 0x00};
 constexpr uint8_t kBCallCtxBytes[] = {0x48, 0x8D, 0x55, 0x80, 0x48, 0x8B, 0xC8, 0xE8, 0x06, 0x0D, 0xE0, 0xFF};
 constexpr int32_t kB_Seq = -0x80, kB_Then = -0x48, kB_Field = -0x38, kB_U8a = 0x88, kB_U8b = 0x80, kB_Result = -0x80;
+// Co-op+ 2026-11-24 (docs/research/taming-refusal-3732.md): the branch step 0x2C0B8B0's two loads of error global
+// 0x71BB2E8, hooked right after the load (eax = the code). BF1 after 2C0BFD7 (a node entry of kind 2 and the element's
+// [+0x88]+0x75 set), BF2 after 2C0C03A (the condition call 0x25C82A0 returned false). The frame: rbp as in the step;
+// [rbp+0xCE0] = the scene (its first argument's spill), [rbp] = the target node, [rbp-0x70] = the element (BF1).
+constexpr uintptr_t kBF1 = 0x2C0BFDD, kBF2 = 0x2C0C040, kBF1Ctx = 0x2C0BFD7, kBF2Ctx = 0x2C0C03A;
+constexpr uint32_t kBFPatch = 7;
+constexpr uint8_t kBFBytes[] = {0x4C, 0x8B, 0xBD, 0xE8, 0x0C, 0x00, 0x00};  // mov r15,[rbp+0xCE8]
+constexpr uint8_t kBF1CtxBytes[] = {0x8B, 0x05, 0x0B, 0xF3, 0x5A, 0x04};     // mov eax,[rip+0x45AF30B] (0x71BB2E8)
+constexpr uint8_t kBF2CtxBytes[] = {0x8B, 0x05, 0xA8, 0xF2, 0x5A, 0x04};     // mov eax,[rip+0x45AF2A8] (0x71BB2E8)
+constexpr int32_t kBF_Scene = 0xCE0, kBF_Node = 0, kBF_Elem = -0x70;
+constexpr uint32_t kBF_SceneOwner = 0x28, kBF_SceneWord = 0x30, kBF_ElemInfo = 0x88, kBF_ElemFlag = 0x75;
+constexpr uintptr_t kImageSize3732 = 0x13C7E000;
 
 // Offsets (server objects; the same ones observer_stage / observer_milestone read).
 constexpr uint32_t kActor_Key = 0x60, kActor_User = 0xA0, kUser_Key = 0x60, kField_Owner = 0x180, kMgr_Actor = 0x18;
@@ -115,6 +127,9 @@ std::atomic<bool> g_e_on{false}, g_g_on{false}, g_p_on{false}, g_c_on{false}, g_
 SafetyHookMid g_e_hook, g_g_hook, g_p_hook, g_c_hook, g_sa_hook, g_sr_hook, g_sf_hook;
 std::atomic<bool> g_b1_on{false}, g_b2_on{false};
 SafetyHookMid g_b1_hook, g_b2_hook;
+std::atomic<bool> g_bf1_on{false}, g_bf2_on{false};
+SafetyHookMid g_bf1_hook, g_bf2_hook;
+std::atomic<uint64_t> g_bf[2][2] = {};  // [site][user 2?]
 // B: user 2's StageBranchStateReq sequencers (the tap), so the handler's result is told as user 2's.
 shp::IdRing<32> g_u2_branch_seqs;
 std::atomic<uint64_t> g_branch[2] = {}, g_branch_fail[2] = {}, g_branch_unpaired{0};  // [0] user 2, [1] other
@@ -137,10 +152,11 @@ std::atomic<uint64_t> g_srv[3] = {}, g_srv_found[3] = {}, g_srv_result[3][4] = {
 std::atomic<uint64_t> g_req[4] = {}, g_req_filtered[4] = {}, g_req_funcnpc[4] = {};  // 2671 2720 2436 2591
 std::atomic<uint64_t> g_out[6] = {}, g_out_funcnpc[6] = {};  // 2663 3000 2916 2525 2981 2524
 
-enum Kind : uint16_t { kEGate, kEPrep, kE2671, kESrv, kEReq, kEOut, kETwin, kEBranch, kKindCount };
+enum Kind : uint16_t { kEGate, kEPrep, kE2671, kESrv, kEReq, kEOut, kETwin, kEBranch, kEBranchFail, kKindCount };
 p::EventRing<512> g_ring;
 p::WindowLimiter g_lim[kKindCount] = {{16, 5'000'000}, {48, 5'000'000}, {32, 5'000'000}, {32, 5'000'000},
-                                       {48, 5'000'000}, {48, 5'000'000}, {32, 5'000'000}, {32, 5'000'000}};
+                                       {48, 5'000'000}, {48, 5'000'000}, {32, 5'000'000}, {32, 5'000'000},
+                                       {16, 5'000'000}};
 std::atomic<uint64_t> g_limited{0}, g_lost{0}, g_lines{0};
 constexpr uint64_t kMaxLines = 4000;
 
@@ -373,6 +389,43 @@ void on_b2(safetyhook::Context& ctx) noexcept {
     emit(kEBranch, e);
 }
 
+// BF1 / BF2: the branch step refused with the code in eax (see kBF1). Whose branch: B1's thread-local on this thread.
+void on_bf(safetyhook::Context& ctx, int site) noexcept {
+    const BranchCall& b = t_branch;  // B2 clears it after the step returns: still set here
+    const bool u2 = b.set && g_u2_branch_seqs.has(b.seq);
+    g_bf[site][u2 ? 1 : 0].fetch_add(1, std::memory_order_relaxed);
+    // The host's own refusals: the first 16 per site only (book); user 2's: all (the limiter bounds them).
+    if (!u2 && !g_book.take(book_key(0xBF00 + static_cast<uint64_t>(site), 0x61), 16)) return;
+    const uintptr_t scene = rdp(ctx.rbp + kBF_Scene);
+    const uintptr_t node = rdp(ctx.rbp + kBF_Node);
+    const uintptr_t owner = scene ? rdp(scene + kBF_SceneOwner) : 0;
+    p::Event e;
+    uint64_t flag = 0xFF;
+    if (site == 0) {
+        const uintptr_t elem = rdp(ctx.rbp + kBF_Elem);
+        const uintptr_t info = elem ? rdp(elem + kBF_ElemInfo) : 0;
+        if (info) flag = rdv<uint8_t>(info + kBF_ElemFlag, 0xFF);
+    }
+    e.v[0] = static_cast<uint64_t>(site) | flag << 8 | static_cast<uint64_t>(u2) << 16 |
+             static_cast<uint64_t>(static_cast<uint32_t>(ctx.rax)) << 32;
+    e.v[1] = b.set ? b.seq : 0;
+    e.v[2] = scene ? rdv<uint64_t>(scene + kBF_SceneWord) : 0;
+    e.v[3] = static_cast<uint64_t>(owner ? rdv<uint32_t>(owner + kActor_Key) : 0) | static_cast<uint64_t>(b.then) << 32;
+    for (int i = 0; i < 8; ++i) {
+        const uintptr_t q = node ? rdp(node + i * 8) : 0;
+        const uintptr_t vt = q > 0x10000 ? rdp(q) : 0;
+        e.v[4 + i] = vt >= g_base && vt - g_base < kImageSize3732 ? (static_cast<uint64_t>(vt - g_base) | (1ull << 63))
+                                                                 : static_cast<uint64_t>(q);
+    }
+    emit(kEBranchFail, e);
+}
+void on_bf1(safetyhook::Context& ctx) noexcept {
+    if (g_bf1_on.load(std::memory_order_acquire)) on_bf(ctx, 0);
+}
+void on_bf2(safetyhook::Context& ctx) noexcept {
+    if (g_bf2_on.load(std::memory_order_acquire)) on_bf(ctx, 1);
+}
+
 // S: the server's 0x2126920. A = the decision point's registers (RAX = field vf48), R = the lookup's result, F = BL.
 void on_sa(safetyhook::Context& ctx) noexcept {
     if (!g_sa_on.load(std::memory_order_acquire)) return;
@@ -548,6 +601,20 @@ std::string line_of(const p::Event& e) {
                                static_cast<uint32_t>(v[0]),
                                v[0] ? "REFUSED (a Nak 1013 follows)" : "ACCEPTED (its Ack 2920 is the branch's own)",
                                (v[5] >> 17) & 1 ? "" : " (B1 not seen on this thread: sequencer unknown)");
+        case kEBranchFail: {
+            std::string q;
+            for (int i = 4; i < 12; ++i)
+                q += (v[i] >> 63) ? std::format(" vt exe+0x{:X}", v[i] & 0x7FFFFFFFFFFFFFFFull) : std::format(" 0x{:X}", v[i]);
+            return std::format("ShopProbe [branch fail] {} T{} | the branch step 0x2C0B8B0 refused {}'s branch of sequencer "
+                               "0x{:X} to 0x{:08X} with 0x{:08X} at {} | scene +0x30 0x{:X}, its owner actor 0x{:08X} | "
+                               "target node:{}",
+                               when, e.tid, (v[0] >> 16) & 1 ? "USER 2" : "the host / another", v[1],
+                               static_cast<uint32_t>(v[3] >> 32), static_cast<uint32_t>(v[0] >> 32),
+                               (v[0] & 0xFF) == 0 ? std::format("2C0BFD7 (a node entry of kind 2; the element's flag "
+                                                                "+0x75 = {})", (v[0] >> 8) & 0xFF)
+                                                  : std::string("2C0C03A (the condition call 0x25C82A0 said no)"),
+                               v[2], static_cast<uint32_t>(v[3]), q);
+        }
         default:
             return std::format("ShopProbe: event {}?", e.kind);
     }
@@ -607,9 +674,11 @@ void summary() {
 void branch_summary() {
     if (!g_b2_on.load()) return;
     log::info("ShopProbe branch summary: the StageBranchStateReq handler's 0x2B56870: user 2 {} (refused {}), the host "
-              "/ others {} (refused {}), without B1 {} | user 2's branch sequencers seen {}",
+              "/ others {} (refused {}), without B1 {} | user 2's branch sequencers seen {} | the step's refusals at "
+              "2C0BFD7 user 2 {} / others {}, at 2C0C03A (the condition) user 2 {} / others {}",
               g_branch[0].load(), g_branch_fail[0].load(), g_branch[1].load(), g_branch_fail[1].load(),
-              g_branch_unpaired.load(), g_u2_branch_seqs.size());
+              g_branch_unpaired.load(), g_u2_branch_seqs.size(), g_bf[0][1].load(), g_bf[0][0].load(), g_bf[1][1].load(),
+              g_bf[1][0].load());
 }
 
 void drain() {
@@ -661,6 +730,14 @@ void install(std::span<const gad::Section> secs) {
         mid(kB1, kB1Patch, kB1Bytes, on_b1, g_b1_hook, g_b1_on, "B1, before the branch 0x2B56870");
         if (g_b1_on.load()) mid(kB2, kB2Patch, kB2Bytes, on_b2, g_b2_hook, g_b2_on, "B2, the branch's result");
     }
+    // Co-op+ 2026-11-24: why a branch is refused (BF1 / BF2; read only, needs B1 for whose branch it is).
+    if (g_b1_on.load() && context_ok(secs, kBF1Ctx, kBF1CtxBytes, "the branch step's error load 0x2C0BFD7") &&
+        context_ok(secs, kBF2Ctx, kBF2CtxBytes, "the branch step's error load 0x2C0C03A")) {
+        mid(kBF1, kBFPatch, kBFBytes, on_bf1, g_bf1_hook, g_bf1_on, "BF1, the branch step's refusal (a)");
+        mid(kBF2, kBFPatch, kBFBytes, on_bf2, g_bf2_hook, g_bf2_on, "BF2, the branch step's refusal (the condition)");
+    }
+    log::info("ShopProbe: BF 0x2C0BFDD/0x2C0C040 (why the branch step refuses) {}/{}", g_bf1_on.load() ? "hooked" : "off",
+              g_bf2_on.load() ? "hooked" : "off");
     log::info("ShopProbe: B 0x2D55B56/0x2D55B6A (the StageBranchStateReq handler's result) {}/{}",
               g_b1_on.load() ? "hooked" : "REFUSED", g_b2_on.load() ? "hooked" : "REFUSED");
     if (context_ok(secs, isl::kCtxLookup, isl::kCtxLookupBytes, "the entry check's lookup call 0x2126A5C") &&
