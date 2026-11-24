@@ -8,3 +8,5 @@ __pycache__/
 tools/audio/*.exe
 tools/audio/*.obj
 upstream/cdmp-native/
+# fmap.py caches (rebuilt on demand)
+tools/native-port/**/fmap.pickle

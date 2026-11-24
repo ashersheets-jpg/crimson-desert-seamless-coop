@@ -716,3 +716,14 @@ the step's 15 minutes of keys and clicks on both title menus; one of them starte
 test co-op world aside, and the checklist runner then stopped the whole pass before its next step. A test step's
 input belongs only where its precondition holds: twocopy.ps1 now ends the lobby flow at "guest REMOTE: False". When a
 pass stops early, look at what the failed step did AFTER its failure point, not only at the failure itself.
+
+## A log-only probe of a tester's bug class can find it in our own runs (2026-11-23)
+Brycecco's invisible boss could not be reproduced (no boss save, his zips not yet in). The cheap move was a log-only
+watch on the mechanism we suspected (merchant_unhide's hide bit 9, for every scene instead of the shop list), in the
+build the checklist runs anyway. Its first checklist step showed the bug class at our own start spot: three critters
+of a host scene, visible on the host within 4 s, hidden on the joined player's game for good. That gave a fix (the
+host tells the guest which of them it shows) and a test for it in one evening. Lessons: (1) when a report cannot be
+reproduced directly, log the suspected mechanism wherever it runs and let the existing tests look for it; (2) such a
+probe must compare BOTH games (here: hidden on the guest while visible on the host), or it cannot tell a bug from a
+scene that hides people on purpose; (3) an intermittent repro (the scene bound in about half the runs) needs the
+fix's own diagnostics (the host's first look) before concluding from a run where nothing happened.
