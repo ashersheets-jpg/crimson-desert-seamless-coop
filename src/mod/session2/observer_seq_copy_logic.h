@@ -584,6 +584,7 @@ public:
         clear();
         own_.clear();
         own_deleted_.clear();
+        own_refused_.clear();
     }
 
     // User 2's MoveFieldAck went to its queue. observer: the field's owner (as the server wrote it)
@@ -652,6 +653,44 @@ public:
         if (!own_.count(seq) || own_deleted_.count(seq) || own_deleted_.size() >= l_.max_own) return false;
         own_deleted_.insert(seq);
         return true;
+    }
+    // Co-op+ 2026-11-24 (Borque's two-PC session): the joined player tamed a wild horse, the host's server REFUSED his
+    // branch to the taming's last state (0x2B56870 -> 0xFF9EA4EB eErrNoFailedStageChartBranchCondition) and never
+    // deleted the scene while the session lived: his game stayed in it, mounted and motionless. The server's answer to
+    // a branch of user 2's own scene (shop_probe's B2): a refusal that no accepted branch of that scene and no 2292
+    // follow within kOwnRefusedReleaseUs becomes due, and user 2 then gets the scene's 2292 naming its own character (a
+    // delete released him when he was thrown off). Once per scene; the first refusal's time counts.
+    static constexpr uint64_t kOwnRefusedReleaseUs = 6'000'000;
+    struct OwnRefused {
+        uint64_t seq = 0, us = 0;
+        uint32_t then = 0, result = 0;
+    };
+    void on_user2_own_branch(uint64_t seq, bool accepted, uint64_t now_us, uint32_t then, uint32_t result) {
+        if (!own_.count(seq) || own_deleted_.count(seq)) return;
+        if (accepted) {
+            own_refused_.erase(seq);
+            return;
+        }
+        if (own_refused_.size() >= 64 && !own_refused_.count(seq)) return;
+        own_refused_.try_emplace(seq, OwnRefused{seq, now_us ? now_us : 1, then, result});
+    }
+    size_t own_refused_waiting() const { return own_refused_.size(); }
+    // The refused own scenes now due, each marked own-deleted (no other 2292 copy of it follows); the ones whose 2292
+    // went meanwhile are dropped.
+    std::vector<OwnRefused> take_own_refused_due(uint64_t now_us) {
+        std::vector<OwnRefused> out;
+        for (auto it = own_refused_.begin(); it != own_refused_.end();) {
+            if (own_deleted_.count(it->first)) {
+                it = own_refused_.erase(it);
+            } else if (now_us >= it->second.us && now_us - it->second.us >= kOwnRefusedReleaseUs) {
+                if (own_deleted_.size() < l_.max_own) own_deleted_.insert(it->first);
+                out.push_back(it->second);
+                it = own_refused_.erase(it);
+            } else {
+                ++it;
+            }
+        }
+        return out;
     }
     // Co-op+ (2026-11-09, tcB225/226) conflict hold: user 2's OWN live scenes (U-1's, prepared while it was far) and
     // the NPCs they bind (types 4 / 5). A copy of the host's scene requiring one of those NPCs stays pending until
@@ -1020,6 +1059,7 @@ private:
     std::map<uint64_t, uint64_t> delivered_;              // seq -> when its 2661 copy went (this trip)
     std::unordered_set<uint64_t> own_;                    // user 2's own sequencer ids (this server)
     std::unordered_set<uint64_t> own_deleted_;            // ... whose 2292 user 2 got (natively or a copy)
+    std::map<uint64_t, OwnRefused> own_refused_;          // ... whose branch the server refused (on_user2_own_branch)
     uint64_t trips_ = 0, observer_trips_ = 0, filtered_ = 0, pending_full_ = 0, copied_ = 0, copied_branches_ = 0,
              milestones_ = 0, cancelled_ = 0, vanished_ = 0, refused_ = 0, bound_removed_ = 0, announced_overflow_ = 0,
              gate_by_timeout_ = 0, delivered_evicted_ = 0, purged_ = 0;

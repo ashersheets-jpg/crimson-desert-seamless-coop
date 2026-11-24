@@ -70,6 +70,11 @@ void observer_seq_copy_on_server_replaced() noexcept;
 // on; at most 5 min). take_frame then keeps that NPC's MoveActorAck / StartActionAck from user 2: its own scene holds
 // it. Any thread.
 bool observer_seq_copy_user2_scene_holds(uint32_t key) noexcept;
+// Co-op+ 2026-11-24 (Borque's two-PC session: the joined player's taming ended with his game stuck in the scene):
+// shop_probe's B2, the server's answer to one of user 2's StageBranchStateReqs (result 0 = accepted). A refused branch
+// of one of user 2's own scenes that nothing follows within 6 s: user 2 gets that scene's 2292 (observer_seq_copy_tick).
+// The server's thread; only a note under the module's lock.
+void observer_seq_copy_user2_branch_result(uint64_t seq, uint32_t then, uint32_t result) noexcept;
 std::string observer_seq_copy_describe();
 
 }  // namespace cdmp::session2

@@ -357,6 +357,9 @@ void on_b2(safetyhook::Context& ctx) noexcept {
     const bool u2 = b.set && g_u2_branch_seqs.has(b.seq);
     g_branch[u2 ? 0 : 1].fetch_add(1, std::memory_order_relaxed);
     if (result) g_branch_fail[u2 ? 0 : 1].fetch_add(1, std::memory_order_relaxed);
+    // Co-op+ 2026-11-24: a refused branch of user 2's own scene that nothing follows ends that scene for user 2
+    // (observer_seq_copy_user2_branch_result; Borque's two-PC taming).
+    if (u2) observer_seq_copy_user2_branch_result(b.seq, b.then, result);
     // User 2's are all logged (the limiter bounds them); the host's: its failures, 16 per id.
     if (!u2 && (!result || !g_book.take(book_key(b.seq, 0x60), 16))) return;
     p::Event e;
