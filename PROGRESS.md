@@ -10909,3 +10909,24 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   fight; WATER is still to find (the river's course near the dock is not where I guessed twice).
   Side result, every run tonight: the hide mirror un-hid the start scene's 3 critters on the guest (cs108c, cs109a,
   cs109b: "[mirror] NPC 0xB01004..: visible on the host, hidden here (hide 0x200): the game's setter cleared bit 9").
+- 02:49 cs111a (a fixture: the host jumps to 8 points on a 25 m circle round the dock, shots every 7 s; SAVES OK,
+  5/5): no water within 25 m of the "Rodbel Fishing Dock" point: meadow, rock and the camp (settled heights 537.9 to
+  546.9; the one that moved was pushed by the camp's bandits, shot p10). The river is elsewhere; T19's water case
+  stays open (the landing rule needs nothing special for it: the friend's own path in the water is water).
+- 02:52 Discord: nothing new (feedback, bug reports, general: two joins). Gimmick event hashes are not names in the
+  exe (tools/native-port/port3732/evnames.py: hashlittle with seed 0xC5EDE checks on eErrNoActorNotExist, 874k strings,
+  none of the 5 refused events): the names live in the game's data.
+- ~03:05 World objects for the joined player (fishing, mining, the duplicated tree: P1 Borque (5)(6), the tree item):
+  the base's S25 table says interactions (chests, tables, loot) are the server's per user and work, but level objects
+  and gimmick events run only on the controller's game, the host's; cs108c showed the joined player's client refusing
+  every one of its own gimmick events. A research agent reads the decomp / docs for how the AiHandoff rules move an
+  NPC's controller, the game's own gimmick OwnershipState / OverriedOwnershipStateTypeyAck, and the fishing flow
+  (report: build/decomp/notes_gimmick_handoff.md, private). cs112a (exploratory): the guest on the fishing3 test save
+  (a rod in quick slot 2) casts twice at the dock with docked_gimmicks=probe on both games.
+- 03:04 cs112a (SAVES OK, 5/5, both alive): the guest started beside the host at the usual spot (the join hop), not
+  at the dock; keys 2 then Ctrl did not bring the rod out (g1 / g2: the shield on its back), so no cast happened.
+  But the client probe shows the joined player's game refusing its OWN gimmick events all the time, not only in a
+  fight: 539 / 1063 / 1595 / 2004 refusals at minutes 1-4 (about 500 a minute) on 20-43 gimmicks while it stood
+  still (the same event hashes as at the camp: 0x0F86C0FC, 0x128B06E9, 0x1E3E141C, 0x5CB19FE2). Whatever those
+  events do (plants pushed aside, birds, water?), they never run on the joined player's screen. Fishing waits for
+  the agent's report (how a cast is made, which check stops it).
