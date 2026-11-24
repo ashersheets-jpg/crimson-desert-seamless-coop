@@ -55,7 +55,8 @@ static std::vector<NpcRow> npcs_near(float radius, float from, std::optional<pro
     // cs27d (2026-11-16): the single-record 2005s only (enemy_loaded_variants) missed the host server's batched records
     // on the guest; every announced 0xB key is a candidate too (variant 0 when not known), counted only when the game
     // has the actor (its position reads).
-    std::vector<std::pair<uint32_t, uint32_t>> cands = enemy_loaded_variants();
+    // 2026-11-23 (cs105g): the batched records' variants too (enemy_any_variants), so the guest's geese have one.
+    std::vector<std::pair<uint32_t, uint32_t>> cands = enemy_any_variants();
     {
         std::vector<uint32_t> have;
         have.reserve(cands.size());
@@ -934,6 +935,13 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                                   st.variant ? std::format(" of variant 0x{:X}", st.variant) : std::string(), st.to[0], loaded);
                 }
                 auto at = key ? game::actor_world_position(key) : std::nullopt;
+                // 2026-11-23 (cs105g): on the guest a critter's position read (-0.0, 1.8, 0.2) and tpanimal took the
+                // joined player to the world's origin. A target within 100 m of (0, 0) is no place to go.
+                if (at && std::fabs(at->x) < 100.0f && std::fabs(at->z) < 100.0f) {
+                    log::info("Dev script: tp to 0x{:08X} refused: its position ({:.1f}, {:.1f}, {:.1f}) is the world's origin "
+                              "(not a real place)", key, at->x, at->y, at->z);
+                    at = std::nullopt;
+                }
                 // mc1 (2026-11-11): "our horse" can be a horse that never came (the host's stood 430 m away in a
                 // town and the script went there). A called horse is near: farther than 60 m is not a hop.
                 if (at && st.addr == 0xFFFFFFFFu) {

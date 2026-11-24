@@ -385,6 +385,12 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   played too (every step reaches the game's sound player, ~115 in a 50 s walk) and heard: muting them in
   alternate 4 s windows drops the host's loudness after a step from median 14.1 to 11.7 (= no step). cs42a's "not
   heard" was ambient noise. Falloff: the sounds play at the friend's character (quieter as it walks away).
+  2026-11-23 cs98f-i (voices, by hooking the game's PlayEvent 0x3BD5820 on both games): the posts on each player's
+  sound object and the per-event counts in 10-s windows show NO event that rises during either player's 30 swings,
+  even on the swinging player's own game: the swing and voice sounds take another post path, so this hook cannot
+  answer it (and the frame-event processors are never called on a player key). Next: the cs42a way (the host's
+  process audio loudness while the friend jumps / is hurt vs. stands), or a tester's ear ("do you hear your friend's
+  grunts when they attack or get hit?").
   Left: voices (effort / hurt sounds) checked the same way. 2026-11-21 reading (3576 decomp): voices are played by
   the action's frame events (ClientFrameEventVoiceSound, processor 0x79A160), the same frame-event path as the swing
   sounds (ClientFrameEventSoundEvent 0x795B20) that cs42a heard for the friend; its checks are the character's type

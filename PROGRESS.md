@@ -10778,3 +10778,22 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   18:44:47) told the guest "the friend travelled far away"; the guest's second Ctrl+F4 put it at (-9004.0, 479.6,
   -5064.0) at 18:45:06, 1.0 m from the host (-9005.0, 479.1, -5064.0), on the ground. With cs106 (summon, go-to from
   4 km: 1.0 m): summon, go-to and follow all checked on one PC. Not yet: cliffs, water (T19's "several regions").
+- 18:56 cs98i (B20, SAVES OK, 5/5): every PlayEvent post in 10-s windows (voice_windows.py): during the guest's 30
+  swings (18:53:03-33) and the host's (18:55:04-34) NO event rises on EITHER game, the swinging player's own game
+  included (the windows look like the idle ones: 22D10317 / CDA47353 / 672BD16F / 866C9077, the world's foley). So
+  the swing and voice sounds do not go through PlayEvent 0x3BD5820 (another post path), and cs98f/g/h counted other
+  things; the frame-event processors were never called on a player key either. The probe path is a dead end for the
+  question "does the friend's grunt play here": next B20 step is the cs42a method (the host's audio output loudness
+  in windows while the friend jumps / gets hurt vs. stands), not more hooks. Package 6f571df7 (dev killgame skips the
+  dead); cs105e (hunt) from 19:00.
+- 19:12 cs105e (SAVES OK, 5/5): the guest picked a LIVE goose (0xB01000EE, released to user 2's session at 19:04) and
+  sent KillCheatReq: nothing died (no death notice anywhere): the server ignores user 2's cheat request (the host's
+  work every time). So killgame cannot test the joined player's kill; cs105f instead puts [dev] hunt_test=1 on the
+  GUEST (every death it sees counts as its kill): the host's geese must read "Hunt: we brought down Goose" on the
+  guest now (before the batched-variant fix they would be "not game"). From 19:13.
+- 19:25 cs105f (SAVES OK, 5/5): no "Hunt:" kill line at all on the guest for the host's two geese (neither "brought
+  down" nor "not game"), and no "Kill feed" line: hunt_observe_s2c returned before its variant lookup, so either the
+  guest's client gets no death notice for a kill that is not its own, or hunt_test did not reach its layer ini. Its
+  own kills do give it death notices (pp48e-farfight's guest: "Kill feed: we took down 0xB01000D8 ..." x3). The real
+  case is the joined player's OWN kill: cs105g puts it beside a goose (tpanimal 60 7578) and has it swing in six
+  directions; the host kills one goose only. From 19:28.
