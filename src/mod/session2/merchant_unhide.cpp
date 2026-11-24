@@ -208,12 +208,15 @@ std::atomic<uint64_t> c_watch_noted{0}, c_watch_hidden{0}, c_watch_cleared{0};
 // The hide mirror (merchant_unhide_logic.h): the guest's copy of the host's last lists (key -> when last listed).
 bool g_mirror = true;
 std::mutex g_vis_mu;
-std::unordered_map<uint32_t, uint64_t> g_host_visible;
+struct Listed {
+    uint64_t first = 0, last = 0, applied = 0;
+};
+std::unordered_map<uint32_t, Listed> g_host_visible;
 std::atomic<uint64_t> c_mirror_sent{0}, c_mirror_in{0}, c_mirror_unhidden{0};
 bool host_shows(uint32_t key) {
     std::lock_guard lk(g_vis_mu);
     const auto it = g_host_visible.find(key);
-    return it != g_host_visible.end() && GetTickCount64() - it->second < 15000;
+    return it != g_host_visible.end() && GetTickCount64() - it->second.last < 15000;
 }
 
 template <class T>
@@ -370,6 +373,37 @@ void worker() {
                       g_guest ? "guest" : "host", seen_noted, mul::kStuckMs, c_watch_hidden.load(),
                       c_watch_cleared.load());
         }
+        // The hide mirror, guest: any NPC the host has listed as visible for kStuckMs whose copy here still has
+        // bit 9 (pp50a: the guest does not always see the binding of the host's scene; the host's list is enough).
+        if (g_guest && g_mirror && !g_diag_only) {
+            std::vector<uint32_t> due;
+            {
+                std::lock_guard lk(g_vis_mu);
+                for (const auto& [k, l] : g_host_visible)
+                    if (now - l.last < 15000 && now - l.first >= mul::kStuckMs && now - l.applied > 60000)
+                        due.push_back(k);
+            }
+            for (const uint32_t k : due) {
+                const auto a = game::find_actor(k);
+                uintptr_t comps = 0, info = 0;
+                uint64_t hide = 0;
+                if (!a || !*a || !rd(*a + 0x68, comps) || !rd(comps + 0x20, info) || !rd(info + 0x3B8, hide)) continue;
+                {
+                    std::lock_guard lk(g_vis_mu);
+                    if (auto it = g_host_visible.find(k); it != g_host_visible.end()) it->second.applied = now;
+                }
+                if (!(hide & mul::kHideBit)) continue;  // already shown here
+                const bool ok = call_setter(info);
+                uint64_t after = 0;
+                rd(info + 0x3B8, after);
+                (ok ? c_mirror_unhidden : c_failed).fetch_add(1);
+                log::info("MerchantUnhide [mirror] NPC 0x{:08X}: visible on the host, hidden here (hide 0x{:X}): {} "
+                          "-> 0x{:X}", k, hide, ok ? "the game's setter cleared bit 9" : "the setter FAULTED", after);
+                std::lock_guard lk(g_mu);
+                for (Bound& x : g_watch)
+                    if (x.key == k) x.done = true;
+            }
+        }
         std::vector<Bound> watch;
         {
             std::lock_guard lk(g_mu);
@@ -455,6 +489,13 @@ void merchant_unhide_host_tick(troc::TrocLink& link) {
         }
         std::sort(keys.begin(), keys.end());
         keys.erase(std::unique(keys.begin(), keys.end()), keys.end());
+        if (static bool said = false; !said && !cands.empty()) {
+            said = true;
+            log::info("MerchantUnhide [mirror] host: first look: {} NPC(s) of unlisted scenes bound in the last 3 "
+                      "minutes, {} visible here | link {} | user 2 in the world {}",
+                      cands.size(), keys.size(), link.connected() && !link.broken() ? "up" : "down",
+                      server_user2_in_world() ? "yes" : "no");
+        }
         if (keys.empty() && last_keys.empty()) return;
         if (keys == last_keys && now - last_sent < 6000) return;
         if (!link.connected() || link.broken() || !server_user2_in_world()) return;
@@ -464,6 +505,10 @@ void merchant_unhide_host_tick(troc::TrocLink& link) {
                           "here", keys.size());
             last_sent = now;
             last_keys = std::move(keys);
+        } else if (static bool told = false; !told) {
+            told = true;
+            log::warn("MerchantUnhide [mirror] host: the list of {} NPC(s) could not be queued for the guest",
+                      keys.size());
         }
     } catch (...) {
     }
@@ -475,9 +520,13 @@ bool merchant_unhide_guest_on_control(std::span<const uint8_t> payload) {
         if (auto keys = mul::parse_visible_payload(payload)) {
             const uint64_t t = GetTickCount64();
             std::lock_guard lk(g_vis_mu);
-            for (const uint32_t k : *keys) g_host_visible[k] = t;
+            for (const uint32_t k : *keys) {
+                Listed& l = g_host_visible[k];
+                if (!l.first || t - l.last > 30000) l.first = t;  // new, or listed again after a gap
+                l.last = t;
+            }
             if (g_host_visible.size() > 2048)
-                std::erase_if(g_host_visible, [&](const auto& e) { return t - e.second > 30000; });
+                std::erase_if(g_host_visible, [&](const auto& e) { return t - e.second.last > 30000; });
             if (c_mirror_in.fetch_add(1) == 0)
                 log::info("MerchantUnhide [mirror] first host list: {} NPC(s) of unlisted scenes visible on the "
                           "host", keys->size());
