@@ -229,7 +229,8 @@ KNOWN ISSUES (shared world playtest)
   not fixed yet.
 - The host's armour dye does not show on the joined player's screen yet.
 - A tree the joined player cuts down can show twice for the host.
-- Taming a wild horse as the joined player can leave them stuck at the end: if it
+- Taming a wild horse as the joined player can fail at its last step: the joined
+  player is freed a few seconds later, but the horse is most likely not tamed. If it
   happens, please send both zips.
 - City NPCs sitting on benches may stand in a T-pose on the joined player's screen
   (reported once, not seen in our tests).

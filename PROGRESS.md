@@ -12,6 +12,9 @@ test save Out, shipped cdmp.ini restored.
   (the joined player = the test save with a rod, a probe logging the summon), you take out the rod in the joined
   player's window and cast once into water; that one cast tells which gimmick the summon belongs to and what the fix
   must hand over. Or tell me the keys (take out the rod, aim, cast) and a spot with water near Nas River.
+  09:45 update: web guides give the keyboard keys (hold F2 = the equipment wheel, mouse wheel to the rod, release;
+  Q = can I fish here; hold the left button, release = cast), and the Nas River start has a pond beside the host.
+  cs116 scripts exactly that after the current checklist; if it casts, this hands-on is no longer needed.
 - 2026-11-23 19:58 HANDS-ON (5 minutes, not urgent, T41 hunting contest): the contest runs in the shared world and
   the host's kills count; a fix makes the joined player's game know the host's animals, but its OWN kill scoring
   cannot be scripted (the server ignores its test kill, and a scripted sword cannot catch a goose). Next time you
@@ -54,6 +57,8 @@ test save Out, shipped cdmp.ini restored.
   fresh, solostart, loot, display; both zips checked byte for byte against the tested package): doors of a building
   the joined player reached first open for both; no arm-wrestling choice in the friend menu. Text:
   docs/release/shared-world-playtest/download-677c87bb.txt. Also answered "does dlc work with the mod" in #general.
+- 2026-11-24 09:30 CLEARED (read-only check: RebootRequired is no longer set; last boot still 21 Nov 00:49): no update
+  restart is pending now, so long runs are back on in the day. Kept below for the record.
 - 2026-11-22 05:20, updated 2026-11-24 03:08 (still set; last boot 21 Nov 00:49). FYI, time-sensitive: Windows still
   has an update RESTART PENDING (read-only check: RebootRequired is set; active hours 15:00-09:00, so today 09:00-15:00
   is when it may restart by itself; I keep long runs out of that window unless you pause or restart). Its toast at 15:12 said the PC "will restart to update
@@ -11002,4 +11007,52 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   copy stays at the mount spot is unseen; a rerun needs the host turned toward the mount spot (a mouse move in its
   keys). On the shots at ~08:36: a Windows Update toast "Your device will restart to update outside of active hours
   (estimate: 6 min)". Everything pushed at 08:38 (273635e), no test running, a phone notice sent; no OS dialog
-  touched. No new test until the restart is past or the user pauses it. After pp52: build, package, cs113.
+  touched. No new test until the restart is past or the user pauses it.
+- 09:00 The log analysis of Borque's session (research agent; scratchpad borque-1124-analysis.md):
+  (1) HORSE: the host's HorseDiag containment skipped the CharacterControl update / post-update of the joined
+  player's own horse on EVERY frame while it was ridden (copy's update skipped = the host's frame rate, 0.95-1.17 of
+  it, in each ride; cs114a's host log shows the same): the crude 2976 test (a layer with a chart and no action) that
+  the guest side replaced on 2026-11-08 by the game's layer rule; never animated or moved, the horse stays at the
+  mount spot with the rider drawn on it. (2) "GLOBAL DESYNC": Steam ping 23 ms and Co-op+'s channel 25-45 ms, lost 0,
+  but the host's native network loop took 0.5-2.4 s per pass from 12:56:50 ("mostly host tunnel"; tunnel_tick itself
+  <= 34 ms): the time is in the four post-tunnel ticks, following the host's NPC category table (67 -> 204 NPCs);
+  npc_category read it with safe_read (VirtualQuery per read, 4 per NPC every second) and the hide mirror called
+  find_actor (~12 VirtualQuery reads per candidate every 2 s). Everything through the tunnel came in ~1 s bursts
+  (the joined player's samples >1 s late 40-51 % of a minute, NPCs "teleporting"). It started before the first NPC
+  hand-over, so the talk rule did not cause it. Our own pp53 town step had 196 such loops and still passed.
+  (3) TAMING: the host's server REFUSED the joined player's branch to state 2 of its own taming scene (13:03:45,
+  "0x2B56870 result 0xFF9EA4EB -> REFUSED (a Nak 1013)"), and nothing deleted that scene until the host logged out:
+  the joined player stayed mounted and still. The first, thrown-off attempt was released by the copied delete.
+- 09:04 built native 15ba2ed: fast reads in npc_category and every merchant_unhide lookup (find_actor_fast, the same
+  walk with SEH-guarded reads), each post-tunnel tick timed ("Net: host tick <name> took N ms" over 100 ms), and
+  the host holds user 2's actors (not the old copies) by the game's layer rule (horse_diag: layer_rule shared with
+  the guest side). Native 92 tests (14 known failing), layer tests pass. Package 96d6305b. cs114b: the long ride
+  again (the host's skip counter should stay near 0; host shots turning toward the guest). After pp52: build, package, cs113.
+- 09:25 cs114c (cs114b's re-run after its host window was moved; SAVES OK, 5/5, both alive): THE HORSE FIX WORKS on one
+  PC. The joined player called its horse, mounted (MountApply APPLIED on the host) and rode 38 m (x -10340 -> -10378,
+  09:23:29-09:23:54). The host's skip counter: 0 lines (cs114a: ~40 a second through the ride). The host's view of
+  him (RemoteInterp) went with him: seat offset (0, 1.5, 0.5) on the horse, newest sample (-10378.6, 532.8, -3914.9)
+  = his own; the horse 0xB0100068 interpolated on the host. 0 slow loops. The host camera's turn keys did not turn it
+  (shots show him 29 m away behind bushes), so no close-up; the logs settle it. Borque's "frozen copy at the mount
+  spot" is this.
+- 09:26 the taming release (Borque's (3)): shop_probe's B2 (the server's answer to user 2's branches) now feeds
+  observer_seq_copy; a refused branch of user 2's own scene that no accepted branch and no 2292 follow within 6 s gets
+  that scene's 2292 naming user 2's character (built from the last 2292 the host's client got), once per scene; logged
+  "ObserverSeqCopy [own refused]". Tester logs hold 5 branch answers for the joined player: 4 accepted, the taming's
+  one refused, so the release stays general. Unit test test_own_refused_release (0 failures; the seq_copy suite now
+  prints unbuffered and runs it first, its older crash comes later). Native 52ef13e, synced (365e7b5), package
+  365e7b50. Why the server refuses: 0x2B56870 is a protection jmp to 0xE169180, whose result comes from 0x2C0B8B0
+  (the scene's branch step); scratchpad errglobal73.py (to run after the pass) finds the global that holds
+  0xFF9EA4EB and which function in that tree loads it.
+- 09:30 replied to Edward in #bug-reports (tagged): his solo arm-wrestling jump loop happens only with the mod
+  (2451dff5) and the minigame cannot be left without a restart; asked for a report zip, suggested playing solo without
+  the mod until the fix. Read: in solo the layer's arm-wrestling versus, the hold prompts (they mask and re-press the
+  pad's A) and the native minigame / AI hand-over rules all need a connected friend, so his log has to show what ran.
+- 09:31 FULL CHECKLIST pp54 on 365e7b50 started (no update restart pending now), the town steps first (armwrest,
+  shop: the host's network-loop fix in a town, expect no "Net: one loop took" and at most a "Net: host tick" warning),
+  then the other 26. Note: one stray harmless "echo" Bash call at 09:34 while it ran (rule slip, nothing touched).
+- 09:47 pp54-armwrest 50 / 0. THE NETWORK-LOOP FIX WORKS in town on one PC: 0 "Net: one loop took" and 0 "Net: host
+  tick" lines in the step's logs, where pp53-armwrest (the previous build, the same step) had 196 slow loops of up to
+  1146 ms ("mostly host tunnel", the same signature as Borque's log), from the joined player's arrival in Hernand.
+  Fishing: the web guides' keys (hold F2 + mouse wheel to the rod, Q, hold / release the left button) are scripted in
+  cs116.sh with a new helper fishsweep.py (walkto's camera aim round the pond by the Nas River start), for after the pass.

@@ -82,6 +82,12 @@ no_recording() {  # native log, who
 }
 
 head_step() { say ""; say "== $STEP ($NAME) $(date '+%Y-%m-%d %H:%M') : $1"; }
+slow_loops() {  # native log, who: the network loop's "> 250 ms" warnings (2026-11-24: Borque's town session and
+  # pp53-armwrest had 196 of them, up to 1.1 s each, and every step passed; a step that expects more sets SLOW_LOOPS)
+  local n; n=$(grep -c "Net: one loop took" "$1" 2>/dev/null)
+  if [ "${n:-0}" -le "${SLOW_LOOPS:-10}" ]; then ok "$2: the network loop was slow (> 250 ms) ${n:-0} time(s), at most ${SLOW_LOOPS:-10}"
+  else bad "$2: the network loop was slow (> 250 ms) $n times, more than ${SLOW_LOOPS:-10}   [Net: one loop took, $(basename "$1")]"; fi
+}
 
 overlay_checks() {  # layer log, who
   has    "$1" "Overlay ready"            "$2: overlay ready"
@@ -173,6 +179,7 @@ two_player_checks() {  # [round]: "2" = the harness's second round of restarts (
     # native log errors: the known ones (the harness's own sandbox copy, three far-world hooks not ported to this
     # game build, the guest's guarded reads) are counted; any other is a FAIL.
     no_recording $N/$NAME.$r.log "$r"
+    slow_loops $N/$NAME.$r.log "$r"
     growth $N/$NAME.$r.log "$r native" ${NATIVE_GROWTH:-380}  # a step in a busy town sets NATIVE_GROWTH (as shop's 480)
     growth "$L" "$r layer" 240
     new_wrn "$r" "$L" $N/$NAME.coopplus.$r.before.log $N/$NAME.$r.log

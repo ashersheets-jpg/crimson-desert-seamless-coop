@@ -754,3 +754,15 @@ The T19 landing logged "lands on their own spot (0.0 m)" and the step passed, bu
 characters inside each other. The unit tests checked the arithmetic; only the shot showed what that arithmetic
 looks like in the game. The fallback went back to the old +1 m beside the friend. For anything that places a
 character, read one shot from each game of the first run that exercises it.
+
+## A function that disassembles to junk after a jmp is a protection stub: read its target (2026-11-24, the taming)
+The server's branch 0x2B56870 (3732) disassembled as one `jmp 0xE169180` and then nonsense. The body is whole at the
+jmp's target, a relocated copy far out in the exe: readable code, its error codes loaded from globals the game fills
+at start from hashed names (`mov eax, [rip+X]`, X = 0 in the file). Follow the jmp, then the call that writes the
+result; to name an error code, find the global its name's hash goes into, then who loads that global.
+
+## A unit-test exe that crashes hides the new test's result (2026-11-24, seq_copy)
+cdmp_tests_optd_seq_copy crashes partway (a baseline failure) and its stdout was buffered into a file, so the
+crash lost every line, the new test's too: "old failure" said nothing about the new code. Now the suite sets
+stdout unbuffered and runs the new test first. For a suite on the baseline list, run the exe by hand after adding a
+test and read its own lines before calling the build fine.

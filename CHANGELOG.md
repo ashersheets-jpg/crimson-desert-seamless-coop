@@ -5,6 +5,22 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
+Candidate 0.1.0-alpha+365e7b50, for game 1.0.0.3732 (native 52ef13e, layer c0fa5540's; checklist pp54 running; not
+posted yet; text docs/release/shared-world-playtest/download-365e7b50.txt). From Borque's two-PC session of 24 Nov:
+- **The host's network loop no longer stalls in towns**: npc_category's table read and the hide mirror's actor
+  lookups used VirtualQuery-checked reads, which cost the host's network loop 0.5-2.4 s per pass while the game
+  streamed a town, so everything to the joined player went out in bursts (the "big desync, NPCs teleporting"). Fast
+  (SEH-guarded) reads now; each tick after the tunnel is timed ("Net: host tick <name> took N ms" over 100 ms).
+  pp53-armwrest (before): 196 "one loop took" warnings, up to 1.1 s; pp54-armwrest (after): none, and no slow tick.
+- **The host no longer freezes the joined player's horse**: horse_diag held user 2's actors on the host by the crude
+  2976 test (a chart and no action), so the joined player's own horse never updated on the host. The game's layer rule
+  now, as on the guest since 2026-11-08. cs114c: 0 held frames through a 38 m ride.
+- **A refused step of the joined player's own scene no longer strands them** (Borque's taming): when the host's
+  server refuses a branch of user 2's own scene and no accepted branch or delete follows within 6 s, user 2 gets that
+  scene's 2292 naming its character (observer_seq_copy, "[own refused]"). Unit-tested; a taming is not scriptable.
+- **Hops to the friend land on the friend's recent path** (T19, layer 9a16282 / c0fa5540): the newest point 1-4 m
+  from the friend within 2 m up / down, else 1 m beside them (pp52-lowsave: the friend's own spot overlapped).
+
 Posted 2026-11-24 01:53 as 0.1.0-alpha+2451dff5, for game 1.0.0.3732 (checklist pp51 over 28 steps, its three
 failed steps re-run clean in pp51b with static as smoke: farfight and newsave (the Discord overlay had broken their
 joins) and lagrun (one hold over its line under the random TEST lag); both zips checked file by file against the
