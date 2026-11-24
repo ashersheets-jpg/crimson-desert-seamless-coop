@@ -10884,3 +10884,28 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - 01:53 POSTED 2451dff5 in #download-here (message 1574679393542869023; two attachments; tags Brycecco; the grunts
   question for B20). Next: the T23 port and the T19 landing into a build (native + layer tests), cs108 (the gimmick
   event probe at the bandit camp) on it, a landing test at a cliff edge and in water.
+- 01:56 built: native bd6164e (the T23 port; 92 unit tests, the 14 known failing, optd_docked_gimmicks passes) and
+  layer 9a16282 (T19 landing; all layer tests pass with the new test_landing_spot). Research package 9a16282e.
+- 02:06 cs108b (gimmick_event_dedup=probe on both, 9a16282e; SAVES OK, 5/5): the module runs on 3732 (no more
+  "unsupported game build"); the joined player's 40 swings in the bandit camp (5 bandits killed) made NO
+  CreateProjectileFromGimmickEventReq on either game: that path doubles nothing here.
+- 02:17 cs108c (+ docked_gimmicks=probe; SAVES OK, 5/5): EVERY PORTED HOOK INSTALLS: "client probe hooked at the
+  entries of 0xA00E40 (vf +0x748) and 0xA01370" on both games, "server probe hooked: 0x2B734B0 / 0x2B741D0 ...
+  0x2DBEBA0 / 0x2DBE130 ... mid hook at 0x2A31BBB" on the host, no REFUSED. Measured: the host's client made 4319
+  gimmick event requests (0 refused); the joined player's client 3870, ALL refused by its own controller check (the
+  host's user controls every world gimmick: ByJunter's S25 finding, "observer noise": the host's game runs them and
+  the server's Acks show the result on both); the server took the joined player's 3082 1082 times and rejected 376 of
+  its 586 2758s; docking spawns 12076 (6909 for players), none of them docked to the joined player's character in this
+  run (no rope device out). T23's next checks: an object the JOINED player breaks or moves, seen from both games
+  side by side (the host beside it).
+- 02:27 cs109a (T19 landing, 9a16282e; SAVES OK, 5/5, both alive): (1) on land the hop "lands on their path a moment
+  ago (1.1 m from them, +0.6 m up)": the guest 1.07 m from the host, same height; (2) after the host's script tp to
+  (-10207, -3997), the second hop put the guest 0.99 m from the host at the same height (538.06 / 537.97), shot g4:
+  side by side on the rocky slope under a cliff face (Serkis Estate, Nas River), on the rock, not in it. That spot is
+  not water (the river guess was wrong): cs109b tries one past the dock's end (-10253, -3944).
+- 02:37 cs109b (SAVES OK, 5/5, both alive): the path landing again (1.4 m, +0.6 m up); the second hop landed the guest
+  0.6 m from the host at the dock camp (545.25 / 545.24), on grass among the bandits, who then fought both (shot g4).
+  Also dry land, not the river. T19 landings checked so far: flat ground, a rocky slope under a cliff, a camp in a
+  fight; WATER is still to find (the river's course near the dock is not where I guessed twice).
+  Side result, every run tonight: the hide mirror un-hid the start scene's 3 critters on the guest (cs108c, cs109a,
+  cs109b: "[mirror] NPC 0xB01004..: visible on the host, hidden here (hide 0x200): the game's setter cleared bit 9").

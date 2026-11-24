@@ -25,8 +25,9 @@ manifest records pe_timestamp "0x6AB28F00"). 2976-only and refused cleanly by th
 owner_fanout_writers.h), observer_scene_copy, guest_sched_bind, companion_probe's extra points, enemy_damage_probe,
 aggro_test, local_capture's equip / docking writers. Off by their own build check (kPeTimestampUnported, no log line
 when off): guest_seq_play / present / foreign, guest_stage_diag, guest_bodyanim_diag, guest_scene_diag, p8_probes,
-shop_trade_probe, door_trace, catch_seq, docked_gimmicks, remote_rope, rope_probe, tree_bend, guest_sched_load's
-second installer. Already fine: the four non-address values the port had rewritten (kCatchInteractions,
+shop_trade_probe, door_trace, catch_seq, remote_rope, rope_probe, tree_bend, guest_sched_load's
+second installer. (docked_gimmicks / gimmick_event_dedup: ported 2026-11-24, native bd6164e, T23;
+tools/native-port/port3732/gimmick73.py / gimmick73b.py show how: each point through its caller.) Already fine: the four non-address values the port had rewritten (kCatchInteractions,
 kShopDialogGroup, trade_probe's 0xF4321, guest_s3's mod size) are back; anti_grief kCrimeRetHit and guest_save_host
 kCallSites were fixed by hand. Many log strings still print 2976 addresses (LoadSlot 0x186F570, GuestSeqRoute
 0xC0612A, MountSync 0x2228260, WeatherSync, UiPause 0x1416B80, GuestFastTravel 0x655110): cosmetic, misleading.

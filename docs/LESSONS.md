@@ -727,3 +727,15 @@ reproduced directly, log the suspected mechanism wherever it runs and let the ex
 probe must compare BOTH games (here: hidden on the guest while visible on the host), or it cannot tell a bug from a
 scene that hides people on purpose; (3) an intermittent repro (the scene bound in about half the runs) needs the
 fix's own diagnostics (the host's first look) before concluding from a run where nothing happened.
+
+## Porting from a build whose exe is gone: find each point through its caller (2026-11-24, T23)
+docked_gimmicks still had 2976 addresses, and no 2976 exe exists here. Its recorded heads are generic prologues (8
+matches in the right region for the docking spawns, none at all for two functions whose prologue changed). What
+found every point for certain: the CALLER, read from names that survive builds. A troc message's handler is slot 2
+of the RTTI vtable `.?AVTrocTr<Message>@pa@@` (UpdateGimmickReq's handler calls the server update, and so on). A
+component's request is a slot of its class's vtable, and that slot can move: here +0x740 became +0x748, because a
+virtual was added before it. The refusal's global confirmed the client and server pair (both store 0x71D5CC4).
+2976 anchors from ByJunter's `Class::vfN` name list (176 resolved in 3732, 172 in order) narrowed each search to a
+window. Also: constants whose comment names an older build may already be the new build's (the controller write
+matched 3732, not 3663): check the bytes in each exe before "porting" them again. The tools are
+tools/native-port/port3732/gimmick73.py / gimmick73b.py.
