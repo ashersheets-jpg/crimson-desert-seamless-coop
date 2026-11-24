@@ -1,5 +1,6 @@
 #include "mod/net/horse_diag.h"
 
+#include <string>
 #include <windows.h>
 #include <intrin.h>
 #include <tlhelp32.h>
@@ -55,6 +56,41 @@ std::atomic<uint32_t> g_watch_real{0};
 std::atomic<int> g_lines{0};
 constexpr int kMaxLines = 400;
 std::atomic<uint64_t> g_skipped{0}, g_skipped_post{0};
+// Co-op+ 2026-11-24 (Borque's two-PC log: the host held one actor on every frame and the 400-line shape cap hid which):
+// the held actors by key, 16 keys at most (any later key counts in g_held_other). Lock-free: the game's update threads.
+constexpr int kHeldKeys = 16;
+std::atomic<uint32_t> g_held_key[kHeldKeys] = {};
+std::atomic<uint64_t> g_held_n[kHeldKeys] = {};
+std::atomic<uint64_t> g_held_other{0};
+void note_held(uint32_t key) noexcept {
+    if (!key) return;
+    for (int i = 0; i < kHeldKeys; ++i) {
+        uint32_t k = g_held_key[i].load(std::memory_order_relaxed);
+        if (k == 0) {
+            if (g_held_key[i].compare_exchange_strong(k, key, std::memory_order_relaxed)) k = key;
+        }
+        if (k == key) {
+            g_held_n[i].fetch_add(1, std::memory_order_relaxed);
+            return;
+        }
+    }
+    g_held_other.fetch_add(1, std::memory_order_relaxed);
+}
+std::string held_keys() {
+    std::vector<std::pair<uint64_t, uint32_t>> v;
+    for (int i = 0; i < kHeldKeys; ++i) {
+        const uint32_t k = g_held_key[i].load(std::memory_order_relaxed);
+        const uint64_t n = g_held_n[i].load(std::memory_order_relaxed);
+        if (k && n) v.emplace_back(n, k);
+    }
+    if (v.empty()) return {};
+    std::sort(v.begin(), v.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
+    std::string out = " | held:";
+    for (size_t i = 0; i < v.size() && i < 4; ++i) out += std::format(" 0x{:08X} x{}", v[i].second, v[i].first);
+    if (v.size() > 4) out += std::format(" (+{} more keys)", v.size() - 4);
+    if (const uint64_t o = g_held_other.load(std::memory_order_relaxed)) out += std::format(" (+{} of untracked keys)", o);
+    return out;
+}
 std::atomic<uint32_t> g_extra_copy{0};  // option D: user 2's character
 std::atomic<uint32_t> g_owner{0};       // option D: everything user 2 owns (pet, horse...)
 uint64_t g_t0 = 0;
@@ -1361,6 +1397,7 @@ void on_cc_update(safetyhook::Context& ctx) {
     if (g_contain && (is_copy(key) ? layer_without_action(s)
                                    : (owned_by_guest(ctx.rcx) && guest_actor_would_fault(ctx.rcx)))) {
         g_skipped.fetch_add(1, std::memory_order_relaxed);
+        note_held(key);
         ctx.rip = reinterpret_cast<uintptr_t>(g_ret);
     }
 }
@@ -1518,7 +1555,8 @@ void horse_diag_tick() {
     const uint64_t a = g_skipped.load(std::memory_order_relaxed), b = g_skipped_post.load(std::memory_order_relaxed);
     const uint64_t t = now_ms();
     if ((a != logged || b != logged_post) && t - last >= 2000) {
-        log::info("HorseDiag: copy's update skipped {} times (post-update {}) while it has no action", a, b);
+        log::info("HorseDiag: copy's update skipped {} times (post-update {}) while it has no action{}", a, b,
+                  held_keys());
         logged = a;
         logged_post = b;
         last = t;
