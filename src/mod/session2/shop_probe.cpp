@@ -231,10 +231,6 @@ std::atomic<bool> g_slot_wanted{false}, g_slot_on{false};
 std::atomic<uintptr_t> g_host_mgr{0};
 std::atomic<bool> g_slot_reset_all{false}, g_slot_reset_u2{false};
 std::atomic<uint64_t> g_slot_resets{0};  // the slot reset for another host manager (the summary)
-// Co-op+ 2026-11-25 (cs125a): the NPC of the host's last accepted talk (its InteractionPreemptionStepReq, the C point);
-// user 2's talks to that NPC while the host's focus is set keep the game's one-talker rule (see on_fr1).
-std::atomic<uint32_t> g_host_talk_npc{0};
-std::atomic<uint64_t> g_slot_u2_talks{0}, g_slot_u2_talk_kept{0};  // user 2's talks with its triple / left to the game
 SafetyHookInline g_fset_hook, g_ftick_hook, g_fend_hook;
 pfs::FocusSlots g_slots;                    // the server's thread only
 std::atomic<uint64_t> g_slot_u2[4] = {};    // user 2's pieces of work: requests, setter, stage ends, ticks
@@ -438,7 +434,6 @@ void on_c(safetyhook::Context& ctx) noexcept {
     g_2671[static_cast<size_t>(w)].fetch_add(1, std::memory_order_relaxed);
     if (result) g_2671_fail[static_cast<size_t>(w)].fetch_add(1, std::memory_order_relaxed);
     if (w == Who::Host) user2_shops_host_2671(result);  // U2: the HostRefused criterion
-    if (w == Who::Host && result == 0) g_host_talk_npc.store(rdv<uint32_t>(ctx.rbp + kC_Npc), std::memory_order_relaxed);
     if (w == Who::User2 && result == 0)  // the catch rule (ai_handoff.h): a caught animal runs on the catcher's game
         ai_handoff_note_catch(requester, rdv<uint32_t>(ctx.rbp + kC_Npc), rdv<uint32_t>(ctx.rbp + kC_Interaction));
     if (w != Who::User2 && !g_book.take(book_key(0x2671, static_cast<uint8_t>(0x30 | static_cast<uint8_t>(w))), 16)) {
@@ -704,33 +699,22 @@ void on_fr1(safetyhook::Context& ctx) noexcept {
     if (!slot_here()) return;
     slot_outermost();
     if (!t_recv_u2) return;
-    // pp58 (2026-11-25): user 2's branch and chart-event requests about a scene of its OWN (StageBranchStateReq 2644 and
-    // the stage chart event Req 2200 on 3732, 2880 / 2591 on 2976; each payload starts with the u64 sequencer), where
-    // the branch step's focus check runs. cs125a (2026-11-25): and its TALKS (InteractionPreemptionStepReq 2642,
-    // InteractionDoStepReq 2304 on 3732; u32 requester | u32 NPC | ...): while the host held a focus stage (its talk to
-    // another NPC 73 m away), the friend's talk to ANY NPC failed with the busy-NPC error 0x58C8345D, the server's
-    // check meeting the host manager's focus. Not at the NPC of the host's own current talk (its last accepted 2642's
-    // NPC while the host's focus is set): there the game's one-talker rule stays as it is. Its other requests
-    // (movement: hundreds a second) and those about any other stage run with the host manager's own triple.
+    // pp58 (2026-11-25): only user 2's branch and chart-event requests about a scene of its OWN (StageBranchStateReq
+    // 2644 and the stage chart event Req 2200 on 3732, 2880 / 2591 on 2976; each payload starts with the u64
+    // sequencer), where the branch step's focus check runs. Its other requests (movement: hundreds a second) and its
+    // requests about any other stage run with the host manager's own triple, as without the fix.
+    // (Its talks are NOT taken: cs125b, 2026-11-25, ran them with its own triple and the host's talk still refused the
+    // friend's talk to any NPC with 0x58C8345D: that check reads some other shared state.)
     uint16_t op = 0;
     uint64_t seq = 0;
-    uint32_t npc = 0;
-    const bool scene_req = rd(ctx.r9, op) && (op == shp::kOpBranchReq || op == shp::kOpChartEvent) &&
-                           rd(ctx.r9 + troc::kHeaderSize, seq) && g_u2_own.has(seq);
-    const bool talk_req = !scene_req && (op == shp::kOpPreemptionReq || op == shp::kOpDoStepReq) &&
-                          rd(ctx.r9 + troc::kHeaderSize + 4, npc);
-    if (!scene_req && !talk_req) {
+    if (!rd(ctx.r9, op) || (op != shp::kOpBranchReq && op != shp::kOpChartEvent) ||
+        !rd(ctx.r9 + troc::kHeaderSize, seq) || !g_u2_own.has(seq)) {
         g_slot_u2_passed.fetch_add(1, std::memory_order_relaxed);
         return;
     }
     uint32_t key = 0;
     const uintptr_t mgr = host_mgr_live(&key);
     if (!mgr) return;
-    if (talk_req && npc && npc == g_host_talk_npc.load(std::memory_order_relaxed) &&
-        (stp::current_of(rdv<uint64_t>(mgr + kMgr_FocusA0), rdv<uint64_t>(mgr + kMgr_Focus90)) & stp::kStageMask)) {
-        g_slot_u2_talk_kept.fetch_add(1, std::memory_order_relaxed);
-        return;
-    }
     // Review 2026-11-25 (pp59): this request may be the first to see another host manager (a reload), before the
     // module's refresh does; the refresh then sees no change. So the reset is asked here too: user 2's kept triple
     // holds scene ids of the old manager (applied by slot_enter's housekeeping, depth 0 here after slot_outermost).
@@ -740,7 +724,6 @@ void on_fr1(safetyhook::Context& ctx) noexcept {
     t_fr_mgr = mgr;
     t_fr_token = slot_enter(mgr, pfs::Owner::User2);
     g_slot_u2[0].fetch_add(1, std::memory_order_relaxed);
-    if (talk_req) g_slot_u2_talks.fetch_add(1, std::memory_order_relaxed);
 }
 void on_fr2(safetyhook::Context&) noexcept {
     if (t_fr_mgr) slot_leave(t_fr_mgr, t_fr_token);
@@ -1200,15 +1183,13 @@ void branch_summary() {
     }
     if (g_slot_on.load()) {
         // g_slots' counters are the server thread's plain integers, read here as they are (a log line only).
-        log::info("ShopProbe per-player focus slot: user 2's requests with its own triple {} (its talks among them {}; "
-                  "its talks at the NPC of the host's own talk, left to the game, {}; its other requests passed by {}), "
-                  "its stages' setter {} / ends {} / ticks {}, the "
+        log::info("ShopProbe per-player focus slot: user 2's branch / chart-event requests about its own scenes {} (its "
+                  "other requests passed by {}), its stages' setter {} / ends {} / ticks {}, the "
                   "host's stages inside its requests {} | swaps {} failed {} overflow {} unbalanced {} repairs {} missed "
                   "leaves {} (unwound {}, dropped {}), resets for another manager {} | other managers {}, other "
                   "threads {} | the host's manager 0x{:X} "
                   "(character 0x{:08X})",
-                  g_slot_u2[0].load(), g_slot_u2_talks.load(), g_slot_u2_talk_kept.load(), g_slot_u2_passed.load(),
-                  g_slot_u2[1].load(), g_slot_u2[2].load(),
+                  g_slot_u2[0].load(), g_slot_u2_passed.load(), g_slot_u2[1].load(), g_slot_u2[2].load(),
                   g_slot_u2[3].load(),
                   g_slot_host_in_u2.load(), g_slots.swaps(), g_slots.failed(), g_slots.overflow(), g_slots.unbalanced(),
                   g_slots.repairs(), g_slots.missed(), g_slot_unwinds.load(), g_slot_dropped.load(),
@@ -1309,8 +1290,8 @@ bool install_focus_slot(std::span<const gad::Section> secs) {
         g_fd_on.store(true, std::memory_order_release);  // the stage-end detour logs the focus ends
         g_slot_on.store(true, std::memory_order_release);
         log::info("ShopProbe: the per-player focus slot (user2_focus_slot=1) is ON: user 2's branch / chart-event "
-                  "requests about its own scenes, its talks (2642 / 2304; not at the NPC of the host's own talk) and its "
-                  "own stages' focus work run with its own +0x90 / +0x98 / +0xA0 in the host's manager");
+                  "requests about its own scenes and its own stages' focus work run with its own +0x90 / +0x98 / +0xA0 "
+                  "in the host's manager");
         return true;
     }
     log::error("ShopProbe: the per-player focus slot (user2_focus_slot=1) stays OFF ({} failed)", failed);
