@@ -336,6 +336,35 @@ lowsave)
   [ -n "$d" ] && [ "$d" -le 30 ] && ok "guest: $d m from the host at the end" || bad "guest: ${d:-?} m from the host at the end (wanted within 30 m)"
   has "$N/$NAME.coopplus.guest.log" "Teleport: [0-9]+ m: the game's own travel" "guest: the join's move was the game's own travel (not hops)"
   hasnot "$N/$NAME.coopplus.guest.log" "far travel did not take us there|back where we started" "guest: the travel took at the first try" ;;
+stall)
+  head_step "the host's server stops answering 25 s while a guest on a new save (1.3 km away) joins (Borque 25 Nov)"
+  # The lowsave join with the host's ServerRunThread made to sleep 25 s at user 2's 2nd MoveFieldCompleteReq 2723 (its
+  # move into the host's field, where Borque's host stalled; the milestone lines call it "2471", 2976's number) by the
+  # TEST-ONLY [session2] dev_server_stall_ms. The guest's far travel to the host (~12 s after it is in the world) must
+  # WAIT in the world (no 3074, no loading screen; a note), then go when the server answers, and arrive; the host's
+  # stall lines must name the last item and carry stack samples. Its own warnings are allowed here (anywhere else they
+  # are a finding).
+  WRN_ALLOW='^(SessionN (inject|DEV)|Config: TEST ONLY|Teleport: (the host|the server is still|far travel under way))'
+  G="w:3000_shot:$NAME-g0_w:5000_shot:$NAME-g1_w:5000_shot:$NAME-g2_w:5000_shot:$NAME-g3_w:8000_shot:$NAME-g4_w:10000_shot:$NAME-g5_w:8000_shot:$NAME-g6"
+  run2 "-CoopPlus -Lobby -Fresh -PackageIni $MODW -HostVariant newgame -GuestVariant newgame -Hold 20 -HostNativeExtra dev_server_stall_ms=25000 -GuestKeys $G -HostKeys $FLOW_H"; two_player_checks
+  WRN_ALLOW=
+  H=$N/$NAME.host.log; L=$N/$NAME.coopplus.guest.log
+  has "$H" "Session2 DEV \(test only\): ServerRunThread T[0-9]+ sleeps 25000 ms now, at user 2's #2 Req 2723" "host: the test stall ran (25 s at user 2's 2nd 2723)"
+  has "$H" "has not taken our buffers .*ServerRunThread's last item: user 2's 2723 entered [0-9]+ ms ago" "host: the stall line names the last item (user 2's 2723)"
+  has "$H" "stall sample \(line 1 of this stall\): T[0-9]+ \(ServerRunThread\): rip .*returns: .*cdmp\+0x[0-9A-F]+ \[mod\]" "host: a stack sample of ServerRunThread, our sleep on it"
+  hasnot "$H" "stall sample .*(sample failed|not sampled)" "host: every stall sample was taken"
+  has "$L" "Teleport: the host says its server has not taken requests for [0-9]+ ms" "guest: the host told it of the stall"
+  # cs127c: a trip asked right after the stall, while the guest's own move into the host's field (the stalled 2723) was
+  # still completing, was undone by its game; the join now waits for the host's word that that load is done.
+  has "$L" "Co-op: joined: the host's server is still finishing our own load: the trip to its side waits for it" "guest: the join's trip waited for its own load on the host's server"
+  has "$L" "Co-op: joined: our own load is done on the host's server" "guest: ... and went when the host said it was done"
+  has "$L" "Teleport: [0-9]+ m: the game's own travel" "guest: then the game's own travel"
+  has "$L" "Teleport: far travel took [0-9.]+ s" "guest: the travel took"
+  hasnot "$L" "far travel did not take us there|back where we started|the far travel is given up|the game's travel is asked for once more|still not done on the host's server after 90 s" "guest: no second request, no timeout, no give-up"
+  near=$(grep "Net: connected" "$L" | tail -1 | sed -n 's/.*last remote (\([-0-9.]*\), [-0-9.]*, \([-0-9.]*\)).*/\1 \2/p')
+  mine=$(grep "Local: pos" "$L" | tail -1 | sed -n 's/.*pos (\([-0-9.]*\), [-0-9.]*, \([-0-9.]*\)).*/\1 \2/p')
+  d=$(echo "$near $mine" | awk 'NF==4{printf "%d", sqrt(($1-$3)^2 + ($2-$4)^2)}')
+  [ -n "$d" ] && [ "$d" -le 30 ] && ok "guest: $d m from the host at the end" || bad "guest: ${d:-?} m from the host at the end (wanted within 30 m)" ;;
 chest)
   head_step "chest: the host opens it, the guest is away, comes back and gets its own share"
   A="w:800_shot:$NAME-h0_kd:E_w:2800_ku:E_w:3600_shot:$NAME-h1_w:10500"
@@ -505,10 +534,11 @@ talkwhile)
   # friend: the host far / at the inn, not talking / IN A TALK with the arm-wrestling organizer (left open); then the
   # host's Esc. The key lists run one after another: guest keys (#1, #2), host keys (the talk), guest after-walk keys
   # (#3), host after-walk keys.
-  # NOT IN THE RELEASE LIST (2026-11-25): #3 still FAILS on every build so far (cs125a / cs125b; cs126a without the
-  # host's talk opens all three). Its two per-player-slot checks assume a fix that runs the friend's talks with its own
-  # focus, which did NOT cure it (cs125b). Run it by hand (bash tools/prepost.sh <tag> <pkg> talkwhile) for that bug.
-  head_step "the friend opens a shop while the host is in a talk with another NPC (the testers' bug 2; known to fail)"
+  # IN THE RELEASE LIST since cs128 (2026-11-25: 28 / 0, BUG 2 fixed by C0). Before it #3 FAILED on every build (cs125a-e; cs126a without the host's talk
+  # opens all three). cs125b's "the friend's talks with its own focus did not cure it" ran on the network thread
+  # (cs125d), so it tested nothing; the error 0x58C8345D is neither preempt error (cs127c). The fix under test: C0, the
+  # talk window on the logic thread (its checks below). Run it by hand (bash tools/prepost.sh <tag> <pkg> talkwhile).
+  head_step "the friend opens a shop while the host is in a talk with another NPC (the testers' bug 2, fixed 2026-11-25)"
   sw() { local n=$1; while [ $n -ge 10 ]; do echo "wait 10000"; n=$((n - 10)); done; [ $n -gt 0 ] && echo "wait $((n * 1000))"; }
   { echo "wait 3000"; echo "tp -10238 640 -3958"; sw 67; echo "tp -10661.5 617.5 -3830.0"; sw 150; } > $N/scan/talkwhile_host.txt
   { echo "wait 3000"; echo "tp -10678.5 612 -3904.2"; sw 25; echo "npcs 4"; sw 160; } > $N/scan/talkwhile_guest.txt
@@ -535,8 +565,8 @@ talkwhile)
   [ "${m:-0}" -ge 2 ] && ok "the friend's shop menu opened with the host at the inn, before AND during the host's talk: $m" \
                       || bad "the friend's shop menu with the host at the inn: ${m:-0} of 2 (before / during the host's talk)"
   hasnot "$GL" "was refused: busy with another player" "the friend's talks never refused as busy (the host talked to another NPC)"
-  has "$H" "per-player focus slot: user 2's requests with its own triple [0-9]+ \\(its talks among them [1-9]" "the friend's talks ran with its own focus slot"
-  has "$H" "per-player focus slot: .* failed 0 overflow 0 unbalanced 0" "the focus slot's swaps: none failed or unbalanced"
+  has "$H" "per-player focus slot \\(the logic thread T[0-9]+\\): .* its talks [1-9][0-9]* \\(.*the C0 window hooked\\)" "the friend's talks ran with its own focus slot (C0, the logic thread)"
+  has "$H" "per-player focus slot \\(the logic thread T[0-9]+\\): .* failed 0 overflow 0 unbalanced 0" "the focus slot's swaps: none failed or unbalanced"
   overlay_checks "$HL" "host"
   no_recording "$H" "host"
   growth "$H" "host native" 480
@@ -853,7 +883,7 @@ armwrest)
   [ "${n:-0}" -ge 1 ] && ok "host: its own talk to the organizer accepted after the joined player's match ($n)" || bad "host: no talk of its own accepted at the table"
   info "screenshots to LOOK AT (g2: the joined player's won match, h3: the host's): $(cd $N/shots && ls $NAME-*.png 2>/dev/null | tr '\n' ' ')" ;;
 summary)
-  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c '^== ' "$R") (28 in the list)"; exit 0 ;;
+  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c "^== " "$R") (30 in the list)"; exit 0 ;;
 *) echo "unknown step $STEP"; exit 2 ;;
 esac
 sed -n "/^== $STEP /,\$p" "$R"

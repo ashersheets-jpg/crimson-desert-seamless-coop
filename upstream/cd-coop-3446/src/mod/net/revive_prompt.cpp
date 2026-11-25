@@ -9,10 +9,13 @@
 #include <cstring>
 #include <deque>
 #include <mutex>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include <safetyhook.hpp>
 
+#include "common/clock.h"
 #include "mod/game/actor_lookup.h"
 #include "mod/input/actions.h"
 #include "mod/game/offsets.h"
@@ -165,6 +168,99 @@ std::array<float, 3> g_far_from{};       // where we stood when it began
 std::array<float, 3> g_confirm_goal{};
 uint32_t g_confirm_at = 0;               // when to look again (0 = nothing to confirm)
 int g_confirm_tries = 2, g_confirm_waits = 0;
+// 2026-11-25 (Borque, 527e283a): the host's server took no input for 30 s, 26 s and 153 s right after the joined
+// player came into its field 600 m from the host. The join's move went by far travel: the request waited in the
+// stalled server, our loading screen (the 3072) waited for it, the 8 s rule asked again (in his first attempt: two
+// reloads back to back), and the 45 s timeout went on to hops, which cannot move a client in a loading screen: it never
+// ended. So while the server is stalled (the native's stall watch, > 1 s: on the host from the native base, on the guest
+// from the host, coop_lobby's kMsgServerBusy, trusted for kHostBusyFreshMs): a far travel not started yet waits (no
+// request, no loading screen; the player can move meanwhile) and says so; one under way neither asks again nor times
+// out (it ends when the server takes it, or as before once the server answers again). At most kFarWaitMaxMs in all.
+std::atomic<uint32_t> g_host_busy_ms{0}, g_host_busy_at{0};  // the host's word (the guest), on cdmp::now_ms()
+constexpr uint32_t kHostBusyFreshMs = 6000;
+constexpr uint32_t kFarWaitMaxMs = 300000;
+constexpr uint32_t kFarWaitToastMs = 30000;
+uint32_t g_far_wait_since = 0;     // a far travel not started yet held back since (0 = none)
+uint32_t g_far_wait_toast_at = 0;  // the last "it waits" toast
+uint32_t g_far_stuck_from = 0;     // the 8 s rule counts from here (the request, or the end of a stall)
+bool g_far_in_stall = false;       // the server is stalled during this far travel (said once per stall)
+std::mutex g_toast_mutex;
+std::string g_toast;  // revive_take_toast
+
+// When the last stall seen here ended (either source; cdmp::now_ms(), 0 = none). cs127b (2026-11-25): a far travel
+// that went right after a 25 s stall took 9 s (the server worked through its backlog and the game's autosave that had
+// waited for it), so the 8 s rule asked again and the host's server ran a second reload trip over the first (it
+// finished there; in Borque's first attempt the two broke the load). Within kAfterStallMs of a stall: one request only.
+std::atomic<uint32_t> g_stall_ended_at{0};
+constexpr uint32_t kAfterStallMs = 30000;
+bool stall_ended_recently(uint32_t now_ms) {
+    const uint32_t e = g_stall_ended_at.load(std::memory_order_relaxed);
+    return e && now_ms - e < kAfterStallMs;
+}
+
+// This PC's server (the host): the native base's stall watch (0 = no stall, or no server here: the guest).
+uint32_t native_stalled_ms() {
+    using Fn = uint32_t (*)();
+    static Fn fn = [] {
+        Fn f = nullptr;
+        if (HMODULE m = GetModuleHandleW(L"cdmp.asi")) f = reinterpret_cast<Fn>(GetProcAddress(m, "cdmp_server_stalled_ms"));
+        return f;
+    }();
+    const uint32_t ms = fn ? fn() : 0;
+    static std::atomic<bool> was{false};
+    if (was.exchange(ms != 0, std::memory_order_relaxed) && !ms) g_stall_ended_at.store(cdmp::now_ms() | 1);
+    return ms;
+}
+bool server_stall_is_ours() { return native_stalled_ms() != 0; }
+
+// How long the server has been stalled, in ms (0 = it takes requests, or nobody knows): this PC's own (the host) or the
+// host's word (the guest).
+uint32_t server_busy_ms(uint32_t now_ms) {
+    if (const uint32_t ms = native_stalled_ms()) return ms;
+    const uint32_t at = g_host_busy_at.load(std::memory_order_relaxed);
+    if (!at || now_ms - at >= kHostBusyFreshMs) return 0;
+    const uint32_t ms = g_host_busy_ms.load(std::memory_order_relaxed);
+    return ms ? ms + (now_ms - at) : 0;
+}
+
+void say(std::string text) {
+    std::lock_guard lock(g_toast_mutex);
+    g_toast = std::move(text);
+}
+
+enum class FarWait { Go, Wait, GiveUp };
+// A far travel not started yet, while the server is stalled: Wait (looked at again in a second), GiveUp after
+// kFarWaitMaxMs (hops from where we are), else Go. Said when it starts waiting, every kFarWaitToastMs on screen, and
+// when it ends.
+FarWait far_wait_for_server(uint32_t now_ms) {
+    const uint32_t busy = server_busy_ms(now_ms);
+    if (!busy) {
+        if (g_far_wait_since) {
+            log::info("Teleport: the server takes requests again; the far travel waited {:.1f} s and goes now",
+                      (now_ms - g_far_wait_since) / 1000.0);
+            g_far_wait_since = 0;
+        }
+        return FarWait::Go;
+    }
+    if (!g_far_wait_since) {
+        g_far_wait_since = now_ms | 1;
+        g_far_wait_toast_at = 0;
+        log::warn("Teleport: the {} server has not taken requests for {} ms: the far travel waits for it (no loading "
+                  "screen meanwhile)", server_stall_is_ours() ? "our" : "host's", busy);
+    } else if (now_ms - g_far_wait_since >= kFarWaitMaxMs) {
+        log::warn("Teleport: the server is still stalled after {} s: the far travel is given up (hops from here)",
+                  kFarWaitMaxMs / 1000);
+        g_far_wait_since = 0;
+        return FarWait::GiveUp;
+    }
+    if (!g_far_wait_toast_at || now_ms - g_far_wait_toast_at >= kFarWaitToastMs) {
+        g_far_wait_toast_at = now_ms | 1;
+        say(server_stall_is_ours() ? "Co-op\nYour game is busy right now: the trip to your friend waits until it answers"
+                                   : "Co-op\nThe host's game is busy right now: the trip to your friend waits until it "
+                                     "answers. You can move meanwhile");
+    }
+    return FarWait::Wait;
+}
 
 uint32_t own_field_key() {
     using Fn = uint32_t (*)();
@@ -213,6 +309,8 @@ void hop_tick(uint32_t now_ms) {
             g_far_try = true;
             g_far_until = g_far_ack_at = 0;
             g_far_used = false;
+            g_far_in_stall = false;
+            g_far_wait_since = 0;
             g_confirm_at = 0;
             g_confirm_tries = 2;
             g_confirm_waits = 0;
@@ -259,6 +357,25 @@ void hop_tick(uint32_t now_ms) {
             puppet_inject_s2c_batch({{kOpTeleportRevivePointAck, b}});
             log::info("Teleport: far travel: our loading screen is started ({})", kOpTeleportRevivePointAck);
         }
+        // The server stalled while we travel (Borque 25 Nov): no second request and no timeout while it lasts (our
+        // request waits in it; the loading screen ends when it takes it), counted again from when it answers.
+        if (const uint32_t busy = server_busy_ms(now_ms); busy && now_ms - g_far_since < kFarWaitMaxMs) {
+            if (!g_far_in_stall) {
+                g_far_in_stall = true;
+                log::warn("Teleport: far travel under way and the server has not taken requests for {} ms: no second "
+                          "request and no timeout until it answers", busy);
+            }
+            g_far_until = (now_ms + kFarTimeoutMs) | 1;
+        } else if (g_far_in_stall) {
+            // It answers again, with a backlog to work through first (Borque's host: 26,353 Reqs queued): our request
+            // is in it, so no second one for this travel (his first attempt's two reloads back to back); the timeout
+            // counts from now, then hops as before.
+            g_far_in_stall = false;
+            g_far_again = true;
+            g_far_stuck_from = now_ms;
+            log::info("Teleport: the server takes requests again during the far travel ({:.1f} s after asking): our "
+                      "request is in its queue, no second one", (now_ms - g_far_since) / 1000.0);
+        }
         if (static_cast<int32_t>(now_ms - g_far_until) >= 0) {
             log::warn("Teleport: far travel did not take us there in {} s: hops from where we are",
                       kFarTimeoutMs / 1000);
@@ -277,7 +394,8 @@ void hop_tick(uint32_t now_ms) {
     if (g_far_until) {
         if (left > kFarLandedM) {  // still on the way (the loading screen), or it did not start
             const float sx = at->x - g_far_from[0], sz = at->z - g_far_from[2];
-            if (!g_far_again && now_ms - g_far_since >= kFarStuckMs && sx * sx + sz * sz < kFarMovedM * kFarMovedM) {
+            if (!g_far_again && !g_far_in_stall && now_ms - g_far_stuck_from >= kFarStuckMs &&
+                sx * sx + sz * sz < kFarMovedM * kFarMovedM) {
                 g_far_again = true;
                 if (far_travel_start(g_far_key, goal)) g_far_ack_at = (now_ms + kFarAckDelayMs) | 1;
                 log::warn("Teleport: {} s after asking we still stand where we started: the game's travel is asked "
@@ -291,21 +409,36 @@ void hop_tick(uint32_t now_ms) {
         g_hop_last = {1e9f, 0.0f, 1e9f};
     }
     if (g_far_try) {
+        uint32_t key = left > kFarM ? own_field_key() : 0;
+        bool gave_up = false;
+        if (key) {
+            const FarWait w = far_wait_for_server(now_ms);
+            if (w == FarWait::Wait) {  // the server is stalled: nothing is sent yet; looked at again in a second
+                g_hop_at = now_ms + 1000;
+                return;
+            }
+            gave_up = w == FarWait::GiveUp;  // hops from here (said by far_wait_for_server)
+            if (gave_up) key = 0;
+        }
         g_far_try = false;
-        const uint32_t key = left > kFarM ? own_field_key() : 0;
         if (key && far_travel_start(key, goal)) {
             g_far_used = true;
-            g_far_again = false;
+            // Right after a stall the server still has a backlog: one request only (cs127b's second reload trip).
+            g_far_again = stall_ended_recently(now_ms);
+            g_far_in_stall = false;
             g_far_key = key;
             g_far_from = {at->x, at->y, at->z};
             g_far_since = now_ms;
+            g_far_stuck_from = now_ms;
             g_far_ack_at = (now_ms + kFarAckDelayMs) | 1;
             g_far_until = (now_ms + kFarTimeoutMs) | 1;
-            log::info("Teleport: {:.0f} m: the game's own travel (field 0x{:08X}, to ({:.0f}, {:.0f}, {:.0f}))", left, key,
-                      goal[0], goal[1], goal[2]);
+            log::info("Teleport: {:.0f} m: the game's own travel (field 0x{:08X}, to ({:.0f}, {:.0f}, {:.0f})){}", left, key,
+                      goal[0], goal[1], goal[2], g_far_again ? "; right after a stall of the server: one request only" : "");
             return;
         }
-        if (left > kFarM) log::info("Teleport: {:.0f} m in hops (the field is not known{})", left, key ? ", or the request was not sent" : "");
+        if (left > kFarM && !gave_up) {
+            log::info("Teleport: {:.0f} m in hops (the field is not known{})", left, key ? ", or the request was not sent" : "");
+        }
     }
     if (left <= g_arrive_m) {
         log::info("Teleport: arrived ({:.0f}, {:.0f})", at->x, at->z);
@@ -579,6 +712,52 @@ void revive_set_field_key(uint32_t key) {
     if (g_field_key_from_host.exchange(key) != key) log::info("Teleport: the host's field is 0x{:08X} (for far travel)", key);
 }
 uint32_t revive_own_field_key() { return own_field_key(); }
+
+uint32_t revive_server_stalled_ms() { return native_stalled_ms(); }
+
+// 2026-11-25 (cs127c): the joined player's own load on the host's server. The host reads its native base's tracker; the
+// guest keeps the host's word (coop_lobby's kMsgGuestLoad, every 3 s and on a change).
+namespace {
+std::atomic<int> g_own_load{-1};
+std::atomic<uint32_t> g_own_load_at{0};
+}  // namespace
+int revive_user2_load_settled() {
+    using Fn = int (*)();
+    static Fn fn = [] {
+        Fn f = nullptr;
+        if (HMODULE m = GetModuleHandleW(L"cdmp.asi")) f = reinterpret_cast<Fn>(GetProcAddress(m, "cdmp_user2_load_settled"));
+        return f;
+    }();
+    return fn ? fn() : -1;
+}
+void revive_set_own_load_settled(int state) {
+    const int was = g_own_load.exchange(state, std::memory_order_relaxed);
+    g_own_load_at.store(cdmp::now_ms() | 1, std::memory_order_relaxed);
+    if (was != state) {
+        log::info("Teleport: the host says our own load on its server is {}",
+                  state == 1 ? "done" : state == 0 ? "under way" : "not seen yet");
+    }
+}
+bool revive_own_load_settled() {
+    // No word at all: as before. Otherwise the last word counts, however old (cs127d: a 10 s freshness rule let the
+    // trip go during the stall although the host's tracker still said "under way"; the join's own 90 s cap is the
+    // safety net).
+    if (!g_own_load_at.load(std::memory_order_relaxed)) return true;
+    return g_own_load.load(std::memory_order_relaxed) != 0;
+}
+void revive_set_host_server_busy(uint32_t ms) {
+    const uint32_t was = g_host_busy_ms.exchange(ms, std::memory_order_relaxed);
+    g_host_busy_at.store(ms ? (cdmp::now_ms() | 1) : 0, std::memory_order_relaxed);
+    if (was && !ms) g_stall_ended_at.store(cdmp::now_ms() | 1, std::memory_order_relaxed);
+    if ((was != 0) != (ms != 0)) {
+        if (ms) log::warn("Teleport: the host says its server has not taken requests for {} ms", ms);
+        else log::info("Teleport: the host says its server takes requests again");
+    }
+}
+std::string revive_take_toast() {
+    std::lock_guard lock(g_toast_mutex);
+    return std::exchange(g_toast, std::string());
+}
 
 bool revive_teleport_to(float x, float y, float z, float arrive_m) {
     if (!capture_own_player_key()) return false;

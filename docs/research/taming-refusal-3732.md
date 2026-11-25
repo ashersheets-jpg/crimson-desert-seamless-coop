@@ -247,3 +247,97 @@ So the request path writes the slot synchronously (2880 StageBranchStateReq -> 0
   LOGIC thread (learned from the setter / tick hooks on the host's server manager), and the request window must wrap
   the handler's own run on that thread (the dispatch of a queued request on T35304, not OnRecvPacket), with the
   request's user known there.
+- Redo design (not built): ShopProbe already hooks INSIDE the StageBranchStateReq handler on the logic thread: B1
+  0x2D55B56 (right before its call of the branch 0x2B56870, which runs the condition check 0x25C82A0 -> 0x21CABF0;
+  rax = the manager, t_branch knows whose branch and the sequencer) and B2 (its result). So: (1) learn g_logic_tid
+  at B1 / at the setter on the host's server manager, and let slot_here() take it (the setter / tick / end detours
+  then act where the focus is written); (2) the branch window = B1 -> B2 for user 2's branch of its own scene in the
+  host's manager (both on the logic thread, so no race); (3) the chart-event Req 2200 needs the same kind of point in
+  its handler (to find). Nothing scripted reaches the case (a taming / an encounter of the joined player's own in
+  the host's manager): the proof is "no harm" in a full pass plus the [branch why] lines of a tester's taming.
+- Checked 25 Nov 08:47: the probe's [branch] (B1 / B2), [2671] (C) and the server manager's [focus] writes all come
+  from ONE thread per run (cs125d T35304; pp59-armwrest T424; pp59-shop T6856): the logic thread. CORRECTION to
+  pp58's reading above ("181 writes, all in the processor's tick, none inside any request"): the probe's "inside a
+  request" flag (t_recv_u2 / t_recv_any) is set on the network thread, so on the logic thread it was always 0: the
+  writes may as well have come inside a request's handling. pp58 did not show where they come from.
+
+## The redo, built and run (25 Nov, native 81e3ed4; cs125e)
+- B1 learns the logic thread and opens the branch window (B1 -> B2) for user 2's branch of a scene of its own in the
+  host's manager; slot_here() takes that thread; FR1 / FR2 keep only their counters.
+- cs125e (the cs125 shop flow with the slot on): the logic thread learned (T5484, the same thread as the 2642
+  handler's C point); "user 2's branches of its own scenes in the host's manager 0 (other branches passed by 70)",
+  swaps 0, failed 0, unbalanced 0. The friend's own shop scene runs in its OWN manager, so nothing there reaches the
+  case. The focus lines' labels now work on that thread: the friend's own shop undo "inside USER 2's branch request",
+  the host's talk's undo "inside a branch request (not user 2's)" (so the host's focus writes do come inside its
+  branch requests too). #3 refused again (2946, 0x58C8345D) while the host talked: BUG 2, not the slot.
+- The layer writes user2_focus_slot=1 for the host again. The proof that it helps is a tester's taming (its [branch
+  why] lines and the slot's summary: "user 2's branches of its own scenes in the host's manager N" with N > 0).
+
+## BUG 2 (the host's talk refuses the friend's talks): where 0x58C8345D comes from (25 Nov, reading S46)
+- The FailAck 2946 is queued INSIDE 0x2E3C180 (3732's twin of 2976's 0x2B36EF0): 4 us before the C point, whose
+  path result stays 0. In S46's map of 0x2B36EF0 (native-base/docs/research/s25/s46-datos/nativo.md 1.1) the one step
+  there that answers by itself is the .xtls RESERVE 0xE3F84D0 -> 0xE401150(compNPC, sol, idx, p5): on failure
+  eErrNoAlreadyPreemptedActor; on success 0x2123090 points the NPC at the requester and [compSol+0xD8] = the NPC's
+  key. S46 item 4: "0xE401150 applies the exclusivity of the key's InteractionInfo (+0x13 and +0xBC). If the key does
+  not exempt players, the second gets eErrNoAlreadyPreemptedActor." So 0x58C8345D is most likely
+  eErrNoAlreadyPreemptedActor: to confirm with scratchpad errname73.py (the name's registration on 3732, its global,
+  the global's loads near the 2642 path) or S46's P3 (read the globals at run time).
+- Why the HOST's talk with ANOTHER NPC (the organizer, key 0x000F431C) makes the friend's shop talk (Renee, key
+  0x000F4321) fail: the exclusivity is the InteractionInfo's (+0x13 / +0xBC: perhaps a group shared by both keys, or
+  "one preemption per owner" where Renee's owner is the host through the host's shop scene that binds her), not
+  Renee's own preemption state (she was free). To read: 0xE401150's 3732 twin, and at run time the two keys'
+  InteractionInfo +0x13 / +0xBC (S46's probe P5) during cs125's flow.
+- 3732, static (scratchpad errname73.py / errname73b.py, 25 Nov 09:39): the names are registered at 0x244D3B5..405
+  (lea rcx,[G]; mov [rsp+0x20],rcx; lea rdx,[name]; call 0x164E060): eErrNoAlreadyPreemptedActor -> global
+  0x71D6974, eErrNoAlreadyPreemptingActor -> 0x71D6978. Their loads:
+  - AlreadyPreempting: 0x2359089, in the requester-state check (2976's vf160 0x211F930; before it 0x2359060 tests
+    [[comp+0x1A0]+0x3DC], the "moving" byte, for another error): `cmp [comp+0xF0],0` (2976's +0xD8: the
+    requester already holds a preemption); and 0xC958F21 (relocated code): `cmp [r14+0xF0],0; je -> mov
+    [r14+0xF0],eax (the NPC's key)` = the reserve's "mark the requester", AlreadyPreempting when already marked.
+  - AlreadyPreempted: 0x235BDB9 and 0x2A33ED0, each right after `call 0x235D030(compNPC = [[actor+0x68]+0x98], ...)`
+    returned false: 0x235D030 is the NPC's reserve on 3732; and 0xB4CB50D (relocated: after 0x235E850 with
+    [comp+0xE8] == 0).
+  - So which one 0x58C8345D is decides the mechanism: AlreadyPreempting = the server judges the friend's request
+    against a component that already holds the host's preemption (the friend's request resolved to the HOST's
+    character's component?); AlreadyPreempted = Renee's reserve fails (an exclusivity of the key or of her
+    binding in the host's shop scene). The next build logs both values once ("ShopProbe: the game's preempt
+    errors: ..."), so any host log names it.
+- S46 section 3 on the NPC's side (0xE401150 on 2976): with a player requester and InteractionInfo +0xBC set (and
+  +0x13 != 3) the reserve always accepts; else by +0x13: 0 = one slot (+0x98 requester / +0x9C key), 1 = per key
+  (+0x98/+0x9C, +0xD0, +0xE0/+0xE4, +0x118 or the key in the lists +0xA8 / +0xF0), 2 = by (key, p5). All of it is the
+  NPC's own state, and Renee was free (cs126a: #3 opens without the host's talk), so the NPC side fits badly. The
+  requester side does fit "ANY NPC while the host talks": [compSol+0xF0] (2976's +0xD8) holds the NPC the requester
+  is preempting; if the friend's 2642 were judged with the HOST's component, the host's open talk would refuse every
+  talk of the friend's with eErrNoAlreadyPreemptingActor.
+- BUT the [2671] C lines already name the handler's requester actor: on_c's "user" is user_key_of(r13), and every one
+  of the friend's reads "USER 2 asked: requester 0xA0100066 (user 0x90100065)": r13, the actor whose component the
+  check uses ([[r13+0x68]+0x98]), is the FRIEND's character. So "judged with the host's component" is out unless the
+  failing step takes another actor; AlreadyPreempting would then mean the friend's own +0xF0 is set during the host's
+  talk (why?), AlreadyPreempted that Renee's own state is (a block the host's talk puts on the NPCs of its other
+  scenes, e.g. +0xD0 / +0x118 in mode 1?).
+- ANSWER (cs127c's host log, 25 Nov 09:54, the one-time line): eErrNoAlreadyPreemptedActor = 0xA956C7AF,
+  eErrNoAlreadyPreemptingActor = 0x6DB9963D. The friend's refusal 0x58C8345D is NEITHER: no preemption state refuses
+  it. Remaining candidates in the 2642 path (S46 1.1): the requester's state (dead, loading, QTE,
+  eErrNoInteractionDelayTime), the NPC's state (eErrNoSequencerNotInteractableState: the NPC has a dynamic entry with
+  a scene), the common validation (eErrNoInvalidDynamicInteractionData, ownership, the condition vf1E8,
+  0x2126920's eErrNoInvalidStageChartInteractionCondition through the FIELD OWNER's manager, distance / angle).
+  0x2126920 is where the host's manager's state meets the friend's talk; and cs125b's "the focus swap did not help"
+  proves nothing: that swap ran on the network thread (cs125d), so the shared focus is back as the lead for BUG 2.
+  To name the error: scratchpad errhash.py (the registrar's hash from the three known pairs, then every name of
+  errtable73.csv), else the run-time values of those candidates' globals.
+- cs125d's [u2 talk] probe cannot answer it: it read +0xD8 (2976's offset; 3732's mark is +0xF0) and never saw the
+  requester actor (it ran on the network thread). Next probe (after this batch): at the C point 0x2CDC149, on the
+  logic thread, for user 2's 2642: r13 (the requester actor) and its key, [[r13+0x68]+0x98] and its +0xF0, the host's
+  character's component and its +0xF0, the err at [rbp-0x80]; then the 2946's error against the logged preempt values.
+
+## BUG 2 FIXED (25 Nov, cs128)
+- The scan of the error globals (the new one-time line) found 0x58C8345D in 0x71D5EA4 =
+  eErrNoInvalidStageChartInteractionCondition (scratchpad errtable73.csv): the stage-chart interaction condition, the
+  check 0x2126920 makes through the FIELD OWNER's (the host's) stage manager. While the host's talk held that manager's
+  focus, every talk of the friend's failed it: the shared focus after all (cs125b's swap ran on the network thread).
+- Fix: C0, a mid hook at 0x2CDC13D right before the 2642 handler's call of its check 0x2E3C180, on the logic thread,
+  opens the per-player slot for user 2's talk (its own focus triple in the host's manager); C closes it. Not for the NPC
+  of the host's own accepted talk while the host's focus is set (the game's one-talker rule stays).
+- cs128 talkwhile: 28 / 0. #1, #2 and #3 (DURING the host's talk with the organizer) opened Renee's shop menu; never
+  refused; "its talks 2 (... left to the game: 0; the C0 window hooked)"; swaps none failed or unbalanced. In the
+  release checklist from this build (30 steps).

@@ -82,10 +82,12 @@ can be added in coopplus.ini (the README explains how).
 - The host's armour dye does not show on the joined player's screen yet.
 - A tree the joined player cuts down can show twice for the host.
 - Taming a wild horse as the joined player can fail at its last step: they are freed a few seconds later, but the
-  horse is most likely not tamed (a fix is being redone).
+  horse is most likely not tamed (a new fix is in, not yet tested on a real taming).
+- If the host's game stops answering for a while, the joined player's trip to the host waits in the world with a note
+  until it answers (seen once on a host PC; the host's log now says what its game was stuck on).
 - Arm wrestling in solo with Co-op+ installed was reported once to leave the character jumping until a restart.
-- While the host is in a conversation (or a scene), the joined player cannot start a talk with any NPC; it works again
-  once the host is done.
+- Two players cannot talk to the same NPC at once (the game's own rule); talking to other NPCs while the host is in a
+  conversation works.
 - Story scenes that start from a talk do not wait for both of you yet.
 - Boss fights are not tested with two players yet.
 - After a game update Co-op+ switches itself off until it is updated.

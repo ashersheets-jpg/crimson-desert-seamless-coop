@@ -92,6 +92,8 @@ topic BEFORE testing or guessing about it.
 
 ## Harness and tools
 
+- While a test runs, wait with Read / Grep on its .out and the browser's clock, never with a "placeholder" Bash call
+  (2026-11-25: three no-op `echo` calls slipped through during cs127a-c by reflex; the rule is no Bash at all).
 - The horse call for tests: a simulated pad (-HostDev pad_sim=1 / -GuestDev pad_sim=1) and the dev script steps
   `pad 0001 700`, `pad 0401 1300`, `pad 0400 400` (D-pad Up, then Up + right stick down, then the stick alone: the
   wheel picks when Up is released with the stick held). Pressing both together and releasing together does nothing.
@@ -829,6 +831,26 @@ The static step checks that layer / kit / tools have no uncommitted changes. Edi
 for the NEXT package while pp59 ran made static FAIL ("uncommitted changes") on a package built from a clean commit,
 and the README change then needed a new package and a re-run of static + real + a smoke step before the post. During a
 run, draft kit text in the scratchpad (or docs/drafts/) and copy it into kit/ after the run, then package once.
+
+## A wait timed in seconds for a game state breaks when that state is late: wait for the state (2026-11-25, cs127c)
+The join's trip to the host waited "12 s after both are in the world" for the friend's own move into the host's field
+to end (nb5 / nb6, 2026-11-12). With the host's server stalled 25 s that move ended 35 s later, the trip went first,
+the server ran its reload to the end, and the friend's game kept it where it was. The host's native base already
+tracked the move from the tunnel's packets (MovePhaseTracker: Stable at the LoadingCompleteAck); the trip now waits
+for that word. When a fix "waits N s for X", look for something that already knows X, and test the case where X is
+late (here: the forced stall).
+
+## A failure only a tester's PC shows: force it on one PC with a TEST-ONLY switch (2026-11-25, Borque / cs127)
+Borque's host's server stopped taking input for 30 s, 26 s and 153 s right after his friend joined; no one-PC run in
+weeks had a stall over 1 s, so neither the fix (the far travel waits) nor the new stall diagnostics could be seen
+working. A switch that makes the failure happen on purpose ([session2] dev_server_stall_ms: ServerRunThread sleeps once
+at user 2's 2nd MoveFieldCompleteReq 2723, the moment his host stalled) turns it into a scripted step (cs127, the
+checklist's "stall"). cs127a first used "2471", the number the milestone lines print, and the switch never fired: the
+opcode lesson below, again; a test switch must log when it FIRES, and its step must check that line first.
+Such a switch: 0 by default, named TEST ONLY in its log line, set only through a harness argument, and the step allows
+its own warnings while every other step still treats them as findings. And when a tester's log cannot say where a
+thread is stuck, the next build must be able to (name the item it entered, sample its stack): guessing the cause from
+the outside (his other mods, a slower PC) stays a guess.
 
 ## A hook "around a request" must be proven to wrap the handler's own run (2026-11-25, cs125d)
 The per-player focus slot wrapped ServerRunThread's call of OnRecvPacket and treated the thread that built user 2's

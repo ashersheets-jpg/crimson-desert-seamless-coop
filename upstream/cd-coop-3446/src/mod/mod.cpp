@@ -991,6 +991,11 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
                 toast = std::move(t);
                 toast_until = now + 8000;
             }
+            // Co-op+ far travel (2026-11-25): it waits while the server is stalled; the player is told why.
+            if (std::string t = net::revive_take_toast(); !t.empty()) {
+                toast = std::move(t);
+                toast_until = now + 8000;
+            }
             // Co-op+ 2026-11-16 (the testers' bug 2): the server lets one player at a time talk to an NPC. When ours
             // is refused because the friend is busy with that NPC (cdmp.asi counts those refusals), say so.
             // 2026-11-25 (cs125a / cs126a): the refusal comes while the friend is in ANY talk, whichever NPC ours is
@@ -1204,6 +1209,41 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
                 {
                     static bool join_done = false;
                     static uint64_t both_since = 0;
+                    // The host's word that our own last load is done on its server (cs127c); at most 90 s of waiting,
+                    // with a note on screen from 5 s on (every 30 s) so the player knows why the trip has not come.
+                    static uint64_t settle_wait_since = 0, settle_note_at = 0;
+                    const auto join_load_settled = [&]() {
+                        const uint64_t t = GetTickCount64();
+                        if (net::revive_own_load_settled()) {
+                            if (settle_wait_since) {
+                                log::info("Co-op: joined: our own load is done on the host's server ({:.1f} s of waiting)",
+                                          (t - settle_wait_since) / 1000.0);
+                                settle_wait_since = 0;
+                            }
+                            return true;
+                        }
+                        if (!settle_wait_since) {
+                            settle_wait_since = t;
+                            settle_note_at = 0;
+                            log::info("Co-op: joined: the host's server is still finishing our own load: the trip to its "
+                                      "side waits for it");
+                        }
+                        if (t - settle_wait_since >= 5000 && (!settle_note_at || t - settle_note_at >= 30000)) {
+                            settle_note_at = t;
+                            const std::string who = session.peer_name().empty() ? std::string("your friend")
+                                                                                   : session.peer_name();
+                            toast = std::format("Co-op\nThe host's game is still loading you in: the trip to {} follows",
+                                                who);
+                            toast_until = now + 8000;
+                        }
+                        if (t - settle_wait_since >= 90000) {
+                            log::warn("Co-op: joined: our own load is still not done on the host's server after 90 s: "
+                                      "the trip goes anyway");
+                            settle_wait_since = 0;
+                            return true;
+                        }
+                        return false;
+                    };
                     if (kNativeLayer && cfg.coop_join_beside_host && !join_done && net::lobby_native_guest()) {
                         const auto& rs = session.remote_state();
                         const bool ready = linked && s.health > 0.0f && rs && rs->health > 0.0f && !game::ui_menu_open();
@@ -1211,10 +1251,12 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
                             both_since = 0;
                         } else if (!both_since) {
                             both_since = GetTickCount64();
-                        } else if (GetTickCount64() - both_since >= 12000) {
+                        } else if (GetTickCount64() - both_since >= 12000 && join_load_settled()) {
                             // 12 s, not 4 (nb5 / nb6-lowsave, 2026-11-12): the login's own move into the host's field
                             // ends about 5 s after we stand in the world; a far travel asked before that is undone
-                            // or never shown by our client.
+                            // or never shown by our client. 2026-11-25 (cs127c): after a stall of the host's server that
+                            // move ended 35 s later, so the trip also waits for the host's word that our own load is
+                            // done on its server (join_load_settled, at most 90 s more).
                             join_done = true;
                             const float dx = rs->pos.x - s.position.x, dz = rs->pos.z - s.position.z;
                             const float d = std::sqrt(dx * dx + dz * dz);

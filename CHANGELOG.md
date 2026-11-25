@@ -5,6 +5,49 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
+Next build (not posted yet), from Borque's 25 Nov session and the talk / taming research of 25 Nov:
+- **The joined player's trip to the host waits while the host's game is not answering** (Borque: an endless loading
+  screen right after joining). His host's server took no input for 30 s, 26 s and 2.5 minutes just after the friend
+  came into its world 600 m away. Co-op+'s far travel (the join's "go to your friend") had already opened its loading
+  screen; it asked again after 8 s and switched to hops after 45 s without ending it, and hops cannot move a game that
+  is loading. Now, while the host's server is stalled (its stall watch, over 1 s; the host tells the friend every 2 s),
+  a far travel not started yet waits in the world with a note, and one already under way neither asks again nor
+  gives up until the server answers (then one request only). After 5 minutes it gives up for hops, as before. A
+  travel within 30 s of a stall's end also sends one request only: cs127b (one PC, the host's server made to stall
+  25 s on purpose) waited 14 s in the world and arrived, but the server, busy with its backlog, took 9 s, and the old
+  8 s rule's second request made a second reload trip over the first (the pattern that broke Borque's first try).
+  And the join's trip waits for the host's word that the friend's own load into the host's field is done on its
+  server (the host's move tracker, sent every 3 s; at most 90 s more than the old 12 s; a note from 5 s on): cs127c
+  showed a trip asked right after the stall, while that load was still completing, undone by the friend's game (it got
+  there 45 s later by the hops).
+- **The host's log names what its server is stuck on**: each "the server has not taken our buffers" line names
+  ServerRunThread's last item (its op, the host's or the friend's, how long ago). For the stall's first 30 s, then
+  every 30 s, the lines carry a stack sample of that thread, of the server's logic thread and of any other busy
+  server thread: where it is and up to 20 return addresses by module (the game, cdmp.asi, another mod's DLL or .asi,
+  hook stubs). At most 60 a session; read only (the thread is suspended for ~30 us). cs127b: the forced sleep showed
+  under ServerRunThread's OnRecvPacket call, and the game's autosave barrier parked the logic thread meanwhile, the
+  same lines as Borque's log. Test only: [session2] dev_server_stall_ms makes the server stall once on purpose (0 in
+  every shipped ini); the checklist's new "stall" step uses it.
+- **The taming fix, redone** (T25): 614591d0's per-player focus slot never acted. It ran its thread test on the
+  server's network thread, while the server handles the requests and writes the focus on its logic thread (cs125d).
+  It runs there now (native 81e3ed4): the joined player's branch of a scene of its own in the host's stage manager
+  runs with its own focus. cs125e: no harm in the shop flow; a real taming is still untested.
+- **The friend can talk to NPCs while the host is in a conversation** (the testers' BUG 2 of 16 Nov): every talk of
+  the friend's was refused while the host talked to anyone, with 0x58C8345D, which the host's log now names:
+  eErrNoInvalidStageChartInteractionCondition, the talk's stage-chart check against the host's stage manager, whose one
+  "focus" slot held the host's talk. The friend's talk check now runs with its own focus on the server's logic thread
+  (C0, the per-player slot; the earlier try of 0f4af72 ran on the wrong thread). cs128 talkwhile (one PC): the
+  friend's shop opened during the host's talk, never refused; the slot's swaps none failed. A talk to the very NPC the
+  host is talking to stays the game's one-talker rule, and its note now says "You can't start a talk while <host> is
+  talking". The talkwhile step joins the release checklist.
+
+Posted 2026-11-25 05:51 as 0.1.0-alpha+614591d0, for game 1.0.0.3732 (checklist pp59 over 28 steps with the fix on,
+1211 / 1, the one my uncommitted docs; pp59r static / real / fresh 71 / 0 on the package; message
+1575101562714329119; tags Borque):
+- **The joined player's taming** (meant to): a focus slot of its own in the host's stage manager. It did not take
+  effect (found the same morning, cs125d: it ran on the wrong thread); 527e283a's 6 s release stays. README: the solo
+  arm-wrestling report as an open issue.
+
 Posted 2026-11-24 14:11 as 0.1.0-alpha+527e283a, for game 1.0.0.3732 (native c63f8b4, layer c0fa5540's; checklist
 pp55 over 28 steps, 1202 / 10, the 10 all farfight's join lost to Discord's overlay popup, farfight 49 / 0 on its
 re-run in pp55b with static as smoke; both zips checked file by file, 25/25 and 10/10; message 1574864934821433446,

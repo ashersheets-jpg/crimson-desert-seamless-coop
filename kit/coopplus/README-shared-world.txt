@@ -230,15 +230,19 @@ KNOWN ISSUES (shared world playtest)
 - The host's armour dye does not show on the joined player's screen yet.
 - A tree the joined player cuts down can show twice for the host.
 - Taming a wild horse as the joined player can fail at its last step: the joined
-  player is freed a few seconds later, but the horse is most likely not tamed. (The
-  fix in 614591d0 did not take effect; it is off again while it is redone.) If it
-  happens, please send both zips.
+  player is freed a few seconds later, but the horse is most likely not tamed. This
+  build has a new fix for it (the one in 614591d0 did not take effect), not yet tested
+  on a real taming. If it still happens, please send both zips.
+- If the host's game stops answering for a while (seen once on a host PC, for up to
+  a few minutes), the joined player's trip to the host waits in the world with a note
+  until it answers, instead of a loading screen that never ends. If you see that
+  note, please send both zips: the host's log now says what its game was stuck on.
 - Arm wrestling in SOLO with Co-op+ installed was reported once to leave the
   character jumping, with no way out of the match but a restart (not seen in our
   tests). If it happens to you, please send your zip.
-- While the host is in a conversation (or a scene), the joined player cannot start a
-  talk with ANY NPC, not only the one the host is talking to. Wait until the host is
-  done; the game tells the joined player so.
+- Two players cannot talk to the SAME NPC at once (the game's own rule): the second
+  is told to wait until the first is done. (Talking to other NPCs while the host is in
+  a conversation works since this build.)
 - City NPCs sitting on benches may stand in a T-pose on the joined player's screen
   (reported once, not seen in our tests).
 - Boss fights are not tested with two players yet.

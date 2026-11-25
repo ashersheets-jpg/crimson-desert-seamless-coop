@@ -113,7 +113,19 @@ Steam join/invite/leave and room code, friends-only vs invite-only, join/leave n
   the host, respawn_at=partner) landed at the friend's position + 1 m on x, which beside a cliff's edge is open air and
   beside a rock face is inside the rock; it now lands on the friend's own recent path, the newest point 1 to 4 m from it
   and within 2 m up / down (net/landing_spot.h, unit-tested), else on the friend's spot. cs109: the path landing on
-  land, then a hop to the host in the river by the Rodbel dock.)
+  land, then a hop to the host in the river by the Rodbel dock.) (2026-11-25, Borque's two-PC join on 527e283a: an
+  endless loading screen. His host's server took no input for 30 s / 26 s / 153 s right after the friend came into its
+  field 600 m away; the join's far travel had opened its loading screen and gave up for hops after 45 s without ending
+  it. Next build: while the server is stalled (the native's stall watch; the host tells the friend) a far travel not
+  started yet waits in the world with a note, one under way waits for the server with one request only; the host's
+  stall lines name the last item and carry stack samples. cs127 forces such a stall on one PC (cs127b: the guest's
+  travel waited 14 s in the world, then went and arrived beside the host; the samples showed the forced sleep under
+  ServerRunThread's OnRecvPacket call and the game's autosave barrier parking the logic thread, Borque's pattern; a
+  resend 8 s after the stall made a second reload trip, so a travel within 30 s of a stall sends one request only;
+  cs127c: with one request the trip was undone, being asked while the friend's own move into the host's field was
+  still completing, so the join's trip now waits for the host's word that that load is done). The checklist has a
+  "stall" step now. The stall's root on his PC is unknown: asked for a session with his old
+  version.dll / without his two other .asi.)
 - [x] **T20 — World-state persistence rules.** Define and implement what happens to world state changed during co-op (cleared camps, killed bosses, gathered nodes, opened doors) for host and guest. Document the rules in the README. *Done when:* the rules are written and a test confirms host and guest outcomes.
 - [x] **T21 — Fix: empty arm-wrestling table.** The pub table has no NPCs when the stand-in is connected from the start. Find and fix the cause. *Done when:* arm wrestling works regardless of connection timing. (The empty table was the two-worlds design's; in the shared world both games list the same 15 people there (cs33a) and the host's match works. Left, as B14: the joined player's own match. DONE 2026-11-22 with B14: cs103, both players' matches at the table, every path.)
 - [~] **T22 — World event sync.** Sieges, faction events and other dynamic events that start in the host's world are visible and participatable for the guest. *Done when:* at least the most common event types are verified.
@@ -155,9 +167,10 @@ Steam join/invite/leave and room code, friends-only vs invite-only, join/leave n
   requests about them, and their setter / tick / end, run with its own triple). pp59, the full checklist with it on:
   28 steps, 1211 pass (the 1 fail my own uncommitted docs); posted as 614591d0 (05:51). BUT cs125d (08:33) showed the
   slot NEVER ACTED: its thread test took the network thread, while the focus writes and the request handlers run on
-  the server's logic thread (docs/research/taming-refusal-3732.md, "The slot ran on the wrong thread"). OFF again in
-  the next build (the layer stops writing user2_focus_slot=1); to redo on the logic thread. Left: that redo, then a
-  tester's taming.)
+  the server's logic thread (docs/research/taming-refusal-3732.md, "The slot ran on the wrong thread"). REDONE
+  (native 81e3ed4, 25 Nov 09:10): B1 learns the logic thread and wraps user 2's branch of its own scene in the host's
+  manager (B1 -> B2); the detours act on that thread. cs125e: learned (T5484), no harm in the shop flow (nothing there
+  reaches the case). ON again in the next build. Left: the checklist on it, then a tester's taming.)
 - [x] **T26 — Death penalty and respawn options.** Config options for penalty (none, partial loss, full) and respawn rules, applied consistently on both sides. *Done when:* every option is tested. (2026-11-22: the respawn option is done; the penalty options were blocked on the two-worlds design (no removal the server accepts). On the native shared world the game's own jail fine removes items on the host's server (RemoveItemToInventoryAck 2481): a lead to a server-side removal; design in docs/research/t26-death-penalty.md. 2026-11-22: route 2 built as research, off (native 6af91d5: the host's server takes a player's own "I got up myself" request and removes the host's share of its money with the game's own delete; layer: the revive prompt's Q / U send it); cs97 lists the money pouch to find the silver's key, cs97b the removal; then the setting.) (2026-11-22 cs97: the request reached the host's server for both players and the "Money" pouch was listed; it holds the camp money and contributions only. The coins are item key 1 (the arm-wrestling prize names item 1), in another inventory: the native now searches every inventory for the item (40f0c15). cs97b (item 1) is the removal test; the layer passes item 1 to the host only after it passes.) (2026-11-22 19:11 cs97b
 PASSED: item 1 is 'Money_Copper', in the character's bag (inventory 1, slot 6); the joined player and then the host
 each lost exactly 10 % (1145 of 11454), err 0, once per death; SAVES OK, the test world unchanged. The layer now passes
@@ -316,7 +329,11 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   other shared state (ByJunter S46 1.1: the requester's vf160 0x211F930 / the .xtls reserve 0xE401150; the error's name
   unread). Next: a probe at the 2642 handler (the requester's interaction component and its +0xD8 for user 2's
   requests, against the host's). Meanwhile the toast says what happens, and README / Nexus / features list it.
-  Repro: build/native/cs125.sh (tools/prepost.sh talkwhile, kept out of the release list).
+  Repro: build/native/cs125.sh (tools/prepost.sh talkwhile, kept out of the release list). 2026-11-25 static on
+  3732 (docs/research/taming-refusal-3732.md, "BUG 2"): eErrNoAlreadyPreemptingActor (global 0x71D6978: the
+  requester's own [comp+0xF0] mark, 0x2359089 / 0xC958F21) or eErrNoAlreadyPreemptedActor (0x71D6974: the NPC's
+  reserve 0x235D030 failing, 0x235BDB9 / 0x2A33ED0); the next build logs both values once, so its host logs name
+  0x58C8345D, which decides the fix's direction. FIXED the same day (cs128 talkwhile 28 / 0): 0x58C8345D is eErrNoInvalidStageChartInteractionCondition (the talk's stage-chart check through the host's manager, whose focus the host's talk held); C0 runs the friend's talk check with its own focus on the logic thread.
   2026-11-21: the talk scenes were decided (option 2, 11-17); a script may reach them now: talks start with R while
   the camera faces the person, every scripted try had held E (cs79: faceto + R at Marius and Ross). 2026-11-22, from cs79b's logs: each of Marius / Ross stood TWICE at one spot on the host's game, and the second copies (0xB0100279, 0xB010027F) are the bound NPCs of the joined player's OWN story scenes (0x1CD, 0x1D0; "Story scenes together" prepares them on its own quest manager): the host's game shows the friend's copies too, and in cs79b the host's game sent NO talk request (2671) to either copy: most likely its aim settled on the friend's copy, which has no talk on the host's game (unproven). Next: the friend's own-scene people hidden on the host's game (and the host's on the friend's), then the talks by script again.)
   (2026-11-22 cs79c, the story mode off: one Marius and one Ross, and the scripted talks still took nothing. The doubles were not the block; the cabin talks stay on the hands-on list. The doubles remain a story-mode defect to fix before that mode can be on by default.)

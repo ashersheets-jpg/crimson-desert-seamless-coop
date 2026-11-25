@@ -26,6 +26,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <string>
 
 namespace cdmp::net {
 
@@ -78,6 +79,21 @@ bool revive_teleport_to(float x, float y, float z, float arrive_m = 3.0f);
 // tells the guest (coop_lobby's kMsgFieldKey); 0 = not known.
 uint32_t revive_own_field_key();
 void revive_set_field_key(uint32_t key);
+// 2026-11-25 (Borque): a far travel waits while the server is stalled (no request, no loading screen). The host's own
+// stall in ms from the native base (0 = none, or the guest: no server there); the host tells the guest
+// (coop_lobby's kMsgServerBusy: revive_set_host_server_busy, 0 = it takes requests again; trusted for 6 s).
+uint32_t revive_server_stalled_ms();
+void revive_set_host_server_busy(uint32_t ms);
+// 2026-11-25 (cs127c): the joined player's own last load on the host's server: 1 done, 0 under way, -1 none seen. The
+// host reads its native base (revive_user2_load_settled); the guest keeps the host's word (coop_lobby's
+// kMsgGuestLoad: revive_set_own_load_settled) and asks revive_own_load_settled() (true when its last word is "done",
+// or with no word at all) before the join's trip to the host: a far travel asked while its own move into the host's
+// field was still completing was undone by its game.
+int revive_user2_load_settled();
+void revive_set_own_load_settled(int state);
+bool revive_own_load_settled();
+// A note for the player (the far travel waits for the server): empty when there is none. The network loop shows it.
+std::string revive_take_toast();
 
 // T26: the host's death penalty in force this session (10 / 25 / 50 / 100, 0 = none): the host sets its own, the
 // joined player gets it from the host (coop_lobby's kMsgDeathPenalty). The death screen names the cost.

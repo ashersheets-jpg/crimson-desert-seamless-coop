@@ -169,11 +169,12 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
                               // never marked ready on the server (only the field owner's load does), so its doors
                               // answered "not ready" to both players until a fast travel (the native base's S43);
                               // scene_level_share marks user 2's load ready too and keeps a level the other still has.
-                              "scene_level_share=1"}) {
-            // (T25, 2026-11-25: "user2_focus_slot=1" was written here from d871af4 to 614591d0 and is OFF again:
-            // cs125d showed its detours refused on the server's logic thread, where the focus is written and the
-            // branch / talk handlers run (its thread test took the network thread), so it never acted and its few
-            // request-window swaps raced the logic thread. To come back once its hooks follow the logic thread.)
+                              "scene_level_share=1",
+                              // T25 (the joined player's taming refused): user 2's own scenes in the host's stage
+                              // manager get a focus slot of their own. Written from d871af4 to 614591d0 on the wrong
+                              // thread (cs125d: it never acted); back since the native base's 81e3ed4, which runs it
+                              // on the server's logic thread (cs125e: learned there, no harm in the shop flow).
+                              "user2_focus_slot=1"}) {
             line(k);
         }
         // B10 option 2, the player's choice ([coop] shared_quest_credit): an objective one player completes also

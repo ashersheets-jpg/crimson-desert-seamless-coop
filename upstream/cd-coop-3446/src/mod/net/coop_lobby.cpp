@@ -42,6 +42,14 @@ constexpr uint8_t kMsgSessionEnded = 25;
 constexpr uint8_t kMsgFieldKey = 26;
 // u8 | u8: the host's death penalty in force this session (T26; 0 = none)   host -> guest
 constexpr uint8_t kMsgDeathPenalty = 28;
+// u8 | u32: how long the host's server has not taken requests, in ms (the native's stall watch; 0 = it takes them
+// again), for the guest's far travel (revive_prompt.cpp: it waits instead of a loading screen; Borque 25 Nov). Sent
+// when a stall starts, every 2 s while it lasts, and once when it ends   host -> guest
+constexpr uint8_t kMsgServerBusy = 29;
+// u8 | i8: the joined player's own last load on the host's server (the native base's tracker: 1 done, 0 under way, -1
+// none seen), for its join trip (cs127c: a trip asked while its own move was still completing was undone). On a change
+// and every 3 s   host -> guest
+constexpr uint8_t kMsgGuestLoad = 30;
 constexpr uint64_t kRestartDelayMs = 1500;  // the message goes out before this game closes
 constexpr uint64_t kStuckLineMs = 150000;   // guest: Play pressed this long ago, no world: the waiting screen says what to do
 constexpr uint64_t kStuckTellMs = 240000;   // guest: ... the host is told (its card in the world)
@@ -89,6 +97,10 @@ std::string g_native_note;       // a line for the menu (e.g. the friend did not
 std::string g_peer_problem;      // the handshake's refusal (another build / game version): the menu's line while it holds
 uint32_t g_field_key_sent = 0;   // host: the field key the guest was told (0 = none since the link came up)
 uint64_t g_field_key_at = 0;     // host: when the base was last asked
+bool g_busy_sent = false;        // host: the guest was told of a stall of our server that has not ended
+uint64_t g_busy_at = 0, g_busy_sent_at = 0;
+int g_load_sent = -2;            // host: the guest's own load state it was told last (-2 = nothing since the link)
+uint64_t g_load_sent_at = 0;
 bool g_refused_seen = false;     // B22a: the native base refused co-op for this launch (its save redirect failed)
 // A start that did not work (a tester's session, 2026-11-12: the host's game never answered the guest's Play, and the
 // second Start Co-op ran in the same two games: the guest's title was still waiting for the first answer, nothing
@@ -361,6 +373,35 @@ void lobby_tick(const LobbyInput& in) {
             }
         }
         if (!in.connected) g_field_key_sent = 0;
+        // Our server stalled (the native's watch): the guest's far travel waits for it (kMsgServerBusy). Looked at
+        // every 0.5 s while both are in the world.
+        if (g_native && in.host && in.connected && in.in_world && in.now_ms - g_busy_at >= 500) {
+            g_busy_at = in.now_ms;
+            const uint32_t ms = revive_server_stalled_ms();
+            if (ms ? (!g_busy_sent || in.now_ms - g_busy_sent_at >= 2000) : g_busy_sent) {
+                g_busy_sent = ms != 0;
+                g_busy_sent_at = in.now_ms;
+                std::vector<uint8_t> m(5);
+                m[0] = kMsgServerBusy;
+                std::memcpy(m.data() + 1, &ms, 4);
+                send(std::move(m));
+            }
+            // The guest's own last load on our server (its join trip waits for it).
+            const int load = revive_user2_load_settled();
+            if (load != g_load_sent || in.now_ms - g_load_sent_at >= 3000) {
+                if (load != g_load_sent) {
+                    log::info("Co-op lobby: the guest's own load on our server is {} (told it)",
+                              load == 1 ? "done" : load == 0 ? "under way" : "not seen yet");
+                }
+                g_load_sent = load;
+                g_load_sent_at = in.now_ms;
+                send({kMsgGuestLoad, static_cast<uint8_t>(static_cast<int8_t>(load))});
+            }
+        }
+        if (!in.connected) {
+            g_busy_sent = false;
+            g_load_sent = -2;
+        }
         // T26: the host's death penalty in force (none while the money item is unknown: kDeathPenaltyItem 0).
         if (g_native && in.host && in.in_world) {
             int p = 0;
@@ -897,6 +938,16 @@ void lobby_on_message(const std::vector<uint8_t>& b) {
                 break;
             case kMsgDeathPenalty:
                 if (b.size() >= 2 && !g_in.host) revive_set_death_penalty(b[1]);
+                break;
+            case kMsgServerBusy:
+                if (b.size() >= 5 && !g_in.host) {
+                    uint32_t ms = 0;
+                    std::memcpy(&ms, b.data() + 1, 4);
+                    revive_set_host_server_busy(ms);
+                }
+                break;
+            case kMsgGuestLoad:
+                if (b.size() >= 2 && !g_in.host) revive_set_own_load_settled(static_cast<int8_t>(b[1]));
                 break;
             case kMsgSessionEnded:
                 if (!g_in.host) bye_at_title_locked();  // in the world: the activity goodbye does the full Leave

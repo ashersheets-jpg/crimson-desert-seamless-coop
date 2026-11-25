@@ -5,6 +5,10 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- 2026-11-25 09:51 NOTHING NEW TO DECIDE. Under way: the next batch (Borque's endless loading: the far travel waits
+  while the host's server is stalled, the stall diagnostics; the taming fix redone; the talk toast), its forced-stall
+  test cs127c, then the full checklist (29 steps with the new "stall") and the post. 614591d0 was posted 05:51
+  (its taming fix turned out never to act: corrected in the next post).
 - 2026-11-24 04:16 HANDS-ON (5 minutes, not urgent, P1 Borque (6) fishing for the joined player): research shows
   the joined player's own game drops the fish summon (it runs a gimmick's summon only if that game controls the
   gimmick, and the host's game controls all of them), but my scripted casts never got the rod out: the quick slot
@@ -11461,3 +11465,186 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   PARK-ASKED busy(ServerRunThread)" from 01:22:18, never taken again (142 s, 26,353 packets held, by 01:25:37).
   08:35 acknowledged to Borque (tagged, message 1575143016077729943). Log analysis by an agent (read only) running
   (scratchpad/borque-1125-analysis.md).
+- 08:36-08:47 the layer stops writing user2_focus_slot=1 (native_mode_text.h, its layer test flipped), README / Nexus /
+  features back to the taming's known issue; the talk probe reverted (kept as scratchpad/u2talk_probe.patch);
+  committed 8417cd1, native base synced (a90aa47), pushed; rebuilt (cdmp e78120df, coopplus 6e4a4487) and packaged
+  ce521dbe (= the build tree). #general: how90 posted the progress chart; squidbots32 asks whether anyone has tested
+  (left to the community). Thread check: the [branch] B1 / B2, [2671] C and the server manager's [focus] writes all
+  run on one logic thread per run (T35304 cs125d, T424 pp59-armwrest, T6856 pp59-shop): pp58's "all focus writes in
+  the tick, none inside a request" was an artifact (the flag lived on the network thread).
+- 08:48-08:54 THE SLOT REDONE ON THE LOGIC THREAD (native, uncommitted): B1 learns the logic thread (g_logic_tid) and
+  opens the branch window for user 2's branch of its own scene in the HOST's manager (closed at B2, only with B2
+  hooked); slot_here() takes the logic thread; FR1 / FR2 keep only their counters; the focus lines' "inside a
+  request" means inside a branch step (B1 -> B2) on that thread; the summary names the logic thread. Built (the same
+  14 known old failures; layer tests pass). ~08:55 cs125e: cs125 with -HostNativeExtra user2_focus_slot=1, to see it
+  on the right thread and doing no harm.
+- 08:59 the agent's analysis of Borque's 25 Nov zips (scratchpad/borque-1125-analysis.md): the join WORKED (the guest
+  "in world" 01:22:10.191, 601 m from the host); the endless loading screen is the LAYER's far travel (revive_prompt.cpp:
+  the ReloadStageStartReq 3074, then the injected TeleportRevivePointAck 3072 that starts the client's loading screen,
+  which asks the server for the load by itself). The host's ServerRunThread T7540 took no input for 29.7 s, 26.3 s and
+  152.7 s; it accepted the guest's 3074 only at 01:25:50.8, 2 s before the host quit; the host's own travel to the
+  guest at 01:24:17 failed too (stopped 514 m short). The 45 s timeout switches to hops without ending the loading
+  screen (lines 262-269), and the 8 s rule resent the 3074 (the first attempt: two reload trips). PARK-ASKED is the
+  game's autosave pause (cleared in 5 s; not the cause). The same moment of his WORKING 24 Nov session stalled 2.0 /
+  2.0 / 2.3 s and the travel took 6.5 s. Changed on the host since: version.dll (the ASI loader that loads our .asi
+  there: 3,615,928 B dated 31 Oct -> 7,467,688 B dated 24 Nov 19:56) and our build (2451dff5 -> 527e283a). Our one-PC
+  logs (lowsave makes the same far join + travel) have no such stall. Root of the stall NOT determined. Next: reply
+  (drafted: scratchpad/reply_borque_1125.txt: the findings, a session with the old version.dll or without the two
+  other .asi); native diagnostics naming the item ServerRunThread is in at a stall (and its stack); the layer's travel
+  ends its own loading screen when the server does not take it (design below). (Rule slip 09:00: a cat through Bash
+  while cs125e ran.)
+- 09:05 cs125e (SAVES OK, 5/5, both alive): the redone slot learned the logic thread (T5484, the same thread as the
+  2642 handler's C point) and did nothing: "user 2's branches of its own scenes in the host's manager 0 (other
+  branches passed by 70)", swaps 0, failed 0, unbalanced 0 (the friend's own shop scene runs in its OWN manager:
+  nothing scripted reaches the taming case). The focus lines' labels now work on that thread ("inside USER 2's branch
+  request" for its own shop's undo; the host's undo "inside a branch request (not user 2's)"). #3 refused again with
+  0x58C8345D (2946 twice) while the host talked: BUG 2 as in cs125a-c, not the slot's doing. Verdict: no harm; the
+  slot goes back ON in the layer (a tester's taming is the real test).
+- 09:08 the reply to Borque posted in #play-testing-feedback (tagged, message 1575151169066639431): the join worked,
+  the server stalled 30 s / 26 s / 2.5 min, Co-op+ should have ended its loading screen (fixing it), the version.dll
+  change; asked for one session with the old version.dll or without CrimsonInternalGraphics.asi / DmmRuntime.asi;
+  the next build logs what the server is stuck on. #general: nothing new since squidbots32 (08:37).
+- 09:10 native 81e3ed4 (the slot on the logic thread, committed after cs125e).
+- 09:11-09:21 written (uncommitted): (1) native: the stall line names ServerRunThread's last item (on_server_recv
+  records op, user 2 / host, entry time, items in all), and with the stall's first line, each of the next ones for its
+  first ~30 s, then every 30 s, stack samples of ServerRunThread and of any other registered server thread flagged
+  busy (freeze_watchdog's new on-request sampler freeze_sample_thread_text: its own module list via
+  K32EnumProcessModules, SuspendThread + GetThreadContext + one stack copy, RIP and up to 20 return addresses as
+  exe+ / cdmp+ [mod] / any module by name (version.dll, the other .asi) / [stub]; <= 60 per session; works with
+  freeze_watchdog off); export cdmp_server_stalled_ms (the stall watch's age while stalled). (2) layer
+  (revive_prompt.cpp, coop_lobby.cpp kMsgServerBusy 29, mod.cpp toast): while the server is stalled (> 1 s; the host's
+  own from the export, the guest's from the host every 2 s, trusted 6 s) a far travel not started yet WAITS (no 3074,
+  no loading screen; a toast says why; given up after 5 min: hops), and one under way neither resends at 8 s nor
+  times out until the server answers. (3) layer: user2_focus_slot=1 back for the host (its test flipped). Building.
+- 09:21-09:28 built (the same 14 known old failures; layer tests pass), then a TEST-ONLY switch added ([session2]
+  dev_server_stall_ms / _op / _nth: ServerRunThread sleeps once at user 2's 2nd 2471, the moment Borque's host
+  stalled; 0 in every shipped ini) and the layer's "one request only after a stall during a travel" (the backlog
+  holds our request: no second 3074, Borque's first attempt's double reload); rebuilt (cdmp 4c83793e, coopplus
+  3fa61573). CHANGELOG (the next build's section and 614591d0's missing one), README / Nexus / features (the taming's
+  new fix; the trip that waits while the host's game is not answering), the taming note's cs125e section written.
+  Discord 09:26: EDWARD answered (#bug-reports 13:52Z): an XBOX pad; he will retry the minigame after school and
+  "might have to do a new playthrough"; replied 09:27 (tagged, message 1575155988007358575): any inn's table will do,
+  then Diagnose and the zip. Read: in solo the layer's XInput hook masks / presses nothing (those paths need the
+  friend, a request or an RPS game); the View chord only with a pad chord bound. Waiting for his zip.
+- ~09:28 cs127a (build/native/cs127.sh: the lowsave join, the host's server made to sleep 25 s at user 2's 2nd 2471):
+  wanted the stall lines with the last item and stack samples, the guest's far travel waiting with its toast, then
+  going, arriving; SAVES OK.
+- 09:36 cs127a (SAVES OK, 5/5, both alive): the switch NEVER FIRED ("Config: TEST ONLY ... at user 2's #2 Req 2471"
+  logged, no "Session2 DEV ... sleeps"): 3732's MoveFieldCompleteReq is 2723 (observer_milestone_logic.h); its lines
+  print "2471", 2976's number (the 25 Nov opcode lesson, again). So the run was a plain lowsave on the new build: the
+  guest's far travel went at 09:32:27 (12 s after it was in the world), 0.5 s, arrived; the new code's Go path, no
+  harm. Fixed: dev_server_stall_op default 2723 (config.h / .cpp, cs127.sh, the step, the checklist row, the lesson).
+  Also written while it ran: the stall samples take the server's LOGIC thread too (shop_probe_logic_thread: in case
+  ServerRunThread only waits for it); the checklist's new step "stall" (tools/prepost.sh, the cs127 flow and its
+  checks; RELEASE-CHECKLIST.md: 29 steps, after lowsave); the BUG 2 reading of S46 (taming note: 0x58C8345D is most
+  likely eErrNoAlreadyPreemptedActor from the .xtls reserve 0xE401150, the key's InteractionInfo exclusivity;
+  scratchpad errname73.py to confirm); ROADMAP T19 / T25; the next post's draft (scratchpad/post_next_draft.txt).
+  (Rule slip 09:30: one `echo` through Bash while cs127a ran.) Rebuilding.
+- 09:38-09:40 rebuilt (the same 14 known old failures; layer tests pass; cdmp b46d6372, coopplus 11047095). BUG 2
+  static (scratchpad errname73.py / errname73b.py, the archived 3732 exe): eErrNoAlreadyPreemptedActor -> global
+  0x71D6974, eErrNoAlreadyPreemptingActor -> 0x71D6978 (registered at 0x244D3B5..405). AlreadyPreempting is loaded
+  in the requester-state check at 0x2359089 (`cmp [comp+0xF0],0`: 2976's +0xD8) and in relocated code 0xC958F21
+  (`cmp [r14+0xF0],0; je -> mov [r14+0xF0],eax`: the reserve marking the requester); AlreadyPreempted at 0x235BDB9 /
+  0x2A33ED0, each after `call 0x235D030(compNPC, ...)` returned false (3732's NPC reserve), and at 0xB4CB50D. Written
+  (native, uncommitted): shop_probe logs both globals' values once ("ShopProbe: the game's preempt errors: ..."), so
+  the next host log names 0x58C8345D: AlreadyPreempting would mean the friend's talk is judged against a component
+  that holds the HOST's preemption; AlreadyPreempted, Renee's reserve. ~09:40 cs127b (cs127 with op 2723).
+- 09:48 cs127b (SAVES OK, 5/5, both alive; the stall at op 2723): THE STALL DIAGNOSTIC WORKS. "Session2 DEV (test
+  only): ServerRunThread T32476 sleeps 25000 ms now, at user 2's #2 Req 2723" (09:44:27.8); stall lines from +1 s
+  with "ServerRunThread's last item: user 2's 2723 entered 3984 ms ago (12549 items in all)"; samples every 5 s:
+  ServerRunThread rip ntdll+0x166A64 (the delay) | returns ntdll+0xD31A4, KERNELBASE+0x8CCC1 (SleepEx), cdmp+0x32527D
+  [mod] (our sleep), cdmp+0x40B1D7 / 0x5A1571 [mod] (the mid-hook dispatch), 0x7FFDF3741CFD [stub], exe+0x2A10B9A
+  (ServerRunThread's call of OnRecvPacket: FR2's address), exe+0x165B3E6 / 0x163AEEF (its thread start); suspended
+  24-36 us. The LOGIC thread T26776 is the server's second registered thread (Borque's T4264); from +6 s the game's
+  autosave barrier had it "PARK-ASKED PARKED" while ServerRunThread stayed "PARK-ASKED busy": exactly Borque's
+  pattern, so his barrier lines were the autosave waiting on a stuck ServerRunThread, as read. The guest: told at
+  +4.4 s ("the host says its server has not taken requests for 1359 ms"), its far travel (at +12 s) WAITED in the
+  world ("... 8984 ms: the far travel waits for it"), went at 09:44:53.8 (14.0 s waited), loading screen, ARRIVED
+  09:45:02.8; shot g0: beside the host ("Host 1 m"). BUT the travel took 9.0 s (the server's backlog and the autosave
+  that had waited), so the 8 s rule asked again at 09:45:01.8 and the host ran a SECOND reload trip (R3) over R2's
+  load (it finished: LoadingCompleteReq 09:45:11; in Borque's first attempt two trips broke the load). Fixed
+  (layer): within 30 s of a stall's end (the host's "takes requests again", or the host's own export going to 0) a
+  far travel sends one request only ("; right after a stall of the server: one request only"); the step checks it
+  and "asked for once more" absent. The toast is not on a shot (the harness's keys start ~2.5 min after the join;
+  the log line is the evidence). Rebuilding; cs127c next.
+- 09:55 (reading, during cs127c) Borque's version.dll is most likely Definitive Mod Manager's own ASI loader: his
+  bin64 also has DmmRuntime.asi, and docs/compatibility.md lists DMM (Nexus 633: overlay PAZ archives, JSON, ASI / DLL
+  plugins) as a manager that may install its own version.dll loader. Its 24 Nov 19:56 file (twice the size) fits a DMM
+  update the evening between his working and his failing session; a runtime that overlays the game's PAZ archives
+  hooks file reads, which the server's loads run through. A lead for his A/B, not proven. Also written: the stack
+  sampler asks VirtualQuery only for values outside every module and the sampled thread's own stack, at most 64 per
+  sample (LESSONS 2026-11-23: VirtualQuery can wait seconds on the address-space lock while the loader maps).
+  (Rule slips: two more no-op `echo` calls through Bash while tests ran, ~09:46 during cs127b and ~09:56 during
+  cs127c; used as "placeholders" by reflex. None touched a file or the games; the rule stands: no Bash at all during
+  a test.)
+- 09:59 cs127c (the new checklist step "stall" itself, tag cs127c; SAVES OK, 5/5): the step's own checks PASS (the
+  test stall ran, the stall line names "user 2's 2723", ServerRunThread's sample shows our sleep, every sample taken,
+  the guest told, its far travel WAITED and went when the server answered with "one request only") but 3 FAIL:
+  (1) a new host warning kind "host tunnel: one tick took 51-58 ms: inject watch" (the samples' VirtualQuery calls on
+  16 KB stacks: that build had no cap yet); (2)(3) the travel did NOT take: one request at 09:55:41.5, the server ran
+  the reload trip R2 to its normal exit (LoadingCompleteAck 09:55:50), but the guest stayed where it was; 45 s later
+  hops took it there (arrived 09:56:50.9, 1 m from the host). The host timeline says why: the trip was asked 1 s after
+  the stall, while the guest's OWN move into the host's field (the stalled 2723, trip E1.T2) was still completing; its
+  LoadingCompleteReq came only at 09:55:50, and that load closed at its own place (nb5's "a far travel asked before the
+  login's move ends is undone"). In cs127b the 8 s rule's second request (after that load) was what moved it.
+  Fix (10:00-10:04): native export cdmp_user2_load_settled (the host's MovePhaseTracker: 1 Stable = the server wrote
+  the LoadingCompleteAck of user 2's last load, 0 under way, -1 none); the host's layer tells the guest (coop_lobby
+  kMsgGuestLoad 30, on a change and every 3 s); the guest's join trip (mod.cpp, the 12 s rule) also waits for "done"
+  (at most 90 s more, logged); the step checks those lines. Rebuilt (cdmp f5120b70, coopplus 30406e9f; the same 14
+  known old failures; layer tests pass). ~10:04 cs127d = run_pp stall + lowsave (the normal join must not regress).
+- 10:07 written while cs127d runs: the join's wait shows a note from 5 s on ("The host's game is still loading you
+  in: the trip to <host> follows", every 30 s) so the post's "waits in the world with a note" holds on that path too.
+- 10:11 *** BUG 2: 0x58C8345D IS NEITHER PREEMPT ERROR *** (cs127c's host log, the new one-time line:
+  eErrNoAlreadyPreemptedActor 0xA956C7AF, eErrNoAlreadyPreemptingActor 0x6DB9963D). No preemption state refuses the
+  friend's talk while the host talks. And the [2671] C lines' user key comes from r13: the handler's requester actor
+  is the friend's own character. Left in the 2642 path (S46 1.1): the requester / NPC state checks and the common
+  validation, whose 0x2126920 reads the FIELD OWNER's (the host's) manager. cs125b's "the focus swap did not help"
+  ran on the network thread (cs125d), so it tested nothing: the shared focus is back as the lead. Next (no test
+  running): scratchpad errhash.py names 0x58C8345D if the registrar's hash is a common one (three known pairs).
+- 10:13 cs127d step 1 (stall, the load gate on): 61 pass, 2 fail. The host's samples, the friend told, the join's trip
+  WAITED ("the host's server is still finishing our own load", 10:08:55.9) but went at 10:08:59.5 ("done (3.6 s of
+  waiting)") although the host's tracker still said COMPLETING (summary lines 10:08:59 / 10:09:04) and turned STABLE
+  only at 10:09:19: the guest's 10 s freshness rule fired (its last load word was from ~10:08:46-49, while the busy
+  words kept arriving; why the repeats did not land is not clear from the logs). The trip then waited for the stall,
+  went at 10:09:09.5 (one request), the friend's own LoadingCompleteReq came at 10:09:18.4, the trip never took, hops
+  after 45 s, 1 m from the host at the end. Fixed (layer): the guest trusts the host's last load word (no freshness
+  rule; the join's 90 s cap stays), and the host logs each change it tells. The second step (lowsave) runs.
+- 10:12-10:16 BUG 2 FIX WRITTEN (native shop_probe.cpp, not built): C0, a mid hook at 0x2CDC13D (mov rcx,[rcx+0x98],
+  7 bytes, right before the 2642 handler's call of its check 0x2E3C180; installed after C, whose context check reads
+  those bytes) opens the per-player slot for user 2's talk (r13's user = user 2) with its own focus triple in the
+  host's manager, C closes it first thing. Not for the NPC of the host's own accepted talk while the host's focus is
+  set (C records the host's accepted NPC). Counted in the slot's summary ("its talks N ... left to the game"). The
+  0f4af72 idea, now on the logic thread. Test: cs125 (the host in a talk, the friend opens Renee's shop: #3).
+- 10:20 cs127d step 2 (lowsave, the load gate on): 50 / 0 (the normal join is not slowed into a failure). Total 104 / 2
+  (the stall step's two: the freshness rule, fixed).
+- 10:21 static (scratchpad errtable73.py: 3151 registrations; errhash.py): no common hash (crc32 / fnv / djb2 / sdbm /
+  oaat / murmur3 / xxh32, as-is / lower / upper / without "eErrNo", ascii / utf-16) gives the three known pairs, so
+  0x58C8345D cannot be named offline. The error globals are 0x71B8974..0x71D7064 (the registrar 0x164E1D0's r8); the
+  talk-related names there include eErrTooFrequentlyPreemptRequest 0x71D6970, eErrNoAlreadyInteracting 0x71D6D7C,
+  eErrInteractionPreemptionFail 0x71D5E58, eErrNoSequencerNotInteractableState 0x71D7034,
+  eErrNoSameHierarchyGroupWithInteractionTarget 0x71D7038, eErrNoBlockInteractionByQTE 0x71D6FBC. Written: the
+  one-time line also scans 0x71B0000..0x71E0000 for 0x58C8345D and logs the globals that hold it (named from the CSV).
+  talkwhile's slot checks updated for the logic-thread summary. Built (cdmp fd4e41db, coopplus e3283c1e; the same 14
+  known old failures; layer tests pass). ~10:23 cs128 = run_pp talkwhile + stall (BUG 2's C0 window; the load gate
+  with the last word counting).
+- 10:24 STOPPED HERE (usage limit). cs128 was still running in the background (results: build/native/prepost-cs128.txt,
+  cs128-talkwhile.*, cs128-stall.*). NOTHING of today's 09:11+ work is committed: native (stall lines + samples,
+  freeze_sample_thread_text, cdmp_server_stalled_ms, cdmp_user2_load_settled, the TEST-ONLY dev_server_stall_ms,
+  shop_probe_logic_thread, the preempt-error line + 0x58C8345D scan, BUG 2's C0 talk window) and outer (layer
+  revive_prompt / coop_lobby / mod.cpp / native_mode_text.h / tests, tools/prepost.sh stall + talkwhile, docs,
+  CHANGELOG, README / Nexus / features, ROADMAP, LESSONS). Next, in order: read cs128 (talkwhile: did #3 open during the
+  host's talk, "its talks N", the 0x58C8345D scan line; stall: the join waits for the load, one request, "far travel
+  took"); fix if needed; commit native (scratchpad/commit_native_stall.txt, fill TALKWHILE) -> tools/sync-native-base.sh
+  -> commit outer (scratchpad/commit_outer_stall.txt) -> push; package-native.ps1; if BUG 2 is fixed put talkwhile in
+  the release list (30 steps); full pass pp60 (armwrest shop chest first, then the rest incl. stall); post with
+  scratchpad/stage_post.py + docs/release/shared-world-playtest/download-next-draft.txt; then the Borque DMM note
+  (scratchpad/reply_borque_dmm.txt).
+- 10:41 *** cs128: BUG 2 FIXED, the stall join WORKS *** (run_pp, SAVES OK 5/5 both steps). talkwhile 28 / 0: the
+  friend's #3 opened Renee's shop menu DURING the host's talk with the organizer, never refused as busy; "its talks 2
+  (... left to the game: 0; the C0 window hooked)", swaps none failed / unbalanced. The new scan named the error:
+  0x58C8345D lives in 0x71D5EA4 = eErrNoInvalidStageChartInteractionCondition (the talk's stage-chart check through the
+  host's manager: the shared focus after all; cs125b's swap had run on the network thread). stall 56 / 0: the friend
+  told at 10:37:26, the join's trip waited 21.5 s for its own load ("done" at 10:37:55, the host's tracker STABLE),
+  one request ("right after a stall of the server: one request only"), far travel took 0.5 s, arrived, 1 m from the
+  host. talkwhile joins the release list (30 steps); README / Nexus / features / CHANGELOG / the post's draft say the
+  talk bug is fixed (the same NPC at once stays the game's rule). (The stop at 10:24 was a usage-limit pause.)
