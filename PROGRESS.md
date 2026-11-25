@@ -11156,7 +11156,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   slot with every writer covered). User: says some phone messages did not reach me; listed what arrived, asked to
   resend anything else.
 - 19:33 (static, the user plays) the focus slot's code found on 3732 (scratchpad focus73.py / b / c): reset 0x21C6490
-  and 0x21C6A40, undo 0x21CAF10, the setter 0x2271152's store 0x2271252 (it reads the focus first and does not take
+  and 0x21C6A40, undo 0x21CAF10, the setter 0x2271150's store 0x2271252 (it reads the focus first and does not take
   it from another stage), the clear at a stage's end 0x21CB970; the request path writes it synchronously (2880 ->
   0xE169180 -> 0x2C0B8B0 -> 0x226F7A0 -> 0x2271150). The joined player's purchases DEPEND on the slot (tcB185 /
   tcB194 bought only because its own shop scene took the host manager's focus), so the fix is a per-player slot
@@ -11166,3 +11166,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   around ServerRunThread's one call of ServerNet::OnRecvPacket 0x2A10B95; every hook's bytes and branch targets
   checked in the exe). cs121.sh prints the focus lines. Discord: not checked since 18:03 (the browser pane closed
   with the restart; reopening it could take the game's focus): next check when the PC is free.
+- 19:43 (static) THE FIX WRITTEN, off by default (native c2ec8eb, local, not built): [session2] user2_focus_slot=1,
+  the per-player focus slot. fsl::FocusSlots (focus_slot_logic.h + tests/focus_slot_tests.cpp, 7 tests traced by hand)
+  keeps the joined player's own +0x90 / +0x98 / +0xA0 and swaps it into the host's manager around each request of
+  its session (FR1 / FR2) and around the focus setter 0x2271150, a stage processor's tick 0x226DA80 and a stage's end
+  0x21CB970 when their stage is positively the joined player's; anything else as it is; server thread only; all
+  hooks or none. cs121.sh takes "user2_focus_slot=1" as a third argument. An independent read-only review of the
+  three unbuilt native commits runs. Next when the PC is free: build (93 native tests now), the review's fixes,
+  cs121 (probe), cs121 with the fix, the rest of pp56 / a full pass, Discord.

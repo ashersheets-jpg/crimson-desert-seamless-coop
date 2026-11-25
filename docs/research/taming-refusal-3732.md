@@ -141,3 +141,13 @@ So the request path writes the slot synchronously (2880 StageBranchStateReq -> 0
    names the focus holder too.
 2. If cs121 reproduces it: design the per-player focus slot (above) with every writer covered, unit-test the swap
    rules, then the checklist and a taming by a tester.
+3. WRITTEN (native c2ec8eb, local, not built; off by default: [session2] user2_focus_slot=1, needs shop_probe=1):
+   fsl::FocusSlots (session2/focus_slot_logic.h, tests/focus_slot_tests.cpp) and its hooks in shop_probe.cpp: the
+   request window FR1 / FR2 (user 2's session: its triple in), inline hooks at the setter 0x2271150, the processor's
+   tick 0x226DA80 and a stage's end 0x21CB970 (each 3 or fewer register arguments, no stack argument read: checked),
+   which swap user 2's triple in only for a stage positively owned by user 2 ([[stage+0x48]+0x60] = its character)
+   and pass everything else on as it is (a wrong owner read gives the game's own behaviour back, never a new mix).
+   Server thread only (server_thread_id()). Order of use: the focus probe's lines first (do they mark user 2's stages
+   "USER 2's"?), then cs121 with user2_focus_slot=1, then the checklist with it, then a tester's taming.
+   Not covered: the base's two reset paths (0x21C6490, 0x21C6A40; harmless: a stale id is no live stage, so it blocks
+   nothing), and user 2's focus work outside its requests and its own stages' setter / tick / end (none known).
