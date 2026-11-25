@@ -309,6 +309,7 @@ Config load_config(const std::wstring& ini_path) {
     c.s2_guest_x_research = read_uint(ini_path, L"session2", L"guest_x_research", 0) != 0;
     c.s2_guest_x_eval_fix = read_uint(ini_path, L"session2", L"guest_x_eval_fix", 0) != 0;
     c.s2_shop_probe = read_uint(ini_path, L"session2", L"shop_probe", 0) != 0;
+    c.s2_user2_focus_slot = read_uint(ini_path, L"session2", L"user2_focus_slot", 0) != 0;
     c.s2_trade_probe = read_uint(ini_path, L"session2", L"trade_probe", 1) != 0;  // Co-op+: the give and the shared stash ride on it (host)
     c.s2_inter_probe = read_uint(ini_path, L"session2", L"inter_probe", 0) != 0;
     c.s2_voice_probe = read_uint(ini_path, L"session2", L"voice_probe", 0) != 0;

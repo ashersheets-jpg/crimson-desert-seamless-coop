@@ -103,6 +103,8 @@ bool server_push_extra(std::span<const uint8_t> packet);
 inj::Outcome server_inject_ex(std::span<const uint8_t> packet);
 // server_inject_ex(...) == Queued.
 bool server_inject(std::span<const uint8_t> packet);
+// Co-op+ 2026-11-24: the packet (OnRecvPacket's 4th argument) is one of the mod's buffers, i.e. a request of user 2.
+bool server_packet_is_user2(uintptr_t pkt) noexcept;
 // Network thread, every loop turn: logs the exceptions the NetworkThread
 // caught (each one, loudly), the server not taking our buffers (with its
 // threads' park flags), the NetworkThread not turning, the queue at its bound.

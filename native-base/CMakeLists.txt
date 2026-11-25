@@ -640,6 +640,12 @@ add_executable(cdmp_tests_optd_shop_c1 tests/optd_shop_c1_tests.cpp)
 cdmp_strict(cdmp_tests_optd_shop_c1)
 target_link_libraries(cdmp_tests_optd_shop_c1 PRIVATE cdmp_common)
 add_test(NAME optd_shop_c1 COMMAND cdmp_tests_optd_shop_c1)
+
+# Co-op+ 2026-11-24: the per-player focus slot of the host's stage manager (session2/focus_slot_logic.h).
+add_executable(cdmp_tests_focus_slot tests/focus_slot_tests.cpp)
+cdmp_strict(cdmp_tests_focus_slot)
+target_link_libraries(cdmp_tests_focus_slot PRIVATE cdmp_common)
+add_test(NAME focus_slot COMMAND cdmp_tests_focus_slot)
 # P8 option U, U-0 (research/s25/mundo-escenarios-propios.md): offline logic only - the key, the cells and world
 # positions as 0x288B7A0 / 0x4F8220 compute them, the arm check, the would-be state machine, who, the timer table, the
 # (reason, caller) table and the overlap counts. Not the hooks or the game.

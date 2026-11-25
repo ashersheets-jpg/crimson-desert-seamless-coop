@@ -408,6 +408,39 @@ void test_names() {
     CHECK(!r.has(0));
 }
 
+// Co-op+ 2026-11-24: the branch refusal's "why" (the manager's exclusive check, 0x21CABF0's first rules).
+void test_exclusive_verdict() {
+    // No current stage (both slots' low 29 bits 0), whatever the high bits.
+    CHECK(shp::exclusive_verdict(0, false, 0x29D) == shp::Excl::NoCurrent);
+    CHECK(shp::exclusive_verdict(0x2000000000000000ull, true, 0x29D) == shp::Excl::NoCurrent);
+    // The scene itself is the current one: not blocked (live or not).
+    CHECK(shp::exclusive_verdict(0x29D, true, 0x29D) == shp::Excl::ThisScene);
+    CHECK(shp::exclusive_verdict(0x29D, false, 0x29D) == shp::Excl::ThisScene);
+    // Another stage: blocked only when it is live in the manager (0x21C7370 found it).
+    CHECK(shp::exclusive_verdict(0x28F, true, 0x29D) == shp::Excl::Another);
+    CHECK(shp::exclusive_verdict(0x28F, false, 0x29D) == shp::Excl::CurrentGone);
+    // The ids compare whole (0x21CABF0 compares the two stages' u64 +0x30).
+    CHECK(shp::exclusive_verdict(0x100000000000029Dull, true, 0x29D) == shp::Excl::Another);
+    for (auto v : {shp::Excl::NoCurrent, shp::Excl::CurrentGone, shp::Excl::ThisScene, shp::Excl::Another})
+        CHECK(std::string_view(shp::excl_name(v)) != "?");
+}
+
+// Co-op+ 2026-11-24: a PrepareSequencerAck's owner and sequencer (user 2's own scenes for the per-player focus slot).
+void test_prepare_owner() {
+    std::vector<uint8_t> p(108, 0);
+    p[0] = 4;                                                           // kind
+    const uint32_t actor = 0xA0100066, owner = 0xA0100066;
+    const uint64_t seq = 0x29D;
+    std::memcpy(&p[1], &actor, 4);
+    std::memcpy(&p[5], &owner, 4);
+    std::memcpy(&p[9], &seq, 8);
+    const shp::PrepareOwner po = shp::parse_prepare_owner(p);
+    CHECK(po.ok && po.owner == 0xA0100066 && po.id == 0x29D);
+    const std::vector<uint8_t> short_one(16, 0);
+    CHECK(!shp::parse_prepare_owner(short_one).ok);
+    CHECK(shp::kOpPrepareAck == 2356);
+}
+
 void test_packets() {
     // Session 11 (H1): C>S 2671 A0100001 -> B0100153 interaction 000F4321 ... 00000001.
     const uint8_t p2671[] = {0x01, 0x00, 0x10, 0xA0, 0x53, 0x01, 0x10, 0xB0, 0x21, 0x43, 0x0F, 0x00,
@@ -486,6 +519,8 @@ int main() {
     test_keys();
     test_who();
     test_names();
+    test_exclusive_verdict();
+    test_prepare_owner();
     test_packets();
     if (g_failures) {
         std::printf("%d check(s) FAILED\n", g_failures);
