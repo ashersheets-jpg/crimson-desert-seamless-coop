@@ -1,0 +1,14 @@
+**Update: shared world playtest 0.1.0-alpha+a03a63b9, for game 1.0.0.3732**
+Use this instead of 614591d0; **both players need the same build**.
+
+- **Joining ended in an endless loading screen** (<@224953308010381312>'s session): the join worked, but right after it the host's game stopped answering for minutes while Co-op+ was moving the friend to the host, and Co-op+ never closed its loading screen. Now that trip waits in the world with a note until the host's game answers. The host's log also says what its game was stuck on: if you see that note, please send both report zips.
+- **Taming a wild horse as the joined player, take two:** the fix in 614591d0 never took effect (it ran on the wrong thread of the game). It's redone here, still untested on a real taming: if one fails, both zips please.
+- **Talking to NPCs while the host is in a conversation** (the bug many of you hit): the joined player's talks were refused, with a misleading "busy" note, because the host's game keeps one "current scene" and the host's talk held it. The joined player's talks now use their own. Only talking to the very same NPC at the same time stays one at a time (the game's own rule).
+- Still open: arm wrestling in **solo** with the mod can leave your character jumping.
+
+Tested with two copies of the game on one PC (Nvidia): the full checklist on 1.0.0.3732 (30 steps), including a join where the host's game was made to stop answering for 25 s. Not covered: two PCs over Steam, real internet, AMD / Intel cards, long sessions.
+
+- `...a03a63b9-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tell us in <#1567319198206525450> how it goes, with the report zip from **both** players (close the game, run **Diagnose Co-op+.cmd**).

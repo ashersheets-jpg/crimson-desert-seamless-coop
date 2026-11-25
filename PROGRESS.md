@@ -5,10 +5,17 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
-- 2026-11-25 09:51 NOTHING NEW TO DECIDE. Under way: the next batch (Borque's endless loading: the far travel waits
-  while the host's server is stalled, the stall diagnostics; the taming fix redone; the talk toast), its forced-stall
-  test cs127c, then the full checklist (29 steps with the new "stall") and the post. 614591d0 was posted 05:51
-  (its taming fix turned out never to act: corrected in the next post).
+- 2026-11-25 15:05 NOTHING NEW TO DECIDE. a03a63b9 is POSTED (below). Under way: Brycecco's and Arcticwolf's
+  two-PC session zips (25 Nov, on 614591d0: the first two-PC data from them), then cs129 (Edward's Xbox-pad arm
+  wrestling).
+- 2026-11-25 15:01 DONE: a03a63b9 POSTED in #download-here by me (standing OK; pp60: all 30 checklist steps
+  passed, 1296 checks, 0 failed; SAVES OK and the install restored 5/5 in every step; the zips = the files in dist\,
+  12.49 MB / 6.81 MB): Borque's endless loading (the trip waits while the host's server is stalled; the host's log
+  names what it is stuck on), BUG 2 fixed (the joined player talks to NPCs while the host is in a conversation), the
+  taming fix redone (untested on a real taming). Tags Borque. Message 1575240072368750592, text:
+  docs/release/shared-world-playtest/download-a03a63b9.txt. Replies in #play-testing-feedback: Brycecco + Arcticwolf
+  (15:02, 1575240325474295859: thanks, reading their zips, the new build, what to test), Borque (15:03,
+  1575240412204105820: the new build; try once without DMM's version.dll + DmmRuntime.asi).
 - 2026-11-24 04:16 HANDS-ON (5 minutes, not urgent, P1 Borque (6) fishing for the joined player): research shows
   the joined player's own game drops the fish summon (it runs a gimmick's summon only if that game controls the
   gimmick, and the host's game controls all of them), but my scripted casts never got the rod out: the quick slot
@@ -11648,3 +11655,20 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   one request ("right after a stall of the server: one request only"), far travel took 0.5 s, arrived, 1 m from the
   host. talkwhile joins the release list (30 steps); README / Nexus / features / CHANGELOG / the post's draft say the
   talk bug is fixed (the same NPC at once stays the game's rule). (The stop at 10:24 was a usage-limit pause.)
+- 10:43-10:44 committed native c2a0ac8 (stall diagnostics, the exports, the TEST-ONLY switch, BUG 2's C0 window),
+  synced (90307e0), outer a03a63b (the layer: far travel waits / one request / the join's load gate and note; the slot
+  ON; the checklist steps stall + talkwhile, 30 steps; docs), pushed; packaged a03a63b9 (= the build tree's DLLs).
+  ~10:45 pp60 started: the full checklist, 30 steps (armwrest shop talkwhile chest first). (Rule slip 10:45: one more
+  no-op `echo` through Bash right after pp60 started. Waiting from here: Read / Grep / the browser's clock only.)
+- 14:58 *** pp60 PASSED: all 30 steps, 1296 checks, 0 failed *** (armwrest 52, shop 25, talkwhile 28, chest 49,
+  static 12, real 14, fresh 45, xess 46, fsr 46, latehook 61, display 7, lowsave 50, stall 56, revive 51, loot 50,
+  crime 53, leave 27, door 49, farfight 49, farfight2 48, newsave 104, solostart 51, mounts 53, mountfight 49, nosave 7,
+  retry 49, stuck 53, mismatch 9, hostrevive 53, lagrun 50; SAVES OK, the install restored 5/5 in every step). The
+  run's TOTAL line said 1142 / 26 steps: the static step started prepost-pp60.txt anew (": > $R") after the four steps
+  run first, so their sections are only in prepost-pp60-<step>.console.txt (52 / 25 / 28 / 49, 0 failed). Fixed in
+  tools/prepost.sh: static starts the report only when it holds no step yet (LESSONS).
+- 15:01 POSTED a03a63b9 in #download-here (message 1575240072368750592; both zips 12.49 MB / 6.81 MB = the dist\
+  files; the Borque mention resolved). 15:02 replied to Brycecco + Arcticwolf (their 17:46 question and their two zips
+  of 18:59 / 19:00 UTC: a new save to the camp outside the castle, Arcticwolf hosting, on 614591d0) and 15:03 to
+  Borque (DMM's version.dll). 15:03 downloaded the two zips (scratchpad dl-cecco-1125, read only): each the standard
+  Diagnose files (cdmp.log 15.0 MB host / 4.8 MB joiner, coopplus.log, report.txt).

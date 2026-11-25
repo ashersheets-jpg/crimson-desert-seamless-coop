@@ -230,7 +230,8 @@ BASE="-CoopPlus -Lobby -Fresh -PackageIni $MODW -HostVariant coop-test-bandits"
 mkdir -p $N/scan; kit_scripts
 case $STEP in
 static)
-  : > "$R"; say "RELEASE CHECKLIST RUN $TAG   package: $(basename "$PKG")"
+  # The report starts here only when it holds no step yet (pp60 ran four steps before static: ": > $R" wiped them).
+  grep -q '^== ' "$R" 2>/dev/null || : > "$R"; say "RELEASE CHECKLIST RUN $TAG   package: $(basename "$PKG")"
   head_step "the package itself (no game)"
   [ -f "$PKG.zip" ] && ok "zip exists ($(du -h "$PKG.zip" | cut -f1))" || bad "zip missing: $PKG.zip"
   a=$(sha256sum "$MOD/cdmp.asi" | cut -c1-64); b=$(sha256sum $ROOT/upstream/cdmp-native/build/bin/RelWithDebInfo/cdmp.asi | cut -c1-64)

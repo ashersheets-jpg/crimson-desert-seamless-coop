@@ -876,3 +876,10 @@ every armwrest step, but on the gallery above (620.76) in cs122b and cs122c: 619
 the game sometimes pushes the character up instead of letting it fall. The screenshots showed an upstairs corridor and
 two runs were lost before the logs' positions showed why. Teleport a little above the floor you want (617.5 here),
 and when a run "cannot find" an NPC it reached before, compare the character's height in the logs first.
+
+## A step that starts the report must not wipe the steps run before it (2026-11-25, pp60)
+The checklist's static step began with ": > $R" (start the report), written when static always ran first. pp60 ran
+the four newest steps first (armwrest shop talkwhile chest) to fail fast; static then wiped their sections, and the
+pass's TOTAL said 1142 checks over 26 steps although all 30 had passed (their per-step lines and console files kept
+the counts). Static now starts the report only when it holds no step. When a pass's total disagrees with its step
+lines, count the steps before believing either, and keep each step's own output next to the shared report.

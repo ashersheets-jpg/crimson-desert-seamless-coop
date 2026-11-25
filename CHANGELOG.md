@@ -5,7 +5,7 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-Next build (not posted yet), from Borque's 25 Nov session and the talk / taming research of 25 Nov:
+Posted 2026-11-25 15:01 as 0.1.0-alpha+a03a63b9 (checklist pp60: all 30 steps, 1296 checks, one PC), from Borque's 25 Nov session and the talk / taming research of 25 Nov:
 - **The joined player's trip to the host waits while the host's game is not answering** (Borque: an endless loading
   screen right after joining). His host's server took no input for 30 s, 26 s and 2.5 minutes just after the friend
   came into its world 600 m away. Co-op+'s far travel (the join's "go to your friend") had already opened its loading
