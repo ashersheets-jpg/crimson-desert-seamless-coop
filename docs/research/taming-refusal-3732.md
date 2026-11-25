@@ -1,6 +1,7 @@
 # The joined player's taming: why the host's server refuses its last step (game 1.0.0.3732)
 
-Status 2026-11-24: research. A release is built (native 52ef13e); the cause is not fixed.
+Status 2026-11-24: research. A release is built (native 52ef13e); the cause is not fixed. Evening: the likely cause
+is a focus slot both players share in the host's stage manager (below: "The likely cause").
 
 ## What happened (Borque's two-PC session, 24 Nov, build 2451dff5)
 - The joined player (user 2) mounted a wild horse; its game prepared its own taming scene 0x29D (resource hash
@@ -58,8 +59,51 @@ progress on the horse, whose AI the ride rule handed to the joined player's game
 log-only probe (scratchpad apply_branch_fail_probe.py; bytes checked in the 3732 exe) names which of the two places
 refused and the target node's object types, from a tester's taming.
 
+## The condition call, read (2026-11-24 evening; scratchpad cond73.py / cond73b.py on the 3732 exe)
+- 0x25C82A0(node, X = [scene+0x28], context, scene, u8, ptr). X is the scene's MANAGER, not an actor: the mod's
+  other modules name +0x28 kStage_Mgr, and 0x21CAF70 below feeds it to the scene lookup 0x21C7370 as a manager.
+  (So the first BF probe's "owner actor" is [[scene+0x28]+0x60], a manager field; fixed in the next build's text.)
+- First path: the target node's entry in the scene's processor list ([[scene+0x58]+0x10], u32 count +0x18, matched by
+  u32 [entry] == [node+0x10]). If its element flag [[entry+0x88]+0x75] is set, 0x21CABF0(manager, scene) is asked and a
+  yes REFUSES. 0x21CABF0: 0x21CAF70 takes the manager's current stage ([mgr+0xA0] when its low 29 bits are set, else
+  [mgr+0x90]) and looks it up; none -> no; the same stage as the scene -> no; another live stage -> yes, unless its
+  later checks (the two stages' +0x78 group through a table; a type-6 scene's list) clear it.
+- Otherwise the node's condition object [[[node]+0x38]] is asked (vtable +8, or +0x10 when the context's +0x828 is
+  set) with a pa::CompareSequencerTargetParameter (RTTI; it derives from pa::CompareTargetParameter); a true answer
+  refuses. The objects are the game's pa::ConditionData_* classes (about 500 in the exe's RTTI, e.g.
+  ConditionData_CheckWildVehicle, _CheckRide, _IsRidingVehicle, _BlockByExclusiveStage, _CheckOwnershipState).
+- What [mgr+0x90 / +0x98 / +0xA0] are was already in ByJunter's S46 notes (native-base/docs/research/s25/s46-datos/
+  nativo.md, "Qué son [mgr+0x90/+0x98/+0xA0]"): a branch into a node with that same flag sets [mgr+0xA0] = the scene's
+  id and [mgr+0x90] = 0 (0x2045BC0); 0x1F6FF40 undoes it (+0xA0 = 0, +0x90 = +0x98); deleting the current stage
+  clears it (0x1F709A0). It is "the focused stage of the manager's owning player". Shop buys (2789 / 2366) check it too.
+
+## The likely cause: one focus slot for two players
+The joined player's own scenes are prepared in the HOST's manager (0x51494321800 in Borque's log; its own manager
+0x5150BD90800 holds none of them: the base's own-stages mode "U" is off and cannot arm on 3732). So both players'
+flagged nodes write and check ONE focus slot. In Borque's host log, between the taming's accepted "then 0"
+(13:03:30.5, which most likely made 0x29D the focus) and its refused "then 2" (13:03:45.1), the same manager prepared
+the host's 0x29E (13:03:30.1), 0x29F ('cd_seq_faction_bleed_moru_slave_0300_01', 13:03:36.3) and 0x2A0 (13:03:36.6),
+and the joined player's own 0x2A1 (13:03:42.3, its character plus three NPCs of scene 0x2BC74C06: an encounter of
+its own, like 0x299 before it). If any of them took the focus, the taming's last (flagged) step had to be refused.
+Not proven: the next build logs it ("ShopProbe [branch why]": the node's flag, the manager's +0xA0 / +0x90, whether
+that stage is live, both stages' names, the condition object's class).
+The same slot predicts more: a joined player's flagged step refused while the host has a focus stage of its own, the
+host's refused while the friend's has it, and a shop buy of either refused (eErrNoInvalidStageInfo) when the other
+holds the focus. cs121 (build/native/cs121.sh) is a one-PC repro of the second case: the friend's own butcher shop
+open (the host far away first, so it is its own scene, not the twin) while the host talks to the inn's arm-wrestling
+organizer, takes part and mashes.
+
+## Fix directions (after the data)
+- Proper: the joined player's own scenes in its own manager (the base's mode "U", user2_stages / user2_funnels'
+  vf48 routing; not armed on 3732). Large; it is the base's unfinished design.
+- Narrow: a focus slot per player for the host's manager: keep the host's +0x90/+0x98/+0xA0 and user 2's apart and
+  swap the right one in around the server's work for user 2's scenes (its branch requests, its scenes' processor
+  ticks, the deletes). Every writer of the three fields has to be covered (0x2045BC0, 0x1F6FF40, 0x1F709A0, vf1
+  0x1F6B860) or the slot desyncs; to be designed once cs121 / a tester shows the slot is the cause.
+- The current release (52ef13e) only ends the refused scene for the joined player after 6 s.
+
 ## Next
-1. errglobal73.py: confirm 0x71BB2E8 (or another global) is eErrNoFailedStageChartBranchCondition and which path sets it.
-2. If it is the condition call: what 0x25C82A0 evaluates (its arguments: the node, [r13+0x28], the scene, a byte).
-3. A taming cannot be scripted: a log-only probe at the condition call for user 2's scenes would let a tester's
-   session say which condition fails.
+1. Build the "why" lines; run cs121 (one PC). Post the diagnostics build with the next fixes so a tester's taming
+   names the focus holder too.
+2. If cs121 reproduces it: design the per-player focus slot (above) with every writer covered, unit-test the swap
+   rules, then the checklist and a taming by a tester.

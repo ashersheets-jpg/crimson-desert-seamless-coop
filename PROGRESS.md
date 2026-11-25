@@ -11140,3 +11140,18 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   removed, no game running). pp56: 14 steps clean (static 12 ... crime 53, leave 27, shop 25: all 0 fail), the door
   step's 11 fails are the stop. The other 13 steps (door, farfight ... armwrest) are still to run on db220af7 when
   the PC is free again.
+- 18:45-19:22 (the user plays; static work only, no build or game): THE TAMING REFUSAL'S LIKELY CAUSE. cond73.py /
+  cond73b.py read the condition call 0x25C82A0 in the 3732 exe: its second argument [scene+0x28] is the scene's
+  MANAGER; its first path refuses a node whose element flag [[entry+0x88]+0x75] is set when 0x21CABF0 says the
+  manager's current stage ([mgr+0xA0], else [mgr+0x90]) is another live stage; otherwise the node's condition object
+  (a pa::ConditionData_* class, RTTI) decides. ByJunter's S46 notes already say what that slot is: the manager's
+  FOCUS stage, set by a branch into such a flagged node, "the focused stage of the manager's owning player". The
+  joined player's own scenes are in the HOST's manager, so the two players share one focus slot; in Borque's log the
+  host's 0x29E / 0x29F / 0x2A0 and the joined player's own encounter 0x2A1 were prepared in that manager between the
+  taming's accepted step and its refused one. Not proven yet. Written (not built): native 418d116 (local), ShopProbe's
+  "[branch why]" lines after a refusal (the node's flag, the manager's focus stage and whether it is live, both names,
+  the condition object's class) + shp::exclusive_verdict unit tests; build/native/cs121.sh, a one-PC repro (the
+  friend's own butcher shop held open while the host talks to the inn's arm-wrestling organizer and plays); the
+  research note's new sections (cause, predictions, fix directions: the base's own-stages mode, or a per-player focus
+  slot with every writer covered). User: says some phone messages did not reach me; listed what arrived, asked to
+  resend anything else.
