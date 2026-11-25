@@ -785,3 +785,29 @@ cdmp_tests_optd_seq_copy crashes partway (a baseline failure) and its stdout was
 crash lost every line, the new test's too: "old failure" said nothing about the new code. Now the suite sets
 stdout unbuffered and runs the new test first. For a suite on the baseline list, run the exe by hand after adding a
 test and read its own lines before calling the build fine.
+## Search the base's research before reversing a structure (2026-11-24, the taming refusal)
+Hours went into reading 0x25C82A0 / 0x21CABF0 to learn what a manager's +0x90 / +0xA0 are; ByJunter's S46 notes
+(native-base/docs/research/s25/s46-datos/nativo.md) already said it: the manager's FOCUS stage, with its setter, its
+undo and its clear. Before reading a function for its meaning, grep native-base/docs/research for the offsets and
+the function's old (2976) neighbours; the base's notes name 2976 addresses, which the port tools and the function
+order (lookup 0x1F6C190 -> 0x21C7370, etc.) map to 3732.
+
+## Use the module's own offset names before naming a field in a probe (2026-11-24, BF probe)
+The first branch-refusal probe logged [[scene+0x28]+0x60] as "the owner actor"; +0x28 is the scene's MANAGER (named
+kStage_Mgr in four other modules). The probe's line would have pointed the analysis at an actor that was never
+there. grep the tree for the offset (`kStage_`, `kMgr_`, `kProc_`) before writing a new name for it.
+
+## A new overload can silently capture existing calls (2026-11-24, shop_probe name_of)
+A new name_of(const uint64_t*, int) next to the module's name_of(const uint64_t*, size_t) would have taken every
+existing call with a literal count (name_of(v + 6, 5)) and changed its meaning without a compile error. Give a new
+helper its own name, or grep the callers of the name first.
+
+## One state per manager shared by two players is a bug class (2026-11-24, the focus slot)
+The joined player's own scenes live in the host's stage manager, so anything the game keeps once per manager (the
+focus slot +0x90 / +0x98 / +0xA0) is shared by both players: one player's step is refused or checked against the
+other's state. When a joined-player failure is a server refusal with no obvious cause, ask what per-manager or
+per-owner state the check reads, and whose it is in the shared world.
+
+## Messages from the user's phone can arrive late and together (2026-11-24)
+Four messages written hours apart reached the session at once, after a later one ("those sent late"). When the user
+says messages are missing, list what arrived, in order, and ask for the rest again; act on the newest intent.
