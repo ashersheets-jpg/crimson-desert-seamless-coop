@@ -11185,3 +11185,19 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   the stage-end check runs against the triple that stage meets; the host's own stages inside the friend's request get
   the host's triple. None of the three wrapped functions returns in xmm0 (checked in the exe). Also 24 Nov: the
   progress chart for the owner (docs/drafts/progress-2026-11-24.png, gains since 13 Nov; sent).
+- 20:28 the PC is free again (no update restart pending; Steam was not running after the user's restart: started it
+  minimized with its saved login, 20:36). Built (93 native tests, the 14 known failing; focus_slot and optd_shop_c1
+  pass; layer tests pass), package 89bcc5e1 (= the build tree). Discord 20:28: no new feedback / bug report; #general:
+  a newcomer (PapiHongo) answered by the owner and Jax; Brycecco (20:39) offers to test this week over a Steam invite.
+- 20:50 cs121a (89bcc5e1, the probe; SAVES OK, 5/5, both alive): the focus probe works and shows (1) the setter also
+  runs for the host's CLIENT manager (0x5C8B6F89300, its own thread T24144) next to the host's server manager
+  (0x5C92232F000, the server thread T29920); (2) the host's talk to the arm-wrestling organizer is focus stage 0x34C
+  (server: set 20:48:12.9 ... undone 20:49:05); (3) the request window counted 0 of ~560,000 requests as user 2's:
+  user 2's requests arrive in that call with the HOST's session in r8 and OnRecvPacket's entry hook re-routes them by
+  the buffer's tag; (4) [[stage+0x48]+0x60] read 0 on every stage (the owner read is wrong); (5) the joined player's
+  shop went through its TWIN (answered locally, no server branch): with the host at the inn 75 m away the host's game
+  runs the butcher's scene, and the harness's key timers start minutes after the scripts, so the planned overlap did
+  not happen. Fixed in native ada0215 (local): user 2's requests told by their buffer's tag (server_packet_is_user2),
+  both owner fields logged (+0x98 too). Rebuilt (the same 14 known failing). Next: the full checklist on it with the
+  probe (fix off): its [focus] lines show which activities take the focus and whether the joined player's own shop
+  (the shop step's alone half) writes the host server manager's slot; then the fix in a test.
