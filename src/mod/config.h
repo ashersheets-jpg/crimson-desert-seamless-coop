@@ -523,6 +523,10 @@ struct Config {
     // shop scenes (owner gate 0x288B87A, 0x288AAEF, the 2671 result, the server's 0x2126920) and user 2's
     // 2671/2720/2436/2591 with observer_seq_copy's R1 verdict. Needs create_session=1.
     bool s2_shop_probe = false;
+    // user2_focus_slot = 0 | 1, HOST (session2/shop_probe.h; Co-op+ 2026-11-24, docs/research/taming-refusal-3732.md):
+    // the joined player's own focus slot of the host's stage manager (its taming's last step was refused while another
+    // stage had the host's focus). Off by default; needs shop_probe=1.
+    bool s2_user2_focus_slot = false;
     // trade_probe, HOST (session2/trade_probe.h; B11 research): read-only probes of the server's 3111 item move.
     bool s2_trade_probe = true;  // Co-op+ 2026-11-10: on by default (the give B11 and the shared stash B12 need it)
     // lootr_probe = 0 | 1, HOST (session2/lootr.h): logs the server pickup worker and the host's packets after it.

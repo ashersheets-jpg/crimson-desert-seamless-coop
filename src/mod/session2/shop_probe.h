@@ -36,6 +36,9 @@ namespace cdmp::session2 {
 //
 // session2::install (host, create_session=1). Starts the install / drain thread. No-op when both are off.
 void shop_probe_start(bool on, const std::string& twin_mode);
+// Co-op+ 2026-11-24 (docs/research/taming-refusal-3732.md): user2_focus_slot=1, the per-player focus slot of the host's
+// stage manager (off by default). Before shop_probe_start; it needs shop_probe=1.
+void shop_probe_set_focus_slot(bool on);
 bool shop_probe_active() noexcept;
 // P8 option U, U-a: the owner gate G 0x288B87A is hooked here (it calls user2_stages_gate). Any thread.
 bool shop_probe_gate_live() noexcept;

@@ -1443,6 +1443,7 @@ bool install(const Options& opt) {
         if (!opt.create_session) {
             log::warn("Session2: shop_probe / funcnpc_twin need create_session=1; off");
         } else {
+            shop_probe_set_focus_slot(lc.s2_user2_focus_slot);  // Co-op+ 2026-11-24 (off by default)
             shop_probe_start(lc.s2_shop_probe, lc.s2_funcnpc_twin);
         }
     }

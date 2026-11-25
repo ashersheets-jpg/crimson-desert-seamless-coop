@@ -2,6 +2,7 @@
 #include "mod/session2/ai_handoff.h"
 
 #include <windows.h>
+#include <intrin.h>  // _ReturnAddress (the per-player focus slot's stage-end detour)
 
 #include <algorithm>
 #include <atomic>
@@ -15,6 +16,7 @@
 #include "mod/game/offsets.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
+#include "mod/session2/focus_slot_logic.h"
 #include "mod/session2/guest_actor_diag_logic.h"
 #include "mod/session2/observer_seq_copy.h"
 #include "mod/session2/p8_probe_logic.h"
@@ -196,6 +198,27 @@ SafetyHookMid g_fs_hook, g_fu_hook, g_fd_hook, g_fr1_hook, g_fr2_hook;
 std::atomic<uint64_t> g_focus_n[3][2] = {};
 std::atomic<uint64_t> g_recv_u2{0}, g_recv_all{0};
 thread_local uint32_t t_recv_u2 = 0, t_recv_any = 0;
+// The per-player focus slot (user2_focus_slot=1; docs/research/taming-refusal-3732.md, "Per-player focus slot"): the
+// joined player's own triple of the HOST manager's focus slot is kept apart (fsl::FocusSlots) and put in the manager
+// around each request of user 2's session (FR1 / FR2) and, by their stage's owner ([[stage+0x48]+0x60] = user 2's
+// character: user 2's triple, else the host's), around the focus setter 0x2271150 (proc, old, new), a stage
+// processor's tick 0x226DA80 (proc, u8) and a stage's end 0x21CB970 (mgr, stage, u8): inline hooks at their entries;
+// each takes 3 or fewer register arguments and reads no stack argument (checked in the exe). Only the host's manager
+// (refreshed every second from the host's character); the server's thread only.
+constexpr uintptr_t kFSetFn = 0x2271150, kFTickFn = 0x226DA80, kFEndFn = kFD;
+constexpr uint8_t kFSetHead[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x4C, 0x89, 0x44, 0x24, 0x18};
+constexpr uint8_t kFTickHead[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x55, 0x56, 0x57, 0x41, 0x54};
+constexpr uint8_t kFEndHead[] = {0x48, 0x89, 0x5C, 0x24, 0x18, 0x48, 0x89, 0x6C, 0x24, 0x20};
+constexpr uint32_t kProc_Mgr8 = 0x08, kProc_Stage10 = 0x10;
+std::atomic<bool> g_slot_wanted{false}, g_slot_on{false};
+std::atomic<uintptr_t> g_host_mgr{0};
+std::atomic<bool> g_slot_reset_all{false}, g_slot_reset_u2{false};
+SafetyHookInline g_fset_hook, g_ftick_hook, g_fend_hook;
+fsl::FocusSlots g_slots;                    // the server's thread only
+std::atomic<uint64_t> g_slot_u2[4] = {};    // user 2's pieces of work: requests, setter, stage ends, ticks
+std::atomic<uint64_t> g_slot_other{0};      // other managers' calls passed straight on
+thread_local uint32_t t_fr_token = fsl::FocusSlots::kRefused;
+thread_local uintptr_t t_fr_mgr = 0;
 std::atomic<uint64_t> g_limited{0}, g_lost{0}, g_lines{0};
 constexpr uint64_t kMaxLines = 4000;
 
@@ -535,7 +558,65 @@ void on_bf2(safetyhook::Context& ctx) noexcept {
     if (g_bf2_on.load(std::memory_order_acquire)) on_bf(ctx, 1);
 }
 
-// The focus probe (see kFS). FR: whose request the server loop is handing to ServerNet::OnRecvPacket.
+// ---- the per-player focus slot's helpers (see kFSetFn)
+template <class T>
+bool wr(uintptr_t a, T v) noexcept {
+    if (a < 0x10000) return false;
+    __try {
+        *reinterpret_cast<volatile T*>(a) = v;
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+struct MgrMem {  // fsl::FocusSlots' Mem: the manager's +0x90 / +0x98 / +0xA0
+    uintptr_t m = 0;
+    bool read(fsl::Triple& t) noexcept {
+        return rd(m + kMgr_Focus90, t.f90) && rd(m + kMgr_Focus98, t.f98) && rd(m + kMgr_FocusA0, t.fa0);
+    }
+    bool write(const fsl::Triple& t) noexcept {
+        return wr(m + kMgr_Focus90, t.f90) && wr(m + kMgr_Focus98, t.f98) && wr(m + kMgr_FocusA0, t.fa0);
+    }
+};
+bool stage_is_user2(uintptr_t stage) noexcept {
+    const uint32_t u2 = server_user2_player_key();
+    if (!u2 || !stage) return false;
+    const uintptr_t data = rdp(stage + kScene_Info);
+    return data && rdv<uint32_t>(data + kStageData_Owner) == u2;
+}
+// Between two pieces of work (depth 0): the resets the module's thread asked for.
+void slot_housekeeping() noexcept {
+    if (g_slots.depth() != 0) return;
+    if (g_slot_reset_all.exchange(false, std::memory_order_acq_rel)) {
+        g_slots = fsl::FocusSlots{};  // another host manager: nothing kept applies to it
+        g_slot_reset_u2.store(false, std::memory_order_relaxed);
+    }
+    if (g_slot_reset_u2.exchange(false, std::memory_order_acq_rel)) g_slots.reset_user2();
+}
+uint32_t slot_enter(uintptr_t mgr, fsl::Owner o) noexcept {
+    slot_housekeeping();
+    MgrMem mem{mgr};
+    return g_slots.enter(mem, o);
+}
+void slot_leave(uintptr_t mgr, uint32_t token) noexcept {
+    MgrMem mem{mgr};
+    g_slots.leave(mem, token);
+}
+// The manager the slot applies to: the host's, while the fix is on and on the server's thread (the one that hands the
+// requests to ServerNet::OnRecvPacket: g_slots has no lock); else 0 (the call goes on as it is).
+std::atomic<uint64_t> g_slot_other_thread{0};
+uintptr_t slot_mgr() noexcept {
+    if (!g_slot_on.load(std::memory_order_acquire)) return 0;
+    const uint32_t tid = server_thread_id();
+    if (!tid || GetCurrentThreadId() != tid) {
+        g_slot_other_thread.fetch_add(1, std::memory_order_relaxed);
+        return 0;
+    }
+    return g_host_mgr.load(std::memory_order_acquire);
+}
+
+// The focus probe (see kFS). FR: whose request the server loop is handing to ServerNet::OnRecvPacket; with the
+// per-player slot on, user 2's request runs with user 2's own triple in the host's manager.
 void on_fr1(safetyhook::Context& ctx) noexcept {
     if (!g_fr1_on.load(std::memory_order_acquire)) return;
     const uintptr_t sess = rdp(ctx.r15 + kRecv_Session);
@@ -544,8 +625,20 @@ void on_fr1(safetyhook::Context& ctx) noexcept {
     t_recv_u2 = sess && sess == s2 ? 1u : 0u;
     g_recv_all.fetch_add(1, std::memory_order_relaxed);
     if (t_recv_u2) g_recv_u2.fetch_add(1, std::memory_order_relaxed);
+    t_fr_token = fsl::FocusSlots::kRefused;
+    t_fr_mgr = 0;
+    if (t_recv_u2) {
+        if (const uintptr_t mgr = slot_mgr()) {
+            t_fr_mgr = mgr;
+            t_fr_token = slot_enter(mgr, fsl::Owner::User2);
+            g_slot_u2[0].fetch_add(1, std::memory_order_relaxed);
+        }
+    }
 }
 void on_fr2(safetyhook::Context&) noexcept {
+    if (t_fr_mgr) slot_leave(t_fr_mgr, t_fr_token);
+    t_fr_token = fsl::FocusSlots::kRefused;
+    t_fr_mgr = 0;
     t_recv_u2 = 0;
     t_recv_any = 0;
 }
@@ -585,14 +678,57 @@ void on_fu(safetyhook::Context& ctx) noexcept {
     if (!g_fu_on.load(std::memory_order_acquire)) return;
     focus_event(1, ctx.rcx, 0, 0, rdv<uint64_t>(ctx.rsp));  // at the entry: [rsp] is the return address
 }
-void on_fd(safetyhook::Context& ctx) noexcept {
-    if (!g_fd_on.load(std::memory_order_acquire)) return;
-    // Every stage's end comes here (hundreds a minute in a town): only the end of the manager's focus stage is an event
-    // (0x21CB970's own test: the stage's +0x30 against the focus, +0xA0 when set, else +0x90).
-    const uintptr_t mgr = ctx.rcx, stage = ctx.rdx;
+// Every stage's end comes to 0x21CB970 (hundreds a minute in a town): only the end of the manager's focus stage is an
+// event (0x21CB970's own test: the stage's +0x30 against the focus, +0xA0 when set, else +0x90).
+void fd_check(uintptr_t mgr, uintptr_t stage, uint64_t ret) noexcept {
     const uint64_t cur = mgr ? stp::current_of(rdv<uint64_t>(mgr + kMgr_FocusA0), rdv<uint64_t>(mgr + kMgr_Focus90)) : 0;
     if (!stage || !(cur & stp::kStageMask) || cur != rdv<uint64_t>(stage + kBF_SceneWord)) return;
-    focus_event(2, mgr, 0, stage, rdv<uint64_t>(ctx.rsp));
+    focus_event(2, mgr, 0, stage, ret);
+}
+void on_fd(safetyhook::Context& ctx) noexcept {
+    if (!g_fd_on.load(std::memory_order_acquire)) return;
+    fd_check(ctx.rcx, ctx.rdx, rdv<uint64_t>(ctx.rsp));
+}
+
+// The per-player slot's detours (inline hooks at the three entries; see kFSetFn). Only a stage positively known as
+// user 2's (stage_is_user2) gets user 2's triple; any other call goes on with whatever is in the manager (the host's
+// between pieces of work, user 2's inside its own request), so a wrong owner read can only give the game's own
+// behaviour back, never a new mix.
+uint64_t __fastcall fset_detour(uintptr_t proc, uint64_t a2, uint64_t a3, uint64_t a4) {
+    const uintptr_t host = slot_mgr();
+    const uintptr_t mgr = host ? rdp(proc + kProc_Mgr8) : 0;
+    if (!host || mgr != host) {
+        if (host) g_slot_other.fetch_add(1, std::memory_order_relaxed);
+        return g_fset_hook.unsafe_call<uint64_t>(proc, a2, a3, a4);
+    }
+    if (!stage_is_user2(rdp(proc + kProc_Stage10))) return g_fset_hook.unsafe_call<uint64_t>(proc, a2, a3, a4);
+    g_slot_u2[1].fetch_add(1, std::memory_order_relaxed);
+    const uint32_t t = slot_enter(mgr, fsl::Owner::User2);
+    const uint64_t r = g_fset_hook.unsafe_call<uint64_t>(proc, a2, a3, a4);
+    slot_leave(mgr, t);
+    return r;
+}
+uint64_t __fastcall ftick_detour(uintptr_t proc, uint64_t a2, uint64_t a3, uint64_t a4) {
+    const uintptr_t host = slot_mgr();
+    const uintptr_t mgr = host ? rdp(proc + kProc_Mgr8) : 0;
+    if (!host || mgr != host || !stage_is_user2(rdp(proc + kProc_Stage10))) {
+        return g_ftick_hook.unsafe_call<uint64_t>(proc, a2, a3, a4);
+    }
+    g_slot_u2[3].fetch_add(1, std::memory_order_relaxed);
+    const uint32_t t = slot_enter(mgr, fsl::Owner::User2);
+    const uint64_t r = g_ftick_hook.unsafe_call<uint64_t>(proc, a2, a3, a4);
+    slot_leave(mgr, t);
+    return r;
+}
+uint64_t __fastcall fend_detour(uintptr_t mgr, uintptr_t stage, uint64_t a3, uint64_t a4) {
+    if (g_fd_on.load(std::memory_order_relaxed)) fd_check(mgr, stage, reinterpret_cast<uint64_t>(_ReturnAddress()));
+    const uintptr_t host = slot_mgr();
+    if (!host || mgr != host || !stage_is_user2(stage)) return g_fend_hook.unsafe_call<uint64_t>(mgr, stage, a3, a4);
+    g_slot_u2[2].fetch_add(1, std::memory_order_relaxed);
+    const uint32_t t = slot_enter(mgr, fsl::Owner::User2);
+    const uint64_t r = g_fend_hook.unsafe_call<uint64_t>(mgr, stage, a3, a4);
+    slot_leave(mgr, t);
+    return r;
 }
 
 // S: the server's 0x2126920. A = the decision point's registers (RAX = field vf48), R = the lookup's result, F = BL.
@@ -921,6 +1057,14 @@ void branch_summary() {
                   g_focus_n[0][1].load(), g_focus_n[1][0].load() + g_focus_n[1][1].load(), g_focus_n[1][1].load(),
                   g_focus_n[2][0].load() + g_focus_n[2][1].load(), g_focus_n[2][1].load());
     }
+    if (g_slot_on.load()) {
+        log::info("ShopProbe per-player focus slot: user 2's requests {}, its stages' setter {} / ends {} / ticks {} | "
+                  "swaps {} failed {} overflow {} unbalanced {} repairs {} | other managers {}, other threads {} | the "
+                  "host's manager 0x{:X}",
+                  g_slot_u2[0].load(), g_slot_u2[1].load(), g_slot_u2[2].load(), g_slot_u2[3].load(), g_slots.swaps(),
+                  g_slots.failed(), g_slots.overflow(), g_slots.unbalanced(), g_slots.repairs(), g_slot_other.load(),
+                  g_slot_other_thread.load(), g_host_mgr.load());
+    }
 }
 
 void drain() {
@@ -950,6 +1094,41 @@ bool context_ok(std::span<const gad::Section> secs, uintptr_t rva, std::span<con
     }
     log::error("ShopProbe: {} (exe+0x{:X}, {} bytes) is not build 2976's .rsrc code; REFUSED", what, rva, bytes.size());
     return false;
+}
+
+// user2_focus_slot=1: the three inline hooks; all or none (the request window FR1 / FR2 must be in too).
+void install_focus_slot(std::span<const gad::Section> secs) {
+    const auto inl = [&](uintptr_t rva, std::span<const uint8_t> head, void* detour, SafetyHookInline& h,
+                         const char* what) {
+        if (!context_ok(secs, rva, head, what)) return false;
+        h = safetyhook::create_inline(reinterpret_cast<void*>(g_base + rva), detour, SafetyHookInline::StartDisabled);
+        if (!h || !h.enable()) {
+            h = {};
+            log::error("ShopProbe: cannot hook {} (exe+0x{:X})", what, rva);
+            return false;
+        }
+        return true;
+    };
+    const bool fr = g_fr1_on.load() && g_fr2_on.load();
+    const bool a = fr && inl(kFSetFn, kFSetHead, reinterpret_cast<void*>(&fset_detour), g_fset_hook,
+                             "the focus setter 0x2271150");
+    const bool b = a && inl(kFTickFn, kFTickHead, reinterpret_cast<void*>(&ftick_detour), g_ftick_hook,
+                            "the stage processor's tick 0x226DA80");
+    const bool c = b && inl(kFEndFn, kFEndHead, reinterpret_cast<void*>(&fend_detour), g_fend_hook,
+                            "a stage's end 0x21CB970");
+    if (c) {
+        g_fd_on.store(true, std::memory_order_release);  // the stage-end detour logs the focus ends
+        g_slot_on.store(true, std::memory_order_release);
+        log::info("ShopProbe: the per-player focus slot (user2_focus_slot=1) is ON: user 2's requests and its own "
+                  "stages' focus work run with its own +0x90 / +0x98 / +0xA0 in the host's manager");
+        return;
+    }
+    g_fset_hook = {};
+    g_ftick_hook = {};
+    g_fend_hook = {};
+    log::error("ShopProbe: the per-player focus slot (user2_focus_slot=1) stays OFF (request window {}, setter {}, "
+               "tick {}, stage end {})",
+               fr ? "in" : "NOT in", a ? "in" : "NOT in", b ? "in" : "NOT in", c ? "in" : "NOT in");
 }
 
 void install(std::span<const gad::Section> secs) {
@@ -990,7 +1169,12 @@ void install(std::span<const gad::Section> secs) {
     if (g_fr1_on.load()) mid(kFR2, kFR2Patch, kFR2Bytes, on_fr2, g_fr2_hook, g_fr2_on, "FR2, after it");
     mid(kFS, kFSPatch, kFSBytes, on_fs, g_fs_hook, g_fs_on, "FS, the focus setter's store 0x2271252");
     mid(kFU, kFUPatch, kFUBytes, on_fu, g_fu_hook, g_fu_on, "FU, the focus undo 0x21CAF10");
-    mid(kFD, kFDPatch, kFDBytes, on_fd, g_fd_hook, g_fd_on, "FD, the focus clear at a stage's end 0x21CB970");
+    // With the per-player slot, 0x21CB970's entry takes an inline hook instead (its detour logs the same events).
+    if (!g_slot_wanted.load()) {
+        mid(kFD, kFDPatch, kFDBytes, on_fd, g_fd_hook, g_fd_on, "FD, the focus clear at a stage's end 0x21CB970");
+    } else {
+        install_focus_slot(secs);
+    }
     log::info("ShopProbe: focus probe (read only): FR 0x2A10B89/0x2A10B9A {}/{} | FS 0x2271252 {} | FU 0x21CAF10 {} | FD "
               "0x21CB970 {}",
               g_fr1_on.load() ? "hooked" : "off", g_fr2_on.load() ? "hooked" : "off", g_fs_on.load() ? "hooked" : "off",
@@ -1034,6 +1218,29 @@ void refresh_user2() {
     g_u2_mgr.store(0);
 }
 
+// The module's thread, every second (user2_focus_slot): the host's ServerSequencerStageManager (the chain
+// refresh_user2 follows, from the host's user), and user 2's comings and goings (its own triple starts empty).
+void refresh_host_for_slot() {
+    uintptr_t user = 0, chr = 0, comps = 0, seq = 0, mgr = 0, vt = 0;
+    if (server_host_user(user) && user && game::safe_read(user + kUser_Main, &chr, sizeof chr) && chr &&
+        game::safe_read(chr + kActor_Comps, &comps, sizeof comps) && comps &&
+        game::safe_read(comps + kComps_Seq, &seq, sizeof seq) && seq &&
+        game::safe_read(seq + kSeqComp_Mgr, &mgr, sizeof mgr) && mgr && game::safe_read(mgr, &vt, sizeof vt) &&
+        vt == g_base + isl::kVtServerStageMgr) {
+        const uintptr_t was = g_host_mgr.exchange(mgr, std::memory_order_acq_rel);
+        if (was != mgr) {
+            g_slot_reset_all.store(true, std::memory_order_release);
+            log::info("ShopProbe: the per-player focus slot follows the host's manager 0x{:X} (was 0x{:X})", mgr, was);
+        }
+    }
+    static bool u2_was = false;
+    const bool u2 = server_user2_present();
+    if (u2 != u2_was) {
+        g_slot_reset_u2.store(true, std::memory_order_release);
+        u2_was = u2;
+    }
+}
+
 DWORD WINAPI probe_thread(LPVOID) {
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     IMAGE_DOS_HEADER dos{};
@@ -1059,6 +1266,7 @@ DWORD WINAPI probe_thread(LPVOID) {
         Sleep(1000);
         try {
             if (g_twin.load()) refresh_user2();
+            if (g_slot_wanted.load()) refresh_host_for_slot();
             drain();
             if (tick % 60 == 0) {
                 summary();
@@ -1085,6 +1293,11 @@ void shop_probe_start(bool on, const std::string& twin_mode) {
     g_on.store(on);
     if (g_started.exchange(true)) return;
     CloseHandle(CreateThread(nullptr, 0, probe_thread, nullptr, 0, nullptr));
+}
+
+void shop_probe_set_focus_slot(bool on) {
+    g_slot_wanted.store(on);
+    if (on) log::info("ShopProbe: user2_focus_slot=1 asked (the per-player focus slot; needs shop_probe=1)");
 }
 
 bool shop_probe_active() noexcept { return g_on.load(std::memory_order_relaxed); }
