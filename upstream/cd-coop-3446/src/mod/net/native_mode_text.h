@@ -169,13 +169,11 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
                               // never marked ready on the server (only the field owner's load does), so its doors
                               // answered "not ready" to both players until a fast travel (the native base's S43);
                               // scene_level_share marks user 2's load ready too and keeps a level the other still has.
-                              "scene_level_share=1",
-                              // T25 (2026-11-25, Borque's taming): the joined player's own scenes that stay in the
-                              // host's stage manager (a taming, an encounter) shared its one focus slot with the
-                              // host's talks and matches, so a flagged step of one was refused while the other held
-                              // it (eErrNoFailedStageChartBranchCondition). user2_focus_slot gives the joined player
-                              // its own copy of the slot (its hooks live in shop_probe, on above).
-                              "user2_focus_slot=1"}) {
+                              "scene_level_share=1"}) {
+            // (T25, 2026-11-25: "user2_focus_slot=1" was written here from d871af4 to 614591d0 and is OFF again:
+            // cs125d showed its detours refused on the server's logic thread, where the focus is written and the
+            // branch / talk handlers run (its thread test took the network thread), so it never acted and its few
+            // request-window swaps raced the logic thread. To come back once its hooks follow the logic thread.)
             line(k);
         }
         // B10 option 2, the player's choice ([coop] shared_quest_credit): an objective one player completes also

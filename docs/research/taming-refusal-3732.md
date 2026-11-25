@@ -232,3 +232,18 @@ So the request path writes the slot synchronously (2880 StageBranchStateReq -> 0
   [compSol+0xD8] is set; eErrNoInteractionDelayTime) if the requester's component resolves to the host's for user 2's
   request, or the .xtls reserve 0xE401150. Next: a probe at the 2642 handler logging, for user 2's requests, the
   requester actor, its interaction component and +0xD8, and the host's component.
+
+## THE SLOT RAN ON THE WRONG THREAD (25 Nov, cs125d's [u2 talk] probe)
+- The request window (FR1 / FR2 around ServerRunThread's call of ServerNet::OnRecvPacket 0x2A111F0) runs on the
+  NETWORK thread (cs125d: T30528). OnRecvPacket only hands the packet on: the 2642 handler (its C point) ran on
+  T35304, and the server stage manager's focus writes (setter, undo) also on T35304, the server's LOGIC thread
+  (T25068: the host's client manager). The talk probe saw the C point never inside the window ("not reached").
+- slot_here() compares with g_built_tid (server.cpp:403, the thread that built user 2's session: the network side), so
+  every detour call on T35304 was refused ("other threads" 222 in cs125d, 490 in pp59-armwrest) and the request
+  window's swaps happened on T30528, where nothing reads the focus, while T35304 ran: a small race on the host's
+  triple (8 swaps in the whole pp59, none failed or unbalanced).
+- So the per-player focus slot posted in d871af4f / 614591d0 never acted, and the cs125b talk swap could not either.
+  The layer stops writing user2_focus_slot=1 in the next build. To redo: the detours' thread test must take the
+  LOGIC thread (learned from the setter / tick hooks on the host's server manager), and the request window must wrap
+  the handler's own run on that thread (the dispatch of a queued request on T35304, not OnRecvPacket), with the
+  request's user known there.

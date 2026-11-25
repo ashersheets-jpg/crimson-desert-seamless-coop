@@ -830,6 +830,15 @@ for the NEXT package while pp59 ran made static FAIL ("uncommitted changes") on 
 and the README change then needed a new package and a re-run of static + real + a smoke step before the post. During a
 run, draft kit text in the scratchpad (or docs/drafts/) and copy it into kit/ after the run, then package once.
 
+## A hook "around a request" must be proven to wrap the handler's own run (2026-11-25, cs125d)
+The per-player focus slot wrapped ServerRunThread's call of OnRecvPacket and treated the thread that built user 2's
+session as "the server's". Both were the NETWORK side: the handlers and the focus writes run later on the LOGIC
+thread, so the fix never acted in two posted builds, and 28 green checklist steps could not show it (no step had the
+case it was for; "swaps 0" read as "nothing to do", not "never could"). A one-line probe would have shown it the first
+day: from inside the handler (its own hook), log whether the window's thread-local is set and both thread ids. Do
+that for every "around the request" design before trusting it, and treat a counter of refused calls ("other threads")
+in the hundreds as a red flag, not noise.
+
 ## Before chasing a new failure, search PROGRESS for it as a known limitation (2026-11-25, cs123-cs124)
 Five runs (cs123a-c, cs124a-b, ~1.5 h) chased "the friend cannot open the butcher's shop" (its game never looked for
 anyone to talk to) through the host's talk, the table's twin and the distance, before PROGRESS 2026-11-21 13:05 turned

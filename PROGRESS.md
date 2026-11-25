@@ -11418,4 +11418,46 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   interaction component, its +0xD8, and the host's component; not in this build. DECISIONS (mine, scoped): the talk
   part of the native change is reverted (it does nothing for this, and swaps without a reason are risk); the FR1 reset
   stays. The talkwhile step leaves the checklist until a fix exists (cs125.sh is the repro). The layer's toast says
-  what really happens ("You cannot start a talk while Host is in one").
+  what really happens ("You can't start a talk while Host is talking").
+- 08:06-08:08 rebuilt (native a90aa47: FR1 only; cdmp 95aa32fd, coopplus 114618e6 with the toast; the same 14 known
+  old failures; layer tests pass), outer e4f30aa (the toast, README / Nexus / features known issue, talkwhile kept out
+  of the list, armwrest at 617.5). The 2642 handler on 3732 (0x2CDBE20): the C point 0x2CDC149 reads the requester
+  check's error at [rbp-0x80] after 0x2E3C180 (rcx = [[r13+0x68]+0x98], the requester's interaction component); 0
+  -> the success path, so #3's 2946 comes from later. S46's shop_trade_probe (host, read only, never run on 3732 here)
+  logs each talk's NPC busy mode (P5), the requester check (P6) and every refusal to user 2 with its error NAMED:
+  ~08:09 cs125c = cs125 with -HostNativeExtra shop_trade_probe=1.
+  From cs125b's host log, the coupling: when the host reached the inn (07:50:21) its server prepared the butcher's
+  shop scene 0x392 (cd_seq_funcnpc_butcher) for the HOST, binding Renee (0xB01005E9) to the host's character
+  (ChildHold: Renee's play data owner 0xA0100001, scene 0x392), and the friend's own shop scene 0x1E3 was removed
+  (ObserverSeqCopy: "bound by it and required by a scene of the host"). The friend's #2 / #3 then talk to an NPC of a
+  HOST-owned scene (its twin answers the menu). #3's FailAck is queued inside the same handler call as the C point
+  (qpc 4 us apart), i.e. inside 0x2E3C180's reserve, while the host is preempting the organizer. So: the friend cannot
+  talk to an NPC bound in a scene of the host's while the host is in any talk (the scene owner busy).
+- 08:19 cs125c (SAVES OK, 5/5): the same refusal (#3 twice, 0x58C8345D). shop_trade_probe is NOT ported to 3732
+  (refused at its build check: nothing installed) and its error table has no name for 0x58C8345D. The host's table
+  scene 0x388 binds the host and NPCs 0xB0100758-75E only, not Renee (0xB01005E9): she is bound in the host's SHOP
+  scene 0x392 alone. Written: a read-only probe "ShopProbe [u2 talk]" (native, uncommitted): around each 2642 of user
+  2's, the requester actor the handler used (the C point's r13: user 2's character or THE HOST'S?), its check's result,
+  and the +0xD8 "preempting" mark of the host's and user 2's interaction components ([[chr+0x68]+0x98]) before and
+  after. Built (the same 14 known old failures; layer tests pass). ~08:23 cs125d: cs125 with it.
+- 08:20 *** BORQUE (#play-testing-feedback, message 1575138953810673704, a reply to mine of 24 Nov 19:11): "past
+  night we tried to make another session but in the new version we weren't able to test anything at all as the guest
+  player when it was loading the game ended in a infinite loading screen" (twice); the host also had "renox" and an
+  LOD mod installed (also in his previous, working report). Two zips: CoopPlus-report-2026-11-25_01-26-18-client and
+  _12-02-29 (the host). To download after cs125d (scratchpad dl_borque_1125.sh, their own folder) and read FIRST: a
+  joined player who cannot get in is the worst bug there is. (Rule slip ~08:26: one ls through Bash during cs125d.)
+- 08:33 cs125d (SAVES OK, 5/5): the [u2 talk] probe found the handler's C point NEVER inside the request window: the
+  window (FR1 / FR2 around ServerRunThread's OnRecvPacket call) runs on T30528, the 2642 handler (C point) on T35304,
+  and the server manager's focus writes also on T35304 (T25068: the host's client manager). So OnRecvPacket only
+  hands the packet on; the logic thread handles it later. Consequences: (1) the talk swap could not work (cs125b);
+  (2) THE PER-PLAYER FOCUS SLOT IN 614591d0 DOES NOT ACT where it matters: slot_here() takes g_built_tid (the thread
+  that built user 2's session, the network side), so every detour on the logic thread T35304 is refused ("other
+  threads 222"), and its request-window swaps (8 in the whole pp59) write the host manager's triple on T30528 while
+  T35304 runs: a small race. It changed nothing in 28 steps, and the taming keeps its 6 s release; the slot goes OFF
+  (or onto the right thread) in the next build. 08:34 Borque's zips downloaded (scratchpad/dl-borque-1125, 4 files,
+  logs extracted with python -I). Both PCs ran 527e283a (the session 01:17-01:26; the host's Diagnose at 12:02); the
+  host also has version.dll, CrimsonInternalGraphics.asi, DmmRuntime.asi. Host cdmp.log: the join went on (user 2 in
+  01:20:52, into the field 01:22:11), then "Session2 inject: the server has not taken our buffers" with "T7540
+  PARK-ASKED busy(ServerRunThread)" from 01:22:18, never taken again (142 s, 26,353 packets held, by 01:25:37).
+  08:35 acknowledged to Borque (tagged, message 1575143016077729943). Log analysis by an agent (read only) running
+  (scratchpad/borque-1125-analysis.md).
