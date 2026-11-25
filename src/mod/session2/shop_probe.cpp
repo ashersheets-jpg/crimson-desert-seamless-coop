@@ -131,7 +131,10 @@ constexpr uint8_t kFDBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x18};
 constexpr uint8_t kFR1Bytes[] = {0x4D, 0x8B, 0x47, 0x18, 0x48, 0x8D, 0x54, 0x24, 0x30};
 constexpr uint8_t kFR2Bytes[] = {0x48, 0x8D, 0x94, 0x24, 0xA0, 0x00, 0x00, 0x00};
 constexpr uint32_t kFSPatch = 7, kFUPatch = 6, kFDPatch = 5, kFR1Patch = 9, kFR2Patch = 8;
-constexpr uint32_t kRecv_Session = 0x18, kFS_SceneHolder = 0x10, kStageData_Owner = 0x60;
+// A stage's owner: cs121a read [[stage+0x48]+0x60] as 0 on every stage of both the host's client and server managers,
+// so the u32 at +0x98 (the client stages' owner key, kStage_Owner in guest_seq_foreign_logic.h) is read too; the
+// [focus] lines log both until one is seen right on a server stage (the host's own talk, user 2's own shop).
+constexpr uint32_t kFS_SceneHolder = 0x10, kStageData_Owner = 0x60, kStage_Owner98 = 0x98;
 constexpr uint32_t kMgr_Focus90 = 0x90, kMgr_Focus98 = 0x98, kMgr_FocusA0 = 0xA0;
 
 // Offsets (server objects; the same ones observer_stage / observer_milestone read).
@@ -589,8 +592,11 @@ enum class StageOwner : uint8_t { Other, Host, User2 };
 std::atomic<uint32_t> g_host_key{0};  // the host's character key (host_mgr_live)
 StageOwner stage_owner(uintptr_t stage) noexcept {
     if (!stage) return StageOwner::Other;
-    const uintptr_t data = rdp(stage + kScene_Info);
-    const uint32_t owner = data ? rdv<uint32_t>(data + kStageData_Owner) : 0;
+    uint32_t owner = rdv<uint32_t>(stage + kStage_Owner98);
+    if (!owner) {
+        const uintptr_t data = rdp(stage + kScene_Info);
+        owner = data ? rdv<uint32_t>(data + kStageData_Owner) : 0;
+    }
     if (!owner) return StageOwner::Other;
     const uint32_t u2 = server_user2_player_key();
     if (u2 && owner == u2) return StageOwner::User2;
@@ -673,10 +679,10 @@ void slot_outermost() noexcept {
 // per-player slot on, user 2's request runs with user 2's own triple in the host's manager.
 void on_fr1(safetyhook::Context& ctx) noexcept {
     if (!g_fr1_on.load(std::memory_order_acquire)) return;
-    const uintptr_t sess = rdp(ctx.r15 + kRecv_Session);
-    const uintptr_t s2 = server_live_session2();
+    // cs121a: user 2's requests come here with the HOST's session in r8 ([r15+0x18]); OnRecvPacket's entry hook
+    // re-routes them by their buffer's tag. So whose request it is: the buffer (r9, set at 0x2A10B78), as that hook.
     t_recv_any = 1;
-    t_recv_u2 = sess && sess == s2 ? 1u : 0u;
+    t_recv_u2 = server_packet_is_user2(ctx.r9) ? 1u : 0u;
     g_recv_all.fetch_add(1, std::memory_order_relaxed);
     if (t_recv_u2) g_recv_u2.fetch_add(1, std::memory_order_relaxed);
     t_fr_token = pfs::FocusSlots::kRefused;
@@ -720,8 +726,8 @@ void focus_event(uint32_t what, uintptr_t mgr, uint64_t new_id, uintptr_t scene,
     e.v[7] = scene ? rdv<uint64_t>(scene + kBF_SceneWord) : 0;
     const uintptr_t data = scene ? rdp(scene + kScene_Info) : 0;
     e.v[8] = static_cast<uint64_t>(data ? rdv<uint32_t>(data + kStageData_Owner) : 0) |
-             static_cast<uint64_t>(server_user2_player_key()) << 32;
-    e.v[9] = rva(ret);
+             static_cast<uint64_t>(scene ? rdv<uint32_t>(scene + kStage_Owner98) : 0) << 32;
+    e.v[9] = rva(ret) | static_cast<uint64_t>(server_user2_player_key()) << 32;
     const uintptr_t name = data ? rdp(data + kInfo_Name) : 0;
     e.v[10] = name ? rdv<uint64_t>(name) : 0;
     e.v[11] = name ? rdv<uint64_t>(name + 8) : 0;
@@ -1037,11 +1043,13 @@ std::string line_of(const p::Event& e) {
         case kEFocus: {
             const auto what = static_cast<uint32_t>(v[0] & 0xFF);
             const bool u2req = (v[0] >> 8) & 1, any = (v[0] >> 9) & 1, u2mgr = (v[0] >> 10) & 1;
-            const auto owner = static_cast<uint32_t>(v[8]), u2key = static_cast<uint32_t>(v[8] >> 32);
+            const auto owner48 = static_cast<uint32_t>(v[8]), owner98 = static_cast<uint32_t>(v[8] >> 32),
+                       u2key = static_cast<uint32_t>(v[9] >> 32), ret = static_cast<uint32_t>(v[9]);
             const uint64_t cur = stp::current_of(v[4], v[2]);
+            const bool u2own = u2key && (owner98 == u2key || owner48 == u2key);
             const std::string scene =
-                v[6] ? std::format("scene 0x{:X} ('{}', owner 0x{:08X}{})", v[7], name_of(v + 10, 2), owner,
-                                   owner && owner == u2key ? ": USER 2's" : "")
+                v[6] ? std::format("scene 0x{:X} ('{}', owner +0x98 0x{:08X} / [+0x48]+0x60 0x{:08X}{})", v[7],
+                                   name_of(v + 10, 2), owner98, owner48, u2own ? ": USER 2's" : "")
                      : std::string("scene -");
             return std::format(
                 "ShopProbe [focus] {} T{} | {} in manager 0x{:X}{} | before: +0xA0 0x{:X} +0x90 0x{:X} +0x98 0x{:X} (focus "
@@ -1054,7 +1062,7 @@ std::string line_of(const p::Event& e) {
                 what == 0 && cur && (cur & stp::kStageMask) && cur != v[5] ? " TAKEN FROM ANOTHER STAGE" : "", scene,
                 u2req ? "inside a request of USER 2's session" : any ? "inside a request of the host's session"
                                                                   : "outside any request (a tick)",
-                v[9] ? std::format(" | from exe+0x{:X}", v[9]) : std::string());
+                ret ? std::format(" | from exe+0x{:X}", ret) : std::string());
         }
         default:
             return std::format("ShopProbe: event {}?", e.kind);

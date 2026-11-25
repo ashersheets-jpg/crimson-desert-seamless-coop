@@ -1539,6 +1539,18 @@ inj::Outcome inject(std::span<const uint8_t> in, InjectKind kind);
 inj::Outcome server_inject_ex(std::span<const uint8_t> in) { return inject(in, InjectKind::Normal); }
 bool server_inject(std::span<const uint8_t> in) { return inject(in, InjectKind::Normal) == inj::Outcome::Queued; }
 
+// Co-op+ 2026-11-24 (cs121a: user 2's requests arrive in ServerRunThread's call of OnRecvPacket with the HOST's session
+// in r8, and on_server_recv's entry hook re-routes them by the buffer's tag): one of our buffers = a request of user 2.
+// The same frame / base / magic test as on_server_recv's, read only.
+bool server_packet_is_user2(uintptr_t pkt) noexcept {
+    if (!pkt || !g_session2.load(std::memory_order_acquire)) return false;
+    const uintptr_t pb = pkt - off::kFrameHeader;
+    uintptr_t frame = 0, base = 0;
+    uint64_t magic = 0;
+    return peek(pb + off::kPb_FramePtr, frame) && frame == pb && peek(pb + off::kPb_Base, base) && base == pb &&
+           peek(pb + off::kPb_Magic, magic) && magic == kMagic;
+}
+
 namespace {
 
 inj::Outcome inject(std::span<const uint8_t> in, InjectKind kind) {
