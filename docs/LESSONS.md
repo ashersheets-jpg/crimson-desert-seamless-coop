@@ -823,3 +823,9 @@ find the constant it names before using it.
 The armwrest step mashes E inside a co-op session; a tester's solo match on a controller ("the character starts
 jumping and it never ends") is a path no step drives. When a report names an input device or a mode the checklist
 does not use, the repro starts with that device and mode (pad_sim, -NoGuest), not with the step that passes.
+
+## A kit file edited during a checklist run fails its static step (2026-11-25, pp59)
+The static step checks that layer / kit / tools have no uncommitted changes. Editing kit/coopplus/README-shared-world.txt
+for the NEXT package while pp59 ran made static FAIL ("uncommitted changes") on a package built from a clean commit,
+and the README change then needed a new package and a re-run of static + real + a smoke step before the post. During a
+run, draft kit text in the scratchpad (or docs/drafts/) and copy it into kit/ after the run, then package once.

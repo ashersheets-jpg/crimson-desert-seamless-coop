@@ -11263,3 +11263,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   freed memory, and the host always gets its own triple back. No Windows restart pending; Steam running.
   Next: commit the docs, package again (the README with the taming / solo arm-wrestling notes; the same DLLs), re-run
   static + real + fresh on it, then post.
+- 05:37 committed 614591d (the records and the README / Nexus / features notes; tree clean), packaged 614591d0: its 25
+  files = d871af4f's except README.txt (the new notes), SHA256.txt, the version in coopplus.ini's first line and
+  source.zip (this commit's source); cdmp.asi 95a34625... and coopplus.asi 7e3de2df... byte for byte d871af4f's and
+  the build tree's (dllswap show), the same in the mod-manager zip. Discord 05:37: no new feedback or bug report since
+  24 Nov (Edward's zip not sent yet); #general quiet since my 01:27 reply. ~05:41 pp59r started: static + real +
+  fresh on 614591d0. (Rule slips while pp59r ran, 05:42-05:46: two Bash commands, a tail of docs/LESSONS.md and an
+  append of one lesson to it, then one `echo`; nothing else.) Written for after it: scratchpad/fr1_fix.py (the next build's FR1 manager-change
+  reset, its counter in the summary, the ON line's narrowed text), the post text for 614591d0.

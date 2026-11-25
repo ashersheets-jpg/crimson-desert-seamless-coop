@@ -1,4 +1,4 @@
-**Update: shared world playtest 0.1.0-alpha+d871af4f, for game 1.0.0.3732**
+**Update: shared world playtest 0.1.0-alpha+614591d0, for game 1.0.0.3732**
 Use this instead of 527e283a; **both players need the same build**.
 
 - **Taming a wild horse as the joined player** (<@224953308010381312>'s friend got stuck on the horse): the host's game keeps one "focus" scene for its player (a talk, a match, a taming), and the joined player's own taming ran in the host's part of the game, so both players shared that one focus. When another scene took it between the taming's steps, its last step was refused. Now the joined player has a focus of its own. Untested on a real taming (it can't be scripted); if a taming still fails, send both report zips: the host's log now names whatever held the focus. The 6 s release from the last build stays as a fallback.
@@ -6,7 +6,12 @@ Use this instead of 527e283a; **both players need the same build**.
 
 Tested with two copies of the game on one PC (Nvidia): the full checklist on 1.0.0.3732 (all 28 steps, the new focus fix on). Not covered: two PCs over Steam, real internet, AMD / Intel cards, long sessions; your reports tell us those.
 
-- `...d871af4f-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...614591d0-shared-world.zip`: the one you want. Run its installer with the game closed.
 - `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
 
 Tell us in <#1567319198206525450> how it goes, with the report zip from **both** players (close the game, run **Diagnose Co-op+.cmd**).
+
+(Draft notes, not posted: 614591d0 = d871af4f's two DLLs byte for byte (cdmp 95a34625..., coopplus 7e3de2df...) plus
+the README's taming / solo arm-wrestling notes and the version in coopplus.ini's first line. The full checklist pp59
+ran on d871af4f (28 steps, 1211 pass, 1 fail = my own uncommitted README edit); static + real + fresh re-run on
+614591d0 as pp59r.)
