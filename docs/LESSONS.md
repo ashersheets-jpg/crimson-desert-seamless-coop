@@ -829,3 +829,19 @@ The static step checks that layer / kit / tools have no uncommitted changes. Edi
 for the NEXT package while pp59 ran made static FAIL ("uncommitted changes") on a package built from a clean commit,
 and the README change then needed a new package and a re-run of static + real + a smoke step before the post. During a
 run, draft kit text in the scratchpad (or docs/drafts/) and copy it into kit/ after the run, then package once.
+
+## Before chasing a new failure, search PROGRESS for it as a known limitation (2026-11-25, cs123-cs124)
+Five runs (cs123a-c, cs124a-b, ~1.5 h) chased "the friend cannot open the butcher's shop" (its game never looked for
+anyone to talk to) through the host's talk, the table's twin and the distance, before PROGRESS 2026-11-21 13:05 turned
+up: "after a far teleport INTO a town whose host scenes already run, it does not [work] (known, said in the post)":
+the friend's game refuses a twin's prepare while the shopkeeper is not loaded there, and shop_twin_again (the re-make)
+stays off. Every one of those runs teleported the friend into the market after the host. When a scripted setup
+fails in a new way, grep PROGRESS / docs/research for the symptom and for the setup's own moves (a teleport, a load,
+an order of arrival) first; and a test's setup must not be the known-broken case unless that case is the subject.
+
+## A teleport's height must be below any floor above the target (2026-11-25, cs122b / cs122c)
+"tp -10661.5 619 -3830.0" (the Hernand inn's arm-wrestling table) landed on the table's floor (617.09) in cs122a and in
+every armwrest step, but on the gallery above (620.76) in cs122b and cs122c: 619 is inside the gallery's floor, and
+the game sometimes pushes the character up instead of letting it fall. The screenshots showed an upstairs corridor and
+two runs were lost before the logs' positions showed why. Teleport a little above the floor you want (617.5 here),
+and when a run "cannot find" an NPC it reached before, compare the character's height in the logs first.

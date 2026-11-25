@@ -496,6 +496,57 @@ shop)
   e=$(unknown_errs "$H" | grep -c .)
   [ "${e:-0}" -eq 0 ] && ok "host: native log: no error line outside the known set" || { bad "host: native log: $e unknown error line(s):"; unknown_errs "$H" | cut -d']' -f3- | cut -c1-170 | sort | uniq -c | head -5 | sed 's/^/          /' >> "$R"; }
   info "screenshots to LOOK AT (a0: the menu alone, a2: the menu with the host there): $(cd $N/shots && ls $NAME-*.png 2>/dev/null | tr '\n' ' ')" ;;
+talkwhile)
+  # 2026-11-25 (cs125a; the testers' BUG 2 of 16 Nov): while the host held a focus stage (its talk to another NPC), the
+  # friend's talk to ANY NPC was refused with the busy-NPC error 0x58C8345D: the host's stage manager has one focus slot
+  # for both players (docs/research/taming-refusal-3732.md). The friend at the butcher FIRST (the host far: its own shop
+  # scene; a friend teleported into a market whose host scenes already run gets no shop twins, the known limit), the host
+  # then at the Hernand inn table 73 m away (617.5: the table's floor), and three opens of the butcher's shop by the
+  # friend: the host far / at the inn, not talking / IN A TALK with the arm-wrestling organizer (left open); then the
+  # host's Esc. The key lists run one after another: guest keys (#1, #2), host keys (the talk), guest after-walk keys
+  # (#3), host after-walk keys.
+  # NOT IN THE RELEASE LIST (2026-11-25): #3 still FAILS on every build so far (cs125a / cs125b; cs126a without the
+  # host's talk opens all three). Its two per-player-slot checks assume a fix that runs the friend's talks with its own
+  # focus, which did NOT cure it (cs125b). Run it by hand (bash tools/prepost.sh <tag> <pkg> talkwhile) for that bug.
+  head_step "the friend opens a shop while the host is in a talk with another NPC (the testers' bug 2; known to fail)"
+  sw() { local n=$1; while [ $n -ge 10 ]; do echo "wait 10000"; n=$((n - 10)); done; [ $n -gt 0 ] && echo "wait $((n * 1000))"; }
+  { echo "wait 3000"; echo "tp -10238 640 -3958"; sw 67; echo "tp -10661.5 617.5 -3830.0"; sw 150; } > $N/scan/talkwhile_host.txt
+  { echo "wait 3000"; echo "tp -10678.5 612 -3904.2"; sw 25; echo "npcs 4"; sw 160; } > $N/scan/talkwhile_guest.txt
+  AIM=$(cat $N/scan/b13_aim.txt 2>/dev/null || echo -10662.0,-3831.1)
+  OPEN="py:facesweep2:-10677.6,-3905.4,-30,30,10,82,1500,u2,70_w:1500"
+  CLOSE="k:ESC:150_w:2500"
+  GK="w:15000_${OPEN}_shot:$NAME-a1_${CLOSE}_shot:$NAME-a2_w:30000_${OPEN}_shot:$NAME-b1_${CLOSE}_shot:$NAME-b2"
+  HK="w:2000_py:facesweep:${AIM},-180,160,20,82,1500,host_w:500_w:3000_shot:$NAME-h1"
+  GA="w:1000_${OPEN}_shot:$NAME-c1_${CLOSE}_shot:$NAME-c2"
+  AW="w:500_shot:$NAME-h2_k:ESC:150_w:3000_shot:$NAME-h3"
+  run2 "-CoopPlus -Lobby -Fresh -PackageIni $MODW -HostVariant usercopy -Hold 15 -HostScript $SCAN\\talkwhile_host.txt -GuestScript $SCAN\\talkwhile_guest.txt -GuestKeys $GK -HostKeys $HK -GuestAfterWalkKeys $GA -AfterWalkKeys $AW"
+  O=$N/$NAME.out; H=$N/$NAME.host.log; G=$N/$NAME.guest.log; HL=$N/$NAME.coopplus.host.log; GL=$N/$NAME.coopplus.guest.log
+  has "$O" "^host in the shared world: True"  "host reached the shared world"
+  has "$O" "^guest in the shared world: True" "guest reached the shared world"
+  has "$O" "^host alive=True guest alive=True" "both games still running at the end"
+  has "$O" "^SAVES OK"                     "the player's saves untouched (SAVES OK)"
+  has "$O" "user install restored: 5/5 OK" "the player's install put back (5/5)"
+  has "$H" "host asked: requester 0xA0100001 .* interaction 0x000F431C .* ACCEPTED" "the host's talk to the arm-wrestling organizer accepted"
+  has "$H" "ShopProbe \\[focus\\] .* SET to 0x[0-9A-F]+ \\(a flagged branch\\) in manager 0x[0-9A-F]+ \\|" "the host's talk took its manager's focus (the case is exercised)"
+  n=$(grep -cE "USER 2 asked: requester $(jkey) .* interaction 0x000F4321 .* ACCEPTED" "$H" 2>/dev/null)
+  [ "${n:-0}" -ge 3 ] && ok "the friend's three shop requests accepted by the host's server: $n" \
+                      || bad "the friend's shop requests accepted by the host's server: ${n:-0} of 3"
+  m=$(grep -cE "ShopTwin \\[branch\\] twin 0x1[0-9A-F]+ -> branch 0 answered locally with state 2" "$G" 2>/dev/null)
+  [ "${m:-0}" -ge 2 ] && ok "the friend's shop menu opened with the host at the inn, before AND during the host's talk: $m" \
+                      || bad "the friend's shop menu with the host at the inn: ${m:-0} of 2 (before / during the host's talk)"
+  hasnot "$GL" "was refused: busy with another player" "the friend's talks never refused as busy (the host talked to another NPC)"
+  has "$H" "per-player focus slot: user 2's requests with its own triple [0-9]+ \\(its talks among them [1-9]" "the friend's talks ran with its own focus slot"
+  has "$H" "per-player focus slot: .* failed 0 overflow 0 unbalanced 0" "the focus slot's swaps: none failed or unbalanced"
+  overlay_checks "$HL" "host"
+  no_recording "$H" "host"
+  growth "$H" "host native" 480
+  growth "$HL" "host layer" 240
+  WRN_ALLOW='^(UserNShops \[(drain NOT held|nested vfN)\]|Teleport: stopped N m short)'
+  new_wrn "host" "$HL" $N/$NAME.coopplus.host.before.log "$H"
+  WRN_ALLOW=
+  e=$(unknown_errs "$H" | grep -c .)
+  [ "${e:-0}" -eq 0 ] && ok "host: native log: no error line outside the known set" || { bad "host: native log: $e unknown error line(s):"; unknown_errs "$H" | cut -d']' -f3- | cut -c1-170 | sort | uniq -c | head -5 | sed 's/^/          /' >> "$R"; }
+  info "screenshots to LOOK AT (a1 host far, b1 host at the inn, c1 DURING the host's talk, h1 the host's talk): $(cd $N/shots && ls $NAME-*.png 2>/dev/null | tr '\n' ' ')" ;;
 farfight)
   # 2026-11-17 (pp26: farfight and mountfight, the guest swung at the air with the bandits beside and behind it;
   # 7 of 35 fight checks since pp11 failed that way): a mouse turn every 3 swings sweeps the guest around.
@@ -777,10 +828,12 @@ armwrest)
   # (twin_extra_chart=3); the layer writes both into its native ini (no dev override here). The joined player talks to
   # the organizer (R), Participate (E held 2 s), mashes E (a win), Back (Esc); then, off the spot, the host does the same.
   AIM=$(cat $N/scan/b13_aim.txt 2>/dev/null || echo -10662.0,-3831.1)
-  { for i in 1 2 3; do echo "wait 10000"; done; echo "tp -10657.5 619 -3826.5"; for i in $(seq 1 12); do echo "wait 10000"; done
-    echo "wait 5000"; echo "tp -10661.5 619 -3830.0"; for i in $(seq 1 10); do echo "wait 10000"; done; } > $N/scan/armwrest_host.txt
-  { echo "wait 8000"; echo "tp -10661.5 619 -3830.0"; for i in $(seq 1 12); do echo "wait 10000"; done; echo "wait 2000"
-    echo "tp -10657.5 619 -3826.5"; for i in $(seq 1 12); do echo "wait 10000"; done; } > $N/scan/armwrest_guest.txt
+  # 2026-11-25 (cs122b / cs122c): y 617.5, not 619: 619 is inside the gallery's floor above the table (620.76) and the
+  # game may push the character up there instead of letting it fall to the table's floor (617.09).
+  { for i in 1 2 3; do echo "wait 10000"; done; echo "tp -10657.5 617.5 -3826.5"; for i in $(seq 1 12); do echo "wait 10000"; done
+    echo "wait 5000"; echo "tp -10661.5 617.5 -3830.0"; for i in $(seq 1 10); do echo "wait 10000"; done; } > $N/scan/armwrest_host.txt
+  { echo "wait 8000"; echo "tp -10661.5 617.5 -3830.0"; for i in $(seq 1 12); do echo "wait 10000"; done; echo "wait 2000"
+    echo "tp -10657.5 617.5 -3826.5"; for i in $(seq 1 12); do echo "wait 10000"; done; } > $N/scan/armwrest_guest.txt
   MASH=""; for i in $(seq 1 240); do MASH="${MASH}k:E:40_w:43_"; done
   GK="w:15000_py:facesweep:${AIM},-180,160,20,82,1500,u2_w:500_w:4000_shot:$NAME-g0_kd:E_w:2000_ku:E_w:12000_shot:$NAME-g1_${MASH}shot:$NAME-g2_w:8000_shot:$NAME-g3_k:ESC:150_w:3000_shot:$NAME-g4"
   HK="w:60000_shot:$NAME-h0_py:facesweep:${AIM},-180,160,20,82,1500,host_w:500_w:4000_shot:$NAME-h1_kd:E_w:2000_ku:E_w:6000_shot:$NAME-h2_${MASH}shot:$NAME-h3_w:8000_shot:$NAME-h4_k:ESC:150_w:3000_shot:$NAME-h5"

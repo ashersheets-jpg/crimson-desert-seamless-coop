@@ -74,6 +74,7 @@ Updated 2026-11-22 (build 677c87bb).
 
 Mining with the hand drill and fishing as the joined player; the host's armour dye on the friend's screen; a tree the
 friend cuts can show twice for the host; taming a wild horse as the friend (a fix is in, not yet confirmed on a real
-taming); arm wrestling in solo with Co-op+ installed (one report: the character kept jumping until a restart); bench
+taming); arm wrestling in solo with Co-op+ installed (one report: the character kept jumping until a restart); the
+friend cannot start a talk with any NPC while the host is in a conversation or a scene (it works once the host is done); bench
 sitters may T-pose on the friend's screen; boss fights with two players are untested; more than two players. The full
 list is in README.txt (KNOWN ISSUES).

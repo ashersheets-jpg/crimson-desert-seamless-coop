@@ -152,8 +152,11 @@ Steam join/invite/leave and room code, friends-only vs invite-only, join/leave n
   (cs121a, pp57, pp58: 1212 checks, 0 fail) showed the slot written only in the stage processor's tick, the joined
   player's own shop in its own manager, and its taming / encounters in the host's. The fix ON by default from
   d871af4f (layer d871af4, native 96d6c65: user 2's own scenes known by their 2356 ids; its branch / chart-event
-  requests about them, and their setter / tick / end, run with its own triple). pp59, the full checklist with it on,
-  started 01:39. Left: a tester's taming (cannot be scripted).)
+  requests about them, and their setter / tick / end, run with its own triple). pp59, the full checklist with it on:
+  28 steps, 1211 pass (the 1 fail my own uncommitted docs); posted as 614591d0 (05:51). Left: a tester's taming
+  (cannot be scripted); the next build's FR1 manager-change reset; and whether the server's INTERACTION and
+  minigame-start checks (ServerInteractionActorComponent slot 46 -> 0x21CABF0, ActivateMiniGameReq -> 0x21CAF70)
+  meet the host's focus for the friend's requests: cs123, the host in a talk while the friend opens a shop.)
 - [x] **T26 — Death penalty and respawn options.** Config options for penalty (none, partial loss, full) and respawn rules, applied consistently on both sides. *Done when:* every option is tested. (2026-11-22: the respawn option is done; the penalty options were blocked on the two-worlds design (no removal the server accepts). On the native shared world the game's own jail fine removes items on the host's server (RemoveItemToInventoryAck 2481): a lead to a server-side removal; design in docs/research/t26-death-penalty.md. 2026-11-22: route 2 built as research, off (native 6af91d5: the host's server takes a player's own "I got up myself" request and removes the host's share of its money with the game's own delete; layer: the revive prompt's Q / U send it); cs97 lists the money pouch to find the silver's key, cs97b the removal; then the setting.) (2026-11-22 cs97: the request reached the host's server for both players and the "Money" pouch was listed; it holds the camp money and contributions only. The coins are item key 1 (the arm-wrestling prize names item 1), in another inventory: the native now searches every inventory for the item (40f0c15). cs97b (item 1) is the removal test; the layer passes item 1 to the host only after it passes.) (2026-11-22 19:11 cs97b
 PASSED: item 1 is 'Money_Copper', in the character's bag (inventory 1, slot 6); the joined player and then the host
 each lost exactly 10 % (1145 of 11454), err 0, once per death; SAVES OK, the test world unchanged. The layer now passes
@@ -305,6 +308,14 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   more (the black screen after the host's next cinematic; native 781dba6), the NPCs move in the guest's cabin scene
   (cs28b shots), a message when the friend is busy with the NPC (one talk at a time, the server's rule). Left: the
   scenes that start from a TALK (design question to the user), a hands-on / tester check of the fix.
+  2026-11-25 cs125a: that rule was read too narrowly: while the host is in ANY talk (a focus stage), the friend's talk
+  to ANY NPC is refused with the busy-NPC error (Renee's shop refused while the host talked to the inn's organizer
+  73 m away; the toast "They are busy with Host" was wrong). NOT the shared focus slot: cs125b ran the friend's talks
+  with its own focus and the refusal stayed; cs126a (no host talk) opened all three. The server's busy check reads
+  other shared state (ByJunter S46 1.1: the requester's vf160 0x211F930 / the .xtls reserve 0xE401150; the error's name
+  unread). Next: a probe at the 2642 handler (the requester's interaction component and its +0xD8 for user 2's
+  requests, against the host's). Meanwhile the toast says what happens, and README / Nexus / features list it.
+  Repro: build/native/cs125.sh (tools/prepost.sh talkwhile, kept out of the release list).
   2026-11-21: the talk scenes were decided (option 2, 11-17); a script may reach them now: talks start with R while
   the camera faces the person, every scripted try had held E (cs79: faceto + R at Marius and Ross). 2026-11-22, from cs79b's logs: each of Marius / Ross stood TWICE at one spot on the host's game, and the second copies (0xB0100279, 0xB010027F) are the bound NPCs of the joined player's OWN story scenes (0x1CD, 0x1D0; "Story scenes together" prepares them on its own quest manager): the host's game shows the friend's copies too, and in cs79b the host's game sent NO talk request (2671) to either copy: most likely its aim settled on the friend's copy, which has no talk on the host's game (unproven). Next: the friend's own-scene people hidden on the host's game (and the host's on the friend's), then the talks by script again.)
   (2026-11-22 cs79c, the story mode off: one Marius and one Ross, and the scripted talks still took nothing. The doubles were not the block; the cabin talks stay on the hands-on list. The doubles remain a story-mode defect to fix before that mode can be on by default.)

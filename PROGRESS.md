@@ -11281,3 +11281,141 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   focus; untested on a real taming; the host's log names whatever held the focus; the 6 s release stays), tags
   Borque; the solo arm-wrestling report as still open; tested = the full checklist on 3732 (28 steps, the fix on).
 - 05:53 native base synced (native-base/ at 96d6c65: the focus slot, its probe and the narrowed request window).
+- 05:53-05:59 static, on the 3732 exe (scratchpad interact_focus73.py, exclusive73.py, revfocus73.py; the note's new
+  section "Which other server paths read the focus"): the interaction Reqs (2642 / 2304) and the server's interaction
+  decision reach no focus reader by DIRECT calls, but going backward from the readers, the server's
+  ServerInteractionActorComponent slot 46 (-> 0x23607D0 -> 0x21CABF0 "blocked by another live stage", the manager from
+  an actor's chain) and TrocTrActivateMiniGameReq (-> 0x21CAF70) do read a manager's focus. If that manager is the
+  host's for the friend's requests, the friend cannot talk to an NPC or start a minigame while the host is in a talk or
+  a match: never tested (no step has the host in a talk while the friend talks). Written: build/native/cs123.sh (the
+  host's talk left open, the friend opens the butcher's shop twice, then the host closes its talk).
+- 05:59 cs122a started (EdwardJames's solo arm wrestling on a pad: the host alone at the Hernand table, the simulated
+  pad mashing X for 15 s, then A, then B twice; the talk sweep narrowed to five angles so the mash meets the match).
+- 06:03 cs122a done (SAVES OK, 5/5), INCONCLUSIVE: with pad_sim on the game is in pad mode (its prompt "(A) Try arm
+  wrestling", the screenshots), and the keyboard R sweep took nothing at any angle (ShopProbe on: no "host asked"),
+  so no match started; the mash met no minigame (MiniGameProbe: match off). cs122.sh changed to ALL-PAD input (A to
+  try, A held 2 s to take part, then X / A mashes, B twice; a screenshot every 3 s). 06:05 cs122b started.
+- 06:09 cs122b done (SAVES OK, 5/5), MISSED: without the sweep the camera kept the load's direction (a wall in the
+  screenshots), so A had no prompt to press; no match. cs122.sh: one sweep step at -60 first, only to turn the camera
+  to the table (its R does nothing in pad mode). 06:10 cs122c started.
+- 06:14 cs122c done (SAVES OK, 5/5), MISSED again, and why: the teleport "tp -10661.5 619 -3830.0" lands EITHER on the
+  table's floor (617.09: cs122a, the armwrest steps) OR on the gallery above (620.76: cs122b / cs122c, the logs'
+  positions; the screenshots show the upstairs corridor): 619 is inside the gallery's floor, and the game pushes the
+  character up or lets it fall. cs122.sh now teleports to 617.5. The checklist's armwrest step uses the same 619 for
+  both players (a flaky spot; it passed every pass so far): to 617.5 with the next full pass (a test-kit change).
+  06:16 cs122d started.
+- 06:19 cs122d done (SAVES OK, 5/5): at the table now (617.09; "(A) Try arm wrestling" over the organizer), but the
+  simulated pad's A (a tap at S+25, then held 2 s at S+30) never started the interaction: no "host asked" on the
+  server, only the organizer's "Stranger: Eh?" bark after the tap. The X mash then made the character ATTACK (a skill
+  effect on a "Stranger" target): on an Xbox layout X is an attack and A the jump / interact. So EdwardJames's "I mash
+  X ... the character starts jumping" fits a PLAYSTATION pad (Cross, in A's place, = jump / interact), whose buttons
+  the layer reads through its own HID reader (pad_input.cpp sony_reader), a path the simulated XInput pad never
+  takes. Stopped here (four runs): his report zip and his controller type are the next evidence (ask him), not more
+  scripted runs. Why the simulated A hold did not take the prompt is open (holds worked for the horse call, mr1).
+- 06:32 cs123a done (SAVES OK, 5/5, both alive): THE FRIEND COULD NOT TALK WHILE THE HOST WAS IN A TALK. The host's
+  talk to the inn's organizer ACCEPTED (06:29:17; its scene 0x31E took the focus on the host's server and client
+  managers until its Esc, UNDO 06:31:32); during it the friend's two shop sweeps at the butcher (73 m away; the shop
+  step's exact sweep, which takes at -30 on its first angle) got NO "USER 2 asked" at all, so the friend's game never
+  sent the request. The friend's game had the host's table scene 0x31E (its prepare copied by GuestSeqRoute, its twin
+  0x1000031E): the likely cause is the friend's OWN client check (ClientInteractionActorComponent slot 46 -> 0x2359460
+  -> 0x23607D0 -> 0x21CABF0 "blocked by another live stage") meeting the host's scene as its client manager's focus.
+  That fits Borque's "client still not able to interact with npcs". 06:35 cs123b: a control open before the host's
+  talk, and the focus probe on the friend's game too (-GuestDev native_extra=shop_probe=1).
+  On the friend's game the host's 0x31E itself was ROUTED to the host character's own manager X (GuestSeqRoute), not
+  the friend's M; but the friend's game also holds a TWIN of it for itself (ShopTwin twin_extra 0x94FEA6AE: twin
+  0x1000031E "for 0xA0100066", fed the host scene's states): if the twin follows the host's talk into the flagged node,
+  it takes the friend's own focus. cs123b's probe on the friend's side should name the scene. (Rule slip ~06:35: one
+  grep through Bash as cs123b started, before its games were up.)
+- 06:46 cs123b done (SAVES OK, 5/5, both alive): the CONTROL failed too: before the host's talk the friend's sweep at
+  the butcher took nothing either. So the host's talk is not the cause; the host being at the inn (73 m away) is. The
+  friend's interaction entry check (GuestXInter's A, 0x2126A1F) ran 0 times in the whole run (cs123a too), while in
+  the shop step it runs thousands of times once the friend stands at the butcher (pp59-shop 7,478 then 22,193; the
+  armwrest step 3,805+): the friend's game never even looked for someone to talk to. (The shop probe does not run on
+  a guest: it needs create_session, so no focus lines there.) Not the AI hand-off (ai_handoff=0). What differs: when
+  the host reached the inn table, the friend's game made 10 twins at once (06:40:39): 9 shop twins (the butcher's
+  0x0591B85B among them) AND the arm-wrestling table's twin_extra (0x94FEA6AE) "for 0xA0100066"; the shop step's twin
+  half makes 6 shop twins and no table twin. Suspect: the table's twin binds the friend's character into the table
+  scene from 76 m away, so its game treats it as busy in a scene. 06:48 cs123c: the same with the friend's table twin
+  off (-GuestDev native_extra=shop_probe=1+twin_extra=0; native_extra is written first, so it overrides the layer's).
+- 07:02 cs123c done (SAVES OK, 5/5): the override held (twin_extra 0x00000000: 9 shop twins, no table twin) and the
+  friend STILL never looked for anyone to talk to (A: 0 calls) and no "USER 2 asked": the table twin is cleared. What
+  is left between cs123 and the shop step: in the shop step the friend meets the butcher with the host 440 m away
+  (its own shop scene) before the host comes; in cs123 the friend arrives at the shop with the host already near
+  (73 m). 07:03 cs124 (build/native/cs124.sh): the host beside the butcher first, then the friend arrives and opens
+  twice: opens = the 73 m band breaks it; fails = arriving with the host already near breaks it. History: 9 Nov
+  (tcB217-224) lobby runs failed the same way when the friend's game had prepared its OWN copies of the market's shop
+  scenes at its login place, which then coexisted with the shop twins near the host; the note then: "shop_twin must
+  not twin a host shop scene whose resource the guest already has as its own scene" (not built: shop_twin.cpp has no
+  such check). (Rule slip ~07:05: one grep through Bash while cs124 loaded.)
+- 07:14 cs124a done (SAVES OK, 5/5), CONFOUNDED: "tpnear 4 0" put the host 1 m from the friend's spot, and the friend's
+  R hold opened the Co-op+ menu ON THE HOST (the hold-R prompt on the other player within 3 m). Its twins: 6 shop
+  twins, the same 6 as the shop step's (the butcher is resource 0x978345CA, Renee; 0x0591B85B is another merchant, my
+  mix-up above), also made in cs123. Renee's flags on the friend's game (MerchantUnhide: +0x5E 0x10 +0xC2 1 +0xCF 1,
+  not hidden) are the same in cs123b and pp59-shop. So far only the host's distance separates failing (73 m, the inn)
+  from working (440 m; beside). cs124.sh: the host 6.4 m away by the stall instead.
+- 07:15 asked EdwardJames in #bug-reports (tagged): PlayStation or Xbox controller, and the report zip again.
+- 07:16 cs124b started (the host 6.4 m from the friend's spot from the start; the friend arrives after). Meanwhile the
+  next build's FR1 manager-change reset written into native src (shop_probe.cpp: the exchange + reset in FR1, the
+  resets counted in the summary, the ON line's narrowed text; 19 placeholders / 19 arguments checked). Not built.
+- ~07:24 cs124b's first open (screenshot g1, the host 7 m away from the start): NOT opened either. So the distance is
+  not it: what breaks the friend's shop is ARRIVING at the shop with the host already near (the host's game already
+  running the shop scene). The checklist's shop step always has the friend at the butcher FIRST (host 440 m away:
+  its own shop scene), and its "with the host there" half passes only after that; a friend who walks up to a shop
+  the host is already at has never been tested. That is ordinary play (both enter a shop, or the host gets there
+  first) and fits Borque's "client still not able to interact with npcs".
+- 07:26 cs124b done (SAVES OK, 5/5): no "USER 2 asked", A 0 calls; its twins were made at 07:22:13, when the host
+  arrived, with the friend still at its login place (it teleported in 44 s later). CORRECTION, this is the KNOWN
+  limitation of 2026-11-21 13:05 (pp42 notes): "the shop works when the joined player walks in or arrives before the
+  host's shop scenes (cs82c, cs75w1); after a far teleport INTO a town whose host scenes already run, it does not
+  (known, said in the post)": the friend's game refuses a twin's prepare while the shopkeeper is not loaded there,
+  and the re-make (shop_twin_again) ships off after two reviews found faults; round 3 is to go the host's way (its
+  ObserverSeqCopy re-sends live scenes after a field move) and first needs one real fast travel of the joined player.
+  Every cs123 / cs124 run teleported the friend into the market after the host: the known case, not a new bug. Lesson
+  in docs/LESSONS.md. The original question (does the host's talk block the friend's talk?) is still untested: cs123d
+  next, with the friend at the butcher FIRST (the host far, its own shop scene), then the host to the inn and its
+  talk, then the friend's open again.
+- 07:38 *** cs125a: THE HOST'S TALK BLOCKS EVERY TALK OF THE FRIEND *** (SAVES OK, 5/5, both alive; build/native/
+  cs125.sh, the friend at the butcher first): #1 the host 408 m away: Renee's shop OPENS (its own scene); #2 the host
+  at the inn table 73 m away, not talking: OPENS (its twin 0x1000039A, branches answered locally); the host talks to
+  the arm-wrestling organizer (NPC 0xB01006EC; its scene 0x390 takes the host server manager's focus 07:37:00, undone
+  07:37:21 at its Esc); #3 during it: NOT opened: the friend's game got InteractionPreemptionStepFailAck 2946 with
+  error 0x58C8345D twice (07:37:11, :12) for RENEE (0xB010059E), not the organizer, and the layer's toast "They are
+  busy with Host right now" (wrong: Renee was busy with nobody). The C point of the host's server logged both as
+  ACCEPTED: the refusal is later in the 2642 handler (the .xtls check 0xE401150). So the 16 Nov reading of the
+  testers' BUG 2 ("the server lets one player at a time preempt an NPC: the NPC the host is talking to") was too
+  narrow: while the host holds a focus stage, the friend's preemption of ANY NPC fails; the shared focus fits
+  (revfocus73: the interaction component's slot 46 -> 0x23607D0 -> 0x21CABF0 "blocked by another live stage").
+  Fix (next build): the per-player focus slot's request window also takes user 2's InteractionPreemptionStepReq 2642
+  and DoStepReq 2304, run with user 2's own triple, EXCEPT when its NPC is the one of the host's current talk (the
+  host's last accepted 2642's NPC while the host's focus is set): there the game's one-talker rule stays as it is.
+- 07:38-07:42 that fix written (native shop_probe.cpp: on_c records the host's accepted talk NPC; on_fr1 takes user 2's
+  2642 / 2304 except at that NPC while the host's focus is set; counted in the summary as "its talks among them" /
+  "left to the game"; the ON line names the talks) with the FR1 manager-change reset; built (93 native tests, the same
+  14 known old failures; layer tests pass; cdmp 6e371a96, coopplus 4741bbe0), committed native (local). Test kit:
+  tools/prepost.sh gets a "talkwhile" step (cs125's flow and checks: 3 opens accepted, the menu answered twice at the
+  inn, never refused as busy, the slot's talks > 0, no swap failed / unbalanced) and the armwrest step's teleports at
+  617.5; docs/tests/RELEASE-CHECKLIST.md lists talkwhile (29 steps). ~07:42 cs125b: cs125 on the new build.
+- 07:52 cs125b done (SAVES OK, 5/5): THE FOCUS FIX DID NOT HELP: #3 refused again (2946, 0x58C8345D, "busy with Host"),
+  although the window took the friend's talks ("its talks among them 4", none left to the game, 16 swaps, 0 failed).
+  So this refusal does not read the host manager's focus. The friend's packets: #1 and #2 each 2642 -> 2308 -> 2304 ->
+  2363 (no reset 2751 / 2930 after either), #3 2642 -> 2946 at once. ByJunter's S46 notes (native-base/docs/research/
+  s25/s46-datos/nativo.md sections 1.1 and 3): the 2642 fails while the REQUESTER still holds a preemption
+  ([compSol+0xD8], eErrNoAlreadyPreemptingActor) or the NPC is held ([compNPC] slot, eErrNoAlreadyPreemptedActor),
+  both released by the interaction's reset. New suspect: #2 went through the TWIN, whose shop close is answered on
+  the friend's game, so the server never ends that interaction and the friend keeps Renee preempted; #1 (its own
+  scene) closed on the server. The host's talk would then be a coincidence. 07:54 cs126a (build/native/cs126.sh):
+  cs125 with NO host talk; #3 failing would confirm the twin's leftover. (Rule slip 07:55-07:56: three log greps
+  through Bash while cs126a started, before its games were up.) The reset the server would need: InteractionResetReq
+  2751, captured from the host's own client three times (cs55-crime, cs86e, pp49-fresh): 17 B, payload u32 requester
+  | u32 NPC | 0x8ABB6D65 (the same constant each time), answered by 2930 InteractionResetAck. The friend's game sent
+  none after #1 or #2.
+- 08:05 cs126a (SAVES OK; no host talk): #3 OPENED (Renee's menu, shot c1). So the twin's leftover is cleared, and the
+  HOST'S TALK is what refuses the friend's talks (cs125a / cs125b #3), to any NPC; but the per-player focus slot does
+  not cure it (cs125b), so the server's busy check reads some other shared state (ByJunter S46 1.1: the 2642 path's
+  requester state vf160 0x211F930 (eErrNoAlreadyPreemptingActor if [compSol+0xD8], eErrNoInteractionDelayTime ...) and
+  the .xtls reserve 0xE401150; which one 0x58C8345D is was never read: S46's P3, the .rdata error words, filled at run
+  time). Next for it: a probe at the 2642 handler logging, for user 2's requests, the requester actor, its
+  interaction component, its +0xD8, and the host's component; not in this build. DECISIONS (mine, scoped): the talk
+  part of the native change is reverted (it does nothing for this, and swaps without a reason are risk); the FR1 reset
+  stays. The talkwhile step leaves the checklist until a fix exists (cs125.sh is the repro). The layer's toast says
+  what really happens ("You cannot start a talk while Host is in one").

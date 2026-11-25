@@ -236,6 +236,9 @@ KNOWN ISSUES (shared world playtest)
 - Arm wrestling in SOLO with Co-op+ installed was reported once to leave the
   character jumping, with no way out of the match but a restart (not seen in our
   tests). If it happens to you, please send your zip.
+- While the host is in a conversation (or a scene), the joined player cannot start a
+  talk with ANY NPC, not only the one the host is talking to. Wait until the host is
+  done; the game tells the joined player so.
 - City NPCs sitting on benches may stand in a T-pose on the joined player's screen
   (reported once, not seen in our tests).
 - Boss fights are not tested with two players yet.

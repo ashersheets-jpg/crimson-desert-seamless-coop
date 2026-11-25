@@ -993,6 +993,8 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
             }
             // Co-op+ 2026-11-16 (the testers' bug 2): the server lets one player at a time talk to an NPC. When ours
             // is refused because the friend is busy with that NPC (cdmp.asi counts those refusals), say so.
+            // 2026-11-25 (cs125a / cs126a): the refusal comes while the friend is in ANY talk, whichever NPC ours is
+            // for (Renee's shop refused while the host talked to the inn's organizer 73 m away): the toast says that.
             {
                 using RefusedFn = int (*)(uint32_t*, uint32_t*);
                 static RefusedFn refused = nullptr;
@@ -1016,7 +1018,8 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
                         if (!said_at || now - said_at >= 10000) {
                             said_at = now;
                             const std::string who = session.peer_name().empty() ? std::string("Your friend") : session.peer_name();
-                            toast = std::format("Co-op\nThey are busy with {} right now. Try again when {} is done", who, who);
+                            toast = std::format("Co-op\nYou can't start a talk while {} is talking. Try again when {} is done",
+                                                who, who);
                             toast_until = now + 5000;
                         }
                     }

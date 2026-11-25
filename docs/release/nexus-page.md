@@ -84,6 +84,8 @@ can be added in coopplus.ini (the README explains how).
 - Taming a wild horse as the joined player: a fix is in, not yet confirmed on a real taming (if the last step still
   fails, they are freed a few seconds later and the horse is most likely not tamed).
 - Arm wrestling in solo with Co-op+ installed was reported once to leave the character jumping until a restart.
+- While the host is in a conversation (or a scene), the joined player cannot start a talk with any NPC; it works again
+  once the host is done.
 - Story scenes that start from a talk do not wait for both of you yet.
 - Boss fights are not tested with two players yet.
 - After a game update Co-op+ switches itself off until it is updated.

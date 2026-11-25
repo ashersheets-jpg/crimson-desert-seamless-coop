@@ -183,3 +183,52 @@ So the request path writes the slot synchronously (2880 StageBranchStateReq -> 0
   the OLD manager is swapped into the new one. A stale focus id there blocks only if a live stage of the new manager
   has the same id (ids look like one counter per server: unlikely); the host's triple is never affected. Fix: FR1
   compares with g_host_mgr (exchange) and asks the reset itself when it changed, as the refresh does.
+- pp59 (25 Nov, the fix ON, d871af4f; 28 steps, 1211 pass, 1 fail = my uncommitted docs): "swaps 0 failed 0 ..." in
+  every step but shop (4 of user 2's branch / chart-event requests about its own shop scene: 8 swaps, 0 failed, 0
+  unbalanced; harmless, that scene is in its OWN manager). [own scene]: all 19 of user 2's own scenes (door 10, shop 9)
+  were in its own manager. Posted as 614591d0 (the same DLLs plus the README notes).
+
+## Which other server paths read the focus (25 Nov, scratchpad interact_focus73.py, revfocus73.py, exclusive73.py)
+- Forward, direct calls only (depth <= 7): the server's interaction decision 0x2126920, InteractionPreemptionStepReq
+  2642 (0x2CDBE20) and InteractionDoStepReq 2304 (0x2CDC3B0) reach NO focus reader; the control (the
+  StageBranchStateReq body 0xE169180) reaches 0x21CABF0 at depth 3 (via 0x25C82A0) and the setter at depth 4.
+- The 506 pa::ConditionData_* classes share generic vtables (BlockByExclusiveStage, ExclusiveStagePlaying and
+  IsReservedNextExclusiveStage have the same slots): their checks run elsewhere, so no class reaches a reader there.
+- Backward from the readers (0x21CAF70, 0x21CABF0, 0x21C8DB0, 0x21CA5F0; direct calls, depth <= 6): 323 ancestors,
+  84 of them virtual functions. The SERVER's among them:
+  - ServerInteractionActorComponent (and Common...) slot 46 0x2359460 -> 0x23607D0 -> 0x21CABF0 "blocked by another
+    live stage": 0x23607D0 takes a manager from an actor's chain ([actor+0xA0] -> 0x2299FB0 -> 0x19A14B0 -> its object's
+    vf +0x48), looks the interaction's stage up there by id (0x21C7370, [arg1+0x20]) and refuses when another live
+    stage blocks it. The client's ClientInteractionActorComponent slot 46 and its interaction target finders
+    (FindManualInteractionTargetProcessor) call the same 0x2359460: the talk prompt itself may grey out on it.
+  - TrocTrActivateMiniGameReq slot 2 0x2CBE4F0 -> 0x2F54DD0 -> 0x2BB2190 -> 0x21CAF70 (starting a minigame).
+  - TrocTrStartPlayerBehaviorSequencerReq slot 2 0x2D5A160 -> 0x2BA2B40 -> 0x21D05A0 -> 0x21CABF0.
+  - TrocTrStartChangeFocusActorReq slot 2 (depth 4), TrocTrReviveLoadingStartReq slot 2 (0x2C23BD0 -> 0x21CAF70),
+    ServerGimmickActorComponent slot 6, ServerQuestManager slots 6 / 8, the global-stage requests.
+- So whether the joined player's TALKS and MINIGAMES meet the host's focus depends on whose manager that actor chain
+  gives for a request of user 2: its own (fine) or the host's (then the friend cannot talk to an NPC or start a game
+  while the host is in a talk or a match). Never tested: no checklist step has the host in a talk while the friend
+  talks. cs123 (build/native/cs123.sh): the host talks to the inn's organizer and leaves the talk open, then the
+  friend opens the butcher's shop 75 m away, twice; then the host closes its talk.
+- cs123a-c / cs124a-b (25 Nov 06:21-07:26) could not answer it: each teleported the friend into the market AFTER the
+  host's shop scenes ran, the known case where the friend's shop twins never take (PROGRESS 2026-11-21 13:05: its game
+  refuses a twin's prepare while the shopkeeper is not loaded there; shop_twin_again ships off). Its interaction check
+  (GuestXInter A) then never runs at all, with or without the host's talk, the table's twin or the host's distance.
+  cs125 (build/native/cs125.sh) does it right: the friend at the butcher first (the host far), the host to the inn,
+  then three opens: host far / host at the inn not talking / host in its talk. The friend's talk request is
+  InteractionPreemptionStepReq (2642 on 3732; ShopProbe's "[2671]" lines are its handler 0x2CDBE20's result).
+- cs125a (25 Nov 07:38): #1 and #2 open Renee's shop; #3 (the host in its talk with the organizer, scene 0x390 the
+  host server manager's focus) does NOT: the friend gets InteractionPreemptionStepFailAck 2946 with the busy-NPC error
+  0x58C8345D for RENEE, an NPC the host never touched (the C point still logs ACCEPTED: the refusal is later, the
+  .xtls check 0xE401150). So the testers' BUG 2 (16 Nov: "no NPC interaction while the host is in a cutscene", read
+  then as "the NPC the host is talking to") is the shared focus: while the host holds a focus stage, the friend's
+  talk to ANY NPC fails. Fix (native, next build): the request window also takes user 2's 2642 / 2304 (its own
+  triple), except at the NPC of the host's own current talk (its last accepted 2642's NPC while the host's focus is
+  set), where the game's one-talker rule stays. Counted in the summary ("its talks among them", "left to the game").
+- That fix did NOT cure it (cs125b: 4 of the friend's talks ran with its own triple, 16 swaps, none failed, #3 still
+  refused with 0x58C8345D) and cs126a (the same flow WITHOUT the host's talk) opened all three: the host's talk is the
+  cause, but the server's busy check reads some OTHER shared state than the manager's focus. Reverted (native 2nd
+  commit of 25 Nov). Candidates from S46 1.1: the requester state vf160 0x211F930 (eErrNoAlreadyPreemptingActor when
+  [compSol+0xD8] is set; eErrNoInteractionDelayTime) if the requester's component resolves to the host's for user 2's
+  request, or the .xtls reserve 0xE401150. Next: a probe at the 2642 handler logging, for user 2's requests, the
+  requester actor, its interaction component and +0xD8, and the host's component.
