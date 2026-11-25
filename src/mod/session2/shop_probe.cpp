@@ -6,14 +6,19 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cstring>
 #include <format>
+#include <iterator>
 #include <span>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <safetyhook.hpp>
 
+#include "mod/game/hook_prepare.h"
 #include "mod/game/offsets.h"
+#include "mod/game/rtti.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
 #include "mod/session2/focus_slot_logic.h"
@@ -199,7 +204,7 @@ std::atomic<uint64_t> g_focus_n[3][2] = {};
 std::atomic<uint64_t> g_recv_u2{0}, g_recv_all{0};
 thread_local uint32_t t_recv_u2 = 0, t_recv_any = 0;
 // The per-player focus slot (user2_focus_slot=1; docs/research/taming-refusal-3732.md, "Per-player focus slot"): the
-// joined player's own triple of the HOST manager's focus slot is kept apart (fsl::FocusSlots) and put in the manager
+// joined player's own triple of the HOST manager's focus slot is kept apart (pfs::FocusSlots) and put in the manager
 // around each request of user 2's session (FR1 / FR2) and, by their stage's owner ([[stage+0x48]+0x60] = user 2's
 // character: user 2's triple, else the host's), around the focus setter 0x2271150 (proc, old, new), a stage
 // processor's tick 0x226DA80 (proc, u8) and a stage's end 0x21CB970 (mgr, stage, u8): inline hooks at their entries;
@@ -214,10 +219,10 @@ std::atomic<bool> g_slot_wanted{false}, g_slot_on{false};
 std::atomic<uintptr_t> g_host_mgr{0};
 std::atomic<bool> g_slot_reset_all{false}, g_slot_reset_u2{false};
 SafetyHookInline g_fset_hook, g_ftick_hook, g_fend_hook;
-fsl::FocusSlots g_slots;                    // the server's thread only
+pfs::FocusSlots g_slots;                    // the server's thread only
 std::atomic<uint64_t> g_slot_u2[4] = {};    // user 2's pieces of work: requests, setter, stage ends, ticks
 std::atomic<uint64_t> g_slot_other{0};      // other managers' calls passed straight on
-thread_local uint32_t t_fr_token = fsl::FocusSlots::kRefused;
+thread_local uint32_t t_fr_token = pfs::FocusSlots::kRefused;
 thread_local uintptr_t t_fr_mgr = 0;
 std::atomic<uint64_t> g_limited{0}, g_lost{0}, g_lines{0};
 constexpr uint64_t kMaxLines = 4000;
@@ -569,32 +574,56 @@ bool wr(uintptr_t a, T v) noexcept {
         return false;
     }
 }
-struct MgrMem {  // fsl::FocusSlots' Mem: the manager's +0x90 / +0x98 / +0xA0
+struct MgrMem {  // pfs::FocusSlots' Mem: the manager's +0x90 / +0x98 / +0xA0
     uintptr_t m = 0;
-    bool read(fsl::Triple& t) noexcept {
+    bool read(pfs::Triple& t) noexcept {
         return rd(m + kMgr_Focus90, t.f90) && rd(m + kMgr_Focus98, t.f98) && rd(m + kMgr_FocusA0, t.fa0);
     }
-    bool write(const fsl::Triple& t) noexcept {
+    bool write(const pfs::Triple& t) noexcept {
         return wr(m + kMgr_Focus90, t.f90) && wr(m + kMgr_Focus98, t.f98) && wr(m + kMgr_FocusA0, t.fa0);
     }
 };
-bool stage_is_user2(uintptr_t stage) noexcept {
-    const uint32_t u2 = server_user2_player_key();
-    if (!u2 || !stage) return false;
+// A stage's owner for the slot ([[stage+0x48]+0x60]): user 2's character, the host's, or neither (an NPC's scene,
+// an unreadable one).
+enum class StageOwner : uint8_t { Other, Host, User2 };
+std::atomic<uint32_t> g_host_key{0};  // the host's character key (host_mgr_live)
+StageOwner stage_owner(uintptr_t stage) noexcept {
+    if (!stage) return StageOwner::Other;
     const uintptr_t data = rdp(stage + kScene_Info);
-    return data && rdv<uint32_t>(data + kStageData_Owner) == u2;
+    const uint32_t owner = data ? rdv<uint32_t>(data + kStageData_Owner) : 0;
+    if (!owner) return StageOwner::Other;
+    const uint32_t u2 = server_user2_player_key();
+    if (u2 && owner == u2) return StageOwner::User2;
+    const uint32_t host = g_host_key.load(std::memory_order_relaxed);
+    return host && owner == host ? StageOwner::Host : StageOwner::Other;
+}
+// The host's ServerSequencerStageManager read LIVE (the chain refresh_user2 follows, from the host's user), its vtable
+// checked; 0 when a link is missing. Review 2026-11-24 #4: never write into a cached manager that may have gone.
+uintptr_t host_mgr_live(uint32_t* key = nullptr) noexcept {
+    uintptr_t user = 0;
+    if (!server_host_user(user) || !user) return 0;
+    const uintptr_t chr = rdp(user + kUser_Main);
+    const uintptr_t comps = chr ? rdp(chr + kActor_Comps) : 0;
+    const uintptr_t seq = comps ? rdp(comps + kComps_Seq) : 0;
+    const uintptr_t mgr = seq ? rdp(seq + kSeqComp_Mgr) : 0;
+    if (!mgr || rdp(mgr) != g_base + isl::kVtServerStageMgr) return 0;
+    if (key) *key = rdv<uint32_t>(chr + kActor_Key);
+    return mgr;
 }
 // Between two pieces of work (depth 0): the resets the module's thread asked for.
 void slot_housekeeping() noexcept {
     if (g_slots.depth() != 0) return;
     if (g_slot_reset_all.exchange(false, std::memory_order_acq_rel)) {
-        g_slots = fsl::FocusSlots{};  // another host manager: nothing kept applies to it
+        g_slots = pfs::FocusSlots{};  // another host manager: nothing kept applies to it
         g_slot_reset_u2.store(false, std::memory_order_relaxed);
     }
     if (g_slot_reset_u2.exchange(false, std::memory_order_acq_rel)) g_slots.reset_user2();
 }
-uint32_t slot_enter(uintptr_t mgr, fsl::Owner o) noexcept {
+uintptr_t s_slot_mgr = 0;  // the manager of the open pieces of work (the server's thread only)
+std::atomic<uint64_t> g_slot_unwinds{0}, g_slot_dropped{0}, g_slot_host_in_u2{0};
+uint32_t slot_enter(uintptr_t mgr, pfs::Owner o) noexcept {
     slot_housekeeping();
+    if (g_slots.depth() == 0) s_slot_mgr = mgr;
     MgrMem mem{mgr};
     return g_slots.enter(mem, o);
 }
@@ -602,17 +631,42 @@ void slot_leave(uintptr_t mgr, uint32_t token) noexcept {
     MgrMem mem{mgr};
     g_slots.leave(mem, token);
 }
-// The manager the slot applies to: the host's, while the fix is on and on the server's thread (the one that hands the
-// requests to ServerNet::OnRecvPacket: g_slots has no lock); else 0 (the call goes on as it is).
+// Around a piece of work, also when an exception passes through it (review 2026-11-24 #1).
+struct SlotScope {
+    uintptr_t mgr = 0;
+    uint32_t token = pfs::FocusSlots::kRefused;
+    SlotScope(uintptr_t m, pfs::Owner o) noexcept : mgr(m), token(slot_enter(m, o)) {}
+    ~SlotScope() { slot_leave(mgr, token); }
+    SlotScope(const SlotScope&) = delete;
+    SlotScope& operator=(const SlotScope&) = delete;
+};
+// The fix is on and this is the server's thread (the one that hands the requests to ServerNet::OnRecvPacket: g_slots
+// has no lock). Before user 2's session exists the thread is not known: nothing is done, nothing counted.
 std::atomic<uint64_t> g_slot_other_thread{0};
-uintptr_t slot_mgr() noexcept {
-    if (!g_slot_on.load(std::memory_order_acquire)) return 0;
+bool slot_here() noexcept {
+    if (!g_slot_on.load(std::memory_order_acquire)) return false;
     const uint32_t tid = server_thread_id();
-    if (!tid || GetCurrentThreadId() != tid) {
+    if (!tid) return false;
+    if (GetCurrentThreadId() != tid) {
         g_slot_other_thread.fetch_add(1, std::memory_order_relaxed);
-        return 0;
+        return false;
     }
-    return g_host_mgr.load(std::memory_order_acquire);
+    return true;
+}
+// The manager the detours apply the slot to (the host's), or 0: the call goes on as it is.
+uintptr_t slot_mgr() noexcept { return slot_here() ? g_host_mgr.load(std::memory_order_acquire) : 0; }
+// The outermost point of the server's work: whatever a missed leave left open is closed here, if its manager is still
+// a manager (else the slot's state is dropped: nothing to give back to a manager that went away).
+void slot_outermost() noexcept {
+    if (g_slots.depth() == 0 && g_slots.current() == pfs::Owner::Host) return;
+    g_slot_unwinds.fetch_add(1, std::memory_order_relaxed);
+    if (s_slot_mgr && rdp(s_slot_mgr) == g_base + isl::kVtServerStageMgr) {
+        MgrMem mem{s_slot_mgr};
+        (void)g_slots.unwind(mem);
+        return;
+    }
+    g_slot_dropped.fetch_add(1, std::memory_order_relaxed);
+    g_slots = pfs::FocusSlots{};
 }
 
 // The focus probe (see kFS). FR: whose request the server loop is handing to ServerNet::OnRecvPacket; with the
@@ -625,19 +679,23 @@ void on_fr1(safetyhook::Context& ctx) noexcept {
     t_recv_u2 = sess && sess == s2 ? 1u : 0u;
     g_recv_all.fetch_add(1, std::memory_order_relaxed);
     if (t_recv_u2) g_recv_u2.fetch_add(1, std::memory_order_relaxed);
-    t_fr_token = fsl::FocusSlots::kRefused;
+    t_fr_token = pfs::FocusSlots::kRefused;
     t_fr_mgr = 0;
-    if (t_recv_u2) {
-        if (const uintptr_t mgr = slot_mgr()) {
-            t_fr_mgr = mgr;
-            t_fr_token = slot_enter(mgr, fsl::Owner::User2);
-            g_slot_u2[0].fetch_add(1, std::memory_order_relaxed);
-        }
-    }
+    if (!slot_here()) return;
+    slot_outermost();
+    if (!t_recv_u2) return;
+    uint32_t key = 0;
+    const uintptr_t mgr = host_mgr_live(&key);
+    if (!mgr) return;
+    g_host_mgr.store(mgr, std::memory_order_release);
+    if (key) g_host_key.store(key, std::memory_order_relaxed);
+    t_fr_mgr = mgr;
+    t_fr_token = slot_enter(mgr, pfs::Owner::User2);
+    g_slot_u2[0].fetch_add(1, std::memory_order_relaxed);
 }
 void on_fr2(safetyhook::Context&) noexcept {
     if (t_fr_mgr) slot_leave(t_fr_mgr, t_fr_token);
-    t_fr_token = fsl::FocusSlots::kRefused;
+    t_fr_token = pfs::FocusSlots::kRefused;
     t_fr_mgr = 0;
     t_recv_u2 = 0;
     t_recv_any = 0;
@@ -690,45 +748,62 @@ void on_fd(safetyhook::Context& ctx) noexcept {
     fd_check(ctx.rcx, ctx.rdx, rdv<uint64_t>(ctx.rsp));
 }
 
-// The per-player slot's detours (inline hooks at the three entries; see kFSetFn). Only a stage positively known as
-// user 2's (stage_is_user2) gets user 2's triple; any other call goes on with whatever is in the manager (the host's
-// between pieces of work, user 2's inside its own request), so a wrong owner read can only give the game's own
-// behaviour back, never a new mix.
+// The per-player slot's detours (inline hooks at the three entries; see kFSetFn). In the host's manager on the server's
+// thread: a stage positively owned by user 2 works with user 2's triple, one positively owned by the host with the
+// host's (it matters inside user 2's request), and any other stage (an NPC's, an unread owner) with whatever is in
+// the manager. A misread user 2 stage therefore falls back to the game's own shared slot for its tick-time work while
+// its requests use user 2's triple: the focus probe's lines (owners marked "USER 2's") are checked before the fix is
+// used (review 2026-11-24 #6). Returns: whatever the original leaves in rax (none of the three returns in xmm0).
+// The owner a piece of work in the host's manager runs as, or false: as it is (no swap needed or no owner known).
+bool slot_owner_for(uintptr_t stage, pfs::Owner& o) noexcept {
+    const StageOwner so = stage_owner(stage);
+    if (so == StageOwner::User2) {
+        o = pfs::Owner::User2;
+        return true;
+    }
+    if (so == StageOwner::Host && g_slots.current() != pfs::Owner::Host) {
+        o = pfs::Owner::Host;
+        g_slot_host_in_u2.fetch_add(1, std::memory_order_relaxed);
+        return true;
+    }
+    return false;
+}
 uint64_t __fastcall fset_detour(uintptr_t proc, uint64_t a2, uint64_t a3, uint64_t a4) {
     const uintptr_t host = slot_mgr();
     const uintptr_t mgr = host ? rdp(proc + kProc_Mgr8) : 0;
-    if (!host || mgr != host) {
-        if (host) g_slot_other.fetch_add(1, std::memory_order_relaxed);
+    pfs::Owner o{};
+    if (!host || mgr != host || !slot_owner_for(rdp(proc + kProc_Stage10), o)) {
+        if (host && mgr != host) g_slot_other.fetch_add(1, std::memory_order_relaxed);
         return g_fset_hook.unsafe_call<uint64_t>(proc, a2, a3, a4);
     }
-    if (!stage_is_user2(rdp(proc + kProc_Stage10))) return g_fset_hook.unsafe_call<uint64_t>(proc, a2, a3, a4);
-    g_slot_u2[1].fetch_add(1, std::memory_order_relaxed);
-    const uint32_t t = slot_enter(mgr, fsl::Owner::User2);
-    const uint64_t r = g_fset_hook.unsafe_call<uint64_t>(proc, a2, a3, a4);
-    slot_leave(mgr, t);
-    return r;
+    if (o == pfs::Owner::User2) g_slot_u2[1].fetch_add(1, std::memory_order_relaxed);
+    SlotScope s(mgr, o);
+    return g_fset_hook.unsafe_call<uint64_t>(proc, a2, a3, a4);
 }
 uint64_t __fastcall ftick_detour(uintptr_t proc, uint64_t a2, uint64_t a3, uint64_t a4) {
     const uintptr_t host = slot_mgr();
     const uintptr_t mgr = host ? rdp(proc + kProc_Mgr8) : 0;
-    if (!host || mgr != host || !stage_is_user2(rdp(proc + kProc_Stage10))) {
+    pfs::Owner o{};
+    if (!host || mgr != host || !slot_owner_for(rdp(proc + kProc_Stage10), o)) {
         return g_ftick_hook.unsafe_call<uint64_t>(proc, a2, a3, a4);
     }
-    g_slot_u2[3].fetch_add(1, std::memory_order_relaxed);
-    const uint32_t t = slot_enter(mgr, fsl::Owner::User2);
-    const uint64_t r = g_ftick_hook.unsafe_call<uint64_t>(proc, a2, a3, a4);
-    slot_leave(mgr, t);
-    return r;
+    if (o == pfs::Owner::User2) g_slot_u2[3].fetch_add(1, std::memory_order_relaxed);
+    SlotScope s(mgr, o);
+    return g_ftick_hook.unsafe_call<uint64_t>(proc, a2, a3, a4);
 }
 uint64_t __fastcall fend_detour(uintptr_t mgr, uintptr_t stage, uint64_t a3, uint64_t a4) {
-    if (g_fd_on.load(std::memory_order_relaxed)) fd_check(mgr, stage, reinterpret_cast<uint64_t>(_ReturnAddress()));
+    const uint64_t ret = reinterpret_cast<uint64_t>(_ReturnAddress());
+    const bool log_end = g_fd_on.load(std::memory_order_relaxed);
     const uintptr_t host = slot_mgr();
-    if (!host || mgr != host || !stage_is_user2(stage)) return g_fend_hook.unsafe_call<uint64_t>(mgr, stage, a3, a4);
-    g_slot_u2[2].fetch_add(1, std::memory_order_relaxed);
-    const uint32_t t = slot_enter(mgr, fsl::Owner::User2);
-    const uint64_t r = g_fend_hook.unsafe_call<uint64_t>(mgr, stage, a3, a4);
-    slot_leave(mgr, t);
-    return r;
+    pfs::Owner o{};
+    if (!host || mgr != host || !slot_owner_for(stage, o)) {
+        if (log_end) fd_check(mgr, stage, ret);
+        return g_fend_hook.unsafe_call<uint64_t>(mgr, stage, a3, a4);
+    }
+    if (o == pfs::Owner::User2) g_slot_u2[2].fetch_add(1, std::memory_order_relaxed);
+    SlotScope s(mgr, o);
+    if (log_end) fd_check(mgr, stage, ret);  // against the triple this stage's end really meets (review #5)
+    return g_fend_hook.unsafe_call<uint64_t>(mgr, stage, a3, a4);
 }
 
 // S: the server's 0x2126920. A = the decision point's registers (RAX = field vf48), R = the lookup's result, F = BL.
@@ -826,18 +901,9 @@ const char* req_name(uint16_t op) {
 
 // The RTTI class name of an exe vtable (MSVC x64: [vt-8] the complete object locator, signature 1, its type
 // descriptor's rva at +0x0C, the decorated name at the descriptor +0x10); on the log thread; "?" when unreadable.
-std::string rtti_name(uint64_t vt_rva) {
+std::string rtti_name(uint64_t vt_rva) {  // game::rtti_name_of_vtable from an exe-relative vtable
     if (!g_base || vt_rva < 8 || vt_rva >= kImageSize3732) return "?";
-    const uintptr_t col = rdp(g_base + static_cast<uintptr_t>(vt_rva) - 8);
-    if (col < g_base || col - g_base >= kImageSize3732 || rdv<uint32_t>(col) != 1) return "?";
-    const uint32_t td = rdv<uint32_t>(col + 0x0C);
-    if (!td || td >= kImageSize3732) return "?";
-    std::string s;
-    for (uintptr_t i = 0; i < 120; ++i) {
-        const char c = rdv<char>(g_base + td + 0x10 + i);
-        if (!c) break;
-        s += c;
-    }
+    const std::string s = game::rtti_name_of_vtable(g_base + static_cast<uintptr_t>(vt_rva));
     return s.empty() ? std::string("?") : s;
 }
 std::string line_of(const p::Event& e) {
@@ -947,15 +1013,19 @@ std::string line_of(const p::Event& e) {
                                                   : std::format("its element flag +0x75 = {} ({})", excl,
                                                                 excl ? "EXCLUSIVE: the manager's check below applies"
                                                                      : "not exclusive: the condition object decides");
+            const std::string lk = (cur & stp::kStageMask)
+                                       ? std::format("{} there (lookup read {}, dead {})", live ? "LIVE" : "not live",
+                                                     v[8] & 1 ? "ok" : "failed", (v[8] >> 2) & 1 ? "yes" : "no")
+                                       : std::string("no current stage");
             return std::format(
                 "ShopProbe [branch why] {} T{} | {}'s branch at {}: sequencer 0x{:X} (scene +0x30 0x{:X}), target node "
                 "0x{:X}: {} | the scene's manager +0x28 0x{:X} ({}; {} the B1 manager 0x{:X}): current stage +0xA0 0x{:X} "
-                "/ +0x90 0x{:X} -> 0x{:X}, {} there (lookup read {}, dead {}) -> {} | scene type +0x68 {}, group +0x78 "
+                "/ +0x90 0x{:X} -> 0x{:X}, {} -> {} | scene type +0x68 {}, group +0x78 "
                 "0x{:08X} (the current stage's 0x{:08X}) | the node's condition object: {} (vt exe+0x{:X}; +8 exe+0x{:X}, "
                 "+0x10 exe+0x{:X})",
                 when, e.tid, (v[0] >> 8) & 1 ? "USER 2" : "the host / another", site == 0 ? "2C0BFD7" : "2C0C03A", v[1],
                 v[2], node_id, ex, v[3], v[11] ? rtti_name(v[11]) : std::string("?"), v[3] == v[4] ? "=" : "!=", v[4],
-                v[6], v[5], cur, live ? "LIVE" : "not live", v[8] & 1 ? "ok" : "failed", (v[8] >> 2) & 1 ? "yes" : "no",
+                v[6], v[5], cur, lk,
                 shp::excl_name(verdict), v[7] & 0xFF, static_cast<uint32_t>(v[7] >> 32),
                 static_cast<uint32_t>(v[8] >> 32), v[9] ? rtti_name(v[9]) : std::string("none"), v[9],
                 v[10] & 0xFFFFFFFF, v[10] >> 32);
@@ -975,7 +1045,7 @@ std::string line_of(const p::Event& e) {
                      : std::string("scene -");
             return std::format(
                 "ShopProbe [focus] {} T{} | {} in manager 0x{:X}{} | before: +0xA0 0x{:X} +0x90 0x{:X} +0x98 0x{:X} (focus "
-                "0x{:X}){} | {} | {} | from exe+0x{:X}",
+                "0x{:X}){} | {} | {}{}",
                 when, e.tid,
                 what == 0 ? std::format("SET to 0x{:X} (a flagged branch)", v[5])
                 : what == 1 ? std::string("UNDO (+0xA0 = 0, +0x90 = +0x98)")
@@ -984,7 +1054,7 @@ std::string line_of(const p::Event& e) {
                 what == 0 && cur && (cur & stp::kStageMask) && cur != v[5] ? " TAKEN FROM ANOTHER STAGE" : "", scene,
                 u2req ? "inside a request of USER 2's session" : any ? "inside a request of the host's session"
                                                                   : "outside any request (a tick)",
-                v[9]);
+                v[9] ? std::format(" | from exe+0x{:X}", v[9]) : std::string());
         }
         default:
             return std::format("ShopProbe: event {}?", e.kind);
@@ -1058,12 +1128,15 @@ void branch_summary() {
                   g_focus_n[2][0].load() + g_focus_n[2][1].load(), g_focus_n[2][1].load());
     }
     if (g_slot_on.load()) {
-        log::info("ShopProbe per-player focus slot: user 2's requests {}, its stages' setter {} / ends {} / ticks {} | "
-                  "swaps {} failed {} overflow {} unbalanced {} repairs {} | other managers {}, other threads {} | the "
-                  "host's manager 0x{:X}",
-                  g_slot_u2[0].load(), g_slot_u2[1].load(), g_slot_u2[2].load(), g_slot_u2[3].load(), g_slots.swaps(),
-                  g_slots.failed(), g_slots.overflow(), g_slots.unbalanced(), g_slots.repairs(), g_slot_other.load(),
-                  g_slot_other_thread.load(), g_host_mgr.load());
+        // g_slots' counters are the server thread's plain integers, read here as they are (a log line only).
+        log::info("ShopProbe per-player focus slot: user 2's requests {}, its stages' setter {} / ends {} / ticks {}, the "
+                  "host's stages inside its requests {} | swaps {} failed {} overflow {} unbalanced {} repairs {} missed "
+                  "leaves {} (unwound {}, dropped {}) | other managers {}, other threads {} | the host's manager 0x{:X} "
+                  "(character 0x{:08X})",
+                  g_slot_u2[0].load(), g_slot_u2[1].load(), g_slot_u2[2].load(), g_slot_u2[3].load(),
+                  g_slot_host_in_u2.load(), g_slots.swaps(), g_slots.failed(), g_slots.overflow(), g_slots.unbalanced(),
+                  g_slots.repairs(), g_slots.missed(), g_slot_unwinds.load(), g_slot_dropped.load(), g_slot_other.load(),
+                  g_slot_other_thread.load(), g_host_mgr.load(), g_host_key.load());
     }
 }
 
@@ -1096,39 +1169,74 @@ bool context_ok(std::span<const gad::Section> secs, uintptr_t rva, std::span<con
     return false;
 }
 
-// user2_focus_slot=1: the three inline hooks; all or none (the request window FR1 / FR2 must be in too).
-void install_focus_slot(std::span<const gad::Section> secs) {
-    const auto inl = [&](uintptr_t rva, std::span<const uint8_t> head, void* detour, SafetyHookInline& h,
-                         const char* what) {
-        if (!context_ok(secs, rva, head, what)) return false;
-        h = safetyhook::create_inline(reinterpret_cast<void*>(g_base + rva), detour, SafetyHookInline::StartDisabled);
-        if (!h || !h.enable()) {
-            h = {};
-            log::error("ShopProbe: cannot hook {} (exe+0x{:X})", what, rva);
-            return false;
-        }
-        return true;
+// user2_focus_slot=1: the three inline hooks; all or none (the request window FR1 / FR2 must be in too). Review
+// 2026-11-24 #2 / #3: each is prepared disabled through game::prepare_inline, which must relocate exactly the verified
+// 5-byte first instruction (a 14-byte fallback would move unverified bytes: refused); only when all three are
+// prepared are they moved into place and enabled; an enabled hook is never destroyed (a server thread may be inside
+// its trampoline): on a failure the enabled ones are disabled and kept. Returns whether 0x21CB970 got its hook.
+bool install_focus_slot(std::span<const gad::Section> secs) {
+    struct One {
+        uintptr_t rva;
+        std::span<const uint8_t> head;
+        void* detour;
+        SafetyHookInline* slot;
+        const char* what;
+    };
+    const One ones[] = {
+        {kFSetFn, kFSetHead, reinterpret_cast<void*>(&fset_detour), &g_fset_hook, "the focus setter 0x2271150"},
+        {kFTickFn, kFTickHead, reinterpret_cast<void*>(&ftick_detour), &g_ftick_hook, "the stage processor's tick 0x226DA80"},
+        {kFEndFn, kFEndHead, reinterpret_cast<void*>(&fend_detour), &g_fend_hook, "a stage's end 0x21CB970"},
     };
     const bool fr = g_fr1_on.load() && g_fr2_on.load();
-    const bool a = fr && inl(kFSetFn, kFSetHead, reinterpret_cast<void*>(&fset_detour), g_fset_hook,
-                             "the focus setter 0x2271150");
-    const bool b = a && inl(kFTickFn, kFTickHead, reinterpret_cast<void*>(&ftick_detour), g_ftick_hook,
-                            "the stage processor's tick 0x226DA80");
-    const bool c = b && inl(kFEndFn, kFEndHead, reinterpret_cast<void*>(&fend_detour), g_fend_hook,
-                            "a stage's end 0x21CB970");
-    if (c) {
+    std::vector<std::pair<SafetyHookInline*, SafetyHookInline>> ready;  // prepared, disabled
+    ready.reserve(std::size(ones));
+    const char* failed = fr ? nullptr : "the request window FR1 / FR2";
+    for (const One& o : ones) {
+        if (failed) break;
+        if (!context_ok(secs, o.rva, o.head, o.what)) {
+            failed = o.what;
+            break;
+        }
+        const auto whole = [&o](const std::vector<uint8_t>& b) {
+            return b.size() == 5 && std::memcmp(b.data(), o.head.data(), 5) == 0;
+        };
+        auto h = game::prepare_inline(g_base + o.rva, o.detour, whole, "ShopProbe", o.what);
+        if (!h) {
+            log::error("ShopProbe: {} (exe+0x{:X}) could not be prepared ({}); nothing written", o.what, o.rva,
+                       game::inline_error_text(h.error()));
+            failed = o.what;
+            break;
+        }
+        if (!whole(h->original_bytes())) {
+            log::error("ShopProbe: {} (exe+0x{:X}) would patch {} bytes, not its verified 5-byte first instruction; "
+                       "nothing written",
+                       o.what, o.rva, h->original_bytes().size());
+            failed = o.what;
+            break;
+        }
+        ready.emplace_back(o.slot, std::move(*h));
+    }
+    if (!failed) {
+        for (auto& r : ready) *r.first = std::move(r.second);
+        std::vector<SafetyHookInline*> enabled;
+        for (auto& r : ready) {
+            if (!r.first->enable()) {
+                for (SafetyHookInline* e : enabled) (void)e->disable();
+                failed = "enabling the hooks";
+                break;
+            }
+            enabled.push_back(r.first);
+        }
+    }
+    if (!failed) {
         g_fd_on.store(true, std::memory_order_release);  // the stage-end detour logs the focus ends
         g_slot_on.store(true, std::memory_order_release);
         log::info("ShopProbe: the per-player focus slot (user2_focus_slot=1) is ON: user 2's requests and its own "
                   "stages' focus work run with its own +0x90 / +0x98 / +0xA0 in the host's manager");
-        return;
+        return true;
     }
-    g_fset_hook = {};
-    g_ftick_hook = {};
-    g_fend_hook = {};
-    log::error("ShopProbe: the per-player focus slot (user2_focus_slot=1) stays OFF (request window {}, setter {}, "
-               "tick {}, stage end {})",
-               fr ? "in" : "NOT in", a ? "in" : "NOT in", b ? "in" : "NOT in", c ? "in" : "NOT in");
+    log::error("ShopProbe: the per-player focus slot (user2_focus_slot=1) stays OFF ({} failed)", failed);
+    return static_cast<bool>(g_fend_hook);  // moved into place (now disabled): 0x21CB970 takes no mid hook then
 }
 
 void install(std::span<const gad::Section> secs) {
@@ -1166,14 +1274,17 @@ void install(std::span<const gad::Section> secs) {
               g_bf2_on.load() ? "hooked" : "off");
     // Co-op+ 2026-11-24 (late): the focus slot's writers and whose request is running (read only).
     mid(kFR1, kFR1Patch, kFR1Bytes, on_fr1, g_fr1_hook, g_fr1_on, "FR1, before ServerNet::OnRecvPacket's call");
-    if (g_fr1_on.load()) mid(kFR2, kFR2Patch, kFR2Bytes, on_fr2, g_fr2_hook, g_fr2_on, "FR2, after it");
+    if (g_fr1_on.load()) {
+        mid(kFR2, kFR2Patch, kFR2Bytes, on_fr2, g_fr2_hook, g_fr2_on, "FR2, after it");
+        if (!g_fr2_on.load()) g_fr1_on.store(false, std::memory_order_release);  // a window that never closes: none
+    }
     mid(kFS, kFSPatch, kFSBytes, on_fs, g_fs_hook, g_fs_on, "FS, the focus setter's store 0x2271252");
     mid(kFU, kFUPatch, kFUBytes, on_fu, g_fu_hook, g_fu_on, "FU, the focus undo 0x21CAF10");
-    // With the per-player slot, 0x21CB970's entry takes an inline hook instead (its detour logs the same events).
-    if (!g_slot_wanted.load()) {
+    // With the per-player slot, 0x21CB970's entry takes an inline hook instead (its detour logs the same events);
+    // without it, or when that hook could not be placed, the mid hook.
+    const bool end_hooked = g_slot_wanted.load() && install_focus_slot(secs);
+    if (!end_hooked) {
         mid(kFD, kFDPatch, kFDBytes, on_fd, g_fd_hook, g_fd_on, "FD, the focus clear at a stage's end 0x21CB970");
-    } else {
-        install_focus_slot(secs);
     }
     log::info("ShopProbe: focus probe (read only): FR 0x2A10B89/0x2A10B9A {}/{} | FS 0x2271252 {} | FU 0x21CAF10 {} | FD "
               "0x21CB970 {}",
@@ -1221,17 +1332,13 @@ void refresh_user2() {
 // The module's thread, every second (user2_focus_slot): the host's ServerSequencerStageManager (the chain
 // refresh_user2 follows, from the host's user), and user 2's comings and goings (its own triple starts empty).
 void refresh_host_for_slot() {
-    uintptr_t user = 0, chr = 0, comps = 0, seq = 0, mgr = 0, vt = 0;
-    if (server_host_user(user) && user && game::safe_read(user + kUser_Main, &chr, sizeof chr) && chr &&
-        game::safe_read(chr + kActor_Comps, &comps, sizeof comps) && comps &&
-        game::safe_read(comps + kComps_Seq, &seq, sizeof seq) && seq &&
-        game::safe_read(seq + kSeqComp_Mgr, &mgr, sizeof mgr) && mgr && game::safe_read(mgr, &vt, sizeof vt) &&
-        vt == g_base + isl::kVtServerStageMgr) {
-        const uintptr_t was = g_host_mgr.exchange(mgr, std::memory_order_acq_rel);
-        if (was != mgr) {
-            g_slot_reset_all.store(true, std::memory_order_release);
-            log::info("ShopProbe: the per-player focus slot follows the host's manager 0x{:X} (was 0x{:X})", mgr, was);
-        }
+    uint32_t key = 0;
+    const uintptr_t mgr = host_mgr_live(&key);  // 0 when the chain is broken: the detours then pass everything on
+    const uintptr_t was = g_host_mgr.exchange(mgr, std::memory_order_acq_rel);
+    if (key) g_host_key.store(key, std::memory_order_relaxed);
+    if (was != mgr) {
+        if (mgr) g_slot_reset_all.store(true, std::memory_order_release);
+        log::info("ShopProbe: the per-player focus slot follows the host's manager 0x{:X} (was 0x{:X})", mgr, was);
     }
     static bool u2_was = false;
     const bool u2 = server_user2_present();
@@ -1265,7 +1372,7 @@ DWORD WINAPI probe_thread(LPVOID) {
     for (uint64_t tick = 1;; ++tick) {
         Sleep(1000);
         try {
-            if (g_twin.load()) refresh_user2();
+            if (g_twin.load() || g_fs_on.load()) refresh_user2();  // the [focus] lines name user 2's own manager too
             if (g_slot_wanted.load()) refresh_host_for_slot();
             drain();
             if (tick % 60 == 0) {
@@ -1289,6 +1396,10 @@ void shop_probe_start(bool on, const std::string& twin_mode) {
     }
     g_twin.store(static_cast<uint8_t>(tk.mode));
     g_twin_asked_on.store(tk.asked_on);
+    if (!on && g_slot_wanted.load()) {
+        log::warn("ShopProbe: user2_focus_slot=1 needs shop_probe=1 (its hooks are this module's): the per-player focus "
+                  "slot stays off");
+    }
     if (!on && tk.mode == shp::TwinMode::Off) return;
     g_on.store(on);
     if (g_started.exchange(true)) return;

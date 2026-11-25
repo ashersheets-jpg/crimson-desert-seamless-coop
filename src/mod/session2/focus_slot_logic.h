@@ -11,12 +11,14 @@
 // server's thread only); the manager's three fields are reached through Mem:
 //   bool read(Triple&)          the three fields as they are
 //   bool write(const Triple&)   all three
-// A failed read or write changes nothing: the work then runs with the triple that is in the manager (as without the
-// mod's slot).
+// A failed read changes nothing; a write is three stores (one object: in practice all or none), and a failed swap
+// leaves the owner it had: the work then runs with the triple that is in the manager (as without the mod's slot).
+// unwind() is for the outermost point of the server's work (its loop's call of ServerNet::OnRecvPacket): a leave
+// that never came (an exception through a piece of work) would otherwise keep the stack open for good.
 
 #include <cstdint>
 
-namespace cdmp::session2::fsl {
+namespace cdmp::session2::pfs {
 
 struct Triple {
     uint64_t f90 = 0, f98 = 0, fa0 = 0;
@@ -36,7 +38,7 @@ public:
     template <class Mem>
     uint32_t enter(Mem& m, Owner o) {
         if (depth_ == 0 && current_ != Owner::Host) {
-            // A leave was missed (the work never came back to us): give the manager the host's triple again first.
+            // An earlier swap back failed (user 2's triple stayed in at depth 0): give the manager the host's first.
             ++repairs_;
             swap_to(m, Owner::Host);
         }
@@ -65,6 +67,22 @@ public:
         }
     }
 
+    // At the outermost point of the server's work: close whatever is still open (missed leaves) and give the manager
+    // the host's triple. Returns how many levels were open (0 normally).
+    template <class Mem>
+    uint32_t unwind(Mem& m) {
+        const uint32_t open = depth_;
+        if (open) {
+            ++missed_;
+            leave(m, 0);
+        }
+        if (current_ != Owner::Host) {
+            ++repairs_;
+            if (!swap_to(m, Owner::Host)) ++failed_;
+        }
+        return open;
+    }
+
     // User 2 logged out (or a new session): its own triple starts empty. While its triple is in the manager, the
     // reset is applied when it is swapped out.
     void reset_user2() {
@@ -84,6 +102,7 @@ public:
     uint64_t overflow() const { return overflow_; }
     uint64_t unbalanced() const { return unbalanced_; }
     uint64_t repairs() const { return repairs_; }
+    uint64_t missed() const { return missed_; }
 
 private:
     static constexpr uint32_t idx(Owner o) { return o == Owner::User2 ? 1u : 0u; }
@@ -109,7 +128,7 @@ private:
     Owner stack_[kMaxDepth] = {};
     uint32_t depth_ = 0;
     bool reset_pending_ = false;
-    uint64_t swaps_ = 0, failed_ = 0, overflow_ = 0, unbalanced_ = 0, repairs_ = 0;
+    uint64_t swaps_ = 0, failed_ = 0, overflow_ = 0, unbalanced_ = 0, repairs_ = 0, missed_ = 0;
 };
 
-}  // namespace cdmp::session2::fsl
+}  // namespace cdmp::session2::pfs
