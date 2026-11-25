@@ -11201,3 +11201,16 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   both owner fields logged (+0x98 too). Rebuilt (the same 14 known failing). Next: the full checklist on it with the
   probe (fix off): its [focus] lines show which activities take the focus and whether the joined player's own shop
   (the shop step's alone half) writes the host server manager's slot; then the fix in a test.
+- 20:58 replied to Brycecco in #general (tagged): Steam is the way (no Radmin), both players' Diagnose zips after a
+  session, most wanted: a boss fight, the friend taming a horse, an NPC the friend cannot talk to.
+- 21:21 pp57 on 28743015 (the town steps first), STOPPED after 2 steps on purpose (a stop mark; removed after):
+  armwrest 52 / 2 (both FAILs the focus probe's own reads: first-chance exceptions in shop_probe's rd<> through a
+  server stage's +0x48, not a known guarded read), shop 25 / 0. Focus data: the request window now counts user 2's
+  requests (153,533 of 592,223 in armwrest); the host's talk / match (stage 0x4DA) took the focus in the PROCESSOR'S
+  TICK (outside any request), on its server manager and its client manager alike; no owner field at a server stage's
+  +0x98 or [+0x48]+0x60 (0 on the host's own talk); the joined player's own shop scene 0x1E5 runs in ITS OWN manager
+  (User2Shops' routing): its branches and focus there, all accepted. So the shared slot hits the joined player's own
+  scenes that are NOT routed (Borque's taming 0x29D and encounters 0x299 / 0x2A1 were in the host's manager). Fixed
+  in native 5030d34 (local): the module's reads through game::fast_read (known guarded reads), user 2's own scenes
+  known by id from the PrepareSequencerAcks (2356) to user 2. Rebuilt (the same 14 known failing; optd_shop_c1 and
+  focus_slot pass). Note: shop_probe.cpp was edited while pp57 ran (no build until it stopped).
