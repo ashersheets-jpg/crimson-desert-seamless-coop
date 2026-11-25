@@ -11176,3 +11176,12 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   hooks or none. cs121.sh takes "user2_focus_slot=1" as a third argument. An independent read-only review of the
   three unbuilt native commits runs. Next when the PC is free: build (93 native tests now), the review's fixes,
   cs121 (probe), cs121 with the fix, the rest of pp56 / a full pass, Discord.
+- 20:09 (static) THE REVIEW (read only): no compile error found (every std::format's placeholders counted, name
+  lookup, __try, safetyhook's API), FocusSlots and its 7 tests correct, the probe's packing decodes right, nothing
+  changes with user2_focus_slot=0. Fixed its 4 risks + 1 log bug + nits in native 96ff54e (local, not built): a missed
+  leave is unwound at FR1 (FocusSlots::unwind, new test 8) and the detours use an RAII scope; the inline hooks are
+  prepared disabled through game::prepare_inline (exactly the verified 5 bytes relocated), enabled only all together,
+  never destroyed once enabled; the request window writes only into the host's manager read live (vtable checked);
+  the stage-end check runs against the triple that stage meets; the host's own stages inside the friend's request get
+  the host's triple. None of the three wrapped functions returns in xmm0 (checked in the exe). Also 24 Nov: the
+  progress chart for the owner (docs/drafts/progress-2026-11-24.png, gains since 13 Nov; sent).
