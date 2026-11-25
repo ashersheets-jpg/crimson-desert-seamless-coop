@@ -16,6 +16,7 @@
 
 #include <safetyhook.hpp>
 
+#include "common/troc_frame.h"
 #include "mod/game/hook_prepare.h"
 #include "mod/game/offsets.h"
 #include "mod/game/rtti.h"
@@ -197,12 +198,16 @@ std::atomic<uint64_t> g_out[6] = {}, g_out_funcnpc[6] = {};  // 2663 3000 2916 2
 
 enum Kind : uint16_t {
     kEGate, kEPrep, kE2671, kESrv, kEReq, kEOut, kETwin, kEBranch, kEBranchFail, kEBranchWhy, kEBranchNames, kEFocus,
-    kKindCount
+    kEOwnScene, kKindCount
 };
 p::EventRing<512> g_ring;
 p::WindowLimiter g_lim[kKindCount] = {{16, 5'000'000}, {48, 5'000'000}, {32, 5'000'000}, {32, 5'000'000},
                                        {48, 5'000'000}, {48, 5'000'000}, {32, 5'000'000}, {32, 5'000'000},
-                                       {16, 5'000'000}, {16, 5'000'000}, {16, 5'000'000}, {24, 5'000'000}};
+                                       {16, 5'000'000}, {16, 5'000'000}, {16, 5'000'000}, {24, 5'000'000},
+                                       {16, 5'000'000}};
+// kEOwnScene (2026-11-25): where each scene of user 2's own was at its PrepareSequencerAck: [0] the host's manager
+// only, [1] user 2's own manager only, [2] both, [3] neither.
+std::atomic<uint64_t> g_own_where[4] = {};
 // The focus probe (kFS ...): hooks, counts [set / undo / clear][inside a request of user 2's session], the window.
 std::atomic<bool> g_fs_on{false}, g_fu_on{false}, g_fd_on{false}, g_fr1_on{false}, g_fr2_on{false};
 SafetyHookMid g_fs_hook, g_fu_hook, g_fd_hook, g_fr1_hook, g_fr2_hook;
@@ -211,9 +216,10 @@ std::atomic<uint64_t> g_recv_u2{0}, g_recv_all{0};
 thread_local uint32_t t_recv_u2 = 0, t_recv_any = 0;
 // The per-player focus slot (user2_focus_slot=1; docs/research/taming-refusal-3732.md, "Per-player focus slot"): the
 // joined player's own triple of the HOST manager's focus slot is kept apart (pfs::FocusSlots) and put in the manager
-// around each request of user 2's session (FR1 / FR2) and, by their stage's owner ([[stage+0x48]+0x60] = user 2's
-// character: user 2's triple, else the host's), around the focus setter 0x2271150 (proc, old, new), a stage
-// processor's tick 0x226DA80 (proc, u8) and a stage's end 0x21CB970 (mgr, stage, u8): inline hooks at their entries;
+// around user 2's branch / chart-event requests about a scene of its own (FR1 / FR2) and, by their stage's owner (a
+// scene of user 2's own, its id in g_u2_own: user 2's triple, else the host's), around the focus setter 0x2271150
+// (proc, old, new), a stage processor's tick 0x226DA80 (proc, u8) and a stage's end 0x21CB970 (mgr, stage, u8): inline
+// hooks at their entries;
 // each takes 3 or fewer register arguments and reads no stack argument (checked in the exe). Only the host's manager
 // (refreshed every second from the host's character); the server's thread only.
 constexpr uintptr_t kFSetFn = 0x2271150, kFTickFn = 0x226DA80, kFEndFn = kFD;
@@ -227,6 +233,7 @@ std::atomic<bool> g_slot_reset_all{false}, g_slot_reset_u2{false};
 SafetyHookInline g_fset_hook, g_ftick_hook, g_fend_hook;
 pfs::FocusSlots g_slots;                    // the server's thread only
 std::atomic<uint64_t> g_slot_u2[4] = {};    // user 2's pieces of work: requests, setter, stage ends, ticks
+std::atomic<uint64_t> g_slot_u2_passed{0};  // user 2's other requests: run with the host's triple, as without the fix
 std::atomic<uint64_t> g_slot_other{0};      // other managers' calls passed straight on
 thread_local uint32_t t_fr_token = pfs::FocusSlots::kRefused;
 thread_local uintptr_t t_fr_mgr = 0;
@@ -690,6 +697,17 @@ void on_fr1(safetyhook::Context& ctx) noexcept {
     if (!slot_here()) return;
     slot_outermost();
     if (!t_recv_u2) return;
+    // pp58 (2026-11-25): only user 2's branch and chart-event requests about a scene of its OWN (StageBranchStateReq
+    // 2644 and the stage chart event Req 2200 on 3732, 2880 / 2591 on 2976; each payload starts with the u64
+    // sequencer), where the branch step's focus check runs. Its other requests (movement: hundreds a second) and its
+    // requests about any other stage run with the host manager's own triple, as without the fix.
+    uint16_t op = 0;
+    uint64_t seq = 0;
+    if (!rd(ctx.r9, op) || (op != shp::kOpBranchReq && op != shp::kOpChartEvent) ||
+        !rd(ctx.r9 + troc::kHeaderSize, seq) || !g_u2_own.has(seq)) {
+        g_slot_u2_passed.fetch_add(1, std::memory_order_relaxed);
+        return;
+    }
     uint32_t key = 0;
     const uintptr_t mgr = host_mgr_live(&key);
     if (!mgr) return;
@@ -1066,6 +1084,22 @@ std::string line_of(const p::Event& e) {
                                                                   : "outside any request (a tick)",
                 ret ? std::format(" | from exe+0x{:X}", ret) : std::string());
         }
+        case kEOwnScene: {
+            const uint64_t f = v[3];
+            const auto where = [](bool ok, bool found, bool dead) {
+                return !ok ? "unreadable" : found ? "HAS it" : dead ? "has it ended" : "does not have it";
+            };
+            const bool in_host = (f >> 1) & 1, in_own = (f >> 4) & 1;
+            return std::format(
+                "ShopProbe [own scene] {} T{} | the joined player's own scene 0x{:X} ('{}', its character 0x{:08X}) at "
+                "its PrepareSequencerAck: the host's manager 0x{:X} {}, its own manager 0x{:X} {} -> {}",
+                when, e.tid, v[0], name_of(v + 5, 5), static_cast<uint32_t>(f >> 32), v[1],
+                where(f & 1, in_host, (f >> 2) & 1), v[2], where((f >> 3) & 1, in_own, (f >> 5) & 1),
+                in_host && !in_own   ? "in the HOST's manager: the per-player focus slot is for it"
+                : in_own && !in_host ? "in ITS OWN manager: its focus is apart already"
+                : in_own && in_host  ? "in both?"
+                                     : "in neither yet");
+        }
         default:
             return std::format("ShopProbe: event {}?", e.kind);
     }
@@ -1132,18 +1166,22 @@ void branch_summary() {
               g_bf[1][0].load());
     if (g_fs_on.load() || g_fu_on.load() || g_fd_on.load()) {
         log::info("ShopProbe focus summary: requests handed to ServerNet::OnRecvPacket {} (user 2's {}) | focus set {} "
-                  "(in user 2's requests {}), undo {} ({}), stage ends {} ({})",
+                  "(in user 2's requests {}), undo {} ({}), stage ends {} ({}) | user 2's own scenes at their "
+                  "PrepareSequencerAck: in the host's manager {}, in its own {}, in both {}, in neither {}",
                   g_recv_all.load(), g_recv_u2.load(), g_focus_n[0][0].load() + g_focus_n[0][1].load(),
                   g_focus_n[0][1].load(), g_focus_n[1][0].load() + g_focus_n[1][1].load(), g_focus_n[1][1].load(),
-                  g_focus_n[2][0].load() + g_focus_n[2][1].load(), g_focus_n[2][1].load());
+                  g_focus_n[2][0].load() + g_focus_n[2][1].load(), g_focus_n[2][1].load(), g_own_where[0].load(),
+                  g_own_where[1].load(), g_own_where[2].load(), g_own_where[3].load());
     }
     if (g_slot_on.load()) {
         // g_slots' counters are the server thread's plain integers, read here as they are (a log line only).
-        log::info("ShopProbe per-player focus slot: user 2's requests {}, its stages' setter {} / ends {} / ticks {}, the "
+        log::info("ShopProbe per-player focus slot: user 2's branch / chart-event requests about its own scenes {} (its "
+                  "other requests passed by {}), its stages' setter {} / ends {} / ticks {}, the "
                   "host's stages inside its requests {} | swaps {} failed {} overflow {} unbalanced {} repairs {} missed "
                   "leaves {} (unwound {}, dropped {}) | other managers {}, other threads {} | the host's manager 0x{:X} "
                   "(character 0x{:08X})",
-                  g_slot_u2[0].load(), g_slot_u2[1].load(), g_slot_u2[2].load(), g_slot_u2[3].load(),
+                  g_slot_u2[0].load(), g_slot_u2_passed.load(), g_slot_u2[1].load(), g_slot_u2[2].load(),
+                  g_slot_u2[3].load(),
                   g_slot_host_in_u2.load(), g_slots.swaps(), g_slots.failed(), g_slots.overflow(), g_slots.unbalanced(),
                   g_slots.repairs(), g_slots.missed(), g_slot_unwinds.load(), g_slot_dropped.load(), g_slot_other.load(),
                   g_slot_other_thread.load(), g_host_mgr.load(), g_host_key.load());
@@ -1467,7 +1505,26 @@ void shop_probe_on_out(uint16_t opcode, std::span<const uint8_t> payload, bool t
     if (opcode == shp::kOpPrepareAck) {  // a scene of user 2's own: the per-player focus slot's owner test
         const shp::PrepareOwner po = shp::parse_prepare_owner(payload);
         const uint32_t u2 = server_user2_player_key();
-        if (po.ok && u2 && po.owner == u2 && po.id) g_u2_own.add(po.id);
+        if (!po.ok || !u2 || po.owner != u2 || !po.id) return;
+        // 2026-11-25: which manager has it (the slot is for the ones in the host's), once per id (a held Ack comes
+        // here again when it is released).
+        if (g_u2_own.has(po.id)) return;
+        g_u2_own.add(po.id);
+        const uintptr_t hm = host_mgr_live(), um = g_u2_mgr.load(std::memory_order_relaxed);
+        const isl::Lookup lh = hm ? isl::find_stage(SehRd{}, hm, po.id) : isl::Lookup{};
+        const isl::Lookup lu = um ? isl::find_stage(SehRd{}, um, po.id) : isl::Lookup{};
+        g_own_where[lh.found && !lu.found ? 0 : lu.found && !lh.found ? 1 : lh.found ? 2 : 3].fetch_add(
+            1, std::memory_order_relaxed);
+        p::Event e;
+        e.v[0] = po.id;
+        e.v[1] = hm;
+        e.v[2] = um;
+        e.v[3] = static_cast<uint64_t>(lh.read_ok) | static_cast<uint64_t>(lh.found) << 1 |
+                 static_cast<uint64_t>(lh.dead) << 2 | static_cast<uint64_t>(lu.read_ok) << 3 |
+                 static_cast<uint64_t>(lu.found) << 4 | static_cast<uint64_t>(lu.dead) << 5 |
+                 static_cast<uint64_t>(po.owner) << 32;
+        put_stage_name(lh.found ? lh.inst : lu.found ? lu.inst : 0, e.v, 5);
+        emit(kEOwnScene, e);
         return;
     }
     size_t i = 0;
