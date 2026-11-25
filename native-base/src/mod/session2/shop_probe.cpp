@@ -230,6 +230,7 @@ constexpr uint32_t kProc_Mgr8 = 0x08, kProc_Stage10 = 0x10;
 std::atomic<bool> g_slot_wanted{false}, g_slot_on{false};
 std::atomic<uintptr_t> g_host_mgr{0};
 std::atomic<bool> g_slot_reset_all{false}, g_slot_reset_u2{false};
+std::atomic<uint64_t> g_slot_resets{0};  // the slot reset for another host manager (the summary)
 SafetyHookInline g_fset_hook, g_ftick_hook, g_fend_hook;
 pfs::FocusSlots g_slots;                    // the server's thread only
 std::atomic<uint64_t> g_slot_u2[4] = {};    // user 2's pieces of work: requests, setter, stage ends, ticks
@@ -629,6 +630,7 @@ void slot_housekeeping() noexcept {
     if (g_slot_reset_all.exchange(false, std::memory_order_acq_rel)) {
         g_slots = pfs::FocusSlots{};  // another host manager: nothing kept applies to it
         g_slot_reset_u2.store(false, std::memory_order_relaxed);
+        g_slot_resets.fetch_add(1, std::memory_order_relaxed);
     }
     if (g_slot_reset_u2.exchange(false, std::memory_order_acq_rel)) g_slots.reset_user2();
 }
@@ -701,6 +703,8 @@ void on_fr1(safetyhook::Context& ctx) noexcept {
     // 2644 and the stage chart event Req 2200 on 3732, 2880 / 2591 on 2976; each payload starts with the u64
     // sequencer), where the branch step's focus check runs. Its other requests (movement: hundreds a second) and its
     // requests about any other stage run with the host manager's own triple, as without the fix.
+    // (Its talks are NOT taken: cs125b, 2026-11-25, ran them with its own triple and the host's talk still refused the
+    // friend's talk to any NPC with 0x58C8345D: that check reads some other shared state.)
     uint16_t op = 0;
     uint64_t seq = 0;
     if (!rd(ctx.r9, op) || (op != shp::kOpBranchReq && op != shp::kOpChartEvent) ||
@@ -711,7 +715,11 @@ void on_fr1(safetyhook::Context& ctx) noexcept {
     uint32_t key = 0;
     const uintptr_t mgr = host_mgr_live(&key);
     if (!mgr) return;
-    g_host_mgr.store(mgr, std::memory_order_release);
+    // Review 2026-11-25 (pp59): this request may be the first to see another host manager (a reload), before the
+    // module's refresh does; the refresh then sees no change. So the reset is asked here too: user 2's kept triple
+    // holds scene ids of the old manager (applied by slot_enter's housekeeping, depth 0 here after slot_outermost).
+    if (g_host_mgr.exchange(mgr, std::memory_order_acq_rel) != mgr)
+        g_slot_reset_all.store(true, std::memory_order_release);
     if (key) g_host_key.store(key, std::memory_order_relaxed);
     t_fr_mgr = mgr;
     t_fr_token = slot_enter(mgr, pfs::Owner::User2);
@@ -1178,12 +1186,14 @@ void branch_summary() {
         log::info("ShopProbe per-player focus slot: user 2's branch / chart-event requests about its own scenes {} (its "
                   "other requests passed by {}), its stages' setter {} / ends {} / ticks {}, the "
                   "host's stages inside its requests {} | swaps {} failed {} overflow {} unbalanced {} repairs {} missed "
-                  "leaves {} (unwound {}, dropped {}) | other managers {}, other threads {} | the host's manager 0x{:X} "
+                  "leaves {} (unwound {}, dropped {}), resets for another manager {} | other managers {}, other "
+                  "threads {} | the host's manager 0x{:X} "
                   "(character 0x{:08X})",
                   g_slot_u2[0].load(), g_slot_u2_passed.load(), g_slot_u2[1].load(), g_slot_u2[2].load(),
                   g_slot_u2[3].load(),
                   g_slot_host_in_u2.load(), g_slots.swaps(), g_slots.failed(), g_slots.overflow(), g_slots.unbalanced(),
-                  g_slots.repairs(), g_slots.missed(), g_slot_unwinds.load(), g_slot_dropped.load(), g_slot_other.load(),
+                  g_slots.repairs(), g_slots.missed(), g_slot_unwinds.load(), g_slot_dropped.load(),
+                  g_slot_resets.load(), g_slot_other.load(),
                   g_slot_other_thread.load(), g_host_mgr.load(), g_host_key.load());
     }
 }
@@ -1279,8 +1289,9 @@ bool install_focus_slot(std::span<const gad::Section> secs) {
     if (!failed) {
         g_fd_on.store(true, std::memory_order_release);  // the stage-end detour logs the focus ends
         g_slot_on.store(true, std::memory_order_release);
-        log::info("ShopProbe: the per-player focus slot (user2_focus_slot=1) is ON: user 2's requests and its own "
-                  "stages' focus work run with its own +0x90 / +0x98 / +0xA0 in the host's manager");
+        log::info("ShopProbe: the per-player focus slot (user2_focus_slot=1) is ON: user 2's branch / chart-event "
+                  "requests about its own scenes and its own stages' focus work run with its own +0x90 / +0x98 / +0xA0 "
+                  "in the host's manager");
         return true;
     }
     log::error("ShopProbe: the per-player focus slot (user2_focus_slot=1) stays OFF ({} failed)", failed);
