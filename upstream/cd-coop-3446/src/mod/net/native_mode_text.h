@@ -169,7 +169,13 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
                               // never marked ready on the server (only the field owner's load does), so its doors
                               // answered "not ready" to both players until a fast travel (the native base's S43);
                               // scene_level_share marks user 2's load ready too and keeps a level the other still has.
-                              "scene_level_share=1"}) {
+                              "scene_level_share=1",
+                              // T25 (2026-11-25, Borque's taming): the joined player's own scenes that stay in the
+                              // host's stage manager (a taming, an encounter) shared its one focus slot with the
+                              // host's talks and matches, so a flagged step of one was refused while the other held
+                              // it (eErrNoFailedStageChartBranchCondition). user2_focus_slot gives the joined player
+                              // its own copy of the slot (its hooks live in shop_probe, on above).
+                              "user2_focus_slot=1"}) {
             line(k);
         }
         // B10 option 2, the player's choice ([coop] shared_quest_credit): an objective one player completes also
