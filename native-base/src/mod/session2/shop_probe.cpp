@@ -1255,20 +1255,29 @@ void preempt_errors_once() {
               "host talks carry 0x58C8345D",
               ed, ing);
     // cs127c: 0x58C8345D is neither. Every error name's global sits in 0x71B0000..0x71E0000 (scratchpad
-    // errtable73.csv, the registrar 0x164E1D0's globals): the ones holding 0x58C8345D, named offline from that table.
-    std::string hits;
-    int n = 0;
-    for (uintptr_t rva = 0x71B0000; rva < 0x71E0000 && n < 8; rva += 0x1000) {
+    // errtable73.csv, the registrar 0x164E1D0's globals): the ones holding a refusal code seen in a log, named offline
+    // from that table. 0x58C8345D: the friend's talk refusal (BUG 2: eErrNoInvalidStageChartInteractionCondition).
+    // 0x7B1E861C (Brycecco + Arcticwolf 25 Nov, a03a63b9): the host's pickup of Shia's pendant (0xB020093B, interaction
+    // 0xF4244, an object bound to the host's story scene 0x352) refused 20+ times, its pickup animation stuck; the
+    // joined player's interaction 0x275F refused with it too.
+    constexpr uint32_t kCodes[] = {0x58C8345Du, 0x7B1E861Cu};
+    std::string hits[std::size(kCodes)];
+    int n[std::size(kCodes)] = {};
+    for (uintptr_t rva = 0x71B0000; rva < 0x71E0000; rva += 0x1000) {
         uint32_t page[0x400];
         if (!game::fast_read(g_base + rva, page, sizeof page)) continue;
-        for (size_t i = 0; i < std::size(page) && n < 8; ++i) {
-            if (page[i] == 0x58C8345Du) {
-                hits += std::format("{}0x{:X}", n ? ", " : "", rva + i * 4);
-                ++n;
+        for (size_t i = 0; i < std::size(page); ++i) {
+            for (size_t c = 0; c < std::size(kCodes); ++c) {
+                if (page[i] == kCodes[c] && n[c] < 8) {
+                    hits[c] += std::format("{}0x{:X}", n[c] ? ", " : "", rva + i * 4);
+                    ++n[c];
+                }
             }
         }
     }
-    log::info("ShopProbe: error globals holding 0x58C8345D (the friend's talk refusal): {}", hits.empty() ? "none" : hits);
+    for (size_t c = 0; c < std::size(kCodes); ++c)
+        log::info("ShopProbe: error globals holding 0x{:08X} (a refusal seen in a log): {}", kCodes[c],
+                  hits[c].empty() ? "none" : hits[c]);
 }
 
 void branch_summary() {
