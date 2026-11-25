@@ -172,6 +172,9 @@ SafetyHookMid g_bf1_hook, g_bf2_hook;
 std::atomic<uint64_t> g_bf[2][2] = {};  // [site][user 2?]
 // B: user 2's StageBranchStateReq sequencers (the tap), so the handler's result is told as user 2's.
 shp::IdRing<32> g_u2_branch_seqs;
+// User 2's own scenes (their sequencer ids from the PrepareSequencerAcks to user 2 naming its character as the owner):
+// lock-free, read by the per-player focus slot's detours and the [focus] lines.
+shp::IdRing<128> g_u2_own;
 std::atomic<uint64_t> g_branch[2] = {}, g_branch_fail[2] = {}, g_branch_unpaired{0};  // [0] user 2, [1] other
 struct BranchCall {
     uint64_t seq = 0;
@@ -243,15 +246,16 @@ thread_local SrvCall t_srv;
 
 // ---------------------------------------------------------------- hot path
 
+// game::fast_read: the base's SEH-guarded direct read (no VirtualQuery). pp57-armwrest (2026-11-24): the focus probe's
+// reads through a stage's +0x48 fault on server stages; in this module's own __try each fault was "not a known guarded
+// read" for the checklist (its crash capture records every first-chance exception in the mod); fast_read's are known.
 template <class T>
 bool rd(uintptr_t a, T& v) noexcept {
     if (a < 0x10000) return false;
-    __try {
-        v = *reinterpret_cast<const volatile T*>(a);
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    T tmp{};
+    if (!game::fast_read(a, &tmp, sizeof tmp)) return false;
+    v = tmp;
+    return true;
 }
 template <class T>
 T rdv(uintptr_t a, T fallback = T{}) noexcept {
@@ -590,18 +594,14 @@ struct MgrMem {  // pfs::FocusSlots' Mem: the manager's +0x90 / +0x98 / +0xA0
 // an unreadable one).
 enum class StageOwner : uint8_t { Other, Host, User2 };
 std::atomic<uint32_t> g_host_key{0};  // the host's character key (host_mgr_live)
+// pp57-armwrest: no owner field was found on a server stage (+0x98 and [+0x48]+0x60 read 0 on the host's own talk), so
+// the owner test is the id: user 2's own scenes are the ones the server prepared for user 2 naming its character
+// (g_u2_own, from the PrepareSequencerAcks); any other stage in the host's manager is the host's (the manager's owner).
 StageOwner stage_owner(uintptr_t stage) noexcept {
     if (!stage) return StageOwner::Other;
-    uint32_t owner = rdv<uint32_t>(stage + kStage_Owner98);
-    if (!owner) {
-        const uintptr_t data = rdp(stage + kScene_Info);
-        owner = data ? rdv<uint32_t>(data + kStageData_Owner) : 0;
-    }
-    if (!owner) return StageOwner::Other;
-    const uint32_t u2 = server_user2_player_key();
-    if (u2 && owner == u2) return StageOwner::User2;
-    const uint32_t host = g_host_key.load(std::memory_order_relaxed);
-    return host && owner == host ? StageOwner::Host : StageOwner::Other;
+    const uint64_t id = rdv<uint64_t>(stage + kBF_SceneWord);
+    if (!id) return StageOwner::Other;
+    return g_u2_own.has(id) ? StageOwner::User2 : StageOwner::Host;
 }
 // The host's ServerSequencerStageManager read LIVE (the chain refresh_user2 follows, from the host's user), its vtable
 // checked; 0 when a link is missing. Review 2026-11-24 #4: never write into a cached manager that may have gone.
@@ -716,7 +716,8 @@ void focus_event(uint32_t what, uintptr_t mgr, uint64_t new_id, uintptr_t scene,
     const uintptr_t u2mgr = g_u2_mgr.load(std::memory_order_relaxed);
     p::Event e;
     e.v[0] = static_cast<uint64_t>(what) | static_cast<uint64_t>(u2req) << 8 | static_cast<uint64_t>(t_recv_any) << 9 |
-             static_cast<uint64_t>(mgr && mgr == u2mgr) << 10;
+             static_cast<uint64_t>(mgr && mgr == u2mgr) << 10 |
+             static_cast<uint64_t>(scene && g_u2_own.has(rdv<uint64_t>(scene + kBF_SceneWord))) << 11;
     e.v[1] = mgr;
     e.v[2] = mgr ? rdv<uint64_t>(mgr + kMgr_Focus90) : 0;
     e.v[3] = mgr ? rdv<uint64_t>(mgr + kMgr_Focus98) : 0;
@@ -755,11 +756,12 @@ void on_fd(safetyhook::Context& ctx) noexcept {
 }
 
 // The per-player slot's detours (inline hooks at the three entries; see kFSetFn). In the host's manager on the server's
-// thread: a stage positively owned by user 2 works with user 2's triple, one positively owned by the host with the
-// host's (it matters inside user 2's request), and any other stage (an NPC's, an unread owner) with whatever is in
-// the manager. A misread user 2 stage therefore falls back to the game's own shared slot for its tick-time work while
-// its requests use user 2's triple: the focus probe's lines (owners marked "USER 2's") are checked before the fix is
-// used (review 2026-11-24 #6). Returns: whatever the original leaves in rax (none of the three returns in xmm0).
+// thread: a scene of user 2's own (its id in g_u2_own) works with user 2's triple, any other stage with the host's
+// (that matters inside user 2's request). A scene of user 2's whose PrepareSequencerAck was missed falls back to the
+// game's own shared slot for its tick-time work while its requests use user 2's triple: the [focus] lines (scenes
+// marked "USER 2's") are checked before the fix is used (review 2026-11-24 #6). pp57-armwrest: the focus is set in
+// the processor's tick (outside any request), so the stage test, not the request window, carries most of the fix.
+// Returns: whatever the original leaves in rax (none of the three returns in xmm0).
 // The owner a piece of work in the host's manager runs as, or false: as it is (no swap needed or no owner known).
 bool slot_owner_for(uintptr_t stage, pfs::Owner& o) noexcept {
     const StageOwner so = stage_owner(stage);
@@ -1046,7 +1048,7 @@ std::string line_of(const p::Event& e) {
             const auto owner48 = static_cast<uint32_t>(v[8]), owner98 = static_cast<uint32_t>(v[8] >> 32),
                        u2key = static_cast<uint32_t>(v[9] >> 32), ret = static_cast<uint32_t>(v[9]);
             const uint64_t cur = stp::current_of(v[4], v[2]);
-            const bool u2own = u2key && (owner98 == u2key || owner48 == u2key);
+            const bool u2own = ((v[0] >> 11) & 1) || (u2key && (owner98 == u2key || owner48 == u2key));
             const std::string scene =
                 v[6] ? std::format("scene 0x{:X} ('{}', owner +0x98 0x{:08X} / [+0x48]+0x60 0x{:08X}{})", v[7],
                                    name_of(v + 10, 2), owner98, owner48, u2own ? ": USER 2's" : "")
@@ -1462,6 +1464,12 @@ void shop_probe_on_user2_req(uint16_t opcode, std::span<const uint8_t> payload, 
 
 void shop_probe_on_out(uint16_t opcode, std::span<const uint8_t> payload, bool to_user2, bool pushed) noexcept {
     if (!g_on.load(std::memory_order_relaxed) || !to_user2) return;
+    if (opcode == shp::kOpPrepareAck) {  // a scene of user 2's own: the per-player focus slot's owner test
+        const shp::PrepareOwner po = shp::parse_prepare_owner(payload);
+        const uint32_t u2 = server_user2_player_key();
+        if (po.ok && u2 && po.owner == u2 && po.id) g_u2_own.add(po.id);
+        return;
+    }
     size_t i = 0;
     switch (opcode) {
         case shp::kOpPreemptionOk: i = 0; break;

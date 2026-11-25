@@ -218,6 +218,24 @@ inline constexpr uint16_t kOpPreemptionFail = 2946;  // ...FailAck
 inline constexpr uint16_t kOpDoStepOk = 2363;        // InteractionDoStepSuccessAck
 inline constexpr uint16_t kOpDoInteraction = 2160;   // the interaction ran
 inline constexpr uint16_t kOpBranchAck = 2752;       // StageBranchStateAck: u8 kind | u32 actor | u64 seq | u32 state
+// Co-op+ 2026-11-24: PrepareSequencerAck on 3732 (hold_scene_order_logic.h kOpPrepare): u8 kind | u32 actor @1 | u32
+// owner @5 | u64 sequencer @9 | ...; to user 2 with owner = user 2's character: a scene of user 2's OWN. pp57-armwrest:
+// a server stage's +0x98 and [+0x48]+0x60 read 0 (no owner there), so the per-player focus slot knows user 2's scenes
+// by these ids (= the stage's +0x30).
+inline constexpr uint16_t kOpPrepareAck = 2356;
+struct PrepareOwner {
+    bool ok = false;
+    uint32_t owner = 0;
+    uint64_t id = 0;
+};
+inline PrepareOwner parse_prepare_owner(std::span<const uint8_t> p) {
+    PrepareOwner r;
+    if (p.size() < 17) return r;
+    r.ok = true;
+    r.owner = le32(p.data() + 5);
+    r.id = le64(p.data() + 9);
+    return r;
+}
 inline constexpr uint16_t kOpOnBranchEvent = 2369;   // StageOnBranchEventAck
 
 struct Interaction {
