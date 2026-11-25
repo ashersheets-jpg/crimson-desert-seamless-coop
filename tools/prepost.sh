@@ -366,6 +366,37 @@ stall)
   mine=$(grep "Local: pos" "$L" | tail -1 | sed -n 's/.*pos (\([-0-9.]*\), [-0-9.]*, \([-0-9.]*\)).*/\1 \2/p')
   d=$(echo "$near $mine" | awk 'NF==4{printf "%d", sqrt(($1-$3)^2 + ($2-$4)^2)}')
   [ -n "$d" ] && [ "$d" -le 30 ] && ok "guest: $d m from the host at the end" || bad "guest: ${d:-?} m from the host at the end (wanted within 30 m)" ;;
+fall)
+  head_step "a trip to the friend ends in the air (a place of the friend's story; Brycecco + Arcticwolf 25 Nov): the fall guard"
+  # The lowsave flow (both on the newgame saves; the guest's own place 1.3 km from the host) with the TEST-ONLY [dev]
+  # fall_guard_test=1 on the guest (no "the friend stands up there" check: here the host stands on the ground). The
+  # guest's dev script, after the join's trip (90 s): back to its own place (far travel, ground); a far travel to a point
+  # 150 m ABOVE the host (the game holds it in the air until its load is done, then it falls: the testers' Abyss island)
+  # where the guard must take it back before it lands; the same point again (refused, a note); the ground beside the
+  # host (allowed). Its own warnings are allowed here (anywhere else the guard's line is a finding).
+  WRN_ALLOW='^(Config: TEST ONLY|Teleport: N m below the move)'
+  { for i in $(seq 1 9); do echo "wait 10000"; done
+    echo "tp -9836.4 669.2 -2702.0"; echo "wait 10000"; echo "wait 10000"
+    echo "tp -10349.5 685.6 -3919.6"; echo "wait 10000"; echo "wait 10000"; echo "wait 10000"
+    echo "tp -10349.5 685.6 -3919.6"; echo "wait 5000"
+    echo "tp -10347.5 536.1 -3917.6"; echo "wait 10000"; echo "wait 10000"; } > $N/scan/fall_guest.txt
+  G="w:3000_shot:$NAME-g0"; for i in $(seq 1 20); do G="${G}_w:9000_shot:$NAME-g$i"; done
+  run2 "-CoopPlus -Lobby -Fresh -PackageIni $MODW -HostVariant newgame -GuestVariant newgame -Hold 10 -GuestDev fall_guard_test=1 -GuestScript $SCAN\\fall_guest.txt -GuestKeys $G -HostKeys $FLOW_H"; two_player_checks
+  WRN_ALLOW=
+  L=$N/$NAME.coopplus.guest.log
+  has "$L" "Config: TEST ONLY \[dev\] fall_guard_test=1" "guest: the test switch is on (the friend check skipped)"
+  has "$L" "Teleport: [0-9]+ m: the game's own travel \(field 0x[0-9A-F]+, to \(-10350, 686, -3920\)\)" "guest: the far travel to the point in the air"
+  has "$L" "Teleport: [0-9]+ m below the move's goal \(-10350, 686, -3920\) and falling [0-9]+ m/s straight down.*back to where the move started \(-9836, 669, -2702\)" "guest: the fall guard took it back while it fell"
+  has "$L" "Teleport: a move to \(-10350, 686, -3920\) is refused: [0-9]+ m from where our game had no ground" "guest: the same point again was refused"
+  hasnot "$L" "Revive: our death notice|Revive: death [0-9]" "guest: never died (it did not land)"
+  last=$(grep "Teleport: arrived" "$L" | tail -1)
+  echo "$last" | grep -qE "arrived \(-1034[0-9], -39(1[0-9]|2[0-9])\)" && ok "guest: the last move (the ground beside the host) arrived" || bad "guest: the last arrival was not beside the host: ${last:-none}"
+  low=$(grep "Local: pos" "$L" | sed -n 's/.*pos ([-0-9.]*, \([-0-9.]*\), .*/\1/p' | sort -n | head -1)
+  [ -n "$low" ] && awk -v y="$low" 'BEGIN{exit !(y > 600)}' && ok "guest: its lowest height $low m (never reached the ground under the point)" || bad "guest: its lowest height ${low:-?} m (wanted above 600)"
+  near=$(grep "Net: connected" "$L" | tail -1 | sed -n 's/.*last remote (\([-0-9.]*\), [-0-9.]*, \([-0-9.]*\)).*/\1 \2/p')
+  mine=$(grep "Local: pos" "$L" | tail -1 | sed -n 's/.*pos (\([-0-9.]*\), [-0-9.]*, \([-0-9.]*\)).*/\1 \2/p')
+  d=$(echo "$near $mine" | awk 'NF==4{printf "%d", sqrt(($1-$3)^2 + ($2-$4)^2)}')
+  [ -n "$d" ] && [ "$d" -le 30 ] && ok "guest: $d m from the host at the end" || bad "guest: ${d:-?} m from the host at the end (wanted within 30 m)" ;;
 chest)
   head_step "chest: the host opens it, the guest is away, comes back and gets its own share"
   A="w:800_shot:$NAME-h0_kd:E_w:2800_ku:E_w:3600_shot:$NAME-h1_w:10500"
@@ -884,7 +915,7 @@ armwrest)
   [ "${n:-0}" -ge 1 ] && ok "host: its own talk to the organizer accepted after the joined player's match ($n)" || bad "host: no talk of its own accepted at the table"
   info "screenshots to LOOK AT (g2: the joined player's won match, h3: the host's): $(cd $N/shots && ls $NAME-*.png 2>/dev/null | tr '\n' ' ')" ;;
 summary)
-  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c "^== " "$R") (30 in the list)"; exit 0 ;;
+  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c "^== " "$R") (31 in the list)"; exit 0 ;;
 *) echo "unknown step $STEP"; exit 2 ;;
 esac
 sed -n "/^== $STEP /,\$p" "$R"

@@ -321,6 +321,7 @@ Config load_config(const std::wstring& ini_path) {
     c.coop_coop_worlds = read_uint(ini_path, L"coop", L"coop_worlds", 0) != 0;
     c.dev_coop_world_partner = narrow(read_string(ini_path, L"dev", L"coop_world_partner", ""));
     c.dev_no_revive_prompt = read_uint(ini_path, L"dev", L"no_revive_prompt", 0) != 0;
+    c.dev_fall_guard_test = read_uint(ini_path, L"dev", L"fall_guard_test", 0) != 0;
     c.dev_summary_test = read_uint(ini_path, L"dev", L"summary_test", 0) != 0;
     c.coop_direct = read_uint(ini_path, L"coop", L"direct", 0) != 0;
     c.coop_predict = read_uint(ini_path, L"coop", L"predict", 1) != 0;

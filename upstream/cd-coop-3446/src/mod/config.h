@@ -221,6 +221,9 @@ struct Config {
     int dev_hideseek_test = 0;  // Co-op+ dev: hide and seek one-PC test (1 we seek, 2 we hide; coop_hideseek.h)
     bool dev_summary_test = false;  // Co-op+ dev: the session summary card for any session, 3 s after it ends
     bool dev_no_revive_prompt = false;  // Co-op+ dev: no revive prompt and no revive keys (death-screen research)
+    // Co-op+ dev (TEST ONLY, 2026-11-25): the fall guard (net/revive_prompt.h) does not ask whether the friend stands up
+    // there, so one PC can show it with a far travel to a point in the air above the host.
+    bool dev_fall_guard_test = false;
     bool dev_coop_world_as_host = false;  // Co-op+ dev: the co-op worlds side acts as the host (first-session card)
     // Co-op+: quest steps follow between the players live, while both are in a co-op world (quest_live.h).
     bool coop_live_quests = true;

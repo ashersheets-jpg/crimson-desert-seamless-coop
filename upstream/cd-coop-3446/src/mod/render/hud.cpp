@@ -676,7 +676,12 @@ void hud_draw(float width, float height) {
         // the friend; both players stand together at the scene, and the hold there must answer the story.
         const int story_now = net::story_shown();
         const bool story_first = story_now == 1 || story_now == 2;
-        if (!story_first && !menu_open && !we_are_down && d.remote && !d.hide_partner && remote_distance <= 3.0f) {
+        // Brycecco + Arcticwolf (2026-11-25, two PCs, pads): in a cutscene the friend stands beside us, so the prompt
+        // came up and held the pad's interact button back from the game: the game's hold-to-skip never arrived ("not
+        // allowing for fast forward") and the hold opened our menu instead. No prompt, no held button, in a cutscene.
+        const bool in_cutscene = game::cutscene_playing().value_or(false);
+        if (!in_cutscene && !story_first && !menu_open && !we_are_down && d.remote && !d.hide_partner &&
+            remote_distance <= 3.0f) {
             const proto::Vec3 chest{partner_at.x, partner_at.y + 1.1f, partner_at.z};
             if (auto p = game::project(*cam, *cam_world, chest, width, height)) {
                 if (std::fabs(p->x - width * 0.5f) < width * 0.22f && std::fabs(p->y - height * 0.5f) < height * 0.32f) {
@@ -721,7 +726,7 @@ void hud_draw(float width, float height) {
         // Shared world: a request from the friend who is not right here (a challenge, "come to me", "I travelled
         // far") is accepted by the same hold, the prompt under the request's line; it lapses when left alone.
         // Beside the friend the hold opens the menu instead (Accept / Decline / Leave).
-        if (kNativeLayer && !shown && !menu_open && d.local && !game::ui_menu_open()) {
+        if (kNativeLayer && !shown && !in_cutscene && !menu_open && d.local && !game::ui_menu_open()) {
             const int travel = net::travel_request();
             // Co-op+ 2026-11-14 the ready check (coop_story.h): 1 go on alone, 2 start together, 4 go to the friend.
             const int story = net::story_shown();

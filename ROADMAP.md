@@ -349,6 +349,14 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   host's script kills the camp: 257 ms after the host's camp mission moved (0x0F4D39 / 0x0F4D3A, quest 0x0F42D9),
   the JOINED player's own character got the same three updates: option 2 seen working on 3732. The baseline with the
   credit off (cs93b) is next, to rule out the game sharing that step by itself.)
+  (2026-11-25, Brycecco + Arcticwolf, TWO PCs, a New Co-op Save through the prologue on 614591d0: the shared credit
+  worked on every step, "ours too" from Head to the cabin to Head to Hernand. Found: a place of the HOST's story (the
+  prologue's Abyss island right after "Into the Fog", levels the host's stage loads: "owner native", never "ready for
+  user 2") is not in the joined player's game: Go to my friend dropped it through the world. The fall guard (layer)
+  now takes it back with a note and refuses that spot. Open: getting the joined player there (share the host's
+  story-phase levels near user 2, or the story scene together moving both). Also seen: the HOST took no damage in the
+  prologue's fights (381 NPC blows, HP full) while the joined player did: to verify (the game's own prologue
+  protection of the hero?). docs/research/two-pc-cecco-arctic-1125.md.)
   **Design (user 2026-11-08, after a Discord poll):** option 3 as the base -- each player keeps and plays their OWN
   quests and story in the shared world (start / finish individually, fight together); option 2 as an optional "do it
   together" bonus -- when both are on the SAME step of the same quest, one completing it checks it off for both

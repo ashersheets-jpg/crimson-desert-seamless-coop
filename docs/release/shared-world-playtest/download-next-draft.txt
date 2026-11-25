@@ -1,12 +1,13 @@
 **Update: shared world playtest 0.1.0-alpha+PKGID, for game 1.0.0.3732**
-Use this instead of 614591d0; **both players need the same build**.
+Use this instead of a03a63b9; **both players need the same build**.
 
-- **Joining ended in an endless loading screen** (<@224953308010381312>'s session): the join worked, but right after it the host's game stopped answering for minutes while Co-op+ was moving the friend to the host, and Co-op+ never closed its loading screen. Now that trip waits in the world with a note until the host's game answers. The host's log also says what its game was stuck on: if you see that note, please send both report zips.
-- **Taming a wild horse as the joined player, take two:** the fix in 614591d0 never took effect (it ran on the wrong thread of the game). It's redone here, still untested on a real taming: if one fails, both zips please.
-- **Talking to NPCs while the host is in a conversation** (the bug many of you hit): the joined player's talks were refused, with a misleading "busy" note, because the host's game keeps one "current scene" and the host's talk held it. The joined player's talks now use their own. Only talking to the very same NPC at the same time stays one at a time (the game's own rule).
-- Still open: arm wrestling in **solo** with the mod can leave your character jumping.
+From <@816395856902357032> and <@535093164910968833>'s two-PC run through the game's start:
+- **Following the host into a place of its story:** right after "Into the Fog" the host's story takes it up to an Abyss island that exists only in the host's game. Go to my friend dropped the joined player through the world there (and the revive put them back on the island to fall again). Now a trip that ends in that fall takes you back to where you were, with a note, and further trips there are refused while the host stays. Joining the host on the island itself isn't solved yet: wait below until the host's story brings them down.
+- **An NPC standing still after the joined player talked to it:** a hand-over between the two games that went wrong on the host's side is now finished properly.
+- **Cutscenes:** the co-op "hold to interact" prompt on your friend no longer shows during cutscenes (on a controller it held back the button the game uses).
+- Still open: arm wrestling in **solo** can leave your character jumping (not reproduced yet); in the prologue's fights the host seems to take no damage (checking whether that's the game's own prologue).
 
-Tested with two copies of the game on one PC (Nvidia): the full checklist on 1.0.0.3732 (CHECKLIST), including a join where the host's game was made to stop answering for 25 s. Not covered: two PCs over Steam, real internet, AMD / Intel cards, long sessions.
+Tested with two copies of the game on one PC (Nvidia): the full checklist on 1.0.0.3732 (CHECKLIST), including a trip that ends in the air above the host. Not covered: two PCs over Steam, real internet, AMD / Intel cards, long sessions.
 
 - `...PKGID-shared-world.zip`: the one you want. Run its installer with the game closed.
 - `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.

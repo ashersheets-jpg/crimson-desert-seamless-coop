@@ -5,6 +5,24 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
+Next build (not posted yet), from Brycecco's and Arcticwolf's two-PC session of 25 Nov (a New Co-op Save through the
+prologue, on 614591d0):
+- **Following the host into a place of its story no longer drops the joined player through the world.** Right after
+  "Into the Fog" the host's story took it up to an Abyss island (the Abyss tutorial). That island exists only in the
+  host's game, so Go to my friend put the joined player in the air: held there ~25 s, then a fall through the world
+  (dead on landing, revived on the island's checkpoint, the same fall again, stranded below for 5 minutes). Now, when
+  a trip ends in a straight drop far below where it was going while the friend stands up there, the joined player is
+  taken back to where the trip started, with a note, and trips to that spot are refused while the friend is there
+  (5 minutes at most). One PC (cs130a: a trip to a point 150 m above the host): taken back 2 s into the fall, never
+  landed. Getting the joined player onto such a place itself is not solved yet.
+- **An NPC hand-over that faults no longer leaves the NPC standing still.** On their host's game the hand-over of a
+  camp NPC to the joined player (it was talking to it) faulted inside the game's AI reset (caught, no crash), after
+  the controller had changed: neither game was told, so the NPC stood still. Such a hand-over is now told to both
+  games like a normal one, and logged.
+- **No co-op prompt on the friend during a cutscene.** In a cutscene the friend stands beside you, so the "hold to
+  interact" prompt came up and, on a controller, held the interact button back from the game: holding it opened the
+  co-op menu instead of reaching the game.
+
 Posted 2026-11-25 15:01 as 0.1.0-alpha+a03a63b9 (checklist pp60: all 30 steps, 1296 checks, one PC), from Borque's 25 Nov session and the talk / taming research of 25 Nov:
 - **The joined player's trip to the host waits while the host's game is not answering** (Borque: an endless loading
   screen right after joining). His host's server took no input for 30 s, 26 s and 2.5 minutes just after the friend

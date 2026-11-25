@@ -1180,6 +1180,7 @@ SessionEnd run_network(const Config& cfg, LocalSource& local) {
                     landing.clear();
                 } else if (const auto& rs = session.remote_state(); rs && rs->health > 0.0f) {
                     landing.note(rs->pos.x, rs->pos.y, rs->pos.z, now);
+                    net::revive_note_friend(rs->pos.x, rs->pos.y, rs->pos.z);  // the fall guard (revive_prompt.h)
                 }
                 const auto hop_to_friend = [&](const proto::Vec3& p) {
                     const net::LandingSpot ls = landing.spot(p.x, p.y, p.z, now);
@@ -2504,6 +2505,7 @@ DWORD WINAPI worker(LPVOID) {
         render::dev_no_streamline(cfg.dev_overlay_no_streamline);
         render::dev_fps_cap(cfg.dev_fps_cap);
         net::revive_set_boss_wait(cfg.coop_boss_death_wait);
+        net::revive_set_fall_test(cfg.dev_fall_guard_test);
         net::activity_set_skip_test(cfg.dev_skip_test);
         if (cfg.dev_trace_op) net::sniffer_set_trace_op(static_cast<uint16_t>(cfg.dev_trace_op));
         net::activity_set_versus_test(static_cast<int>(cfg.dev_versus_test));

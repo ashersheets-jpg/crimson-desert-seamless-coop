@@ -883,3 +883,12 @@ the four newest steps first (armwrest shop talkwhile chest) to fail fast; static
 pass's TOTAL said 1142 checks over 26 steps although all 30 had passed (their per-step lines and console files kept
 the counts). Static now starts the report only when it holds no step. When a pass's total disagrees with its step
 lines, count the steps before believing either, and keep each step's own output next to the shared report.
+
+## During a test, a wanted shell command goes on a list, never into a neutered Bash call (2026-11-25, cs130a / cs129a)
+The rule "no Bash while a test runs" was broken three more times in one afternoon, always the same way: a Bash call
+was begun for something useful (a grep of our logs, a look at a file's tail, a timestamp), the rule came to mind
+mid-call, and the call was turned into "echo skip" / "echo no" / "echo x" instead of being dropped. Each was harmless,
+each was still a Bash call during a test. What works instead: Read / Grep / Glob for anything that only reads (they
+cover the logs, the live game-folder logs and the screenshots), the browser's `new Date()` for the time, and for
+anything that really needs a shell (curl, python, git, a build) a line in a scratchpad file, run after the test. If
+the next tool call would be Bash and a test is running, the call is not made at all.

@@ -237,6 +237,13 @@ KNOWN ISSUES (shared world playtest)
   a few minutes), the joined player's trip to the host waits in the world with a note
   until it answers, instead of a loading screen that never ends. If you see that
   note, please send both zips: the host's log now says what its game was stuck on.
+- Places that exist only in one player's story (like the Abyss island the prologue
+  takes the host to right after "Into the Fog") are not in the other player's game:
+  the joined player cannot follow the host there yet. A trip to such a place now
+  takes you back to where you were (with a note) instead of dropping you through the
+  world, and further trips there are refused while the host stays.
+- In the prologue's fights the host seemed to take no damage (seen once; we are
+  checking whether that is the game's own prologue).
 - Arm wrestling in SOLO with Co-op+ installed was reported once to leave the
   character jumping, with no way out of the match but a restart (not seen in our
   tests). If it happens to you, please send your zip.

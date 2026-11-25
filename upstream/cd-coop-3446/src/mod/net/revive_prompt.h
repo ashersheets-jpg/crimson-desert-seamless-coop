@@ -94,6 +94,13 @@ void revive_set_own_load_settled(int state);
 bool revive_own_load_settled();
 // A note for the player (the far travel waits for the server): empty when there is none. The network loop shows it.
 std::string revive_take_toast();
+// 2026-11-25 (Brycecco + Arcticwolf, two PCs): the fall guard. After a move of ours arrives, a straight drop far below
+// its goal while the friend stands up there (a place of the friend's story, like the prologue's Abyss island, that our
+// game has no ground for) takes us back to where the move started, with a note, and moves to that spot are refused for
+// a while. The network loop notes the friend's position every tick (alive and linked).
+void revive_note_friend(float x, float y, float z);
+// TEST ONLY ([dev] fall_guard_test=1): the fall guard does not ask whether the friend stands up there.
+void revive_set_fall_test(bool on);
 
 // T26: the host's death penalty in force this session (10 / 25 / 50 / 100, 0 = none): the host sets its own, the
 // joined player gets it from the host (coop_lobby's kMsgDeathPenalty). The death screen names the cost.

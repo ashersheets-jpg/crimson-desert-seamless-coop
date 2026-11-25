@@ -85,6 +85,9 @@ can be added in coopplus.ini (the README explains how).
   horse is most likely not tamed (a new fix is in, not yet tested on a real taming).
 - If the host's game stops answering for a while, the joined player's trip to the host waits in the world with a note
   until it answers (seen once on a host PC; the host's log now says what its game was stuck on).
+- Places that exist only in one player's story (like the Abyss island the prologue takes the host to) are not in the
+  other player's game: the joined player cannot follow there yet; a trip there takes them back where they were, with a
+  note, instead of dropping them through the world.
 - Arm wrestling in solo with Co-op+ installed was reported once to leave the character jumping until a restart.
 - Two players cannot talk to the same NPC at once (the game's own rule); talking to other NPCs while the host is in a
   conversation works.

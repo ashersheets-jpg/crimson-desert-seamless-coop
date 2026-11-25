@@ -8,7 +8,9 @@
 #include <cmath>
 #include <cstring>
 #include <deque>
+#include <format>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -122,8 +124,68 @@ std::array<float, 3> g_hop_last{};                 // where we were at the last 
 int g_hop_fails = 0;
 uint32_t g_hop_at = 0;
 
-void request_move(float x, float y, float z) {
+// FALL GUARD (2026-11-25, Brycecco + Arcticwolf on 614591d0, the first two-PC run of the game's start). Right after
+// "Into the Fog" the host's story took it up to an Abyss island (the prologue's Abyss tutorial, ~2008 m up). That
+// island is a level of the HOST's story: its server loaded it for the host only (SceneLevelShare "owner native", never
+// "ready for user 2"), so the joined player's game had no ground there. Go to my friend's far travel arrived at
+// 2007.9 m, the game held the character in the air ~25 s, then it fell straight down through the world (1650 m in
+// ~45 s), died on landing, was revived at the island's checkpoint (the server's choice) and fell again; the next tries
+// to reach the friend could not take. So, after a move of ours arrives, for kFallWatchMs: our height kFallDropM below
+// the move's goal, falling at least kFallSpeed over the last second, still within kFallNearM of the goal (a straight
+// drop: not a walk off an edge, a dive or a lift), while the friend stands up there = no ground under us in our game.
+// Then: back to where the move started (far travel or hops, as any move), a note, and the spot is remembered for
+// kBadSpotMs: a move to within kBadSpotM of it, not more than kBadSpotDy below it, is refused with a note (until we
+// stand there ourselves: the place is in our game by then).
+constexpr uint32_t kFallWatchMs = 120000;
+constexpr uint32_t kFallSampleMs = 250;
+constexpr float kFallDropM = 30.0f;
+constexpr float kFallSpeed = 12.0f;                            // metres per second, over the last second
+constexpr float kFallNearM = 7.0f;                             // from the goal (3 m of arrival radius, some drift)
+constexpr float kFallFriendM = 200.0f, kFallFriendDy = 15.0f;  // the friend still up there
+constexpr uint32_t kBadSpotMs = 300000;
+constexpr float kBadSpotM = 150.0f, kBadSpotDy = 60.0f;
+uint32_t g_fall_watch_until = 0;     // network loop only, like the rest of the fall guard but g_bad_spot
+std::array<float, 3> g_fall_goal{};  // the arrived move's goal
+std::array<float, 3> g_move_from{};  // where the move in progress started (its first position read)
+bool g_move_from_set = false;
+std::array<float, 3> g_fall_back{};  // where the arrived move started
+bool g_fall_back_set = false;
+uint32_t g_fall_sample_at = 0;
+float g_fall_y[5] = {};  // the last heights, kFallSampleMs apart (g_fall_n % 5)
+int g_fall_n = 0;
+struct BadSpot {
+    std::array<float, 3> p;
+    uint32_t at;
+};
+std::optional<BadSpot> g_bad_spot;  // under g_hop_mutex
+uint32_t g_bad_refused_at = 0;      // the last refusal's note (under g_hop_mutex)
+uint32_t g_bad_stand_since = 0;     // we stand on the bad spot since (network loop)
+// The friend's last position (mod.cpp, every network tick while linked and the friend is alive; cdmp::now_ms).
+std::atomic<float> g_friend_x{0.0f}, g_friend_y{0.0f}, g_friend_z{0.0f};
+std::atomic<uint32_t> g_friend_at{0};
+std::atomic<bool> g_fall_test{false};  // TEST ONLY ([dev] fall_guard_test): no "the friend stands up there" check
+
+void say(std::string text);
+
+void request_move(float x, float y, float z, bool check_bad = true) {
     std::lock_guard lock(g_hop_mutex);
+    if (check_bad && g_bad_spot) {
+        const BadSpot& b = *g_bad_spot;
+        const uint32_t now = cdmp::now_ms();
+        const float dx = x - b.p[0], dz = z - b.p[2];
+        if (now - b.at >= kBadSpotMs) {
+            g_bad_spot.reset();
+        } else if (dx * dx + dz * dz <= kBadSpotM * kBadSpotM && y >= b.p[1] - kBadSpotDy) {
+            if (!g_bad_refused_at || now - g_bad_refused_at >= 10000) {
+                g_bad_refused_at = now | 1;
+                log::info("Teleport: a move to ({:.0f}, {:.0f}, {:.0f}) is refused: {:.0f} m from where our game had no "
+                          "ground {:.0f} s ago", x, y, z, std::sqrt(dx * dx + dz * dz), (now - b.at) / 1000.0);
+                say("Co-op\nYour friend is somewhere your game has no ground yet (likely a place from their story, "
+                    "like an Abyss island). Go to my friend works again once they leave it");
+            }
+            return;
+        }
+    }
     g_hop_target = std::array<float, 3>{x, y, z};
 }
 
@@ -295,6 +357,101 @@ void send_hop(uint32_t own, const std::array<float, 3>& p) {
     puppet_inject_s2c_batch({{kOpDoTeleportAck, b}});
 }
 
+// The fall guard (above request_move): a move arrived at `goal`; watch our height for a while.
+void fall_watch_start(uint32_t now_ms, const std::array<float, 3>& goal) {
+    g_fall_watch_until = (now_ms + kFallWatchMs) | 1;
+    g_fall_goal = goal;
+    g_fall_back = g_move_from;
+    g_fall_back_set = g_move_from_set;
+    g_fall_sample_at = now_ms;
+    g_fall_n = 0;
+}
+
+// Network loop, every hop_tick: the watch after an arrival (one sample every kFallSampleMs), and the bad spot's end.
+void fall_watch(uint32_t now_ms, uint32_t own) {
+    // The bad spot ends early once we stand on it ourselves for 5 s (the place is in our game now).
+    static uint32_t bad_next = 0;
+    static float bad_last_y = 0.0f;
+    if (static_cast<int32_t>(now_ms - bad_next) >= 0) {
+        bad_next = now_ms + 1000;
+        std::optional<std::array<float, 3>> p;
+        {
+            std::lock_guard lock(g_hop_mutex);
+            if (g_bad_spot) p = g_bad_spot->p;
+        }
+        const auto at = p && own ? game::actor_world_position(own) : std::nullopt;
+        if (!p) {
+            g_bad_stand_since = 0;
+        } else if (at) {
+            const float dx = at->x - (*p)[0], dz = at->z - (*p)[2];
+            const bool on = dx * dx + dz * dz <= 40.0f * 40.0f && at->y >= (*p)[1] - 10.0f &&
+                            std::fabs(at->y - bad_last_y) < 1.0f;
+            bad_last_y = at->y;
+            if (!on) {
+                g_bad_stand_since = 0;
+            } else if (!g_bad_stand_since) {
+                g_bad_stand_since = now_ms | 1;
+            } else if (now_ms - g_bad_stand_since >= 5000) {
+                g_bad_stand_since = 0;
+                std::lock_guard lock(g_hop_mutex);
+                g_bad_spot.reset();
+                log::info("Teleport: we stand where our game had no ground before: it has it now; moves there are "
+                          "allowed again");
+            }
+        }
+    }
+    if (!g_fall_watch_until) return;
+    if (g_hop_goal || static_cast<int32_t>(now_ms - g_fall_watch_until) >= 0) {  // another move, or the time is up
+        g_fall_watch_until = 0;
+        return;
+    }
+    if (static_cast<int32_t>(now_ms - g_fall_sample_at) < 0) return;
+    g_fall_sample_at = now_ms + kFallSampleMs;
+    const auto at = own ? game::actor_world_position(own) : std::nullopt;
+    if (!at) return;  // loading: no sample
+    const float dx = at->x - g_fall_goal[0], dz = at->z - g_fall_goal[2];
+    if (dx * dx + dz * dz > kFallNearM * kFallNearM) {
+        g_fall_watch_until = 0;  // we moved off the spot: whatever happens from here is a normal move of ours
+        return;
+    }
+    const float y_1s = g_fall_n >= 4 ? g_fall_y[(g_fall_n - 4) % 5] : at->y;  // 4 samples = a second ago
+    g_fall_y[g_fall_n % 5] = at->y;
+    ++g_fall_n;
+    const float drop = g_fall_goal[1] - at->y, speed = y_1s - at->y;
+    if (drop < kFallDropM || speed < kFallSpeed) return;
+    // The friend stands up there still (its word within 3 s): it has ground where we have none. A friend that dives or
+    // falls with us is no sign of missing ground; the watch goes on.
+    const uint32_t f_at = g_friend_at.load(std::memory_order_relaxed);
+    const float fx = g_friend_x.load(std::memory_order_relaxed) - g_fall_goal[0];
+    const float fz = g_friend_z.load(std::memory_order_relaxed) - g_fall_goal[2];
+    const float fy = g_friend_y.load(std::memory_order_relaxed);
+    const bool test = g_fall_test.load(std::memory_order_relaxed);
+    if (!test && (!f_at || cdmp::now_ms() - f_at >= 3000 || fx * fx + fz * fz > kFallFriendM * kFallFriendM ||
+                  fy < g_fall_goal[1] - kFallFriendDy)) {
+        return;
+    }
+    g_fall_watch_until = 0;
+    {
+        std::lock_guard lock(g_hop_mutex);
+        g_bad_spot = BadSpot{g_fall_goal, cdmp::now_ms() | 1};
+        g_bad_refused_at = 0;
+    }
+    g_bad_stand_since = 0;
+    g_confirm_at = 0;  // the far travel's "back where we started" check must not send us up again,
+    g_teleport_at = 0;  // nor the revive's checkpoint checks
+    g_teleport_due = false;
+    log::warn("Teleport: {:.0f} m below the move's goal ({:.0f}, {:.0f}, {:.0f}) and falling {:.0f} m/s straight down "
+              "while the friend stands up there ({:.0f} m up{}): our game has no ground there (a place of the friend's "
+              "story?): {}", drop, g_fall_goal[0], g_fall_goal[1], g_fall_goal[2], speed, fy,
+              test ? "; TEST ONLY: [dev] fall_guard_test, not checked" : "",
+              g_fall_back_set ? std::format("back to where the move started ({:.0f}, {:.0f}, {:.0f})", g_fall_back[0],
+                                            g_fall_back[1], g_fall_back[2])
+                              : std::string("where the move started is not known: left as it is"));
+    if (g_fall_back_set) request_move(g_fall_back[0], g_fall_back[1], g_fall_back[2], /*check_bad=*/false);
+    say("Co-op\nYour game has no ground where your friend is (likely a place from their story, like an Abyss island), "
+        "so you were brought back");
+}
+
 // Network loop: start a newly asked move, and send the next hop when due.
 void hop_tick(uint32_t now_ms) {
     {
@@ -314,9 +471,12 @@ void hop_tick(uint32_t now_ms) {
             g_confirm_at = 0;
             g_confirm_tries = 2;
             g_confirm_waits = 0;
+            g_move_from_set = false;  // the first position read for this move (below)
+            g_fall_watch_until = 0;   // a new move ends the last one's watch
         }
     }
     const uint32_t own = capture_own_player_key();
+    fall_watch(now_ms, own);
     if (!g_hop_goal) {
         if (!g_confirm_at || static_cast<int32_t>(now_ms - g_confirm_at) < 0) return;
         const auto here = own ? game::actor_world_position(own) : std::nullopt;
@@ -388,6 +548,10 @@ void hop_tick(uint32_t now_ms) {
     if (static_cast<int32_t>(now_ms - g_hop_at) < 0) return;
     const auto at = own ? game::actor_world_position(own) : std::nullopt;
     if (!at) return;
+    if (!g_move_from_set) {
+        g_move_from = {at->x, at->y, at->z};
+        g_move_from_set = true;
+    }
     const auto& goal = *g_hop_goal;
     const float dx = goal[0] - at->x, dz = goal[2] - at->z;
     const float left = std::sqrt(dx * dx + dz * dz);
@@ -447,6 +611,7 @@ void hop_tick(uint32_t now_ms) {
             g_confirm_at = (now_ms + kFarConfirmMs) | 1;
             g_confirm_waits = 0;
         }
+        fall_watch_start(now_ms, goal);
         g_hop_goal.reset();
         return;
     }
@@ -757,6 +922,18 @@ void revive_set_host_server_busy(uint32_t ms) {
 std::string revive_take_toast() {
     std::lock_guard lock(g_toast_mutex);
     return std::exchange(g_toast, std::string());
+}
+
+void revive_set_fall_test(bool on) {
+    g_fall_test.store(on, std::memory_order_relaxed);
+    if (on) log::warn("Config: TEST ONLY [dev] fall_guard_test=1: the fall guard does not ask whether the friend stands up there");
+}
+
+void revive_note_friend(float x, float y, float z) {
+    g_friend_x.store(x, std::memory_order_relaxed);
+    g_friend_y.store(y, std::memory_order_relaxed);
+    g_friend_z.store(z, std::memory_order_relaxed);
+    g_friend_at.store(cdmp::now_ms() | 1, std::memory_order_relaxed);
 }
 
 bool revive_teleport_to(float x, float y, float z, float arrive_m) {
