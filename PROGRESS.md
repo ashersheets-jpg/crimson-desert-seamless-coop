@@ -11269,5 +11269,15 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   the build tree's (dllswap show), the same in the mod-manager zip. Discord 05:37: no new feedback or bug report since
   24 Nov (Edward's zip not sent yet); #general quiet since my 01:27 reply. ~05:41 pp59r started: static + real +
   fresh on 614591d0. (Rule slips while pp59r ran, 05:42-05:46: two Bash commands, a tail of docs/LESSONS.md and an
-  append of one lesson to it, then one `echo`; nothing else.) Written for after it: scratchpad/fr1_fix.py (the next build's FR1 manager-change
-  reset, its counter in the summary, the ON line's narrowed text), the post text for 614591d0.
+  append of one lesson to it, then one `echo`; nothing else.) Written for after it: scratchpad/fr1_fix.py (the next
+  build's FR1 manager-change reset, its counter in the summary, the ON line's narrowed text), the post text.
+- 05:49 pp59r DONE on 614591d0: static 12 / 0 (the committed-tree check passes now), real 14 / 0 (REAL SAVES
+  UNCHANGED), fresh 45 / 0 (SAVES OK, 5/5; the fix's counters 0 swaps, nothing failed). So 614591d0 = pp59's tested
+  build (the same DLLs, 28 steps) with the README notes, its package checks and a two-player smoke passed again.
+
+### POSTED 2026-11-25 05:51: 0.1.0-alpha+614591d0 in #download-here (game 1.0.0.3732), both zips (13 069 726 d345564c...,
+### 7 124 849 c06c94b9...; Discord shows 12.46 / 6.79 MB), message 1575101562714329119
+- The text (docs/release/shared-world-playtest/download-614591d0-draft.txt): the taming fix (the joined player's own
+  focus; untested on a real taming; the host's log names whatever held the focus; the 6 s release stays), tags
+  Borque; the solo arm-wrestling report as still open; tested = the full checklist on 3732 (28 steps, the fix on).
+- 05:53 native base synced (native-base/ at 96d6c65: the focus slot, its probe and the narrowed request window).
