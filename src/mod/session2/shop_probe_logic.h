@@ -285,4 +285,31 @@ inline Interaction parse_interaction_ack(std::span<const uint8_t> p, uint16_t op
 // The 3000's native error @12 (0 when it is not a well-formed 3000).
 inline uint32_t fail_ack_error(std::span<const uint8_t> p) { return p.size() >= 16 ? le32(p.data() + 12) : 0; }
 
+// Co-op+ 2026-11-24 (the joined player's refused taming; docs/research/taming-refusal-3732.md): the branch step's
+// condition call 0x25C82A0(node, manager = [scene+0x28], context, scene, ...) first finds the target node's entry in
+// the scene's processor list; when that entry's element flag [[entry+0x88]+0x75] is set (an exclusive node) it asks
+// 0x21CABF0(manager, scene) and REFUSES when that says yes. 0x21CABF0's first checks: the manager's current stage
+// (0x21CAF70: [mgr+0xA0] when its low 29 bits are set, else [mgr+0x90]; stp::current_of) looked up in the manager;
+// none or not live -> no; the same stage as the scene ([+0x30] equal) -> no; another live stage -> yes, unless its
+// later checks clear it (the two stages' +0x78 group through a table; a type-6 scene's list). The log line's verdict.
+enum class Excl : uint8_t { NoCurrent, CurrentGone, ThisScene, Another };
+inline Excl exclusive_verdict(uint64_t current, bool current_live, uint64_t scene_id) {
+    constexpr uint64_t kMask = 0x1FFFFFFF;
+    if (!(current & kMask)) return Excl::NoCurrent;
+    if (current == scene_id) return Excl::ThisScene;
+    if (!current_live) return Excl::CurrentGone;
+    return Excl::Another;
+}
+inline const char* excl_name(Excl e) {
+    switch (e) {
+        case Excl::NoCurrent: return "the manager has no current stage: not blocked by one";
+        case Excl::CurrentGone: return "its current stage id is no live stage of the manager: not blocked by one";
+        case Excl::ThisScene: return "its current stage IS this scene: not blocked";
+        case Excl::Another:
+            return "ANOTHER live stage is the manager's current one: an exclusive node is refused for it (unless "
+                   "0x21CABF0's group / type-6 checks clear it)";
+    }
+    return "?";
+}
+
 }  // namespace cdmp::session2::shp

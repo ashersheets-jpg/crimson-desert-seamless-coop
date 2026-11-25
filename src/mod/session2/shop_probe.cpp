@@ -21,6 +21,7 @@
 #include "mod/session2/p8_probes.h"
 #include "mod/session2/server.h"
 #include "mod/session2/shop_probe_logic.h"
+#include "mod/session2/shop_trade_probe_logic.h"
 #include "mod/session2/stage_lookup_logic.h"
 #include "mod/session2/user2_shops.h"
 #include "mod/session2/user2_shops_logic.h"
@@ -96,6 +97,16 @@ constexpr uint8_t kBF2CtxBytes[] = {0x8B, 0x05, 0xA8, 0xF2, 0x5A, 0x04};     // 
 constexpr int32_t kBF_Scene = 0xCE0, kBF_Node = 0, kBF_Elem = -0x70;
 constexpr uint32_t kBF_SceneOwner = 0x28, kBF_SceneWord = 0x30, kBF_ElemInfo = 0x88, kBF_ElemFlag = 0x75;
 constexpr uintptr_t kImageSize3732 = 0x13C7E000;
+// Co-op+ 2026-11-24 (late; scratchpad cond73 / cond73b, shp::exclusive_verdict): [scene+0x28] is the scene's MANAGER
+// (kStage_Mgr elsewhere; the "owner" the BF line names is that manager's +0x60), and the condition call's first path is
+// the manager's exclusive check. "Why" reads, after either refusal: the target node's entry in the scene's processor
+// list ([[scene+0x58]+0x10], u32 count +0x18, matched by u32 [entry] == [node+0x10]) and its element flag; the
+// manager's current stage (stp::current_of) and whether it is live there (isl::find_stage), with both stages' names
+// ([[stage+0x48]+0x1B8]); the node's condition object [[[node]+0x38]] (asked when the exclusive path passes: vtable +8
+// or +0x10 with a pa::CompareSequencerTargetParameter), named from its RTTI on the log thread. Read only.
+constexpr uint32_t kBF_SceneProc = 0x58, kProc_Entries = 0x10, kProc_Count = 0x18, kNode_EntryId = 0x10;
+constexpr uint32_t kScene_Type = 0x68, kScene_Group = 0x78, kScene_Info = 0x48, kInfo_Name = 0x1B8, kNodeData_Cond = 0x38;
+constexpr uint32_t kMaxProcEntries = 256;
 
 // Offsets (server objects; the same ones observer_stage / observer_milestone read).
 constexpr uint32_t kActor_Key = 0x60, kActor_User = 0xA0, kUser_Key = 0x60, kField_Owner = 0x180, kMgr_Actor = 0x18;
@@ -152,11 +163,13 @@ std::atomic<uint64_t> g_srv[3] = {}, g_srv_found[3] = {}, g_srv_result[3][4] = {
 std::atomic<uint64_t> g_req[4] = {}, g_req_filtered[4] = {}, g_req_funcnpc[4] = {};  // 2671 2720 2436 2591
 std::atomic<uint64_t> g_out[6] = {}, g_out_funcnpc[6] = {};  // 2663 3000 2916 2525 2981 2524
 
-enum Kind : uint16_t { kEGate, kEPrep, kE2671, kESrv, kEReq, kEOut, kETwin, kEBranch, kEBranchFail, kKindCount };
+enum Kind : uint16_t {
+    kEGate, kEPrep, kE2671, kESrv, kEReq, kEOut, kETwin, kEBranch, kEBranchFail, kEBranchWhy, kEBranchNames, kKindCount
+};
 p::EventRing<512> g_ring;
 p::WindowLimiter g_lim[kKindCount] = {{16, 5'000'000}, {48, 5'000'000}, {32, 5'000'000}, {32, 5'000'000},
                                        {48, 5'000'000}, {48, 5'000'000}, {32, 5'000'000}, {32, 5'000'000},
-                                       {16, 5'000'000}};
+                                       {16, 5'000'000}, {16, 5'000'000}, {16, 5'000'000}};
 std::atomic<uint64_t> g_limited{0}, g_lost{0}, g_lines{0};
 constexpr uint64_t kMaxLines = 4000;
 
@@ -189,6 +202,23 @@ T rdv(uintptr_t a, T fallback = T{}) noexcept {
     return rd(a, v) ? v : fallback;
 }
 uintptr_t rdp(uintptr_t a) noexcept { return rdv<uintptr_t>(a); }
+// isl::find_stage's reader: the SEH reads above.
+template <class T>
+bool seh_rd(uintptr_t a, T& v) noexcept {
+    return rd(a, v);
+}
+struct SehRd {
+    template <class T>
+    bool rd(uintptr_t a, T& v) const noexcept {
+        return seh_rd(a, v);
+    }
+};
+// Up to 40 bytes of a stage's name ([[stage+0x48]+0x1B8], a char*) into v[at .. at+4].
+void put_stage_name(uintptr_t stage, uint64_t* v, int at) noexcept {
+    const uintptr_t info = stage ? rdp(stage + kScene_Info) : 0;
+    const uintptr_t name = info ? rdp(info + kInfo_Name) : 0;
+    for (int k = 0; k < 5 && name; ++k) v[at + k] = rdv<uint64_t>(name + 8 * static_cast<uintptr_t>(k));
+}
 
 uint32_t user_key_of(uintptr_t actor) noexcept {
     const uintptr_t u = actor ? rdp(actor + kActor_User) : 0;
@@ -418,6 +448,59 @@ void on_bf(safetyhook::Context& ctx, int site) noexcept {
                                                                  : static_cast<uint64_t>(q);
     }
     emit(kEBranchFail, e);
+
+    // Why (see kBF_SceneProc): the manager's exclusive check and the node's condition object.
+    const auto rva = [](uintptr_t a) -> uint64_t {
+        return a >= g_base && a - g_base < kImageSize3732 ? static_cast<uint64_t>(a - g_base) : 0;
+    };
+    const uintptr_t mgr = owner;  // [scene+0x28]
+    const uint32_t node_id = node ? rdv<uint32_t>(node + kNode_EntryId) : 0;
+    uint8_t excl = 0xFF;  // 0xFF no entry for the node, 0xFE its info unreadable, else the flag
+    if (scene && node) {
+        const uintptr_t proc = rdp(scene + kBF_SceneProc);
+        const uintptr_t arr = proc ? rdp(proc + kProc_Entries) : 0;
+        const uint32_t n = proc ? rdv<uint32_t>(proc + kProc_Count) : 0;
+        for (uint32_t i = 0; arr && i < n && i < kMaxProcEntries; ++i) {
+            const uintptr_t en = rdp(arr + 8ull * i);
+            if (!en || rdv<uint32_t>(en, 0xFFFFFFFFu) != node_id) continue;
+            const uintptr_t info = rdp(en + kBF_ElemInfo);
+            excl = info ? rdv<uint8_t>(info + kBF_ElemFlag, uint8_t{0xFE}) : uint8_t{0xFE};
+            break;
+        }
+    }
+    const uint64_t a0 = mgr ? rdv<uint64_t>(mgr + stp::kMgr_Current) : 0;
+    const uint64_t m90 = mgr ? rdv<uint64_t>(mgr + stp::kMgr_Current2) : 0;
+    const uint64_t cur = stp::current_of(a0, m90);
+    isl::Lookup look;
+    if (mgr && (cur & stp::kStageMask)) look = isl::find_stage(SehRd{}, mgr, cur);
+    const uintptr_t data = node ? rdp(node) : 0;
+    const uintptr_t holder = data ? rdp(data + kNodeData_Cond) : 0;
+    const uintptr_t cond = holder ? rdp(holder) : 0;
+    const uintptr_t cvt = cond ? rdp(cond) : 0;
+    p::Event w;
+    w.v[0] = static_cast<uint64_t>(site) | static_cast<uint64_t>(u2) << 8 | static_cast<uint64_t>(excl) << 16 |
+             static_cast<uint64_t>(node_id) << 32;
+    w.v[1] = b.set ? b.seq : 0;
+    w.v[2] = scene ? rdv<uint64_t>(scene + kBF_SceneWord) : 0;
+    w.v[3] = mgr;
+    w.v[4] = b.set ? b.mgr : 0;
+    w.v[5] = m90;
+    w.v[6] = a0;
+    w.v[7] = (scene ? rdv<uint8_t>(scene + kScene_Type) : 0) |
+             static_cast<uint64_t>(scene ? rdv<uint32_t>(scene + kScene_Group) : 0) << 32;
+    w.v[8] = static_cast<uint64_t>(look.read_ok) | static_cast<uint64_t>(look.found) << 1 |
+             static_cast<uint64_t>(look.dead) << 2 |
+             static_cast<uint64_t>(look.found ? rdv<uint32_t>(look.inst + kScene_Group) : 0) << 32;
+    w.v[9] = rva(cvt);
+    w.v[10] = cvt ? (rva(rdp(cvt + 8)) | rva(rdp(cvt + 0x10)) << 32) : 0;
+    w.v[11] = mgr ? rva(rdp(mgr)) : 0;
+    emit(kEBranchWhy, w);
+    p::Event nm;
+    put_stage_name(look.found ? look.inst : 0, nm.v, 0);
+    put_stage_name(scene, nm.v, 5);
+    nm.v[10] = cur;
+    nm.v[11] = w.v[2];
+    emit(kEBranchNames, nm);
 }
 void on_bf1(safetyhook::Context& ctx) noexcept {
     if (g_bf1_on.load(std::memory_order_acquire)) on_bf(ctx, 0);
@@ -519,6 +602,22 @@ const char* req_name(uint16_t op) {
     }
 }
 
+// The RTTI class name of an exe vtable (MSVC x64: [vt-8] the complete object locator, signature 1, its type
+// descriptor's rva at +0x0C, the decorated name at the descriptor +0x10); on the log thread; "?" when unreadable.
+std::string rtti_name(uint64_t vt_rva) {
+    if (!g_base || vt_rva < 8 || vt_rva >= kImageSize3732) return "?";
+    const uintptr_t col = rdp(g_base + static_cast<uintptr_t>(vt_rva) - 8);
+    if (col < g_base || col - g_base >= kImageSize3732 || rdv<uint32_t>(col) != 1) return "?";
+    const uint32_t td = rdv<uint32_t>(col + 0x0C);
+    if (!td || td >= kImageSize3732) return "?";
+    std::string s;
+    for (uintptr_t i = 0; i < 120; ++i) {
+        const char c = rdv<char>(g_base + td + 0x10 + i);
+        if (!c) break;
+        s += c;
+    }
+    return s.empty() ? std::string("?") : s;
+}
 std::string line_of(const p::Event& e) {
     const uint64_t* v = e.v;
     const std::string when = p8_when(e.qpc_us);
@@ -606,8 +705,8 @@ std::string line_of(const p::Event& e) {
             for (int i = 4; i < 12; ++i)
                 q += (v[i] >> 63) ? std::format(" vt exe+0x{:X}", v[i] & 0x7FFFFFFFFFFFFFFFull) : std::format(" 0x{:X}", v[i]);
             return std::format("ShopProbe [branch fail] {} T{} | the branch step 0x2C0B8B0 refused {}'s branch of sequencer "
-                               "0x{:X} to 0x{:08X} with 0x{:08X} at {} | scene +0x30 0x{:X}, its owner actor 0x{:08X} | "
-                               "target node:{}",
+                               "0x{:X} to 0x{:08X} with 0x{:08X} at {} | scene +0x30 0x{:X}, [[scene+0x28]+0x60] 0x{:08X} "
+                               "(+0x28 is the scene's manager, not an actor) | target node:{}",
                                when, e.tid, (v[0] >> 16) & 1 ? "USER 2" : "the host / another", v[1],
                                static_cast<uint32_t>(v[3] >> 32), static_cast<uint32_t>(v[0] >> 32),
                                (v[0] & 0xFF) == 0 ? std::format("2C0BFD7 (a node entry of kind 2; the element's flag "
@@ -615,6 +714,34 @@ std::string line_of(const p::Event& e) {
                                                   : std::string("2C0C03A (the condition call 0x25C82A0 said no)"),
                                v[2], static_cast<uint32_t>(v[3]), q);
         }
+        case kEBranchWhy: {
+            const auto site = static_cast<uint32_t>(v[0] & 0xFF), excl = static_cast<uint32_t>((v[0] >> 16) & 0xFF),
+                       node_id = static_cast<uint32_t>(v[0] >> 32);
+            const uint64_t cur = stp::current_of(v[6], v[5]);
+            const bool live = (v[8] >> 1) & 1;
+            const shp::Excl verdict = shp::exclusive_verdict(cur, live, v[2]);
+            const std::string ex = excl == 0xFF ? std::string("the node has no entry in the scene's list")
+                                   : excl == 0xFE ? std::string("its entry's info is unreadable")
+                                                  : std::format("its element flag +0x75 = {} ({})", excl,
+                                                                excl ? "EXCLUSIVE: the manager's check below applies"
+                                                                     : "not exclusive: the condition object decides");
+            return std::format(
+                "ShopProbe [branch why] {} T{} | {}'s branch at {}: sequencer 0x{:X} (scene +0x30 0x{:X}), target node "
+                "0x{:X}: {} | the scene's manager +0x28 0x{:X} ({}; {} the B1 manager 0x{:X}): current stage +0xA0 0x{:X} "
+                "/ +0x90 0x{:X} -> 0x{:X}, {} there (lookup read {}, dead {}) -> {} | scene type +0x68 {}, group +0x78 "
+                "0x{:08X} (the current stage's 0x{:08X}) | the node's condition object: {} (vt exe+0x{:X}; +8 exe+0x{:X}, "
+                "+0x10 exe+0x{:X})",
+                when, e.tid, (v[0] >> 8) & 1 ? "USER 2" : "the host / another", site == 0 ? "2C0BFD7" : "2C0C03A", v[1],
+                v[2], node_id, ex, v[3], v[11] ? rtti_name(v[11]) : std::string("?"), v[3] == v[4] ? "=" : "!=", v[4],
+                v[6], v[5], cur, live ? "LIVE" : "not live", v[8] & 1 ? "ok" : "failed", (v[8] >> 2) & 1 ? "yes" : "no",
+                shp::excl_name(verdict), v[7] & 0xFF, static_cast<uint32_t>(v[7] >> 32),
+                static_cast<uint32_t>(v[8] >> 32), v[9] ? rtti_name(v[9]) : std::string("none"), v[9],
+                v[10] & 0xFFFFFFFF, v[10] >> 32);
+        }
+        case kEBranchNames:
+            return std::format("ShopProbe [branch why] {} T{} | names: the manager's current stage 0x{:X} '{}' | this "
+                               "scene 0x{:X} '{}'",
+                               when, e.tid, v[10], name_of(v, 5), v[11], name_of(v + 5, 5));
         default:
             return std::format("ShopProbe: event {}?", e.kind);
     }
