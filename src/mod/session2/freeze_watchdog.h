@@ -40,6 +40,17 @@ safetyhook::MidHookFn freeze_watchdog_wrap_mid(safetyhook::MidHookFn fn, const c
 
 // For an inline detour: an id once (at install), then a FreezeMark on the stack of the detour.
 uint16_t freeze_watchdog_register(const char* tag, const char* what);
+
+// A stack sample of another thread, on request (2026-11-25, Borque: the host's ServerRunThread took no input for 30 s,
+// 26 s and 153 s and the log could not say where it was; server.cpp's stall watch asks). Works with freeze_watchdog on
+// or off, from a thread of the mod that is not `tid`; one caller at a time (a second one gets a "not sampled" text).
+// Its own module list (K32EnumProcessModules: no loader lock; refreshed at most every 30 s) and stack buffer, never the
+// watchdog thread's. While `tid` is suspended: GetThreadContext and one copy of <= 16 KB of its stack, nothing else
+// (fwd::sample_stack). Then the text: RIP and up to 20 return addresses (a call right before them) as module+RVA: the
+// exe ("exe+"), cdmp.asi ("cdmp+ [mod]"), any other module by name (another mod's DLL / .asi, the system's), private
+// executable memory ("[stub]": hook trampolines); plus the mod hook `tid` is in when freeze_watchdog is on. At most 60
+// suspensions per session.
+std::string freeze_sample_thread_text(uint32_t tid);
 class FreezeMark {
 public:
     explicit FreezeMark(uint16_t id) noexcept;

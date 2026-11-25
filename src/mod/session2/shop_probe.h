@@ -48,5 +48,8 @@ bool shop_probe_route_points_live() noexcept;
 void shop_probe_on_user2_req(uint16_t opcode, std::span<const uint8_t> payload, bool filtered) noexcept;
 // take_frame (a game thread): a packet for session `to_user2` (the live session 2) was queued (pushed) or not.
 void shop_probe_on_out(uint16_t opcode, std::span<const uint8_t> payload, bool to_user2, bool pushed) noexcept;
+// 2026-11-25: the server's LOGIC thread (where the request handlers run), learned at the first StageBranchStateReq's
+// B1 (0 = not seen yet, or the probe is off). Any thread; the stall samples (server.cpp) take it too.
+uint32_t shop_probe_logic_thread() noexcept;
 
 }  // namespace cdmp::session2

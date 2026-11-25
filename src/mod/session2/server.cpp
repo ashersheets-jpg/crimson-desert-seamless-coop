@@ -29,6 +29,7 @@
 #include "mod/session2/combat_follow.h"
 #include "mod/session2/docked_gimmicks.h"
 #include "mod/session2/frame_probe.h"
+#include "mod/session2/freeze_watchdog.h"
 #include "mod/session2/door_trace.h"
 #include "mod/session2/scene_level_share.h"
 #include "mod/session2/child_hold.h"
@@ -109,6 +110,16 @@ std::atomic<uintptr_t> g_session2{0};
 // so the thread is part of it: a new server runs a new ServerRunThread.
 std::atomic<uintptr_t> g_built_net{0}, g_built_s1{0};
 std::atomic<uint32_t> g_built_tid{0};
+// 2026-11-25 (Borque, 527e283a: the host's ServerRunThread took no input for 30 s, 26 s and 153 s, and the log could
+// not say where it was): the last item ServerRunThread entered (OnRecvPacket's entry), for the stall lines, and the
+// stall's start for the layer (cdmp_server_stalled_ms: its far travel waits for the server instead of a loading screen).
+std::atomic<uint32_t> g_item_op{0};             // the op, | 0x10000 for one of user 2's buffers
+std::atomic<uint64_t> g_item_at{0};             // GetTickCount64 at its entry
+std::atomic<uint64_t> g_items{0};               // items entered
+std::atomic<uint64_t> g_server_stall_since{0};  // while the stall watch is stalled: since when; 0 = not stalled
+// TEST ONLY ([session2] dev_server_stall_ms, server_dev_stall): a stall of ServerRunThread on purpose, once.
+std::atomic<uint32_t> g_dev_stall_ms{0}, g_dev_stall_op{0}, g_dev_stall_nth{0}, g_dev_stall_seen{0};
+std::atomic<bool> g_dev_stall_done{false};
 std::atomic<uint32_t> g_rebuilt{0};
 std::atomic<bool> g_want_session{false};
 std::atomic<bool> g_create_failed{false};
@@ -893,6 +904,20 @@ void on_server_recv(safetyhook::Context& ctx) {
     }
     // P6, second layer (log only, decision D-5): the server is asked to save.
     if (pkt && peek(pkt, op) && (op == 2234 || op == 3158)) g_n.save_reqs.fetch_add(1, std::memory_order_relaxed);
+    // The item this thread enters now (the stall lines name the last one: server_last_item).
+    g_item_op.store(static_cast<uint32_t>(op) | (from_user2 ? 0x10000u : 0u), std::memory_order_relaxed);
+    g_item_at.store(GetTickCount64(), std::memory_order_relaxed);
+    g_items.fetch_add(1, std::memory_order_relaxed);
+    // TEST ONLY (config.h dev_server_stall_ms; 0 in every shipped ini): this thread sleeps once, here.
+    if (const uint32_t ms = g_dev_stall_ms.load(std::memory_order_relaxed);
+        ms && from_user2 && op && op == g_dev_stall_op.load(std::memory_order_relaxed) &&
+        g_dev_stall_seen.fetch_add(1, std::memory_order_relaxed) + 1 == g_dev_stall_nth.load(std::memory_order_relaxed) &&
+        !g_dev_stall_done.exchange(true)) {
+        log::warn("Session2 DEV (test only): ServerRunThread T{} sleeps {} ms now, at user 2's #{} Req {}",
+                  GetCurrentThreadId(), ms, g_dev_stall_nth.load(), op);
+        Sleep(ms);
+        log::warn("Session2 DEV (test only): ServerRunThread awake again");
+    }
     // E4: copy the host player's movement for user 2 (mirror_delay_ms later).
     if (g_opt.mirror_host && (op == kOpMoveActorReq || op == kOpStartActionReq || op == kOpRotateActorReq) &&
         ctx.r8 != s2) {
@@ -1382,6 +1407,12 @@ bool server_user2(uintptr_t& user2) { return session_user(live_session2(), user2
 bool server_session_user(uintptr_t session, uintptr_t& user) { return session_user(session, user); }
 
 uint32_t server_thread_id() { return g_built_tid.load(); }
+
+void server_dev_stall(uint32_t ms, uint32_t op, uint32_t nth) {
+    g_dev_stall_op.store(op, std::memory_order_relaxed);
+    g_dev_stall_nth.store(nth ? nth : 1, std::memory_order_relaxed);
+    g_dev_stall_ms.store(ms, std::memory_order_relaxed);
+}
 
 uintptr_t server_live_session2() { return live_session2(); }
 uintptr_t server_host_session() { return g_built_s1.load(std::memory_order_relaxed); }
@@ -2105,28 +2136,87 @@ namespace {
 
 // The server's registered threads and their park flags (offsets_s2.h:
 // ServerNet+0xF8 {u32 tid, u8* flag}[+0x100]; flag[0] park asked, [1] parked,
-// [2] handling an item). Read only.
-std::string server_threads_park() {
+// [2] handling an item). Read only. Returns the count (-1: unreadable); at most 16 are read.
+struct ServerThreadFlags {
+    uint32_t tid = 0;
+    bool ok = false, asked = false, parked = false, busy = false;
+};
+int server_threads_read(std::array<ServerThreadFlags, 16>& out) {
     uintptr_t net = 0, arr = 0;
     uint32_t n = 0;
     if (!peek(g_base + off::kServerNetSlot, net) || !net || !peek(net + off::kServerNet_Threads, arr) || !arr ||
         !peek(net + off::kServerNet_ThreadCount, n)) {
-        return "server threads unreadable";
+        return -1;
     }
-    std::string s = std::format("server threads {}:", n);
-    for (uint32_t i = 0; i < n && i < 16; ++i) {
-        uint32_t tid = 0;
+    for (uint32_t i = 0; i < n && i < out.size(); ++i) {
+        ServerThreadFlags& f = out[i];
         uintptr_t flag = 0;
         uint8_t b[3] = {};
-        if (!peek(arr + i * off::kServerThreadEntry, tid) || !peek(arr + i * off::kServerThreadEntry + 8, flag) ||
-            !flag || !peek(flag, b[0]) || !peek(flag + 1, b[1]) || !peek(flag + 2, b[2])) {
+        f.ok = peek(arr + i * off::kServerThreadEntry, f.tid) && peek(arr + i * off::kServerThreadEntry + 8, flag) &&
+               flag && peek(flag, b[0]) && peek(flag + 1, b[1]) && peek(flag + 2, b[2]);
+        f.asked = b[0] != 0;
+        f.parked = b[1] != 0;
+        f.busy = b[2] != 0;
+    }
+    return static_cast<int>(std::min<uint32_t>(n, 0x7FFFFFFF));
+}
+
+std::string server_threads_park() {
+    std::array<ServerThreadFlags, 16> t{};
+    const int n = server_threads_read(t);
+    if (n < 0) return "server threads unreadable";
+    std::string s = std::format("server threads {}:", n);
+    for (int i = 0; i < n && i < static_cast<int>(t.size()); ++i) {
+        if (!t[i].ok) {
             s += " ?";
             continue;
         }
-        s += std::format(" T{}{}{}{}", tid, b[0] ? " PARK-ASKED" : "", b[1] ? " PARKED" : "", b[2] ? " busy" : " idle");
-        if (tid == g_built_tid.load()) s += "(ServerRunThread)";
+        s += std::format(" T{}{}{}{}", t[i].tid, t[i].asked ? " PARK-ASKED" : "", t[i].parked ? " PARKED" : "",
+                         t[i].busy ? " busy" : " idle");
+        if (t[i].tid == g_built_tid.load()) s += "(ServerRunThread)";
     }
     return s;
+}
+
+// The last item ServerRunThread entered (on_server_recv), for the stall lines: "entered N ms ago" about as long as
+// the stall says it is still in it (or stuck after it, in its loop: the stack sample tells).
+std::string server_last_item(uint64_t now) {
+    const uint32_t it = g_item_op.load(std::memory_order_relaxed);
+    const uint64_t at = g_item_at.load(std::memory_order_relaxed);
+    if (!at) return "ServerRunThread entered no item yet";
+    return std::format("ServerRunThread's last item: {} {} entered {} ms ago ({} items in all)",
+                       (it & 0x10000) ? "user 2's" : "the host's", it & 0xFFFF, now > at ? now - at : 0,
+                       g_items.load(std::memory_order_relaxed));
+}
+
+// During a stall: stack samples of ServerRunThread, of the server's logic thread (the handlers run there; shop_probe
+// learns it) and of any other registered server thread flagged busy, through freeze_watchdog's on-request sampler
+// (which caps them per session): with the stall's first line and each of the next ones for its first ~30 s (Enter at
+// 1 s, then one line per 5 s), then every 30 s. Network thread only.
+uint32_t g_stall_lines = 0;
+void stall_samples(bool enter) {
+    if (enter) g_stall_lines = 0;
+    ++g_stall_lines;
+    if (g_stall_lines > 7 && g_stall_lines % 6 != 1) return;
+    std::array<uint32_t, 4> tids{};
+    size_t n = 0;
+    const uint32_t run_tid = g_built_tid.load();
+    // The logic thread (shop_probe learns it at a branch request): ServerRunThread may only be waiting for it.
+    const uint32_t logic_tid = shop_probe_logic_thread();
+    if (run_tid) tids[n++] = run_tid;
+    if (logic_tid && logic_tid != run_tid) tids[n++] = logic_tid;
+    std::array<ServerThreadFlags, 16> t{};
+    const int count = server_threads_read(t);
+    for (int i = 0; i < count && i < static_cast<int>(t.size()) && n < tids.size(); ++i) {
+        if (t[i].ok && t[i].busy && t[i].tid && t[i].tid != run_tid && t[i].tid != logic_tid) tids[n++] = t[i].tid;
+    }
+    for (size_t i = 0; i < n; ++i) {
+        const char* who = tids[i] == run_tid     ? "ServerRunThread"
+                          : tids[i] == logic_tid ? "the server's logic thread"
+                                                 : "another server thread, busy";
+        log::warn("Session2 inject: stall sample (line {} of this stall): T{} ({}): {}", g_stall_lines, tids[i], who,
+                  freeze_sample_thread_text(tids[i]));
+    }
 }
 
 }  // namespace
@@ -2152,6 +2242,7 @@ void server_inject_tick(uint64_t now) {
         }
     }
     if (g_halted_epoch.load()) {
+        g_server_stall_since.store(0, std::memory_order_relaxed);
         if (g_halt_reason.empty()) g_halt_reason = "the game's allocator returned no buffer";
         if (g_q_size.load()) {
             std::lock_guard lock(g_q_mu);
@@ -2164,12 +2255,19 @@ void server_inject_tick(uint64_t now) {
     const uint32_t e = g_want_epoch.load();
     if (e < kEpochSlots) {
         const uint64_t pushed = g_pb_pushed[e].load(), seen = g_pb_seen[e].load();
-        switch (g_server_watch.update(now, seen, pushed > seen)) {
+        const inj::StallWatch::Event ev = g_server_watch.update(now, seen, pushed > seen);
+        // For the layer (cdmp_server_stalled_ms): since when, while the watch says stalled (> 1 s).
+        g_server_stall_since.store(
+            g_server_watch.stalled() ? std::max<uint64_t>(1, now - g_server_watch.stalled_ms(now)) : 0,
+            std::memory_order_relaxed);
+        switch (ev) {
             case inj::StallWatch::Event::Enter:
             case inj::StallWatch::Event::Still:
                 log::warn("Session2 inject: the server has not taken our buffers for {} ms (epoch {}: handed {}, "
-                          "seen {}, {} more held in our queue; user 2 is NOT logged out for this) | {}",
-                          g_server_watch.stalled_ms(now), e, pushed, seen, g_q_size.load(), server_threads_park());
+                          "seen {}, {} more held in our queue; user 2 is NOT logged out for this) | {} | {}",
+                          g_server_watch.stalled_ms(now), e, pushed, seen, g_q_size.load(), server_threads_park(),
+                          server_last_item(now));
+                stall_samples(ev == inj::StallWatch::Event::Enter);
                 break;
             case inj::StallWatch::Event::Exit:
                 log::info("Session2 inject: the server takes our buffers again after {} ms (handed {}, seen {})",
@@ -2178,6 +2276,8 @@ void server_inject_tick(uint64_t now) {
             case inj::StallWatch::Event::None:
                 break;
         }
+    } else {
+        g_server_stall_since.store(0, std::memory_order_relaxed);
     }
     // 3. The NetworkThread not turning while something waits for it.
     switch (g_pump_watch.update(now, g_pump_turns.load(), g_q_size.load() > 0)) {
@@ -2310,3 +2410,22 @@ std::string server_finder_describe() {
 }
 
 }  // namespace cdmp::session2
+
+// Co-op+ (the layer's far travel, 2026-11-25: Borque's guest waited in its far-travel loading screen while the host's
+// server took no input for 153 s): how long the server has not taken user 2's buffers while some wait, in ms, once the
+// stall watch calls it a stall (> 1 s); 0 = it takes them, nothing waits, or no server here (the guest). Any thread.
+extern "C" __declspec(dllexport) uint32_t cdmp_server_stalled_ms() {
+    const uint64_t since = cdmp::session2::g_server_stall_since.load(std::memory_order_relaxed);
+    const uint64_t now = GetTickCount64();
+    return since && now > since ? static_cast<uint32_t>(std::min<uint64_t>(now - since, 0xFFFFFFFFull)) : 0;
+}
+
+// Co-op+ (the layer's join travel, 2026-11-25 cs127c): user 2's login / move on this host's server, from the tunnel's
+// packets (MovePhaseTracker): 1 = settled (the server wrote the LoadingCompleteAck of its last load), 0 = a move or a
+// load under way, -1 = none seen in this epoch. A far travel asked while its own move into the host's field was still
+// completing (after a 25 s stall) was undone by the client. Any thread (a short lock).
+extern "C" __declspec(dllexport) int cdmp_user2_load_settled() {
+    using cdmp::session2::MovePhase;
+    const MovePhase p = cdmp::session2::phase_snapshot().phase();
+    return p == MovePhase::Stable ? 1 : p == MovePhase::None ? -1 : 0;
+}

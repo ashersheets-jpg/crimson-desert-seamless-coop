@@ -339,6 +339,14 @@ struct Config {
     // Present); no frame for > 300 ms: stack samples of the frozen thread (RIP, return addresses in the exe /
     // cdmp.asi / hook stubs, the mod hook it is in). Host and guest, read only (pendientes/p8-impl-freeze-watchdog.md).
     bool s2_freeze_watchdog = false;
+    // TEST ONLY (2026-11-25, Borque's host's ServerRunThread stalled 153 s): dev_server_stall_ms > 0 makes
+    // ServerRunThread sleep that long, once, at user 2's dev_server_stall_nth-th (default 2) Req of op
+    // dev_server_stall_op (default 2723, 3732's MoveFieldCompleteReq, which the milestone lines call "2471" after
+    // 2976: its 2nd is the move into the host's field), to test the stall lines, their stack samples and the layer's
+    // far travel waiting on one PC. 0 (default): nothing.
+    uint32_t s2_dev_server_stall_ms = 0;
+    uint32_t s2_dev_server_stall_op = 2723;
+    uint32_t s2_dev_server_stall_nth = 2;
     // P8 remote movement (session2/remote_interp.h, horse_follow.h; pendientes/p8-impl-interp-remota.md), each
     // "0" (default, nothing installed) | "probe" (measure only) | "1"; the raw ini values.
     // remote_interp, host AND guest: the remote actors' (0xB...) interpolation delay per actor from their own
