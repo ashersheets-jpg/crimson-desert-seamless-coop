@@ -11214,3 +11214,16 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   in native 5030d34 (local): the module's reads through game::fast_read (known guarded reads), user 2's own scenes
   known by id from the PrepareSequencerAcks (2356) to user 2. Rebuilt (the same 14 known failing; optd_shop_c1 and
   focus_slot pass). Note: shop_probe.cpp was edited while pp57 ran (no build until it stopped).
+- 21:24 FULL CHECKLIST pp58 on 3b298a9d (probe on, the fix off; armwrest, shop, chest first) started. 22:13: 7 steps,
+  0 fail (armwrest 52, shop 25, chest 49, static 12, real 14, fresh 45, xess 46): the fast_read change cleared
+  pp57's two FAILs. pp58-chest: two encounter scenes of the joined player's own (0x1C2 / 0x1C3, its character + 3
+  NPCs) that never touched the focus. Brycecco (21:23, #general): no zip from his first session (his friend's), he
+  records with Outplayed now: to answer after the pass (posting needs a key press; games run).
+- 25 Nov 01:26 pp58 DONE (ended 01:23): 28 of 28 steps, 1212 pass, 0 fail (its TOTAL line says 25 steps / 1086: it
+  counts only the prepost steps, not armwrest / shop / chest's 126), SAVES OK in every game step (real: none, as
+  always), user install 5/5 OK each time. So the probe and the compiled-in fix (off) change nothing for the players.
+  Focus data over the whole pass: 181 writes of a focus slot, ALL in the stage processor's tick (none inside any
+  request, the joined player's or the host's): the host's opening scene (0xA010000100000001) and its activities (the
+  arm-wrestling match 0x4D1, loot's 0x203) on the host's server and client managers; the joined player's own shop
+  0x1EA in ITS OWN manager (marked USER 2's). No step had a scene of the joined player's own set the focus in the
+  host's manager (that needs a taming or an encounter with a flagged step: a tester's).

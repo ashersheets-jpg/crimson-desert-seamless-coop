@@ -151,3 +151,25 @@ So the request path writes the slot synchronously (2880 StageBranchStateReq -> 0
    "USER 2's"?), then cs121 with user2_focus_slot=1, then the checklist with it, then a tester's taming.
    Not covered: the base's two reset paths (0x21C6490, 0x21C6A40; harmless: a stale id is no live stage, so it blocks
    nothing), and user 2's focus work outside its requests and its own stages' setter / tick / end (none known).
+
+## What the probe runs showed (24 Nov evening: cs121a, pp57, pp58)
+- The setter runs for every manager: the host's SERVER manager on the server thread and the host's CLIENT manager on
+  its own thread (the client mirrors the server's focus ~15 ms later). The fix's thread test keeps it to the server.
+- The host's own talk / arm-wrestling match is a focus stage (0x34C in cs121a, 0x4DA in pp57), and its flagged
+  steps are applied in the PROCESSOR'S TICK, outside any request: the per-stage hooks carry most of the fix.
+- User 2's requests reach ServerRunThread's OnRecvPacket call with the HOST's session in r8 (the entry hook re-routes
+  them by the buffer's tag): the request window now tells them by that tag (server_packet_is_user2).
+- No owner field on a server stage: +0x98 and [+0x48]+0x60 read 0 on the host's own talk, and the +0x48 chain faults on
+  some stages (pp57-armwrest's two FAILs, before the module's reads went through game::fast_read). User 2's own
+  scenes are known by id from the PrepareSequencerAcks (2356) to user 2 naming its character.
+- The joined player's own SHOP scene runs in its OWN manager (User2Shops' routing): its focus is already separate.
+  The scenes of its own that stay in the HOST's manager are the unrouted ones: Borque's taming (0x28F / 0x29D) and
+  encounters (0x299 / 0x2A1: its character plus 3 NPCs; deleted with the host as the target). pp58-chest had two
+  such encounter scenes of the joined player (0x1C2 / 0x1C3) that never touched the focus.
+- pp58 (the full checklist, 28 steps, 1212 checks, 0 fail; probe on, fix off): 181 focus writes, all in the
+  processor's tick, none inside a request. Host stages took the focus on the host's server and client managers (the
+  opening scene, the arm-wrestling match 0x4D1, loot's 0x203); the joined player's own shop 0x1EA took the focus of
+  its own manager. No checklist step makes a scene of the joined player's own take the host manager's focus.
+- Planned next: the request window only for user 2's scene requests (2880 StageBranchStateReq, 2591 the chart event
+  Req: where the branch step's focus check runs), not for every packet (hundreds a second); a log line naming the
+  manager each of user 2's own scenes is prepared in; then a full pass with user2_focus_slot=1.
