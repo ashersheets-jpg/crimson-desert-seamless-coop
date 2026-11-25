@@ -107,6 +107,25 @@ constexpr uintptr_t kImageSize3732 = 0x13C7E000;
 constexpr uint32_t kBF_SceneProc = 0x58, kProc_Entries = 0x10, kProc_Count = 0x18, kNode_EntryId = 0x10;
 constexpr uint32_t kScene_Type = 0x68, kScene_Group = 0x78, kScene_Info = 0x48, kInfo_Name = 0x1B8, kNodeData_Cond = 0x38;
 constexpr uint32_t kMaxProcEntries = 256;
+// Co-op+ 2026-11-24 (late; scratchpad focus73*.py, the research note's "The focus slot's code on 3732"): who writes a
+// ServerSequencerStageManager's focus slot (+0x90 / +0x98 / +0xA0) and from where, read only:
+//   FS 0x2271252  mov [rcx+0xA0],rdx      the setter, a branch into a flagged node: rcx the manager, rdx the new id,
+//                                         [r14+0x10] the scene (its id at +0x30 = rdx)
+//   FU 0x21CAF10  push rbx ; sub rsp,0x20 the undo (rcx the manager; [rsp] the return: 0x21CBA3B the delete's clear,
+//                                         0x227148C the setter leaving a flagged node)
+//   FD 0x21CB970  mov [rsp+0x18],rbx      the clear at a stage's end (rcx the manager, rdx the stage)
+//   FR 0x2A10B89 / 0x2A10B9A              around ServerRunThread's one call of ServerNet::OnRecvPacket (its session
+//                                         r8 = [r15+0x18]): a thread-local "inside a request of user 2's session"
+// None of their functions branches into the patched bytes (focus73c.py).
+constexpr uintptr_t kFS = 0x2271252, kFU = 0x21CAF10, kFD = 0x21CB970, kFR1 = 0x2A10B89, kFR2 = 0x2A10B9A;
+constexpr uint8_t kFSBytes[] = {0x48, 0x89, 0x91, 0xA0, 0x00, 0x00, 0x00};
+constexpr uint8_t kFUBytes[] = {0x40, 0x53, 0x48, 0x83, 0xEC, 0x20};
+constexpr uint8_t kFDBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x18};
+constexpr uint8_t kFR1Bytes[] = {0x4D, 0x8B, 0x47, 0x18, 0x48, 0x8D, 0x54, 0x24, 0x30};
+constexpr uint8_t kFR2Bytes[] = {0x48, 0x8D, 0x94, 0x24, 0xA0, 0x00, 0x00, 0x00};
+constexpr uint32_t kFSPatch = 7, kFUPatch = 6, kFDPatch = 5, kFR1Patch = 9, kFR2Patch = 8;
+constexpr uint32_t kRecv_Session = 0x18, kFS_SceneHolder = 0x10, kStageData_Owner = 0x60;
+constexpr uint32_t kMgr_Focus90 = 0x90, kMgr_Focus98 = 0x98, kMgr_FocusA0 = 0xA0;
 
 // Offsets (server objects; the same ones observer_stage / observer_milestone read).
 constexpr uint32_t kActor_Key = 0x60, kActor_User = 0xA0, kUser_Key = 0x60, kField_Owner = 0x180, kMgr_Actor = 0x18;
@@ -164,12 +183,19 @@ std::atomic<uint64_t> g_req[4] = {}, g_req_filtered[4] = {}, g_req_funcnpc[4] = 
 std::atomic<uint64_t> g_out[6] = {}, g_out_funcnpc[6] = {};  // 2663 3000 2916 2525 2981 2524
 
 enum Kind : uint16_t {
-    kEGate, kEPrep, kE2671, kESrv, kEReq, kEOut, kETwin, kEBranch, kEBranchFail, kEBranchWhy, kEBranchNames, kKindCount
+    kEGate, kEPrep, kE2671, kESrv, kEReq, kEOut, kETwin, kEBranch, kEBranchFail, kEBranchWhy, kEBranchNames, kEFocus,
+    kKindCount
 };
 p::EventRing<512> g_ring;
 p::WindowLimiter g_lim[kKindCount] = {{16, 5'000'000}, {48, 5'000'000}, {32, 5'000'000}, {32, 5'000'000},
                                        {48, 5'000'000}, {48, 5'000'000}, {32, 5'000'000}, {32, 5'000'000},
-                                       {16, 5'000'000}, {16, 5'000'000}, {16, 5'000'000}};
+                                       {16, 5'000'000}, {16, 5'000'000}, {16, 5'000'000}, {24, 5'000'000}};
+// The focus probe (kFS ...): hooks, counts [set / undo / clear][inside a request of user 2's session], the window.
+std::atomic<bool> g_fs_on{false}, g_fu_on{false}, g_fd_on{false}, g_fr1_on{false}, g_fr2_on{false};
+SafetyHookMid g_fs_hook, g_fu_hook, g_fd_hook, g_fr1_hook, g_fr2_hook;
+std::atomic<uint64_t> g_focus_n[3][2] = {};
+std::atomic<uint64_t> g_recv_u2{0}, g_recv_all{0};
+thread_local uint32_t t_recv_u2 = 0, t_recv_any = 0;
 std::atomic<uint64_t> g_limited{0}, g_lost{0}, g_lines{0};
 constexpr uint64_t kMaxLines = 4000;
 
@@ -509,6 +535,66 @@ void on_bf2(safetyhook::Context& ctx) noexcept {
     if (g_bf2_on.load(std::memory_order_acquire)) on_bf(ctx, 1);
 }
 
+// The focus probe (see kFS). FR: whose request the server loop is handing to ServerNet::OnRecvPacket.
+void on_fr1(safetyhook::Context& ctx) noexcept {
+    if (!g_fr1_on.load(std::memory_order_acquire)) return;
+    const uintptr_t sess = rdp(ctx.r15 + kRecv_Session);
+    const uintptr_t s2 = server_live_session2();
+    t_recv_any = 1;
+    t_recv_u2 = sess && sess == s2 ? 1u : 0u;
+    g_recv_all.fetch_add(1, std::memory_order_relaxed);
+    if (t_recv_u2) g_recv_u2.fetch_add(1, std::memory_order_relaxed);
+}
+void on_fr2(safetyhook::Context&) noexcept {
+    t_recv_u2 = 0;
+    t_recv_any = 0;
+}
+// what: 0 set (FS), 1 undo (FU), 2 clear at a stage's end (FD).
+void focus_event(uint32_t what, uintptr_t mgr, uint64_t new_id, uintptr_t scene, uint64_t ret) noexcept {
+    const bool u2req = t_recv_u2 != 0;
+    g_focus_n[what][u2req ? 1 : 0].fetch_add(1, std::memory_order_relaxed);
+    const auto rva = [](uint64_t a) -> uint64_t {
+        return a >= g_base && a - g_base < kImageSize3732 ? a - g_base : 0;
+    };
+    const uintptr_t u2mgr = g_u2_mgr.load(std::memory_order_relaxed);
+    p::Event e;
+    e.v[0] = static_cast<uint64_t>(what) | static_cast<uint64_t>(u2req) << 8 | static_cast<uint64_t>(t_recv_any) << 9 |
+             static_cast<uint64_t>(mgr && mgr == u2mgr) << 10;
+    e.v[1] = mgr;
+    e.v[2] = mgr ? rdv<uint64_t>(mgr + kMgr_Focus90) : 0;
+    e.v[3] = mgr ? rdv<uint64_t>(mgr + kMgr_Focus98) : 0;
+    e.v[4] = mgr ? rdv<uint64_t>(mgr + kMgr_FocusA0) : 0;
+    e.v[5] = new_id;
+    e.v[6] = scene;
+    e.v[7] = scene ? rdv<uint64_t>(scene + kBF_SceneWord) : 0;
+    const uintptr_t data = scene ? rdp(scene + kScene_Info) : 0;
+    e.v[8] = static_cast<uint64_t>(data ? rdv<uint32_t>(data + kStageData_Owner) : 0) |
+             static_cast<uint64_t>(server_user2_player_key()) << 32;
+    e.v[9] = rva(ret);
+    const uintptr_t name = data ? rdp(data + kInfo_Name) : 0;
+    e.v[10] = name ? rdv<uint64_t>(name) : 0;
+    e.v[11] = name ? rdv<uint64_t>(name + 8) : 0;
+    emit(kEFocus, e);
+}
+void on_fs(safetyhook::Context& ctx) noexcept {
+    if (!g_fs_on.load(std::memory_order_acquire)) return;
+    const uintptr_t holder = ctx.r14;
+    focus_event(0, ctx.rcx, ctx.rdx, holder ? rdp(holder + kFS_SceneHolder) : 0, 0);
+}
+void on_fu(safetyhook::Context& ctx) noexcept {
+    if (!g_fu_on.load(std::memory_order_acquire)) return;
+    focus_event(1, ctx.rcx, 0, 0, rdv<uint64_t>(ctx.rsp));  // at the entry: [rsp] is the return address
+}
+void on_fd(safetyhook::Context& ctx) noexcept {
+    if (!g_fd_on.load(std::memory_order_acquire)) return;
+    // Every stage's end comes here (hundreds a minute in a town): only the end of the manager's focus stage is an event
+    // (0x21CB970's own test: the stage's +0x30 against the focus, +0xA0 when set, else +0x90).
+    const uintptr_t mgr = ctx.rcx, stage = ctx.rdx;
+    const uint64_t cur = mgr ? stp::current_of(rdv<uint64_t>(mgr + kMgr_FocusA0), rdv<uint64_t>(mgr + kMgr_Focus90)) : 0;
+    if (!stage || !(cur & stp::kStageMask) || cur != rdv<uint64_t>(stage + kBF_SceneWord)) return;
+    focus_event(2, mgr, 0, stage, rdv<uint64_t>(ctx.rsp));
+}
+
 // S: the server's 0x2126920. A = the decision point's registers (RAX = field vf48), R = the lookup's result, F = BL.
 void on_sa(safetyhook::Context& ctx) noexcept {
     if (!g_sa_on.load(std::memory_order_acquire)) return;
@@ -742,6 +828,28 @@ std::string line_of(const p::Event& e) {
             return std::format("ShopProbe [branch why] {} T{} | names: the manager's current stage 0x{:X} '{}' | this "
                                "scene 0x{:X} '{}'",
                                when, e.tid, v[10], name_of(v, 5), v[11], name_of(v + 5, 5));
+        case kEFocus: {
+            const auto what = static_cast<uint32_t>(v[0] & 0xFF);
+            const bool u2req = (v[0] >> 8) & 1, any = (v[0] >> 9) & 1, u2mgr = (v[0] >> 10) & 1;
+            const auto owner = static_cast<uint32_t>(v[8]), u2key = static_cast<uint32_t>(v[8] >> 32);
+            const uint64_t cur = stp::current_of(v[4], v[2]);
+            const std::string scene =
+                v[6] ? std::format("scene 0x{:X} ('{}', owner 0x{:08X}{})", v[7], name_of(v + 10, 2), owner,
+                                   owner && owner == u2key ? ": USER 2's" : "")
+                     : std::string("scene -");
+            return std::format(
+                "ShopProbe [focus] {} T{} | {} in manager 0x{:X}{} | before: +0xA0 0x{:X} +0x90 0x{:X} +0x98 0x{:X} (focus "
+                "0x{:X}){} | {} | {} | from exe+0x{:X}",
+                when, e.tid,
+                what == 0 ? std::format("SET to 0x{:X} (a flagged branch)", v[5])
+                : what == 1 ? std::string("UNDO (+0xA0 = 0, +0x90 = +0x98)")
+                            : std::string("a stage's END (clears the focus if it was the focus)"),
+                v[1], u2mgr ? " (USER 2's own manager)" : "", v[4], v[2], v[3], cur,
+                what == 0 && cur && (cur & stp::kStageMask) && cur != v[5] ? " TAKEN FROM ANOTHER STAGE" : "", scene,
+                u2req ? "inside a request of USER 2's session" : any ? "inside a request of the host's session"
+                                                                  : "outside any request (a tick)",
+                v[9]);
+        }
         default:
             return std::format("ShopProbe: event {}?", e.kind);
     }
@@ -806,12 +914,24 @@ void branch_summary() {
               g_branch[0].load(), g_branch_fail[0].load(), g_branch[1].load(), g_branch_fail[1].load(),
               g_branch_unpaired.load(), g_u2_branch_seqs.size(), g_bf[0][1].load(), g_bf[0][0].load(), g_bf[1][1].load(),
               g_bf[1][0].load());
+    if (g_fs_on.load() || g_fu_on.load() || g_fd_on.load()) {
+        log::info("ShopProbe focus summary: requests handed to ServerNet::OnRecvPacket {} (user 2's {}) | focus set {} "
+                  "(in user 2's requests {}), undo {} ({}), stage ends {} ({})",
+                  g_recv_all.load(), g_recv_u2.load(), g_focus_n[0][0].load() + g_focus_n[0][1].load(),
+                  g_focus_n[0][1].load(), g_focus_n[1][0].load() + g_focus_n[1][1].load(), g_focus_n[1][1].load(),
+                  g_focus_n[2][0].load() + g_focus_n[2][1].load(), g_focus_n[2][1].load());
+    }
 }
 
 void drain() {
     p::Event e;
+    static uint64_t focus_lines = 0;  // the focus probe's own budget: it never takes the other lines' kMaxLines
     while (g_ring.pop(e)) {
         if (e.kind >= kKindCount) continue;
+        if (e.kind == kEFocus) {
+            if (focus_lines++ < 1500) log::info("{}", line_of(e));
+            continue;
+        }
         if (g_lines.fetch_add(1) < kMaxLines) log::info("{}", line_of(e));
     }
 }
@@ -865,6 +985,16 @@ void install(std::span<const gad::Section> secs) {
     }
     log::info("ShopProbe: BF 0x2C0BFDD/0x2C0C040 (why the branch step refuses) {}/{}", g_bf1_on.load() ? "hooked" : "off",
               g_bf2_on.load() ? "hooked" : "off");
+    // Co-op+ 2026-11-24 (late): the focus slot's writers and whose request is running (read only).
+    mid(kFR1, kFR1Patch, kFR1Bytes, on_fr1, g_fr1_hook, g_fr1_on, "FR1, before ServerNet::OnRecvPacket's call");
+    if (g_fr1_on.load()) mid(kFR2, kFR2Patch, kFR2Bytes, on_fr2, g_fr2_hook, g_fr2_on, "FR2, after it");
+    mid(kFS, kFSPatch, kFSBytes, on_fs, g_fs_hook, g_fs_on, "FS, the focus setter's store 0x2271252");
+    mid(kFU, kFUPatch, kFUBytes, on_fu, g_fu_hook, g_fu_on, "FU, the focus undo 0x21CAF10");
+    mid(kFD, kFDPatch, kFDBytes, on_fd, g_fd_hook, g_fd_on, "FD, the focus clear at a stage's end 0x21CB970");
+    log::info("ShopProbe: focus probe (read only): FR 0x2A10B89/0x2A10B9A {}/{} | FS 0x2271252 {} | FU 0x21CAF10 {} | FD "
+              "0x21CB970 {}",
+              g_fr1_on.load() ? "hooked" : "off", g_fr2_on.load() ? "hooked" : "off", g_fs_on.load() ? "hooked" : "off",
+              g_fu_on.load() ? "hooked" : "off", g_fd_on.load() ? "hooked" : "off");
     log::info("ShopProbe: B 0x2D55B56/0x2D55B6A (the StageBranchStateReq handler's result) {}/{}",
               g_b1_on.load() ? "hooked" : "REFUSED", g_b2_on.load() ? "hooked" : "REFUSED");
     if (context_ok(secs, isl::kCtxLookup, isl::kCtxLookupBytes, "the entry check's lookup call 0x2126A5C") &&
