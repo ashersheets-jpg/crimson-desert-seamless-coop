@@ -391,8 +391,11 @@ fall)
   hasnot "$L" "Revive: our death notice|Revive: death [0-9]" "guest: never died (it did not land)"
   last=$(grep "Teleport: arrived" "$L" | tail -1)
   echo "$last" | grep -qE "arrived \(-1034[0-9], -39(1[0-9]|2[0-9])\)" && ok "guest: the last move (the ground beside the host) arrived" || bad "guest: the last arrival was not beside the host: ${last:-none}"
-  low=$(grep "Local: pos" "$L" | sed -n 's/.*pos ([-0-9.]*, \([-0-9.]*\), .*/\1/p' | sort -n | head -1)
-  [ -n "$low" ] && awk -v y="$low" 'BEGIN{exit !(y > 600)}' && ok "guest: its lowest height $low m (never reached the ground under the point)" || bad "guest: its lowest height ${low:-?} m (wanted above 600)"
+  # pp61: the lowest "Local: pos" height was the ground beside the host (535.56 m: the join and the last move), not
+  # the fall. The guard's own line says how far below the point (686 m) it took the guest back: under 120 m = above
+  # the ground (536 m), i.e. it never landed.
+  drop=$(grep -o "Teleport: [0-9]* m below the move's goal (-10350, 686, -3920)" "$L" | head -1 | sed -n 's/Teleport: \([0-9]*\) m.*/\1/p')
+  [ -n "$drop" ] && [ "$drop" -lt 120 ] && ok "guest: taken back $drop m below the point (the ground is 150 m below: it never landed)" || bad "guest: taken back ${drop:-?} m below the point (wanted under 120)"
   near=$(grep "Net: connected" "$L" | tail -1 | sed -n 's/.*last remote (\([-0-9.]*\), [-0-9.]*, \([-0-9.]*\)).*/\1 \2/p')
   mine=$(grep "Local: pos" "$L" | tail -1 | sed -n 's/.*pos (\([-0-9.]*\), [-0-9.]*, \([-0-9.]*\)).*/\1 \2/p')
   d=$(echo "$near $mine" | awk 'NF==4{printf "%d", sqrt(($1-$3)^2 + ($2-$4)^2)}')
@@ -525,7 +528,9 @@ shop)
   # One Esc closes a shop menu (a second opens the game menu, which then swallows the next R: cs82a/b).
   head_step "the friend opens a shop alone (host 440 m away) and with the host beside the shopkeeper (the twin)"
   sw() { local n=$1; while [ $n -ge 10 ]; do echo "wait 10000"; n=$((n - 10)); done; [ $n -gt 0 ] && echo "wait $((n * 1000))"; }
-  { echo "wait 3000"; echo "tp -10238 640 -3958"; sw 67; echo "tp -10678.5 612 -3904.2"; sw 25; echo "tpnear 4 0"; sw 60; } > $N/scan/shop_host.txt
+  # pp61: the far spot was the hill above the bandit camp (-10238 640 -3958): the bandits killed the host there; now its
+  # own start, 330 m from the market (the same in shop).
+  { echo "wait 3000"; echo "tp -10349.5 536.0 -3919.6"; sw 67; echo "tp -10678.5 612 -3904.2"; sw 25; echo "tpnear 4 0"; sw 60; } > $N/scan/shop_host.txt
   { echo "wait 3000"; echo "tp -10678.5 612 -3904.2"; sw 25; echo "npcs 4"; sw 120; } > $N/scan/shop_guest.txt
   OPEN="py:facesweep2:-10677.6,-3905.4,-30,30,10,82,1500,u2,70_w:1500"
   CLOSE="k:ESC:150_w:2500"
@@ -566,13 +571,15 @@ talkwhile)
   # friend: the host far / at the inn, not talking / IN A TALK with the arm-wrestling organizer (left open); then the
   # host's Esc. The key lists run one after another: guest keys (#1, #2), host keys (the talk), guest after-walk keys
   # (#3), host after-walk keys.
-  # IN THE RELEASE LIST since cs128 (2026-11-25: 28 / 0, BUG 2 fixed by C0). Before it #3 FAILED on every build (cs125a-e; cs126a without the host's talk
+  # OUT OF THE RELEASE LIST again (2026-11-25 evening): the per-player slot (user2_focus_slot) is off after three
+  # host story stops on a03a63b9, so #3 is refused again by design until it comes back. It was IN THE RELEASE
+  # LIST from cs128 (2026-11-25: 28 / 0, BUG 2 fixed by C0). Before it #3 FAILED on every build (cs125a-e; cs126a without the host's talk
   # opens all three). cs125b's "the friend's talks with its own focus did not cure it" ran on the network thread
   # (cs125d), so it tested nothing; the error 0x58C8345D is neither preempt error (cs127c). The fix under test: C0, the
   # talk window on the logic thread (its checks below). Run it by hand (bash tools/prepost.sh <tag> <pkg> talkwhile).
   head_step "the friend opens a shop while the host is in a talk with another NPC (the testers' bug 2, fixed 2026-11-25)"
   sw() { local n=$1; while [ $n -ge 10 ]; do echo "wait 10000"; n=$((n - 10)); done; [ $n -gt 0 ] && echo "wait $((n * 1000))"; }
-  { echo "wait 3000"; echo "tp -10238 640 -3958"; sw 67; echo "tp -10661.5 617.5 -3830.0"; sw 150; } > $N/scan/talkwhile_host.txt
+  { echo "wait 3000"; echo "tp -10349.5 536.0 -3919.6"; sw 67; echo "tp -10661.5 617.5 -3830.0"; sw 150; } > $N/scan/talkwhile_host.txt
   { echo "wait 3000"; echo "tp -10678.5 612 -3904.2"; sw 25; echo "npcs 4"; sw 160; } > $N/scan/talkwhile_guest.txt
   AIM=$(cat $N/scan/b13_aim.txt 2>/dev/null || echo -10662.0,-3831.1)
   OPEN="py:facesweep2:-10677.6,-3905.4,-30,30,10,82,1500,u2,70_w:1500"
@@ -915,7 +922,7 @@ armwrest)
   [ "${n:-0}" -ge 1 ] && ok "host: its own talk to the organizer accepted after the joined player's match ($n)" || bad "host: no talk of its own accepted at the table"
   info "screenshots to LOOK AT (g2: the joined player's won match, h3: the host's): $(cd $N/shots && ls $NAME-*.png 2>/dev/null | tr '\n' ' ')" ;;
 summary)
-  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c "^== " "$R") (31 in the list)"; exit 0 ;;
+  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c "^== " "$R") (30 in the list)"; exit 0 ;;
 *) echo "unknown step $STEP"; exit 2 ;;
 esac
 sed -n "/^== $STEP /,\$p" "$R"

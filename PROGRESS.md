@@ -5,10 +5,11 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
-- 2026-11-25 15:28 NOTHING NEW TO DECIDE. a03a63b9 is POSTED (below). Brycecco's and Arcticwolf's two-PC session
-  (614591d0) is read and answered: two fixes are in test (cs130: the fall guard for the joined player who follows the
-  host into a place of the host's story, like the prologue's Abyss island; the NPC hand-over fault told to both
-  games). Then cs129 (Edward's Xbox-pad arm wrestling).
+- 2026-11-25 16:08 NOTHING NEW TO DECIDE. a03a63b9 is POSTED (below). Under way: the full checklist pp61 (31 steps)
+  on 9e10811c (the fall guard, cs130a; the NPC hand-over fault told to both games; no friend prompt in cutscenes),
+  then its post. Being looked into: Arcticwolf's stuck pickup of Shia's pendant on a03a63b9 (a refusal code new in
+  that build; the next host log names it), Edward's solo arm wrestling on a pad (cs129c), the host taking no damage in
+  the prologue's fights.
 - 2026-11-25 15:01 DONE: a03a63b9 POSTED in #download-here by me (standing OK; pp60: all 30 checklist steps
   passed, 1296 checks, 0 failed; SAVES OK and the install restored 5/5 in every step; the zips = the files in dist\,
   12.49 MB / 6.81 MB): Borque's endless loading (the trip waits while the host's server is stalled; the host's log
@@ -11721,3 +11722,67 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   "During a test, a wanted shell command goes on a list, never into a neutered Bash call".) (Rule slip ~16:00: a
   FOURTH, an empty `echo` during cs129b, minutes after writing that lesson. Four in one afternoon: a reflex, not a
   lapse of memory; I keep checking before every tool call while a test runs.)
+- 15:52 cs129a (Edward's pad, X held 2 s at the organizer): no match: the dialog shows Xbox glyphs "(A) Participate
+  (20)  (B) Back"; X does nothing there (shot h2). 16:03 cs129b (A tapped 300 ms, then X / A mashed): no match either:
+  Participate is a HOLD (the keyboard step holds E 2 s). cs129c written (A held 2 s, A mashed, X mashed) for after the
+  pass. SAVES OK in both. Edward (#bug-reports 20:42 UTC): this time "no jumping just no red bar filling up minigame
+  ... it never ends" (his solo log: the match started, his presses never moved it).
+- 15:44-16:00 NEW ZIPS (downloaded, scratchpad dl-cecco-1125b): Arcticwolf 20:41 UTC "got stuck in the animation of
+  picking up Shia's pendant and had to forceclose the game" (the host's zip, a03a63b9, 15:22-15:38); Brycecco's two
+  (his side of that session; and his side of a second 614591d0 session, "npc battling and interacting"). The host's
+  log: 15:34:22 its story scene 0x352 prepared (binding the pendant 0xB020093B; ObserverSeqCopy sent a copy to user 2,
+  GuestSeqRoute put it in user 2's own manager); 15:35:05 branch 2; 15:35:06-15:35:33+ the host's pickup (2642,
+  interaction 0xF4244) of the pendant refused 23 times with error 0x7B1E861C. The joined player's talk 0x275F to NPC
+  0xB010312B was refused with the same code at 15:33. 0x7B1E861C is in NO earlier tester log (only this a03a63b9
+  session): a03a63b9's per-player slot / C0 window is a suspect (its summary: 21 talks, 42 swaps, 0 failed /
+  unbalanced) but not shown. No user-2 request about the host's scene was dropped or passed by the seq-copy filter
+  (0 / 0). The native base now names the code (the error-globals scan, c8ef220): the next host log says which error.
+- 16:04-16:06 built, committed native c8ef220 (a faulted hand-over told to both games; the scan names 0x7B1E861C),
+  synced 3712071, outer 9e10811 (the fall guard, no prompt in cutscenes, checklist step fall (31), docs), pushed;
+  packaged 9e10811c (= the build tree's DLLs). 16:07 pp61 started: the full checklist, 31 steps (fall talkwhile
+  armwrest shop chest first).
+- 16:10 THE REFUSAL NAMED: pp61-fall's host log (9e10811c's scan): 0x7B1E861C is held by the global 0x71D7024 =
+  eErrNoGimmickNotInteractableState (errtable73.csv); 0x58C8345D again 0x71D5EA4. So the pendant's pickup and the
+  joined player's 0x275F were refused because the server had those gimmicks in a not-interactable state. In the host's
+  log the level 'Imp_Banquet_Boss_Battle_Gimmick' (loaded by its stage 15:34:23) was deleted by the host's own client at
+  branch 1 (15:34:36.5), 30 s before the pickup at branch 2. Next (after the pass): scratchpad xref73.py 0x71D7024 (the
+  code that returns it for a pickup, which state it reads).
+- 16:18 pp61 fall: 52 pass, 1 FAIL: "its lowest height 535.56 m (wanted above 600)": a TEST-KIT flaw (the lowest
+  "Local: pos" height is the ground beside the host, where the guest stands at the join and after the last move); the
+  guard took it back 33 m into the fall (25 m/s), the same point refused, as in cs130a. Fix written
+  (scratchpad fix_fall_check.py: the guard's own drop under 120 m), applied after the pass (no prepost.sh edit while
+  it runs); then fall + a smoke step again (checklist rules).
+- 16:24 NEXT BATCH (written, NOT built or committed: after 9e10811c's post): the fall guard's window restarts while
+  the game still holds us at the goal's height (its in-air hold lasts until the host says our load is done: 8 s in
+  cs130a, 25 s for the testers, minutes on a stalled host; the 120 s now count from the end of the hold).
+  Decided myself (small, scoped): the joined player is not taken onto the host's story-only places for now (the guard
+  brings it back with a note); getting it there is research for B09 / B10 (its own game must ask for those levels).
+- 16:29 pp61 talkwhile: 27 pass, 1 FAIL ("the host's talk to the arm-wrestling organizer accepted"): the HOST WAS DEAD
+  (shot h1: "Death has found you"): its script's first "far away" spot (-10238, 640, -3958) is the hill right above the
+  usercopy save's bandit camp; the bandits killed it there (HP 124 -> 89 -> 41 -> 19 -> 0, 16:25:13-29; it starts at
+  132 / 300), it was moved to the inn dead and never talked. The friend's three shop opens all worked (#3 during...
+  no host talk this time). A TEST-KIT spot (cs125's), not the mod; shop uses the same spot. Fix written (scratchpad
+  fix_far_spot.py: the host's own start, 330 m from the market), applied after the pass; talkwhile (+ shop if hit)
+  again then.
+- pp61 so far: armwrest 52 / 0, shop 25 / 0, chest 49 / 0, static 12 / 0, real 14 / 0, fresh 45 / 0.
+- 17:11 TWO MORE STORY BLOCKERS ON a03a63b9 (#play-testing-feedback 22:10-22:11 UTC): Arcticwolf "Got stuck at the
+  mystical key quest trying to enter the door in the castle. Wouldn't open or give any prompts" (the host's zip);
+  Brycecco "not able to progress through main story ... Host not able to prompt key unlock to open door" (the
+  joiner's zip). With the pendant that is three host story interactions failing on a03a63b9, none on 614591d0 (their
+  prologue run). 17:13 STOPMARK written: pp61 pauses after the current step (xess) so I can read the zips, tell them
+  (614591d0 for story progress meanwhile) and decide on the slot; then the remaining steps resume.
+- 17:17 pp61 paused after 9 steps: 322 pass, 2 fail (both test-kit flaws: fall's height check, talkwhile's far
+  spot), xess 46 / 0. The door zips (Arcticwolf's host, Brycecco's joiner; a03a63b9, 16:46-17:08): no refused
+  interaction at all (the door never showed a prompt, so the host's game never asked); the quest had just moved to
+  "Go to Hernand Castle" (16:59:52); the slot's counters: user 2's talks 96, its stages' setter 8 / ends 4 / ticks 4,
+  the host's stages inside its requests 0, swaps 208, failed / unbalanced / unwound 0.
+- 17:19-17:30 DECISION (mine, the testers blocked): the per-player slot (user2_focus_slot=1, a03a63b9's BUG 2 fix)
+  goes OFF again: three host story stops on a03a63b9 in one afternoon, none on 614591d0; the slot was busy in both
+  stopped sessions (21 / 96 talk windows); not proven, but a stopped story is worse than BUG 2's wait. Told the
+  testers (#play-testing-feedback 1575274674013868214: play 614591d0 for the story meanwhile; tell me if it stops
+  there too) and Edward (#bug-reports 1575274740384534639: which button the match shows). Layer native_mode_text.h
+  without user2_focus_slot=1 (its test flipped); talkwhile out of the release list again (30 steps); the two kit
+  fixes applied (fall: the guard's own drop under 120 m; talkwhile / shop: the host's far spot = its own start); the
+  fall guard's window now restarts while held at the goal's height (the next-batch change, in this build);
+  README / Nexus / features / CHANGELOG / the post's draft say so. Built (the 14 old native failures; layer tests
+  pass). 9e10811c is NOT posted (the slot on); the next package gets the full pass.

@@ -414,6 +414,9 @@ void fall_watch(uint32_t now_ms, uint32_t own) {
         g_fall_watch_until = 0;  // we moved off the spot: whatever happens from here is a normal move of ours
         return;
     }
+    // While the game still holds us at the goal's height (its hold until our load is done on the host's server: cs130a
+    // 8 s, the testers 25 s, a stalled host minutes), the window starts again: kFallWatchMs from the end of the hold.
+    if (std::fabs(at->y - g_fall_goal[1]) < 2.0f) g_fall_watch_until = (now_ms + kFallWatchMs) | 1;
     const float y_1s = g_fall_n >= 4 ? g_fall_y[(g_fall_n - 4) % 5] : at->y;  // 4 samples = a second ago
     g_fall_y[g_fall_n % 5] = at->y;
     ++g_fall_n;

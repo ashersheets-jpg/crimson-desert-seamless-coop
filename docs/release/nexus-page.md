@@ -89,8 +89,8 @@ can be added in coopplus.ini (the README explains how).
   other player's game: the joined player cannot follow there yet; a trip there takes them back where they were, with a
   note, instead of dropping them through the world.
 - Arm wrestling in solo with Co-op+ installed was reported once to leave the character jumping until a restart.
-- Two players cannot talk to the same NPC at once (the game's own rule); talking to other NPCs while the host is in a
-  conversation works.
+- While the host is in a conversation, the joined player's talks to other NPCs are refused (wait until the host is
+  done); a fix exists but is switched off until it is proven not to stop the host's story.
 - Story scenes that start from a talk do not wait for both of you yet.
 - Boss fights are not tested with two players yet.
 - After a game update Co-op+ switches itself off until it is updated.

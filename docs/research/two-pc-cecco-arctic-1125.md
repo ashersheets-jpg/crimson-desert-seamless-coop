@@ -40,7 +40,14 @@ replied 15:17 (message 1575243949344432129). Kept in the session scratchpad (dl-
   ourselves). TEST ONLY [dev] fall_guard_test=1 skips the friend check (one PC: a far travel to a point in the air
   above the host). cs130.
 - Not fixed: the joined player onto the island itself. Ways: share the host's story-phase levels near user 2
-  (SceneLevelShare for "owner native" levels), or the story scene together (B09) moving both.
+  (SceneLevelShare for "owner native" levels), or the story scene together (B09) moving both. (Their session also
+  shows "Phase00" levels made "[ready for user 2]" when the joined player's own game asked for them with a 2720, e.g.
+  DemenissGate_GoldenPlains_0001_Phase00_00, House_Her_0003_Phase00_00: for the island its game never asked, so the
+  gate is in the joined player's own story state, not on the server.)
+- Next improvement (not in 9e10811c): the guard's 120 s window counts from the arrival; cs130a showed the game holds
+  the character in the air until the host says the load is done (8 s there, 25 s for the testers, minutes on a
+  stalled host): the window should count from the end of that hold (extend it while the height still equals the
+  goal's).
 
 ## 2. One NPC hand-over faulted on the host's server (caught, no crash)
 
@@ -84,6 +91,24 @@ replied 15:17 (message 1575243949344432129). Kept in the session scratchpad (dl-
   enemies run on the host's game and fight the joined player too).
 - 11.25.2 (a second session on the earlier build): "shops not able to have both players at 1 time if host initiates
   the interaction": BUG 2 (fixed in a03a63b9) or the same shopkeeper at once (the game's rule); asked.
+
+## 3. The stuck pickup of Shia's pendant (a03a63b9, Arcticwolf hosting; reported 20:41 UTC)
+
+- Their third session, on a03a63b9 (15:22-15:38): "got stuck in the animation of picking up Shia's pendant and had to
+  forceclose the game". The host's log: 15:34:22 the host's story scene 0x352 prepared (bindings: the host,
+  0xB01039A5, 0xB01039A4, 0x20000008 -> 0xB020093B = the pendant; ObserverSeqCopy sent the copy to user 2, whose game
+  put it in its own manager); 15:34:23 the level 'Imp_Banquet_Boss_Battle_Gimmick' loaded by the host's stage ("owner
+  native"); 15:34:35.9 branch 1 and 15:34:36.5 that level deleted by the host's own client (a 2834); 15:35:05.4 branch
+  2; 15:35:06.8-15:35:33+ the host's 2642 pickup (interaction 0xF4244) of 0xB020093B refused 23 times (2946 FailAck).
+- The refusal code 0x7B1E861C = **eErrNoGimmickNotInteractableState** (global 0x71D7024; named by the error-globals
+  scan in 9e10811c's first host log, pp61, mapped with errtable73.csv). The joined player's interaction 0x275F with
+  0xB010312B was refused with the same code at 15:33:11-15:33:20.
+- 0x7B1E861C appears in no earlier tester log (614591d0 and before): only in this a03a63b9 session. a03a63b9 turned
+  the per-player focus slot on (+ the C0 talk window): its counters show nothing wrong (21 talks, 42 swaps, failed 0,
+  unbalanced 0, unwound 0: no window was ever left open), no user-2 request reached the logic thread in 15:34-15:35,
+  and the seq-copy filter saw no user-2 request about the host's scenes. Not explained yet. Next: the server code that
+  returns that error for a pickup (scratchpad xref73.py 0x71D7024) and what gimmick state it checks; whether the
+  deleted level held the pendant's gimmick data.
 
 ## Smaller things seen
 

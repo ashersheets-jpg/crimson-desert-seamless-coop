@@ -169,12 +169,13 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
                               // never marked ready on the server (only the field owner's load does), so its doors
                               // answered "not ready" to both players until a fast travel (the native base's S43);
                               // scene_level_share marks user 2's load ready too and keeps a level the other still has.
-                              "scene_level_share=1",
-                              // T25 (the joined player's taming refused): user 2's own scenes in the host's stage
-                              // manager get a focus slot of their own. Written from d871af4 to 614591d0 on the wrong
-                              // thread (cs125d: it never acted); back since the native base's 81e3ed4, which runs it
-                              // on the server's logic thread (cs125e: learned there, no harm in the shop flow).
-                              "user2_focus_slot=1"}) {
+                              "scene_level_share=1"}) {
+            // T25 / BUG 2: user2_focus_slot=1 (user 2's own focus triple in the host's stage manager; its talks' check
+            // with it: the friend could talk while the host talks) is OFF again (2026-11-25 evening): on a03a63b9, its
+            // first build that really acted on the logic thread, the testers hit three host story stops in one
+            // afternoon (Shia's pendant refused with eErrNoGimmickNotInteractableState, a castle door with no prompt,
+            // a mission that would not start) and none on 614591d0; not proven, but a stopped story is worse than the
+            // busy-NPC wait it fixed. Back once a test shows the host's story gimmicks unharmed with it.
             line(k);
         }
         // B10 option 2, the player's choice ([coop] shared_quest_credit): an objective one player completes also

@@ -78,6 +78,7 @@ untested on a real taming); the friend's trip to the host waits while the host's
 a host PC); places that exist only in one player's story (the prologue's Abyss island: the joined player cannot follow
 the host there; a trip there takes them back with a note instead of a fall through the world); arm wrestling in solo
 with Co-op+ installed (one report: the character kept jumping until a restart); the
-two players cannot talk to the same NPC at once (the game's own rule); bench
+while the host is in a conversation the friend's talks are refused (the fix is switched off: suspected of stopping the
+host's story on a03a63b9); bench
 sitters may T-pose on the friend's screen; boss fights with two players are untested; more than two players. The full
 list is in README.txt (KNOWN ISSUES).

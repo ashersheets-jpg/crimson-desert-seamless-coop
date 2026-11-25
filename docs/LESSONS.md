@@ -884,6 +884,14 @@ pass's TOTAL said 1142 checks over 26 steps although all 30 had passed (their pe
 the counts). Static now starts the report only when it holds no step. When a pass's total disagrees with its step
 lines, count the steps before believing either, and keep each step's own output next to the shared report.
 
+## A pad test starts from the game's own prompt: which button, and tap or hold (2026-11-25, cs129a / cs129b)
+Edward's report said "mash X", so cs129a held X at the arm-wrestling organizer; the dialog's own Xbox glyphs said
+"(A) Participate", and nothing started. cs129b tapped A for 300 ms: still nothing, because Participate is a HOLD (the
+keyboard step had held E for 2 s all along). Two runs of ten minutes each went to things one screenshot of the prompt
+and one look at the keyboard step's key list would have told. Before scripting a pad test: take one shot at the
+prompt, read the glyphs (which button, a ring = a hold), and copy the hold times from the keyboard step that works.
+A tester's words for a button are a lead, not the binding.
+
 ## During a test, a wanted shell command goes on a list, never into a neutered Bash call (2026-11-25, cs130a / cs129a)
 The rule "no Bash while a test runs" was broken three more times in one afternoon, always the same way: a Bash call
 was begun for something useful (a grep of our logs, a look at a file's tail, a timestamp), the rule came to mind

@@ -1,11 +1,12 @@
 **Update: shared world playtest 0.1.0-alpha+PKGID, for game 1.0.0.3732**
 Use this instead of a03a63b9; **both players need the same build**.
 
-From <@816395856902357032> and <@535093164910968833>'s two-PC run through the game's start:
-- **Following the host into a place of its story:** right after "Into the Fog" the host's story takes it up to an Abyss island that exists only in the host's game. Go to my friend dropped the joined player through the world there (and the revive put them back on the island to fall again). Now a trip that ends in that fall takes you back to where you were, with a note, and further trips there are refused while the host stays. Joining the host on the island itself isn't solved yet: wait below until the host's story brings them down.
-- **An NPC standing still after the joined player talked to it:** a hand-over between the two games that went wrong on the host's side is now finished properly.
-- **Cutscenes:** the co-op "hold to interact" prompt on your friend no longer shows during cutscenes (on a controller it held back the button the game uses).
-- Still open: arm wrestling in **solo** can leave your character jumping (not reproduced yet); in the prologue's fights the host seems to take no damage (checking whether that's the game's own prologue).
+From <@816395856902357032> and <@535093164910968833>'s two-PC runs:
+- **Story stops on a03a63b9:** Shia's pendant hanging in its pickup, the castle door with no prompt, a mission that wouldn't start. My main suspect is a03a63b9's fix for talking while the host talks, so it's **switched off again** here (while the host talks, the joined player waits again). Please tell me if the story still stops on this build.
+- **Following the host into a place of its story:** right after "Into the Fog" the host goes up to an Abyss island that only exists in the host's game. Go to my friend dropped the joined player through the world there. Now that fall takes you back to where you were, with a note, and trips there are refused while the host stays. Joining the host on the island isn't solved yet.
+- **An NPC standing still after the joined player talked to it:** a failed hand-over between the two games is now finished properly.
+- **Cutscenes:** the co-op "hold to interact" prompt on your friend no longer shows in cutscenes (on a controller it held back the game's button).
+- Still open: arm wrestling in **solo** on a controller; the host seeming to take no damage in the prologue's fights.
 
 Tested with two copies of the game on one PC (Nvidia): the full checklist on 1.0.0.3732 (CHECKLIST), including a trip that ends in the air above the host. Not covered: two PCs over Steam, real internet, AMD / Intel cards, long sessions.
 

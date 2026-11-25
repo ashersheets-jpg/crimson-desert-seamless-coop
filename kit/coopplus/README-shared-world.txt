@@ -247,9 +247,11 @@ KNOWN ISSUES (shared world playtest)
 - Arm wrestling in SOLO with Co-op+ installed was reported once to leave the
   character jumping, with no way out of the match but a restart (not seen in our
   tests). If it happens to you, please send your zip.
-- Two players cannot talk to the SAME NPC at once (the game's own rule): the second
-  is told to wait until the first is done. (Talking to other NPCs while the host is in
-  a conversation works since this build.)
+- While the host is in a conversation, the joined player's talks to other NPCs are
+  refused (a note says the host is busy talking): wait until the host's talk ends. The
+  fix for this in a03a63b9 is switched off again in this build, because three of the
+  host's story steps stopped working with it (an item and a door that would not
+  interact, a mission that would not start); it comes back once it is safe.
 - City NPCs sitting on benches may stand in a T-pose on the joined player's screen
   (reported once, not seen in our tests).
 - Boss fights are not tested with two players yet.

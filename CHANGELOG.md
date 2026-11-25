@@ -22,6 +22,13 @@ prologue, on 614591d0):
 - **No co-op prompt on the friend during a cutscene.** In a cutscene the friend stands beside you, so the "hold to
   interact" prompt came up and, on a controller, held the interact button back from the game: holding it opened the
   co-op menu instead of reaching the game.
+- **Talking while the host is in a conversation: switched off again.** On a03a63b9, the first build where the joined
+  player's separate "current scene" really acted, the same testers hit three stops in the host's story in one
+  afternoon (Shia's pendant refused as "not interactable" with the pickup animation hanging, the castle door of the
+  key quest with no prompt, a mission that would not start); 614591d0 had none. Not proven to be the cause, but a
+  stopped story is worse than waiting for the host's talk to end. The host's log now names such refusals.
+- The fall guard's watch counts from the moment the game lets go of the held character (it holds a far traveller in
+  the air until the host's game has loaded it in: seconds, or minutes on a stalled host).
 
 Posted 2026-11-25 15:01 as 0.1.0-alpha+a03a63b9 (checklist pp60: all 30 steps, 1296 checks, one PC), from Borque's 25 Nov session and the talk / taming research of 25 Nov:
 - **The joined player's trip to the host waits while the host's game is not answering** (Borque: an endless loading
