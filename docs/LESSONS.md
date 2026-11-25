@@ -811,3 +811,15 @@ per-owner state the check reads, and whose it is in the shared world.
 ## Messages from the user's phone can arrive late and together (2026-11-24)
 Four messages written hours apart reached the session at once, after a later one ("those sent late"). When the user
 says messages are missing, list what arrived, in order, and ask for the rest again; act on the newest intent.
+
+## An opcode from a note or a log line is 2976's number: compare against the shp::kOp* constants (2026-11-25)
+The research notes and the probes' log text name the requests by their 2976 opcodes (2880 StageBranchStateReq, 2591
+the chart event Req), while the code's constants are 3732's (shp::kOpBranchReq = 2644, kOpChartEvent = 2200). The
+focus slot's request filter was about to be written with 2880 / 2591 from the note, which on 3732 matches none of
+them (the window would silently never open). In code, always use the named constant; when a note gives a number,
+find the constant it names before using it.
+
+## The checklist plays a minigame on the keyboard only: a pad report needs a pad test (2026-11-25, Edward)
+The armwrest step mashes E inside a co-op session; a tester's solo match on a controller ("the character starts
+jumping and it never ends") is a path no step drives. When a report names an input device or a mode the checklist
+does not use, the repro starts with that device and mode (pad_sim, -NoGuest), not with the step that passes.

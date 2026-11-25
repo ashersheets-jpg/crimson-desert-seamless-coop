@@ -229,9 +229,13 @@ KNOWN ISSUES (shared world playtest)
   not fixed yet.
 - The host's armour dye does not show on the joined player's screen yet.
 - A tree the joined player cuts down can show twice for the host.
-- Taming a wild horse as the joined player can fail at its last step: the joined
-  player is freed a few seconds later, but the horse is most likely not tamed. If it
-  happens, please send both zips.
+- Taming a wild horse as the joined player: a fix is in (each player has their own
+  "focus" scene now), not yet confirmed on a real taming. If the last step still
+  fails (the joined player is freed a few seconds later, the horse most likely not
+  tamed), please send both zips.
+- Arm wrestling in SOLO with Co-op+ installed was reported once to leave the
+  character jumping, with no way out of the match but a restart (not seen in our
+  tests). If it happens to you, please send your zip.
 - City NPCs sitting on benches may stand in a T-pose on the joined player's screen
   (reported once, not seen in our tests).
 - Boss fights are not tested with two players yet.

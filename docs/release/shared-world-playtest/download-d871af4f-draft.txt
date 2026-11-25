@@ -1,0 +1,12 @@
+**Update: shared world playtest 0.1.0-alpha+d871af4f, for game 1.0.0.3732**
+Use this instead of 527e283a; **both players need the same build**.
+
+- **Taming a wild horse as the joined player** (<@224953308010381312>'s friend got stuck on the horse): the host's game keeps one "focus" scene for its player (a talk, a match, a taming), and the joined player's own taming ran in the host's part of the game, so both players shared that one focus. When another scene took it between the taming's steps, its last step was refused. Now the joined player has a focus of its own. Untested on a real taming (it can't be scripted); if a taming still fails, send both report zips: the host's log now names whatever held the focus. The 6 s release from the last build stays as a fallback.
+- Still open: arm wrestling in **solo** with the mod can leave your character jumping (reported in <#1567319198206525450>). If it happens to you, a report zip helps a lot.
+
+Tested with two copies of the game on one PC (Nvidia): the full checklist on 1.0.0.3732 (all 28 steps, the new focus fix on). Not covered: two PCs over Steam, real internet, AMD / Intel cards, long sessions; your reports tell us those.
+
+- `...d871af4f-shared-world.zip`: the one you want. Run its installer with the game closed.
+- `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.
+
+Tell us in <#1567319198206525450> how it goes, with the report zip from **both** players (close the game, run **Diagnose Co-op+.cmd**).

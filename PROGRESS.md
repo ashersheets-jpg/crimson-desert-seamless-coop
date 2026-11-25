@@ -11227,3 +11227,39 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   arm-wrestling match 0x4D1, loot's 0x203) on the host's server and client managers; the joined player's own shop
   0x1EA in ITS OWN manager (marked USER 2's). No step had a scene of the joined player's own set the focus in the
   host's manager (that needs a taming or an encounter with a flagged step: a tester's).
+- 01:27 replied to Brycecco in #general (tagged): no problem, the recording helps; Diagnose now may still catch that
+  session if his friend has not started the game since (the zip has the last runs' logs), else both zips next time.
+  Discord otherwise: no new feedback or bug report.
+- 01:39 THE FIX ON, FULL CHECKLIST pp59 on d871af4f started (ends ~05:40). Native 96d6c65 (local): the request window
+  only for user 2's StageBranchStateReq (2644 on 3732) and chart-event Req (2200) about a scene of its OWN (the u64
+  sequencer at the payload's start, in the 2356-learned ids); its other requests (movement, ~320 a second) and those
+  about any other stage keep the host's triple, as without the fix. New "ShopProbe [own scene]" line: which manager
+  has each of user 2's own scenes at its PrepareSequencerAck (counted in the focus summary). Layer d871af4 (outer):
+  the host's native settings write user2_focus_slot=1 (layer test checks it). Built: native 93 tests, the 14 known
+  failing; layer tests pass; package d871af4f = the build tree (dllswap show). No Windows restart pending.
+  (A rule slip at 01:41: one harmless `echo` through Bash while pp59 ran; nothing else ran.)
+- 01:40-01:50 static, pp59 running: the next post's text drafted (docs/release/shared-world-playtest/
+  download-d871af4f-draft.txt: the taming fix, tags Borque; the solo arm-wrestling bug as still open). Edward's solo
+  arm-wrestling bug, read again from the solo side: in solo the native ini runs only the sniffer (record=0) and the
+  game-errors hook ([net] / [overlay] / [coop] / [session2] off), and every layer path that masks or presses pad
+  buttons for the game needs a friend or a Co-op+ screen: the hold prompts' A mask and tap hand-back (a friend within
+  3 m, or a challenge / story / travel request), the cutscene-skip hold of Esc / B / Start ("connected" and the
+  friend in a cutscene; cleared when not connected), RPS / menu masks (an accepted challenge), versus arm wrestling
+  (an accepted challenge or [dev] versus_test). No cause found. Written for after pp59: build/native/cs122.sh, the
+  host ALONE (-NoGuest, no Start Co-op: the layer in a solo player's state) at the Hernand table on a simulated Xbox
+  pad (pad_sim=1, minigame_probe=1): talk and Participate on the keyboard, then A x100, X x100, B twice from the dev
+  script, shots every 5 s. If that match runs and ends normally: the layer's real solo mode next (a test-kit switch).
+- 05:33 pp59 DONE (the fix ON, d871af4f): 28 steps, 1211 pass, 1 fail. The one FAIL is static's "layer / kit / tools
+  have uncommitted changes": my own docs edit of kit/coopplus/README-shared-world.txt during the run (made after the
+  package was built from the clean commit d871af4f), not the mod. SAVES OK in all 27 game steps, REAL SAVES UNCHANGED,
+  user install 5/5 OK each time. The fix in the host logs: in every step "swaps 0 failed 0 overflow 0 unbalanced 0
+  repairs 0 missed leaves 0" except shop (4 of user 2's branch / chart-event requests about its own scenes, 8 swaps, 0
+  failed, 0 unbalanced; its shop scene is in its OWN manager, so that swap is harmless and changed nothing: shop 25 / 0);
+  user 2's other requests passed by untouched (146,438 in armwrest). [own scene]: all 19 of user 2's own scenes (door 10,
+  shop 9) were prepared in ITS OWN manager, none in the host's: no step had the case the fix is for (a taming or an
+  encounter of the joined player's, a tester's). Self-review checked: the triple holds scene IDS (+0xA0 the scene's id,
+  +0x90 the previous one, looked up by id through 0x21C7370), not pointers, so the FR1 manager-change gap (next build)
+  can at worst refuse or let through one of user 2's flagged steps after the host's manager changes; it cannot touch
+  freed memory, and the host always gets its own triple back. No Windows restart pending; Steam running.
+  Next: commit the docs, package again (the README with the taming / solo arm-wrestling notes; the same DLLs), re-run
+  static + real + fresh on it, then post.

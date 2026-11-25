@@ -148,7 +148,12 @@ Steam join/invite/leave and room code, friends-only vs invite-only, join/leave n
   why it is refused: errglobal73.py, next.) (2026-11-24 evening, docs/research/taming-refusal-3732.md: most likely
   the host's stage manager has ONE focus slot both players' scenes share, so the taming's last, flagged step is
   refused while another stage holds the focus; the fix, a per-player slot, is written (native c2ec8eb, off by
-  default, not built), with a focus probe and the cs121 one-PC repro to run first.)
+  default, not built), with a focus probe and the cs121 one-PC repro to run first.) (2026-11-25: the probe's runs
+  (cs121a, pp57, pp58: 1212 checks, 0 fail) showed the slot written only in the stage processor's tick, the joined
+  player's own shop in its own manager, and its taming / encounters in the host's. The fix ON by default from
+  d871af4f (layer d871af4, native 96d6c65: user 2's own scenes known by their 2356 ids; its branch / chart-event
+  requests about them, and their setter / tick / end, run with its own triple). pp59, the full checklist with it on,
+  started 01:39. Left: a tester's taming (cannot be scripted).)
 - [x] **T26 — Death penalty and respawn options.** Config options for penalty (none, partial loss, full) and respawn rules, applied consistently on both sides. *Done when:* every option is tested. (2026-11-22: the respawn option is done; the penalty options were blocked on the two-worlds design (no removal the server accepts). On the native shared world the game's own jail fine removes items on the host's server (RemoveItemToInventoryAck 2481): a lead to a server-side removal; design in docs/research/t26-death-penalty.md. 2026-11-22: route 2 built as research, off (native 6af91d5: the host's server takes a player's own "I got up myself" request and removes the host's share of its money with the game's own delete; layer: the revive prompt's Q / U send it); cs97 lists the money pouch to find the silver's key, cs97b the removal; then the setting.) (2026-11-22 cs97: the request reached the host's server for both players and the "Money" pouch was listed; it holds the camp money and contributions only. The coins are item key 1 (the arm-wrestling prize names item 1), in another inventory: the native now searches every inventory for the item (40f0c15). cs97b (item 1) is the removal test; the layer passes item 1 to the host only after it passes.) (2026-11-22 19:11 cs97b
 PASSED: item 1 is 'Money_Copper', in the character's bag (inventory 1, slot 6); the joined player and then the host
 each lost exactly 10 % (1145 of 11454), err 0, once per death; SAVES OK, the test world unchanged. The layer now passes

@@ -170,6 +170,16 @@ So the request path writes the slot synchronously (2880 StageBranchStateReq -> 0
   processor's tick, none inside a request. Host stages took the focus on the host's server and client managers (the
   opening scene, the arm-wrestling match 0x4D1, loot's 0x203); the joined player's own shop 0x1EA took the focus of
   its own manager. No checklist step makes a scene of the joined player's own take the host manager's focus.
-- Planned next: the request window only for user 2's scene requests (2880 StageBranchStateReq, 2591 the chart event
-  Req: where the branch step's focus check runs), not for every packet (hundreds a second); a log line naming the
-  manager each of user 2's own scenes is prepared in; then a full pass with user2_focus_slot=1.
+- Done 25 Nov (native 96d6c65, layer d871af4): the request window only for user 2's StageBranchStateReq (2644 on 3732,
+  2880 on 2976) and chart-event Req (2200 / 2591) about a scene of its own (the request's u64 sequencer, in the ids
+  learned from the 2356s); every other request of user 2 runs with the host's triple, as without the fix. Why not
+  every request: the setter runs in the tick (pp58), and a request about a host stage should meet the host's focus.
+  Not covered (widen only on evidence): user 2's interaction Reqs (2642 / 2304), in case one checks the host's
+  focus. "ShopProbe [own scene]" names the manager each own scene is in at its 2356. The layer now writes
+  user2_focus_slot=1 for the host (the package's default). pp59 (the full checklist with it on) started 01:39.
+- Self-review 25 Nov 02:00 (for the next build, not d871af4f): FR1 stores the live host manager into g_host_mgr
+  itself, so when the host's manager CHANGES (a new character / field) and a request of user 2 comes before the
+  module's once-a-second refresh, the refresh sees no change and never resets the slots: user 2's saved triple of
+  the OLD manager is swapped into the new one. A stale focus id there blocks only if a live stage of the new manager
+  has the same id (ids look like one counter per server: unlikely); the host's triple is never affected. Fix: FR1
+  compares with g_host_mgr (exchange) and asks the reset itself when it changed, as the refresh does.
