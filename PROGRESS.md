@@ -15,6 +15,8 @@ test save Out, shipped cdmp.ini restored.
   09:45 update: web guides give the keyboard keys (hold F2 = the equipment wheel, mouse wheel to the rod, release;
   Q = can I fish here; hold the left button, release = cast), and the Nas River start has a pond beside the host.
   cs116 scripts exactly that after the current checklist; if it casts, this hands-on is no longer needed.
+  14:31 update: cs116a / cs116b did NOT get the rod out (F2 held opened no wheel; 1-8, Z, B neither), so this
+  5-minute hands-on is still the quick way (or this build's keys for: take out the rod, cast).
 - 2026-11-23 19:58 HANDS-ON (5 minutes, not urgent, T41 hunting contest): the contest runs in the shared world and
   the host's kills count; a fix makes the joined player's game know the host's animals, but its OWN kill scoring
   cannot be scripted (the server ignores its test kill, and a scripted sword cannot catch a goose). Next time you

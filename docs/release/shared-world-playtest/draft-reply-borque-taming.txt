@@ -1,0 +1,5 @@
+@Borque an update on the taming that left your friend stuck (your 24 Nov zips), for when the next build is up:
+
+The cause, most likely: the host's game keeps one "focus" scene per player, and in the shared world your friend's own scenes run in the host's part of the game, so both of you share ONE focus. The taming's last step is only allowed while the taming has that focus; between its first step and its last, other scenes in your game (an encounter near your friend, your own) took it, so the game refused the last step and your friend stayed on the horse.
+
+The next build has a fix for it (each player gets their own focus), off at first while I test it on one PC, and it logs exactly who held the focus if a taming still fails. If you tame again with it, a report zip from both of you tells me whether it holds.
