@@ -444,26 +444,53 @@ int nearest(float px, float pz, float hx, float hz, Near* out, int cap) noexcept
     return n;
 }
 
-// The hand-over on the server: the controller key, then the game's own restart steps. False = a fault (nothing more
-// is done with this actor).
-bool hand_over(uintptr_t actor, uint32_t key, uint32_t from, uint32_t to) noexcept {
+// The hand-over on the server: the controller key, then the game's own restart steps (as its own request handler
+// 0x2F52C.. runs them: both session bumps, then the action reset). No = not done (the actor changed since the scan, or
+// a fault before the key was written: nothing changed); Done; Faulted = the key is written but a restart step faulted.
+// Brycecco + Arcticwolf 2026-11-25 (614591d0, two PCs): the talk rule's hand-over of NPC 0xB0101FAE, in the other
+// player's interaction 0xF4263, faulted in the action reset (its inner 0x229D960 read the AI's action object again
+// after the reset's first steps and called through a stale one: exe+0x6287580, data, executed). The SEH caught it, and
+// the old "false" told nobody: the server had a controller neither game knew of (the old one's packets refused by
+// the bumped sessions: the NPC stands still). A Faulted hand-over is told like a done one.
+enum class Handed { No, Done, Faulted };
+thread_local uintptr_t t_fault_at = 0;  // the last fault's address (hand_over, this thread)
+int fault_filter(EXCEPTION_POINTERS* ep) noexcept {
+    t_fault_at = ep && ep->ExceptionRecord ? reinterpret_cast<uintptr_t>(ep->ExceptionRecord->ExceptionAddress) : 0;
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+Handed hand_over(uintptr_t actor, uint32_t key, uint32_t from, uint32_t to) noexcept {
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    volatile bool written = false;
     __try {
         // still the same actor in the same state (the scan was a moment ago, on this thread)
         if (*reinterpret_cast<uint32_t*>(actor + 0x60) != key || *reinterpret_cast<uint32_t*>(actor + 0x90) != from ||
             *reinterpret_cast<uintptr_t*>(actor + 0xA0))
-            return false;
+            return Handed::No;
         *reinterpret_cast<uint32_t*>(actor + 0x90) = to;
+        written = true;
         reinterpret_cast<void (__fastcall*)(uintptr_t)>(base + kFnAiSessionBump)(actor);
         reinterpret_cast<void (__fastcall*)(uintptr_t)>(base + kFnMoveSessionBump)(actor);
         const uintptr_t comps = *reinterpret_cast<uintptr_t*>(actor + 0x68);
         const uintptr_t ai = comps ? *reinterpret_cast<uintptr_t*>(comps + 0x58) : 0;
         int out = 0;
         if (ai) reinterpret_cast<void (__fastcall*)(uintptr_t, int*)>(base + kFnActionReset)(ai, &out);
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
+        return Handed::Done;
+    } __except (fault_filter(GetExceptionInformation())) {
+        return written ? Handed::Faulted : Handed::No;
     }
+}
+
+// A Faulted hand-over (above): said (the first 20, then every 100th) with where it faulted; counted.
+std::atomic<uint64_t> c_restart_faults{0};
+void note_restart_fault(const char* rule, uint32_t key, uint32_t from, uint32_t to) {
+    const uint64_t n = c_restart_faults.fetch_add(1) + 1;
+    const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    const uintptr_t at = t_fault_at;
+    if (n <= 20 || n % 100 == 0)
+        log::warn("AiHandoff: {}NPC 0x{:08X}: the game's AI restart faulted at {} after the control change (0x{:08X} -> "
+                  "0x{:08X}); both games are told the new controller all the same ({} so far)", rule, key,
+                  at >= base && at - base < 0x10000000 ? std::format("exe+0x{:X}", at - base) : std::format("0x{:X}", at),
+                  from, to, n);
 }
 
 // A server packet for one user's client: the host's own client through the injection queue (delivered on its packet
@@ -641,10 +668,12 @@ void ai_handoff_server_tick() noexcept {
             int back = 0, failed = 0;
             std::string keys;  // the first few, for the log
             for (int i = 0; i < m && back < kMaxPerTick; ++i) {
-                if (!hand_over(left[i].actor, left[i].key, left[i].ctrl, host_user)) {
+                const Handed hv = hand_over(left[i].actor, left[i].key, left[i].ctrl, host_user);
+                if (hv == Handed::No) {
                     ++failed;
                     continue;
                 }
+                if (hv == Handed::Faulted) note_restart_fault("departure sweep: ", left[i].key, left[i].ctrl, host_user);
                 if (++back <= 8)
                     keys += std::format(" 0x{:08X} (from 0x{:08X}, {:.0f} m)", left[i].key, left[i].ctrl, left[i].d);
                 uint8_t priv[12];
@@ -729,11 +758,13 @@ void ai_handoff_server_tick() noexcept {
                 still[c.key].second = -100000;
                 continue;
             }
-            if (!hand_over(c.actor, c.key, c.from, c.to)) {
+            const Handed hv = hand_over(c.actor, c.key, c.from, c.to);
+            if (hv == Handed::No) {
                 const uint64_t f = c_failed.fetch_add(1) + 1;
                 if (f <= 10) log::warn("AiHandoff: NPC 0x{:08X}: the hand-over did not go through (state changed or a fault)", c.key);
                 continue;
             }
+            if (hv == Handed::Faulted) note_restart_fault("", c.key, c.from, c.to);
             ++done;
             moved[c.key] = GetTickCount64();
             uint8_t priv[12];
@@ -774,11 +805,13 @@ void ai_handoff_server_tick() noexcept {
                     if (pl[k].key == rider) to = pl[k].user;
                 }
                 if (!to || to == f.ctrl) continue;
-                if (!hand_over(f.actor, f.key, f.ctrl, to)) {
+                const Handed hv = hand_over(f.actor, f.key, f.ctrl, to);
+                if (hv == Handed::No) {
                     const uint64_t fl = c_failed.fetch_add(1) + 1;
                     if (fl <= 10) log::warn("AiHandoff: ride rule: NPC 0x{:08X}: the hand-over did not go through", f.key);
                     continue;
                 }
+                if (hv == Handed::Faulted) note_restart_fault("ride rule: ", f.key, f.ctrl, to);
                 ++done;
                 moved[f.key] = now;
                 uint8_t priv[12];
@@ -867,11 +900,13 @@ void ai_handoff_server_tick() noexcept {
                     if (!from) g_talk_from[s].store(f.ctrl, std::memory_order_relaxed);
                     to = talker_user;
                 }
-                if (!hand_over(f.actor, f.key, f.ctrl, to)) {
+                const Handed hv = hand_over(f.actor, f.key, f.ctrl, to);
+                if (hv == Handed::No) {
                     const uint64_t fl = c_failed.fetch_add(1) + 1;
                     if (fl <= 10) log::warn("AiHandoff: talk rule: NPC 0x{:08X}: the hand-over did not go through", f.key);
                     continue;
                 }
+                if (hv == Handed::Faulted) note_restart_fault("talk rule: ", f.key, f.ctrl, to);
                 ++done;
                 moved[f.key] = now;
                 uint8_t priv[12];
@@ -940,11 +975,13 @@ void ai_handoff_server_tick() noexcept {
                     to = host_user;
                 if (!to) continue;
                 if (const auto it = moved.find(f.key); it != moved.end() && now - it->second < kFightCooldownMs) continue;
-                if (!hand_over(f.actor, f.key, f.ctrl, to)) {
+                const Handed hv = hand_over(f.actor, f.key, f.ctrl, to);
+                if (hv == Handed::No) {
                     const uint64_t fl = c_failed.fetch_add(1) + 1;
                     if (fl <= 10) log::warn("AiHandoff: fight rule: NPC 0x{:08X}: the hand-over did not go through", f.key);
                     continue;
                 }
+                if (hv == Handed::Faulted) note_restart_fault("fight rule: ", f.key, f.ctrl, to);
                 ++done;
                 moved[f.key] = now;
                 uint8_t priv[12];
@@ -1202,7 +1239,8 @@ std::string ai_handoff_describe() {
                std::format(" | departures: sweeps {} NPCs back to the host {} failed {}", c_left_sweeps.load(),
                            c_left_back.load(), c_left_failed.load()) +
                std::format(" | passengers noted {} fight hand-overs skipped {} table full {}", c_pass_noted.load(),
-                           c_pass_skip.load(), c_pass_full.load());
+                           c_pass_skip.load(), c_pass_full.load()) +
+               std::format(" | AI restart faults (told anyway) {}", c_restart_faults.load());
     return std::format("AiHandoff: {} | server checks {} | NPCs looked at {} (controller far, another player close: {}) | "
                        "handed over {} (of them back to the first controller {}) would {} failed {} | this client: took {} "
                        "noted {} not loaded {} notices dropped {}",
@@ -1212,7 +1250,8 @@ std::string ai_handoff_describe() {
            std::format(" | ride rule: rides noted {} handed to the rider {} table full {}", c_ride_noted.load(),
                        c_ride_out.load(), c_ride_full.load()) +
            std::format(" | departures: sweeps {} NPCs back to the host {} failed {}", c_left_sweeps.load(),
-                       c_left_back.load(), c_left_failed.load());
+                       c_left_back.load(), c_left_failed.load()) +
+           std::format(" | AI restart faults (told anyway) {}", c_restart_faults.load());
 }
 
 }  // namespace cdmp::session2
