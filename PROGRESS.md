@@ -11155,3 +11155,14 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   research note's new sections (cause, predictions, fix directions: the base's own-stages mode, or a per-player focus
   slot with every writer covered). User: says some phone messages did not reach me; listed what arrived, asked to
   resend anything else.
+- 19:33 (static, the user plays) the focus slot's code found on 3732 (scratchpad focus73.py / b / c): reset 0x21C6490
+  and 0x21C6A40, undo 0x21CAF10, the setter 0x2271152's store 0x2271252 (it reads the focus first and does not take
+  it from another stage), the clear at a stage's end 0x21CB970; the request path writes it synchronously (2880 ->
+  0xE169180 -> 0x2C0B8B0 -> 0x226F7A0 -> 0x2271150). The joined player's purchases DEPEND on the slot (tcB185 /
+  tcB194 bought only because its own shop scene took the host manager's focus), so the fix is a per-player slot
+  (swap the joined player's own triple in around its requests, its scenes' ticks and ends), not keeping it out.
+  Written, not built: native 9b19699 (local), the FOCUS PROBE (ShopProbe [focus]: each set / undo / end of the
+  focus, the scene and its owner, "TAKEN FROM ANOTHER STAGE", inside a request of user 2's session or not; FR hooks
+  around ServerRunThread's one call of ServerNet::OnRecvPacket 0x2A10B95; every hook's bytes and branch targets
+  checked in the exe). cs121.sh prints the focus lines. Discord: not checked since 18:03 (the browser pane closed
+  with the restart; reopening it could take the game's focus): next check when the PC is free.

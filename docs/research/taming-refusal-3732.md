@@ -101,8 +101,42 @@ organizer, takes part and mashes.
   ticks, the deletes). Every writer of the three fields has to be covered (0x2045BC0, 0x1F6FF40, 0x1F709A0, vf1
   0x1F6B860) or the slot desyncs; to be designed once cs121 / a tester shows the slot is the cause.
 - The current release (52ef13e) only ends the refused scene for the joined player after 6 s.
+- NOT a fix: keeping the joined player's scenes out of the slot. Its shop buys pass only BECAUSE its own shop scene
+  takes the host manager's focus (tcB185 / tcB194: the guest bought at the butcher and the grocer; 0x21F2780 checks
+  the focus against the NPC's stage, S46).
+
+## The focus slot's code on 3732 (scratchpad focus73.py / focus73b.py; ServerSequencerStageManager vtable 0x5F5FAF0)
+| What (S46's 2976 name) | 3732 | Notes |
+|---|---|---|
+| reset at creation | 0x21C6490 (caller 0x2B3AAC3) | +0x90, +0x98, +0xA0 = 0 |
+| vf reset (vf1 0x1F6B860) | 0x21C6A40 (no direct caller) | the three = 0 |
+| undo (0x1F6FF40) | 0x21CAF10 (95 B; callers 0x21CBA36, 0x2271487) | +0xA0 = 0; +0x90 = +0x98 and +0x98 = 0 when +0x98 is set, else +0x90 = 0 |
+| set at a flagged branch (0x2045BC0) | 0x2271150 (callers 0x226DC8F in the processor's vf 0x226DA80 = ServerSequencerStage_StageChartProcessor +8, and 0x2270B65 in 0x226F7A0, which the branch step calls at 0x2C0D200) | at 0x2271252 / 0x227125B: +0xA0 = the scene's id, +0x90 = 0, then vf +0x110; it first reads the current focus (0x21CAF70) and does NOT take it when another stage holds it (2271236 -> 2271496); leaving a flagged branch calls the undo (0x2271487) |
+| clear at a delete (0x1F709A0) | 0x21CB970 (callers 0x21C8663, 0x2B3BCA8) | reads +0xA0 / +0x98, calls the undo (0x21CBA36) when the deleted stage was the focus |
+| readers | 0x21CAF70 (the current stage; 0x21CABF0, the setter, ~40 more callers), 0x21C8DB0, 0x21C9480, 0x21C9AD0, 0x21CA5F0 | 0x21F2780's own read (shop buys) as in S46 |
+So the request path writes the slot synchronously (2880 StageBranchStateReq -> 0xE169180 -> 0x2C0B8B0 -> 0x226F7A0 ->
+0x2271150), and the processor's tick writes it for transitions it makes on its own.
+
+## Per-player focus slot: design draft (to build only once cs121 or a tester log shows the slot is the cause)
+- State: the host manager's own triple stays where the game keeps it; user 2's triple U (+0x90, +0x98, +0xA0) is
+  kept by the mod (zero at the session's start).
+- Swap in U, run, save U, swap the host's back, around every server operation done for user 2: (a) user 2's session's
+  Reqs that read or write the focus (2880 branch -> 0xE169180; the shop Reqs that reach 0x21F2780: 2789, 2366,
+  2458, 2308, 2940, ...), best at the one place the server dispatches a received Req of a session, so every handler is
+  covered; (b) the processor's vf 0x226DA80 when its scene is one of user 2's own (the ledger's "own" ids, or the
+  scene's owner key); (c) 0x21CB970 when the deleted scene is user 2's.
+- The reset paths (0x21C6490, 0x21C6A40) also zero U. A user 2 logout zeroes U.
+- Same thread only (the server's); a nested swap is a no-op (depth counter). Pure bookkeeping in a logic header with
+  unit tests (swap, nested, a write while swapped saved to U, a reset while swapped), then hooks with their bytes
+  checked, off by default behind [session2] user2_focus_slot, research first ("probe": log what each swap would
+  change, change nothing).
 
 ## Next
+0. Written, not built (native 418d116 + 9b19699, local): the "why" lines and a FOCUS PROBE (ShopProbe [focus]): every
+   write of a manager's focus slot (the setter's store 0x2271252, the undo 0x21CAF10, the end of the focus stage
+   0x21CB970) with the scene, its owner (user 2's or not), the slot before ("TAKEN FROM ANOTHER STAGE"), and whether
+   it runs inside a request of user 2's session (FR: 0x2A10B89 / 0x2A10B9A around ServerRunThread's one call of
+   ServerNet::OnRecvPacket 0x2A111F0); a summary each minute. Read only; its lines have their own budget.
 1. Build the "why" lines; run cs121 (one PC). Post the diagnostics build with the next fixes so a tester's taming
    names the focus holder too.
 2. If cs121 reproduces it: design the per-player focus slot (above) with every writer covered, unit-test the swap
