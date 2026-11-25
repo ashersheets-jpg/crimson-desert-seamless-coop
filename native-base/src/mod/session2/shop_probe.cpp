@@ -78,6 +78,14 @@ constexpr uintptr_t kC = 0x2CDC149, kCCtx = 0x2CDC13D;
 constexpr uint32_t kCPatch = 5;
 constexpr uint8_t kCBytes[] = {0x8B, 0x5D, 0x80, 0x85, 0xDB};
 constexpr uint8_t kCCtxBytes[] = {0x48, 0x8B, 0x89, 0x98, 0x00, 0x00, 0x00, 0xE8, 0x37, 0x00, 0x16, 0x00};
+// C0 (2026-11-25, BUG 2): the context's first instruction, mov rcx,[rcx+0x98] (7 bytes), right before the 2642 handler's
+// call of its path check 0x2E3C180 (the refusal 0x58C8345D comes from inside that call: cs125a). r13 = the requester's
+// actor (C's user key comes from it: the friend's own character for its talks), the frame as at C. With the per-player
+// slot on, user 2's talk runs that check with its own focus triple in the host's manager; C closes the window. Installed
+// after C (C's context check reads these bytes first).
+constexpr uintptr_t kC0 = 0x2CDC13D;
+constexpr uint32_t kC0Patch = 7;
+constexpr uint8_t kC0Bytes[] = {0x48, 0x8B, 0x89, 0x98, 0x00, 0x00, 0x00};
 // B (Co-op+ 2026-11-21, the taming freeze: user 2's StageBranchStateReq "then 2" of its taming scene got no Ack and no
 // Nak). 3732: the StageBranchStateReq handler (its vf48 at 0x2D55B36) calls the branch 0x2B56870 (protected) as
 // (manager = vf48's rax, &result [rbp-0x80], field [rbp-0x38], seq [rbp-0x80], then [rbp-0x48], [rbp+0x88] u8,
@@ -168,6 +176,15 @@ std::atomic<bool> g_e_on{false}, g_g_on{false}, g_p_on{false}, g_c_on{false}, g_
 SafetyHookMid g_e_hook, g_g_hook, g_p_hook, g_c_hook, g_sa_hook, g_sr_hook, g_sf_hook;
 std::atomic<bool> g_b1_on{false}, g_b2_on{false};
 SafetyHookMid g_b1_hook, g_b2_hook;
+// C0 (BUG 2, the talk window): the hook, and on the logic thread the window it opened (closed at C).
+std::atomic<bool> g_c0_on{false};
+SafetyHookMid g_c0_hook;
+thread_local uintptr_t t_c_mgr = 0;
+thread_local uint32_t t_c_token = pfs::FocusSlots::kRefused;
+// The host's last accepted talk (C): its NPC and when; with the host's focus set, a talk of user 2's to that same NPC
+// is left to the game (its one-talker rule).
+std::atomic<uint32_t> g_host_talk_npc{0};
+std::atomic<uint64_t> g_slot_talks{0}, g_slot_talks_left{0};
 std::atomic<bool> g_bf1_on{false}, g_bf2_on{false};
 SafetyHookMid g_bf1_hook, g_bf2_hook;
 std::atomic<uint64_t> g_bf[2][2] = {};  // [site][user 2?]
@@ -236,8 +253,12 @@ pfs::FocusSlots g_slots;                    // the server's thread only
 std::atomic<uint64_t> g_slot_u2[4] = {};    // user 2's pieces of work: requests, setter, stage ends, ticks
 std::atomic<uint64_t> g_slot_u2_passed{0};  // user 2's other requests: run with the host's triple, as without the fix
 std::atomic<uint64_t> g_slot_other{0};      // other managers' calls passed straight on
-thread_local uint32_t t_fr_token = pfs::FocusSlots::kRefused;
-thread_local uintptr_t t_fr_mgr = 0;
+// 2026-11-25 redo (cs125d): the server's LOGIC thread, where the stage manager's focus is written and the requests'
+// handlers run (the branch handler's B1 learns it); FR1 / FR2 run on the network thread, which only hands the packets
+// on. The slot works on this thread alone: B1 -> B2 around user 2's branch of its own scene, and the detours.
+std::atomic<uint32_t> g_logic_tid{0};
+thread_local uint32_t t_b_token = pfs::FocusSlots::kRefused;
+thread_local uintptr_t t_b_mgr = 0;
 std::atomic<uint64_t> g_limited{0}, g_lost{0}, g_lines{0};
 constexpr uint64_t kMaxLines = 4000;
 
@@ -424,8 +445,13 @@ void on_p(safetyhook::Context& ctx) noexcept {
     emit(kEPrep, e);
 }
 
+// C0 (BUG 2's talk window), defined with the slot below.
+void on_c0(safetyhook::Context& ctx) noexcept;
+void slot_talk_leave() noexcept;
+
 // C 0x29E9282: the 2671's server-side result.
 void on_c(safetyhook::Context& ctx) noexcept {
+    slot_talk_leave();  // first: the host's triple back before anything else runs (C0's window)
     if (!g_c_on.load(std::memory_order_acquire)) return;
     const uint32_t result = rdv<uint32_t>(ctx.rbp + kC_Result);
     const uint32_t requester = rdv<uint32_t>(ctx.rbp + kC_Requester);
@@ -434,6 +460,7 @@ void on_c(safetyhook::Context& ctx) noexcept {
     g_2671[static_cast<size_t>(w)].fetch_add(1, std::memory_order_relaxed);
     if (result) g_2671_fail[static_cast<size_t>(w)].fetch_add(1, std::memory_order_relaxed);
     if (w == Who::Host) user2_shops_host_2671(result);  // U2: the HostRefused criterion
+    if (w == Who::Host && result == 0) g_host_talk_npc.store(rdv<uint32_t>(ctx.rbp + kC_Npc), std::memory_order_relaxed);
     if (w == Who::User2 && result == 0)  // the catch rule (ai_handoff.h): a caught animal runs on the catcher's game
         ai_handoff_note_catch(requester, rdv<uint32_t>(ctx.rbp + kC_Npc), rdv<uint32_t>(ctx.rbp + kC_Interaction));
     if (w != Who::User2 && !g_book.take(book_key(0x2671, static_cast<uint8_t>(0x30 | static_cast<uint8_t>(w))), 16)) {
@@ -450,6 +477,8 @@ void on_c(safetyhook::Context& ctx) noexcept {
 }
 
 // B1 0x2D55B56: the StageBranchStateReq handler right before its call of the branch 0x2B56870 (rax = the manager).
+void slot_branch_enter(uintptr_t mgr, uint64_t seq) noexcept;  // the per-player slot's branch window (below)
+void slot_branch_leave() noexcept;
 void on_b1(safetyhook::Context& ctx) noexcept {
     if (!g_b1_on.load(std::memory_order_acquire)) return;
     BranchCall& b = t_branch;
@@ -460,11 +489,15 @@ void on_b1(safetyhook::Context& ctx) noexcept {
     b.b = rdv<uint8_t>(ctx.rbp + kB_U8b);
     b.mgr = ctx.rax;
     b.set = true;
+    // 2026-11-25 redo: this handler runs on the server's LOGIC thread (cs125d): the slot's thread.
+    g_logic_tid.store(GetCurrentThreadId(), std::memory_order_release);
+    slot_branch_enter(b.mgr, b.seq);
 }
 
 // B2 0x2D55B6A: the branch's result (!= 0: the handler answers with a Nak 1013).
 void on_b2(safetyhook::Context& ctx) noexcept {
     if (!g_b2_on.load(std::memory_order_acquire)) return;
+    slot_branch_leave();  // first: the host's triple back before anything else runs
     const uint32_t result = rdv<uint32_t>(ctx.rbp + kB_Result);
     BranchCall b = t_branch;
     t_branch.set = false;
@@ -660,7 +693,8 @@ struct SlotScope {
 std::atomic<uint64_t> g_slot_other_thread{0};
 bool slot_here() noexcept {
     if (!g_slot_on.load(std::memory_order_acquire)) return false;
-    const uint32_t tid = server_thread_id();
+    // The logic thread (B1 learns it): until a branch was seen, nothing is done here (the game's own slot as it is).
+    const uint32_t tid = g_logic_tid.load(std::memory_order_acquire);
     if (!tid) return false;
     if (GetCurrentThreadId() != tid) {
         g_slot_other_thread.fetch_add(1, std::memory_order_relaxed);
@@ -684,8 +718,77 @@ void slot_outermost() noexcept {
     g_slots = pfs::FocusSlots{};
 }
 
-// The focus probe (see kFS). FR: whose request the server loop is handing to ServerNet::OnRecvPacket; with the
-// per-player slot on, user 2's request runs with user 2's own triple in the host's manager.
+// The per-player slot's branch window (2026-11-25 redo, on the LOGIC thread): B1 -> B2 of the StageBranchStateReq
+// handler, around its call of the branch step (the condition check that reads the focus), when the branch is user 2's
+// of a scene of its OWN (its id among the 2356-learned ones) in the HOST's manager. Only with B2 hooked (a window that
+// never closes: none). Its other branches and the host's run with the host's triple, as without the fix.
+void slot_branch_enter(uintptr_t mgr, uint64_t seq) noexcept {
+    t_b_mgr = 0;
+    t_b_token = pfs::FocusSlots::kRefused;
+    if (!g_b2_on.load(std::memory_order_acquire) || !slot_here()) return;
+    slot_outermost();  // a leave missed earlier on this thread: closed before this piece of work
+    if (!seq || !g_u2_own.has(seq)) {
+        g_slot_u2_passed.fetch_add(1, std::memory_order_relaxed);
+        return;
+    }
+    uint32_t key = 0;
+    const uintptr_t hm = host_mgr_live(&key);
+    if (!hm || mgr != hm) {  // its own scene in its OWN manager: its focus is apart already
+        g_slot_u2_passed.fetch_add(1, std::memory_order_relaxed);
+        return;
+    }
+    // Review 2026-11-25 (pp59): the first to see another host manager (a reload) asks the reset itself.
+    if (g_host_mgr.exchange(hm, std::memory_order_acq_rel) != hm)
+        g_slot_reset_all.store(true, std::memory_order_release);
+    if (key) g_host_key.store(key, std::memory_order_relaxed);
+    t_b_mgr = hm;
+    t_b_token = slot_enter(hm, pfs::Owner::User2);
+    g_slot_u2[0].fetch_add(1, std::memory_order_relaxed);
+}
+void slot_branch_leave() noexcept {
+    if (t_b_mgr) slot_leave(t_b_mgr, t_b_token);
+    t_b_mgr = 0;
+    t_b_token = pfs::FocusSlots::kRefused;
+}
+
+// BUG 2's talk window (2026-11-25, on the LOGIC thread): C0 -> C of the InteractionPreemptionStepReq 2642 handler,
+// around its path check 0x2E3C180, for user 2's talk (the requester actor r13 is its character): the check runs with
+// user 2's own focus triple in the host's manager. Why: while the host is in a talk (its talk's stage holds the host
+// manager's focus), every talk of the friend's was refused with 0x58C8345D, which is neither preempt error (cs127c's
+// values) and comes from inside that check; its stage-chart condition (0x2126920) reads the FIELD OWNER's manager. The
+// earlier try of this (0f4af72, cs125b) ran on the network thread and tested nothing (cs125d). The NPC of the host's
+// own talk, while the host's focus is set, is left to the game (its one-talker rule).
+void on_c0(safetyhook::Context& ctx) noexcept {
+    t_c_mgr = 0;
+    t_c_token = pfs::FocusSlots::kRefused;
+    if (!g_c0_on.load(std::memory_order_acquire) || !slot_here()) return;
+    slot_outermost();  // a leave missed earlier on this thread: closed before this piece of work
+    const uint32_t user = user_key_of(ctx.r13);
+    if (!user || user != server_user2_user_key()) return;  // the host's (or anyone else's) talk: as it is
+    uint32_t key = 0;
+    const uintptr_t hm = host_mgr_live(&key);
+    if (!hm) return;
+    const uint32_t npc = rdv<uint32_t>(ctx.rbp + kC_Npc);
+    const bool host_in_focus = rdv<uint64_t>(hm + kMgr_FocusA0) != 0 || rdv<uint64_t>(hm + kMgr_Focus90) != 0;
+    if (npc && npc == g_host_talk_npc.load(std::memory_order_relaxed) && host_in_focus) {
+        g_slot_talks_left.fetch_add(1, std::memory_order_relaxed);
+        return;
+    }
+    if (g_host_mgr.exchange(hm, std::memory_order_acq_rel) != hm) g_slot_reset_all.store(true, std::memory_order_release);
+    if (key) g_host_key.store(key, std::memory_order_relaxed);
+    t_c_mgr = hm;
+    t_c_token = slot_enter(hm, pfs::Owner::User2);
+    g_slot_talks.fetch_add(1, std::memory_order_relaxed);
+}
+void slot_talk_leave() noexcept {
+    if (t_c_mgr) slot_leave(t_c_mgr, t_c_token);
+    t_c_mgr = 0;
+    t_c_token = pfs::FocusSlots::kRefused;
+}
+
+// The focus probe (see kFS). FR: whose request the server loop is handing to ServerNet::OnRecvPacket. This is the
+// NETWORK thread (cs125d): it only hands the packets on; the handlers and the focus writes run on the logic thread, so
+// the per-player slot does nothing here any more (2026-11-25 redo; the counters stay).
 void on_fr1(safetyhook::Context& ctx) noexcept {
     if (!g_fr1_on.load(std::memory_order_acquire)) return;
     // cs121a: user 2's requests come here with the HOST's session in r8 ([r15+0x18]); OnRecvPacket's entry hook
@@ -694,54 +797,26 @@ void on_fr1(safetyhook::Context& ctx) noexcept {
     t_recv_u2 = server_packet_is_user2(ctx.r9) ? 1u : 0u;
     g_recv_all.fetch_add(1, std::memory_order_relaxed);
     if (t_recv_u2) g_recv_u2.fetch_add(1, std::memory_order_relaxed);
-    t_fr_token = pfs::FocusSlots::kRefused;
-    t_fr_mgr = 0;
-    if (!slot_here()) return;
-    slot_outermost();
-    if (!t_recv_u2) return;
-    // pp58 (2026-11-25): only user 2's branch and chart-event requests about a scene of its OWN (StageBranchStateReq
-    // 2644 and the stage chart event Req 2200 on 3732, 2880 / 2591 on 2976; each payload starts with the u64
-    // sequencer), where the branch step's focus check runs. Its other requests (movement: hundreds a second) and its
-    // requests about any other stage run with the host manager's own triple, as without the fix.
-    // (Its talks are NOT taken: cs125b, 2026-11-25, ran them with its own triple and the host's talk still refused the
-    // friend's talk to any NPC with 0x58C8345D: that check reads some other shared state.)
-    uint16_t op = 0;
-    uint64_t seq = 0;
-    if (!rd(ctx.r9, op) || (op != shp::kOpBranchReq && op != shp::kOpChartEvent) ||
-        !rd(ctx.r9 + troc::kHeaderSize, seq) || !g_u2_own.has(seq)) {
-        g_slot_u2_passed.fetch_add(1, std::memory_order_relaxed);
-        return;
-    }
-    uint32_t key = 0;
-    const uintptr_t mgr = host_mgr_live(&key);
-    if (!mgr) return;
-    // Review 2026-11-25 (pp59): this request may be the first to see another host manager (a reload), before the
-    // module's refresh does; the refresh then sees no change. So the reset is asked here too: user 2's kept triple
-    // holds scene ids of the old manager (applied by slot_enter's housekeeping, depth 0 here after slot_outermost).
-    if (g_host_mgr.exchange(mgr, std::memory_order_acq_rel) != mgr)
-        g_slot_reset_all.store(true, std::memory_order_release);
-    if (key) g_host_key.store(key, std::memory_order_relaxed);
-    t_fr_mgr = mgr;
-    t_fr_token = slot_enter(mgr, pfs::Owner::User2);
-    g_slot_u2[0].fetch_add(1, std::memory_order_relaxed);
 }
 void on_fr2(safetyhook::Context&) noexcept {
-    if (t_fr_mgr) slot_leave(t_fr_mgr, t_fr_token);
-    t_fr_token = pfs::FocusSlots::kRefused;
-    t_fr_mgr = 0;
     t_recv_u2 = 0;
     t_recv_any = 0;
 }
 // what: 0 set (FS), 1 undo (FU), 2 clear at a stage's end (FD).
 void focus_event(uint32_t what, uintptr_t mgr, uint64_t new_id, uintptr_t scene, uint64_t ret) noexcept {
-    const bool u2req = t_recv_u2 != 0;
+    // 2026-11-25 redo (cs125d): the focus is written on the LOGIC thread, where FR's flags (the network thread) are
+    // never set. "Inside a request" is now inside a branch handler's step (B1 -> B2) on this thread; user 2's when its
+    // sequencer is one of user 2's branch sequencers.
+    const BranchCall& br = t_branch;
+    const bool in_branch = br.set;
+    const bool u2req = in_branch && g_u2_branch_seqs.has(br.seq);
     g_focus_n[what][u2req ? 1 : 0].fetch_add(1, std::memory_order_relaxed);
     const auto rva = [](uint64_t a) -> uint64_t {
         return a >= g_base && a - g_base < kImageSize3732 ? a - g_base : 0;
     };
     const uintptr_t u2mgr = g_u2_mgr.load(std::memory_order_relaxed);
     p::Event e;
-    e.v[0] = static_cast<uint64_t>(what) | static_cast<uint64_t>(u2req) << 8 | static_cast<uint64_t>(t_recv_any) << 9 |
+    e.v[0] = static_cast<uint64_t>(what) | static_cast<uint64_t>(u2req) << 8 | static_cast<uint64_t>(in_branch) << 9 |
              static_cast<uint64_t>(mgr && mgr == u2mgr) << 10 |
              static_cast<uint64_t>(scene && g_u2_own.has(rdv<uint64_t>(scene + kBF_SceneWord))) << 11;
     e.v[1] = mgr;
@@ -1088,8 +1163,8 @@ std::string line_of(const p::Event& e) {
                             : std::string("a stage's END (clears the focus if it was the focus)"),
                 v[1], u2mgr ? " (USER 2's own manager)" : "", v[4], v[2], v[3], cur,
                 what == 0 && cur && (cur & stp::kStageMask) && cur != v[5] ? " TAKEN FROM ANOTHER STAGE" : "", scene,
-                u2req ? "inside a request of USER 2's session" : any ? "inside a request of the host's session"
-                                                                  : "outside any request (a tick)",
+                u2req ? "inside USER 2's branch request" : any ? "inside a branch request (not user 2's)"
+                                                               : "outside any branch request (a tick or another request)",
                 ret ? std::format(" | from exe+0x{:X}", ret) : std::string());
         }
         case kEOwnScene: {
@@ -1164,7 +1239,40 @@ void summary() {
               g_out_funcnpc[5].load(), g_limited.load(), g_lost.load());
 }
 
+// BUG 2 (2026-11-25, scratchpad errname73.py / errname73b.py on the 3732 exe): the joined player's talk is refused
+// with 0x58C8345D while the host talks. The two preempt errors' globals (filled at start from their names): the
+// requester already holding a preemption ([comp+0xF0], 0x2359089 / 0xC958F21) and the NPC's reserve 0x235D030
+// failing (0x235BDB9 / 0x2A33ED0). Their values, once, name which one it is.
+constexpr uintptr_t kErrAlreadyPreempted = 0x71D6974, kErrAlreadyPreempting = 0x71D6978;
+void preempt_errors_once() {
+    static bool said = false;
+    if (said || !g_base) return;
+    const uint32_t ed = rdv<uint32_t>(g_base + kErrAlreadyPreempted), ing = rdv<uint32_t>(g_base + kErrAlreadyPreempting);
+    if (!ed && !ing) return;  // not filled yet: the next minute
+    said = true;
+    log::info("ShopProbe: the game's preempt errors: eErrNoAlreadyPreemptedActor 0x{:08X} (the NPC's reserve failed), "
+              "eErrNoAlreadyPreemptingActor 0x{:08X} (the requester already holds one); the friend's refusals while the "
+              "host talks carry 0x58C8345D",
+              ed, ing);
+    // cs127c: 0x58C8345D is neither. Every error name's global sits in 0x71B0000..0x71E0000 (scratchpad
+    // errtable73.csv, the registrar 0x164E1D0's globals): the ones holding 0x58C8345D, named offline from that table.
+    std::string hits;
+    int n = 0;
+    for (uintptr_t rva = 0x71B0000; rva < 0x71E0000 && n < 8; rva += 0x1000) {
+        uint32_t page[0x400];
+        if (!game::fast_read(g_base + rva, page, sizeof page)) continue;
+        for (size_t i = 0; i < std::size(page) && n < 8; ++i) {
+            if (page[i] == 0x58C8345Du) {
+                hits += std::format("{}0x{:X}", n ? ", " : "", rva + i * 4);
+                ++n;
+            }
+        }
+    }
+    log::info("ShopProbe: error globals holding 0x58C8345D (the friend's talk refusal): {}", hits.empty() ? "none" : hits);
+}
+
 void branch_summary() {
+    preempt_errors_once();
     if (!g_b2_on.load()) return;
     log::info("ShopProbe branch summary: the StageBranchStateReq handler's 0x2B56870: user 2 {} (refused {}), the host "
               "/ others {} (refused {}), without B1 {} | user 2's branch sequencers seen {} | the step's refusals at "
@@ -1183,13 +1291,16 @@ void branch_summary() {
     }
     if (g_slot_on.load()) {
         // g_slots' counters are the server thread's plain integers, read here as they are (a log line only).
-        log::info("ShopProbe per-player focus slot: user 2's branch / chart-event requests about its own scenes {} (its "
-                  "other requests passed by {}), its stages' setter {} / ends {} / ticks {}, the "
+        log::info("ShopProbe per-player focus slot (the logic thread T{}): user 2's branches of its own scenes in the "
+                  "host's manager {} (other branches passed by {}), its talks {} (to the NPC of the host's own talk, "
+                  "left to the game: {}; the C0 window {}), its stages' setter {} / ends {} / ticks {}, the "
                   "host's stages inside its requests {} | swaps {} failed {} overflow {} unbalanced {} repairs {} missed "
                   "leaves {} (unwound {}, dropped {}), resets for another manager {} | other managers {}, other "
                   "threads {} | the host's manager 0x{:X} "
                   "(character 0x{:08X})",
-                  g_slot_u2[0].load(), g_slot_u2_passed.load(), g_slot_u2[1].load(), g_slot_u2[2].load(),
+                  g_logic_tid.load(), g_slot_u2[0].load(), g_slot_u2_passed.load(), g_slot_talks.load(),
+                  g_slot_talks_left.load(), g_c0_on.load() ? "hooked" : "NOT hooked", g_slot_u2[1].load(),
+                  g_slot_u2[2].load(),
                   g_slot_u2[3].load(),
                   g_slot_host_in_u2.load(), g_slots.swaps(), g_slots.failed(), g_slots.overflow(), g_slots.unbalanced(),
                   g_slots.repairs(), g_slots.missed(), g_slot_unwinds.load(), g_slot_dropped.load(),
@@ -1289,9 +1400,11 @@ bool install_focus_slot(std::span<const gad::Section> secs) {
     if (!failed) {
         g_fd_on.store(true, std::memory_order_release);  // the stage-end detour logs the focus ends
         g_slot_on.store(true, std::memory_order_release);
-        log::info("ShopProbe: the per-player focus slot (user2_focus_slot=1) is ON: user 2's branch / chart-event "
-                  "requests about its own scenes and its own stages' focus work run with its own +0x90 / +0x98 / +0xA0 "
-                  "in the host's manager");
+        log::info("ShopProbe: the per-player focus slot (user2_focus_slot=1) is ON, on the server's logic thread (learned "
+                  "at the first branch): user 2's branches of its own scenes in the host's manager, its talks' check "
+                  "(C0 {}; not to the NPC of the host's own talk) and its own stages' focus work run with its own +0x90 "
+                  "/ +0x98 / +0xA0 in the host's manager",
+                  g_c0_on.load() ? "hooked" : "NOT hooked");
         return true;
     }
     log::error("ShopProbe: the per-player focus slot (user2_focus_slot=1) stays OFF ({} failed)", failed);
@@ -1317,6 +1430,12 @@ void install(std::span<const gad::Section> secs) {
     }
     if (context_ok(secs, kCCtx, kCCtxBytes, "the 2671 handler's call 0x2B36860")) {
         mid(kC, kCPatch, kCBytes, on_c, g_c_hook, g_c_on, "C, the 2671's result 0x29E9282");
+        // BUG 2's talk window (the per-player slot, 2026-11-25): C0 right before the check, installed after C (C's
+        // context check read these bytes first); without C no window (it would never close).
+        if (g_c_on.load() && g_slot_wanted.load()) {
+            mid(kC0, kC0Patch, kC0Bytes, on_c0, g_c0_hook, g_c0_on,
+                "C0, before the 2642 handler's check 0x2E3C180 (the talk window)");
+        }
     }
     if (context_ok(secs, kBCtx, kBCtxBytes, "the StageBranchStateReq handler's vf48 0x2D55B36") &&
         context_ok(secs, kBCallCtx, kBCallCtxBytes, "the handler's call 0x2B56870")) {
@@ -1471,6 +1590,8 @@ void shop_probe_set_focus_slot(bool on) {
 }
 
 bool shop_probe_active() noexcept { return g_on.load(std::memory_order_relaxed); }
+
+uint32_t shop_probe_logic_thread() noexcept { return g_logic_tid.load(std::memory_order_acquire); }
 
 bool shop_probe_gate_live() noexcept { return g_g_on.load(std::memory_order_acquire); }
 

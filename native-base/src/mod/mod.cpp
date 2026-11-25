@@ -1239,6 +1239,12 @@ DWORD WINAPI worker(LPVOID) {
         // P8 session 10 (pendientes/p8-impl-freeze-watchdog.md): before ANY module installs a hook, so that every
         // mid hook installed through p8_install_mid gets its thread mark. Both roles; its own thread.
         session2::freeze_watchdog_start(in_game && cfg.s2_enabled && cfg.s2_freeze_watchdog, cfg.s2_guest);
+        if (cfg.s2_dev_server_stall_ms && cfg.s2_enabled && !cfg.s2_guest) {  // TEST ONLY (config.h)
+            session2::server_dev_stall(cfg.s2_dev_server_stall_ms, cfg.s2_dev_server_stall_op,
+                                       cfg.s2_dev_server_stall_nth);
+            log::warn("Config: TEST ONLY: dev_server_stall_ms {}: ServerRunThread sleeps once at user 2's #{} Req {}",
+                      cfg.s2_dev_server_stall_ms, cfg.s2_dev_server_stall_nth, cfg.s2_dev_server_stall_op);
+        }
 
         if (cfg.startup_delay_ms > 0 && stop_requested(cfg.startup_delay_ms)) return 0;
 

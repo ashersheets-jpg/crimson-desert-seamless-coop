@@ -71,6 +71,9 @@ bool server_user2(uintptr_t& user2);
 bool server_session_user(uintptr_t session, uintptr_t& user);
 // ServerRunThread's id (the thread session 2 was built on; 0 = not yet).
 uint32_t server_thread_id();
+// TEST ONLY ([session2] dev_server_stall_ms, config.h): ServerRunThread sleeps `ms` once, at user 2's `nth` Req of
+// `op`. Call before the server hooks run; ms 0 = nothing.
+void server_dev_stall(uint32_t ms, uint32_t op, uint32_t nth);
 // P8 S2 (observer_milestone.h), any thread, read only: the live session 2 of
 // the current epoch (0 = none), user 2's user key (its MainUserDataStartAck)
 // and character key (its MainPlayerDataStartAck of this epoch; 0 = unknown),

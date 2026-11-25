@@ -239,6 +239,9 @@ Config load_config(const std::wstring& ini_path) {
     c.s2_dismount_probe = read_uint(ini_path, L"session2", L"dismount_probe", 0) != 0;
     c.s2_divergence_probe = read_uint(ini_path, L"session2", L"divergence_probe", 0) != 0;
     c.s2_freeze_watchdog = read_uint(ini_path, L"session2", L"freeze_watchdog", 0) != 0;
+    c.s2_dev_server_stall_ms = std::min(read_uint(ini_path, L"session2", L"dev_server_stall_ms", 0), 120000u);
+    c.s2_dev_server_stall_op = std::min(read_uint(ini_path, L"session2", L"dev_server_stall_op", 2723), 0xFFFFu);
+    c.s2_dev_server_stall_nth = std::max(read_uint(ini_path, L"session2", L"dev_server_stall_nth", 2), 1u);
     // P8 remote movement (pendientes/p8-impl-interp-remota.md).
     c.s2_remote_interp = narrow(read_string(ini_path, L"session2", L"remote_interp", "0"));
     c.s2_horse_follow = narrow(read_string(ini_path, L"session2", L"horse_follow", "0"));

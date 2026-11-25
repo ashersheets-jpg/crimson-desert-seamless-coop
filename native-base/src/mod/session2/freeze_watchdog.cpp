@@ -264,6 +264,110 @@ std::string hook_text(uint32_t tid) {
                        now - m->leave_ms.load(std::memory_order_relaxed));
 }
 
+// ---------------------------------------------------------------- a sample of another thread, on request
+// (freeze_sample_thread_text: server.cpp's stall watch). Its own module list and stack buffer, one caller at a time
+// (g_req_busy): never the watchdog thread's state.
+
+constexpr uint32_t kReqMaxSamples = 60;  // suspensions per session
+constexpr size_t kReqReturns = 20;
+struct ReqModules {
+    std::array<Range, 512> mods{};
+    size_t n = 0;
+    uintptr_t exe_base = 0, exe_end = 0, self_base = 0, self_end = 0;
+    uint64_t at = 0;
+};
+ReqModules g_rm;
+alignas(16) uint8_t g_req_stack[kStackCopy];
+std::atomic<bool> g_req_busy{false};
+uint32_t g_req_taken = 0;
+// Resolved at the start (freeze_watchdog_start), never during a stall: GetModuleHandleW / GetProcAddress may wait for
+// the loader, which a stalled thread may hold.
+NtQueryInformationThreadFn g_req_ntqit = nullptr;
+
+// As refresh_modules (K32EnumProcessModules / GetModuleInformation / GetModuleBaseNameA read the loader's list without
+// its lock), into g_rm; the exe and this module are found in the list.
+void req_modules_refresh(uint64_t now) {
+    HMODULE list[512];
+    DWORD need = 0;
+    g_rm.n = 0;
+    g_rm.at = now;
+    if (!EnumProcessModules(GetCurrentProcess(), list, sizeof list, &need)) return;
+    const size_t n = std::min<size_t>(need / sizeof(HMODULE), std::size(list));
+    const uintptr_t self = reinterpret_cast<uintptr_t>(&req_modules_refresh);
+    const uintptr_t exe = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));  // the PEB's image base: no lock
+    for (size_t i = 0; i < n && g_rm.n < g_rm.mods.size(); ++i) {
+        MODULEINFO mi{};
+        if (!GetModuleInformation(GetCurrentProcess(), list[i], &mi, sizeof mi)) continue;
+        Range& r = g_rm.mods[g_rm.n++];
+        r.base = reinterpret_cast<uintptr_t>(mi.lpBaseOfDll);
+        r.end = r.base + mi.SizeOfImage;
+        if (!GetModuleBaseNameA(GetCurrentProcess(), list[i], r.name, sizeof r.name)) strcpy_s(r.name, "?");
+        if (r.base == exe) {
+            g_rm.exe_base = r.base;
+            g_rm.exe_end = r.end;
+        }
+        if (self >= r.base && self < r.end) {
+            g_rm.self_base = r.base;
+            g_rm.self_end = r.end;
+        }
+    }
+}
+
+const Range* req_module_of(uintptr_t v) {
+    for (size_t i = 0; i < g_rm.n; ++i) {
+        if (v >= g_rm.mods[i].base && v < g_rm.mods[i].end) return &g_rm.mods[i];
+    }
+    return nullptr;
+}
+
+// Committed private executable memory (hook trampolines and stubs, ours or another mod's): VirtualQuery, after the
+// resume only.
+bool req_private_exec(uintptr_t v) {
+    MEMORY_BASIC_INFORMATION mbi{};
+    if (VirtualQuery(reinterpret_cast<void*>(v), &mbi, sizeof mbi) != sizeof mbi) return false;
+    constexpr DWORD kExec = PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY;
+    return mbi.State == MEM_COMMIT && mbi.Type == MEM_PRIVATE && (mbi.Protect & kExec) != 0;
+}
+
+std::string req_where(uintptr_t v) {
+    if (v >= g_rm.exe_base && v < g_rm.exe_end) return std::format("exe+0x{:X}", v - g_rm.exe_base);
+    if (v >= g_rm.self_base && v < g_rm.self_end) return std::format("cdmp+0x{:X} [mod]", v - g_rm.self_base);
+    if (const Range* m = req_module_of(v)) return std::format("{}+0x{:X}", m->name, v - m->base);
+    if (req_private_exec(v)) return std::format("0x{:X} [stub]", v);
+    return std::format("0x{:X}", v);
+}
+
+// After the resume: the stack values inside any module's code (past its headers) or private executable memory, with a
+// call right before them. VirtualQuery (the private memory test) can wait on the address-space lock while the loader
+// maps something (LESSONS 2026-11-23: seconds), so it is asked only for values outside every module and outside the
+// sampled thread's own stack [stack_lo, stack_hi), at most kReqQueries times per sample.
+constexpr int kReqQueries = 64;
+std::string req_returns(size_t copied, uintptr_t stack_lo, uintptr_t stack_hi) {
+    std::string s;
+    size_t found = 0;
+    int queries = 0;
+    for (size_t i = 0; i + 8 <= copied && found < kReqReturns; i += 8) {
+        uint64_t v = 0;
+        std::memcpy(&v, g_req_stack + i, 8);
+        if (v < 0x10000 || v >= 0x7FFFFFFF0000ull) continue;
+        const Range* m = req_module_of(v);
+        if (m) {
+            if (v < m->base + 0x1000) continue;
+        } else {
+            if (stack_lo && v >= stack_lo && v < stack_hi) continue;  // a saved frame / local pointer: never code
+            if (queries >= kReqQueries) continue;
+            ++queries;
+            if (!req_private_exec(v)) continue;
+        }
+        uint8_t before[7];
+        if (!game::fast_read(v - 7, before, sizeof before) || !fwd::is_call_before(before)) continue;
+        s += found ? ", " : "";
+        s += m ? req_where(v) : std::format("0x{:X} [stub]", v);  // private executable memory, tested above
+        ++found;
+    }
+    return found ? s : std::string("none found");
+}
+
 // ---------------------------------------------------------------- the thread
 
 enum class Source : uint8_t { None, Main, Present };
@@ -395,6 +499,12 @@ DWORD WINAPI watch_thread(LPVOID) {
 }  // namespace
 
 void freeze_watchdog_start(bool on, bool guest) {
+    // The on-request sampler (freeze_sample_thread_text) works with the watchdog off too: its ntdll entry now.
+    if (!g_req_ntqit) {
+        if (HMODULE nt = GetModuleHandleW(L"ntdll.dll")) {
+            g_req_ntqit = reinterpret_cast<NtQueryInformationThreadFn>(GetProcAddress(nt, "NtQueryInformationThread"));
+        }
+    }
     if (!on || g_started.exchange(true)) return;
     g_guest = guest;
     g_wanted.store(true);
@@ -415,6 +525,39 @@ safetyhook::MidHookFn freeze_watchdog_wrap_mid(safetyhook::MidHookFn fn, const c
 
 uint16_t freeze_watchdog_register(const char* tag, const char* what) {
     return freeze_watchdog_wanted() ? new_id(tag, what) : 0;
+}
+
+std::string freeze_sample_thread_text(uint32_t tid) {
+    if (!tid || tid == GetCurrentThreadId()) return "not sampled (no other thread)";
+    bool idle = false;
+    if (!g_req_busy.compare_exchange_strong(idle, true, std::memory_order_acquire)) {
+        return "not sampled (another sample is being taken)";
+    }
+    struct Done {
+        ~Done() { g_req_busy.store(false, std::memory_order_release); }
+    } done;
+    if (g_req_taken >= kReqMaxSamples) return std::format("not sampled (the session's {} are taken)", kReqMaxSamples);
+    const uint64_t now = GetTickCount64();
+    if (!g_rm.n || now - g_rm.at >= 30000) req_modules_refresh(now);
+    HANDLE h = OpenThread(THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT | THREAD_QUERY_INFORMATION, FALSE, tid);
+    if (!h) return std::format("not sampled (OpenThread failed, error {})", GetLastError());
+    uintptr_t base = 0, limit = 0;
+    ThreadBasicInfo tbi{};
+    if (g_req_ntqit && g_req_ntqit(h, 0, &tbi, sizeof tbi, nullptr) == 0 && tbi.teb) {
+        const auto teb = reinterpret_cast<uintptr_t>(tbi.teb);
+        game::safe_read(teb + offsetof(NT_TIB, StackBase), &base, sizeof base);
+        game::safe_read(teb + offsetof(NT_TIB, StackLimit), &limit, sizeof limit);
+    }
+    ++g_req_taken;
+    const uint64_t t0 = qpc_us();
+    const fwd::StackSample s = fwd::sample_stack(h, limit, base, g_req_stack, kStackCopy);
+    const uint64_t us = qpc_us() - t0;
+    CloseHandle(h);
+    if (!s.ok) return std::format("sample failed ({}, error {})", s.fail ? s.fail : "?", s.err);
+    std::string text = std::format("rip {} rsp 0x{:X} ({} B of stack copied, suspended {} us) | returns: {}",
+                                   req_where(s.rip), s.rsp, s.copied, us, req_returns(s.copied, limit, base));
+    if (freeze_watchdog_wanted()) text += " | " + hook_text(tid);
+    return text;
 }
 
 FreezeMark::FreezeMark(uint16_t id) noexcept : id_(id) {
