@@ -386,6 +386,7 @@ Config load_config(const std::wstring& ini_path) {
     c.s2_death_penalty = static_cast<int>(read_uint(ini_path, L"session2", L"death_penalty", 0));
     c.s2_death_penalty_item = read_uint(ini_path, L"session2", L"death_penalty_item", 0);
     c.s2_fog_share = read_uint(ini_path, L"session2", L"fog_share", 0) != 0;
+    c.s2_level_state_share = narrow(read_string(ini_path, L"session2", L"level_state_share", "0"));
     c.s2_knowledge_grant = read_uint(ini_path, L"session2", L"knowledge_grant", 0) != 0;
     c.s2_quest_own_progress = read_uint(ini_path, L"session2", L"quest_own_progress", 0) != 0;
     c.s2_quest_shared_credit = read_uint(ini_path, L"session2", L"quest_shared_credit", 0) != 0;

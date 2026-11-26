@@ -1,6 +1,7 @@
 #include "mod/session2/session2.h"
 #include "mod/session2/shop_twin.h"
 #include "mod/session2/fog_share.h"
+#include "mod/session2/level_state_share.h"
 #include "mod/session2/knowledge_grant.h"
 #include "mod/session2/ai_handoff.h"
 #include "mod/session2/damage_range.h"
@@ -205,6 +206,7 @@ DWORD WINAPI probe_thread(LPVOID) {
         if (clock_gate_active()) log::info("Session2 probe (minute {}): {}", minute, clock_gate_describe());
         log::info("Session2 probe (minute {}): {}", minute, scene_req_guard_describe());
         if (const std::string k = knowledge_grant_describe(); !k.empty()) log::info("Session2 probe (minute {}): {}", minute, k);
+        if (const std::string k = level_state_share_describe(); !k.empty()) log::info("Session2 probe (minute {}): {}", minute, k);
         if (identity_probe_active()) log::info("Session2 probe (minute {}): {}", minute, identity_probe_describe());
         if (identity_fix_wanted()) log::info("Session2 probe (minute {}): {}", minute, identity_fix_describe());
         if (guest_save_mode() != gsv::Mode::Off) {
@@ -254,6 +256,7 @@ void sniffer_fanout(const uint8_t* packet, size_t size, uint64_t t_us, bool serv
     shop_twin_host_sniffed(packet, size, server_to_client);       // Co-op+ 2026-11-09: the host's shop choices
     fog_share_host_sniffed(packet, size, server_to_client);
     dye_share_host_sniffed(packet, size, server_to_client);  // Co-op+ 2026-11-17: the host's dye
+    level_state_share_host_sniffed(packet, size, server_to_client);  // Co-op+ 2026-11-26 B10: game level states
     lootr_host_sniffed(packet, size, server_to_client);      // Co-op+ 2026-11-10 Lootr probe
     anti_grief_host_sniffed(packet, size, server_to_client);  // Co-op+ 2026-11-09 B19: the NPCs the host talks to       // Co-op+ 2026-11-09 B04: the host's map fog
     door_trace_packet(server_to_client ? DoorTraceStage::HostClientAck : DoorTraceStage::HostClientReq,

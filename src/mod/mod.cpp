@@ -76,6 +76,7 @@
 #include "mod/session2/stage_candidate_guard.h"
 #include "mod/session2/quest_route.h"
 #include "mod/session2/fog_share.h"
+#include "mod/session2/level_state_share.h"
 #include "mod/session2/knowledge_grant.h"
 #include "mod/session2/ai_handoff.h"
 #include "mod/session2/damage_range.h"
@@ -1306,6 +1307,7 @@ DWORD WINAPI worker(LPVOID) {
             session2::lootr_set_kill_hits(cfg.s2_guest ? 0 : cfg.s2_lootr_kill_hits);
             session2::handle_guard_start();  // both roles (tcB342)
             session2::fog_share_start(cfg.s2_fog_share, cfg.s2_guest);
+            session2::level_state_share_start(cfg.s2_level_state_share, cfg.s2_guest);  // B10 (Co-op+ 11-26)
             session2::knowledge_grant_start(cfg.s2_knowledge_grant, cfg.s2_guest);
             session2::quest_route_start(cfg.s2_quest_own_progress, cfg.s2_quest_shared_credit, cfg.s2_guest);
             session2::merchant_unhide_set_mirror(cfg.s2_hide_mirror != 0);
