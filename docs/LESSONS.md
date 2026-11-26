@@ -1009,3 +1009,10 @@ Rule: a file is "off" only when NOTHING on by default calls into it. Before skip
 its install / shared functions (identity_shared_hooks_install, npc_action_probe_install, applied_mid_ready, ...);
 and after the first live run, compare every "REFUSED / not the expected code / could not be installed / stays off"
 line with the last run on the old build (pp65b-mountfight on 3732): a refusal that is new is a port gap.
+
+## The game's popups close on a HELD key; a tap does nothing (2026-11-26, cs139 / cs139b / cs139c on 3840)
+What happened: 1.0.0.3840 opens "Extra Rewards List" on the first load of a save made before it ("[Enter] Confirm" by
+its icon). Three one-copy runs tried Enter (0.2 / 0.9 / 1.2 s), a Space tap, E, F, Esc and a click on its Confirm:
+none closed it; Space held 2 s did. The same as the tutorial popups on 2026-11-04 (quick Space taps: no; held: yes).
+Rule: for any game popup in a test, try the held key first (Space 2 s), with a shot after it; and a "passed" step
+whose shots show a popup over the game did not test what it claims (look at the shots before calling it a pass).

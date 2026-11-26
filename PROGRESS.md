@@ -12169,3 +12169,8 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   cause: their NPCs' holds dropped).
 - 18:10 cs139 (one copy): what closes the popup: Enter held 900 ms, Space, a click on Confirm, E, Esc, shots after
   each. (Rule slip ~18:12: a no-op `echo` through Bash while cs139 ran.)
+- 18:13-18:24 cs139 / cs139b / cs139c: Enter 0.2 / 0.9 / 1.2 s, Space 0.15 s, E, F, Esc and a click on Confirm do NOT
+  close the game's "Extra Rewards List"; Space HELD 2 s does (cs139c a1), as the tutorial popups (2026-11-04). Our
+  "Seamless Co-op+" guide card only draws (60 s, no keys) and the layer does not count the popup as a game menu; in
+  solo UiPause lets the game pause for it. Test kit: twocopy.ps1 holds Space 2 s on each game after the join (and in
+  the one-copy flow). Native 29e5ae7 (kTsSector +0x558), synced, pushed (0a8feb4). Package 0a8feb44.
