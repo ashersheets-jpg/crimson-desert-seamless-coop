@@ -2,13 +2,14 @@
 Use this instead of a03a63b9; **both players need the same build**.
 
 From <@816395856902357032> and <@535093164910968833>'s two-PC runs:
-- **Story stops on a03a63b9:** Shia's pendant hanging in its pickup, the castle door with no prompt, a mission that wouldn't start. My main suspect is a03a63b9's fix for talking while the host talks, so it's **switched off again** here (while the host talks, the joined player waits again). Please tell me if the story still stops on this build.
-- **Following the host into a place of its story:** right after "Into the Fog" the host goes up to an Abyss island that only exists in the host's game. Go to my friend dropped the joined player through the world there. Now that fall takes you back to where you were, with a note, and trips there are refused while the host stays. Joining the host on the island isn't solved yet.
-- **An NPC standing still after the joined player talked to it:** a failed hand-over between the two games is now finished properly.
-- **Cutscenes:** the co-op "hold to interact" prompt on your friend no longer shows in cutscenes (on a controller it held back the game's button).
-- Still open: arm wrestling in **solo** on a controller; the host seeming to take no damage in the prologue's fights.
+- **Story stops on a03a63b9** (Shia's pendant, the castle door, a mission that wouldn't start): my main suspect is a03a63b9's fix for talking while the host talks, so it's **switched off again** (the joined player waits for the host's talk again). If anything still won't interact, reloading the save got you past it both times; please tell me if it happens on this build.
+- **Following the host into its story:** after "Into the Fog" the host goes up to an Abyss island that only exists in the host's game, and Go to my friend dropped the joined player through the world. Now that fall takes you back where you were, with a note. Joining the host on the island isn't solved yet.
+- **An NPC standing still after the joined player talked to it:** fixed.
+- **Cutscenes:** no co-op "hold to interact" prompt on your friend during cutscenes (on a controller it held back the game's button).
+- The joined player's own story scenes (e.g. a gate that starts a cutscene) need the host to turn on **Story scenes together** (Co-op tab, Saves & Story; experimental).
+- Still open: solo arm wrestling on a controller; the host taking no damage in the prologue's fights.
 
-Tested with two copies of the game on one PC (Nvidia): the full checklist on 1.0.0.3732 (CHECKLIST), including a trip that ends in the air above the host. Not covered: two PCs over Steam, real internet, AMD / Intel cards, long sessions.
+Tested with two copies of the game on one PC (Nvidia): the full checklist on 1.0.0.3732 (CHECKLIST). Not covered: two PCs over Steam, real internet, AMD / Intel cards, long sessions.
 
 - `...PKGID-shared-world.zip`: the one you want. Run its installer with the game closed.
 - `...-shared-world-mod-manager.zip`: only for manual / Vortex / MO2 installs.

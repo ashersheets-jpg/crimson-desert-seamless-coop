@@ -5,11 +5,14 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
-- 2026-11-25 16:08 NOTHING NEW TO DECIDE. a03a63b9 is POSTED (below). Under way: the full checklist pp61 (31 steps)
-  on 9e10811c (the fall guard, cs130a; the NPC hand-over fault told to both games; no friend prompt in cutscenes),
-  then its post. Being looked into: Arcticwolf's stuck pickup of Shia's pendant on a03a63b9 (a refusal code new in
-  that build; the next host log names it), Edward's solo arm wrestling on a pad (cs129c), the host taking no damage in
-  the prologue's fights.
+- 2026-11-25 21:52 NOTHING NEW TO DECIDE. DONE: b95eef38 POSTED in #download-here by me (pp62: all 30 steps, 1320
+  checks; farfight's luck check re-run and passed; message 1575343130708934797; the slot off, the island fall guard,
+  the hand-over fault told to both games, no friend prompt in cutscenes). Replied to Brycecco + Arcticwolf (their
+  fourth session: the Abyss townsfolk, the revive, the stage offsets, the duel, the grindstone; asked about windows and
+  the portal chest) and to PapiHongo in #general (game version). Next build under way: the duel's stagger, the
+  joined player's townsfolk after a checkpoint revive and with the host high above (the Abyss island), the native
+  stage offsets read 8 bytes off since 3576 (the duplicate guard), a checklist step u2revive; then its full pass.
+- 2026-11-25 17:24 (superseded 21:52) Under way then: pp62 on b95eef38, then its post.
 - 2026-11-25 15:01 DONE: a03a63b9 POSTED in #download-here by me (standing OK; pp60: all 30 checklist steps
   passed, 1296 checks, 0 failed; SAVES OK and the install restored 5/5 in every step; the zips = the files in dist\,
   12.49 MB / 6.81 MB): Borque's endless loading (the trip waits while the host's server is stalled; the host's log
@@ -103,6 +106,15 @@ test save Out, shipped cdmp.ini restored.
   own match; (1) does; (3) is (2) plus moving your friend's real character into the NPC's chair).
   2026-11-22 17:15 update: the joined player's own match now works (B14, cs95b: fee, live bar, a win and its prize),
   so (1) no longer waits on a fix: each player plays its own table match and one shared bar decides. Still your call.
+- 2026-11-25 17:30 QUESTION (B09 / B10, not urgent but the testers hit it): with "Story scenes together
+  (experimental)" OFF (the default), the joined player's game cannot start the story scenes of its OWN story (the
+  shared world prepares user 2's story scenes only with that option): Brycecco 25 Nov, on a new co-op save, "Joiner
+  cannot initiate any sequences that leads to cutscene ... cannot go through gate as joined player due to cutscene".
+  On by default (experimental: the first scene of a step waits for both and plays in both games; scenes that start
+  from a talk do not wait yet; a doubled-NPC defect seen 22 Nov), or keep it off and point testers to it? My
+  recommendation: keep it off for now, say in the next post that the joined player's own story scenes need it, and
+  decide on testers' reports. (Meanwhile: the host's "no damage" is the prologue only: in their later session the
+  host's HP dropped 55 times; the pendant and the castle door both worked after a reload.)
 - 2026-11-22 18:50 QUESTION (not urgent, B10): the shared quest credit (when one of you finishes a step you both
   have, the other gets it too) is built and proven: on, the joined player's step moved 257 ms after the host's (cs93);
   off, nothing moved for it (cs93b). It is a Co-op Settings choice now, OFF by default. On by default, or keep it off?
@@ -11786,3 +11798,61 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   fall guard's window now restarts while held at the goal's height (the next-batch change, in this build);
   README / Nexus / features / CHANGELOG / the post's draft say so. Built (the 14 old native failures; layer tests
   pass). 9e10811c is NOT posted (the slot on); the next package gets the full pass.
+- 17:21-17:23 committed outer b95eef3 (slot off, the window change, kit fixes, docs), pushed; packaged b95eef38 (= the
+  build tree's DLLs). 17:23 pp62 started: the full checklist, 30 steps (fall armwrest shop chest first).
+- 17:24-17:30 Discord (reads): Brycecco 22:19-22:21 UTC: "we ended up getting the pendant after reload", "door is
+  currently working after a reload", "we're testing rn if you want me to join a voice channel and screenshare" (I
+  can't: text only), the video link in a DM (Google Drive folder; not opened during the pass), and earlier "Joiner
+  cannot initiate any sequences that leads to cutscene (experimental cutscene option off) ... cannot go through gate as
+  joined player due to cutscene" (= Story scenes together off: the QUESTION above). Their DM of 18:35 UTC: "the host
+  does not take damage" in a boss fight; their later a03a63b9 session has the host's HP dropping 55 times: the
+  prologue's protection. The slot is OFF in pp62's host log (no "per-player focus slot" line).
+- pp62 so far: fall 53 / 0 (the new checks), armwrest 52 / 0, shop 25 / 0 (the new far spot), chest 49 / 0, static
+  12 / 0, real 14 / 0, fresh 45 / 0, xess 46 / 0.
+- 18:24 Discord: Brycecco 23:10 UTC, "most recent playthrough" (+ zip 18-09-28; Arcticwolf's host zip "Host_4"): the
+  town's shopkeepers vanish for the joined player while the host is in the Abyss / 100-150 m away and come back en
+  masse within 50 m (the host's game runs the NPCs: distance); some "?" shopkeepers T-posed, nobody can use them; the
+  second player's pickup of a ground item plays no animation (the item goes, the bag gets it: Lootr); the joined
+  player's grindstone does nothing (the prompt shows); duel hits make no stagger (health drops); "Neither player can
+  open windows". Zips downloaded after the pass (scratchpad dl_cecco_1125d.sh).
+- pp62 (browser clock): 19:14 loot 50 / 0, 19:23 crime 53 / 0, 19:33 leave 27 / 0, 19:42 door 49 / 0, 19:52 farfight
+  48 / 1 (FAIL "the guest killed at least one enemy far from the host": 13-14 of its hits counted, it went down once
+  and revived with Q, no kill; the known scene-luck check, failed so in pp14 / pp19 / pp26 and passed on re-runs:
+  farfight runs again after the pass), 20:02 farfight2 48 / 0.
+- 19:20-20:05 static work during the pass (Read / Grep / Write only), from the testers' notes and their earlier zips:
+  - Duel without stagger: two layer causes, both native-only: hits_set_react is called only on the old base's path
+    of late_init (g_react false in every native log: no "reacts to" line), and no stagger was ever learnt (blows on
+    us are keyed by a client frame event the native base never hands the layer; the receiver named the old puppet
+    key). Fix ready (scratchpad duel_stagger_fix.py: the switch on the native path, the server's own batch as the
+    duel's sample with its enemy renamed, the friend's real actor as the source, our own sample when theirs is
+    missing) and a test (build/native/cs131.sh: the host takes the bandits' blows, then a duel both ways).
+  - The joined player's townsfolk off for minutes after a checkpoint revive (their first session: the host on the
+    Abyss island 51 cells away, same field, arm check READY, "U off" for 8 minutes): the layer's U revive sends the
+    load requests itself, the server answers with a same-field reload and the client sends no LoadingCompleteReq, so
+    the native MovePhaseTracker stayed MOVE_ASKED (12 minutes) and server_user2_in_world() said no: U-1's dwell, the
+    world anchor, the clock push and the weather all waited. Fix ready (scratchpad native_revive_phase_fix.py: a
+    revive's reload is STABLE at its LoadingFieldDataAck, unit tests) and a checklist step (add_u2revive_step.py:
+    u2revive, U then the host 430 m away, U-1 must arm). The checklist only ever revived with Q.
+  - The schedule stage's fields read 8 bytes short since 3663 (user2_stages_logic.h kSt_*: the [close] lines' "stage
+    at (0, <real x>)", the [state] lines' host stages all "162..162 cells from the host", the owner 0x22F78310): U-f2's
+    duplicate guard never skipped anything (0/0 in every log), the S33 containment's stage identity is 0 for every
+    NPC ("stage=0x0" in NpcActivation [nacimiento]). U-e itself works (pp62-farfight2: 20 NPCs given and driven by
+    user 2). To verify against the 3732 code after the pass (tools/native-port/port3732/stage_layout.py: the ctor's
+    stores and vf13's fields in 3576 vs 3732) before changing the offsets.
+  - Written up in docs/research/two-pc-cecco-arctic-1125.md §4 and three LESSONS entries.
+- pp62 (cont.): 20:21 newsave 104 / 0, 20:29 solostart 51 / 0, 20:38 mounts 53 / 0, 20:47 mountfight 49 / 0, 20:51 nosave
+  7 / 0, 20:59 retry 49 / 0, 21:12 stuck 53 / 0, 21:15 mismatch 9 / 0, 21:27 hostrevive 53 / 0, 21:37 lagrun 50 / 0.
+  TOTAL 1320 pass, 1 fail (farfight's kill, luck), 30 steps. 21:39-21:48 pp62b farfight re-run: 49 / 0 (the kill
+  check passed). SAVES OK and the install restored 5/5 in every step.
+- 21:38-21:45 after the pass: the testers' 23:10 zips (scratchpad dl-cecco-1125d, read only) and the stage layout
+  (tools/native-port/port3732/stage_layout.py: the CommonNPCScheduleStage constructor is the same in 3576 and 3732;
+  owner +0x58, data +0x68, transform +0x98 so the position +0xB4, entries +0x140 / +0x148; our kSt_* are 2976's since
+  the 3576 port). Their fourth session: the host on an Abyss island ~1180 m straight above Hernand (y 1795; its
+  manager ran 0-2 schedule stages there) with the joined player in the town 0-2 cells away: no U-1, no townsfolk (the
+  Abyss report); U-1 armed / drained as designed three times; duel hits all without a reaction; the grindstone
+  (interaction 0x2BA1) accepted by the server, its scene's branch went to the host's character. Native fix ready:
+  scratchpad native_u1_fixes.py (the stage offsets; 300 m apart in height counts as far).
+- 21:51 POSTED b95eef38 in #download-here (message 1575343130708934797, both zips, Brycecco + Arcticwolf tagged; text
+  docs/release/shared-world-playtest/download-b95eef38.txt). 21:52 replies: #play-testing-feedback 1575343389451358249
+  (each item of their list and what the logs show; questions: windows, the portal chest); #general 1575343501120376853
+  (PapiHongo's "game version 2.05.01": made for the current Steam version, the newest build).

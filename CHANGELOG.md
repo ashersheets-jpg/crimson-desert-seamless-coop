@@ -5,8 +5,9 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-Next build (not posted yet), from Brycecco's and Arcticwolf's two-PC session of 25 Nov (a New Co-op Save through the
-prologue, on 614591d0):
+Posted 2026-11-25 21:51 as 0.1.0-alpha+b95eef38 (checklist pp62: all 30 steps, 1320 checks; farfight's kill check
+failed once on the fight's luck and passed on its re-run, pp62b 49 / 0; one PC), from Brycecco's and Arcticwolf's
+two-PC session of 25 Nov (a New Co-op Save through the prologue, on 614591d0):
 - **Following the host into a place of its story no longer drops the joined player through the world.** Right after
   "Into the Fog" the host's story took it up to an Abyss island (the Abyss tutorial). That island exists only in the
   host's game, so Go to my friend put the joined player in the air: held there ~25 s, then a fall through the world

@@ -892,6 +892,29 @@ and one look at the keyboard step's key list would have told. Before scripting a
 prompt, read the glyphs (which button, a ring = a hold), and copy the hold times from the keyboard step that works.
 A tester's words for a button are a lead, not the binding.
 
+## A diagnostic that prints an impossible value is a failed check (2026-11-25, the schedule stage offsets)
+Since 1.0.0.3663 every U-1 [state] line said all of the host's schedule stages were "162..162 cells from the host"
+(one cell, (0, 0), for every stage) and every [close] line printed "stage at (0, <the real x>)": the stage's fields
+had moved 8 bytes and the module read them short. Nobody looked for two weeks, while the same reads fed the duplicate
+guard (U-f2 skipped nothing, 0/0 in every log) and the joined player's per-NPC control. A value no real game can
+give (all stages in one cell, a position with x = 0, an owner key that is no actor) is a broken read, and a counter
+that stays 0 for a whole session is a feature that never ran (the 11-13 lesson, again). After a port, scan the first
+checklist logs for such values and make the worst of them checks (the host's stages within 6 cells of the host).
+
+## A switch set only on one path of the init is off on the other (2026-11-25, the duel's stagger)
+The duel's hit reactions ([coop] player_hit_react, on by default) were switched on in mod.cpp's late init only on the
+old base's path; the native layer returns from its own branch before it, so no duel hit ever staggered in the shared
+world, and no step checked a reaction. When a feature moves to a new base, list the setters its old path calls and
+check each against the new path; and a feature with an on/off switch should log its state once, so "never set" shows
+in the first log ("our player reacts" was missing from every native log).
+
+## The tests revived the joined player one way; testers used the other (2026-11-25, U vs Q)
+The revive step presses Q (in place, no load); the checkpoint revive (U) sends a load the client never completes,
+which left the native base's move phase at MOVE_ASKED until the next travel and kept the joined player's own
+townsfolk, the world anchor, the clock and the weather off for minutes after each such revive. When a feature has two
+ways (two keys, two menus, two revive kinds), the checklist drives both; and a tracker with a "waiting" state needs a
+check that it leaves it (here: the phase back to STABLE after each revive).
+
 ## During a test, a wanted shell command goes on a list, never into a neutered Bash call (2026-11-25, cs130a / cs129a)
 The rule "no Bash while a test runs" was broken three more times in one afternoon, always the same way: a Bash call
 was begun for something useful (a grep of our logs, a look at a file's tail, a timestamp), the rule came to mind

@@ -110,6 +110,74 @@ replied 15:17 (message 1575243949344432129). Kept in the session scratchpad (dl-
   returns that error for a pickup (scratchpad xref73.py 0x71D7024) and what gimmick state it checks; whether the
   deleted level held the pendant's gimmick data.
 
+## 4. Their fourth session's notes (Brycecco 23:10 UTC, with both zips; analysis of the zips to follow)
+
+- **Duel hits without a stagger** ("hits do not register stagger or a hit visually but health is affected"): two
+  causes in the layer, both on the native base only (read from the code, 25 Nov evening):
+  - the duel's hit reactions ([coop] player_hit_react, on by default) are switched on by `hits_set_react` only on the
+    old base's path of mod.cpp's late init; the native branch returns before it, so `g_react` stayed false and no
+    duel hit was ever given a reaction there (our pp62 guest log has no "reacts to" line at all);
+  - a duel hit carries the stagger its attacker last took from an enemy (`hits_make_pvp`), learnt from the server's
+    batch for a blow on us (AttackTargetAck + ApplyActionRestrictionAck + hit buff), but each blow is keyed by the
+    client frame event that named it (`pending_key_locked`), and the native base hands the layer no client-to-server
+    frame event (coopplus_observe feeds only activity / duel / weather; the enemy's attack is the host client's
+    anyway): nothing was ever learnt. And the receiver named our old puppet key (0xA010F001) as the source, which is
+    no actor in the shared world.
+  - Fix (scratchpad duel_stagger_fix.py, test build/native/cs131.sh): the switch on the native path; a blow on us
+    with no frame event is kept under one key and the latest complete staggering batch is the duel's sample (with the
+    enemy that gave it, renamed as the attacker in the hit: in the shared world that enemy is an actor in both games
+    and the receiver refuses a template naming one); the receiver names the friend's real character
+    (`partner_actor_key`) and uses its own sample when the attacker had none. Still no stagger when neither player
+    was ever hit by an enemy in the session.
+- **Townsfolk and shopkeepers gone for the joined player** while the host was in the Abyss, or 100-150 m away
+  ("once host was within 50 meters npcs respawned en masse"): the joined player's own townsfolk (U-1,
+  user2_stages=1) arm at >= 4 cells (64 m, Chebyshev) for 3 s and drain at <= 2 cells for 5 s, and only while both
+  players are in the same field; with the fields different an armed U-1 drains at once (user2_stages.cpp control():
+  "another field ... never wait"). So with the host in another field (the Abyss, if it is one) the joined player has
+  neither its own stages nor the host's. In their earlier sessions U-1 armed and drained as designed (1125 host log
+  13:48:07 ARMED at 4 cells, 13:48:44 DRAINED at 2; pendant-host 15:26). The 2-3 cell band is the host's stages only
+  (they are made 1-3 cells from the host, mundo-escenarios-propios.md §3.2), so at 100-150 m the joined player sees
+  part of them at best. To check in the zips: the fields at the Abyss, the [state] lines' distance at the time.
+- **Why U-1 never armed while the host was on the Abyss island** (first session, 13:27:19-13:35, host 51 cells away,
+  same field, arm check READY, "U off (would be OFF)" for 8 minutes): U-1's dwell counts only while user 2 is "in
+  the world" (server_user2_in_world: its move phase STABLE), and the phase was MOVE_ASKED from 13:22:45 to 13:28:2x
+  and again later: the joined player's checkpoint revive (the layer's U: ReviveLoadingStartReq 2972, ReviveLoadingReq
+  2887, GameLoadingStartReq 2350 + ReviveReq, all sent by the layer) is answered by the server with a reload in the
+  same field (LoadingFieldDataAck 2286 + 3066), and the client sends nothing more (its load machine stays 0x19 in the
+  joiner's log; "trip R2 ends: reload, but user 2 sent no 2873"), so no LoadingCompleteReq ever ends the move. The
+  world anchor, the clock push and the weather stream wait for the same phase. Our checklist revives the joined
+  player with Q (in place, no load), never with U. Fix (native, scratchpad native_revive_phase_fix.py): a revive's
+  reload in the same field is STABLE at its LoadingFieldDataAck (unit tests); a checklist step u2revive (U, then the
+  host 430 m away: U-1 must arm).
+- **The schedule stage's fields are read 8 bytes short since 1.0.0.3663** (user2_stages_logic.h kSt_*): the [close]
+  lines read the stage's position as (0, z = the real x) ("stage at (0, -11413)" for the stage [create]d at (-11413,
+  -6800)) and its owner as 0x22F78310 ("other"); every [state] line has the host's stages "162..162 cells from the
+  host" (all at cell (0, 0); the same on 3663, cs27e: 141..141). So the position is at +0xB4 now (+8), and the owner
+  (+0x50), data (+0x60) and NPC entries (+0x138 / +0x140) are likely +8 too (the key at +0x30 still reads right).
+  What reads them: U-f2 (`stage_at`: no schedule stage was ever skipped as alive in the other manager, 0/0 in every
+  log: the duplicate guard has been blind), U-e's `npc_exact_stage` (data + entries: no exact identity, so no write),
+  the S33 node veto (owner: never user 2's), the [close] / [state] diagnostics. Duplicate townsfolk where both
+  managers' windows meet, and user 2's own stages without their NPC control, fit "NPCs respawned en masse" and the
+  T-posed "?" shopkeepers. To verify against the 3732 code (the stage ctor's 40-byte transform copy, the entry
+  vector) before changing them.
+- **Their fourth session's zips (a03a63b9 both; host 17:16-18:08):**
+  - The Abyss: from ~17:2x the host stood at (-10675, 1795, -3690) and on (the island ~1180 m straight above the
+    Hernand market, y ~612); its manager ran 0-2 schedule stages up there, and the joined player in the town below
+    was 0-2 cells away (x / z only), so U-1 never armed: nobody made the town's people. When the host came down they
+    "respawned en masse". Fix (native_u1_fixes.py): 300 m or more apart in height counts as far (16 cells).
+  - U-1 armed and drained as designed three times (17:36:42-17:41:34, 17:42:19-17:43:25, 17:50:18-17:51:29, at 4
+    cells / back at 2 or 0).
+  - Duel: every "the other player hit us ... -N hp" without ", reaction" (g_react off), as read from the code.
+  - The grindstone: the joined player's interaction 0x2BA1 on 0xB04022F6 (18:08:20) was accepted (preemption and do
+    step SuccessAcks to user 2), and the next stage branch (sequencer 0xB82) went to the HOST's character: the
+    interaction's little scene runs as the field owner's, the same class as the shops before ShopTwin. Not fixed.
+  - Windows: no refused interaction of either player in the log; asked the testers what they mean.
+- **T-posed "?" shopkeepers nobody can use**, the **joined player's grindstone** (prompt, hold, nothing), the
+  **portal chest** left open after the host left (the joined player cannot trigger the portal), **windows neither
+  player can open**: to read in the zips.
+- **The second player's pickup of a ground item plays no animation** (the item is taken and the inventory is right,
+  "each their own" loot): cosmetic.
+
 ## Smaller things seen
 
 - The host's crash log has first-chance AVs at cdmp.asi+0x959DB / +0x959E3 at startup: the guarded reads (our pp60
