@@ -77,9 +77,14 @@ inline constexpr uint32_t kFm_Actor = 0x18, kFm_List = 0x20, kFm_Count = 0x28, k
 // +0x90 as "(1, 1)"), rotation quaternion (0x393A90 of [elem+0x218]) and position ([elem+0x20C..+0x214]): the WORLD
 // position is at +0x90 + 12 + 16 = +0xAC. The 2335 sends the same 40 bytes reordered: position at +30, rotation +42,
 // scale +58 (S25: +30 = (-10681, 616, -3845), +42 = (0, 0, 0, 1), +58 = (1, 1, 1)).
-inline constexpr uint32_t kSt_Key = 0x30, kSt_Owner = 0x50, kSt_Data = 0x60, kData_Id = 0x1C, kSt_Scale = 0x90,
-                          kSt_Pos = 0xAC,
-                          kSt_Entries = 0x138, kSt_EntryCount = 0x140, kSt_EntrySize = 0x168, kEntry_Actor = 0x28;
+// Co-op+ 2026-11-25: the 3576 and 3732 constructors (0xB41C990 / 0xB198910, the same code) store a byte at +0x50 and
+// the owner at +0x58, a dword handle at +0x60 and the data pointer at +0x68, the 40-byte transform at +0x98 (the
+// position at +0xB4); the close (vf13 0x2AC3890) reads the entries at +0x140 / +0x148, 0x188 bytes each (imul 0x188),
+// the actor key at +0x28. These were 2976's offsets until today: every build since 3576 read the position as (0, the
+// real x) and the owner as no actor (stage_layout.py).
+inline constexpr uint32_t kSt_Key = 0x30, kSt_Owner = 0x58, kSt_Data = 0x68, kData_Id = 0x1C, kSt_Scale = 0x98,
+                          kSt_Pos = 0xB4,
+                          kSt_Entries = 0x140, kSt_EntryCount = 0x148, kSt_EntrySize = 0x188, kEntry_Actor = 0x28;
 // Characters: key +0x60, user +0xA0 (key +0x60), components +0x68 -> sequencer +0xA8 -> manager +0x18, transform
 // [[+0x68]+0x1A0]. A user's main character: [user+0xD0].
 inline constexpr uint32_t kActor_Key = 0x60, kActor_User = 0xA0, kUser_Key = 0x60, kUser_Main = 0xD0,
@@ -248,6 +253,17 @@ inline Step step(Machine& m, bool known, uint32_t dist, uint64_t now_us, const T
     }
     m.near_since = 0;
     return Step::None;
+}
+
+// Co-op+ (Brycecco + Arcticwolf 25 Nov, a03a63b9): the host's Abyss island hangs ~1180 m straight above Hernand; up
+// there its manager runs 0-2 schedule stages, and the joined player in the town below counted as 0-2 cells away (the
+// cells are x / z only), so neither manager made the town's people. Players this far apart in height count as far:
+// U-1's distance is then at least kFarCells.
+inline constexpr double kFarDyM = 300.0;
+inline constexpr uint32_t kFarCells = 16;
+inline double height_apart(double host_y, double user2_y) { return host_y > user2_y ? host_y - user2_y : user2_y - host_y; }
+inline uint32_t u1_distance(uint32_t cells, double host_y, double user2_y) {
+    return height_apart(host_y, user2_y) >= kFarDyM && cells < kFarCells ? kFarCells : cells;
 }
 
 // Both players' fields (TransformSync +0x500: its field mover +0x4F0, +0x10 the field), vtable ServerField checked.

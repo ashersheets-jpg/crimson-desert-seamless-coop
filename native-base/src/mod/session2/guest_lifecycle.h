@@ -219,6 +219,10 @@ inline constexpr uint16_t kLoadingCompleteReq = 2789;
 inline constexpr uint16_t kMoveFieldAck = 2364;
 inline constexpr uint16_t kMoveFieldCompleteAck = 2268;
 inline constexpr uint16_t kLoadingCompleteAck = 2891;
+// Co-op+ (3732): a revive's load request (travel_probe_logic.h kOpReviveLoadingReq) and the server's answer to a load in
+// the same field (kOpLoadingFieldDataAck): the tracker ends a revive's reload there (MovePhaseTracker below).
+inline constexpr uint16_t kReviveLoadingReq = 2887;
+inline constexpr uint16_t kLoadingFieldDataAck = 2286;
 }  // namespace mv
 
 // The phase of user 2's login/move, from what crosses the tunnel only: the
@@ -230,6 +234,11 @@ inline constexpr uint16_t kLoadingCompleteAck = 2891;
 //   Stable     2762 out
 // One per guest epoch (reset when a new one begins). Not thread safe: the
 // caller locks.
+// Co-op+ (Brycecco + Arcticwolf 25 Nov, two PCs, 3732): a revive's reload in the same field (ReviveLoadingReq, its
+// GameLoadingStartReq answered by LoadingFieldDataAck, no MoveFieldAck) needs nothing more from the client: its load
+// machine stays at 0x19 and it sends no LoadingCompleteReq, so the phase stayed MoveAsked until its next travel (12
+// minutes there) and everything waiting for user 2 in the world waited with it (U-1, the world anchor, the clock push,
+// the weather stream). Such a reload is Stable at its LoadingFieldDataAck.
 enum class MovePhase : uint8_t { None, LoggingIn, MoveAsked, WindowA, Completing, WindowB, LoadingSent, Stable };
 const char* move_phase_name(MovePhase p);
 // P8 session 14 (observer_load_defer, pendientes/p8-impl-spawn-action.md): user 2 is completing a field load,
@@ -249,12 +258,17 @@ public:
     // How many of `opcode` (one of mv::) were seen in this epoch.
     uint32_t count(uint16_t opcode) const;
     void reset() { *this = MovePhaseTracker{}; }
-    // "WINDOW_A (3093 1, 2437 1, 2174 2, 2549 1, 2144 1, 2445 1, 2762 1)"
+    // "WINDOW_A (3093 1, 2437 1, 2174 2, 2549 1, 2144 1, 2445 1, 2762 1)" (+ " | revive reloads N" once there was one)
     std::string describe() const;
+    // Revive reloads ended at their LoadingFieldDataAck in this epoch.
+    uint32_t revive_reloads() const { return revive_reloads_; }
 
 private:
     MovePhase phase_ = MovePhase::None;
     uint32_t n_[7] = {};
+    bool revive_ = false;       // a ReviveLoadingReq went, its GameLoadingStartReq not yet
+    bool revive_load_ = false;  // the GameLoadingStartReq in MoveAsked now is a revive's
+    uint32_t revive_reloads_ = 0;
 };
 
 // Before user 2's 2001 (salida-en-carga.md §4): if it left in window A, close

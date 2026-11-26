@@ -658,9 +658,25 @@ void test_move_phase_tracker() {
     CHECK(t.describe().find(std::format("STABLE ({} 1, {} 1, {} 2, {} 2, {} 2, {} 2, {} 2)", mv::kLoginCharacterReq,
                                         mv::kGameLoadingStartReq, mv::kMoveFieldAck, mv::kMoveFieldCompleteReq,
                                         mv::kMoveFieldCompleteAck, mv::kLoadingCompleteReq, mv::kLoadingCompleteAck)) == 0);
+    // Co-op+ (3732, Brycecco + Arcticwolf 25 Nov): a revive's reload in the same field ends at its LoadingFieldDataAck
+    // (the client sends nothing more); a fast travel's reload waits for its LoadingCompleteAck as before.
+    CHECK(!t.on_req(mv::kReviveLoadingReq) && t.phase() == MovePhase::Stable);
+    CHECK(t.on_req(mv::kGameLoadingStartReq) && t.phase() == MovePhase::MoveAsked);
+    CHECK(t.on_ack(mv::kLoadingFieldDataAck) && t.phase() == MovePhase::Stable && t.revive_reloads() == 1);
+    CHECK(!t.on_ack(mv::kLoadingFieldDataAck) && t.phase() == MovePhase::Stable);  // a second one: nothing
+    CHECK(t.describe().find(" | revive reloads 1") != std::string::npos);
+    CHECK(t.on_req(mv::kGameLoadingStartReq) && !t.on_ack(mv::kLoadingFieldDataAck));
+    CHECK(t.phase() == MovePhase::MoveAsked && t.revive_reloads() == 1);
+    CHECK(t.on_req(mv::kLoadingCompleteReq) && t.on_ack(mv::kLoadingCompleteAck) && t.phase() == MovePhase::Stable);
+    // A revive into another field: the normal sequence (its MoveFieldAck ends the revive mark).
+    CHECK(!t.on_req(mv::kReviveLoadingReq) && t.on_req(mv::kGameLoadingStartReq) && t.on_ack(mv::kMoveFieldAck));
+    CHECK(t.phase() == MovePhase::WindowA && !t.on_ack(mv::kLoadingFieldDataAck) && t.phase() == MovePhase::WindowA);
+    // The revive mark is for the next GameLoadingStartReq only.
+    CHECK(!t.on_req(mv::kReviveLoadingReq) && t.on_req(mv::kLoginCharacterReq) && t.on_req(mv::kGameLoadingStartReq));
+    CHECK(!t.on_ack(mv::kLoadingFieldDataAck) && t.phase() == MovePhase::MoveAsked);
     // A new epoch starts from nothing.
     t.reset();
-    CHECK(t.phase() == MovePhase::None && t.count(mv::kMoveFieldAck) == 0);
+    CHECK(t.phase() == MovePhase::None && t.count(mv::kMoveFieldAck) == 0 && t.revive_reloads() == 0);
     CHECK(std::string(move_phase_name(MovePhase::WindowA)) == "WINDOW_A");
     CHECK(std::string(move_phase_name(MovePhase::LoadingSent)) == "LOADING_SENT");
 }

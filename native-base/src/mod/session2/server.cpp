@@ -523,7 +523,7 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
         // that the releases it allows queue behind it; one that goes on (or starts) is told at once.
         bool loaded_after_push = false;
         if (v->opcode == mv::kMoveFieldAck || v->opcode == mv::kMoveFieldCompleteAck ||
-            v->opcode == mv::kLoadingCompleteAck) {
+            v->opcode == mv::kLoadingCompleteAck || v->opcode == mv::kLoadingFieldDataAck) {
             std::lock_guard lock(g_phase_mu);
             if (g_phase.on_ack(v->opcode)) {
                 const bool loading = move_phase_loading(g_phase.phase());
@@ -1717,7 +1717,8 @@ inj::Outcome inject(std::span<const uint8_t> in, InjectKind kind) {
         }
     }
     const bool phase_req = v->opcode == mv::kLoginCharacterReq || v->opcode == mv::kGameLoadingStartReq ||
-                           v->opcode == mv::kMoveFieldCompleteReq || v->opcode == mv::kLoadingCompleteReq;
+                           v->opcode == mv::kMoveFieldCompleteReq || v->opcode == mv::kLoadingCompleteReq ||
+                           v->opcode == mv::kReviveLoadingReq;
     inj::Pending p;
     p.packet.assign(packet.begin(), packet.end());
     p.channel = channel;

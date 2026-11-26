@@ -210,6 +210,10 @@ int tracked_index(uint16_t op) {
 }  // namespace
 
 bool MovePhaseTracker::on_req(uint16_t opcode) {
+    if (opcode == mv::kReviveLoadingReq) {  // not a phase of its own: it marks the next GameLoadingStartReq
+        revive_ = true;
+        return false;
+    }
     MovePhase next;
     switch (opcode) {
         case mv::kLoginCharacterReq: next = MovePhase::LoggingIn; break;
@@ -218,12 +222,22 @@ bool MovePhaseTracker::on_req(uint16_t opcode) {
         case mv::kLoadingCompleteReq: next = MovePhase::LoadingSent; break;
         default: return false;
     }
+    revive_load_ = opcode == mv::kGameLoadingStartReq && revive_;
+    revive_ = false;
     phase_ = next;
     ++n_[tracked_index(opcode)];
     return true;
 }
 
 bool MovePhaseTracker::on_ack(uint16_t opcode) {
+    if (opcode == mv::kLoadingFieldDataAck) {
+        // A revive's reload in the same field: the move ends here (see the class). Any other one goes on as before.
+        if (phase_ != MovePhase::MoveAsked || !revive_load_) return false;
+        revive_load_ = false;
+        ++revive_reloads_;
+        phase_ = MovePhase::Stable;
+        return true;
+    }
     MovePhase next;
     switch (opcode) {
         case mv::kMoveFieldAck: next = MovePhase::WindowA; break;
@@ -231,6 +245,7 @@ bool MovePhaseTracker::on_ack(uint16_t opcode) {
         case mv::kLoadingCompleteAck: next = MovePhase::Stable; break;
         default: return false;
     }
+    revive_load_ = false;  // a revive into another field: the normal sequence
     phase_ = next;
     ++n_[tracked_index(opcode)];
     return true;
@@ -244,7 +259,9 @@ uint32_t MovePhaseTracker::count(uint16_t opcode) const {
 std::string MovePhaseTracker::describe() const {
     std::string s = std::format("{} (", move_phase_name(phase_));
     for (int i = 0; i < 7; ++i) s += std::format("{}{} {}", i ? ", " : "", kTracked[i], n_[i]);
-    return s + ")";
+    s += ")";
+    if (revive_reloads_) s += std::format(" | revive reloads {}", revive_reloads_);
+    return s;
 }
 
 MoveCloseSequence::Action MoveCloseSequence::step(uint32_t now_ms, const MovePhaseTracker& t, std::string* note) {
