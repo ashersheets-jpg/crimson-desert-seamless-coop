@@ -11892,3 +11892,17 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
 - 22:58-23:07 cs132v: the joined player's one duelhit (the stand-in) at 23:05:11.8, "reaction"; the shots: v03
   upright beside the host, v07 doubled over (the stagger, the combat HUD up), v11 upright again. SEEN WORKING.
 - 23:07 pp63a: the new u2revive step alone on a018b4a4.
+- 23:07-23:17 pp63a u2revive 49 / 1: its own checks passed (down, U, alive; the host's tracker "STABLE (... 2350 2 ...)
+  | revive reloads 1"; an ARMED line; the [close] lines now name the owner, "of 0xA0100001 (host)"), but the FAIL
+  was two unknown error lines: U-1 had armed at 23:14:56 while the joined player lay dead (the host's script left 26 s
+  after the kill; the keys' U came 47 s after it), and the revive's first request (ReviveLoadingStartReq 2972, 23:15:13)
+  reset user 2's manager to state 0: "[ABORT] user 2's manager not in state 2 5 s after the arm", "[ABORTED] U-1
+  stopped for the rest of this run". Pre-existing for any death far from the host while armed, and the new arming
+  makes it likelier. Fixed (native d81cc73, synced; outer 3de859d): 2972 counts as a load for U-1 and the in-place
+  ReviveReq 2869 drains too (an armed manager is drained at their entry, re-arms after the dwell). The step: the host
+  leaves 66 s after the kill; checks "no U-1 abort" and "an arm after the revive". Built (14 old), packaged 3de859db;
+  23:21 pp63b u2revive.
+- 23:21-23:31 pp63b u2revive 51 / 0: down 23:28:48, U 23:29:36, the host away ~23:29:54, U-1 ARMED 23:29:58 at 5 cells
+  (after the revive), no abort, the tracker's revive reload counted. It did not exercise the abort case (nothing armed
+  at the revive), so the step goes back to the early departure (26 s after the kill: armed while the guest lies dead,
+  the revive must drain it, then a re-arm after the revive): 23:33 pp63c.

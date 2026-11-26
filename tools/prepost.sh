@@ -825,7 +825,7 @@ u2revive)
   # move phase at MOVE_ASKED until its next travel (12 minutes there) and U-1 (the joined player's own townsfolk far
   # from the host) never armed meanwhile. The tracker now ends such a reload at its LoadingFieldDataAck. The host stands
   # 108 m from the guest (under U-1's 4 cells) until after the revive, so an arm can only come after it.
-  { printf 'tp -10343.4 535.9 -3989.6\nwait 10000\nwait 10000\nwait 8000\nkillfriend\nwait 10000\nwait 10000\nwait 10000\nwait 10000\nwait 10000\nwait 10000\nwait 6000\n'
+  { printf 'tp -10343.4 535.9 -3989.6\nwait 10000\nwait 10000\nwait 8000\nkillfriend\nwait 10000\nwait 10000\nwait 6000\n'
     printf 'tp -10665 634.5 -3701\nwait 5000\nnpcs 30\n'; for i in 1 2 3 4 5 6 7; do printf 'wait 6000\nnpcs 30\n'; done; } > $N/scan/u2rv_host.txt
   G="w:9000_shot:$NAME-g0_w:24000_shot:$NAME-g1_k:U:300_w:12000_shot:$NAME-g2_w:30000_shot:$NAME-g3_w:20000_shot:$NAME-g4"
   run2 "$BASE -Hold 10 -HostScript $SCAN\\u2rv_host.txt -GuestScript $SCAN\\tp_dock_guest.txt -GuestKeys $G"; two_player_checks
@@ -836,8 +836,8 @@ u2revive)
   has "$H" "user 2 move phase STABLE \([^)]*\) \| revive reloads [1-9]" "host: the guest's revive reload ended its move (STABLE, revive reloads counted)"
   info "user 2's move phases seen: $(grep -o 'user 2 move phase [A-Z_]*' "$H" | uniq -c | sed 's/user 2 move phase //' | tr -s ' ' | tr '\n' ';' | cut -c1-300)"
   # pp63a: the host left before the revive (U came 47 s after the kill), U-1 armed while the guest lay dead and the
-  # revive's first request reset its manager: ABORTED for the session. The host now leaves 66 s after the kill, and the
-  # arm must come after the revive.
+  # revive's first request reset its manager: ABORTED for the session. Kept on purpose (the host leaves 26 s after the
+  # kill): the revive must drain the armed manager first (no abort), and U-1 must arm again after the revive.
   hasnot "$H" "User2Stages \[ABORT" "host: U-1 never aborted (a revive drains an armed manager first)"
   rv=$(grep -m1 "Revive: checkpoint revive, step 3" "$L" | cut -c2-13)
   aa=$(grep -h "User2Stages \[ARMED\]" "$H" | cut -c2-13 | awk -v t="$rv" '$1 > t' | head -1)
