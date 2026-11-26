@@ -1779,6 +1779,7 @@ void test_native_mode_text() {
     CHECK(has(ht, "peer_steamid=76561198000000001") && has(ht, "save_guard=redirect"));
     // 2026-11-09: the new host defaults, and B10 option 2 only when chosen.
     CHECK(has(ht, "scene_level_share=1"));  // T23: doors of a level the joined player loaded first
+    CHECK(has(ht, "level_state_share=1"));  // B10 (2026-11-26): the host's game-level state changes reach the friend
     // T25 / BUG 2 (2026-11-25 evening): the per-player focus slot is OFF again (three host story stops on a03a63b9, its
     // first build acting on the logic thread); the probe stays (its lines name the refusal codes).
     CHECK(!has(ht, "user2_focus_slot=1") && has(ht, "shop_probe=1"));

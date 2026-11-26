@@ -169,7 +169,12 @@ inline std::string native_mode_ini_text(const NativeModeSpec& s) {
                               // never marked ready on the server (only the field owner's load does), so its doors
                               // answered "not ready" to both players until a fast travel (the native base's S43);
                               // scene_level_share marks user 2's load ready too and keeps a level the other still has.
-                              "scene_level_share=1"}) {
+                              "scene_level_share=1",
+                              // B10 (2026-11-26, cs135b): the server sends its game-level states (ChangeGameLevelStateAck)
+                              // to the field owner only; the friend got them once at its entry and never a change after
+                              // (a host story step that opens a place: the Abyss island, the castle's gate). Each one
+                              // the host gets now goes to the friend too, with the friend's character key.
+                              "level_state_share=1"}) {
             // T25 / BUG 2: user2_focus_slot=1 (user 2's own focus triple in the host's stage manager; its talks' check
             // with it: the friend could talk while the host talks) is OFF again (2026-11-25 evening): on a03a63b9, its
             // first build that really acted on the logic thread, the testers hit three host story stops in one

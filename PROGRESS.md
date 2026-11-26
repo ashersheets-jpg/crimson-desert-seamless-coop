@@ -11946,3 +11946,7 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   (1575441380128460881; stage_post 1738 characters; both zips = dist file by file, 25/25 and 10/10; the build tree's
   DLLs = the package's, dllswap). 04:22 reply in #play-testing-feedback (1575441709234524241, tags Brycecco +
   Arcticwolf). Records: CHANGELOG posted line, download-ee0cecf0.txt.
+- 04:23 commit 527489d (pushed). 04:24 the level-state share applied to the native tree (scratchpad lss/apply_lss.py:
+  level_state_share.{h,cpp,_logic.h}, config, mod.cpp start, the sniffer tap and the minute line in session2.cpp,
+  CMake + optd_level_state_share), built: native 94 tests, the 14 old failures, the new one "all passed"; layer tests
+  pass. Build tree cdmp 71376689 (not committed yet). 04:27 cs135a: the camp kill, captures on both, the share in probe.

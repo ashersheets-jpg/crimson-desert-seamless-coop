@@ -858,6 +858,10 @@ hostrevive)
   has "$L" "Revive: at the checkpoint" "host: stands at the checkpoint again"
   has "$L" "Teleport: arrived" "host: the move to the checkpoint arrived"
   has "$H" "reason 19" "host: its stages closed 'at the owner's load' (the reload happened with the guest in the world)"
+  # 2026-11-26 (B10, cs135b): the reload re-sends the host its game-level states (ChangeGameLevelStateAck); with
+  # level_state_share (on by default) each goes to the joined player too, under its own character key.
+  has "$H" "LevelStateShare \\[2669\\] .* COPIED to user 2 as 0xA01000" "host: its game-level states after the reload went to the joined player too"
+  hasnot "$H" "LevelStateShare \\[2669\\] .* NOT copied: the queue refused" "host: no game-level state copy refused by the queue"
   hasnot "$H" "the Troc tunnel stops" "host: the tunnel was never stopped"
   asked=$(grep -h 'timer guard: schedule timers' "$H" | tail -1 | sed -n 's/.*asked \([0-9]*\).*/\1/p')
   [ "${asked:-0}" -ge 500 ] && ok "host: schedule timers went on to the end (asked $asked)" || bad "host: schedule timers asked ${asked:-none} (wanted >= 500: about 220 a minute)"
