@@ -12174,3 +12174,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   "Seamless Co-op+" guide card only draws (60 s, no keys) and the layer does not count the popup as a game menu; in
   solo UiPause lets the game pause for it. Test kit: twocopy.ps1 holds Space 2 s on each game after the join (and in
   the one-copy flow). Native 29e5ae7 (kTsSector +0x558), synced, pushed (0a8feb4). Package 0a8feb44.
+- 18:25 pp68-shop on 0a8feb44: the popup closed (held Space), but the shop still FAILED the same way, and the
+  observer hold STILL released none: held 1203, dropped 1143 = despawned x649 (key lookup found no actor), stale /
+  unreadable x407, out of range x87 (the sector fix moved those to the other reasons). Ruled out on 3840 code (scripts
+  build/port3840/hand/samfind84*.py, ccback84.py): the SAM slot (the probe's vtable check passes, actors 0x199..0x1AD
+  as 3732), the SAM key map (the game's own lookup 0x2EB9F90 is instruction for instruction 3732's: mask 0xFFFFF,
+  buckets +0x98 / +0xA8, holders +0xB0, 0x100-byte buckets), CC +8 = actor, CC +0x40 -> +0x30 restore, and the NPC
+  action probe (19223 actions, 521 applied: as 3732). Native 9f8dfe5: a capped decision probe in the release pass
+  (the first 4 decisions per reason with every reading, 120 lines). Package 58b5503b; 18:40 pp69-shop started.
