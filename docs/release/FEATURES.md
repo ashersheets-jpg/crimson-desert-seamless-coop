@@ -1,6 +1,6 @@
 # Crimson Desert Seamless Co-op+ (alpha): features of the shared world
 
-Two-player co-op for Crimson Desert on Steam, game version 1.0.0.3732, in ONE shared world: the host's game runs the
+Two-player co-op for Crimson Desert on Steam, game version 1.0.0.3840, in ONE shared world: the host's game runs the
 world and the friend joins it with their own character. Unofficial fan mod, built on Crimson Desert Multiplayer by
 ByJunter (its NativeServer shared world) and its port by nouzert1. The player's guide is the package's README.txt
 (source: `kit/coopplus/README-shared-world.txt`); this page is the short list with what each status rests on.

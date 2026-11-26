@@ -5,6 +5,17 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- 2026-11-26 12:44 STOPPED HERE (usage limit). The 3840 port is mid-way. DONE and committed: message numbers,
+  767 + 105 mapped addresses, 90 re-read byte patterns, TLS +0x10 (tls84.py), kit / READMEs / docs (kit84.py,
+  docs84.py), port-3840.md. READY, NOT RUN: pins84.py, tests84.py (after the hand table), the GimmickHandoff scripts
+  (on 3840 numbers), cs136 / cs137 / cs138 (solo arm wrestling on a pad, for Edward). IN FLIGHT when stopped: four
+  read-only helper agents writing build/port3840/hand/G1-G4.md (server requests / stages / movement+saves / layer);
+  if those files are missing or partial, redo their groups from BRIEF.md. Next steps in order: scratchpad
+  after_port.txt (hand table -> pins84 -> tests84 -> build -> fresh live -> full checklist -> post).
+- 2026-11-26 11:30 NEWS (no decision needed): Steam updated Crimson Desert at 11:08 to 1.0.0.3840 (Steam calls it
+  "Crimson Desert Enhanced", build 26949954, 2.3 GB). Every Co-op+ build is made for 1.0.0.3732 and switches itself off
+  on 3840, as designed. eb466544 (all 31 steps passed on 3732 by pp65 + pp65b) is therefore NOT posted. Testers told
+  in #play-testing-feedback (11:28, 1575548730139082773, with Borque's dye findings). The port to 3840 is under way.
 - 2026-11-26 10:01 QUESTION (yours: it touches Steam's licensing): Borque wrote the account two DMs (12:30 / 12:38 UTC).
   He and his friend play from ONE Steam library (family sharing); that "is not working good any longer", so they now
   start Crimson Desert under Spacewar's app id (480, Valve's test app), and with that the mod's Steam connection no
@@ -12041,3 +12052,55 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   zips: the URLs and a safe-unzip script in the scratchpad.
 - 10:01 Discord: unread DMs on the account. Borque 12:30 / 12:38 UTC: the Spacewar question (top of the Waiting list:
   yours). Brycecco: the known 25 Nov DMs (the boss-fight note, the Drive link). Mattou: 1, not opened (left for you).
+- 10:34 pp65 DONE: 1372 pass, 2 fail over 31 steps (stuck 53 / 0, mismatch 9 / 0, lagrun 50 / 0 at the end). The two:
+  hostrevive's misplaced level-state check (test kit) and mountfight's luck. SAVES OK and 5/5 in every step. 10:35 the
+  check moved (outer 2317f92, pushed; update check: no restart pending); Borque's zips fetched (own folders, safe
+  unzip). 10:36 pp65b started: hostrevive, u2revive, mountfight + the smoke set (static, fresh, solostart) on eb466544.
+- 10:39 Borque's dye-vendor freeze (his 01:14 / 01:19 zips, a03a63b9; read during pp65b): the joined player 0xA0100067
+  talked to the Hernand dye vendor 0xB01016EE (interaction 0xF4321, 01:06:49, accepted); its game ran the vendor's scene
+  as the ShopTwin twin 0x1000029F (branches 1 -> 2 -> 3 answered locally), the dye screen put the character on its stand
+  (y 533.8 -> 543.4) until 01:07:51, put it back on the same spot, the twin went 2 -> 7 -> 0 (01:07:54)... and from
+  01:07:51 the character took no input for 3 minutes (the teleport to the host and a duel round did not change it). At
+  01:10:41.6 its game opened a pausing UI (UiPause episode: Esc, the map or the inventory) and closed it 1 s later; from
+  01:10:42 it moved again. No pause asked during the dye screen itself (the UiPause counts did not move), no layer input
+  hold. So the workaround is "open and close the menu"; the cause (what gives the joined player its control back at the
+  dye screen's end, which the twin may answer differently) needs the dye vendor in a one-PC run (to write: cs137).
+  Also seen: the host became wanted in the duel (01:10:00: its swings hit two townsfolk 0xB0102201 / 0xB01021FC beside
+  the friend: the game's own crime). Reply drafted (scratchpad reply_borque_1126.txt); the post's draft names the
+  workaround.
+- 10:47-11:07 pp65b: hostrevive 53 / 0, u2revive 53 / 0 (the moved level-state checks pass: COPIED after the host's far
+  teleport, none refused), mountfight 49 / 0 (mounted), static 12 / 0. So all 31 steps passed on eb466544 (pp65 + pp65b).
+- 11:17 pp65b fresh 36 / 11 and solostart failed: "Game reader DISABLED: unsupported game build", "Sniffer: unsupported
+  game build". STEAM UPDATED THE GAME at 11:08 (appmanifest LastUpdated 1795709288; the app now "Crimson Desert
+  Enhanced", build 26949954, 2.27 GB): 1.0.0.3840, PE 0x6B07E5E9, SizeOfImage 0x13D05000, 327,148,952 bytes (archived
+  build/exe-archive/CrimsonDesert-1.0.0.3840.exe). Between mountfight (3732, 11:07) and fresh (11:08). eb466544 is
+  for 3732: NOT posted (the mod is off on 3840, as designed). 11:20 phone notice to the owner.
+- 11:28 #play-testing-feedback 1575548730139082773: the heads-up (3840; every build so far is 3732's and switches itself
+  off; the port is under way; the held build) + Borque's dye findings (tagged: the 3 minutes without input after the dye
+  screen, a menu opened and closed brought it back: the workaround; the duel's crime; riding fixed, its 1-3 s freeze on
+  my list; the NPC / taming tests need the ported build). Brycecco / Arcticwolf's reply waits for the 3840 build post.
+- 11:30 PORT 1.0.0.3732 -> 1.0.0.3840 started (docs/research/port-3840.md; tools as for 3732: fmap, p73 -> p84).
+  A big update, like 3576 -> 3663: code +1.6 MB, 92% of functions paired (3732's port 99%), 1068 of 1176 message
+  numbers changed, many struct fields moved (the actor's core layout did NOT: key +0x60, components +0x68, info
+  +0x88, controller +0x90, owner +0xA0). Done by 11:52: message numbers (native 137c99e; layer 76b1af3 with the new
+  table offsets_3840.h), 767 + 105 mapped addresses (079a1b0), byte patterns with the same instructions (89 + 1,
+  1f5d239 / 7cf678b), the installer's game check and the READMEs (kit84.py), the three inline initialisers. The hand
+  part (115 native + 25 layer addresses, 18 changed byte patterns, moved fields, hook sites) is split four ways among
+  read-only helper agents (build/port3840/hand/G1-G4.md: server requests and shops; stages; movement, saves and
+  guards; the layer); found myself: the save paths' call sites and the crime return inside the protection (prot73.py),
+  user2_funnels' three protected sites (protpat84.py), pins84.py / tests84.py ready to run after the hand table. A
+  first build of both trees runs now (compile errors only; nothing to test in the game before the hand table).
+- 11:57 first build: the native source and the layer compile (layer tests pass); three native unit tests fail at
+  compile time on values still to port (the field owner's bytes, stage_lookup's points, a vtable): after the table.
+  12:00-12:05 found: the game's TLS block grew by 0x10 before our fields (the server-realm byte +0x1EB -> +0x1FB,
+  the allocator's heap flag +0x1FE -> +0x20E, the send context +0x250 -> +0x260; thousands of code uses each, see
+  port-3840.md): tls84.py ported all twelve places (the session's allocations would have used the wrong heap).
+  21 files with open items belong to no helper: off diagnostics / probes, and four on-by-default ones I take
+  (ui_pause: the same call sites; npc_activation: arguments swapped registers around a hooked return; the schedule
+  loader's TLS read; shop_twin / ride_filter: data templates, not code).
+- 12:08 Discord: Edward (#bug-reports 17:05-17:06 UTC): "xbox wired", "the match never ended no bar filled up and i
+  never lost" (and earlier: he was in SOLO). Brycecco (#play-testing-feedback 17:07 UTC): can the mod, loaded but in
+  solo, affect the gameplay? He saw issues he did not see in vanilla. Replied to both (1575558949418049598,
+  1575559020222357556): in our co-op pad test the bar moves with X and no presses lose in 3 s, so a match that never
+  runs in solo points at the mod; a SOLO test with the mod on a pad follows the port (cs138); asked Brycecco what he
+  saw; told both that on today's 3840 the mod is off until the new build.

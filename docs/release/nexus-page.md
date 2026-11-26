@@ -7,7 +7,7 @@ never a `-symbols-KEEP-PRIVATE.zip`. Posting needs the owner's OK (it publishes 
 
 **Name:** Crimson Desert Seamless Co-op+
 **Category:** Gameplay. **Tags:** multiplayer, co-op, gameplay. **Version:** 0.1.0-alpha (shared world).
-**Game version:** 1.0.0.3732 (Steam). On any other version the mod switches itself off and the game runs normally.
+**Game version:** 1.0.0.3840 (Steam). On any other version the mod switches itself off and the game runs normally.
 
 ## Summary (one line, at most 350 characters)
 Play Crimson Desert with a Steam friend in one shared world: your friend joins your actual world with their own
@@ -54,7 +54,7 @@ and the co-op features below.
 - **Controller support** throughout. **One-click** install, uninstall, vanilla mode and a diagnose report.
 
 ### Requirements
-- Crimson Desert on Steam, game version 1.0.0.3732. Both players need the **same Co-op+ zip**.
+- Crimson Desert on Steam, game version 1.0.0.3840. Both players need the **same Co-op+ zip**.
 - Steam friends, with the Steam overlay on (or Radmin VPN / a LAN for Direct Play).
 - Ultimate ASI Loader is included (ThirteenAG, MIT). Nothing else to install.
 

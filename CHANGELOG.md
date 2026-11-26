@@ -6,6 +6,11 @@ One world for both players, on the native shared-world base. Tested with two cop
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
 Next build (not posted yet):
+- **For game 1.0.0.3840.** Steam updated Crimson Desert on 26 Nov 2026 to 1.0.0.3840 (Steam now calls it "Crimson
+  Desert Enhanced"); every earlier Co-op+ build switches itself off on it. This build is ported to 3840 (a big update:
+  most network message numbers changed, many game structures moved, the game's thread-local data grew):
+  docs/research/port-3840.md. The build eb466544 below passed its whole checklist on 3732 on 26 Nov and was never
+  posted because of the update.
 - **The world's level states reach the joined player.** The server keeps the list of the world's game levels and their
   states (which story places are there: the prologue's Abyss island, the shining gate after the castle chest) and sends
   each change to the field owner only; the joined player's game got the whole list once, when it joined, and no change
