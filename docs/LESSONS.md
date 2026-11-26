@@ -977,3 +977,24 @@ Borque wrote the account two DMs at 12:30 UTC (a question for the owner); my che
 DMs too (Brycecco's video link and boss-fight note came that way). Each check also reads the guild bar's first items
 (the unread DMs sit right after "Direct Messages", with "N unread messages" in their label) and opens the testers'
 ones; a DM from someone who is not a tester stays unopened and goes on the owner's list.
+
+## A game update's automatic map is a first pass: non-addresses, byte-alikes and moved calling conventions (2026-11-26, 3840)
+What happened: the 3732 -> 3840 auto map rewrote numbers that are not addresses (guest_s3's mod-DLL span 0x2065780,
+the layer's photo-mode float 0xCB0A77, a [dev] code-range bound 0x4A00000), placed one mid-function window in an
+unrelated function whose bytes looked alike (user2_funnels kApplyCallCtx -> 0x08B22F5; the right site 0x3019762) and a
+protected-section site on a byte-alike inside .reloc (guest_x_interaction 0xCA2BDC0; the 3732 site was plain code),
+and "mapped" error globals to their neighbours (three of trade_probe's, user2_stages' eErrNoEmptyStage). Worse, the
+info getters changed their CALLING CONVENTION (`row*(const u16*)` -> `row*(table*, u32)`, NULL for no row) and the
+records lost their name pointer: every address can be right and the call still reads garbage.
+Rule: after the auto map, (1) error globals are placed BY NAME (the registrars pass the name with the global);
+(2) every literal the map changed that is used as a SIZE, MASK, KEY, FLOAT or RANGE goes on the SKIP list and back to
+its value; (3) a raw CALL to a game function compares the callers' argument set-up in both builds, not only the
+callee's address; (4) a mid-function window is accepted only inside the paired function (fmap pair or the callers'
+votes), never by bytes alone.
+
+## One owner per file when several helpers apply a port (2026-11-26, 3840)
+What happened: four helpers each found the same structure moves (ServerField's owner +0x180 -> +0x158, the
+TransformSync field +0x518 -> +0x528) in files outside their own lists, and two placed the same 13 points of one
+shared header (stage_lookup_logic.h).
+Rule: before anyone edits, give every file one owner (hand/APPLY.md), give the files nobody owns to the helper whose
+facts they need, and have the others report what they found there instead of editing.

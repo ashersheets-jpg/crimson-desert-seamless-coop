@@ -729,11 +729,12 @@ std::atomic<uint64_t> g_death_withheld_at{0};
 // Keeping our own death notice (2985) from the client keeps the HUD and menus, but the character then STANDS at 0 HP
 // on its own player's screen. The client's "on dead" (exe+0x6E7640) does two things: the actor part (the event
 // "OnBattle_HandleDeadSelf" = the fall, collision, the dead flag) and, for the locally controlled character only,
-// one call of the 5-byte jmp stub exe+0xBA3700, which puts the UI into its "gameover" sub-phase (HUD hidden, menus
-// locked, the game's own death screen). With the stub skipped while we are down in co-op, the notice can go to the
-// client: the character falls and stays down, the UI stays ours. The game's two revive packets stand it up again.
-constexpr uintptr_t kGameOverStub = 0xBDBCD0;
-constexpr uint8_t kGameOverStubBytes[5] = {0xE9, 0x5B, 0x67, 0xDF, 0x08};  // build 1.0.0.3576
+// one call of the 5-byte jmp stub exe+0xC27160 (3840; 3732 0xBDBCD0, 3576 0xBA3700), which puts the UI into its
+// "gameover" sub-phase (HUD hidden, menus locked, the game's own death screen). With the stub skipped while we are down
+// in co-op, the notice can go to the client: the character falls and stays down, the UI stays ours. The game's two
+// revive packets stand it up again.
+constexpr uintptr_t kGameOverStub = 0xC27160;  // 3840: both callers of 3732's 0xBDBCD0 call it (jmp 0x9B6CBC0)
+constexpr uint8_t kGameOverStubBytes[5] = {0xE9, 0x5B, 0x5A, 0xF4, 0x08};  // build 1.0.0.3840 (3732: E9 5B 67 DF 08)
 SafetyHookInline g_gameover;
 std::atomic<bool> g_pose_down{false};
 std::atomic<uint32_t> g_gameover_skipped{0};

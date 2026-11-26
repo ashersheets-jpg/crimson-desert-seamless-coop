@@ -48,7 +48,6 @@ using build_3549::kEquipSlot_Table;
 using build_3549::kErrorLoggerHead;
 using build_3549::kHideFlagsOfCopies;
 using build_3549::kHookArgSizeStackOffset;
-using build_3549::kItemInfo_Key;
 using build_3549::kLayer_Chart;
 using build_3549::kLayer_Playback;
 using build_3549::kLoadKindMount;
@@ -170,7 +169,7 @@ inline constexpr uintptr_t kCutscenePlaying = 0x730A156;  // 3549:0x70D9F14, 2/2
 // a timer). Photo mode = both read 0xCB0A77 (u32 & 0xFFFFFF, little-endian).
 inline constexpr uintptr_t kPhotoModeIdA = 0x745B6A4;
 inline constexpr uintptr_t kPhotoModeIdB = 0x745B688;
-inline constexpr uint32_t kPhotoModeId = 0xD05A57;
+inline constexpr uint32_t kPhotoModeId = 0xCB0A77;  // game data (the low 24 bits of a float), not an address
 inline constexpr uintptr_t kFieldTimeClient = 0x70DC128;  // 3549:0x6EAB998, 6/6
 inline constexpr uintptr_t kMiniGameRoot = 0x73F0DA8;  // 3549:0x71BDF48, 8/8
 inline constexpr uintptr_t kClientClockGlobal = 0x730A12D;  // 3549:0x70D9E3D, 8/8 cmp sites
@@ -195,16 +194,19 @@ inline constexpr uintptr_t kActionLayerAdvance = 0x227AB10;  // 3549:0x214EC90, 
 inline constexpr uintptr_t kActionLayersAdvance = 0x247C4E0;  // 3549:0x2331320; one of 227 identical template copies: the 64th in both builds (the whole block moved +0xD50, its callees too), 0x670 gap to kPending kept
 inline constexpr uintptr_t kMinimapIconDecide = 0xA595AD;  // 3549:0x9EA31D
 inline constexpr uintptr_t kVtClientEquipSlotComponent = 0x5B5C6C0;  // 3549:0x594B388 (= RTTI)
-// 3663: the item table is { +0x28 count, +0x20 -> entries of 24 bytes, the record pointer at entry + 8 }
-// (3576: { +0x08 count, +0x58 -> record pointers }); the getter's load is `mov rcx,[rip+d]` (was `mov rbx`).
-inline constexpr uint32_t kItemInfoTable_Count = 0x28;
-inline constexpr uint32_t kItemInfoTable_Records = 0x20;
-inline constexpr uint32_t kItemInfoTable_Stride = 24, kItemInfoTable_RecordAt = 8;
+// 3840: the item table is { +0x20 count, +0x18 -> entries of 0x30 bytes, the record pointer at entry + 0x20 } (the
+// generic getter 0x3EA540; the item wrapper 0x3E5010 loads the table with `mov rcx,[rip+d]` at +7), and the record
+// keeps its key at +0 (3732: +8). 3663 / 3732: { +0x28 count, +0x20 -> entries of 24 bytes, the record at entry + 8 }
+// (3576: { +0x08 count, +0x58 -> record pointers }).
+inline constexpr uint32_t kItemInfoTable_Count = 0x20;
+inline constexpr uint32_t kItemInfoTable_Records = 0x18;
+inline constexpr uint32_t kItemInfoTable_Stride = 0x30, kItemInfoTable_RecordAt = 0x20;
+inline constexpr uint32_t kItemInfo_Key = 0x00;  // 3732 (and 3460..3732): 0x08
 inline constexpr uint8_t kItemInfoTableLoadReg = 0x0D;  // the ModRM byte of the load (rcx; rbx was 0x1D)
-inline constexpr uintptr_t kItemInfoTableSlot = 0x724C510;  // 3549:0x71BEE70, decoded from the load below
-inline constexpr uintptr_t kItemInfoTableLoad = 0x3DB328;  // 3549:0x3DD5D5
+inline constexpr uintptr_t kItemInfoTableSlot = 0x73F21D8;  // 3732:0x724C510, 3549:0x71BEE70, decoded from the load below
+inline constexpr uintptr_t kItemInfoTableLoad = 0x3E5017;  // 3732:0x3DB328, 3549:0x3DD5D5
 inline constexpr uintptr_t kTrocInstancesBegin = 0x70BED10;  // 3549:0x6E8ED10, same span
-inline constexpr uintptr_t kTrocInstancesEnd = 0x6F4E7B8;  // last + 8
+inline constexpr uintptr_t kTrocInstancesEnd = 0x70F2F38;  // last + 8 (3840: 1193 instances 0x70BED10..0x70F2F30; 3732:0x6F4E7B8)
 inline constexpr uintptr_t kGameplayInput = 0x73D1C78;  // 3549:0x719F558, u8
 inline constexpr uintptr_t kUiModePush = 0xFC4AA7;  // 3549:0xF21B07; its movzx reads kGameplayInput
 inline constexpr uintptr_t kErrorLogger = 0x16C7FC0;  // 3549:0x15FC450, head matches

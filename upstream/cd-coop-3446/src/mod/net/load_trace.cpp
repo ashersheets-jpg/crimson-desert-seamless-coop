@@ -41,7 +41,7 @@ constexpr uint8_t kComponentBusyHead[] = {0x84, 0xC0, 0x75, 0x43};  // test al,a
 
 // ClientCharacterControlActorComponent vtable slots 18 (resource load complete: sets the hide
 // bits on 2976) and 24 (end of login: clears them), entry; rcx = component, [rcx+8] = actor.
-constexpr uintptr_t kCcSlot18 = 0x971B80, kCcSlot24 = 0x9AF230;  // 3576, vtable slots (3549: 0x943910, 0x943C60)
+constexpr uintptr_t kCcSlot18 = 0x9AF030, kCcSlot24 = 0x9AF230;  // 3840 vtable 0x5B54DA0 slots (3732: 0x971B80, 0x971ED0; 3549: 0x943910, 0x943C60)
 // ICharacterMovementMethod vf2 (slot 2 of Normal/AnimationAll/...): the per-frame step that,
 // for a remote actor, interpolates its network samples. rcx = method, [rcx+0x20] = actor.
 constexpr uintptr_t kMethodStep = 0xC41380;  // 3576 (3549: 0xBBD5F0)
@@ -56,7 +56,7 @@ SafetyHookMid g_finish_hook;
 SafetyHookMid g_busy_hook;
 // Co-op+ (3479): who runs a DriverMovementMethod, and which actor it resolves as the one it drives.
 // Enemy copies crashed in it (exe+0x780ED0 -> 0x976590 -> 0x976921, a driven actor's null action).
-constexpr uintptr_t kDriverStep = 0x7AF0F9;  // 3549: 0x7819A9  // mov r10,[rax+0xC8]; rax = the driven actor's CC
+constexpr uintptr_t kDriverStep = 0x7E8809;  // 3840 (3732: 0x7AF0F9, 3549: 0x7819A9)  // mov r10,[rax+0xC8]; rax = the driven actor's CC
 SafetyHookMid g_driver_hook;
 std::atomic<int> g_driver_lines{0};
 void on_driver_step(safetyhook::Context& ctx) {

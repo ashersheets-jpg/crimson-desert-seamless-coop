@@ -25,7 +25,7 @@ const char* const kPanels[kMenuPageCount] = {"WorldMapView", "InventoryEquipment
 
 constexpr uintptr_t kTabButton = 0xFBF250;       // the menu's LB / RB handler (root, sender, button, 0, 0, float*)
 constexpr uintptr_t kTabChanged = 0xFBF640;      // void (root, list, flag): the tab row's selection changed
-constexpr uintptr_t kListSelect = 0xA5562A0;  /* 3732 (3663 0xA97F1D0, 3576 0xA7866B0), in the protected section: found by its 160-byte masked pattern, one hit */      // void (list, page + 0x10, 0, flag): select the item with this key
+constexpr uintptr_t kListSelect = 0xA7A8350;  /* 3840 (3732 0xA5562A0, 3663 0xA97F1D0, 3576 0xA7866B0), in the protected section: the target of the jmp stub 0x12841D0 that kOpenPanel calls (3732 stub 0x1209C40) */      // void (list, page + 0x10, 0, flag): select the item with this key
 constexpr uintptr_t kRoot_Pages = 0x158;          // stride 0x30
 constexpr uintptr_t kRoot_PageCount = 0x160;      // uint32
 constexpr uintptr_t kRoot_TabRow = 0x1A8;         // UIGamePlayControlCommon_CircularList*
@@ -129,13 +129,13 @@ void tab_changed(uintptr_t root, uintptr_t list, uint64_t flag) {
     shift_rb(root, false);
 }
 
-// Co-op+ (tcB289): "Leave the session" = the game's own Return to Title. The routine (exe+0x96525F0: game state
-// object, level 2) is the one the pause menu's Return to Title and the console's "logout" end in; the console only
+// Co-op+ (tcB289): "Leave the session" = the game's own Return to Title. The routine (exe+0x96993B0 on 3840: game
+// state object, level 2) is the one the pause menu's Return to Title and the console's "logout" end in; the console only
 // calls it while the state byte is 4 (in the world), and so do we. Asked for from any thread, done on the UI thread
-// by the menu root's per-frame update (vftable slot 36, exe+0xF1B8F0) while the menu is open; when that has not run
-// within a second (menu closed), a helper thread does it.
-constexpr uintptr_t kMenuUpdate = 0xF568B0;
-constexpr uintptr_t kReturnLevel = 0x94CF960;  /* 3732 (3663 0x9790FD0, 3576 0x96525F0), in the protected section: one hit of its masked pattern; reads P+0x24C now */
+// by the menu root's per-frame update (vftable slot 36, exe+0xFBDFF0 on 3840) while the menu is open; when that has
+// not run within a second (menu closed), a helper thread does it.
+constexpr uintptr_t kMenuUpdate = 0xFBDFF0;  // 3840: slot 36 of the root's vftable 0x5C14E68 (3732 0xF568B0)
+constexpr uintptr_t kReturnLevel = 0x96993B0;  /* 3840 (3732 0x94CF960, 3663 0x9790FD0, 3576 0x96525F0), in the protected section: the target of the jmp stub 0xA20930 (3732 0x9E49F0); reads P+0x24C */
 constexpr uintptr_t kStateRootA = 0x73F0DA8;
 std::atomic<bool> g_title_wanted{false};
 std::atomic<uint32_t> g_update_calls{0};
@@ -326,7 +326,7 @@ LONG CALLBACK watch_veh(EXCEPTION_POINTERS* e) {
         const auto* sp = reinterpret_cast<const uintptr_t*>(e->ContextRecord->Rsp);
         int k = 0;
         for (int i = 0; i < 200 && k < 6; ++i) {  // values on the stack that point into the game's code
-            if (sp[i] > base + 0x1000 && sp[i] < base + 0x4B6EE80) h.ret[k++] = sp[i];
+            if (sp[i] > base + 0x1000 && sp[i] < base + 0x4A00000) h.ret[k++] = sp[i];
         }
     }
     return EXCEPTION_CONTINUE_EXECUTION;

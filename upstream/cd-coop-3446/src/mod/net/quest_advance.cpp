@@ -29,7 +29,7 @@ constexpr uintptr_t kSetMissionState = 0x1D4BFF0;  // 3549: 0x1C3F0F0
 constexpr uint8_t kSetMissionStateHead[16] = {0x48, 0x89, 0x5C, 0x24, 0x18, 0x44, 0x88, 0x4C,
                                               0x24, 0x20, 0x48, 0x89, 0x54, 0x24, 0x10, 0x55};
 // exe+0x2B95BE0: the quest advancement routine (quest_advance.h).
-constexpr uintptr_t kAdvance = 0x2C002C0;  // 3549: 0x2B95BE0
+constexpr uintptr_t kAdvance = 0x2D37890;  // 3840 (3732: 0x2C002C0, 3549: 0x2B95BE0)
 constexpr uint8_t kAdvanceHead[16] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x55, 0x56, 0x57,
                                       0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57};
 // MissionTriggerInOutReq's handler (runs on the quest server's thread).
@@ -41,8 +41,10 @@ constexpr uint8_t kTriggerHandlerHead[16] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48,
 // count, [+0x20] the entries, 0x18 bytes each, entry +0x08 = the info* (null until loaded; the getter then loads
 // it, we only skip it). The older layout (3549: +0x08 count, +0x58 info* per index) is gone; the candidates of
 // 17 Nov (0x7419180 / 0x7419188, from the static initializer) were zero at run time (cs44f).
+// 3840: the getter 0x536110 (the new kAdvance calls it on this table): [+0x20] u32 count, [+0x18] the entries, 0x30
+// bytes each, entry +0x20 = the info* (3663 / 3732: +0x28, +0x20, 0x18, +0x08).
 constexpr uintptr_t kMissionTable = 0x73F3BF0;
-constexpr uint32_t kMissionCountOff = 0x28, kMissionEntriesOff = 0x20, kMissionEntrySize = 0x18, kMissionInfoOff = 0x08;
+constexpr uint32_t kMissionCountOff = 0x20, kMissionEntriesOff = 0x18, kMissionEntrySize = 0x30, kMissionInfoOff = 0x20;
 // The key's offset in the info (3549: +0x08), found at run time from the first key asked for: +0x08 first.
 constexpr uint32_t kMissionKeyOffs[] = {0x08, 0x00, 0x04, 0x0C, 0x10, 0x14, 0x18};
 constexpr uint64_t kRequestMs = 10000;

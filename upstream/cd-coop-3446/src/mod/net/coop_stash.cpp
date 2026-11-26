@@ -63,14 +63,15 @@ bool warehouse_index(uint16_t& wh) {
     if (!info || !*info) return false;
     auto mgr = game::read_ptr(*info + 0x220);  // 3663 (3576 +0x240)
     if (!mgr || !*mgr) return false;
-    return game::safe_read(*mgr + 0x8A, &wh, sizeof wh) && wh != 0xFFFF;  // 3663 (3576 +0xB2)
+    return game::safe_read(*mgr + 0x82, &wh, sizeof wh) && wh != 0xFFFF;  // 3840: +0x82 (3663 / 3732 +0x8A, 3576 +0xB2)
 }
 
 uint16_t inventory_key(uint16_t index) {
     const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     __try {
-        const uintptr_t row = game::info_row(base + 0x57B750, index);
-        return row ? *reinterpret_cast<uint16_t*>(row + 8) : 0xFFFF;
+        // 3840: the inventory-row wrapper 0x5AA2D0, the key at +0 (3732: 0x57B750, key at +8).
+        const uintptr_t row = game::info_row(base + 0x5AA2D0, index);
+        return row ? *reinterpret_cast<uint16_t*>(row) : 0xFFFF;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return 0xFFFF;
     }
@@ -446,7 +447,8 @@ bool stash_withdraw(const StashItem& it) {
     return ok;
 }
 
-// Item names (build/decomp/notes_item_names.md, local): row = exe+0x3DD8A0(0, idx) (loaded on demand, freed 30 s
+// Item names (build/decomp/notes_item_names.md, local): row = exe+0x3E5010(&idx) on 3840 (3732 0x3DB320; 3549
+// exe+0x3DD8A0(0, idx)) (loaded on demand, freed 30 s
 // later: only on the game's UI thread, never kept); its localized name object at row+0x90; the object's vftable slot 1
 // returns the UTF-8 text (const char*, from the localization buffer). Resolved in stash_ui_tick, cached here.
 namespace {
@@ -458,7 +460,7 @@ bool read_name(uint16_t idx, char* out, size_t cap) noexcept {
     const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     out[0] = 0;
     __try {
-        const uintptr_t row = game::info_row(base + 0x3DB320, idx);
+        const uintptr_t row = game::info_row(base + 0x3E5010, idx);  // 3732: 0x3DB320
         if (!row) return false;
         const uintptr_t obj = *reinterpret_cast<uintptr_t*>(row + 0x90);
         if (!obj) return false;

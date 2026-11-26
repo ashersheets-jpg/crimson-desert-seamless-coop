@@ -162,7 +162,9 @@ void scan_copy_buffer(uintptr_t actor) {
 // (the oldest shifted out), done cleared. The same positions still arrive as Acks, which the game then drops (not
 // newer) after updating everything else they carry. Checked on first use (the newest sample must be one of ours);
 // a mismatch turns this off for the session.
-constexpr uint32_t kPosBuffer = 0x430, kRotBuffer = 0x4E8, kSampleSize = 0xA0, kSampleTs = 0x98, kMaxSamples = 30;
+// 3840: the controller grew, both buffers +0x50 (the controller method 0x9E4930 `lea rbx,[rcx+0x480]`, the movement
+// step 0xC41380 `lea rbx,[rcx+0x538]`; 3732: +0x430 / +0x4E8).
+constexpr uint32_t kPosBuffer = 0x480, kRotBuffer = 0x538, kSampleSize = 0xA0, kSampleTs = 0x98, kMaxSamples = 30;
 std::atomic<int> g_direct_state{0};  // 0 checking, 1 on, -1 off
 std::atomic<uint64_t> g_direct_inserted{0}, g_direct_skipped{0};
 

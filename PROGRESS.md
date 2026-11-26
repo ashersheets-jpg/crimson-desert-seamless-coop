@@ -5,6 +5,9 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- 2026-11-26 16:45 RESUMED (the limit reset at 16:40). The four helpers resumed; pins84.py applied. The Spacewar
+  QUESTION below still waits for you (Borque, 20:35 UTC in #play-testing-feedback: "I sent you a dm about a problem that
+  is now avoiding us to make more testing"; not answered by me).
 - 2026-11-26 12:44 STOPPED HERE (usage limit). The 3840 port is mid-way. DONE and committed: message numbers,
   767 + 105 mapped addresses, 90 re-read byte patterns, TLS +0x10 (tls84.py), kit / READMEs / docs (kit84.py,
   docs84.py), port-3840.md. READY, NOT RUN: pins84.py, tests84.py (after the hand table), the GimmickHandoff scripts
@@ -12104,3 +12107,27 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   1575559020222357556): in our co-op pad test the bar moves with X and no presses lose in 3 s, so a match that never
   runs in solo points at the mod; a SOLO test with the mod on a pad follows the port (cs138); asked Brycecco what he
   saw; told both that on today's 3840 the mod is off until the new build.
+- 12:44-16:40 stopped (the usage limit). 16:42 Discord: Brycecco (17:12 UTC, still on 3732, solo with the mod): a main
+  quest at the merchant guild ("grab the npc, release or stab him": the NPCs never aggro, area-locked; not sure the
+  mod was on then), and today the stolen-quarry drill boss: neither he nor the boss took damage; he offered a
+  Diagnose zip. Borque (20:35 UTC): points at his Spacewar DM (yours). #general: a join only. 16:43 replied to
+  Brycecco (1575628023992946690): a Diagnose zip after such a fight, and the same fight once with Vanilla mode to
+  rule the mod in or out; the same for the merchant guild.
+- 16:43 native ed3a79e: pins84.py (the stamps, the protection's range, the save sites, the crime return).
+- 16:47 G2 (stages) and G3 (movement, saves) tables complete (G2: 137 high / 13 medium / 5 low); G1 (server requests)
+  and G4 (layer) still finishing. game/info_row.h rewritten for 3840's getters (`info_row(getter, table_slot, index)`,
+  NULL for no row; `info_name(table_slot, index)` for the names that left the records). hand/APPLY.md: the rules,
+  file ownership and my calls on the open rows (parity with 3732: kMcMethods stays 0x198, scene_level_share's
+  kCallSite stays stale so its part B stays off, wall-up probe fields stay; far_travel / lootr / trade_probe move to
+  the new getters; lootr on_keep_body writes rcx, shop_guest reads r15, clock_gate r14). G2 and G3 now APPLY their
+  own rows (G2 also the unowned field_share / server.cpp / guest_lifecycle field moves).
+- 16:50 Discord: Brycecco (21:46 UTC): after a restart with the mod the boss took damage again. Replied
+  (1575629802185031722: Diagnose right after closing the game if it comes back). #general: a join only. No unread DMs.
+- 16:55-17:03 G3 applied (19 files, 31 address pairs; RideOff now called only when its thunk's bytes match), G2
+  applied (13 files, 26 pairs; field_share.h's ServerField offsets and user vector +8 verified on aligned code), G1 and
+  G4 (layer) applying now. Unowned leftovers fixed by me (tools/native-port/left84.py): ui_pause's CALLED client fast
+  travel 0x74E830 (mid-function in 3840) -> 0x787650 (callers' set-up and the context chain [[[0x73F0DA8]+0x90]+0x1240]
+  checked, hand/uipause84b.py); remote_interp's sample buffers +0x430 / +0x4E8 -> +0x480 / +0x538; the scene weather
+  +0xF70 -> +0xF48 (weather_sync, clock_push); identity_probe's kStatusLoad. hand/leftover84.py: every unplaced 3732
+  literal still in the source by file (the judge named only a literal's FIRST place: how ui_pause slipped through).
+  Spot check of the raw CALL targets (hand/spot84.py): all jmp stubs in both builds; the getters' new convention seen.

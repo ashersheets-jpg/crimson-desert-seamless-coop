@@ -9,8 +9,9 @@ from live import BASE, rd, q
 # Per game build, from the running game's PE timestamp (2026-11-06: 1.0.0.3576 moved both; 3527 and 3549 share theirs).
 _BUILDS = {0x6AED2E85: (0x71CF140, 0x70DC130),  # 3576 (build/port3576/map_3576.json)
            0x6AF5D198: (0x7253E60, 0x71602A8),  # 3663 (tools/native-port/p63.py: 2 of 2 code references each)
-           0x6AFDC0CF: (0x725A040, 0x7166368)}  # 3732 (build/port3732 fmap.data + portmap.data: 2 of 2 each; pp37 chest
+           0x6AFDC0CF: (0x725A040, 0x7166368),  # 3732 (build/port3732 fmap.data + portmap.data: 2 of 2 each; pp37 chest
                                                  # walked blind on 3663's values: "at (0, 0, 0)", stuck 41 s)
+           0x6B07E5E9: (0x73FFE08, 0x730A338)}  # 3840 (= kStaticPlayerPos / kCameraSlot: 2 of 2 references each)
 _pe = struct.unpack('<I', rd(BASE + struct.unpack('<I', rd(BASE + 0x3C, 4))[0] + 8, 4))[0]
 STATIC_POS, CAMERA_SLOT = _BUILDS.get(_pe, (0x71CD0B0, 0x70DA028))  # XY floats (+0), Z (+8); 3527/3549 (3479: 0x71C5DF0)
 CAMERA_BLOCK, CAM_FWD = 0x430, 0x90

@@ -64,8 +64,9 @@ bool g_stash = false;  // ... or the deposit into the shared stash (B12)
 uint16_t inventory_key(uint32_t index) noexcept {
     const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     __try {
-        const uintptr_t row = game::info_row(base + 0x57B750, index);
-        if (row) return *reinterpret_cast<uint16_t*>(row + 8);
+        // 3840: the inventory-row wrapper 0x5AA2D0 (table 0x73F21B8), the key at +0 (3732: 0x57B750, key at +8).
+        const uintptr_t row = game::info_row(base + 0x5AA2D0, index);
+        if (row) return *reinterpret_cast<uint16_t*>(row);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
     }
     return static_cast<uint16_t>(index);
@@ -397,12 +398,14 @@ bool give_install() {
     const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     // 3663: the two handlers no longer share a prologue (the bag one keeps a frame pointer now: the inventory-row
     // getter takes its index by address there). Same arguments, same fields (fdiff.py EF6560 F31570).
-    static const uint8_t kBagHead[16] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74,
-                                         0x24, 0x18, 0x48, 0x89, 0x7C, 0x24, 0x20, 0x55};
+    // 3840: the bag handler pushes its registers instead of spilling them, and ClientDiscard no longer spills r9w;
+    // same arguments and bodies (build/port3840/hand/G4.md).
+    static const uint8_t kBagHead[16] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x55, 0x56, 0x57,
+                                         0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57};
     static const uint8_t kListHead[16] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x6C,
                                           0x24, 0x18, 0x48, 0x89, 0x74, 0x24, 0x20, 0x57};
-    static const uint8_t kClientHead[16] = {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x10, 0x66,
-                                            0x44, 0x89, 0x48, 0x20, 0x4C, 0x89, 0x40, 0x18};
+    static const uint8_t kClientHead[16] = {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x10, 0x4C,
+                                            0x89, 0x40, 0x18, 0x48, 0x89, 0x48, 0x08, 0x55};
     uint8_t a[16] = {}, b[16] = {}, c[16] = {};
     if (base != off::kImageBase || !game::safe_read(base + kDiscardBag, a, 16) ||
         !game::safe_read(base + kDiscardList, b, 16) || !game::safe_read(base + kClientDiscard, c, 16) ||
