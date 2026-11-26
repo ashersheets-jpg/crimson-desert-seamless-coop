@@ -14,6 +14,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
 #include <vector>
 
 #include "common/learnt_file.h"
@@ -40,6 +41,8 @@ bool hits_dev_kill_self(int64_t hp_x1000);
 // that attack, and we react the same (stagger, knock-down, push).
 // [coop] player_hit_lethal: a blow that takes all our HP kills us (a normal
 // death); otherwise we stay at 1 HP.
+// TEST ONLY (dev scripts' duelhit): one duel hit on our own player through the real path; a line for the log.
+std::string hits_dev_duel_hit();
 void hits_set_react(bool on, bool lethal);
 // Our player's HP x1000 from its last VaryHPAck (-1 unknown), and its maximum (0 unknown).
 int64_t hits_own_hp();

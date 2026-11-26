@@ -19,6 +19,7 @@
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
 #include "mod/net/local_capture.h"
+#include "mod/net/player_hits.h"
 #include "mod/net/remote_puppet.h"
 #include "mod/net/revive_prompt.h"
 #include "mod/net/time_sync.h"
@@ -198,7 +199,7 @@ static void log_vehicles_near(float radius) {
 namespace {
 
 struct Step {
-    enum Kind { C2S, S2C, Wait, Teleport, Poke, Time, Watch, Day, Pad, KillGame, KillFriend, KillHorse, KillAll, MemScan, MemDiff, MemWatch, Advance, FScan, FFilter, FWatch, WaitFile, DScan, DFilter, DWatch, GSnap, GDiff, VtScan, PtrScan, WatchStatus, Key, ClockScan, RideHorse, PrologueDone, GrantXp, GuestHit, DumpItemMove, TpActor, Npcs, KillNear, LootLast, TpWaypoint } kind;
+    enum Kind { C2S, S2C, Wait, Teleport, Poke, Time, Watch, Day, Pad, KillGame, KillFriend, KillHorse, KillAll, MemScan, MemDiff, MemWatch, Advance, FScan, FFilter, FWatch, WaitFile, DScan, DFilter, DWatch, GSnap, GDiff, VtScan, PtrScan, WatchStatus, Key, ClockScan, RideHorse, PrologueDone, GrantXp, GuestHit, DumpItemMove, TpActor, Npcs, KillNear, LootLast, TpWaypoint, DuelHit } kind;
     uintptr_t addr = 0;
     float to[3] = {};
     uint16_t op = 0;
@@ -377,6 +378,11 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
         // its character load; 2026-11-22: pp44-loot had 0xA0100067, the checklist's revive step named 0xA0100066).
         if (kind == "killfriend") {
             st.kind = Step::KillFriend;
+            steps.push_back(st);
+            continue;
+        }
+        if (kind == "duelhit") {  // duelhit: one duel hit on our own player through the real path (TEST ONLY)
+            st.kind = Step::DuelHit;
             steps.push_back(st);
             continue;
         }
@@ -818,6 +824,8 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                              static_cast<int>(st.to[2]), static_cast<int>(st.wait_ms));
             } else if (st.kind == Step::KillGame) {
                 hunt_dev_kill(std::string(st.payload.begin(), st.payload.end()));
+            } else if (st.kind == Step::DuelHit) {
+                log::info("Dev script: duelhit: {}", hits_dev_duel_hit());
             } else if (st.kind == Step::KillFriend) {
                 const uint32_t friend_key = capture_other_player_key();
                 if (!friend_key) {

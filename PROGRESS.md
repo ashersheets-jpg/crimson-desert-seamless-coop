@@ -11864,3 +11864,16 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   (exe+0x2359205: the gimmick's state byte not 1 / 3-9 with interaction kind 7; written up in the research note).
 - 21:59 native f2995ba (synced, outer 85d9795), outer 0f15dd6 (duel, u2revive, docs), pushed; packaged 0f15dd65 (=
   the build tree's DLLs). 22:00 cs131a (the duel test) started.
+- 22:00-22:10 cs131a: both layers now log "the other player's duel hits stagger our player" (the switch on the native
+  path). The [state] lines read real stage positions now (the host's stages "83/84/84 within 3/4/5 cells of user 2,
+  0..100 cells from the host", was "162..162"). No duel: the joined player's camera after tpfriend + faceto pitched up
+  (the host's tag at the screen's bottom edge, outside the prompt's band), so R found no prompt. The host took one
+  bandit blow, no stagger kept.
+- 22:10-22:20 cs131b (camera tilted down, the host 15 s beside bandits): the duel started (the joined player's invite,
+  the host's accept, round 1), but the host took 3 blows and kept no stagger, and only one swing counted (a "miss" at
+  134 deg: [dev] duel_test=1 sat in a second [dev] section after [keys], never read; the joined player's 90 ms clicks
+  counted none). Cause of the first: player_hits.cpp read the restriction in 2976's layout (77 B); since 3576 it is
+  69 B (+0x1C instance, +0x2C key, +0x41 source), as guest_hits.cpp knew. Fixed, and guest_hits' real staggering
+  blow is the duel's stand-in when nothing was learnt (ebaaa7c, pushed; built: the 14 old native failures, layer tests
+  pass; packaged ebaaa7c9). cs131: dev keys first, 250 ms clicks. LESSONS: both. enemy_relay.cpp / piece4_test.cpp
+  keep the 2976 layout too (old base only, off in the shared world). 22:24 cs131c started.

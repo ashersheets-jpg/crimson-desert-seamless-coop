@@ -336,6 +336,17 @@ int64_t hits_on_pvp(const std::vector<uint8_t>& payload, int64_t floor) {
     return ok ? damage : 0;
 }
 
+std::string hits_dev_duel_hit() {
+    // TEST ONLY (a dev script's duelhit): the hit our side would send, taken by our side as the other player's.
+    const int64_t max = hits_own_hp_max();
+    if (max <= 0) return "our health is not known yet";
+    const auto payload = hits_make_pvp(0x0DE11017u, static_cast<int64_t>(max * 0.05));
+    const bool templates = payload.size() > kHitBaseSize;
+    const int64_t took = hits_on_pvp(payload, static_cast<int64_t>(max * 0.03));
+    return std::format("{} bytes ({}), -{:.1f} hp (see the Duel line above)", payload.size(),
+                       templates ? "with a stagger" : "no stagger", took / 1000.0);
+}
+
 void hits_set_react(bool on, bool lethal) {
     g_react = on;
     g_lethal = lethal;
