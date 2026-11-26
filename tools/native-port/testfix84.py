@@ -29,3 +29,8 @@ sub('optd_shop_c1_tests.cpp', [
      'static_assert(isl::kCtxLookup + sizeof isl::kCtxLookupBytes - 5 == 0x2433C44);  // 3840 (3732 0x2360924; 3663'),
 ])
 print('test checks: done')
+# (second run, after the build showed it) world_anchor's ServerField slot and the TS field (G2: 0x170 / 0x174, 0x528)
+sub('optd_world_anchor_tests.cpp', [
+    ('static_assert(wal::kFieldSlotOn == 0x198 && wal::kFieldSlotKey == 0x19C && wal::kTsField == 0x518);  // 3576',
+     'static_assert(wal::kFieldSlotOn == 0x170 && wal::kFieldSlotKey == 0x174 && wal::kTsField == 0x528);  // 3840 (3576..3732: 0x198 / 0x19C / 0x518)'),
+])
