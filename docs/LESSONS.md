@@ -943,6 +943,20 @@ cover the logs, the live game-folder logs and the screenshots), the browser's `n
 anything that really needs a shell (curl, python, git, a build) a line in a scratchpad file, run after the test. If
 the next tool call would be Bash and a test is running, the call is not made at all.
 
+## The button can change between a minigame's menu and its match: look at each phase's prompt (2026-11-26, cs129c-g)
+Edward's arm wrestling on a pad: the organizer's menu shows "(A) Participate", so my tests mashed A through the match
+and lost every time (the gauge only fell). Shots every 0.4 s through the match showed "(X) Push": the match takes X.
+Mashing X won at once. The lesson "a pad test starts from the game's own prompt" applies to EVERY phase: take a shot
+in each phase (the menu, the countdown, the match) before scripting the next phase's presses.
+
+## Name the object a tester used from the place, not from the order of their notes (2026-11-26, the "grindstone")
+Their list named a grindstone (prompt, hold, nothing) and church windows. In the log I found one interaction of the
+joined player that was accepted and then nothing, and called it the grindstone; I even wrote a test for "the
+grindstone" there. A shot at that exact spot (cs133a) showed the game's place name, "Church of Hernand", and the
+joined player had climbed the wall to reach the objects (two of them, the same interaction): the windows. Before
+telling testers what an interaction was, find where the player stood (its position lines), what moved it there
+(climb, walk) and how many objects took the same interaction; a quick shot at the spot names the place.
+
 ## After asking testers a question, read the channel again before drafting the next reply (2026-11-26)
 On 25 Nov I asked Brycecco two questions (the windows, the portal chest) at 21:52; he answered both at 21:54. My next
 reply draft asked them again two hours later, because I had read the channel only before posting. Testers often answer

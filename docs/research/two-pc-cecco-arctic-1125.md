@@ -174,6 +174,21 @@ replied 15:17 (message 1575243949344432129). Kept in the session scratchpad (dl-
     prepared for the host at 17:50:12, 18 minutes earlier (a long-lived host scene). Corrected 25 Nov 23:50 (the reply
     of 21:52 said "its scene went to the host": to be corrected in the next reply). Next: what the host's own use of
     a grindstone sends (a one-PC test with the host at a grindstone), then the same for user 2.
+  - CORRECTION 26 Nov 05:05 (cs133a): the "grindstone" lines above are most likely the CHURCH WINDOWS. At 18:08:20,
+    18:08:26 and 18:08:41 the joined player used interaction 0x2BA1 on TWO objects (0xB04022F6, then 0xB0402E0B) from
+    one spot, (-10505.8, 600.9, -3910.7), which it had reached by climbing the wall (RemoteMotion: WallUp, then
+    PointClimb, y 596 -> 601); cs133a put both players at that spot: the game names it "Church of Hernand", it is at
+    the foot of the church's wall, and nothing there takes an E (neither player's server got a request in 11
+    directions). So: the joined player's window uses DID reach the host's server and were accepted (2120 / 2794 to
+    user 2), then nothing more came for its character. My reply of 04:22 ("neither game ever asked the server") is
+    wrong for the joined player and needs a correction; the grindstone itself is not identified in the logs (ask
+    where / when). The host never tried a window in the log.
+    Hypothesis for the next work (same shape as the joined player's fishing, PROGRESS 2026-11-24): the server accepts
+    user 2's interaction steps, but what the object then does (open, the scene, the summon) is run by the game that
+    CONTROLS the gimmick, which is the host's for every gimmick; the joined player's game skips it for an object it does
+    not control. A hand-over of the gimmick's control to the interacting player's game for the interaction's length (as
+    the AI hand-over's talk rule does for people) would cover windows, fishing and likely the grindstone. To check
+    first: a host test at a window (a scripted climb), its packets after the do step, against user 2's.
   - Windows: no refused interaction of either player in the log; asked the testers what they mean. Brycecco's answer
     (02:54 UTC 26 Nov, two minutes after the question; first read 25 Nov 23:59): the church windows with a prompt on
     the 2nd floor, where the Bianca bounty contract is. No request in either log means the prompt's own client check

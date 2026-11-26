@@ -11950,3 +11950,47 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   level_state_share.{h,cpp,_logic.h}, config, mod.cpp start, the sniffer tap and the minute line in session2.cpp,
   CMake + optd_level_state_share), built: native 94 tests, the 14 old failures, the new one "all passed"; layer tests
   pass. Build tree cdmp 71376689 (not committed yet). 04:27 cs135a: the camp kill, captures on both, the share in probe.
+- 04:35 cs135a (probe): the share sees the host's lists; at the host's entry "no user 2"; 326 s in, the camp's
+  liberation scene reloads the host's field in place (LoadingFieldDataAck, the scenes 0x20C/0x20D) and the server
+  re-sends 3 full lists: "WOULD COPY (probe) as 0xA0100066". No state changed in them (gls_diff): this camp changes no
+  game level; ByJunter's "the camp changes level state" was his [H]. A real change needs story progress (the island,
+  the gate): the testers' play. 04:45 cs135b (on): all 3 copied ("COPIED to user 2 as 0xA0100066"); the joined
+  player's capture has them with its own key 0.2 s after the host's; both alive, SAVES OK, 5/5; nothing in the
+  joined player's log after them but its usual lines.
+- 04:50 DECISION (mine, scoped): level_state_share on by default (the layer's host ini; layer test), the hostrevive
+  step checks the copies after the host's reload (RELEASE-CHECKLIST row). Native 59548d2 (synced, f57a301), outer
+  3d0c0e3, pushed. Build tree cdmp 6ae88935 / coopplus 9cbb1cd0. 04:52 cs133a: the grindstone.
+- 05:00 cs133a: both players at the testers' 18:08 spot (-10505.8, 600.96, -3910.67) stand at the foot of a wall
+  the game calls "Church of Hernand"; E held 3 s in 11 directions: nothing taken for either. Their joined player had
+  CLIMBED there (WallUp, PointClimb, y 596 -> 601) and used interaction 0x2BA1 on two objects (0xB04022F6, then
+  0xB0402E0B at 18:08:41): the 2nd-floor church WINDOWS, not the grindstone. So the joined player's window uses did
+  reach the host's server and were accepted (preemption + do step answered), then nothing more came for its
+  character; my 04:22 reply's "neither game ever asked" is wrong for the joined player (to correct in the next
+  reply, and to ask where the grindstone was). Research doc + LESSONS (name the object from the place).
+- 05:10 cs134a: the host's bounty-notice spot is Hernand Town in front of the castle gate (shot h00: "Unwelcomed
+  Guests"), not the church; twelve directions, nothing taken. Not the windows' place. The windows need the host to
+  climb the church wall to them (a scripted climb: later). 05:11 cs129c: Edward's pad (A held 2 s).
+- 05:20 cs129c: the organizer's prompts in pad mode ("(A) Participate (20)", "(B) Back"); A held 2 s STARTED the
+  match (05:18:43, the fee paid; cs129a/b's X / A tap never did); intro cutscene 9.6 s; the match ended in a LOSS at
+  05:19:01, 2 s before the script's A mash began (it waited 20.5 s after the hold). The mash was not tested: the
+  test kit's timing. 05:22 cs129d: the mash 12 s after the hold (as the keyboard step).
+- 05:32 cs129d: A held 2 s -> the match (05:30:03), intro cutscene to 05:30:13, the A mash 240 x 40 ms from 05:30:14,
+  and the match was LOST at 05:30:19 ("I'm on a winning streak!"): mashing A on the pad does not win, while E on the
+  keyboard does (checklist armwrest). The game names "MiniGameWithActionButtonA / APress" (strings), so A is the
+  likely button. Edward's report reproduced in part (his "never ends" not seen: here it ends in a loss). 05:33
+  cs129e: the same with [dev] minigame_probe=1 (the gauge per press).
+- 05:43 cs129e: the probe counts the A presses as the game's E presses (8 a second, 05:41:53-58), but the gauge only
+  FALLS (48.86 -> 41.40 -> 33.96 -> 26.51 -> 19.08 -> 12.36 -> 0 every 0.5 s: about -15 a second, as with no presses)
+  and the match is lost at 05:41:58.9. Keyboard for comparison (cs103's host, E at ~11 a second): 50 -> 60.6 -> 68.1
+  -> 75.3 -> 82.9 -> 90.5 -> 96.3, a win. So on a pad the match does not take A as its push. The pad filter in the
+  layer (pad_input.cpp filter) masks A only under a Co-op+ screen or a layer mask; neither is up here. 05:45 cs129f:
+  shots every 0.4 s through the match, to read which input the match shows on a pad.
+- 05:55 cs129f: the countdown ring, then "(X) Push" under the hands (shots m11-m13): on a pad the push is X, not A.
+  cs129c-e mashed A through the match and pressed X only after it ended, so X was never tested in a match. (Edward
+  said he mashed X; to be seen.) 05:56 cs129g: X mashed (12 a second, as E on the keyboard) through the countdown and
+  the match, the gauge logged.
+- 06:05 cs129g: X on the pad PUSHES: the gauge 52.24 -> 62.78 -> 72.93 -> 80.43 -> 90.96, the match won at 06:04:07
+  (as E on the keyboard in cs103); the red fists fill (shot m13). So the game's controller binding works: hold A to
+  Participate, mash X ("(X) Push"). No mod change needed. 06:06 #bug-reports 1575467778604007435: told Edward (tags
+  him), asked his controller (Xbox / PlayStation, wired / Bluetooth, Steam Input) if X did not move it for him, and
+  whether "it never ends" is the match or the menu after it.
