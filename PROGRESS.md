@@ -12131,3 +12131,41 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   +0xF70 -> +0xF48 (weather_sync, clock_push); identity_probe's kStatusLoad. hand/leftover84.py: every unplaced 3732
   literal still in the source by file (the judge named only a literal's FIRST place: how ui_pause slipped through).
   Spot check of the raw CALL targets (hand/spot84.py): all jmp stubs in both builds; the getters' new convention seen.
+- 17:05-17:23 G4 applied the layer (11 files, 15 pairs; walkto.py's 3840 entry), G1 the rest of the native (8 files,
+  41 pairs; its P2 placement differs from G2's in the same block only: G2's kept). Layer 63c5ff9 (builds, its tests
+  pass). tests84.py (35 literals) + testfix84.py / testfix84b.py: the tests that held 3732 values (captured packets'
+  message numbers, the protected save returns, kCodeEnd's test address, a 2976 capture translation that op84 had
+  renumbered by mistake). Unit tests: 94 programs, the 14 baseline failures only (all stale 2976 fixtures). Native
+  329547e (60 files), native-base synced (906712c), pushed (8802502). Package 0.1.0-alpha+88025027 built.
+- 17:23 pp66-fresh started on 88025027 (the first live run on 1.0.0.3840).
+- 17:32 pp66-fresh FAILED: the joined player never entered the shared world. The host's C2 identity fix could not
+  install its shared LoadComponentsFromFile entry hook (identity_probe.cpp kLoadHead: 3732's prologue, a SHAPE head
+  no hand table owned: I had filed identity_probe among the off diagnostics), so option D REFUSED user 2's logins;
+  guest_own_save was forced off by the same hook. Also: NpcActivation "sondas entrada accion=false H1b=false" (3732:
+  all true): its containment could not act, so U-e stopped giving new NPCs to user 2 - npc_action_probe.cpp's entry
+  and host_scene_diag.cpp's H1b relay, again "diagnostic" files with hooks for on-by-default features.
+  Fixed (native 3c5b185): kLoadHead = 3840's prologue (the five arguments unchanged: its only caller sets them as on
+  3732, hand/loadcff84.txt); ServerStartActionLogic became slot 4 of ServerActorMoveSyncProcessor (0x30A69C0, called
+  through [[comps+0x1A0]+0x510], `this` = the processor): the probe derives the control, H1 / H1b's ten sites and
+  registers ported (all arrays checked against the exe). The 16 SHAPE heads are all handled now. Unit tests: the
+  baseline only. Package 93c6c120.
+- 17:47 pp67-fresh started on 93c6c120.
+- 17:56 *** pp67-fresh PASSED (45/0) on 3840 *** both in the shared world, linked (remote states host 3550 / guest
+  4475), overlays draw, SAVES OK, install restored. hand/refusals84.py (every hook / refusal line against pp65-fresh on
+  3732): nothing new refused; two layer lines missing (the guest's "Main menu: tab hooks installed", "Give: inventory
+  hooks installed") because the guest's Esc never opened the menu: the screenshots show the GAME's new "Extra Rewards
+  List" popup ("Rewards have been granted based on your past game activity", Copper x 145, [Enter] Confirm) on both
+  games, from L4 on, still open at the end: a save made before the update gets it on its first load, and the test
+  saves are put back each run. It holds every later step's keys. Test kit (twocopy.ps1, not a mod change): one Enter
+  to each game after the join / before any script, key or walk (and in the one-copy flow), shot "32-rewards-
+  confirmed". Cosmetic seen: our hold-R prompt on the friend is drawn over the game's popup.
+- 17:58 pp67-shop FAILED (0 of 2 shop requests, no twin): (1) the 120 ms Enter did NOT close the rewards popup (shot
+  32 still shows it; the friend's R then opened OUR menu: the game's own interaction is blocked under the popup);
+  (2) a REAL PORT BUG: the host's observer hold (S3, child_hold) held 551 NPCs and RELEASED NONE: dropped 551,
+  "observer out of range" x525. pp65-shop on 3732: held 949, released 904, dropped only despawned x27. child_hold.h
+  kTsSector still 3732's TS+0x548; the TransformSync block from +0x508 on moved +0x10 (G1 / G2): +0x558. Every NPC
+  read "not observed" -> dropped -> the joined player would have got no NPCs through the hold. Fixed in the source
+  (not built yet: a test runs). New warning kind "HoldSceneOrder [DISCARDED scene]" (the shopkeepers' scenes, same
+  cause: their NPCs' holds dropped).
+- 18:10 cs139 (one copy): what closes the popup: Enter held 900 ms, Space, a click on Confirm, E, Esc, shots after
+  each. (Rule slip ~18:12: a no-op `echo` through Bash while cs139 ran.)

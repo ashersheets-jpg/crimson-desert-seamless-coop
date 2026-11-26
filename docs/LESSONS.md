@@ -998,3 +998,14 @@ TransformSync field +0x518 -> +0x528) in files outside their own lists, and two 
 shared header (stage_lookup_logic.h).
 Rule: before anyone edits, give every file one owner (hand/APPLY.md), give the files nobody owns to the helper whose
 facts they need, and have the others report what they found there instead of editing.
+
+## A "diagnostic" file can hold the hooks an on-by-default feature needs (2026-11-26, pp66-fresh on 3840)
+What happened: the port's plan left "the diagnostics that are off" unported (identity_probe, npc_action_probe,
+host_scene_diag), since their hooks check their bytes and refuse. But identity_probe.cpp holds the SHARED
+LoadComponentsFromFile entry hook that the C2 identity fix and the joined player's own save use, and npc_action_probe
+/ host_scene_diag hold the action probe and H1b relay that NpcActivation's containment requires. On 3840 all of them
+refused: the host refused the joined player's logins (no co-op at all) and U-e stopped giving NPCs to user 2.
+Rule: a file is "off" only when NOTHING on by default calls into it. Before skipping a file in a port, grep who calls
+its install / shared functions (identity_shared_hooks_install, npc_action_probe_install, applied_mid_ready, ...);
+and after the first live run, compare every "REFUSED / not the expected code / could not be installed / stays off"
+line with the last run on the old build (pp65b-mountfight on 3732): a refusal that is new is a port gap.
