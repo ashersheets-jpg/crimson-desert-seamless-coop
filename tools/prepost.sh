@@ -842,6 +842,11 @@ u2revive)
   rv=$(grep -m1 "Revive: checkpoint revive, step 3" "$L" | cut -c2-13)
   aa=$(grep -h "User2Stages \[ARMED\]" "$H" | cut -c2-13 | awk -v t="$rv" '$1 > t' | head -1)
   [ -n "$rv" ] && [ -n "$aa" ] && ok "host: the guest's own townsfolk armed at $aa, after its revive at $rv (the host 430 m away)"     || bad "host: no U-1 arm after the guest's revive (revive '${rv:-none}', arms: $(grep -c 'User2Stages \[ARMED\]' "$H"))"
+  # 2026-11-26 (B10, cs135b, pp65): the host's 430 m teleport reloads its world and the server re-sends it its
+  # game-level states (ChangeGameLevelStateAck, three of 333 entries); with level_state_share (on by default) each goes
+  # to the joined player too, under its own character key.
+  has "$H" "LevelStateShare \\[2669\\] .* COPIED to user 2 as 0xA01000" "host: its game-level states after its far teleport went to the joined player too"
+  hasnot "$H" "LevelStateShare \\[2669\\] .* NOT copied: the queue refused" "host: no game-level state copy refused by the queue"
   info "revive: $(grep -h 'Revive: ' "$L" | cut -d']' -f3- | tr '\n' ';' | cut -c1-300)"
   info "U-1: $(grep -h 'User2Stages \[\(ARM requested\|ARMED\|DRAIN requested\|DRAINED\)' "$H" | cut -c2-13,60-200 | tr '\n' ';' | cut -c1-400)"
   info "LOOK: $NAME-g1 (down), $NAME-g2 (the warp to the checkpoint), $NAME-g3 / -g4 (townsfolk around the guest)" ;;
@@ -858,10 +863,7 @@ hostrevive)
   has "$L" "Revive: at the checkpoint" "host: stands at the checkpoint again"
   has "$L" "Teleport: arrived" "host: the move to the checkpoint arrived"
   has "$H" "reason 19" "host: its stages closed 'at the owner's load' (the reload happened with the guest in the world)"
-  # 2026-11-26 (B10, cs135b): the reload re-sends the host its game-level states (ChangeGameLevelStateAck); with
-  # level_state_share (on by default) each goes to the joined player too, under its own character key.
-  has "$H" "LevelStateShare \\[2669\\] .* COPIED to user 2 as 0xA01000" "host: its game-level states after the reload went to the joined player too"
-  hasnot "$H" "LevelStateShare \\[2669\\] .* NOT copied: the queue refused" "host: no game-level state copy refused by the queue"
+  # (pp65: this reload re-sends the host no game-level states; the level_state_share check is in u2revive.)
   hasnot "$H" "the Troc tunnel stops" "host: the tunnel was never stopped"
   asked=$(grep -h 'timer guard: schedule timers' "$H" | tail -1 | sed -n 's/.*asked \([0-9]*\).*/\1/p')
   [ "${asked:-0}" -ge 500 ] && ok "host: schedule timers went on to the end (asked $asked)" || bad "host: schedule timers asked ${asked:-none} (wanted >= 500: about 220 a minute)"

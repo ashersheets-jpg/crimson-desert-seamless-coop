@@ -943,6 +943,13 @@ cover the logs, the live game-folder logs and the screenshots), the browser's `n
 anything that really needs a shell (curl, python, git, a build) a line in a scratchpad file, run after the test. If
 the next tool call would be Bash and a test is running, the call is not made at all.
 
+## A new checklist check rests on "the game sends X here": find X in that step's own log first (2026-11-26, pp65)
+I put the level-state copy check into hostrevive because "a reload re-sends the host its level states" (the camp
+scene's in-place reload did in cs135). The checkpoint revive's reload sends none, so the check failed and the step
+needs a re-run. One run of that step on the new build (or a capture of it) before the pass would have shown it:
+before adding a check that waits for a message, see the message in that step, and put the check where it already
+appears (here u2revive, the host's long teleport: 3 lists copied).
+
 ## The button can change between a minigame's menu and its match: look at each phase's prompt (2026-11-26, cs129c-g)
 Edward's arm wrestling on a pad: the organizer's menu shows "(A) Participate", so my tests mashed A through the match
 and lost every time (the gauge only fell). Shots every 0.4 s through the match showed "(X) Push": the match takes X.
@@ -963,3 +970,10 @@ reply draft asked them again two hours later, because I had read the channel onl
 within minutes. Before writing a follow-up that asks anything: read the channel since my last post, and answer what
 they already said (here the answer also closed a question by itself: the journal line it led to showed the quest had
 moved, so the "portal chest" was the known host-only-place gap).
+
+## A Discord check includes the account's unread DMs, not only the server's channels (2026-11-26)
+Borque wrote the account two DMs at 12:30 UTC (a question for the owner); my checks read #play-testing-feedback,
+#general and #bug-reports only, and saw them 2.5 hours later because the tab's count went up by one. Testers write
+DMs too (Brycecco's video link and boss-fight note came that way). Each check also reads the guild bar's first items
+(the unread DMs sit right after "Direct Messages", with "N unread messages" in their label) and opens the testers'
+ones; a DM from someone who is not a tester stays unopened and goes on the owner's list.

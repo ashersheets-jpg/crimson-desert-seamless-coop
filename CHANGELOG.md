@@ -5,6 +5,17 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
+Next build (not posted yet):
+- **The world's level states reach the joined player.** The server keeps the list of the world's game levels and their
+  states (which story places are there: the prologue's Abyss island, the shining gate after the castle chest) and sends
+  each change to the field owner only; the joined player's game got the whole list once, when it joined, and no change
+  after it. Each list the host's game gets now goes to the joined player's game too, under its own character (native
+  level_state_share, on by default). One PC (cs135b): the copies arrive and change nothing that was already the same;
+  a story step that changes a state is not in our test saves (the testers' play will show it). The checklist's
+  u2revive step checks the copies after the host's far teleport (the host's own checkpoint revive re-sends no list).
+- Arm wrestling on a controller works (cs129g, a simulated Xbox pad): hold A to Participate, then mash X ("(X) Push");
+  A does nothing in the match. No change, a note for players.
+
 Posted 2026-11-26 04:21 as 0.1.0-alpha+ee0cecf0 (checklist pp64: all 31 steps with the new u2revive, 1370 checks; the
 host's ride in mounts was lost once to the test spot's flower patch (its E took a peony) and passed on its re-run,
 pp64b 53 / 0; one PC), from Brycecco's and Arcticwolf's notes of 25 Nov (their fourth session) and their logs:

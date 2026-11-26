@@ -5,6 +5,14 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
+- 2026-11-26 10:01 QUESTION (yours: it touches Steam's licensing): Borque wrote the account two DMs (12:30 / 12:38 UTC).
+  He and his friend play from ONE Steam library (family sharing); that "is not working good any longer", so they now
+  start Crimson Desert under Spacewar's app id (480, Valve's test app), and with that the mod's Steam connection no
+  longer joins them (it uses Crimson Desert's own id). He asks for a code-join system, or how to make the mod use
+  Spacewar's id ("it works with Baldur's Gate 3"). Starting the game under Spacewar's id is a way around Steam's
+  sharing rule (one copy, one player at a time), so I have NOT answered. My suggestion: a polite no (each player needs
+  their own copy on Steam; the mod will not add a way around that), said in the DM or by you. Tell me what to answer.
+  Also unread on the account and not opened by me: one DM from Mattou.
 - 2026-11-26 04:23 NOTHING NEW TO DECIDE. DONE: ee0cecf0 POSTED in #download-here by me (pp64: all 31 steps, 1370
   checks; mounts' host ride lost once to the flower patch, clean on its re-run pp64b 53 / 0; both zips checked file by
   file, 25/25 and 10/10; message 1575441380128460881): the joined player's townsfolk with the host high above (an Abyss
@@ -11994,3 +12002,42 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   Participate, mash X ("(X) Push"). No mod change needed. 06:06 #bug-reports 1575467778604007435: told Edward (tags
   him), asked his controller (Xbox / PlayStation, wired / Bluetooth, Steam Input) if X did not move it for him, and
   whether "it never ends" is the match or the menu after it.
+- 06:09 commit eb46654 (pushed); packaged eb466544 (= the build tree's DLLs: cdmp 6ae88935 with level_state_share,
+  coopplus 9cbb1cd0 writing it on by default). 06:10 pp65 started: the full checklist, 31 steps, hostrevive first (it
+  carries the new level-state check), then the usual order.
+- 06:20 pp65 hostrevive 54 / 1: the 1 is the NEW check ("its game-level states after the reload went to the joined
+  player"): the host's checkpoint-revive reload happened (reason 19 lines) but the server re-sent NO level-state list
+  then (the share saw only the 4 lists of the host's entry, "seen 4" to the end), so there was nothing to copy. My
+  assumption (any reload re-sends them, as the camp scene's in-place reload did in cs135) was wrong: a test-kit
+  error, not the mod. After the pass: the check moves to a step whose logs show copies (grep pp65's host logs for
+  "COPIED to user 2"), hostrevive re-runs (+ smoke).
+- 06:30 pp65 u2revive 51 / 0 and its host log has "LevelStateShare [2669] ... COPIED to user 2 as 0xA0100066" x3 (the
+  host's long teleport re-sends the lists): the check moves there after the pass.
+- 07:31 Discord (reads): Borque, #play-testing-feedback 1575466778799116348 (11:02 UTC, 4 attachments: two report
+  zips + txts, both on a03a63b9, 01:14 / 01:19 their time): the horse riding is fixed for them ("a solid 95%", a 1-3 s
+  freeze of the client at the start); NEW: his friend (the joined player) dyed a cloak at the Hernand dye vendor and
+  then could not move at all (teleport, a duel: nothing helped). The txts hold only the last 2 minutes of each log:
+  the zips after the pass (curl, standing OK), then a reply tagging him.
+- 08:52 Discord (reads): Brycecco 13:51 UTC (1575509398862831828, a reply to mine): he and Arcticwolf are away for
+  Thanksgiving, no testing for a few days, they will read the changes; more video from their sessions 3-4 is in the
+  Drive folder (the link of their earlier DM). To acknowledge with the next post; the videos after the pass.
+- 09:00-10:08 pp65 (reads): farfight 49 / 0, farfight2 48 / 0, newsave 104 / 0, solostart 51 / 0, mounts 53 / 0,
+  mountfight 48 / 1, nosave 7 / 0, retry 49 / 0. mountfight's 1: the joined player's E beside its called horse
+  (09:53:58) did not mount it (shots g0 / g1: on foot beside Herspia with "E Ride" shown, the host's "(A) Interact"
+  prompt at the horse's head 1 m away); pp64's same step mounted with the host 5 m off. The step's luck (two prompts
+  at the E): re-run in pp65b.
+- Static work during pp65: the level-state check moves to u2revive (its host log: 3 lists COPIED after the host's 430 m
+  teleport; hostrevive's checkpoint reload re-sent none, "seen 4" = the host's entry only): scratchpad
+  lss/move_lss_check.py for after the pass, RELEASE-CHECKLIST rows and CHANGELOG already say so. GimmickHandoff:
+  the probe (scratchpad gho/apply_gho_probe.py; an SEH-guarded position read, the gimmick's position in its line, its
+  part of the minute line; setter "0 | probe | 1") and MODE 1 (gho/apply_gho_mode1.py, plan gho/plan_mode1.md): the
+  joined player's InteractionPreemptionStepReq 2642 on a world key not decided yet is HELD on the host's network thread
+  (at most 300 ms) while an immediate server check hands the gimmick (type 7, no owner, the host's user, the joined
+  player within 15 m) to its game ([K+0x90] and the private 12-byte notice to both games; no AI steps, no real 2152);
+  the notice is queued ahead of the server's answers (server_push_extra and take_frame share g_outgoing: read). Back
+  after 10 s unused and 10 m away, after 30 s unused, or when the joined player is not in the world. NPC keys found
+  not to be gimmicks are never held again. cs136.sh: the church windows CLIMBED (the joined player, then the host;
+  frame_probe + the docked_gimmicks probe + captures; an optional third argument, e.g. gimmick_handoff=1). Borque's
+  zips: the URLs and a safe-unzip script in the scratchpad.
+- 10:01 Discord: unread DMs on the account. Borque 12:30 / 12:38 UTC: the Spacewar question (top of the Waiting list:
+  yours). Brycecco: the known 25 Nov DMs (the boss-fight note, the Drive link). Mattou: 1, not opened (left for you).

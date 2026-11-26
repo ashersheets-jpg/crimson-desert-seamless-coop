@@ -1,12 +1,9 @@
 **Update: shared world playtest 0.1.0-alpha+PKGID, for game 1.0.0.3732**
-Use this instead of b95eef38; **both players need the same build**.
+Use this instead of ee0cecf0; **both players need the same build**.
 
-From <@816395856902357032> and <@535093164910968833>'s two-PC sessions:
-- **The joined player's town no longer empties while the host is up on an Abyss island.** The island hangs about 1.2 km above Hernand; the mod measured "far" on the map only, so the town below counted as next to the host. Far apart in height now counts as far: the joined player's own townsfolk take over.
-- **The joined player's own townsfolk right after a checkpoint revive (U).** They stayed off until the next travel (12 minutes in your log); now they come back at once.
-- **Townsfolk made twice / broken where the two areas meet:** the mod read the game's townsfolk data 8 bytes off since an old patch, so its duplicate guard never worked. Fixed (checked against the game's own code).
-- **Duel hits stagger now**, from the first hit.
-- Still open: the joined player's grindstone (the host's game takes the use, then nothing plays); places only the host's story has (the prologue's Abyss island, the shining gate after the castle chest); solo arm wrestling on a controller; the host taking no damage in the prologue's fights.
+- **Places of the host's story, a first step.** The game keeps a list of the world's "level states" (which story places are there: the prologue's Abyss island, the shining gate after the castle chest...). The host's game got every change of that list, the joined player's game only the list as it was when it joined. Now each change reaches the joined player too. Our tests have no story step that changes it, so <@816395856902357032> <@535093164910968833>: when the host's story opens a place, does the joined player see it now (and can Go to my friend take you there)?
+- **Arm wrestling on a controller** (<@1180526487535886497>): it works, the button just changes: hold **A** to Participate, then mash **X** (the game shows "(X) Push" once the match starts). Mashing A does nothing in the match.
+- Still open: the church windows and fishing for the joined player (the host's game accepts the use, but the object only runs on the host's game; next on my list), the host taking no damage in the prologue's fights.
 
 Tested with two copies of the game on one PC (Nvidia): the full checklist on 1.0.0.3732 (CHECKLIST). Not covered: two PCs over Steam, real internet, AMD / Intel cards, long sessions.
 
