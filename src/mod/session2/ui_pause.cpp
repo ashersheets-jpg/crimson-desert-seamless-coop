@@ -66,12 +66,12 @@ constexpr uint8_t kScaleHead[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x6C
 constexpr uint32_t kBoundaries[] = {5, 10, 15, 20, 22, 26, 30};
 // The callers (0xAD1300): 0xAD143C call (vf 0x160's scale) / 0xAD14D6 call (the dt).
 constexpr uintptr_t kCall1 = 0xC69B00, kCall2 = 0xC69B96;
-constexpr uint8_t kCall1Bytes[] = {0xE8, 0xCF, 0x6B, 0xD0, 0x02};
-constexpr uint8_t kCall2Bytes[] = {0xE8, 0x35, 0x6B, 0xD0, 0x02};
+constexpr uint8_t kCall1Bytes[] = {0xE8, 0xCB, 0x09, 0xE1, 0x02};
+constexpr uint8_t kCall2Bytes[] = {0xE8, 0x35, 0x09, 0xE1, 0x02};
 constexpr uintptr_t kRet1 = 0xC69B05, kRet2 = 0xC69B9B;
 // vf 0x168 of every UI root: vmovss xmm0,[rip+..] (1.0f) ; ret.
 constexpr uintptr_t kTrivialVf = 0x764D30;  // 3549: the 1.0f-returning vf in 561 vtables (2976 0x63DA70)
-constexpr uint8_t kTrivialVfBytes[] = {0xC5, 0xFA, 0x10, 0x05, 0x08, 0x78, 0xA9, 0x05, 0xC3};
+constexpr uint8_t kTrivialVfBytes[] = {0xC5, 0xFA, 0x10, 0x05, 0xD4, 0xA6, 0xBE, 0x05, 0xC3};
 // FrameClock_NowMs 0x1416B80's globals (read only, from the drain thread).
 constexpr uintptr_t kClockLocal = 0x730A12D;  /* 3549 (2976 0x6C8CD35) */  // u8: 1 = the per-frame scaled clock for every thread
 constexpr uintptr_t kClockBase = 0x730A170; /* 3549 */  // u64 ms

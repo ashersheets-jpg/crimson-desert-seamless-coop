@@ -417,7 +417,7 @@ int sg_unwind(uint64_t rip, uint64_t rsp, const uint64_t nv[8], uint64_t* out, i
 // the scene locally. 0x7025DD: right after the frame's event flush (0x162E570(.., 0x1C)), on the game thread.
 namespace {
 constexpr uintptr_t kVolCall = 0xE5FFF9;  // 3663
-constexpr uint8_t kVolCallBytes[] = {0xE8, 0x32, 0xF7, 0x8E, 0xFF};
+constexpr uint8_t kVolCallBytes[] = {0xE8, 0x72, 0xBC, 0x8C, 0xFF};
 constexpr uintptr_t kFrameAfter = 0x73A75D;  // 3663
 constexpr uint8_t kFrameAfterBytes[] = {0x48, 0x8B, 0x47, 0x08, 0x48, 0x8B, 0x40, 0x60};
 SafetyHookMid g_vol_hook, g_frame_hook, g_lookup_hook;

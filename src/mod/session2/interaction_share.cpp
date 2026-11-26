@@ -91,7 +91,7 @@ void interaction_share_start() {
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     // Byte guards: the two call sites as built for 3576.
     uint8_t a[5]{}, r[5]{};
-    const uint8_t want_a[5] = {0xE8, 0xAF, 0xBE, 0xD8, 0xFF}, want_r[5] = {0xE8, 0xA3, 0xC0, 0xD8, 0xFF};
+    const uint8_t want_a[5] = {0xE8, 0xE4, 0x8F, 0xD7, 0xFF}, want_r[5] = {0xE8, 0x4E, 0x92, 0xD7, 0xFF};
     if (!game::safe_read(g_base + kAddCall, a, 5) || !game::safe_read(g_base + kRemoveCall, r, 5) ||
         std::memcmp(a, want_a, 5) != 0 || std::memcmp(r, want_r, 5) != 0) {
         log::warn("InteractionShare: the node's call sites do not match this build; off");

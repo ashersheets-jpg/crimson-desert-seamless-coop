@@ -894,7 +894,7 @@ constexpr uint8_t kNotifyReadSessionsBytes[] = {0x49, 0x8B, 0x1E, 0x41, 0x8B, 0x
 constexpr uintptr_t kNotifyReadKeys = 0x2F43D27;  // mov rax,[r15] ; mov [rbp-0x10],rax ; mov eax,[r15+8]
 constexpr uint8_t kNotifyReadKeysBytes[] = {0x49, 0x8B, 0x04, 0x24, 0x48, 0x89, 0x45, 0xF0, 0x41, 0x8B, 0x44};
 constexpr uintptr_t kNotifyFindCall = 0x2F43D3F;  // call 0x2B060E0 (keys -> actors, owner filter)
-constexpr uint8_t kNotifyFindCallBytes[] = {0xE8, 0x9C, 0x85, 0x00, 0x00};
+constexpr uint8_t kNotifyFindCallBytes[] = {0xE8, 0xBC, 0x92, 0x00, 0x00};
 constexpr uintptr_t kCallerNewObservers = 0x2DFB82B;  // call 0x2B000C0
 constexpr uint8_t kCallerNewObserversBytes[] = {0xE8, 0x30, 0x79, 0x00, 0x00};
 constexpr uintptr_t kCallerMovingUser = 0x2DFBA2C;  // call 0x2B000C0
@@ -911,7 +911,7 @@ constexpr uint8_t kRestoreWriteBytes[] = {0x49, 0x8B, 0x47, 0x40, 0xC6, 0x40, 0x
 // (TLS block 0 +0x1EC = 1) before its loop; NotifyAppear's key lookup picks the
 // server's actor manager by that byte (0x2B06147).
 constexpr uintptr_t kServerRealmSet = 0x2B37856;  // mov eax,0x1EB ; mov byte [rax+rbx],1 (Co-op+ port 3549; 2976: 0x27733A6, 0x1EC)
-constexpr uint8_t kServerRealmSetBytes[] = {0xB8, 0xEB, 0x01, 0x00, 0x00, 0xC6, 0x04, 0x18, 0x01};
+constexpr uint8_t kServerRealmSetBytes[] = {0xB8, 0xFB, 0x01, 0x00, 0x00, 0xC6, 0x04, 0x18, 0x01};
 constexpr uint32_t kTlsServerRealm = 0x1EB;  // Co-op+ port 3549 (2976: 0x1EC)
 
 constexpr uint32_t kMaxKeys = 0x4000;      // larger lists go unchanged

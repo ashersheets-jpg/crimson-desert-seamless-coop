@@ -738,7 +738,7 @@ inline constexpr uintptr_t kDockEquip = 0x2B734B0;  // 3732 (2976 0x28AD170)
 inline constexpr uintptr_t kDockOther = 0x2B741D0;  // 3732 (2976 0x28ADE40)
 inline constexpr uint8_t kDockHead[20] = {0x48, 0x89, 0x5C, 0x24, 0x18, 0x48, 0x89, 0x54, 0x24, 0x10,
                                           0x48, 0x89, 0x4C, 0x24, 0x08, 0x55, 0x56, 0x57, 0x41, 0x54};
-inline constexpr uint8_t kDockEquipCall[5] = {0xE8, 0xD7, 0x37, 0xF2, 0xFF};  // 0x2C4FCD4: call 0x2B734B0
+inline constexpr uint8_t kDockEquipCall[5] = {0xE8, 0xE7, 0x97, 0xF1, 0xFF};  // 0x2C4FCD4: call 0x2B734B0
 inline constexpr uintptr_t kDockEquipCallSite = 0x2D88314;  // 3732 (2976 0x2970ADF)
 // The controller's write in ICreateServerActorDesc::vf3 0x2791CD0: mov [r14+0x90],eax (one 7-byte instruction;
 // r14 the new actor, r13 the field, eax the controller: the field owner [r13+0x180] unless the descriptor or an
@@ -751,10 +751,10 @@ inline constexpr uint32_t kControllerWritePatch = 7;
 // mov rax,[rsi+0x40] | test.. : r14 = the actor, rsi = the descriptor (callee-saved across 0x389570 / 0x4A2010).
 inline constexpr uintptr_t kControllerBlock = 0x2B5933E;  // 3732 (2976 0x2792A11)
 inline constexpr uint8_t kControllerBlockBytes[16] = {0x41, 0x8B, 0x86, 0x90, 0x00, 0x00, 0x00, 0x85,
-                                                      0xC0, 0x75, 0x5E, 0x48, 0x8B, 0x46, 0x40, 0x48};  // 3576: jne +0x5A
+                                                      0xC0, 0x75, 0x67, 0x48, 0x8B, 0x46, 0x40, 0x48};  // 3576: jne +0x5A
 // Its "from the field owner" read just before: mov eax,[r13+0x180] | test eax,eax | je 0x2792A82.
 inline constexpr uintptr_t kFieldOwnerRead = 0x2B593A6;  // 3732 (2976 0x2792A70)
-inline constexpr uint8_t kFieldOwnerReadBytes[10] = {0x8B, 0x87, 0x80, 0x01, 0x00, 0x00, 0x85, 0xC0, 0x74, 0x07};  /* 3663: mov eax,[rdi+0x180] (no REX: 10 bytes; 3576 mov eax,[r13+0x180], 11) */
+inline constexpr uint8_t kFieldOwnerReadBytes[10] = {0x8B, 0x87, 0x58, 0x01, 0x00, 0x00, 0x85, 0xC0, 0x74, 0x07};  /* 3663: mov eax,[rdi+0x180] (no REX: 10 bytes; 3576 mov eax,[r13+0x180], 11) */
 inline constexpr uint32_t kField_Owner = 0x180;
 // The server's gimmick logic: ExecuteFrameEvent 0x2AC1270 (comp, requester user actor, event*, u16*), void; and
 // Update 0x2AC0790 (comp, int* err, requester, data*). Both: accepted only when [[comp+8]+0x90] ==

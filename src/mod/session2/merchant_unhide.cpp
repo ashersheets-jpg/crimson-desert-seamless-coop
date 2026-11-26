@@ -586,7 +586,7 @@ void merchant_unhide_start(bool on, bool guest, bool diag_only, bool guard) {
             g_tick_hook = safetyhook::create_mid(reinterpret_cast<void*>(g_base + 0xB28AF0), &on_tick_mgr);
     }
     if (g_guard) {
-        constexpr uint8_t kPre[] = {0xE8, 0xE1, 0x3F, 0xFC, 0x00, 0x48, 0x8B, 0x06, 0xC6, 0x80, 0xC2, 0x00, 0x00, 0x00, 0x01};
+        constexpr uint8_t kPre[] = {0xE8, 0x11, 0xA7, 0x01, 0x01, 0x48, 0x8B, 0x06, 0xC6, 0x80, 0xC2, 0x00, 0x00, 0x00, 0x01};
         uint8_t got[sizeof kPre] = {};
         if (game::fast_read(g_base + 0xA0A05A, got, sizeof got) && std::memcmp(got, kPre, sizeof kPre) == 0) {
             g_login_pre = safetyhook::create_mid(reinterpret_cast<void*>(g_base + 0xA0A05A), &on_login_pre);

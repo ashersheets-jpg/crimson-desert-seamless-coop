@@ -890,7 +890,7 @@ DWORD WINAPI install_thread(LPVOID) {
             else for (SafetyHookMid& h : g_early_hook) h = {};
             log::info("GuestXInter: the early counters {} (3732 research, read only)",
                       ein == 4 ? "hooked" : "NOT all hooked: off");
-            static const uint8_t kAddBytes[5] = {0xE8, 0xAF, 0xBE, 0xD8, 0xFF}, kRemBytes[5] = {0xE8, 0xA3, 0xC0, 0xD8, 0xFF};
+            static const uint8_t kAddBytes[5] = {0xE8, 0xE4, 0x8F, 0xD7, 0xFF}, kRemBytes[5] = {0xE8, 0x4E, 0x92, 0xD7, 0xFF};
             const bool na = p8_install_mid(g_base, secs, kNodeAdd, 5, kAddBytes, &on_node<true>, g_node_add_hook,
                                            "GuestXInter", "the node's ADD call");
             const bool nr = p8_install_mid(g_base, secs, kNodeRemove, 5, kRemBytes, &on_node<false>, g_node_rem_hook,
