@@ -22,8 +22,9 @@ Next build (not posted yet), from Brycecco's and Arcticwolf's notes of 25 Nov (t
   player's townsfolk never found their stage. Read at the right places now (checked against the game's own code).
 - **Duel hits stagger in the shared world.** A duel hit took health but showed no hit: the hit reaction was switched on
   only in the old two-worlds mode, and the stagger a hit carries (the one its attacker last took from an enemy) was
-  never learnt in the shared world. Now on, learnt from the server's own hit on you, and the player who is hit uses
-  their own when the attacker has none yet. Still none while neither player has been hit by an enemy in the session.
+  never learnt (the mod read the game's stagger message in an old patch's layout). Now on, learnt from the enemies'
+  blows on you, and until you have taken one a real staggering blow stands in, so the first duel hit staggers too.
+  One PC (cs132v): the hit player doubles over and stands up again; the learnt and the stand-in stagger both apply.
 
 Posted 2026-11-25 21:51 as 0.1.0-alpha+b95eef38 (checklist pp62: all 30 steps, 1320 checks; farfight's kill check
 failed once on the fight's luck and passed on its re-run, pp62b 49 / 0; one PC), from Brycecco's and Arcticwolf's

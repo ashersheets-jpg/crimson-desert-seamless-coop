@@ -11877,3 +11877,18 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   blow is the duel's stand-in when nothing was learnt (ebaaa7c, pushed; built: the 14 old native failures, layer tests
   pass; packaged ebaaa7c9). cs131: dev keys first, 250 ms clicks. LESSONS: both. enemy_relay.cpp / piece4_test.cpp
   keep the 2976 layout too (old base only, off in the shared world). 22:24 cs131c started.
+- 22:24-22:44 cs131c / cs131d (ebaaa7c9): the host now KEEPS staggers from the bandits' blows ("our player's stagger
+  from 0xB01000D2 (buff 1104, restriction 0x79156D1B) is kept for the duel's hits", 3 in each run: the 69-byte
+  restriction fix works). The duel started both times (invite, accept, round 1), but no swing registered on either
+  side: the friends stood 1 m apart with the friend prompt up and the scripted clicks never made them attack (the
+  shrine in cs131c, open ground in cs131d). Not a code path to fix for players (the testers' own duel logged many
+  HITs); the test needs another way.
+- 22:45 a018b4a (pushed; packaged a018b4a4): a TEST ONLY dev-script step `duelhit` (one duel hit on our own player
+  through hits_make_pvp + hits_on_pvp). cs132a (22:47-22:57): the host (3 staggers learnt at the dock) took 2 duelhits:
+  "Duel: the other player hit us (attack 0x0DE11017): -15.0 hp, reaction" x2 (373-byte hits with a stagger); the
+  joined player (nothing learnt) logged "no stagger taken from an enemy yet: our hits carry a stand-in" and took 2:
+  "-15.0 hp, reaction" x2 (384 bytes). No refused template, no fault, SAVES OK, install 5/5. Its shots came after the
+  hits; cs132v (22:58) times 14 shots around one hit to see the reel.
+- 22:58-23:07 cs132v: the joined player's one duelhit (the stand-in) at 23:05:11.8, "reaction"; the shots: v03
+  upright beside the host, v07 doubled over (the stagger, the combat HUD up), v11 upright again. SEEN WORKING.
+- 23:07 pp63a: the new u2revive step alone on a018b4a4.
