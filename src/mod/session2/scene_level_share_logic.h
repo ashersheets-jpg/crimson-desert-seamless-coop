@@ -63,7 +63,7 @@ inline constexpr uint32_t kPeTimestamp = 0x6B07E5E9;  /* 1.0.0.3840 (3732: 0x6AF
 inline constexpr uintptr_t kImageBase = 0x140000000;
 inline constexpr uint32_t kVtServerField = 0x60FE230;  // 3549 (2976 0x5B29A60)  // pa::ServerField (as user2_stages_logic.h)
 inline constexpr uintptr_t kMgrField = 0x210;          // registry -> its ServerField
-inline constexpr uintptr_t kFieldOwner = 0x180;        // ServerField -> the owner's user key
+inline constexpr uintptr_t kFieldOwner = 0x158;        // ServerField -> the owner's user key (3840; 3732 0x180)
 inline constexpr uintptr_t kActorKey = 0x60;           // actor -> its key
 // The resource of the S42 door (door_trace_logic.h): its packets get a line each (the others are counted).
 inline constexpr uint32_t kWatchedHash = 0xDE7B52AA;
@@ -81,7 +81,7 @@ inline constexpr size_t kGateSigPatchAt = kGateRva - kGateSigRva;  // 27: the cm
 
 // B: the delete 0x2829E60(mgr, &name, &type, char, u8, u8, u8) -> void (.pdata [0x2829E60, 0x282A9CA)). Its first
 // instruction `mov [rsp+0x20],r9b` is exactly 5 bytes (the inline hook's jump).
-inline constexpr uint32_t kDeleteRva = 0x2C01A40, kDeleteEnd = 0x2AD8483 /* 3663: the function is 0x2C01A40..0x2AD8483 */, kDeletePatch = 5;
+inline constexpr uint32_t kDeleteRva = 0x2C01A40, kDeleteEnd = 0x2C025C6 /* 3840: the function is 0x2C01A40..0x2C025C6 (.pdata; 3732 0x2AD7910..0x2AD8483) */, kDeletePatch = 5;
 inline constexpr std::array<uint8_t, 16> kDeleteHead{0x44, 0x88, 0x4C, 0x24, 0x20, 0x4C, 0x89, 0x44,
                                                      0x24, 0x18, 0x48, 0x89, 0x54, 0x24, 0x10, 0x55};
 inline bool delete_patch_ok(std::span<const uint8_t> relocated) {

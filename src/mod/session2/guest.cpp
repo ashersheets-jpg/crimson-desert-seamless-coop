@@ -2202,14 +2202,14 @@ std::string load_machine_text() {
         return " | load machine: no P";
     }
     game::safe_read(p + 0x24C, &state, sizeof state);
-    game::safe_read(g_base + 0x7183D98, &flag, sizeof flag);
+    game::safe_read(g_base + 0x7328268, &flag, sizeof flag);  // 3840 (3732 0x7183D98)
     if (game::safe_read(p + 0x180, &obj, sizeof obj) && obj) {
         game::safe_read(obj, &vt, sizeof vt);
         game::safe_read(obj + 0x23E, &o23e, sizeof o23e);
         game::safe_read(obj + 0x1F8, &o1f8, sizeof o1f8);
     }
     return std::format(" | load machine: P 0x{:X} state 0x{:02X} | [P+0x180] 0x{:X} (vtable exe+0x{:X}, +0x23E {}, +0x1F8 {}) | "
-                       "the 0x0B flag [exe+0x7183D98] {}",
+                       "the 0x0B flag [exe+0x7328268] {}",
                        p, state, obj, vt > g_base ? vt - g_base : 0, o23e, o1f8, flag);
 }
 

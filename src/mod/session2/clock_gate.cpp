@@ -24,13 +24,14 @@ namespace {
 // meet at 0x2E620A1: `mov rbx,[r15]; getter(field) 0x22A8F70; FieldComponent::SetFieldTime(TS, ft) 0x2370570`
 // (which publishes again when the user owns the field). For user 2 a mid hook on the owner check copies the field's
 // time into its character only (clock_user2_travel, as on 2976) and resumes after the setter call: nothing published.
-constexpr uintptr_t kTravelOwnerCmp = 0x2ECF00D;  // 3663: cmp [rsi+0x180], eax ; jne 0x2ECABA4 (3576 0x2E62C28, the field in rdi)
-constexpr uint8_t kTravelOwnerCmpBytes[] = {0x39, 0x86, 0x80, 0x01, 0x00, 0x00, 0x0F, 0x85, 0xDB, 0x00, 0x00, 0x00};
-constexpr uintptr_t kTravelGetterCall = 0x2ECF0F4;  // mov rbx,[r15]; getter(rsi); SetFieldTime(rbx, ft) (3576 0x2E62D11)
-constexpr uint8_t kTravelGetterCallBytes[] = {0x49, 0x8B, 0x1F, 0x48, 0x8D, 0x54, 0x24, 0x70, 0x48,
-                                              0x8B, 0xCE, 0xE8, 0xFC, 0xCC, 0x44, 0xFF, 0x48, 0x8B,
-                                              0xD0, 0x48, 0x8B, 0xCB, 0xE8, 0x81, 0x49, 0x51, 0xFF};
-constexpr uintptr_t kTravelResume = kTravelGetterCall + sizeof kTravelGetterCallBytes;  // 0x2E620BC
+// 1.0.0.3840: FM = R14 (r15 is the zero register now), the field still in rsi, the owner at [field+0x158] (3732 +0x180).
+constexpr uintptr_t kTravelOwnerCmp = 0x30139F1;  // 3840: cmp [rsi+0x158], eax ; jne 0x3013AD4 (3732 0x2ECF00D; 3576 0x2E62C28, the field in rdi)
+constexpr uint8_t kTravelOwnerCmpBytes[] = {0x39, 0x86, 0x58, 0x01, 0x00, 0x00, 0x0F, 0x85, 0xD7, 0x00, 0x00, 0x00};
+constexpr uintptr_t kTravelGetterCall = 0x3013AD4;  // 3840: mov rbx,[r14]; getter(rsi); SetFieldTime(rbx, ft) (3732 0x2ECF0F4; 3576 0x2E62D11)
+constexpr uint8_t kTravelGetterCallBytes[] = {0x49, 0x8B, 0x1E, 0x48, 0x8D, 0x55, 0x98, 0x48, 0x8B,
+                                              0xCE, 0xE8, 0xCD, 0x80, 0x3D, 0xFF, 0x48, 0x8B, 0xD0,
+                                              0x48, 0x8B, 0xCB, 0xE8, 0x22, 0xCC, 0x4A, 0xFF};
+constexpr uintptr_t kTravelResume = kTravelGetterCall + sizeof kTravelGetterCallBytes;  // 0x3013AEE (26 bytes on 3840)
 constexpr uintptr_t kLoading = 0x24BAF40;
 constexpr uint8_t kLoadingHead[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74, 0x24, 0x10, 0x48, 0x89,
                                     0x7C, 0x24, 0x18, 0x55, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57,
@@ -143,7 +144,7 @@ uintptr_t ts_of(void* fm) {
 // user 2 neither the publish nor the game's SetFieldTime runs, not even on a failure.
 void travel_mid(safetyhook::Context& ctx) noexcept {
     try {
-        const uintptr_t ts = ts_of(reinterpret_cast<void*>(ctx.r15));
+        const uintptr_t ts = ts_of(reinterpret_cast<void*>(ctx.r14));  // 3840: FM in r14 (3732 and before: r15)
         if (!ts || who_now(ts) != ClockWho::User2) return;
         const uintptr_t field = ctx.rsi;  // 3663: the destination field is in rsi (3576 and before: rdi)
         g_travels.fetch_add(1);
@@ -155,8 +156,8 @@ void travel_mid(safetyhook::Context& ctx) noexcept {
         if (!copied) g_travel_failed.fetch_add(1);
         if (moved(before, after)) g_world_moved.fetch_add(1);
         uint32_t owner = 0;
-        peek(field + 0x180, owner);
-        ctx.rbx = ts;  // as the skipped `mov rbx,[r15]`
+        peek(field + 0x158, owner);  // 3840 (3732: +0x180)
+        ctx.rbx = ts;  // as the skipped `mov rbx,[r14]` (3732: [r15])
         ctx.rip = g_base + kTravelResume;
         note("Session2 clock gate: user 2 travels to field 0x{:X} (owner 0x{:X}): {} | world clock {} -> {}{}", field,
              owner,

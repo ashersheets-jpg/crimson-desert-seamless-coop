@@ -96,7 +96,7 @@ void test_option() {
     CHECK(wal::leaves_field(2804) && wal::leaves_field(2235) && wal::leaves_field(2001));
     CHECK(!wal::leaves_field(2445) && !wal::leaves_field(2549) && !wal::leaves_field(0));
     // The build's numbers the cpp checks (documented in mundo-invitado.md).
-    static_assert(wal::kFieldSlotOn == 0x198 && wal::kFieldSlotKey == 0x19C && wal::kTsField == 0x518);  // 3576
+    static_assert(wal::kFieldSlotOn == 0x170 && wal::kFieldSlotKey == 0x174 && wal::kTsField == 0x528);  // 3840 (3576..3732: 0x198 / 0x19C / 0x518)
     static_assert(wal::kLockSlotTry == 0x28 && wal::kLockSlotUnlock == 0x20);
     for (int i = 0; i < static_cast<int>(Why::Count); ++i) CHECK(std::strcmp(wal::why_name(static_cast<Why>(i)), "?") != 0);
 }

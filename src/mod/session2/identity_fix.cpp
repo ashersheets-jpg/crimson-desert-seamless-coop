@@ -228,7 +228,7 @@ constexpr uint8_t kClearLobbySiteBytes[] = {0x49, 0x8B, 0x47, 0x68, 0x48, 0x8B, 
 constexpr uintptr_t kClearListSite = 0x3095A79;
 constexpr uint8_t kClearListSiteBytes[] = {0x48, 0x8B, 0x4B, 0x18};
 constexpr uintptr_t kStatusVtable = 0x60F4FC8;    // ServerStatusActorComponent; +0x50 = 0x293FE70
-constexpr uintptr_t kStatusLoad = 0x2C1AB40;
+constexpr uintptr_t kStatusLoad = 0x2D52DC0;  // 3840: the Status vtable's slot 10 (+0x50) (3732: 0x2C1AB40)
 // The logged-in actors that FindByCharacterNo 0x2A83F80 searches: manager =
 // [[exe+0x6D696A8]] (0x2777A18), array [mgr+0xB8], u32 count [mgr+0xC0].
 constexpr uintptr_t kLoginMgrSite = 0x2B3C008;

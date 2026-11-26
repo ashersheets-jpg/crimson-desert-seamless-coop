@@ -66,7 +66,7 @@ constexpr uint8_t kGCtxBytes[] = {0x49, 0x8B, 0x85, 0xA0, 0x00, 0x00, 0x00, 0x48
 //                vzeroupper ; call 0x287C200 (E8 11 17 FF FF)
 // 3576: in the element 0x2AE8700, after call 0x2AD8E60: nop ; mov r12,[rbp-0x69]. There rcx = r14 (the manager), rdx =
 // r15 (the result), the element in RBX (2976: r15 / r14 / rdi); the frame is unchanged (playData rbp-0x51, inst rbp+0x77).
-constexpr uintptr_t kP = 0x2B4EFB5, kPCtx = 0x2C7D46E;
+constexpr uintptr_t kP = 0x2C7D487, kPCtx = 0x2C7D46E;  // 3840: kP = kPCtx + 0x19 (3732: 0x2B4EFB5)
 constexpr uint32_t kPPatch = 5;
 constexpr uint8_t kPBytes[] = {0x90, 0x4C, 0x8B, 0x65, 0x97};
 constexpr uint8_t kPCtxBytes[] = {0x4C, 0x8B, 0x8B, 0x00, 0x02, 0x00, 0x00, 0x4C, 0x8D, 0x45, 0xAF, 0x49, 0x8B,
@@ -79,7 +79,7 @@ constexpr uint32_t kCPatch = 5;
 constexpr uint8_t kCBytes[] = {0x8B, 0x5D, 0x80, 0x85, 0xDB};
 constexpr uint8_t kCCtxBytes[] = {0x48, 0x8B, 0x89, 0x98, 0x00, 0x00, 0x00, 0xE8, 0x17, 0x51, 0x16, 0x00};
 // C0 (2026-11-25, BUG 2): the context's first instruction, mov rcx,[rcx+0x98] (7 bytes), right before the 2642 handler's
-// call of its path check 0x2E3C180 (the refusal 0x58C8345D comes from inside that call: cs125a). r13 = the requester's
+// call of its path check 0x2F7E420 (3732: 0x2E3C180; the refusal 0x58C8345D comes from inside that call: cs125a). r13 = the requester's
 // actor (C's user key comes from it: the friend's own character for its talks), the frame as at C. With the per-player
 // slot on, user 2's talk runs that check with its own focus triple in the host's manager; C closes the window. Installed
 // after C (C's context check reads these bytes first).
@@ -108,11 +108,11 @@ constexpr int32_t kB_Seq = -0x80, kB_Then = -0x48, kB_Field = -0x38, kB_U8a = 0x
 constexpr uintptr_t kBF1 = 0x2D43E4A, kBF2 = 0x2D43EAD, kBF1Ctx = 0x2D43E44, kBF2Ctx = 0x2D43EA7;
 constexpr uint32_t kBFPatch = 7;
 constexpr uint8_t kBFBytes[] = {0x4C, 0x8B, 0xBD, 0xE8, 0x0C, 0x00, 0x00};  // mov r15,[rbp+0xCE8]
-constexpr uint8_t kBF1CtxBytes[] = {0x8B, 0x05, 0x1E, 0xC6, 0x61, 0x04};     // mov eax,[rip+0x45AF30B] (0x71BB2E8)
-constexpr uint8_t kBF2CtxBytes[] = {0x8B, 0x05, 0xBB, 0xC5, 0x61, 0x04};     // mov eax,[rip+0x45AF2A8] (0x71BB2E8)
+constexpr uint8_t kBF1CtxBytes[] = {0x8B, 0x05, 0x1E, 0xC6, 0x61, 0x04};     // mov eax,[rip+0x461C61E] (0x7360468; 3732 0x71BB2E8)
+constexpr uint8_t kBF2CtxBytes[] = {0x8B, 0x05, 0xBB, 0xC5, 0x61, 0x04};     // mov eax,[rip+0x461C5BB] (0x7360468; 3732 0x71BB2E8)
 constexpr int32_t kBF_Scene = 0xCE0, kBF_Node = 0, kBF_Elem = -0x70;
 constexpr uint32_t kBF_SceneOwner = 0x28, kBF_SceneWord = 0x30, kBF_ElemInfo = 0x88, kBF_ElemFlag = 0x75;
-constexpr uintptr_t kImageSize3732 = 0x13C7E000;
+constexpr uintptr_t kImageSize3840 = 0x13D05000;  // SizeOfImage (3732: 0x13C7E000)
 // Co-op+ 2026-11-24 (late; scratchpad cond73 / cond73b, shp::exclusive_verdict): [scene+0x28] is the scene's MANAGER
 // (kStage_Mgr elsewhere; the "owner" the BF line names is that manager's +0x60), and the condition call's first path is
 // the manager's exclusive check. "Why" reads, after either refusal: the target node's entry in the scene's processor
@@ -147,7 +147,7 @@ constexpr uint32_t kFS_SceneHolder = 0x10, kStageData_Owner = 0x60, kStage_Owner
 constexpr uint32_t kMgr_Focus90 = 0x90, kMgr_Focus98 = 0x98, kMgr_FocusA0 = 0xA0;
 
 // Offsets (server objects; the same ones observer_stage / observer_milestone read).
-constexpr uint32_t kActor_Key = 0x60, kActor_User = 0xA0, kUser_Key = 0x60, kField_Owner = 0x180, kMgr_Actor = 0x18;
+constexpr uint32_t kActor_Key = 0x60, kActor_User = 0xA0, kUser_Key = 0x60, kField_Owner = 0x158, kMgr_Actor = 0x18;  // owner 3840 (3732: 0x180)
 // User 2's character ([user+0xD0], as observer_milestone reads it) and its manager [[[char+0x68]+0xA8]+0x18] (the
 // chain ServerField::vf48 0x2B00CE0 follows for the field owner). +0x6A0: the manager's state byte 0x288B7A0 tests.
 constexpr uint32_t kUser_Main = 0xD0, kActor_Comps = 0x68, kComps_Seq = 0xA8, kSeqComp_Mgr = 0x18, kMgr_State = 0x6D8;  // 3663 (3576 +0x6D0)
@@ -546,14 +546,14 @@ void on_bf(safetyhook::Context& ctx, int site) noexcept {
     for (int i = 0; i < 8; ++i) {
         const uintptr_t q = node ? rdp(node + i * 8) : 0;
         const uintptr_t vt = q > 0x10000 ? rdp(q) : 0;
-        e.v[4 + i] = vt >= g_base && vt - g_base < kImageSize3732 ? (static_cast<uint64_t>(vt - g_base) | (1ull << 63))
+        e.v[4 + i] = vt >= g_base && vt - g_base < kImageSize3840 ? (static_cast<uint64_t>(vt - g_base) | (1ull << 63))
                                                                  : static_cast<uint64_t>(q);
     }
     emit(kEBranchFail, e);
 
     // Why (see kBF_SceneProc): the manager's exclusive check and the node's condition object.
     const auto rva = [](uintptr_t a) -> uint64_t {
-        return a >= g_base && a - g_base < kImageSize3732 ? static_cast<uint64_t>(a - g_base) : 0;
+        return a >= g_base && a - g_base < kImageSize3840 ? static_cast<uint64_t>(a - g_base) : 0;
     };
     const uintptr_t mgr = owner;  // [scene+0x28]
     const uint32_t node_id = node ? rdv<uint32_t>(node + kNode_EntryId) : 0;
@@ -752,7 +752,7 @@ void slot_branch_leave() noexcept {
 }
 
 // BUG 2's talk window (2026-11-25, on the LOGIC thread): C0 -> C of the InteractionPreemptionStepReq 2642 handler,
-// around its path check 0x2E3C180, for user 2's talk (the requester actor r13 is its character): the check runs with
+// around its path check 0x2F7E420 (3732: 0x2E3C180), for user 2's talk (the requester actor r13 is its character): the check runs with
 // user 2's own focus triple in the host's manager. Why: while the host is in a talk (its talk's stage holds the host
 // manager's focus), every talk of the friend's was refused with 0x58C8345D, which is neither preempt error (cs127c's
 // values) and comes from inside that check; its stage-chart condition (0x2126920) reads the FIELD OWNER's manager. The
@@ -812,7 +812,7 @@ void focus_event(uint32_t what, uintptr_t mgr, uint64_t new_id, uintptr_t scene,
     const bool u2req = in_branch && g_u2_branch_seqs.has(br.seq);
     g_focus_n[what][u2req ? 1 : 0].fetch_add(1, std::memory_order_relaxed);
     const auto rva = [](uint64_t a) -> uint64_t {
-        return a >= g_base && a - g_base < kImageSize3732 ? a - g_base : 0;
+        return a >= g_base && a - g_base < kImageSize3840 ? a - g_base : 0;
     };
     const uintptr_t u2mgr = g_u2_mgr.load(std::memory_order_relaxed);
     p::Event e;
@@ -1011,7 +1011,7 @@ const char* req_name(uint16_t op) {
 // The RTTI class name of an exe vtable (MSVC x64: [vt-8] the complete object locator, signature 1, its type
 // descriptor's rva at +0x0C, the decorated name at the descriptor +0x10); on the log thread; "?" when unreadable.
 std::string rtti_name(uint64_t vt_rva) {  // game::rtti_name_of_vtable from an exe-relative vtable
-    if (!g_base || vt_rva < 8 || vt_rva >= kImageSize3732) return "?";
+    if (!g_base || vt_rva < 8 || vt_rva >= kImageSize3840) return "?";
     const std::string s = game::rtti_name_of_vtable(g_base + static_cast<uintptr_t>(vt_rva));
     return s.empty() ? std::string("?") : s;
 }
@@ -1090,7 +1090,7 @@ std::string line_of(const p::Event& e) {
         }
         case kEBranch:
             return std::format("ShopProbe [branch] {} T{} | the server's StageBranchStateReq handler for {}: sequencer "
-                               "0x{:X} then 0x{:08X} (u8 {} {}) in manager 0x{:X} (field 0x{:X}) | 0x2B56870 result 0x{:X} "
+                               "0x{:X} then 0x{:08X} (u8 {} {}) in manager 0x{:X} (field 0x{:X}) | 0x2C84CB0 result 0x{:X} "
                                "-> {}{}",
                                when, e.tid, (v[5] >> 16) & 1 ? "USER 2" : "the host / another", v[1],
                                static_cast<uint32_t>(v[2]), v[5] & 0xFF, (v[5] >> 8) & 0xFF, v[3], v[4],
@@ -1243,7 +1243,7 @@ void summary() {
 // with 0x58C8345D while the host talks. The two preempt errors' globals (filled at start from their names): the
 // requester already holding a preemption ([comp+0xF0], 0x2359089 / 0xC958F21) and the NPC's reserve 0x235D030
 // failing (0x235BDB9 / 0x2A33ED0). Their values, once, name which one it is.
-constexpr uintptr_t kErrAlreadyPreempted = 0x71D6974, kErrAlreadyPreempting = 0x737BBB0;
+constexpr uintptr_t kErrAlreadyPreempted = 0x737BBAC, kErrAlreadyPreempting = 0x737BBB0;  // 3840 by name (3732: 0x71D6974 / 0x71D6978)
 void preempt_errors_once() {
     static bool said = false;
     if (said || !g_base) return;
@@ -1254,8 +1254,9 @@ void preempt_errors_once() {
               "eErrNoAlreadyPreemptingActor 0x{:08X} (the requester already holds one); the friend's refusals while the "
               "host talks carry 0x58C8345D",
               ed, ing);
-    // cs127c: 0x58C8345D is neither. Every error name's global sits in 0x71B0000..0x71E0000 (scratchpad
-    // errtable73.csv, the registrar 0x164E1D0's globals): the ones holding a refusal code seen in a log, named offline
+    // cs127c: 0x58C8345D is neither. Every error name's global sits in 0x7350000..0x7380000 on 3840 (its 1598 at
+    // 0x735AA74..0x737C2F4; 3732: 0x71B0000..0x71E0000, scratchpad errtable73.csv, the registrar 0x164E1D0's globals;
+    // 3840's registrar 0x16D6E30): the ones holding a refusal code seen in a log, named offline
     // from that table. 0x58C8345D: the friend's talk refusal (BUG 2: eErrNoInvalidStageChartInteractionCondition).
     // 0x7B1E861C (Brycecco + Arcticwolf 25 Nov, a03a63b9): the host's pickup of Shia's pendant (0xB020093B, interaction
     // 0xF4244, an object bound to the host's story scene 0x352) refused 20+ times, its pickup animation stuck; the
@@ -1263,7 +1264,7 @@ void preempt_errors_once() {
     constexpr uint32_t kCodes[] = {0x58C8345Du, 0x7B1E861Cu};
     std::string hits[std::size(kCodes)];
     int n[std::size(kCodes)] = {};
-    for (uintptr_t rva = 0x7354B88; rva < 0x71E0000; rva += 0x1000) {
+    for (uintptr_t rva = 0x7350000; rva < 0x7380000; rva += 0x1000) {
         uint32_t page[0x400];
         if (!game::fast_read(g_base + rva, page, sizeof page)) continue;
         for (size_t i = 0; i < std::size(page); ++i) {
@@ -1283,7 +1284,7 @@ void preempt_errors_once() {
 void branch_summary() {
     preempt_errors_once();
     if (!g_b2_on.load()) return;
-    log::info("ShopProbe branch summary: the StageBranchStateReq handler's 0x2B56870: user 2 {} (refused {}), the host "
+    log::info("ShopProbe branch summary: the StageBranchStateReq handler's 0x2C84CB0: user 2 {} (refused {}), the host "
               "/ others {} (refused {}), without B1 {} | user 2's branch sequencers seen {} | the step's refusals at "
               "2C0BFD7 user 2 {} / others {}, at 2C0C03A (the condition) user 2 {} / others {}",
               g_branch[0].load(), g_branch_fail[0].load(), g_branch[1].load(), g_branch_fail[1].load(),
@@ -1443,12 +1444,12 @@ void install(std::span<const gad::Section> secs) {
         // context check read these bytes first); without C no window (it would never close).
         if (g_c_on.load() && g_slot_wanted.load()) {
             mid(kC0, kC0Patch, kC0Bytes, on_c0, g_c0_hook, g_c0_on,
-                "C0, before the 2642 handler's check 0x2E3C180 (the talk window)");
+                "C0, before the 2642 handler's check 0x2F7E420 (the talk window)");
         }
     }
     if (context_ok(secs, kBCtx, kBCtxBytes, "the StageBranchStateReq handler's vf48 0x2E93076") &&
-        context_ok(secs, kBCallCtx, kBCallCtxBytes, "the handler's call 0x2B56870")) {
-        mid(kB1, kB1Patch, kB1Bytes, on_b1, g_b1_hook, g_b1_on, "B1, before the branch 0x2B56870");
+        context_ok(secs, kBCallCtx, kBCallCtxBytes, "the handler's call 0x2C84CB0")) {
+        mid(kB1, kB1Patch, kB1Bytes, on_b1, g_b1_hook, g_b1_on, "B1, before the branch 0x2C84CB0");
         if (g_b1_on.load()) mid(kB2, kB2Patch, kB2Bytes, on_b2, g_b2_hook, g_b2_on, "B2, the branch's result");
     }
     // Co-op+ 2026-11-24: why a branch is refused (BF1 / BF2; read only, needs B1 for whose branch it is).

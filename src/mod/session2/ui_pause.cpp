@@ -196,7 +196,7 @@ float on_scale(uintptr_t world, float orig, uintptr_t ret) noexcept {
 // ReloadStageStartReq 3074 with that actor; the host's user2_funnels F3 lets it through and the host's server reloads
 // user 2 at the actor (a client-side hop broke user 2's character: tcB13). Run here, on the game's thread at the top
 // of the UI frame, never on the layer's thread. One request at a time, SEH-guarded; the drain thread logs it.
-constexpr uintptr_t kFastTravelEntry = 0x74E830;
+constexpr uintptr_t kFastTravelEntry = 0x787650;  // 1.0.0.3840 (3732 0x74E830; the same function as fast_travel.cpp kFastTravel)
 constexpr uintptr_t kTravelCtxGlobal = 0x73F0DA8;
 std::atomic<uint32_t> g_travel_actor{0};    // asked (the layer's thread)
 std::atomic<uint32_t> g_travel_called{0};   // the actor of the last call (game thread)
@@ -644,7 +644,7 @@ DWORD WINAPI ui_thread(LPVOID) {
         if (const uint32_t a = g_travel_called.load(std::memory_order_acquire); a && a != g_travel_logged.load()) {
             g_travel_logged = a;
             const int rc = g_travel_rc.load();
-            log::info("Co-op+ travel: the client's fast travel 0x74E830 to actor 0x{:08X}: {}", a,
+            log::info("Co-op+ travel: the client's fast travel 0x787650 to actor 0x{:08X}: {}", a,
                       rc == 1 ? "started (al 1)" : rc == 0 ? "refused by the game (al 0)"
                       : rc == -1 ? "NOT called: its context [[[0x73F0DA8]+0x90]+0x1240] was not readable"
                                  : "the call FAULTED");

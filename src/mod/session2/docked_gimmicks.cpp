@@ -252,7 +252,7 @@ dgl::Table<dgl::TouchEntry, 8192> g_touch;
 std::atomic<uint64_t> g_client_untracked{0}, g_server_untracked{0};
 std::atomic<uint64_t> g_creations_in_dock{0}, g_dock_entries[2] = {}, g_dock_entries_player[2] = {};
 std::atomic<uint64_t> g_server_counts[2][2][2] = {};  // [op 0 exec / 1 update][requester 0 field owner / 1 other][0 ok / 1 rejected]
-std::atomic<uint32_t> g_field_owner{0};  // the field owner the controller write saw ([r13+0x180])
+std::atomic<uint32_t> g_field_owner{0};  // the field owner the controller write saw ([rdi+0x158] on 3840; 3576 [r13+0x180])
 std::atomic<uint64_t> g_unspawn[2][dgl::kAgeBuckets] = {};  // [from 0 host / 1 user 2][the OTHER's age bucket]
 std::atomic<uint64_t> g_unspawn_reqs[2] = {}, g_spawn_reqs[2] = {}, g_touches{0};
 std::atomic<uint32_t> g_unspawn_lines{0};
@@ -565,7 +565,7 @@ void install_client(std::span<const gad::Section> secs) {
     uint64_t slot = 0;
     if (!game::safe_read(g_base + dgl::kClientGimmickRequestSlot, &slot, sizeof slot) ||
         slot != g_base + dgl::kClientRequest) {
-        log::error("DockedGimmicks: pa::ClientGimmickActorComponent's vtable slot +0x748 (exe+0x{:X}) does not hold "
+        log::error("DockedGimmicks: pa::ClientGimmickActorComponent's vtable slot +0x758 (exe+0x{:X}) does not hold "
                    "0xA3D5D0; REFUSED, nothing written",
                    dgl::kClientGimmickRequestSlot);
         return;
@@ -579,7 +579,7 @@ void install_client(std::span<const gad::Section> secs) {
         return;
     }
     g_client_hooks.store(true);
-    log::info("DockedGimmicks: client probe hooked at the entries of 0xA3D5D0 (vf +0x748) and 0xA3DB00 (5 bytes "
+    log::info("DockedGimmicks: client probe hooked at the entries of 0xA3D5D0 (vf +0x758) and 0xA3DB00 (5 bytes "
               "each); log only, nothing of the game is written");
 }
 
@@ -631,9 +631,9 @@ void ctl_write_release(uint8_t user) {
 
 void install_server(std::span<const gad::Section> secs) {
     const Check checks[] = {
-        {dgl::kDockEquip, dgl::kDockHead, "the equipment docking spawn 0x2B734B0's entry"},
-        {dgl::kDockOther, dgl::kDockHead, "the docking spawn 0x2B741D0's entry"},
-        {dgl::kDockEquipCallSite, dgl::kDockEquipCall, "its 2249 caller 0x2D88314 (call 0x2B734B0)"},
+        {dgl::kDockEquip, dgl::kDockHead, "the equipment docking spawn 0x2CA1B00's entry"},
+        {dgl::kDockOther, dgl::kDockOtherHead, "the docking spawn 0x2CA2860's entry"},
+        {dgl::kDockEquipCallSite, dgl::kDockEquipCall, "its 2249 caller 0x2D88314 (call 0x2CA1B00)"},
         {dgl::kFieldOwnerRead, dgl::kFieldOwnerReadBytes, "the field-owner read 0x2B593A6"},
         {dgl::kServerExecute, dgl::kServerExecuteHead, "ServerGimmick_ExecuteFrameEvent 0x2EFC980's entry"},
         {dgl::kServerUpdate, dgl::kServerUpdateHead, "ServerGimmick_Update 0x2EFBE70's entry"},
@@ -641,9 +641,9 @@ void install_server(std::span<const gad::Section> secs) {
     if (!checks_ok(secs, checks)) return;
     std::vector<Prepared> ready;
     if (!prepare(dgl::kDockEquip, reinterpret_cast<void*>(&dock_detour), dgl::kDockHead,
-                 "the equipment docking spawn 0x2B734B0", g_dock_hook, ready) ||
-        !prepare(dgl::kDockOther, reinterpret_cast<void*>(&dock2_detour), dgl::kDockHead,
-                 "the docking spawn 0x2B741D0", g_dock2_hook, ready) ||
+                 "the equipment docking spawn 0x2CA1B00", g_dock_hook, ready) ||
+        !prepare(dgl::kDockOther, reinterpret_cast<void*>(&dock2_detour), dgl::kDockOtherHead,
+                 "the docking spawn 0x2CA2860", g_dock2_hook, ready) ||
         !prepare(dgl::kServerExecute, reinterpret_cast<void*>(&exec_detour), dgl::kServerExecuteHead,
                  "ServerGimmick_ExecuteFrameEvent 0x2EFC980", g_exec_hook, ready) ||
         !prepare(dgl::kServerUpdate, reinterpret_cast<void*>(&upd_detour), dgl::kServerUpdateHead,
@@ -660,7 +660,7 @@ void install_server(std::span<const gad::Section> secs) {
         return;
     }
     g_server_hooks.store(true);
-    log::info("DockedGimmicks: server probe hooked: entries of 0x2B734B0 / 0x2B741D0 (the docking spawns), "
+    log::info("DockedGimmicks: server probe hooked: entries of 0x2CA1B00 / 0x2CA2860 (the docking spawns), "
               "0x2EFC980 / 0x2EFBE70 (the server's gimmick event / update: accepted or rejected) and a mid hook at "
               "0x2B593B0 (the controller written at creation); log only, nothing of the game is written");
 }
@@ -775,7 +775,7 @@ void log_event(const p8p::Event& e, State& st, uint64_t& lines, uint64_t& not_lo
             if (may_log()) {
                 log::info("DockedGimmicks #{} server docking spawn {} {}: for character 0x{:08X} (type {}, controller "
                           "0x{:08X}) created {} actor(s)",
-                          seq, (e.v[1] >> 8) & 0xFF ? "0x2B741D0" : "0x2B734B0", p8_when(e.qpc_us),
+                          seq, (e.v[1] >> 8) & 0xFF ? "0x2CA2860" : "0x2CA1B00", p8_when(e.qpc_us),
                           static_cast<uint32_t>(e.v[0]), e.v[1] & 0xFF, static_cast<uint32_t>(e.v[0] >> 32), e.v[2]);
             }
             return;
@@ -785,7 +785,7 @@ void log_event(const p8p::Event& e, State& st, uint64_t& lines, uint64_t& not_lo
                 const auto owner = static_cast<uint32_t>(e.v[1] >> 32);
                 const auto parent_ctl = static_cast<uint32_t>(e.v[3]);
                 log::info("DockedGimmicks #{} server created 0x{:08X} (type {}) inside the docking spawn for 0x{:08X} "
-                          "{}: controller written 0x{:08X} (field owner [r13+0x180] 0x{:08X}{}) | the character's "
+                          "{}: controller written 0x{:08X} (field owner [rdi+0x158] 0x{:08X}{}) | the character's "
                           "controller 0x{:08X}{}",
                           seq, static_cast<uint32_t>(e.v[0]), e.v[0] >> 32, static_cast<uint32_t>(e.v[2]),
                           p8_when(e.qpc_us), eax, owner, eax == owner ? ", the field owner" : ", NOT the field owner",
@@ -1165,7 +1165,7 @@ void log_summary(State& st, uint64_t not_logged) {
                   named_total[0], named[0].empty() ? std::string("none") : named[0], g_user2_host_at1[0].load(),
                   named_total[1], named[1].empty() ? std::string("none") : named[1], g_user2_host_at1[1].load());
         log::info("DockedGimmicks summary, server (hooks {}, probe at the receive {}){}: creations inside a docking "
-                  "spawn {}, docking spawns 0x2B734B0 {} (for players {}) / 0x2B741D0 {} (for players {}), field owner "
+                  "spawn {}, docking spawns 0x2CA1B00 {} (for players {}) / 0x2CA2860 {} (for players {}), field owner "
                   "0x{:08X} | 3082 accepted/rejected: field owner's client {}/{}, other {}/{} | 2758: field owner's "
                   "{}/{}, other {}/{} | untracked {} | 2221: {} (keys past 16 not measured {}) | keyed requests seen "
                   "{} (table {} used, full {})",
@@ -1622,7 +1622,7 @@ void docked_gimmicks_start(const std::string& raw, bool guest) {
                     : "the host's client is never changed (its own character's docked gimmicks are already its own; "
                       "user 2's are never taken); its 2005s are classified from the sniffer's capture (needs [sniffer] "
                       "enabled=1)",
-              guest ? "" : "; server: the docking spawns 0x2B734B0 / 0x2B741D0, the controller write 0x2B593B0, "
+              guest ? "" : "; server: the docking spawns 0x2CA1B00 / 0x2CA2860, the controller write 0x2B593B0, "
                            "0x2EFC980 / 0x2EFBE70 accepted or rejected, the 2221 unspawns at the server's receive");
 }
 

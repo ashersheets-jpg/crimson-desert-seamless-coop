@@ -52,7 +52,7 @@ namespace cdmp::session2::wsy {
 // in rdi, 0x4143B8E / 0x4143CAA; cs16c). Block C (2976's under-water colours) carries no field on 3663.
 inline constexpr uintptr_t kModuleSlot = 0x730A2C8;  // [exe+] -> M; M.vf60 = 0x7D7940 returns [M+0x60] (2976 0x6C8CEC8)
 inline constexpr uint32_t kModuleScene = 0x60;       // S = [M+0x60]
-inline constexpr uint32_t kSceneWeather = 0xF70;     // X = [S+0xF70] (2976 +0xF68)
+inline constexpr uint32_t kSceneWeather = 0xF48;     // X = [S+0xF48] (3840: the 31 scene-getter readers; 3732 +0xF70, 2976 +0xF68)
 inline constexpr uint32_t kVtGetterSlot = 0x60;      // [[M]+0x60] = the getter the simulators call
 inline constexpr uintptr_t kGetterVf60 = 0x8105D0;   // (2976 0x6DA0A0)
 inline constexpr uint8_t kGetterVf60Bytes[5] = {0x48, 0x8B, 0x41, 0x60, 0xC3};  // mov rax,[rcx+0x60]; ret

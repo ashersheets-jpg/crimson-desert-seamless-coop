@@ -48,14 +48,18 @@ struct Point {
 constexpr uint8_t kEntry7[] = {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x10, 0x44, 0x88, 0x48, 0x20, 0x4C, 0x89, 0x40, 0x18, 0x55};
 constexpr uint8_t kRideEnter[] = {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x10, 0x48, 0x89, 0x70, 0x18, 0x55, 0x57, 0x41, 0x54, 0x41};
 constexpr uint8_t kHandler[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57};
-constexpr uint8_t kVf54[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x6C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x20, 0x57};
+// 1.0.0.3840: ClientVehicle vf54 is a 5-byte jmp into the protection now (its body moved; 3732: the 16-byte prologue
+// 48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 20 57). The 5-byte patch covers exactly that jmp, as for the vf53 thunk.
+constexpr uint8_t kVf54[] = {0xE9, 0xCB, 0x33, 0xE5, 0x08};  // 3840 0xBCF640 jmp 0x9A22A10
 // Co-op+ port 1.0.0.3549 (docs/research/native-port-3549.json): ClientVehicleActorComponent vtable 0x5944B90 slots
 // 53/54, CommonVehicleActorComponent 0x5CEFC28 slot 53, the RideOff thunk right after its vf54 (as on 2976),
 // RideOn/RideOffMovementMethod slot 7, the handlers = slot 2 of their TrocTr vtables.
-constexpr uint8_t kThunkVf53[] = {0xE9, 0xEB, 0x97, 0xD3, 0x08};    // 3549 0xB4D8D0 jmp .xpdata (2976: jmp 0x9DC90A0)
-constexpr uint8_t kThunkRideOff[] = {0xE9, 0x5B, 0xE5, 0x73, 0x0A};  // 3549 0x23FDCC0 jmp 0xCD40720 (2976: jmp 0xE6F2E60)
+constexpr uint8_t kThunkVf53[] = {0xE9, 0xFB, 0x20, 0xE5, 0x08};    // 3840 0xBCF620 jmp 0x9A21720 (3549 0xB4D8D0 jmp .xpdata; 2976: jmp 0x9DC90A0)
+constexpr uint8_t kThunkRideOff[] = {0xE9, 0x6B, 0xCF, 0x76, 0x0A};  // 3840 0x254EE80 jmp 0xCCBBDF0 (3549 0x23FDCC0 jmp 0xCD40720; 2976: jmp 0xE6F2E60)
 
-constexpr uintptr_t kCommonVf53 = 0x254E1F0, kClientVf53 = 0xB857C0, kRideOffThunk = 0x2472600, kClientVf54 = 0xB857E0;
+// 3840: ClientVehicleActorComponent vtable 0x5B55CE8 slots 53/54, the RideOff thunk right after CommonVehicle vf54
+// (3732: 0xB857C0, 0x2472600, 0xB857E0).
+constexpr uintptr_t kCommonVf53 = 0x254E1F0, kClientVf53 = 0xBCF620, kRideOffThunk = 0x254EE80, kClientVf54 = 0xBCF640;
 constexpr uintptr_t kRideOnEnter = 0x7B6060, kRideOffEnter = 0x7B7030, kH2663 = 0xD6B0B0, kH2916 = 0xD6BB80,
                     kH2991 = 0xCF2320;  // 3549 (2976: 0x2228260 0xA45740 0x2228E40 0xA45760 0x681C80 0x682C20 0xBB4130 0xBB4AC0 0xB57720)
 constexpr uintptr_t kCodeEnd = 0x57A5000;  // Co-op+ port: end of .xtext on 1.0.0.3549 (2976: .rsrc ends at 0x51EB000)
@@ -2113,7 +2117,16 @@ DWORD WINAPI install_thread(LPVOID) {
         Sleep(500);
     }
     g_vf53 = reinterpret_cast<Vf53Fn>(g_base + kCommonVf53);
-    g_rideoff = reinterpret_cast<RideOffFn>(g_base + kRideOffThunk);
+    // 3840 port: retire_native CALLS the RideOff thunk; only when it is the expected jmp (before any hook patches it),
+    // else no retirement is ever called (retire_native refuses on a null g_rideoff).
+    g_rideoff = bytes_at(kRideOffThunk, kThunkRideOff, sizeof kThunkRideOff)
+                    ? reinterpret_cast<RideOffFn>(g_base + kRideOffThunk)
+                    : nullptr;
+    if (!g_rideoff) {
+        log::error("MountSync: the RideOff thunk exe+0x{:X} is not the expected jmp; the mod never calls it (no native "
+                   "retirement of the other player's dismount)",
+                   kRideOffThunk);
+    }
     const Point pts[] = {
         {kCommonVf53, 7, kEntry7, sizeof kEntry7, "CommonVehicle::vf53 0x2228260 (MountBegin/MountCommit)"},
         {kClientVf53, 5, kThunkVf53, sizeof kThunkVf53, "the ClientVehicle vf53 thunk 0xA45740 (jmp 0x9DC90A0)"},

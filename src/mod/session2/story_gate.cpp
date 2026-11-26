@@ -602,7 +602,7 @@ void on_frame(safetyhook::Context&) {
         calls.swap(g_client_replay);
     }
     for (const ClientHeld& c : dropped) obj_ref(c.seq, -1);
-    const uintptr_t fn = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)) + 0x6F4550;  // 3663: the call's target
+    const uintptr_t fn = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)) + 0x72BC70;  // 3840: kVolCall's target (3732 0x6F4550; 3663: the call's target)
     for (const ClientHeld& c : calls) {
         // A stage the game has let go of while the call waited (a load, a fast travel: no volume exit seen): only our
         // reference is left on the sequencer object; its call is not played, the object goes with our release.
@@ -634,7 +634,7 @@ void install_client() {
         return;
     }
     p8_install_mid(base, secs, kVolCall, sizeof kVolCallBytes, kVolCallBytes, on_vol_call, g_vol_hook, "StoryGate",
-                   "the client's volume call 0xE5FFF9 (0xE5FDF0 -> 0x6F4550)");
+                   "the client's volume call 0xE5FFF9 (0xE5FDF0 -> 0x72BC70)");
     p8_install_mid(base, secs, kFrameAfter, sizeof kFrameAfterBytes, kFrameAfterBytes, on_frame, g_frame_hook, "StoryGate",
                    "after the frame's event flush 0x73A75D");
     if (g_mode.load() == 1 || g_mode.load() == 3) {

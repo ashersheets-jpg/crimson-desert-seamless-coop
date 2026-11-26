@@ -148,12 +148,12 @@ void test_sites() {
     CHECK(!u2sh::site_of(2671) && !u2sh::site_of(2720) && !u2sh::site_of(2100) && !u2sh::site_of(2043));
     CHECK(u2sh::site_index(2671) == u2sh::kSiteCount);
     // 3576 (2026-11-09): the opcodes are 3549's; the protected-section sites are 0 (matched by section).
-    CHECK(u2sh::site_of(2726)->ret_rva == 0x2D55B39);
+    CHECK(u2sh::site_of(2726)->ret_rva == 0x2E93079);
     CHECK(u2sh::site_of(2811)->ret_rva == 0 && u2sh::site_matches(*u2sh::site_of(2811), 0xE3FA800) &&
-          !u2sh::site_matches(*u2sh::site_of(2811), 0x2D55B39));
+          !u2sh::site_matches(*u2sh::site_of(2811), 0x2E93079));
     CHECK(u2sh::site_of(2048)->ret_rva == 0 && u2sh::site_of(2048)->id_at == u2sh::kTimerId);
     CHECK(u2sh::site_of(2059)->ret_rva == 0 && u2sh::site_of(2059)->id_at == u2sh::kTimerId);
-    CHECK(u2sh::site_matches(*u2sh::site_of(2726), 0x2D55B39) && !u2sh::site_matches(*u2sh::site_of(2726), 0x2CEA18A));
+    CHECK(u2sh::site_matches(*u2sh::site_of(2726), 0x2E93079) && !u2sh::site_matches(*u2sh::site_of(2726), 0x2CEA18A));
     CHECK(u2sh::kOpDeleteTimer == 2059);
     // S13 (the host's smithy 0x19D): a 2436 as a packet (u16 opcode | i8 slot | u16 length | payload).
     const auto b2436 = bytes_of({0x84, 0x09, 0x00, 0x0E, 0x00, 0x9D, 0x01, 0, 0, 0, 0, 0, 0, 0x06, 0, 0, 0, 0, 0});
@@ -322,7 +322,7 @@ void test_shop_watch() {
     h.open_us = t;
     CHECK(u2sh::hold_decision(h) == H::Expired);
     // Review B4: the Req opcode of a Nak 1013 (u16 0x3F5 | u8 0xFF | i32 error | u16 opcode @7 | u64).
-    const auto nak = bytes_of({0xF5, 0x03, 0xFF, 0x05, 0, 0, 0, 0x54, 0x0A, 0, 0, 0, 0, 0, 0, 0, 0});
+    const auto nak = bytes_of({0xF5, 0x03, 0xFF, 0x05, 0, 0, 0, 0xA6, 0x0A, 0, 0, 0, 0, 0, 0, 0, 0});
     CHECK(u2sh::nak_req_opcode(nak) == 2726 && u2sh::site_of(u2sh::nak_req_opcode(nak)));
     CHECK(u2sh::nak_req_opcode(std::span<const uint8_t>(nak.data(), 8)) == 0);
     CHECK(u2sh::nak_error(nak) == 5);  // S46: the i32 error @3

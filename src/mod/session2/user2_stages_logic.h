@@ -95,7 +95,7 @@ inline constexpr uint32_t kActor_Key = 0x60, kActor_User = 0xA0, kUser_Key = 0x6
 inline constexpr uint32_t kTs_Local = 0xB4, kTs_Parent = 0xD0;
 // The field a TransformSync's field mover holds (TS+0x4F0, +0x10: fast_travel.cpp's kTsFieldMoverField) and the
 // ServerField vtable it must have.
-inline constexpr uint32_t kTs_Field = 0x518;  // Co-op+ port 3549: field mover TS+0x508, +0x10 (2976: 0x500)
+inline constexpr uint32_t kTs_Field = 0x528;  // 3840: field mover TS+0x518, +0x10 (3732 0x518; Co-op+ port 3549: field mover TS+0x508, +0x10; 2976: 0x500)
 inline constexpr uint32_t kVtServerField = 0x60FE230;  // 3576
 
 // ---------------------------------------------------------------- positions and cells (0x288B7A0's arithmetic)
@@ -692,7 +692,7 @@ inline ChainCount count_chains(const uint64_t* ticks_us, size_t n, uint64_t peri
 // [r14+0x90],eax; r14 the new actor, rsi the descriptor, r13 the field) eax := user 2's user key for exactly those
 // NPCs, so the guest's client - next to them, with their stage bound in its own M - runs their AI.
 inline constexpr uint32_t kVtDescNpcSchedule = 0x60D95C8;  // 3576 RTTI  // pa::CreateServerActorDesc_NPCSchedule (vf3 0x27A6160)
-inline constexpr uint32_t kActor_Ctl = 0x90, kActor_TypeInfo = 0x88, kDesc_User = 0x40, kField_Owner = 0x180;
+inline constexpr uint32_t kActor_Ctl = 0x90, kActor_TypeInfo = 0x88, kDesc_User = 0x40, kField_Owner = 0x158;  // 3840 owner (3732 0x180)
 inline constexpr uint8_t kLogoutAiReason = 42;  // ServerAiActorComponent vf69's Logout (the client's AI 'logout')
 
 enum class Ctl : uint8_t {

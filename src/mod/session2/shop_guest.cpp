@@ -20,14 +20,15 @@ namespace {
 
 namespace off = game::build_2976;
 
-constexpr uintptr_t kCheck = 0x243AEB0;
-constexpr uint8_t kCheckHead[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x18};
-constexpr uintptr_t kA = 0x243B023;  // test r12d,0x1FFFFFFF ; jne
+// 3840 (3732: kCheck 0x243AEB0 with head 48 89 5C 24 10 48 89 74 24 18, kA 0x243B023, kB 0x243B2E3, [rbp-0x31]).
+constexpr uintptr_t kCheck = 0x2516590;
+constexpr uint8_t kCheckHead[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x4C, 0x89, 0x4C, 0x24, 0x20};
+constexpr uintptr_t kA = 0x251670D;  // test r12d,0x1FFFFFFF ; jne
 constexpr uint8_t kABytes[] = {0x41, 0xF7, 0xC4, 0xFF, 0xFF, 0xFF, 0x1F, 0x75};
-constexpr uintptr_t kB = 0x243B2E3;  // mov rcx,[rbp+0x67] ; mov rax,[rcx] ; mov dl,1 ; call [rax+0x20] ; cmp [rbp-0x31],rbx
+constexpr uintptr_t kB = 0x25169CE;  // mov rcx,[rbp+0x67] ; mov rax,[rcx] ; mov dl,1 ; call [rax+0x20] ; cmp [rbp-0x41],rbx
 constexpr uint8_t kBBytes[] = {0x48, 0x8B, 0x4D, 0x67, 0x48, 0x8B, 0x01, 0xB2, 0x01, 0xFF, 0x50, 0x20,
-                               0x48, 0x39, 0x5D, 0xCF, 0x0F, 0x84};
-constexpr intptr_t kRbpCurrent = -0x31;  // [rbp-0x31]: the manager's current stage, compared at 0x23C7787
+                               0x48, 0x39, 0x5D, 0xBF, 0x0F, 0x84};
+constexpr intptr_t kRbpCurrent = -0x41;  // [rbp-0x41]: the manager's current stage, stored at 0x25166F7, compared at kB
 
 bool g_guest = false, g_on = false;
 uintptr_t g_base = 0;
@@ -41,7 +42,7 @@ bool rd(uintptr_t a, T& v) {
     return a && game::safe_read(a, &v, sizeof v);
 }
 
-// storeComp (r13) -> its actor [+8] -> the guest's character?
+// storeComp (3840: r15, `mov r15,rcx` at the check's entry; 3732: r13) -> its actor [+8] -> the guest's character?
 bool guest_subject(uintptr_t store_comp, uint32_t& key) {
     uintptr_t actor = 0;
     key = 0;
@@ -55,7 +56,7 @@ bool guest_subject(uintptr_t store_comp, uint32_t& key) {
 void a_mid(safetyhook::Context& ctx) noexcept {
     c_a.fetch_add(1, std::memory_order_relaxed);
     uint32_t key = 0;
-    const bool g = guest_subject(ctx.r13, key);
+    const bool g = guest_subject(ctx.r15, key);  // 3840 (3732: r13)
     const auto v = sgl::on_empty(g, ctx.r12);
     t_a_bypassed = v.bypassed;
     if (v.bypassed) {
@@ -68,7 +69,7 @@ void a_mid(safetyhook::Context& ctx) noexcept {
 void b_mid(safetyhook::Context& ctx) noexcept {
     const uint64_t n = c_b.fetch_add(1, std::memory_order_relaxed) + 1;
     uint32_t key = 0;
-    const bool g = guest_subject(ctx.r13, key);
+    const bool g = guest_subject(ctx.r15, key);  // 3840 (3732: r13)
     const bool a = t_a_bypassed;
     t_a_bypassed = false;
     if (!g) return;

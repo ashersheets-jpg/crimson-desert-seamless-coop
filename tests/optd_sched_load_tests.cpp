@@ -58,7 +58,7 @@ std::vector<uint8_t> unhex(const char* h) {
     // A whole captured packet (u16 opcode | i8 slot | u16 length = the rest): 2976's numbers -> the logic's.
     if (out.size() >= 5 && static_cast<size_t>(out[3] | out[4] << 8) == out.size() - 5) {
         const uint16_t op = static_cast<uint16_t>(out[0] | out[1] << 8);
-        const uint16_t now = op == 2552 ? gsl::kOpScheduleCreate : op == 2446 ? gsl::kOpInitSchedule : op;
+        const uint16_t now = op == 2335 ? gsl::kOpScheduleCreate : op == 2874 ? gsl::kOpInitSchedule : op;  // 2976 numbers (op84 must not renumber them)
         out[0] = static_cast<uint8_t>(now);
         out[1] = static_cast<uint8_t>(now >> 8);
     }

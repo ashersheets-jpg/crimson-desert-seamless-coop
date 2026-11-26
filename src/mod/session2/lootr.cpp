@@ -77,7 +77,7 @@ bool snap_bag(uintptr_t picker, BagSnap& b) noexcept {
         const uintptr_t root = *reinterpret_cast<uintptr_t*>(slot);
         const uintptr_t info = *reinterpret_cast<uintptr_t*>(root + 8);
         const uintptr_t mgr = *reinterpret_cast<uintptr_t*>(info + 0x220);  // 3663 (3576 +0x240)
-        const uint16_t bag = *reinterpret_cast<uint16_t*>(mgr + 0x7A);  // 3663 (3576 +0xA2)
+        const uint16_t bag = *reinterpret_cast<uint16_t*>(mgr + 0x72);  // 3840 (3732 +0x7A, 3576 +0xA2)
         const uintptr_t holder = reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t)>(base + 0x2437980)(picker);
         if (!holder) return false;
         const uintptr_t list = *reinterpret_cast<uintptr_t*>(holder + 0x18);
@@ -99,12 +99,13 @@ bool snap_bag(uintptr_t picker, BagSnap& b) noexcept {
     }
     return false;
 }
-// The item row (exe+0x3DD8A0): its key at +8 (tcB326: idx 0x50D -> key 0x0B8D0E).
+// The item row (3840: getter exe+0x3EA540, table exe+0x73F21D8; 3732: exe+0x3DB320): its key at +0 (3732: +8; tcB326:
+// idx 0x50D -> key 0x0B8D0E).
 uint32_t item_key_of(uint16_t idx) noexcept {
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     __try {
-        const uintptr_t row = game::info_row(base + 0x3DB320, idx);
-        return row ? *reinterpret_cast<uint32_t*>(row + 8) : 0;
+        const uintptr_t row = game::info_row(base + 0x3EA540, base + 0x73F21D8, idx);
+        return row ? *reinterpret_cast<uint32_t*>(row) : 0;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return 0;
     }
@@ -190,7 +191,7 @@ struct Seen {
     // in the level, 0x16 = a player dropped it from the inventory, 0x15 = thrown out by a gimmick's Drop event,
     // 0x1A / 0x1B from a dead body, 0x2A never set. 0xFF = unreadable.
     uint8_t reason = 0xFF;
-    uint32_t spawner = 0;  // u32 comp+0x288: who spawned it (0 for level gimmicks)
+    uint32_t spawner = 0;  // u32 comp+0x290 (3732: +0x288): who spawned it (0 for level gimmicks)
 };
 int drop_handler(uintptr_t base, uintptr_t b, uint8_t& mode) noexcept;
 void read_pickup(Seen& s, uintptr_t comp, uintptr_t picker) noexcept {
@@ -198,11 +199,11 @@ void read_pickup(Seen& s, uintptr_t comp, uintptr_t picker) noexcept {
         {
             const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
             s.row = *reinterpret_cast<uint16_t*>(comp + 0x48);
-            s.state = *reinterpret_cast<uint32_t*>(comp + 0x270);
+            s.state = *reinterpret_cast<uint32_t*>(comp + 0x278);  // 3840 (3732: +0x270)
             uint8_t mode = 0xFF;
             s.has_drop = drop_handler(base, *reinterpret_cast<uintptr_t*>(comp + 0x40), mode);
-            const uintptr_t row = game::info_row(base + 0x3DB080, s.row);
-            const uintptr_t h = row ? *reinterpret_cast<uintptr_t*>(row + 8) : 0;
+            // 3840: the gimmick row's name object is in its table entry (3732: *(row + 8) of exe+0x3DB080's row).
+            const uintptr_t h = game::info_name(base + 0x73F2200, s.row);
             const char* text = h ? *reinterpret_cast<const char**>(h) : nullptr;
             for (size_t c = 0; text && c + 1 < sizeof s.name && text[c]; ++c) s.name[c] = text[c];
         }
@@ -214,7 +215,7 @@ void read_pickup(Seen& s, uintptr_t comp, uintptr_t picker) noexcept {
             const uintptr_t status = comps ? *reinterpret_cast<uintptr_t*>(comps + 0x20) : 0;
             if (status) s.reason = *reinterpret_cast<uint8_t*>(status + 0x2F0);
         }
-        s.spawner = *reinterpret_cast<uint32_t*>(comp + 0x288);
+        s.spawner = *reinterpret_cast<uint32_t*>(comp + 0x290);  // 3840 (3732: +0x288)
         const uintptr_t rec = *reinterpret_cast<uintptr_t*>(comp + 0xC0);
         if (rec) {
             s.idx = *reinterpret_cast<uint16_t*>(rec + 8);
@@ -321,9 +322,11 @@ std::atomic<uint64_t> c_body_first{0}, c_body_second{0}, c_body_refused{0}, c_bo
 thread_local bool t_keep_body = false;
 safetyhook::MidHook g_keep_body_hook;
 alignas(16) uint8_t g_zero_row[0x40] = {};
-void on_keep_body(safetyhook::Context& ctx) {  // exe+0x2E22885: rax = the character row, dil = a
+// 3840 exe+0x2FD23BA: RCX = the character row (the getter's result after its NULL -> default cmov), dil = a; the game
+// then tests byte [rcx+0x16] (3732 exe+0x2E8E723: rax and [rax+0x1A]).
+void on_keep_body(safetyhook::Context& ctx) {
     if (!t_keep_body) return;
-    ctx.rax = reinterpret_cast<uintptr_t>(g_zero_row);  // row+0x1A reads 0: the game's own "not removed" branch
+    ctx.rcx = reinterpret_cast<uintptr_t>(g_zero_row);  // row+0x16 reads 0: the game's own "not removed" branch
     ctx.rdi &= ~static_cast<uintptr_t>(0xFF);
 }
 void body_keep_host(uint32_t body, bool on) noexcept {
@@ -664,7 +667,8 @@ uint32_t* __fastcall drop_detour(uintptr_t comp, uint32_t* err, uintptr_t field,
 // (sam = [[exe+0x71C0608]], u32 count +0x9C, array +0xB0, entry -> actor at +8); a gimmick has type byte
 // [[actor+0x88]+1] == 7, its component [[actor+0x68]+0x30] holds the info index (u16 +0x48), the save key (+0x30) and
 // the state data B (+0x40) whose handler lists tell a Drop event (vtable exe+0x5D7CC28). Walk B: the field's sync
-// scene objects ([field+0x80]: u32 count +0x64, array +0x78, entry: key16 +8, data +0x18 with u32 +0x10C rolls left).
+// scene objects ([field+0x88] on 3840, 3732 +0x80: u32 count +0x64, array +0x78, entry: key16 +8, data +0x18 with u32
+// +0x10C rolls left).
 struct ChestFound {
     uint32_t key = 0;
     uint16_t idx = 0xFFFF;
@@ -775,7 +779,7 @@ void chest_scan_read(ChestScan& s, uintptr_t base, uintptr_t host) noexcept {
                 ChestFound g = f;
                 g.key = *reinterpret_cast<uint32_t*>(actor + 0x60);
                 g.idx = *reinterpret_cast<uint16_t*>(comp + 0x48);
-                g.left = *reinterpret_cast<uint32_t*>(comp + 0x270);
+                g.left = *reinterpret_cast<uint32_t*>(comp + 0x278);  // 3840 (3732: +0x270)
                 g.row_rolls = has_drop ? 1 : 0;
                 s.near_[s.near_n++] = g;
             }
@@ -802,9 +806,7 @@ void chest_scan_read(ChestScan& s, uintptr_t base, uintptr_t host) noexcept {
         }
         for (int k = 0; k < s.near_n; ++k) {
             ChestFound& f = s.near_[k];
-            const uintptr_t row =
-                game::info_row(base + 0x3DB080, f.idx);
-            const uintptr_t h = row ? *reinterpret_cast<uintptr_t*>(row + 8) : 0;
+            const uintptr_t h = game::info_name(base + 0x73F2200, f.idx);  // 3840: the table entry's name object
             const char* text = h ? *reinterpret_cast<const char**>(h) : nullptr;
             for (size_t c = 0; text && c + 1 < sizeof f.name && text[c]; ++c) f.name[c] = text[c];
         }
@@ -812,11 +814,11 @@ void chest_scan_read(ChestScan& s, uintptr_t base, uintptr_t host) noexcept {
         // The rows (name, starting rolls): only for the kept ones (the call may load a row).
         for (int k = 0; k < s.n; ++k) {
             ChestFound& f = s.f[k];
-            const uintptr_t row =
-                game::info_row(base + 0x3DB080, f.idx);
+            const uintptr_t row =  // 3840: the gimmick getter + its table (3732: 0x3DB080)
+                game::info_row(base + 0x3EAD20, base + 0x73F2200, f.idx);
             if (!row) continue;
             f.row_rolls = *reinterpret_cast<uint32_t*>(row + 0x268);
-            const uintptr_t h = *reinterpret_cast<uintptr_t*>(row + 8);
+            const uintptr_t h = game::info_name(base + 0x73F2200, f.idx);  // 3840 (3732: *(row + 8))
             const char* text = h ? *reinterpret_cast<const char**>(h) : nullptr;
             for (size_t c = 0; text && c + 1 < sizeof f.name && text[c]; ++c) f.name[c] = text[c];
         }
@@ -825,8 +827,8 @@ void chest_scan_read(ChestScan& s, uintptr_t base, uintptr_t host) noexcept {
         const uintptr_t hc = *reinterpret_cast<uintptr_t*>(host + 0x68);
         const uintptr_t ts = hc ? *reinterpret_cast<uintptr_t*>(hc + 0x1A0) : 0;
         if (!ts || *reinterpret_cast<uint8_t*>(ts + 0x550) != 0) return;
-        const uintptr_t field = *reinterpret_cast<uintptr_t*>(ts + 0x518);
-        const uintptr_t ssom = field ? *reinterpret_cast<uintptr_t*>(field + 0x80) : 0;
+        const uintptr_t field = *reinterpret_cast<uintptr_t*>(ts + 0x528);  // 3840 (3732: +0x518)
+        const uintptr_t ssom = field ? *reinterpret_cast<uintptr_t*>(field + 0x88) : 0;  // 3840 (3732: +0x80)
         if (!ssom) return;
         const uint32_t m = *reinterpret_cast<uint32_t*>(ssom + 0x64);
         const uintptr_t oarr = *reinterpret_cast<uintptr_t*>(ssom + 0x78);
@@ -857,9 +859,7 @@ void chest_scan_read(ChestScan& s, uintptr_t base, uintptr_t host) noexcept {
                 RowName& rn = g_row_names[at];
                 rn = RowName{};
                 rn.idx = idx;
-                const uintptr_t row =
-                    game::info_row(base + 0x3DB080, idx);
-                const uintptr_t h = row ? *reinterpret_cast<uintptr_t*>(row + 8) : 0;
+                const uintptr_t h = game::info_name(base + 0x73F2200, idx);  // 3840: the table entry's name object
                 const char* text = h ? *reinterpret_cast<const char**>(h) : nullptr;
                 char low[sizeof rn.name] = {};
                 for (size_t c = 0; text && c + 1 < sizeof rn.name && text[c]; ++c) {
@@ -2118,10 +2118,11 @@ void lootr_start(bool on, bool probe, bool guest, bool bodies) {
             }
         }
         if (g_bodies_on && g_body_loot) {
-            static const uint8_t kLea[7] = {0x48, 0x8D, 0x35, 0x96, 0xF2, 0x0D, 0x03};
+            // 3840: lea rsi,[rip+0x3127F37] right after the character row's getter (3732 0x2E8E723: ...96 F2 0D 03)
+            static const uint8_t kLea[7] = {0x48, 0x8D, 0x35, 0x37, 0x7F, 0x12, 0x03};
             uint8_t at[7] = {};
-            if (game::safe_read(base + 0x2E8E723, at, sizeof at) && std::memcmp(at, kLea, sizeof at) == 0) {
-                if (auto h = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x2E8E723), on_keep_body)) {
+            if (game::safe_read(base + 0x2FD23BA, at, sizeof at) && std::memcmp(at, kLea, sizeof at) == 0) {
+                if (auto h = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x2FD23BA), on_keep_body)) {
                     g_keep_body_hook = std::move(*h);
                 }
             }

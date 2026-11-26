@@ -1200,7 +1200,7 @@ LONG CALLBACK crash_veh(EXCEPTION_POINTERS* ep) {
                       : "GuestS3 first-chance AV at ");
         if (at >= g_base && at < g_base + 0x14000000) {
             l.str("exe+").hex(at - g_base);
-        } else if (mod_base && at >= mod_base && at < mod_base + 0x2114830) {
+        } else if (mod_base && at >= mod_base && at < mod_base + 0x2065780) {
             l.str("cdmp.asi+").hex(at - mod_base);
         } else {
             l.hex(at);

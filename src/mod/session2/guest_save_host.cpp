@@ -59,8 +59,8 @@ constexpr uint8_t kFlushHead[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74
                                   0xFF, 0xFF, 0x48, 0x81, 0xEC, 0xC0, 0x01, 0x00, 0x00, 0x45, 0x0F, 0xB7,
                                   0xF9, 0x4D, 0x8B, 0xE8, 0x48, 0x8B, 0xF2};
 // Called (never hooked): GetOrCreateSlot's .rsrc thunk (jmp .xtls 0xEF537A0) and AddFile.
-constexpr uintptr_t kGetOrCreate = 0x25BD900;  // (S, const char* name, u8 in_memory) -> slot
-constexpr uint8_t kGetOrCreateHead[] = {0xE9, 0x6B, 0xDB, 0xC3, 0x0A};
+constexpr uintptr_t kGetOrCreate = 0x26A38E0;  /* 3840 (3732: 0x25BD900) */  // (S, const char* name, u8 in_memory) -> slot
+constexpr uint8_t kGetOrCreateHead[] = {0xE9, 0x6B, 0x9D, 0xC7, 0x0A};
 constexpr uintptr_t kAddFile = 0x26A8C80;  // (slot, const char* name) -> ...; makes the 0x140-byte file object
 constexpr uint8_t kAddFileHead[] = {0x40, 0x53, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41,
                                     0x57, 0x48, 0x81, 0xEC, 0x88, 0x00, 0x00, 0x00, 0x48, 0x8B, 0xEA, 0x4C,
@@ -93,8 +93,10 @@ struct ErrorSite {
 // save failure + 4, invalid = absent + 0xE4).
 constexpr ErrorSite kErrBusy = {0x1AB690E, 0x737C078, "LoadSlot's busy error"};
 constexpr ErrorSite kErrInvalidSlot = {0x1AB6870, 0x737BCA4, "LoadSlot's invalid-slot error"};
-constexpr ErrorSite kErrAbsentSlot = {0x2297BEF, 0x71D6988, "LoadComponentsFromFile's absent-slot error"};
-constexpr ErrorSite kErrSaveFail = {0x1A1789A, 0x737C074, "SavePlayerToSlot's own failure"};
+// 3840: LoadComponentsFromFile returns the absent-slot error when its new FindSlot stub (0x26A3830) gives null; the
+// global is still the one the game registers as eErrNoFailedLoadCharacterGamePlayData (3732: {0x2297BEF, 0x71D6988}).
+constexpr ErrorSite kErrAbsentSlot = {0x2360555, 0x737BBC0, "LoadComponentsFromFile's absent-slot error"};
+constexpr ErrorSite kErrSaveFail = {0x1AB577B, 0x737C074, "SavePlayerToSlot's own failure"};  // 3840 (3732: 0x1A1789A)
 
 // Fields (evidence in the report and in guest_save_logic.h).
 constexpr uint32_t kSlotMemoryOnly = 0x699;  // u8: GetOrCreateSlot .xtls 0xEF538D7, CommitSlot .xtls 0xEF5186D

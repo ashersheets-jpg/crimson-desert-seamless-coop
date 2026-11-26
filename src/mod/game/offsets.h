@@ -88,7 +88,7 @@ inline constexpr uint8_t kClientOnRecvPacketHead[] = {0x48, 0x89, 0x5C, 0x24, 0x
 inline constexpr uint32_t kHookArgSizeStackOffset = 0x28;
 // Static Troc handler instances (0x90 bytes each) live in this range.
 inline constexpr uintptr_t kTrocInstancesBegin = 0x70BED10;
-inline constexpr uintptr_t kTrocInstancesEnd = 0x6F4E7B8;
+inline constexpr uintptr_t kTrocInstancesEnd = 0x70F2F38;  // 3840: the last static instance (op 2004) + 8 (3732: 0x6F4E7B8)
 inline constexpr uint32_t kTroc_Kind = 0x08;    // u32: 4 Req, 1 Ack/Nak, 2 auth, 0x7FFFFFFE internal
 inline constexpr uint32_t kTroc_Opcode = 0x0C;  // u16
 // Opcodes of this build (verified against the Troc table / RTTI at runtime).

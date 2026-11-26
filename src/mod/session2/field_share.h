@@ -42,14 +42,18 @@ inline constexpr uint32_t kRefs = 0x10;          // u32 strong references
 inline constexpr uint32_t kLock1 = 0x18;         // lock object (vtable: +8 lock, +0x10 unlock)
 inline constexpr uint32_t kLock2Ptr = 0x08;      // -> lock object
 inline constexpr uint32_t kOpen = 0x4A;          // u8 open
-inline constexpr uint32_t kOwner = 0x180;        // u32 owner user key
-inline constexpr uint32_t kUsers = 0x2A8;        // FieldUserEntry* (Co-op+ port 3549; 2976: 0x2A0)
-inline constexpr uint32_t kUserCount = 0x2B0;    // u32 (3549; 2976: 0x2A8)
-inline constexpr uint32_t kUserActors = 0x2B8;   // u32 (3549; 2976: 0x2B0)
-inline constexpr uint32_t kKey = 0x2D0;          // u32 field key (index, pool, generation) (3549; 2976: 0x2C8)
-inline constexpr uint32_t kLevelEntry = 0x2D8;   // -> level entry; u16 static level index at +4 (3549; 2976: 0x2D0)
+// 1.0.0.3840 (2026-11-26): the owner moved -0x28 (AcquireField 0x2F4F5DF mov [r14+0x158],ecx; 3732 +0x180) and the
+// block from the user vector on moved +8 (0x2F38EBC/0x2F38EF5/0x2F38EFC, 0x2F43054/0x2F4305F: [+0x2B0] data, [+0x2B8]
+// count; ServerField::Reset 0x2F39806..19: +0x2C8, +0x2B8, +0x2E0; the ctor's key store [rdi+0x2D8]).
+inline constexpr uint32_t kOwner = 0x158;        // u32 owner user key (3840; 3732 0x180)
+inline constexpr uint32_t kUsers = 0x2B0;        // FieldUserEntry* (3840; 3732 0x2A8; Co-op+ port 3549; 2976: 0x2A0)
+inline constexpr uint32_t kUserCount = 0x2B8;    // u32 (3840; 3732 0x2B0; 3549; 2976: 0x2A8)
+inline constexpr uint32_t kUserActors = 0x2C0;   // u32 (3840; 3732 0x2B8; 3549; 2976: 0x2B0)
+inline constexpr uint32_t kKey = 0x2D8;          // u32 field key (index, pool, generation) (3840; 3732 0x2D0; 3549; 2976: 0x2C8)
+inline constexpr uint32_t kLevelEntry = 0x2E0;   // -> level entry; u16 static level index at +4 (3840; 3732 0x2D8; 3549; 2976: 0x2D0)
 // FieldMover (FM) = TransformSync + 0x508 (Co-op+ port 3549: ServerTransformSync vf 0x140 = add rcx,0x508; 2976: 0x4F0).
-inline constexpr uint32_t kTsFieldMover = 0x508;
+// 3840: TransformSync + 0x518 (the same vf: add rcx,0x518).
+inline constexpr uint32_t kTsFieldMover = 0x518;
 inline constexpr uint32_t kFmFieldKey = 0x08;    // u32 copy of field+0x2C8
 inline constexpr uint32_t kFmField = 0x10;       // ServerField*
 inline constexpr uint32_t kFmBusy = 0x4A;        // u16 accesses in progress (3549: GetField 0x2E6125F inc word [FM+0x4A]; 2976: 0x5A)

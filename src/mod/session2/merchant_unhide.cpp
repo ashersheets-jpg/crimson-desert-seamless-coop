@@ -61,7 +61,7 @@ std::atomic<uint64_t> g_tick_calls{0};
 void on_tick_mgr(safetyhook::Context& ctx) {
     g_tick_calls.fetch_add(1, std::memory_order_relaxed);
     uint32_t owner = 0;
-    if (game::fast_read(ctx.rcx + 0x180, &owner, 4)) {
+    if (game::fast_read(ctx.rcx + 0x158, &owner, 4)) {  // 3840: the field owner +0x158 (0xB28B04 mov r8d,[rcx+0x158]; 3732 +0x180)
         g_tick_owner.store(owner, std::memory_order_relaxed);
         g_tick_field.store(ctx.rcx, std::memory_order_relaxed);
     }

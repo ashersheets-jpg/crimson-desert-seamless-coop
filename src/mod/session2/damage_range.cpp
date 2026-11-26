@@ -16,8 +16,10 @@
 namespace cdmp::session2 {
 namespace {
 
-constexpr uintptr_t kSite = 0x22CFFDE;  // vsubss xmm3, xmm11, xmm6 ; vsubss xmm4, xmm9, xmm12
-constexpr uint8_t kSiteBytes[9] = {0xC5, 0xA2, 0x5C, 0xDE, 0xC4, 0xC1, 0x32, 0x5C, 0xE4};
+// 3840: vsubss xmm4, xmm11, xmm6 ; vsubss xmm3, xmm9, xmm12 (only the two outputs swapped; the inputs the hook reads
+// and writes are the same registers). 3732: 0x22CFFDE, vsubss xmm3, xmm11, xmm6 ; vsubss xmm4, xmm9, xmm12.
+constexpr uintptr_t kSite = 0x239A28D;
+constexpr uint8_t kSiteBytes[9] = {0xC5, 0xA2, 0x5C, 0xE6, 0xC4, 0xC1, 0x32, 0x5C, 0xDC};
 constexpr int kMaxPlayers = 4;
 
 SafetyHookMid g_hook;

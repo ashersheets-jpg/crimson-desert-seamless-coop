@@ -89,9 +89,9 @@ constexpr uint8_t kMilestoneOpcodeBytes[] = {0x66, 0x41, 0xC7, 0x06, 0x98, 0x09}
 //             path falls through after 0x2BC84D4 call 0x287EF60)
 //   0x2BC84E2 mov rax,[r13+0x2D0]                                                patch 7
 // Outside every range the P8 probes patch or check (0x2BC8452..0x2BC8479, 0x2BC84D4..0x2BC84D8).
-constexpr uintptr_t kEntry = 0x301E034;  // 3549: mov rax,[r15+0x2D8] (the level entry; 2976 [r13+0x2D0])
+constexpr uintptr_t kEntry = 0x301E034;  // 3840: mov rax,[r15+0x2E0] ; test ; je ; movzx esi,[rax+4] (3549 / 3732: mov rax,[r15+0x2D8] ; test ; jne ; mov eax,0xFFFF; the level entry; 2976 [r13+0x2D0])
 constexpr uint32_t kEntryPatch = 7;
-constexpr uint8_t kEntryBytes[] = {0x49, 0x8B, 0x87, 0xD8, 0x02, 0x00, 0x00, 0x48, 0x85, 0xC0, 0x75, 0x07, 0xB8, 0xFF, 0xFF, 0x00};
+constexpr uint8_t kEntryBytes[] = {0x49, 0x8B, 0x87, 0xE0, 0x02, 0x00, 0x00, 0x48, 0x85, 0xC0, 0x74, 0x04, 0x0F, 0xB7, 0x70, 0x04};
 constexpr uintptr_t kEntryPred = 0x301E02B;  // mov rcx,[rdi+0x18] ; call 0x2A8A410
 constexpr uint8_t kEntryPredBytes[] = {0x48, 0x8B, 0x4F, 0x18, 0xE8, 0x1C, 0xE5, 0xBF, 0xFF};
 constexpr uintptr_t kEntryR13 = 0x301D10A;  // mov r15,r8 (3549: the field is R15)
@@ -106,7 +106,7 @@ constexpr uintptr_t kVtToTarget = 0x60FA2D8;  // 3549 (2976 0x5B25438)
 constexpr uintptr_t kVtFinderBase = 0x60FA2F8;  // 3549 (2976 0x5B253F8)
 
 constexpr uint32_t kActor_Key = 0x60, kActor_User = 0xA0, kUser_Key = 0x60;
-constexpr uint32_t kField_Owner = 0x180, kField_Key = 0x2D0;  // 3549 key (2976 0x2C8)
+constexpr uint32_t kField_Owner = 0x158, kField_Key = 0x2D8;  // 3840 (3732: 0x180, 0x2D0); 3549 key (2976 0x2C8)
 constexpr uint32_t kFinder_Session = 0x10;
 constexpr uint32_t kBindingStride = 0x0C;
 

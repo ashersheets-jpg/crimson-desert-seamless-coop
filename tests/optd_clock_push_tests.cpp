@@ -47,7 +47,7 @@ const Mem kGuest2144 = field_time(6, 13, 59, 53, 952, 12, 194007);
 void test_wire_byte_exact() {
     // 00 0B FF 23 00 | key A0100303 | day 6, 13, 59, 53, 952 | u8 6 | scale 12 | anchor 194007 (0x2F5D7)
     const std::array<uint8_t, 40> expected = {
-        0x49, 0x0C, 0xFF, 0x23, 0x00,                          // header: opcode 3145 (2976: 2816), slot -1, payload 35
+        0x5E, 0x08, 0xFF, 0x23, 0x00,                          // header: opcode 2142 (3732: 3145; 2976: 2816), slot -1, payload 35
         0x03, 0x03, 0x10, 0xA0,                                // user 2's character key
         0x06, 0x00, 0x00, 0x00, 0x0D, 0x00, 0x00, 0x00,        // day, hour
         0x3B, 0x00, 0x00, 0x00, 0x35, 0x00, 0x00, 0x00,        // minute, second

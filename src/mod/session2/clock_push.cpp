@@ -374,7 +374,7 @@ void weather_dump() {
     const uintptr_t m = pm ? *pm : 0;
     const auto ps = m ? game::read_ptr(m + 0x60) : std::nullopt;
     const uintptr_t sc = ps ? *ps : 0;
-    const auto px = sc ? game::read_ptr(sc + 0xF70) : std::nullopt;
+    const auto px = sc ? game::read_ptr(sc + 0xF48) : std::nullopt;  // 3840 (3732 +0xF70): weather_sync_logic.h kSceneWeather
     const uintptr_t x = px ? *px : 0;
     if (!x) {
         log::info("WeatherDump [{}]: no X (module 0x{:X} scene 0x{:X})", g_probe_guest ? "guest" : "host", m, sc);

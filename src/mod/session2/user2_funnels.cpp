@@ -153,8 +153,8 @@ constexpr uintptr_t kDeadRet = 0x2D564A3;
 
 // 0x20DEE60: `jmp .xtls 0xE2BF850` (5 bytes, the whole stub in .rsrc). The
 // patch must be exactly these 5 bytes (the bytes after them are not its own).
-constexpr uintptr_t kOwnerUserStub = 0x2315860;
-constexpr uint8_t kOwnerUserStubBytes[] = {0xE9, 0x0B, 0x6A, 0x53, 0x0A};
+constexpr uintptr_t kOwnerUserStub = 0x23E5650;  // 3840: jmp 0xC9148F0 (3732: 0x2315860, E9 0B 6A 53 0A)
+constexpr uint8_t kOwnerUserStubBytes[] = {0xE9, 0x9B, 0xF2, 0x52, 0x0A};
 constexpr uint32_t kStubBoundaries[] = {5};
 // Its loot caller (0x2B83960): lea rdx,[rbp+0x40] ; mov rcx,[rbp-0x10] ; call 0x20DEE60 ; nop ; cmp [rbp+0x50],dil.
 constexpr uintptr_t kLootCallCtx = 0x2FD4CCB;
@@ -182,22 +182,26 @@ constexpr uint8_t kReloadCallCtxBytes[] = {
     0x8D, 0x4D, 0xB0, 0x48, 0x89, 0x4C, 0x24, 0x20, 0x4C, 0x8D, 0x8D, 0xA8, 0x00, 0x00, 0x00, 0x4C,
     0x8D, 0x45, 0xB8, 0x48, 0x8D, 0x55, 0xC0, 0x48, 0x8B, 0xC8, 0xE8, 0x46, 0x1E, 0xDF, 0xFF};
 // 0x2896120's head up to `mov r13,[rcx+0x18]` (0x2896155): the manager is used only through its +0x18.
-constexpr uintptr_t kApplyReload = 0x2B5AE00;  // 3576 (2976 0x2896120): r13 = [rcx+0x18] at +55
+// 3840: 0x2C89260 (the 2283 handler's call after its vf48), head up to `mov r15,[rcx+0x18]` at +47 (rcx is not saved
+// and is overwritten right after: mov rcx,[r15+0xA0]); 3732 0x2B5AE00: r13 = [rcx+0x18] at +55.
+constexpr uintptr_t kApplyReload = 0x2C89260;
 constexpr uint8_t kApplyReloadBytes[] = {
-    0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x10, 0x4C, 0x89, 0x48, 0x20, 0x55, 0x56, 0x57, 0x41, 0x54,
-    0x41, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8D, 0xA8, 0x08, 0xFF, 0xFF, 0xFF, 0x48, 0x81, 0xEC,
-    0xC0, 0x01, 0x00, 0x00, 0xC5, 0xF8, 0x29, 0x70, 0xB8, 0x49, 0x8B, 0xD9, 0x4D, 0x8B, 0xF0, 0x4C,
-    0x8B, 0xE2, 0x33, 0xFF, 0x89, 0x7D, 0xA8, 0x4C, 0x8B, 0x69, 0x18};
+    0x48, 0x89, 0x5C, 0x24, 0x10, 0x4C, 0x89, 0x44, 0x24, 0x18, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41,
+    0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8D, 0xAC, 0x24, 0x10, 0xFF, 0xFF, 0xFF, 0x48, 0x81, 0xEC,
+    0xF0, 0x01, 0x00, 0x00, 0x4D, 0x8B, 0xF1, 0x4C, 0x8B, 0xE2, 0x33, 0xFF, 0x89, 0x7D, 0xB0, 0x4C,
+    0x8B, 0x79, 0x18};
 constexpr uintptr_t kVtServerSequencerStageManager = 0x60EC4D0;  // .?AVServerSequencerStageManager@pa@@
 // The second vf48 of the same 2283 (fast_travel_logic.h kApplyVf48Ret), inside 0x2BC4950: mov rcx,[rbp-0x21] ;
 // mov rax,[rcx] ; call [rax+0x48] ; (0x2BC4C53) mov rbx,rax ; lea rdx,[rax+8] ; ... ; call 0x393650 ; nop ;
 // mov [rbp+0x1F],rbx ; or esi,1 ; mov [rbp-0x69],esi ; mov byte [rbx+0x6A0],0 (0x2BC4C49..0x2BC4C87).
-constexpr uintptr_t kApplyCallCtx = 0x08B22F5;  // 3576 (2976 0x2BC4C49), in 0x2E680F0 (2976 0x2BC4950), called by 0x2AF4690; +0x6D0 (was +0x6A0)
+// 3840: in the reload setter 0x3019530 (3732 0x2ED4620 / 0x2ED4813), its only vf48 call (returns to 0x301976C);
+// 2976 0x2BC4C49 in 0x2BC4950; +0x6D8 (was +0x6A0). The automatic map's 0x08B22F5 was a byte-alike in another function.
+constexpr uintptr_t kApplyCallCtx = 0x3019762;
 constexpr uint8_t kApplyCallCtxBytes[] = {
-    0x48, 0x8B, 0x4D, 0x07, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x48, 0x48, 0x8B, 0xD8, 0x48, 0x8D, 0x50,
+    0x48, 0x8B, 0x4D, 0xEF, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x48, 0x48, 0x8B, 0xD8, 0x48, 0x8D, 0x50,
     0x08, 0x48, 0x85, 0xC0, 0x49, 0x0F, 0x44, 0xD5, 0x41, 0xB0, 0x01, 0x48, 0x8B, 0x12, 0x48, 0x8D,
-    0x4D, 0xE7, 0xE8, 0x76, 0x07, 0x51, 0xFD, 0x90, 0x48, 0x89, 0x5D, 0xF7, 0x83, 0xCF, 0x02, 0x89,
-    0x7D, 0xB7, 0xC6, 0x83, 0xD8, 0x06, 0x00, 0x00, 0x00};
+    0x4D, 0xCF, 0xE8, 0x27, 0x64, 0x3D, 0xFD, 0x90, 0x48, 0x89, 0x5D, 0xDF, 0x83, 0xCF, 0x02, 0x89,
+    0x7D, 0x9F, 0xC6, 0x83, 0xD8, 0x06, 0x00, 0x00, 0x00};
 
 // RTTI (p8-sistemas-juego.md §2.1, §11.5).
 constexpr uintptr_t kVtServerNormalInGameActor = 0x60F2808;
@@ -207,12 +211,12 @@ constexpr uintptr_t kVtServerQuestActorComponent = 0x60F4680;
 constexpr uintptr_t kVtServerQuestManager = 0x60F44F8;
 // Troc handler instances (offsets_s2.h): u16 opcode +0x0C.
 constexpr uintptr_t kTrocInstancesBegin = 0x70BED10;
-constexpr uintptr_t kTrocInstancesEnd = 0x6F4E7B8;
+constexpr uintptr_t kTrocInstancesEnd = 0x70F2F38;  // 3840: the last instance 0x70F2F30 + 8 (3732: 0x6F4E7B8)
 constexpr uint32_t kTrocOpcode = 0x0C;
 
 constexpr uint32_t kActorKey = 0x60;
 constexpr uint32_t kActorController = 0x90;
-constexpr uint32_t kFieldOwner = 0x180;
+constexpr uint32_t kFieldOwner = 0x158;  // ServerField's owner key, 3840 (3732: 0x180)
 constexpr uint32_t kHandleObject = 0x08;
 constexpr uint32_t kHandleLocked = 0x10;
 
@@ -625,7 +629,7 @@ void before_2437(const Frame& now) noexcept {
 // So: before such a timer runs, the field is asked the same question. No manager = the timer is answered as the game
 // answers "field not attached" (*res = 0, not run). Any subject. The unload ran on this same thread in the report,
 // so nothing changes between this question and the handler's own.
-constexpr uintptr_t kTimerActorComponents = 0x68, kTsField = 0x518,
+constexpr uintptr_t kTimerActorComponents = 0x68, kTsField = 0x528,  // 3840: the FieldMover at TS+0x518, its field +0x10 (3732: 0x518)
                     kFieldVfOwnerManager = 0x48;
 std::atomic<uint64_t> c_timer_asked{0}, c_timer_skipped{0}, c_timer_faulted{0};
 std::atomic<int> g_timer_guard_test{0};  // dev: this many timers are skipped although their owner is there
@@ -826,7 +830,7 @@ bool schedule_timer_without_owner(uintptr_t troc, uintptr_t params, uintptr_t r9
     const bool kept = owe_timer(troc, params, r9, op, key_at(actor));
     if (n <= 20 || n % 500 == 0) {
         uint32_t owner = 0;
-        game::fast_read(field + 0x180, &owner, sizeof owner);
+        game::fast_read(field + kFieldOwner, &owner, sizeof owner);  // 3840 +0x158 (3732: +0x180)
         log::warn("User2Funnels timer guard: schedule timer {} of actor 0x{:08X} NOT run now: its field's owner 0x{:08X} "
                   "has no sequencer manager ({}); the game would have read [0+0x170] here | {} [{} so far]",
                   op, key_at(actor), owner,
@@ -1161,12 +1165,14 @@ uintptr_t revive_apply_vf48(uintptr_t field, const Frame& fr, uintptr_t ret) {
 // P8 option U (S28, Ghidra): the timer handlers' vf48 calls return to .xtls 0x1082F96A (2043 UpdateStageOnceTimer ->
 // 0x287DBB0), 0x10830A0F (2045 -> 0x2822D00([mgr+0x148])) and 0x10835A8F (2046 -> 0x27FBD60([mgr+0x10])).
 bool timer_vf48_ret(uint32_t rva, uint16_t opcode) noexcept {
-    // 3732's (tools/native-port/pins73.py pinned them from 3663's 0xECFEA3A / 0xED021AF / 0xED05E4F by the bytes
-    // before them). 3576 (2026-11-09, tcB200's caller table: x24 under 2047, x40 under 2049 / 2050, each right after a
+    // 3840's: the only vf48 call in each timer's execute function (vtable slot 2 -> the normal-code stub -> the
+    // protected body), at the same offset as on 3732 (3732: 0xE57536A / 0xE57791F / 0xE5780FF, which
+    // tools/native-port/pins73.py pinned from 3663's 0xECFEA3A / 0xED021AF / 0xED05E4F by the bytes before them).
+    // 3576 (2026-11-09, tcB200's caller table: x24 under 2047, x40 under 2049 / 2050, each right after a
     // call [rax+0x48] in the protected section; 2976: 0x1082F96A / 0x10830A0F / 0x10835A8F). Any of the three for
     // any of the three timers: the route answers the same object (user 2's manager) for each.
     const bool timer = opcode == 2047 || opcode == 2049 || opcode == 2050;
-    return timer && (rva == 0xE57536A || rva == 0xE57791F || rva == 0xE5780FF);
+    return timer && (rva == 0xE59BE9A || rva == 0xE59F5CF || rva == 0xE5A019F);
 }
 
 // vf48: counted under a subject; changed only by F3 (the 2283's two calls) and F4 (the 2362's setter call).
@@ -2034,7 +2040,7 @@ DWORD WINAPI funnels_thread(LPVOID) {
         const bool ft_sites = ft != ftl::Mode::Off && g_vf48_on &&
                               verify({kReloadCallCtx, kReloadCallCtxBytes,
                                       "the 2283 handler's vf48 call 0x2A5F7F9 and its call 0x2896120"}) &&
-                              verify({kApplyReload, kApplyReloadBytes, "0x2896120's head (mov r13,[rcx+0x18])"}) &&
+                              verify({kApplyReload, kApplyReloadBytes, "0x2896120's head (3840: mov r15,[rcx+0x18])"}) &&
                               verify({kApplyCallCtx, kApplyCallCtxBytes,
                                       "0x2BC4950's vf48 call 0x2BC4C50 and its +0x6A0 write 0x2BC4C80"});
         // F4: the same vf48 hook; only the setter's call site is checked (0x2BC4C49 .. 0x2BC4C80).
@@ -2267,7 +2273,7 @@ QuestPolicyVerdict user2_funnels_policy_judge(uint16_t opcode, std::span<const u
         game::fast_read(chr + kActorKey, &char_key, sizeof char_key);
         if (game::fast_read(chr + u2f::kActorComponents, &comps, sizeof comps) && comps &&
             game::fast_read(comps + kComponentsTransformSync, &ts, sizeof ts) && ts &&
-            game::fast_read(ts + 0x500, &field, sizeof field) && field &&
+            game::fast_read(ts + 0x508, &field, sizeof field) && field &&  // 3840: the TS field 3732 read at +0x500 (parity)
             game::fast_read(field + kFieldOwner, &owner, sizeof owner) && owner) {
             v.field = owner == k.host_user ? 1 : owner == k.user2_user ? 2 : 3;
         }

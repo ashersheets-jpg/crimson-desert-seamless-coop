@@ -83,7 +83,7 @@ constexpr uint8_t kClientVersionSiteBytes[] = {0x48, 0x8B, 0x4B, 0x18, 0xE8, 0xB
 constexpr uintptr_t kClientVersionHook = kClientVersionSite + 18;  // 0xB74302
 constexpr uintptr_t kRestoreVersion = 0x6C8CD98;  // u32 _currentRestoreCodeVersionXXX (0x187C490)
 constexpr uintptr_t kStatusVtable = 0x60F4FC8;    // ServerStatusActorComponent (RTTI at its COL)
-constexpr uintptr_t kStatusLoad = 0x2C1AB40;      // its +0x50: the 5-byte thunk to .xtls 0x10427500
+constexpr uintptr_t kStatusLoad = 0x2D52DC0;      // its +0x50 (3840, as identity_fix.cpp; 3732 0x2C1AB40): the 5-byte thunk into the protection
 constexpr uintptr_t kLoadStub = 0x35EA90;         // the shared vf50 stub (jmp .xtls 0x86F0570)
 
 enum Point : int { kPtLoad, kPtComponent, kPtOwner, kPtPhases, kPtAck, kPtPacker, kPtVersion, kPtClientVersion, kPoints };

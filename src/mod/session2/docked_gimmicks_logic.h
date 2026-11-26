@@ -715,8 +715,9 @@ inline constexpr uintptr_t kClientRequest2 = 0xA3DB00;  // 3732 (2976 0x8E5F60)
 inline constexpr uint8_t kClientRequest2Head[20] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x4C, 0x89, 0x4C, 0x24, 0x20,
                                                     0x4C, 0x89, 0x44, 0x24, 0x18, 0x55, 0x56, 0x57, 0x41, 0x54};
 inline constexpr uintptr_t kClientGimmickVtbl = 0x5B57190;  // 3732 (2976 0x55B7898)
-// 3732: the request moved one slot down (+0x740 on 2976).
-inline constexpr uintptr_t kClientGimmickRequestSlot = kClientGimmickVtbl + 0x748;  // holds kClientRequest
+// 3732: the request moved one slot down (+0x740 on 2976). 3840: two slots further, +0x758 (slot 235; +0x748 holds
+// 0xA61620 now).
+inline constexpr uintptr_t kClientGimmickRequestSlot = kClientGimmickVtbl + 0x758;  // holds kClientRequest
 inline constexpr uint32_t kComp_Actor = 0x08;
 // Not the docked parent (S28: 0 in 80 / 80 checks on both PCs, also for the natively controlled devices): logged by
 // the 1.5 s check for information only, never compared.
@@ -734,11 +735,16 @@ inline constexpr uintptr_t kErrNotControllerGlobal = 0x737AEF4;  // 3732 (2976 0
 // Server (host): the equipment docking spawn 0x28AD170 (2249; caller 0x2970ADF) and the other docking spawn
 // 0x28ADE40 (2973), both (docking component, int* err, request*); [component+8] = the docked-to actor.
 // 3732: called from TrocTrOnDemandEquipDockingGimmickSpawnReq / TrocTrOnDemandDockingGimmickSpawnReq vf2.
-inline constexpr uintptr_t kDockEquip = 0x2B734B0;  // 3732 (2976 0x28AD170)
-inline constexpr uintptr_t kDockOther = 0x2B741D0;  // 3732 (2976 0x28ADE40)
+// 3840: the same two handlers (vf2 at 0x2D87EE0 / 0x2D88BC0, the calls at +0x434 / +0x40E as on 3732).
+inline constexpr uintptr_t kDockEquip = 0x2CA1B00;  // 3840 (3732 0x2B734B0; 2976 0x28AD170)
+inline constexpr uintptr_t kDockOther = 0x2CA2860;  // 3840 (3732 0x2B741D0; 2976 0x28ADE40)
 inline constexpr uint8_t kDockHead[20] = {0x48, 0x89, 0x5C, 0x24, 0x18, 0x48, 0x89, 0x54, 0x24, 0x10,
                                           0x48, 0x89, 0x4C, 0x24, 0x08, 0x55, 0x56, 0x57, 0x41, 0x54};
-inline constexpr uint8_t kDockEquipCall[5] = {0xE8, 0xE7, 0x97, 0xF1, 0xFF};  // 0x2C4FCD4: call 0x2B734B0
+// 3840: kDockOther's own head (it saves r8 first now; 3732 shared kDockHead): mov [rsp+0x18],r8 | mov [rsp+0x10],rdx |
+// mov [rsp+8],rcx | push rbp | push rbx | push rsi | push rdi | push r12 (cut), the same three arguments.
+inline constexpr uint8_t kDockOtherHead[20] = {0x4C, 0x89, 0x44, 0x24, 0x18, 0x48, 0x89, 0x54, 0x24, 0x10,
+                                               0x48, 0x89, 0x4C, 0x24, 0x08, 0x55, 0x53, 0x56, 0x57, 0x41};
+inline constexpr uint8_t kDockEquipCall[5] = {0xE8, 0xE7, 0x97, 0xF1, 0xFF};  // 0x2D88314: call 0x2CA1B00 (3732 0x2C4FCD4: call 0x2B734B0)
 inline constexpr uintptr_t kDockEquipCallSite = 0x2D88314;  // 3732 (2976 0x2970ADF)
 // The controller's write in ICreateServerActorDesc::vf3 0x2791CD0: mov [r14+0x90],eax (one 7-byte instruction;
 // r14 the new actor, r13 the field, eax the controller: the field owner [r13+0x180] unless the descriptor or an
@@ -755,7 +761,7 @@ inline constexpr uint8_t kControllerBlockBytes[16] = {0x41, 0x8B, 0x86, 0x90, 0x
 // Its "from the field owner" read just before: mov eax,[r13+0x180] | test eax,eax | je 0x2792A82.
 inline constexpr uintptr_t kFieldOwnerRead = 0x2B593A6;  // 3732 (2976 0x2792A70)
 inline constexpr uint8_t kFieldOwnerReadBytes[10] = {0x8B, 0x87, 0x58, 0x01, 0x00, 0x00, 0x85, 0xC0, 0x74, 0x07};  /* 3663: mov eax,[rdi+0x180] (no REX: 10 bytes; 3576 mov eax,[r13+0x180], 11) */
-inline constexpr uint32_t kField_Owner = 0x180;
+inline constexpr uint32_t kField_Owner = 0x158;  // 3840: ServerField's owner (3732: 0x180)
 // The server's gimmick logic: ExecuteFrameEvent 0x2AC1270 (comp, requester user actor, event*, u16*), void; and
 // Update 0x2AC0790 (comp, int* err, requester, data*). Both: accepted only when [[comp+8]+0x90] ==
 // ([requester+0xA0] ? [[requester+0xA0]+0x60] : 0).
@@ -765,9 +771,9 @@ inline constexpr uintptr_t kServerExecute = 0x2EFC980;  // 3732 (2976 0x2AC1270)
 inline constexpr uint8_t kServerExecuteHead[21] = {0x4C, 0x89, 0x4C, 0x24, 0x20, 0x4C, 0x89, 0x44, 0x24, 0x18, 0x48,
                                                    0x89, 0x4C, 0x24, 0x08, 0x55, 0x53, 0x56, 0x57, 0x41, 0x54};
 inline constexpr uintptr_t kServerUpdate = 0x2EFBE70;  // 3732 (2976 0x2AC0790; its head pushes fewer registers)
-inline constexpr uint8_t kServerUpdateHead[21] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x20,
-                                                  0x55, 0x57, 0x41, 0x54, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8D,
-                                                  0x6C};
+// 3840: mov [rsp+0x10],rbx | push rbp, rsi, rdi, r12, r13, r14, r15 | lea rbp,[rsp-0x60] (the same four arguments).
+inline constexpr uint8_t kServerUpdateHead[21] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41,
+                                                  0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8D, 0x6C, 0x24, 0xA0};
 inline constexpr uint32_t kUser_Owner = 0xA0;  // the requester's +0xA0 -> its +0x60 = the user key
 // The only patch size accepted at every entry: safetyhook's 5-byte jump over whole instructions (the 14-byte
 // fallback is refused). Every head above begins with one 5-byte instruction.

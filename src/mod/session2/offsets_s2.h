@@ -126,7 +126,7 @@ inline constexpr uint32_t kRq_Frame = 0x30;
 // Troc handler instances (the sniffer's table): u32 kind +0x08, u16 opcode
 // +0x0C, u8 channel +0x14, u16 flags +0x16.
 inline constexpr uintptr_t kTrocInstancesBegin = 0x70BED10;
-inline constexpr uintptr_t kTrocInstancesEnd = 0x6F4E7B8;
+inline constexpr uintptr_t kTrocInstancesEnd = 0x70F2F38;  // 3840: the last static instance (op 2004) + 8 (3732: 0x6F4E7B8)
 inline constexpr uint32_t kTroc_Kind = 0x08;
 inline constexpr uint32_t kTroc_Opcode = 0x0C;
 inline constexpr uint32_t kTroc_Channel = 0x14;
@@ -184,8 +184,8 @@ inline constexpr uintptr_t kWindowsLockVf2 = 0xE860E0;       // mov rax,[rcx]; j
 inline constexpr uint8_t kWindowsLockVf1Head[] = {0x48, 0x8B, 0x01, 0x48, 0xFF, 0x60, 0x18};
 inline constexpr uint8_t kWindowsLockVf2Head[] = {0x48, 0x8B, 0x01, 0x48, 0xFF, 0x60, 0x20};
 // 0x1870C20: jmp .xtls 0xCBD92D0 (refresh the slot table from the slot folders).
-inline constexpr uintptr_t kSaveMgrRefreshSlots = 0x1A19F90;
-inline constexpr uint8_t kSaveMgrRefreshSlotsHead[] = {0xE9, 0xDB, 0x0D, 0xC9, 0x09};
+inline constexpr uintptr_t kSaveMgrRefreshSlots = 0x1AB7E40;  // 3840: jmp 0xB7DB640 (3732: 0x1A19F90)
+inline constexpr uint8_t kSaveMgrRefreshSlotsHead[] = {0xE9, 0xFB, 0x37, 0xD2, 0x09};
 // SaveDataSlotRefreshReq 0x2A22380, +0xF5..+0x172: the native sequence the
 // guest copies (gestor = [[0x6D69698]+0x48]; lock vf1; test/set +0x60;
 // vf2; call 0x1870C20; lock vf1; +0x60 = 0; vf2), without its Ack 0x2A206E0.

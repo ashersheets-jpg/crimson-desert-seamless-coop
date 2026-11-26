@@ -22,9 +22,14 @@
 namespace cdmp::session2 {
 namespace {
 
-constexpr uintptr_t kFieldInfoGetter = 0x57B5D0;  // 3663: (const u16* index) -> record; FieldInfoKey = u32 [record+8]
+// 1.0.0.3840: the getter is the generic lookup 0x5B1960(table, u32 index) -> record or 0, the table object from the
+// global 0x73F6478 (the fast-travel entry does exactly this before its point sender: movzx edx,[TS+0x28]; mov rcx,
+// [0x73F6478]; call 0x5B1960; default record if null; key = u32 [record+0]). 3732: 0x57B5D0(const u16* index), the
+// table read inside ([0x7250F30]), FieldInfoKey = u32 [record+8].
+constexpr uintptr_t kFieldInfoGetter = 0x5B1960;
+constexpr uintptr_t kFieldInfoTableSlot = 0x73F6478;
 constexpr uintptr_t kUserMainCharacter = 0xD0, kActorComponents = 0x68, kComponentsTransformSync = 0x1A0,
-                    kTsFieldIndex = 0x28, kRecordFieldInfoKey = 0x08;
+                    kTsFieldIndex = 0x28, kRecordFieldInfoKey = 0x00;
 
 std::atomic<uint32_t> g_key{0};
 std::atomic<uint64_t> g_asked_at{0};
@@ -34,9 +39,9 @@ std::atomic<bool> g_said{false};
 uint32_t ask(uintptr_t ts, uint16_t index) noexcept {
     __try {
         const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-        // 3663: the getter takes a pointer to the index and never answers null (game/info_row.h)
+        // 3840: the table object is passed in, the getter answers null when it has no row (game/info_row.h)
         (void)ts;
-        const uintptr_t rec = game::info_row(base + kFieldInfoGetter, index);
+        const uintptr_t rec = game::info_row(base + kFieldInfoGetter, base + kFieldInfoTableSlot, index);
         if (!rec) return 0;
         return *reinterpret_cast<uint32_t*>(rec + kRecordFieldInfoKey);
     } __except (EXCEPTION_EXECUTE_HANDLER) {

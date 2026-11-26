@@ -565,7 +565,7 @@ void test_npc_control() {
     for (size_t i = 0; i < static_cast<size_t>(u2s::Ctl::Count); ++i) {
         CHECK(std::string(u2s::ctl_name(static_cast<u2s::Ctl>(i))) != "?");
     }
-    static_assert(u2s::kVtDescNpcSchedule == 0x5F4CB68 &&  // 3576 (2976 0x5ECDB60)
+    static_assert(u2s::kVtDescNpcSchedule == 0x60D95C8 &&  // 3576 (2976 0x5ECDB60)
                   u2s::kActor_Ctl == 0x90 && u2s::kDesc_User == 0x40 &&
                   u2s::kLogoutAiReason == 42);
 }
@@ -1027,7 +1027,7 @@ void test_prep_drain() {
     CHECK(u2s::hold_distance_drain(true, 100 * sec, 95 * sec, 90 * sec, 0));     // starts holding
     CHECK(u2s::hold_distance_drain(true, 114 * sec, 95 * sec, 90 * sec, 100 * sec));
     CHECK(!u2s::hold_distance_drain(true, 115 * sec, 95 * sec, 90 * sec, 100 * sec));  // 15 s: expired
-    CHECK(u2s::prep_caller_known(0x2B40F05) && u2s::prep_caller_known(0x2B5AD2E) && u2s::prep_caller_known(0x2ED8849));
+    CHECK(u2s::prep_caller_known(0x2C6DBD5) && u2s::prep_caller_known(0x2C8918E) && u2s::prep_caller_known(0x301E02B));
     CHECK(!u2s::prep_caller_known(0x287DCD0) && !u2s::prep_caller_known(0));
     CHECK(std::string(u2s::prep_caller_name(0x1234)) == "an UNKNOWN caller");
     for (size_t i = 0; i < static_cast<size_t>(u2s::PrepDrain::Count); ++i) {
