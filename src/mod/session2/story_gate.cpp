@@ -739,7 +739,7 @@ void story_gate_host_stack(const uint8_t* packet, size_t size, uint64_t rsp, uin
     const int nf = sg_unwind(rip, rsp, nv, frames, 24);
     std::string chain;
     for (int i = 0; i < nf; ++i) {
-        chain += frames[i] >= base && frames[i] < base + 0x13C7E000 ? std::format(" exe+0x{:X}", frames[i] - base)
+        chain += frames[i] >= base && frames[i] < base + 0x13D05000 ? std::format(" exe+0x{:X}", frames[i] - base)
                                                                     : std::format(" 0x{:X}", frames[i]);
     }
     log::info("StoryGate [stack] the host's {} for '{}' | unwound callers:{}",

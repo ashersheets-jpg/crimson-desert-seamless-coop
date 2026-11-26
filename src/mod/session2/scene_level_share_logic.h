@@ -59,7 +59,7 @@ inline const char* mode_name(Mode m) {
 // callers at the same offsets: the 2449 SceneLevelUnloadReq handler 0x2C43250, the owner load 0x2A7CE10, the
 // field loader's unload event 0x2AD1100), the same registry map; the handler's frame keeps rbp = C + 0x110, but
 // &name is C + 0x150 and the hash C + 0xE8 (lea rdx,[rbp+0x40] ; mov r8d,[rbp-0x28]).
-inline constexpr uint32_t kPeTimestamp = 0x6AFDC0CF;  /* 1.0.0.3732 (3663: 0x6AF5D198) */  // 1.0.0.3576 (3549: 0x6AEB7D59)
+inline constexpr uint32_t kPeTimestamp = 0x6B07E5E9;  /* 1.0.0.3840 (3732: 0x6AFDC0CF, 3663: 0x6AF5D198) */  // 1.0.0.3576 (3549: 0x6AEB7D59)
 inline constexpr uintptr_t kImageBase = 0x140000000;
 inline constexpr uint32_t kVtServerField = 0x60FE230;  // 3549 (2976 0x5B29A60)  // pa::ServerField (as user2_stages_logic.h)
 inline constexpr uintptr_t kMgrField = 0x210;          // registry -> its ServerField

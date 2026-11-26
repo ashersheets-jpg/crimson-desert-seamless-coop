@@ -73,9 +73,9 @@ struct CallSite {
 };
 constexpr CallSite kCallSites[] = {
     // Co-op+ port 1.0.0.3549 (calls found by scanning .xtext and .xpdata for E8 to each entry; order as on 2976).
-    {0x306EE6B, kLoadSlot}, {0x3095B21, kLoadSlot}, {0xE27435F, kLoadSlot},  // UserLogin, 3093 lobby, 3093 character
-    {0xB6A4AA0, kSave},     {0xE214B60, kSave},                               // autosave, 2910
-    {0x2CFB48A, kFlush},    {0xE584AC8, kFlush},                              // logout phase, flush timer
+    {0x306EE6B, kLoadSlot}, {0x3095B21, kLoadSlot}, {0xE2874B0, kLoadSlot},  // UserLogin, 3093 lobby, 3093 character
+    {0xB7D9D93, kSave},     {0xE23E2F0, kSave},                               // autosave, 2910
+    {0x2CFB48A, kFlush},    {0xE5A2578, kFlush},                              // logout phase, flush timer
 };
 // 2026-11-21 (the 3732 port audit): the decisions' return addresses (guest_save_logic.h) are these call sites + 5.
 static_assert(kCallSites[0].at + 5 == gsv::kRetUserLogin && kCallSites[1].at + 5 == gsv::kRetLobby3093 &&

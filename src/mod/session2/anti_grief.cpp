@@ -90,7 +90,7 @@ std::string tally_text_locked(int src) {
 // fought that NPC or when the game's test says the HOST would not be punished for it. What an NPC's own AI reports
 // (slot 44) is not touched.
 constexpr uint32_t kHostCharacter = 0xA0100001;
-constexpr uintptr_t kCrimeFn = 0x2D709B0, kCrimeGateFn = 0x2D70590, kCrimeRetHit = 0xE2AEA62, kCrimeRetKill = 0x2D70152;
+constexpr uintptr_t kCrimeFn = 0x2D709B0, kCrimeGateFn = 0x2D70590, kCrimeRetHit = 0xE2C96CD, kCrimeRetKill = 0x2D70152;
 safetyhook::InlineHook g_crime;
 bool g_crime_gate_ok = false;
 std::atomic<uint64_t> c_crime_seen{0}, c_crime_skipped{0};

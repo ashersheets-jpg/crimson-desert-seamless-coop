@@ -503,7 +503,7 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
                 std::string chain;
                 for (USHORT i = 0; i < n; ++i) {
                     const auto a = reinterpret_cast<uintptr_t>(frames[i]);
-                    if (a >= base && a < base + 0x13C7E000) chain += std::format(" exe+0x{:X}", a - base);
+                    if (a >= base && a < base + 0x13D05000) chain += std::format(" exe+0x{:X}", a - base);
                 }
                 const uint32_t who = v->payload.size() >= 5 ? (v->payload[1] | v->payload[2] << 8 | v->payload[3] << 16 |
                                                                static_cast<uint32_t>(v->payload[4]) << 24)

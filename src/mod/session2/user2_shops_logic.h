@@ -166,7 +166,7 @@ inline constexpr uint8_t kReqId = 5, kTimerId = 3;
 // 3576 (2026-11-09): each handler's first call [rax+0x48] from its TrocTr vtable's slot 2 (RTTI; tcB209 caught user 2's
 // 2752 at 0x2CE9CEA, the same); 0 = the handler jumps into the protected section (2839, 3161, the 2048 / 2059 timers):
 // matched by opcode for a vf48 called from the protected section (site_matches).
-inline constexpr uint32_t kProtectedBegin = 0x7ACB000, kProtectedEnd = 0x137DB000;
+inline constexpr uint32_t kProtectedBegin = 0x7C78000, kProtectedEnd = 0x1385C000;  // 3840 .reloc (3732 .text1 0x7ACB000..0x137DB000)
 inline constexpr Site kSites[] = {
     {2726, 0x2E93079, kReqId, "StageBranchStateReq (-> 0x2891FB0)"},
     {2811, 0, kReqId, "UpdateStageChartEventReq (0x2C4A8A0 -> 0x2936060)"},
