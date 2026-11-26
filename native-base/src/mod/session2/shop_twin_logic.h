@@ -28,9 +28,9 @@
 
 namespace cdmp::session2::stl {
 
-inline constexpr uint16_t kOpPrepare = 2356, kOpBranchState = 2752, kOpBranchEvent = 2369, kOpDelete = 2659,
-                          kOpChartEventAck = 2105;
-inline constexpr uint16_t kOpBranchReq = 2644, kOpChartEventReq = 2200, kOpAvoidByCutScene = 2698;
+inline constexpr uint16_t kOpPrepare = 2362, kOpBranchState = 2455, kOpBranchEvent = 2239, kOpDelete = 3046,
+                          kOpChartEventAck = 2308;
+inline constexpr uint16_t kOpBranchReq = 2726, kOpChartEventReq = 2811, kOpAvoidByCutScene = 2307;
 inline constexpr uint64_t kTwinIdBase = 0x10000000;  // a twin's id = the host scene's id + this (below 0x1FFFFFFF)
 inline constexpr size_t kHeader = 5;
 inline constexpr size_t kPrepareFixed = 92, kBinding = 11, kHashAt = 27;
@@ -198,7 +198,7 @@ inline std::vector<std::vector<uint8_t>> local_answers(uint16_t op, std::span<co
 //                       u64) when the request's flag (u16 at +12) is set (cs83w3 / cs83w4: Participate's and Play
 //                       Again's branches; the server's 2752 came right after the 2654, its AvoidOff ~20 ms later)
 // A (state, branch) the table lacks: 2369 and 2752 type 0 (the scene back to its start); the caller logs it.
-inline constexpr uint16_t kOpBranchDelayEndReq = 2654;
+inline constexpr uint16_t kOpBranchDelayEndReq = 2574;
 enum class Ans : uint8_t { AvoidOn, AvoidOff, Event, State };
 struct ChartStep {
     uint32_t state, branch, next;
@@ -286,8 +286,8 @@ inline TableAnswer table_answers(std::span<const ChartStep> chart, std::span<con
 // UnspawnMiniGameCharacterReq 2361 (u8 4 | u64 scene id | u16 minigame | ...), and the server's
 // SpawnMiniGameCharacterAck 2810 (u8 4 | u32 actor | u64 scene id | ...). The joined player's game names its twin; the
 // host's server knows only the host's scene.
-inline constexpr uint16_t kOpSpawnMiniGameCharacterReq = 2281, kOpUnspawnMiniGameCharacterReq = 2361,
-                          kOpSpawnMiniGameCharacterAck = 2810;
+inline constexpr uint16_t kOpSpawnMiniGameCharacterReq = 2863, kOpUnspawnMiniGameCharacterReq = 2553,
+                          kOpSpawnMiniGameCharacterAck = 2616;
 // C>S payload: a twin's id at +1 becomes the host's; returns the host's id (0: not such a request, nothing changed).
 inline uint64_t minigame_req_to_host(uint16_t op, std::span<uint8_t> pl) {
     if ((op != kOpSpawnMiniGameCharacterReq && op != kOpUnspawnMiniGameCharacterReq) || pl.size() < 9 || pl[0] != 4)
@@ -327,7 +327,7 @@ inline uint64_t chart_req_to_host(uint16_t op, std::span<uint8_t> pl) {
 // carries the server's grip, made here: CatchActionResultAck 2562 (3732), 55 B, copied from cs92's host capture
 // (t 363.589) with the catcher (+0) and the target (+4) replaced: u32 catcher | u32 target | u32 2 | ... | f32 0.1 |
 // u32 the target's action 0x18F128E3 | u32 0x64528294 | ... | u32 the catcher's action 0x63F9EFFD (+50) | u8 0x17.
-inline constexpr uint16_t kOpCatchActionResultAck = 2562;
+inline constexpr uint16_t kOpCatchActionResultAck = 2560;
 inline constexpr uint8_t kCatchTemplate[55] = {
     0x01, 0x00, 0x10, 0xA0, 0xF7, 0x0A, 0x10, 0xB0, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xCD, 0xCC, 0xCC, 0x3D, 0xE3, 0x28, 0xF1, 0x18, 0x94, 0x82, 0x52,
@@ -370,7 +370,7 @@ inline uint64_t chart_ack_to_twin(uint16_t op, std::span<uint8_t> pl, std::vecto
 // them in the per-player table of the player whose client controls the NPC (the host) only, so the guest's 3086 for
 // that NPC lacks them and its shop menu stays empty (the dialog closes itself, tcB161). The host's entries are sent
 // to the guest (tunnel control state 17) and added to the guest's own 3086 for that NPC.
-inline constexpr uint16_t kOpQuestDialogAck = 2180;
+inline constexpr uint16_t kOpQuestDialogAck = 2877;
 inline constexpr uint32_t kShopDialogGroup = 0x000F4440;
 inline constexpr uint8_t kDialogState = 17, kDialogVersion = 1;
 inline constexpr size_t kMaxDialogNpcs = 256, kMaxDialogsPerNpc = 8;

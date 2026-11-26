@@ -653,7 +653,7 @@ void test_reload_modes() {
     Sink s;
     reload_until_2873(l, s);
     CHECK(l.judge(offer(omr::Mode::Off)) == omr::Gate::NotRelevant);
-    CHECK(omr::followed_out(2286) && omr::followed_out(2941) && omr::followed_out(2364) && !omr::followed_out(2268));
+    CHECK(omr::followed_out(3154) && omr::followed_out(2456) && omr::followed_out(2524) && !omr::followed_out(2682));
 }
 
 void test_reload_emit_once() {

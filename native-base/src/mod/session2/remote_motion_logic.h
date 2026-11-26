@@ -129,7 +129,7 @@ inline uint8_t climb_result(ClimbOut o, uint8_t orig) { return o == ClimbOut::Fo
 // The game's code: [0x1000, 0x51EB000) (the section named .rsrc). Nothing of
 // the mod's ever writes there except verified hooks; the data byte must be
 // outside it, outside .xtls (Denuvo) and in a writable, non-executable section.
-inline constexpr uint32_t kCodeBegin = 0x1000, kCodeEnd = 0x5618000;  // Co-op+ port: end of .xtext on 1.0.0.3549 (2976: .rsrc ends at 0x51EB000)
+inline constexpr uint32_t kCodeBegin = 0x1000, kCodeEnd = 0x57A5000;  // Co-op+ port: end of .xtext on 1.0.0.3549 (2976: .rsrc ends at 0x51EB000)
 inline constexpr uint32_t kScnExecute = 0x20000000, kScnRead = 0x40000000, kScnWrite = 0x80000000;
 
 struct SectionInfo {
@@ -622,7 +622,7 @@ inline bool mc_identity_ok(uintptr_t actor, uintptr_t cc_actor, uintptr_t mc, ui
 // The interpolation buffer mc+0x3D0 (movimiento-remoto-cliente.md §2; build 2976): +0x00 u8 done, +0x08 the
 // sample array (0xA0 bytes each: vec3 pos +0, u64 ts +0x98), +0x10 u32 count, +0x18 the last interpolated
 // sample (0xA0 bytes: rewritten by every update that finds T > ts[0], with ts = T = now - delay).
-inline constexpr uint32_t kInterpPosBuffer = 0x430;  // 3549 (2976 0x3D0)
+inline constexpr uint32_t kInterpPosBuffer = 0x480;  // 3840: UpdateInterpolation 0x9E4930 lea rbx,[rcx+0x480] (3732/3549 0x430; 2976 0x3D0)
 inline constexpr uint32_t kInterpDone = 0x00, kInterpArray = 0x08, kInterpCount = 0x10, kInterpShown = 0x18;
 inline constexpr uint32_t kInterpSampleSize = 0xA0, kInterpSampleTs = 0x98;
 inline constexpr uint32_t kInterpSaneCount = 64;  // the game keeps <= 30

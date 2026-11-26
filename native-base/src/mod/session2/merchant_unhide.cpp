@@ -29,9 +29,9 @@
 namespace cdmp::session2 {
 namespace {
 
-constexpr uintptr_t k2380Point = 0xD6D64E;  // cmp r14b,4 ; je (guest_seq_route's P2661 point)
+constexpr uintptr_t k2380Point = 0xDC689E;  // cmp r14b,4 ; je (guest_seq_route's P2661 point)
 constexpr uint8_t k2380Bytes[] = {0x41, 0x80, 0xFE, 0x04, 0x74, 0x47};
-constexpr uintptr_t kSetter = 0x1934810;  // (info, bits, set, fade, second mask)
+constexpr uintptr_t kSetter = 0x19C5470;  // (info, bits, set, fade, second mask)
 constexpr uint8_t kSetterHead[] = {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x10, 0x48};
 constexpr size_t kHeader = 5, kResourceAt = 27, kBindingsAt = 92, kBindingSize = 11;
 
@@ -61,7 +61,7 @@ std::atomic<uint64_t> g_tick_calls{0};
 void on_tick_mgr(safetyhook::Context& ctx) {
     g_tick_calls.fetch_add(1, std::memory_order_relaxed);
     uint32_t owner = 0;
-    if (game::fast_read(ctx.rcx + 0x180, &owner, 4)) {
+    if (game::fast_read(ctx.rcx + 0x158, &owner, 4)) {  // 3840: the field owner +0x158 (0xB28B04 mov r8d,[rcx+0x158]; 3732 +0x180)
         g_tick_owner.store(owner, std::memory_order_relaxed);
         g_tick_field.store(ctx.rcx, std::memory_order_relaxed);
     }
@@ -83,7 +83,7 @@ std::atomic<uint64_t> c_login_remote{0}, c_login_restored{0};
 std::atomic<uint32_t> g_last_restored_key{0};
 uintptr_t local_user() {
     uintptr_t g = 0, g30 = 0, user = 0;
-    if (game::fast_read(g_base + 0x724B350, &g, 8) && g && game::fast_read(g + 0x30, &g30, 8) && g30 &&
+    if (game::fast_read(g_base + 0x73F0D50, &g, 8) && g && game::fast_read(g + 0x30, &g30, 8) && g30 &&
         game::fast_read(g30 + 0x58, &user, 8))
         return user;
     return 0;
@@ -146,7 +146,7 @@ void on_login_post(safetyhook::Context&) {  // 0x99C17F: back from 0x1928650
 uint32_t local_user_key() {
     uintptr_t g = 0, g30 = 0, user = 0;
     uint32_t k = 0;
-    if (game::fast_read(g_base + 0x724B350, &g, 8) && g && game::fast_read(g + 0x30, &g30, 8) && g30 &&
+    if (game::fast_read(g_base + 0x73F0D50, &g, 8) && g && game::fast_read(g + 0x30, &g30, 8) && g30 &&
         game::fast_read(g30 + 0x58, &user, 8) && user)
         game::fast_read(user + 0x60, &k, 4);
     return k;
@@ -165,7 +165,7 @@ std::string snapshot(uint32_t key) {
     if (!a || !*a) return "not in this client";
     const uintptr_t act = *a, comps = rv<uintptr_t>(act + 0x68);
     const uintptr_t info = rv<uintptr_t>(comps + 0x20), play = rv<uintptr_t>(comps + 0xB0);
-    const bool play_ok = play && rv<uintptr_t>(play) == g_base + 0x59D0850;
+    const bool play_ok = play && rv<uintptr_t>(play) == g_base + 0x5B5EDB8;
     std::string t = std::format("+0x5E 0x{:02X} +0xC2 {} +0xCF {} hide 0x{:X}", rv<uint8_t>(act + 0x5E),
                                 rv<uint8_t>(act + 0xC2), rv<uint8_t>(act + 0xCF), rv<uint64_t>(info + 0x3B8));
     // 0x9A1880 sets +0xCF = 1 (0x9A1D2A) only when no entry of the list {[act+0x78], u32 [act+0x80]} (16 bytes each,
@@ -332,7 +332,7 @@ void worker() {
                 if (const auto a = game::find_actor_fast(b.key); a && *a) {
                     uintptr_t comps = 0, play = 0, vt = 0;
                     uint8_t wait = 0;
-                    if (rd(*a + 0x68, comps) && rd(comps + 0xB0, play) && rd(play, vt) && vt == g_base + 0x59D0850 &&
+                    if (rd(*a + 0x68, comps) && rd(comps + 0xB0, play) && rd(play, vt) && vt == g_base + 0x5B5EDB8 &&
                         rd(play + 0x3E0, wait) && wait) {
                         *reinterpret_cast<volatile uint8_t*>(play + 0x3E0) = 0;
                         log::info("MerchantUnhide [guest] NPC 0x{:08X} of shop scene 0x{:08X}: its scene component "
@@ -582,18 +582,18 @@ void merchant_unhide_start(bool on, bool guest, bool diag_only, bool guard) {
     {
         constexpr uint8_t kTickHead[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x6C, 0x24, 0x18};
         uint8_t th[sizeof kTickHead] = {};
-        if (game::fast_read(g_base + 0xAE0FC0, th, sizeof th) && std::memcmp(th, kTickHead, sizeof th) == 0)
-            g_tick_hook = safetyhook::create_mid(reinterpret_cast<void*>(g_base + 0xAE0FC0), &on_tick_mgr);
+        if (game::fast_read(g_base + 0xB28AF0, th, sizeof th) && std::memcmp(th, kTickHead, sizeof th) == 0)
+            g_tick_hook = safetyhook::create_mid(reinterpret_cast<void*>(g_base + 0xB28AF0), &on_tick_mgr);
     }
     if (g_guard) {
-        constexpr uint8_t kPre[] = {0xE8, 0xE1, 0x3F, 0xFC, 0x00, 0x48, 0x8B, 0x06, 0xC6, 0x80, 0xC2, 0x00, 0x00, 0x00, 0x01};
+        constexpr uint8_t kPre[] = {0xE8, 0x11, 0xA7, 0x01, 0x01, 0x48, 0x8B, 0x06, 0xC6, 0x80, 0xC2, 0x00, 0x00, 0x00, 0x01};
         uint8_t got[sizeof kPre] = {};
-        if (game::fast_read(g_base + 0x9CBA8A, got, sizeof got) && std::memcmp(got, kPre, sizeof kPre) == 0) {
-            g_login_pre = safetyhook::create_mid(reinterpret_cast<void*>(g_base + 0x9CBA8A), &on_login_pre);
-            g_login_post = safetyhook::create_mid(reinterpret_cast<void*>(g_base + 0x9CBA8F), &on_login_post);
+        if (game::fast_read(g_base + 0xA0A05A, got, sizeof got) && std::memcmp(got, kPre, sizeof kPre) == 0) {
+            g_login_pre = safetyhook::create_mid(reinterpret_cast<void*>(g_base + 0xA0A05A), &on_login_pre);
+            g_login_post = safetyhook::create_mid(reinterpret_cast<void*>(g_base + 0xA0A05F), &on_login_post);
         }
         log::info("MerchantUnhide [login guard] {}: another player's character logging in on this client no longer "
-                  "stops this client's own stage manager (0x9CBA8A / 0x9CBA8F)",
+                  "stops this client's own stage manager (0xA0A05A / 0xA0A05F)",
                   g_login_pre && g_login_post ? "ON" : "NOT installed (other bytes or hook failed)");
     }
     g_on = true;
@@ -601,7 +601,7 @@ void merchant_unhide_start(bool on, bool guest, bool diag_only, bool guard) {
     log::info("MerchantUnhide ON (merchant_unhide=1, {}): NPCs bound to the {} shop scenes keeping hide bit 0x200 for "
               "{} ms are unhidden with the game's setter 0x{:X}{}",
               guest ? "guest" : "host", mul::kShopScenes.size() + mul::kUnhideOnlyScenes.size(), mul::kStuckMs, kSetter,
-              guest ? " (bindings from guest_seq_route's 2380 point)" : " (own hook of the 2380 point 0xD6D64E)");
+              guest ? " (bindings from guest_seq_route's 2380 point)" : " (own hook of the 2380 point 0xDC689E)");
 }
 
 std::string merchant_unhide_describe() {

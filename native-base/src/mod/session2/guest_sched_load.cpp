@@ -52,24 +52,24 @@ struct Body {
 // name, finds it through 0x19AC5F0 in [mgr+8], else "sequencer/binary__" + the reader), the reader 0x19A6760 ([mgr+0x90]
 // vf40), the container lookup 0x19AC460 (users +0x68, lock vf40 / vf18 / vf20), the release 0x3D7FA0 (refcount +0x10,
 // atomic +0x14, vf0(1)); ranges from .pdata (the release: the whole function, its first unwind entry is chained).
-constexpr Body kLoader{0x1A0D750, 0x1A0D9CD, 0xEC85DF2ECF441D62ull};  /* 3732: the same code (3663 fnv 0xC7659132BD47D6DA); 3663: the same 154 instructions as 3576 0x19A8150 (fnv 0xACFA1300C77A2A02) */  // 2976 {0x1864140, 0x18643A8}
-constexpr Body kReader{0x1A0D9D0, 0x1A0E40E, 0x6A5CAA67B9BB12CCull};  /* 3732: the same code (3663 fnv 0xBF86C3E6268BDD12); 3663: the same 643 instructions (3576 fnv 0x1841B8E73754BC97) */  // 2976 {0x18643B0, 0x1864CD8}
-constexpr Body kLookup{0x1A136D0, 0x1A13859, 0xF3BD9AA017A1D44Eull};  /* 3732: the same code (3663 fnv 0xD35D03A474EEDE22); 3663: the same 124 instructions (3576 fnv 0x025B68BF2552A266) */  // 2976 {0x186A810, 0x186A999}
-constexpr Body kRelease{0x3DB890, 0x3DB8EC, 0x9F799744CF2F1875ull};  // 2976 {0x38AD90, 0x38ADEC}
-constexpr uintptr_t kNodeLookupRva = 0x1A12EE0;  // 3576 (2976 0x1869D70; reads [0x70DBFA0]+8)
+constexpr Body kLoader{0x1AAB780, 0x1AAB9FD, 0xC8C77DA754072621ull};  /* 3840: the same 154 instructions but the TLS heap flag mov esi,0x1fe -> 0x20e (x2) (3732 fnv 0xEC85DF2ECF441D62); 3732: the same code (3663 fnv 0xC7659132BD47D6DA); 3663: the same 154 instructions as 3576 0x19A8150 (fnv 0xACFA1300C77A2A02) */  // 2976 {0x1864140, 0x18643A8}
+constexpr Body kReader{0x1AABA00, 0x1AAC43E, 0x7F2E31CBADCD7642ull};  /* 3840: the same 643 instructions but the TLS 0x1fe -> 0x20e (x6) and [[mgr+0x90]]+0x40 -> +0x48 (the file system's vtable got a slot) (3732 fnv 0x6A5CAA67B9BB12CC); 3732: the same code (3663 fnv 0xBF86C3E6268BDD12); 3663: the same 643 instructions (3576 fnv 0x1841B8E73754BC97) */  // 2976 {0x18643B0, 0x1864CD8}
+constexpr Body kLookup{0x1AB16A0, 0x1AB1829, 0xC4A7046A433EB343ull};  /* 3840: the same code (3732 fnv 0xF3BD9AA017A1D44E); 3732: the same code (3663 fnv 0xD35D03A474EEDE22); 3663: the same 124 instructions (3576 fnv 0x025B68BF2552A266) */  // 2976 {0x186A810, 0x186A999}
+constexpr Body kRelease{0x3E6C00, 0x3E6C5C, 0x9F799744CF2F1875ull};  // 3840: the same bytes as 3732 // 2976 {0x38AD90, 0x38ADEC}
+constexpr uintptr_t kNodeLookupRva = 0x1AB0EB0;  // 3576 (2976 0x1869D70; reads [0x70DBFA0]+8)
 constexpr uint8_t kNodeLookupBytes[] = {0x48, 0x89, 0x54, 0x24, 0x10, 0x48, 0x89, 0x4C,
                                         0x24, 0x08, 0x53, 0x55, 0x56, 0x57, 0x41, 0x56};
-constexpr uintptr_t kKeyLookupRva = 0x1A0BE10;  // 3576 (2976 0x1862A80)
+constexpr uintptr_t kKeyLookupRva = 0x1AA9E10;  // 3576 (2976 0x1862A80)
 constexpr uint8_t kKeyLookupBytes[] = {0x44, 0x89, 0x44, 0x24, 0x18, 0x48, 0x89, 0x54,
                                        0x24, 0x10, 0x53, 0x48, 0x83, 0xEC, 0x30, 0x48};
 // Session 12 (the hold): 0xA9FEE0 (only caller 0xC0B619 in the 2335 handler 0xC0AFC0) calls 0x1862A80 at 0xA9FFC3
 // (E8 B8 2A DC 00): at the lookup's entry, [rsp] = 0xA9FFC8 means "this 2335 is running now" (checked at install).
-constexpr uintptr_t kStageCallRva = 0xBE4143, kStageRetRva = 0xBE4148;  // 3576: in 0xBABA90 (2976 0xA9FEE0)
-constexpr uint8_t kStageCallBytes[] = {0xE8, 0xC8, 0x7C, 0xE2, 0x00};  // 3576 call 0x19A4B90
+constexpr uintptr_t kStageCallRva = 0xC2F633, kStageRetRva = 0xC2F638;  // 3576: in 0xBABA90 (2976 0xA9FEE0)
+constexpr uint8_t kStageCallBytes[] = {0xE8, 0xD8, 0xA7, 0xE7, 0x00};  // 3576 call 0x19A4B90
 // pa::NPCScheduleData_File (ctor 0x1860C10 [V]): vtable, refcount u32 (+0x10), "atomic count" byte (+0x14 = 1).
-constexpr uintptr_t kVtFile = 0x5BFDD98;  // 3576 (2976 0x57DB080)
+constexpr uintptr_t kVtFile = 0x5D89A50;  // 3576 (2976 0x57DB080)
 constexpr uint32_t kFile_Refs = 0x10, kFile_Atomic = 0x14;
-constexpr uint32_t kTlsRealm = 0x1EB;  /* Co-op+ port 3549 (2976: 0x1EC) */      // the server-realm byte of the exe's TLS block (0x281B757, 0xA9FF2A)
+constexpr uint32_t kTlsRealm = 0x1FB;  /* 3840 (3732: 0x1EB) */  /* Co-op+ port 3549 (2976: 0x1EC) */      // the server-realm byte of the exe's TLS block (0x281B757, 0xA9FF2A)
 constexpr uint32_t kLookupSample = 8;      // the lookup watch's full path: 1 call in 8 per thread (+ verifications)
 constexpr uint32_t kMaxKeySetBuilds = 32;  // the key set is rebuilt when the context table changes, at most this
 

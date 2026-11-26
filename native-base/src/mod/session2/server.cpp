@@ -148,14 +148,14 @@ troc::PacketQueue g_outgoing(kMaxOutgoingBytes);
 // The save slot the host's own client loaded (its LoginCharacterToFieldServerReq):
 // the E3 script loads the same one for user 2. -1 = not seen yet.
 std::atomic<int64_t> g_host_slot{-1};
-constexpr uint16_t kOpLoginCharacterToFieldServerReq = 3081;
-constexpr uint16_t kOpLoginUserToFieldServerReq = 2554;
+constexpr uint16_t kOpLoginCharacterToFieldServerReq = 2894;
+constexpr uint16_t kOpLoginUserToFieldServerReq = 3072;
 
 // E4 mirror. Opcodes of build 2976 (checked against the handler table at install).
-constexpr uint16_t kOpMoveActorReq = 2790, kOpStartActionReq = 2431, kOpRotateActorReq = 2296;
-constexpr uint16_t kOpMainPlayerDataStartAck = 2844;
-constexpr uint16_t kOpMainUserDataStartAck = 2420;  // u32 user key at +0
-constexpr uint16_t kOpMoveFieldAck = 2364;          // u8 | u32 actor | u32 | u32 field owner @9 | 0x38 * n (3549; 2976 0x30)
+constexpr uint16_t kOpMoveActorReq = 2561, kOpStartActionReq = 2221, kOpRotateActorReq = 2582;
+constexpr uint16_t kOpMainPlayerDataStartAck = 2660;
+constexpr uint16_t kOpMainUserDataStartAck = 2253;  // u32 user key at +0
+constexpr uint16_t kOpMoveFieldAck = 2524;          // u8 | u32 actor | u32 | u32 field owner @9 | 0x38 * n (3549; 2976 0x30)
 std::atomic<uint32_t> g_user2_userkey{0};           // from user 2's MainUserDataStartAck
 std::atomic<uint32_t> g_host_userkey{0};            // the host's user key, read once (session 1's user +0x60)
 std::atomic<uint64_t> g_owner_rewrites{0}, g_owner_unexpected{0};
@@ -197,8 +197,8 @@ MovePhaseTracker g_phase;  // under g_phase_mu
 MoveCloseSequence g_close;
 uintptr_t g_close_session = 0;
 constexpr uint16_t kOpNak = 1013;
-constexpr uint16_t kOpMissionListProbe = 2558;  // Co-op+ 3663: UpdateMissionListAck (branch_probe only)
-constexpr uint16_t kOpRemoveActorAck2516 = 3037;  // RemoveActorAck (world_anchor's probe)
+constexpr uint16_t kOpMissionListProbe = 2489;  // Co-op+ 3663: UpdateMissionListAck (branch_probe only)
+constexpr uint16_t kOpRemoveActorAck2516 = 2157;  // RemoveActorAck (world_anchor's probe)
 std::atomic<uint64_t> g_nak{0}, g_nak_after_logout{0};  // Nak 1013 written to session 2 (this epoch)
 
 MovePhaseTracker phase_snapshot() {
@@ -493,8 +493,8 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
         }
         // Co-op+ 2026-11-13 (shared cutscenes, branch_probe=1, read only): who queues the stage list / mission list
         // Acks while user 2's StageBranchStateReq is handled (the quest step of its story branch).
-        if ((v->opcode == 2185 || v->opcode == kOpMissionListProbe) &&
-            (user2_funnels_branch_probe_in(2644) || (user2_funnels_branch_probe_in(0) && user2_stages_q3_recent()))) {
+        if ((v->opcode == 2915 || v->opcode == kOpMissionListProbe) &&
+            (user2_funnels_branch_probe_in(2726) || (user2_funnels_branch_probe_in(0) && user2_stages_q3_recent()))) {
             static std::atomic<int> said{0};
             if (said.fetch_add(1, std::memory_order_relaxed) < 12) {
                 void* frames[32] = {};
@@ -503,17 +503,17 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
                 std::string chain;
                 for (USHORT i = 0; i < n; ++i) {
                     const auto a = reinterpret_cast<uintptr_t>(frames[i]);
-                    if (a >= base && a < base + 0x13C7E000) chain += std::format(" exe+0x{:X}", a - base);
+                    if (a >= base && a < base + 0x13D05000) chain += std::format(" exe+0x{:X}", a - base);
                 }
                 const uint32_t who = v->payload.size() >= 5 ? (v->payload[1] | v->payload[2] << 8 | v->payload[3] << 16 |
                                                                static_cast<uint32_t>(v->payload[4]) << 24)
                                                             : 0;
                 log::info("User2Funnels [branch probe] op 2644 | {} for 0x{:08X} queued to session 2 | stack:{}",
-                          v->opcode == 2185 ? "UpdateStageListAck 2185" : "UpdateMissionListAck", who, chain);
+                          v->opcode == 2915 ? "UpdateStageListAck 2185" : "UpdateMissionListAck", who, chain);
             }
         }
         // Co-op+ 2026-11-09 B04 (fog_share.h): the guest's map fog chunks OR the host's, in place.
-        if (v->opcode == 2932 && self == live_session2()) fog_share_on_user2_out(std::span<uint8_t>(p));
+        if (v->opcode == 3104 && self == live_session2()) fog_share_on_user2_out(std::span<uint8_t>(p));
         // C4: the server's answers to user 2's logout (7-byte internal Acks).
         if (v->opcode == troc::kOpLogoutSessionAck || v->opcode == troc::kOpLogoutUserAck) {
             g_n.logout_acks.fetch_add(1, std::memory_order_relaxed);
@@ -633,7 +633,7 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
         // Co-op+ 2026-11-10 Lootr (lootr.h): what the guest is not shown about a gimmick the host took (kept for the
         // guest); a RemoveActorAck may lose that one key (then the view is read again).
         if (self == live_session2() &&
-            (opcode == 3059 || opcode == 2985 || opcode == 2883 || opcode == 3037 || opcode == 2106)) {
+            (opcode == 2994 || opcode == 2835 || opcode == 2099 || opcode == 2157 || opcode == 2164)) {
             const size_t before = p.size();
             if (lootr_on_guest_out(p)) return;
             if (p.size() != before) {
@@ -644,7 +644,7 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
         // Co-op+ 2026-11-17 (playtest: the guest talked to an NPC, got its menu, and the NPC kept walking): the host's
         // client drives the NPC; while a scene of user 2's own binds it (its dialog), the host client's moves and
         // actions of that NPC stay off user 2's queue, so the guest's own scene holds it there.
-        if (self == live_session2() && (opcode == 3008 || opcode == 2800) && v->payload.size() >= 4) {
+        if (self == live_session2() && (opcode == 2890 || opcode == 2408) && v->payload.size() >= 4) {
             uint32_t k = 0;
             std::memcpy(&k, v->payload.data(), 4);
             if (observer_seq_copy_user2_scene_holds(k)) {
@@ -652,7 +652,7 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
                 const uint64_t n = held.fetch_add(1, std::memory_order_relaxed) + 1;
                 if (n <= 20 || n % 500 == 0) {
                     log::info("Session2: NPC 0x{:08X} is in a scene of user 2's own (its dialog): the host client's {} "
-                              "of it is not sent to user 2 ({} so far)", k, opcode == 3008 ? "move" : "action", n);
+                              "of it is not sent to user 2 ({} so far)", k, opcode == 2890 ? "move" : "action", n);
                 }
                 return;
             }
@@ -660,13 +660,13 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
         // Co-op+ 2026-11-21 (B14, ai_handoff.h's minigame rule): the opponent the server spawns for user 2's minigame
         // runs on user 2's game until its unspawn (SpawnMiniGameCharacterAck 2810: 4 | player | scene u64 | u32 |
         // opponent; UnspawnMiniGameCharacterAck 2922: 4 | player | opponent).
-        if (self == live_session2() && (opcode == 2810 || opcode == 2922) && !v->payload.empty() && v->payload[0] == 4) {
+        if (self == live_session2() && (opcode == 2616 || opcode == 2563) && !v->payload.empty() && v->payload[0] == 4) {
             uint32_t player = 0, npc = 0;
-            const size_t at = opcode == 2810 ? 17 : 5;
+            const size_t at = opcode == 2616 ? 17 : 5;
             if (v->payload.size() >= at + 4) {
                 std::memcpy(&player, v->payload.data() + 1, 4);
                 std::memcpy(&npc, v->payload.data() + at, 4);
-                ai_handoff_note_minigame(player, npc, opcode == 2810);
+                ai_handoff_note_minigame(player, npc, opcode == 2616);
             }
         }
         // P8 S3 (observer_hold_acks.h): a held NPC's packets wait for its 2005; a 2005 is queued with them.
@@ -710,7 +710,7 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
         // P8 S15/S16 (child_hold.h, observer_hold_family): what user 2 is given (2005), loses (2516) or starts over
         // with (2174), in queue order, only once really queued (review 6); the orphans among its records are
         // counted. None of these opcodes is ever kept above (p is intact).
-        if (pushed && (opcode == 2005 || opcode == 3037 || opcode == 2364) && self == live_session2()) {
+        if (pushed && (opcode == 2005 || opcode == 2157 || opcode == 2524) && self == live_session2()) {
             child_hold_on_user2_out(opcode, v->payload);
         }
         // P8 S15 (travel_probe.h): the Acks queued for user 2 after its 2283 / 2437 (bounded, read only).
@@ -745,7 +745,7 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
         user2_shops_on_out(opcode, v->payload, self == live_session2(), pushed);
         // P8 option U, U-1 (user2_stages.h): the 2322 / 2335 really queued for user 2 (abort criterion, counts); the
         // 2005s for U-e's controller check (user2_npc_control).
-        if (pushed && (opcode == 2941 || opcode == 2224 || opcode == 2005)) {
+        if (pushed && (opcode == 2456 || opcode == 2499 || opcode == 2005)) {
             user2_stages_on_out(opcode, v->payload, self == live_session2());
         }
         // P8 B step 2 (owner_fanout.h): user 2's observer trip, by the same rule (counts only).
@@ -903,7 +903,7 @@ void on_server_recv(safetyhook::Context& ctx) {
         }
     }
     // P6, second layer (log only, decision D-5): the server is asked to save.
-    if (pkt && peek(pkt, op) && (op == 2234 || op == 3158)) g_n.save_reqs.fetch_add(1, std::memory_order_relaxed);
+    if (pkt && peek(pkt, op) && (op == 2193 || op == 3108)) g_n.save_reqs.fetch_add(1, std::memory_order_relaxed);
     // The item this thread enters now (the stall lines name the last one: server_last_item).
     g_item_op.store(static_cast<uint32_t>(op) | (from_user2 ? 0x10000u : 0u), std::memory_order_relaxed);
     g_item_at.store(GetTickCount64(), std::memory_order_relaxed);
@@ -1305,9 +1305,9 @@ void server_probe_log(const char* when) {
     // (RTTI .?AVServerActorManager@pa@@, exe+0x5EECE88 on 3549) and log each slot found.
     static bool sam_scanned = false;
     const auto sam_vt = sam ? read_ptr(*sam) : std::nullopt;
-    if (!sam_scanned && game::read_ptr(g_base + off::kServerActorLookupSlot) && sam_vt != g_base + 0x5F6E070) {
+    if (!sam_scanned && game::read_ptr(g_base + off::kServerActorLookupSlot) && sam_vt != g_base + 0x60FA988) {
         sam_scanned = true;
-        constexpr uintptr_t kSamVtable = 0x5F6E070, kFrom = 0x6C00000, kTo = 0x7400000, kChunk = 0x10000;
+        constexpr uintptr_t kSamVtable = 0x60FA988, kFrom = 0x6C00000, kTo = 0x7400000, kChunk = 0x10000;
         std::vector<uint64_t> buf(kChunk / 8);
         int found = 0;
         for (uintptr_t at = kFrom; at < kTo && found < 8; at += kChunk) {
@@ -1346,11 +1346,11 @@ void server_probe_log(const char* when) {
         const auto key = pj ? read<uint32_t>(*pj + off::kServerActor_Key) : std::nullopt;
         const auto c68 = pj ? read_ptr(*pj + 0x68) : std::nullopt;
         const auto ts = c68 ? read_ptr(*c68 + 0x1A0) : std::nullopt;
-        const auto sector = ts ? read_ptr(*ts + 0x558) : std::nullopt;  // Co-op+ port: +0x18 as the FieldMover (unverified)
+        const auto sector = ts ? read_ptr(*ts + 0x568) : std::nullopt;  // Co-op+ port: +0x18 as the FieldMover (unverified); 3840: +0x10 as the FieldMover (3732 0x558; TS+0x548/+0x588 -> +0x558/+0x598)
         // Its ServerField: [TS+0x4F0+0x10] (opcion-d-campo-compartido.md §1): owner +0x180,
         // users in the field +0x2A8 (the game lets in only one), user actors +0x2B0,
         // generation +0x2C8.
-        const auto field = ts ? read_ptr(*ts + fld::kTsFieldMover + fld::kFmField) : std::nullopt;  // 3549: TS+0x518
+        const auto field = ts ? read_ptr(*ts + fld::kTsFieldMover + fld::kFmField) : std::nullopt;  // 3840: TS+0x528 (3549..3732: TS+0x518)
         std::string f = "-";
         if (field) {
             f = std::format("{} owner {} users {} user actors {} generation {}", hex(field),
@@ -1368,7 +1368,7 @@ void server_probe_log(const char* when) {
     // FieldTime 0x6EAB998 + 0x20, as on 2976): user 2's MoveField and
     // LoadingCompleteReq 01 copy its save's time here (R1).
     uint8_t ft[32] = {};
-    if (game::safe_read(g_base + 0x6F37C98, ft, sizeof ft)) {
+    if (game::safe_read(g_base + 0x70DC148, ft, sizeof ft)) {
         std::string h;
         for (uint8_t b : ft) h += std::format("{:02X}", b);
         log::info("Session2 probe ({}): server FieldTime {}", when, h);
@@ -1628,7 +1628,7 @@ inj::Outcome inject(std::span<const uint8_t> in, InjectKind kind) {
     // uploaded save is never moved in, user 2 has no character, its LoginCharacterToFieldServerReq is refused and
     // the guest sits on "Waiting for Host" for ever. So user 2's LoginUserToFieldServerReq waits (held in order, like
     // a Req that comes before session 2 exists) until the world's folder has a slot of the host's.
-    if (v->opcode == 2554 && !guest_save_world_has_host_slot()) {
+    if (v->opcode == 3072 && !guest_save_world_has_host_slot()) {
         static std::atomic<uint64_t> waits{0};
         const uint64_t n = waits.fetch_add(1) + 1;
         if (n == 1 || n % 2000 == 0)
@@ -1641,7 +1641,7 @@ inj::Outcome inject(std::span<const uint8_t> in, InjectKind kind) {
     // user 2 loads that world's own character, not the save the guest uploaded. It is staged here, before the login
     // that loads user 2's lobby: the Req waits (held in order, as above) while the host's first save is not complete
     // yet. Always true in a world without a marker; it logs its own lines ("Session2 guest save (co-op world)").
-    if (v->opcode == 2554 && !guest_save_coop_world_gate()) {
+    if (v->opcode == 3072 && !guest_save_coop_world_gate()) {
         g_held_not_ready.fetch_add(1);
         return inj::Outcome::NotReady;
     }

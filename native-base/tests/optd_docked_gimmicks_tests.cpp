@@ -368,8 +368,8 @@ void test_packets() {
     for (size_t i = 0; i < dgl::kWithheldOpCount; ++i) {
         CHECK(dgl::withhold_index(packet(dgl::kWithheldOps[i], upd), keys) == static_cast<int>(i));
     }
-    CHECK(dgl::withhold_index(packet(2556, upd), keys) == -1);  // MoveActorReq: never withheld
-    CHECK(dgl::withhold_index(packet(3067, upd), keys) == -1);  // RegionInOutReq
+    CHECK(dgl::withhold_index(packet(2561, upd), keys) == -1);  // MoveActorReq (3840 2561; 3732 2790): never withheld
+    CHECK(dgl::withhold_index(packet(2222, upd), keys) == -1);  // RegionInOutReq (3840 2222; 3732 3140)
     auto host_dev = upd;
     dgl::put32(host_dev.data(), 0xB0100156u);
     CHECK(dgl::withhold_index(packet(3082, host_dev), keys) == -1);  // not local-only
@@ -433,7 +433,7 @@ void test_tables() {
     CHECK(dgl::age_bucket(200000, 50000) == 4);
     CHECK(dgl::age_bucket(200000, 0) == 5);
     CHECK(dgl::age_bucket(100, 200) == 5);
-    CHECK(dgl::touch_op(3140) && dgl::touch_op(2996) && !dgl::touch_op(2738) && !dgl::touch_op(2005));
+    CHECK(dgl::touch_op(2222) && dgl::touch_op(3127) && !dgl::touch_op(2444) && !dgl::touch_op(2005));
 }
 
 void test_mode_and_bytes() {
@@ -452,13 +452,13 @@ void test_mode_and_bytes() {
     const uint8_t mov[7] = {0x41, 0x89, 0x86, 0x90, 0x00, 0x00, 0x00};
     static_assert(dgl::kControllerWritePatch == 7);
     CHECK(std::memcmp(dgl::kControllerWriteBytes, mov, 7) == 0);
-    static_assert(dgl::kFieldOwnerReadBytes[2] == 0x80 && dgl::kFieldOwnerReadBytes[3] == 0x01);  // 3663: mov eax,[rdi+0x180], no REX
+    static_assert(dgl::kFieldOwnerReadBytes[2] == 0x58 && dgl::kFieldOwnerReadBytes[3] == 0x01);  // 3840: mov eax,[rdi+0x158] (3663..3732 +0x180), no REX
     static_assert(dgl::kFieldOwnerRead + 10 == dgl::kControllerWrite);
     // 0x2C4FCD4 (3732): E8 rel32 -> 0x2B734B0.
     const int32_t rel = static_cast<int32_t>(dgl::le32(&dgl::kDockEquipCall[1]));
     CHECK(dgl::kDockEquipCall[0] == 0xE8 &&
           static_cast<uintptr_t>(static_cast<intptr_t>(dgl::kDockEquipCallSite) + 5 + rel) == dgl::kDockEquip);
-    static_assert(dgl::kClientGimmickRequestSlot == dgl::kClientGimmickVtbl + 0x748);  // 3732 (2976 +0x740)
+    static_assert(dgl::kClientGimmickRequestSlot == dgl::kClientGimmickVtbl + 0x758);  // 3840 (3732 +0x748, 2976 +0x740)
     static_assert(dgl::kErrNotController == 0xD65F8D70u);
 }
 
@@ -498,9 +498,9 @@ void test_other_player() {
         CHECK(std::strcmp(dgl::docked_action_name(r.docked[0]), "REWRITTEN (other player, local drive)") == 0);
         // Its requests are withheld (the device's key at +0), like phase 1's.
         const std::vector<uint8_t> req = {0x4e, 0x01, 0x10, 0xb0, 0x59, 0xcc, 0x3e, 0x00};
-        CHECK(dgl::withhold_index(packet(2996, req), keys) == 0);
-        CHECK(dgl::withhold_index(packet(2662, req), keys) == 3);
-        CHECK(dgl::withhold_index(packet(2556, req), keys) == -1);
+        CHECK(dgl::withhold_index(packet(3127, req), keys) == 0);
+        CHECK(dgl::withhold_index(packet(2556, req), keys) == 3);
+        CHECK(dgl::withhold_index(packet(2561, req), keys) == -1);  // MoveActorReq
         // Announced again with the same parent: kept. With another parent, or undocked: retired.
         auto again = payload({kS28HostDevice});
         const auto r2 = dgl::process_2005(again, self, dgl::Mode::On, keys, dgl::Mode::On);

@@ -54,16 +54,16 @@ namespace cdmp::session2::omr {
 
 using NoteSink_t = oms::NoteSink;  // the notes share observer_milestone's ring
 
-inline constexpr uint16_t kOpPreLoadSequencerReq = 2372;
-inline constexpr uint16_t kOpReloadStageStartReq = 3018;
-inline constexpr uint16_t kOpGameLoadingStartReq = 2350;
-inline constexpr uint16_t kOpMoveFieldAck = 2364;
-inline constexpr uint16_t kOpLoadingFieldDataAck = 2286;
-inline constexpr uint16_t kOpMoveFieldCompletePostAck = 2792;
-inline constexpr uint16_t kOpMilestone = 2941;
-inline constexpr uint16_t kOpLoadingCompleteAck = 2891;
-inline constexpr uint16_t kOpLogoutCharacterAck = 3116;
-inline constexpr uint16_t kOpReviveLoadingReq = 2887;  // P8 S27: the revive's load request (C>S)
+inline constexpr uint16_t kOpPreLoadSequencerReq = 2223;
+inline constexpr uint16_t kOpReloadStageStartReq = 2235;
+inline constexpr uint16_t kOpGameLoadingStartReq = 2804;
+inline constexpr uint16_t kOpMoveFieldAck = 2524;
+inline constexpr uint16_t kOpLoadingFieldDataAck = 3154;
+inline constexpr uint16_t kOpMoveFieldCompletePostAck = 2549;
+inline constexpr uint16_t kOpMilestone = 2456;
+inline constexpr uint16_t kOpLoadingCompleteAck = 2381;
+inline constexpr uint16_t kOpLogoutCharacterAck = 2453;
+inline constexpr uint16_t kOpReviveLoadingReq = 2672;  // P8 S27: the revive's load request (C>S)
 
 inline constexpr uint64_t kMinDelayUs = 300'000;     // native: the 2322 leaves 460-501 ms after the 2873
 inline constexpr uint64_t kTimeoutUs = 15'000'000;   // no fitting Req of user 2 within 15 s: given up (logged)

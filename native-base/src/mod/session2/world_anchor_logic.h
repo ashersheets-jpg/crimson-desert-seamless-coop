@@ -67,28 +67,28 @@ using u2f::parse_mode;
 
 // ---------------------------------------------------------------- build 1.0.0.2976 (RVAs, checked on the exe)
 
-inline constexpr uintptr_t kVtServerField = 0x5F721D8;  // pa::ServerField (3576; 2976 0x5B29A60)
-inline constexpr uintptr_t kVtFieldLock = 0x5BD4CD0;  // 3576 RTTI (2976 0x57A30B8)   // pa::WindowsRWLock<4,1>, [field+8] (= field+0x1B8)
+inline constexpr uintptr_t kVtServerField = 0x60FE230;  // pa::ServerField (3576; 2976 0x5B29A60)
+inline constexpr uintptr_t kVtFieldLock = 0x5D62150;  // 3576 RTTI (2976 0x57A30B8)   // pa::WindowsRWLock<4,1>, [field+8] (= field+0x1B8)
 inline constexpr uint32_t kLockSlotUnlock = 0x20;       // vf4 0x1371B70 (u8 shared): exclusive -> owner -1, Release
 inline constexpr uint32_t kLockSlotTry = 0x28;          // vf5 0x1371BA0 (u8 shared): TryAcquireSRWLockExclusive
-inline constexpr uintptr_t kLockUnlock = 0x1595620, kLockTry = 0x1595650;  // 3576: the vtable's slots 4 / 5
-inline constexpr uint32_t kFieldLock = 0x08, kFieldOpen = 0x4A, kFieldOwner = 0x180, kFieldGen = 0x2D0;  // 3576: gen +0x2D0 (3549 port)
-inline constexpr uint32_t kFieldSlotOn = 0x198;  // 3576 (2976 0x2E4)  // u8, 0x29C2915 / collector 0x2C38E28
-inline constexpr uint32_t kFieldSlotKey = 0x19C;  // 3576 (2976 0x2E8) // u32, 0x29C291C / collector 0x2B06090
+inline constexpr uintptr_t kLockUnlock = 0x161D5B0, kLockTry = 0x161D5E0;  // 3576: the vtable's slots 4 / 5
+inline constexpr uint32_t kFieldLock = 0x08, kFieldOpen = 0x4A, kFieldOwner = 0x158, kFieldGen = 0x2D8;  // 3840: owner +0x158, gen +0x2D8 (3732: 0x180, 0x2D0; 3576: gen +0x2D0, 3549 port)
+inline constexpr uint32_t kFieldSlotOn = 0x170;  // 3840 (3732 / 3576 0x198; 2976 0x2E4)  // u8, 0x29C2915 / collector 0x2C38E28; 3840 writer 0x30996FA, Reset 0x2F397FF
+inline constexpr uint32_t kFieldSlotKey = 0x174;  // 3840 (3732 / 3576 0x19C; 2976 0x2E8) // u32, 0x29C291C / collector 0x2B06090; 3840 writer 0x3099703, Reset 0x2F397F1
 inline constexpr uint32_t kUserKey = 0x60, kUserMainCharacter = 0xD0, kUserCurrentCharacter = 0xD8;
 inline constexpr uint32_t kActorKey = 0x60, kActorComponents = 0x68, kComponentsTs = 0x1A0;
-inline constexpr uint32_t kTsField = 0x508 + 0x10;  // FieldMover (TS+0x508 since 3549, field_share.h; 2976 +0x4F0) +0x10: ServerField*
+inline constexpr uint32_t kTsField = 0x518 + 0x10;  // FieldMover (3840 TS+0x518; TS+0x508 since 3549 to 3732, field_share.h; 2976 +0x4F0) +0x10: ServerField*
 inline constexpr uint32_t kCharClass = 0xA;         // player characters (key >> 28)
 
-inline constexpr uint16_t kOpGameLoadingStartReq = 2350;
-inline constexpr uint16_t kOpReloadStageStartReq = 3018;
+inline constexpr uint16_t kOpGameLoadingStartReq = 2804;
+inline constexpr uint16_t kOpReloadStageStartReq = 2235;
 inline constexpr uint16_t kOpLogoutSessionReq = 2001;
-inline constexpr uint16_t kOpRemoveActorAck = 3037;
+inline constexpr uint16_t kOpRemoveActorAck = 2157;
 inline constexpr uint8_t kReasonCollector = 25;
 // The slot's other reader on the server [E]: 0x2826F70 (0x2827094 reads [field+0x2E4]) skips its own level-box check
 // (0x184F360) while the slot is on, for UpdateSyncSceneObjectOutOfLevelBoundaryReq 2573 (handler 0x29C31C0 ->
 // 0x282EE90 -> 0x28256F0 with the flag 1): the client's report of a scene object out of its level is trusted. Counted.
-inline constexpr uint16_t kOpOutOfLevelBoundaryReq = 3095;
+inline constexpr uint16_t kOpOutOfLevelBoundaryReq = 2319;
 
 inline constexpr uint64_t kWaitCheckMs = 500;   // nothing set: how often the conditions are read
 inline constexpr uint64_t kWatchdogMs = 5000;   // set: how often the slot is read back

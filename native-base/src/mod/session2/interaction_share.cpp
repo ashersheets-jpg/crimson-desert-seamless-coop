@@ -13,13 +13,15 @@
 #include "mod/log.h"
 #include "mod/session2/interaction_share_logic.h"
 
+// 3840: the node 0x26B8030, frame rbp+0x840 = node, rbp+0x848 = ctx (3732 0x25D1E30: +0x850 / +0x858); the interaction
+// component's dynamic list +0x80, its count +0x88 (3732: +0x90 / +0x98), entries 0x38 bytes as before.
 // 3576: the StageChart interaction node 0x255E100(node, ctx, bool add). Frame: rbp+0x850 = node, rbp+0x858 = ctx
 // ([ctx] = scene: +0x28 stage manager, +0x30 id). ADD = the call at 0x255E45C (rcx = the actor's interaction
 // component, r8w = interaction index, [rsp+0x20] = scene id) -> 0x22EBB40; REMOVE = the call at 0x255E639
 // (rcx = component, edx = key) -> 0x22EBF00 -> 0xCADEB10, which deletes EVERY dynamic entry of that key.
 namespace cdmp::session2 {
 namespace {
-constexpr uintptr_t kAddCall = 0x25D218C, kRemoveCall = 0x25D2368, kRemoveNext = 0x25D236D;
+constexpr uintptr_t kAddCall = 0x26B8387, kRemoveCall = 0x26B856D, kRemoveNext = 0x26B8572;
 SafetyHookMid g_add, g_remove;
 std::mutex g_mu;
 ishare::Ledger g_ledger;
@@ -47,17 +49,17 @@ struct Scene {
 };
 Scene scene_of(const SafetyHookContext& c) noexcept {
     Scene s;
-    const uintptr_t scene = rd<uintptr_t>(rd<uintptr_t>(c.rbp + 0x858));
+    const uintptr_t scene = rd<uintptr_t>(rd<uintptr_t>(c.rbp + 0x848));  // 3840 (3732: +0x858)
     s.id = rd<uint64_t>(scene + 0x30);
     s.manager = rd<uintptr_t>(scene + 0x28);
-    s.idx = rd<uint16_t>(rd<uintptr_t>(c.rbp + 0x850) + 0x38);
+    s.idx = rd<uint16_t>(rd<uintptr_t>(c.rbp + 0x840) + 0x38);  // 3840 (3732: +0x850)
     return s;
 }
 void on_add(SafetyHookContext& c) {
     const uintptr_t ic = c.rcx;
     const Scene s = scene_of(c);
     if (!ic || !s.id || !s.manager) return;
-    const bool empty = rd<uint32_t>(ic + 0x98) == 0;
+    const bool empty = rd<uint32_t>(ic + 0x88) == 0;  // 3840 (3732: +0x98)
     std::lock_guard lock(g_mu);
     g_ledger.on_add(ic, static_cast<uint16_t>(c.r8), s.id, s.manager, empty);
 }
@@ -71,8 +73,8 @@ void on_remove(SafetyHookContext& c) {
         if (!g_ledger.on_remove(ic, s.idx, s.id, s.manager, keep)) return;
     }
     // The entries of this index now belong to the scene that still holds them.
-    const uintptr_t arr = rd<uintptr_t>(ic + 0x90);
-    const uint32_t n = rd<uint32_t>(ic + 0x98);
+    const uintptr_t arr = rd<uintptr_t>(ic + 0x80);  // 3840 (3732: +0x90)
+    const uint32_t n = rd<uint32_t>(ic + 0x88);      // 3840 (3732: +0x98)
     int handed = 0;
     for (uint32_t i = 0; arr && i < n && i < 64; ++i) {
         const uintptr_t e = arr + i * 0x38ull;
@@ -91,7 +93,7 @@ void interaction_share_start() {
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     // Byte guards: the two call sites as built for 3576.
     uint8_t a[5]{}, r[5]{};
-    const uint8_t want_a[5] = {0xE8, 0xAF, 0xBE, 0xD8, 0xFF}, want_r[5] = {0xE8, 0xA3, 0xC0, 0xD8, 0xFF};
+    const uint8_t want_a[5] = {0xE8, 0xE4, 0x8F, 0xD7, 0xFF}, want_r[5] = {0xE8, 0x4E, 0x92, 0xD7, 0xFF};
     if (!game::safe_read(g_base + kAddCall, a, 5) || !game::safe_read(g_base + kRemoveCall, r, 5) ||
         std::memcmp(a, want_a, 5) != 0 || std::memcmp(r, want_r, 5) != 0) {
         log::warn("InteractionShare: the node's call sites do not match this build; off");

@@ -42,15 +42,15 @@
 
 namespace cdmp::session2::npcfam {
 
-inline constexpr uint32_t kVtNpcSchedule = 0x5F4CB68;     // pa::CreateServerActorDesc_NPCSchedule
-inline constexpr uint32_t kVtInstantGimmick = 0x5F4CAB8;  // pa::CreateServerActorDesc_InstantGimmick (tipo 7)
+inline constexpr uint32_t kVtNpcSchedule = 0x60D95C8;     // pa::CreateServerActorDesc_NPCSchedule
+inline constexpr uint32_t kVtInstantGimmick = 0x60D9570;  // pa::CreateServerActorDesc_InstantGimmick (tipo 7)
 // pa::ICreateServerActorDesc, la clase base usada tal cual (la escribe 0x278EA70 en 0x278EAE1): los viajeros de
 // carretera (AutoSpawnRoad) y sus animales/carros. Fuera de U-e (raíz tipo 6, otro descriptor): fase C.
-inline constexpr uint32_t kVtDescBase = 0x5F4CA60;
-inline constexpr uint32_t kVtWrapSimple = 0x5F4CD38, kVtWrapCatchTarget = 0x5F4CC38,
-                          kVtWrapAutoSpawnGimmick = 0x5F4CC58, kVtWrapCombinationGimmick = 0x5F4CC98,
-                          kVtWrapSavedAttached = 0x5F4CCB8, kVtWrapLinkedVehicle = 0x5F4CC18,
-                          kVtWrapDocking = 0x5F4CCF8, kVtWrapRider = 0x5F4CCD8, kVtWrapGroupActionMember = 0x5F4CBF8;
+inline constexpr uint32_t kVtDescBase = 0x60D9678;
+inline constexpr uint32_t kVtWrapSimple = 0x60D97F0, kVtWrapCatchTarget = 0x60D9770,
+                          kVtWrapAutoSpawnGimmick = 0x60D96D0, kVtWrapCombinationGimmick = 0x60D9790,
+                          kVtWrapSavedAttached = 0x60D96F0, kVtWrapLinkedVehicle = 0x60D97B0,
+                          kVtWrapDocking = 0x60D9810, kVtWrapRider = 0x60D97D0, kVtWrapGroupActionMember = 0x60D9750;
 inline constexpr uint32_t kDesc_Parent = 0x2F0, kDesc_Children = 0x2F8, kDesc_ChildCount = 0x300, kDesc_User = 0x40,
                           kWrap_Inner = 0x08;
 inline constexpr uint32_t kActor_Key = 0x60, kActor_Ctl = 0x90;

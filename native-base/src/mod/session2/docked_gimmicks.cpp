@@ -37,7 +37,7 @@ namespace {
 
 namespace g2976 = game::build_2976;
 
-constexpr uintptr_t kCodeBegin = 0x1000, kCodeEnd = 0x5618000;  // Co-op+ port: end of .xtext on 1.0.0.3549 (2976: .rsrc ends at 0x51EB000)
+constexpr uintptr_t kCodeBegin = 0x1000, kCodeEnd = 0x57A5000;  // Co-op+ port: end of .xtext on 1.0.0.3549 (2976: .rsrc ends at 0x51EB000)
 constexpr uint32_t kTickMs = 500;
 constexpr uint32_t kWorldTicks = 6;
 constexpr uint64_t kMinuteMs = 60000;
@@ -252,7 +252,7 @@ dgl::Table<dgl::TouchEntry, 8192> g_touch;
 std::atomic<uint64_t> g_client_untracked{0}, g_server_untracked{0};
 std::atomic<uint64_t> g_creations_in_dock{0}, g_dock_entries[2] = {}, g_dock_entries_player[2] = {};
 std::atomic<uint64_t> g_server_counts[2][2][2] = {};  // [op 0 exec / 1 update][requester 0 field owner / 1 other][0 ok / 1 rejected]
-std::atomic<uint32_t> g_field_owner{0};  // the field owner the controller write saw ([r13+0x180])
+std::atomic<uint32_t> g_field_owner{0};  // the field owner the controller write saw ([rdi+0x158] on 3840; 3576 [r13+0x180])
 std::atomic<uint64_t> g_unspawn[2][dgl::kAgeBuckets] = {};  // [from 0 host / 1 user 2][the OTHER's age bucket]
 std::atomic<uint64_t> g_unspawn_reqs[2] = {}, g_spawn_reqs[2] = {}, g_touches{0};
 std::atomic<uint32_t> g_unspawn_lines{0};
@@ -558,28 +558,28 @@ bool checks_ok(std::span<const gad::Section> secs, std::span<const Check> checks
 
 void install_client(std::span<const gad::Section> secs) {
     const Check checks[] = {
-        {dgl::kClientRequest, dgl::kClientRequestHead, "the client's gimmick event request 0xA00E40's entry"},
-        {dgl::kClientRequest2, dgl::kClientRequest2Head, "the client's second gimmick request 0xA01370's entry"},
+        {dgl::kClientRequest, dgl::kClientRequestHead, "the client's gimmick event request 0xA3D5D0's entry"},
+        {dgl::kClientRequest2, dgl::kClientRequest2Head, "the client's second gimmick request 0xA3DB00's entry"},
     };
     if (!checks_ok(secs, checks)) return;
     uint64_t slot = 0;
     if (!game::safe_read(g_base + dgl::kClientGimmickRequestSlot, &slot, sizeof slot) ||
         slot != g_base + dgl::kClientRequest) {
-        log::error("DockedGimmicks: pa::ClientGimmickActorComponent's vtable slot +0x748 (exe+0x{:X}) does not hold "
-                   "0xA00E40; REFUSED, nothing written",
+        log::error("DockedGimmicks: pa::ClientGimmickActorComponent's vtable slot +0x758 (exe+0x{:X}) does not hold "
+                   "0xA3D5D0; REFUSED, nothing written",
                    dgl::kClientGimmickRequestSlot);
         return;
     }
     std::vector<Prepared> ready;
     if (!prepare(dgl::kClientRequest, reinterpret_cast<void*>(&req_detour), dgl::kClientRequestHead,
-                 "the gimmick event request 0xA00E40", g_req_hook, ready) ||
+                 "the gimmick event request 0xA3D5D0", g_req_hook, ready) ||
         !prepare(dgl::kClientRequest2, reinterpret_cast<void*>(&req2_detour), dgl::kClientRequest2Head,
-                 "the gimmick request 0xA01370", g_req2_hook, ready) ||
+                 "the gimmick request 0xA3DB00", g_req2_hook, ready) ||
         !enable_all(ready, "client")) {
         return;
     }
     g_client_hooks.store(true);
-    log::info("DockedGimmicks: client probe hooked at the entries of 0xA00E40 (vf +0x748) and 0xA01370 (5 bytes "
+    log::info("DockedGimmicks: client probe hooked at the entries of 0xA3D5D0 (vf +0x758) and 0xA3DB00 (5 bytes "
               "each); log only, nothing of the game is written");
 }
 
@@ -595,7 +595,7 @@ bool ctl_write_acquire(uint8_t user, const char* who) {
     const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     std::vector<gad::Section> secs;
     if (base != g2976::kImageBase || !p8_exe_sections(base, secs)) {
-        log::error("{}: the server's controller write 0x2A31BBB: unsupported build or unreadable sections; REFUSED", who);
+        log::error("{}: the server's controller write 0x2B593B0: unsupported build or unreadable sections; REFUSED", who);
         return false;
     }
     const auto same = [&](uintptr_t rva, std::span<const uint8_t> expected) {
@@ -605,14 +605,14 @@ bool ctl_write_acquire(uint8_t user, const char* who) {
     };
     if (!same(dgl::kControllerBlock, dgl::kControllerBlockBytes) ||
         !same(dgl::kFieldOwnerRead, dgl::kFieldOwnerReadBytes)) {
-        log::error("{}: the controller block 0x2A31B52 / the field-owner read 0x2A31BB1 are not build 3732's code; "
-                   "0x2A31BBB REFUSED, nothing written",
+        log::error("{}: the controller block 0x2B5933E / the field-owner read 0x2B593A6 are not build 3732's code; "
+                   "0x2B593B0 REFUSED, nothing written",
                    who);
         return false;
     }
     if (!p8_install_mid(base, secs, dgl::kControllerWrite, dgl::kControllerWritePatch, dgl::kControllerWriteBytes,
                         &ctl_write_mid, g_ctl_mid, who,
-                        "the server's controller write 0x2A31BBB (mov [r14+0x90],eax; one hook for docked_gimmicks "
+                        "the server's controller write 0x2B593B0 (mov [r14+0x90],eax; one hook for docked_gimmicks "
                         "and user2_npc_control)")) {
         return false;
     }
@@ -631,23 +631,23 @@ void ctl_write_release(uint8_t user) {
 
 void install_server(std::span<const gad::Section> secs) {
     const Check checks[] = {
-        {dgl::kDockEquip, dgl::kDockHead, "the equipment docking spawn 0x2B734B0's entry"},
-        {dgl::kDockOther, dgl::kDockHead, "the docking spawn 0x2B741D0's entry"},
-        {dgl::kDockEquipCallSite, dgl::kDockEquipCall, "its 2249 caller 0x2C4FCD4 (call 0x2B734B0)"},
-        {dgl::kFieldOwnerRead, dgl::kFieldOwnerReadBytes, "the field-owner read 0x2A31BB1"},
-        {dgl::kServerExecute, dgl::kServerExecuteHead, "ServerGimmick_ExecuteFrameEvent 0x2DBEBA0's entry"},
-        {dgl::kServerUpdate, dgl::kServerUpdateHead, "ServerGimmick_Update 0x2DBE130's entry"},
+        {dgl::kDockEquip, dgl::kDockHead, "the equipment docking spawn 0x2CA1B00's entry"},
+        {dgl::kDockOther, dgl::kDockOtherHead, "the docking spawn 0x2CA2860's entry"},
+        {dgl::kDockEquipCallSite, dgl::kDockEquipCall, "its 2249 caller 0x2D88314 (call 0x2CA1B00)"},
+        {dgl::kFieldOwnerRead, dgl::kFieldOwnerReadBytes, "the field-owner read 0x2B593A6"},
+        {dgl::kServerExecute, dgl::kServerExecuteHead, "ServerGimmick_ExecuteFrameEvent 0x2EFC980's entry"},
+        {dgl::kServerUpdate, dgl::kServerUpdateHead, "ServerGimmick_Update 0x2EFBE70's entry"},
     };
     if (!checks_ok(secs, checks)) return;
     std::vector<Prepared> ready;
     if (!prepare(dgl::kDockEquip, reinterpret_cast<void*>(&dock_detour), dgl::kDockHead,
-                 "the equipment docking spawn 0x2B734B0", g_dock_hook, ready) ||
-        !prepare(dgl::kDockOther, reinterpret_cast<void*>(&dock2_detour), dgl::kDockHead,
-                 "the docking spawn 0x2B741D0", g_dock2_hook, ready) ||
+                 "the equipment docking spawn 0x2CA1B00", g_dock_hook, ready) ||
+        !prepare(dgl::kDockOther, reinterpret_cast<void*>(&dock2_detour), dgl::kDockOtherHead,
+                 "the docking spawn 0x2CA2860", g_dock2_hook, ready) ||
         !prepare(dgl::kServerExecute, reinterpret_cast<void*>(&exec_detour), dgl::kServerExecuteHead,
-                 "ServerGimmick_ExecuteFrameEvent 0x2DBEBA0", g_exec_hook, ready) ||
+                 "ServerGimmick_ExecuteFrameEvent 0x2EFC980", g_exec_hook, ready) ||
         !prepare(dgl::kServerUpdate, reinterpret_cast<void*>(&upd_detour), dgl::kServerUpdateHead,
-                 "ServerGimmick_Update 0x2DBE130", g_upd_hook, ready)) {
+                 "ServerGimmick_Update 0x2EFBE70", g_upd_hook, ready)) {
         return;
     }
     // The controller's write first (a mid hook, read only here; shared with user2_npc_control, one install): without
@@ -660,9 +660,9 @@ void install_server(std::span<const gad::Section> secs) {
         return;
     }
     g_server_hooks.store(true);
-    log::info("DockedGimmicks: server probe hooked: entries of 0x2B734B0 / 0x2B741D0 (the docking spawns), "
-              "0x2DBEBA0 / 0x2DBE130 (the server's gimmick event / update: accepted or rejected) and a mid hook at "
-              "0x2A31BBB (the controller written at creation); log only, nothing of the game is written");
+    log::info("DockedGimmicks: server probe hooked: entries of 0x2CA1B00 / 0x2CA2860 (the docking spawns), "
+              "0x2EFC980 / 0x2EFBE70 (the server's gimmick event / update: accepted or rejected) and a mid hook at "
+              "0x2B593B0 (the controller written at creation); log only, nothing of the game is written");
 }
 
 bool build_ok() {
@@ -765,7 +765,7 @@ void log_event(const p8p::Event& e, State& st, uint64_t& lines, uint64_t& not_lo
             if (!may_log()) return;
             log::info("DockedGimmicks #{} client request {} {}: gimmick 0x{:08X} {} (comp+0x2B4 0x{:08X}) | event {} | "
                       "{} | {} | thread {}",
-                      seq, (e.v[1] >> 32) ? "0xA01370" : "0xA00E40", p8_when(e.qpc_us), key, dgl::class_name(cls), parent,
+                      seq, (e.v[1] >> 32) ? "0xA3DB00" : "0xA3D5D0", p8_when(e.qpc_us), key, dgl::class_name(cls), parent,
                       hash_text(static_cast<uint32_t>(e.v[1])),
                       e.v[2] ? "REFUSED (eErrNoActorNotExist: not this client's to control)" : "accepted here",
                       e.kind == kEvClientFirst ? "first request seen for it" : "a new refused event", e.tid);
@@ -775,7 +775,7 @@ void log_event(const p8p::Event& e, State& st, uint64_t& lines, uint64_t& not_lo
             if (may_log()) {
                 log::info("DockedGimmicks #{} server docking spawn {} {}: for character 0x{:08X} (type {}, controller "
                           "0x{:08X}) created {} actor(s)",
-                          seq, (e.v[1] >> 8) & 0xFF ? "0x2B741D0" : "0x2B734B0", p8_when(e.qpc_us),
+                          seq, (e.v[1] >> 8) & 0xFF ? "0x2CA2860" : "0x2CA1B00", p8_when(e.qpc_us),
                           static_cast<uint32_t>(e.v[0]), e.v[1] & 0xFF, static_cast<uint32_t>(e.v[0] >> 32), e.v[2]);
             }
             return;
@@ -785,7 +785,7 @@ void log_event(const p8p::Event& e, State& st, uint64_t& lines, uint64_t& not_lo
                 const auto owner = static_cast<uint32_t>(e.v[1] >> 32);
                 const auto parent_ctl = static_cast<uint32_t>(e.v[3]);
                 log::info("DockedGimmicks #{} server created 0x{:08X} (type {}) inside the docking spawn for 0x{:08X} "
-                          "{}: controller written 0x{:08X} (field owner [r13+0x180] 0x{:08X}{}) | the character's "
+                          "{}: controller written 0x{:08X} (field owner [rdi+0x158] 0x{:08X}{}) | the character's "
                           "controller 0x{:08X}{}",
                           seq, static_cast<uint32_t>(e.v[0]), e.v[0] >> 32, static_cast<uint32_t>(e.v[2]),
                           p8_when(e.qpc_us), eax, owner, eax == owner ? ", the field owner" : ", NOT the field owner",
@@ -799,7 +799,7 @@ void log_event(const p8p::Event& e, State& st, uint64_t& lines, uint64_t& not_lo
                 const auto it = st.docked_parent.find(key);
                 log::info("DockedGimmicks #{} server REJECTED {} {}: gimmick 0x{:08X}{} controller 0x{:08X}, requester "
                           "user 0x{:08X} | event {} (first rejection for this gimmick)",
-                          seq, e.v[2] ? "2758 Update (0x2DBE130)" : "3082 ExecuteFrameEvent (0x2DBEBA0)",
+                          seq, e.v[2] ? "2758 Update (0x2EFBE70)" : "3082 ExecuteFrameEvent (0x2EFC980)",
                           p8_when(e.qpc_us), key,
                           it != st.docked_parent.end() ? std::format(" (docked to 0x{:08X})", it->second) : std::string(),
                           static_cast<uint32_t>(e.v[0] >> 32), static_cast<uint32_t>(e.v[1]),
@@ -1075,7 +1075,7 @@ void log_summary(State& st, uint64_t not_logged) {
             }
             hashes += std::format("{}{} x{}", hashes.empty() ? "" : ", ", hash_text(h), n);
         }
-        client += std::format("{}{}: {} gimmicks, 0xA00E40 {} ({} refused), 0xA01370 {} ({} refused){}",
+        client += std::format("{}{}: {} gimmicks, 0xA3D5D0 {} ({} refused), 0xA3DB00 {} ({} refused){}",
                               client.empty() ? "" : "; ", dgl::class_name(static_cast<dgl::Class>(c)), a.keys,
                               a.calls[0], a.refused[0], a.calls[1], a.refused[1],
                               hashes.empty() ? std::string() : " | refused last events: " + hashes);
@@ -1165,7 +1165,7 @@ void log_summary(State& st, uint64_t not_logged) {
                   named_total[0], named[0].empty() ? std::string("none") : named[0], g_user2_host_at1[0].load(),
                   named_total[1], named[1].empty() ? std::string("none") : named[1], g_user2_host_at1[1].load());
         log::info("DockedGimmicks summary, server (hooks {}, probe at the receive {}){}: creations inside a docking "
-                  "spawn {}, docking spawns 0x2B734B0 {} (for players {}) / 0x2B741D0 {} (for players {}), field owner "
+                  "spawn {}, docking spawns 0x2CA1B00 {} (for players {}) / 0x2CA2860 {} (for players {}), field owner "
                   "0x{:08X} | 3082 accepted/rejected: field owner's client {}/{}, other {}/{} | 2758: field owner's "
                   "{}/{}, other {}/{} | untracked {} | 2221: {} (keys past 16 not measured {}) | keyed requests seen "
                   "{} (table {} used, full {})",
@@ -1610,7 +1610,7 @@ void docked_gimmicks_start(const std::string& raw, bool guest) {
         g_server_probe.store(true);     // the 2221 / keyed requests at the server's receive
     }
     log::info("DockedGimmicks ON ({}, docked_gimmicks={}): {}. Probe hooks (log only) once the world is up: the client's "
-              "gimmick requests 0xA00E40 / 0xA01370{}. Server authority (phase 2) is NOT in this build "
+              "gimmick requests 0xA3D5D0 / 0xA3DB00{}. Server authority (phase 2) is NOT in this build "
               "(docs/research/s25/gimmicks-dueno.md section 6)",
               guest ? "guest" : "host", dgl::mode_name(pm.mode),
               guest ? (pm.mode == dgl::Mode::On
@@ -1622,8 +1622,8 @@ void docked_gimmicks_start(const std::string& raw, bool guest) {
                     : "the host's client is never changed (its own character's docked gimmicks are already its own; "
                       "user 2's are never taken); its 2005s are classified from the sniffer's capture (needs [sniffer] "
                       "enabled=1)",
-              guest ? "" : "; server: the docking spawns 0x2B734B0 / 0x2B741D0, the controller write 0x2A31BBB, "
-                           "0x2DBEBA0 / 0x2DBE130 accepted or rejected, the 2221 unspawns at the server's receive");
+              guest ? "" : "; server: the docking spawns 0x2CA1B00 / 0x2CA2860, the controller write 0x2B593B0, "
+                           "0x2EFC980 / 0x2EFBE70 accepted or rejected, the 2221 unspawns at the server's receive");
 }
 
 }  // namespace cdmp::session2

@@ -57,7 +57,7 @@ int main() {
     CHECK(copy[0] == host[0] && copy[1] == host[1] && copy[3] == host[3] && copy[4] == host[4]);
 
     // Not ours: another opcode, a wrong length, a broken entry size, a key that is no player character's.
-    CHECK(lss::character_of(packet(2668, 0xA0100001, {{1, 2}})) == 0);
+    CHECK(lss::character_of(packet(3099, 0xA0100001, {{1, 2}})) == 0);
     CHECK(lss::character_of(packet(lss::kOpChangeGameLevelStateAck, 0xA0100001, {{1, 2}}, 1)) == 0);
     auto odd = host;
     odd.push_back(0);

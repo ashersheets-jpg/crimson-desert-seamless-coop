@@ -86,7 +86,7 @@ enum Kind : uint16_t { kEA, kEF, kEN, kER, kKindCount };
 p::EventRing<256> g_ring;
 p::WindowLimiter g_lim[kKindCount] = {{24, 5'000'000}, {24, 5'000'000}, {40, 5'000'000}, {40, 5'000'000}};
 // Nodes (research): the StageChart interaction node's ADD / REMOVE on this client (interaction_share's 3732 sites).
-constexpr uintptr_t kNodeAdd = 0x25D218C, kNodeRemove = 0x25D2368;
+constexpr uintptr_t kNodeAdd = 0x26B8387, kNodeRemove = 0x26B856D;
 SafetyHookMid g_node_add_hook, g_node_rem_hook;
 std::atomic<bool> g_nodes_on{false};
 std::atomic<uintptr_t> g_last_m{0};
@@ -306,7 +306,7 @@ struct CallerSeen {
 CallerSeen g_lookup_callers[16];
 std::atomic<uint64_t> g_lookup_m_x{0}, g_lookup_x{0};
 SafetyHookMid g_lookup_hook;
-constexpr uintptr_t kLookupAt = 0x21C7370;
+constexpr uintptr_t kLookupAt = 0x2282AE0;
 void on_lookup(safetyhook::Context& ctx) noexcept {
     const uintptr_t mgr = ctx.rcx;
     const uint32_t id = static_cast<uint32_t>(ctx.r8 & 0x1FFFFFFFull);
@@ -382,7 +382,7 @@ void eval_note(uintptr_t entry, uintptr_t ev, uint32_t id) noexcept {
         }
     }
 }
-// The host's side of the probe: every call of the check reaching 0x2360A4D on the host's client.
+// The host's side of the probe: every call of the check reaching 0x2433D98 (3732: 0x2360A4D) on the host's client.
 SafetyHookMid g_host_eval_hook;
 void on_host_eval(safetyhook::Context& ctx) noexcept {
     g_eval_calls.fetch_add(1, std::memory_order_relaxed);
@@ -398,7 +398,8 @@ void on_host_eval(safetyhook::Context& ctx) noexcept {
     if (id & 0x1FFFFFFFull) entry_note(ctx.r13);
 }
 // gx8 (research, both roles): the player's interaction requests (pa::ClientInteractionActorComponent, vtable
-// exe+0x59CF548): +0x180 0xAF1530 (2976's 2671 sender) and +0x188 0xAF0D60 (a thunk to the do-step sender). 24 calls
+// exe+0x5B5DA88; 3732 exe+0x59CF548): +0x180 0xB394B0 (3732 0xAF1530; 2976's 2671 sender) and +0x188 0xB38CA0
+// (3732 0xAF0D60; a thunk to the do-step sender). 24 calls
 // kept: the component's actor key, r8 (the target) and its key, r9 (the index in its low 16 bits), the return address
 // and the exe addresses on the stack above (a scan: stale values too).
 struct ReqSeen {
@@ -413,9 +414,9 @@ ReqSeen g_req[24];
 std::atomic<uint32_t> g_req_n{0};
 std::atomic<uint64_t> g_req_calls[2]{};
 SafetyHookMid g_req_hook[2];
-constexpr uintptr_t kReqAt[2] = {0xAF1530, 0xAF0D60};
+constexpr uintptr_t kReqAt[2] = {0xB394B0, 0xB38CA0};             // the vtable's +0x180 / +0x188 (3840)
 constexpr uint8_t kReqBytes0[5] = {0x48, 0x89, 0x5C, 0x24, 0x10};  // mov [rsp+0x10],rbx
-constexpr uint8_t kReqBytes1[5] = {0xE9, 0x7B, 0x83, 0xBE, 0x08};  // jmp exe+0x96D90E0
+constexpr uint8_t kReqBytes1[5] = {0xE9, 0x0B, 0x90, 0xD7, 0x08};  // jmp exe+0x98B1CB0 (3732: E9 7B 83 BE 08)
 std::atomic<uint64_t> g_req_other{0};  // calls for a component whose actor is not a player character
 template <int W>
 void on_req(safetyhook::Context& ctx) noexcept {
@@ -450,9 +451,9 @@ void on_req(safetyhook::Context& ctx) noexcept {
 }
 void req_install(const std::vector<gad::Section>& secs) {
     const bool a = p8_install_mid(g_base, secs, kReqAt[0], 5, kReqBytes0, &on_req<0>, g_req_hook[0], "GuestXInter",
-                                  "the request sender +0x180 0xAF1530 (research)");
+                                  "the request sender +0x180 0xB394B0 (research)");
     const bool b = p8_install_mid(g_base, secs, kReqAt[1], 5, kReqBytes1, &on_req<1>, g_req_hook[1], "GuestXInter",
-                                  "the do-step thunk +0x188 0xAF0D60 (research)");
+                                  "the do-step thunk +0x188 0xB38CA0 (research)");
     log::info("GuestXInter: the player's request senders {} / {} (3732 research, read only)", a ? "hooked" : "NOT hooked",
               b ? "hooked" : "NOT hooked");
 }
@@ -519,14 +520,14 @@ DWORD WINAPI eval_log_thread(LPVOID) {
             }
             if (h == last) continue;
             last = h;
-            log::info("GuestXInter evaluators (3732 research): calls at 0x2360A4D {} | without an evaluator {}{}",
+            log::info("GuestXInter evaluators (3732 research): calls at 0x2433D98 {} | without an evaluator {}{}",
                       g_eval_calls.load(), g_eval_none.load(), list);
         } catch (...) {
         }
     }
 }
 
-// V 0x2360A4D (mov r10,[r13+8] ; test r10,r10): the entry's evaluator. A call A redirected whose entry has none is
+// V 0x2433D98 (3732: 0x2360A4D; mov r10,[r13+8] ; test r10,r10): the entry's evaluator. A call A redirected whose entry has none is
 // accepted: BL = 1, on to the tail every result takes (mode 1); probe counts it.
 void on_v(safetyhook::Context& ctx) noexcept {
     if (!g_v_on.load(std::memory_order_acquire)) return;
@@ -606,10 +607,11 @@ template <bool Add>
 void on_node(safetyhook::Context& ctx) noexcept {
     if (!g_nodes_on.load(std::memory_order_acquire)) return;
     const uintptr_t ic = ctx.rcx;
-    const uintptr_t scene = rdp(rdp(ctx.rbp + 0x858));
+    // 3840: the node function's home slots are 0x10 lower (ctx +0x848, node +0x840; 3732 +0x858 / +0x850).
+    const uintptr_t scene = rdp(rdp(ctx.rbp + 0x848));
     const uint64_t id = scene ? rdv<uint64_t>(scene + 0x30) : 0;
     const uintptr_t mgr = scene ? rdp(scene + 0x28) : 0;
-    const uint16_t idx = Add ? static_cast<uint16_t>(ctx.r8 & 0xFFFF) : rdv<uint16_t>(rdp(ctx.rbp + 0x850) + 0x38);
+    const uint16_t idx = Add ? static_cast<uint16_t>(ctx.r8 & 0xFFFF) : rdv<uint16_t>(rdp(ctx.rbp + 0x840) + 0x38);
     uintptr_t xs[kMaxX] = {};
     uint32_t keys[kMaxX] = {};
     const size_t nx = g_x.snapshot(xs, keys, kMaxX);
@@ -633,7 +635,7 @@ void on_node(safetyhook::Context& ctx) noexcept {
     e.v[2] = id;
     e.v[3] = mgr;
     e.v[4] = from;
-    e.v[5] = ic ? rdv<uint32_t>(ic + 0x98) : 0;
+    e.v[5] = ic ? rdv<uint32_t>(ic + 0x88) : 0;  // 3840 (3732: +0x98)
     emit(Add ? kEN : kER, e);
 }
 // Every 5 s (the diagnostics thread): the dynamic lists of the components the nodes touched, when they changed.
@@ -642,8 +644,8 @@ void dump_components() {
     for (int k = 0; k < 8; ++k) {
         const uintptr_t ic = g_ic_seen[k].load(std::memory_order_relaxed);
         if (!ic) continue;
-        const uintptr_t arr = rdp(ic + 0x90);
-        const uint32_t n = rdv<uint32_t>(ic + 0x98);
+        const uintptr_t arr = rdp(ic + 0x80);           // 3840 (3732: +0x90)
+        const uint32_t n = rdv<uint32_t>(ic + 0x88);    // 3840 (3732: +0x98)
         std::string list;
         uint64_t h = 0x100000001B3ull ^ n;
         for (uint32_t i = 0; arr && i < n && i < 16; ++i) {
@@ -789,15 +791,15 @@ void summary() {
     if (g_early_on.load())
         log::info("GuestXInter early (3732 research, every call of the prompt check): entered {} (the joined player's own "
                   "J 0xA0100066: {}; no stage id: {}; last id 0x{:X}, last J key 0x{:08X}) | past the stage-id / user "
-                  "returns {} | past [rbp-0x80] (0x2299FB0) {} | past [rsp+0x50] (0x19A14B0) {} | at A {}",
+                  "returns {} | past [rbp-0x80] (0x2363640) {} | past [rsp+0x50] (0x1A36450) {} | at A {}",
                   g_early_seen[0].load(), g_early_own.load(), g_early_no_id.load(), g_early_last_id.load(),
                   g_early_last_key.load(), g_early_seen[1].load(), g_early_seen[2].load(), g_early_seen[3].load(),
                   g_calls.load());
     if (g_gates_on.load())
         log::info("GuestXInter gates (3732 research): reached P0 {} (instance +0x168 not 0: {}, last {}) P1 {} (cond id "
                   "-1: {}, last 0x{:X}) P2 {} P3 {} P4 {} | refused with no gate reached {}, after P0 {} (the instance's "
-                  "+0x168, or its dead check 0x21CABF0 in X), after P1 {} (the player's condition 0x25B7F30), after P2 {} (the condition list), "
-                  "after P3 {} (0x1C9FBB0), after P4 {} (later)",
+                  "+0x168, or its dead check 0x2286490 in X), after P1 {} (the player's condition 0x269CCE0), after P2 {} (the condition list), "
+                  "after P3 {} (0x1D45B80), after P4 {} (later)",
                   g_gate_seen[0].load(), g_busy_nonzero.load(), g_busy_last.load(), g_gate_seen[1].load(),
                   g_cond_minus1.load(), g_cond_last.load(), g_gate_seen[2].load(), g_gate_seen[3].load(),
                   g_gate_seen[4].load(), g_refused_after[0].load(), g_refused_after[1].load(), g_refused_after[2].load(),
@@ -850,9 +852,9 @@ DWORD WINAPI install_thread(LPVOID) {
         // V only for research or guest_x_eval_fix (2026-11-21: the joined player's shop works through ShopTwin's own
         // entries, which an accepted host entry would hide; release builds leave the game's refusal untouched).
         if ((g_research.load() || g_v_fix.load()) &&
-            context_ok(secs, isl::kTailAt, isl::kTailBytes, "the result's tail 0x2360B7C") &&
+            context_ok(secs, isl::kTailAt, isl::kTailBytes, "the result's tail 0x2433ECC") &&
             p8_install_mid(g_base, secs, isl::kEvalAt, isl::kEvalPatch, isl::kEvalBytes, on_v, g_v_hook, "GuestXInter",
-                           "V, the entry's evaluator test 0x2360A4D")) {
+                           "V, the entry's evaluator test 0x2433D98")) {
             g_v_on.store(true, std::memory_order_release);
         }
         log::info("GuestXInter: the evaluator test {} (a redirected entry without an evaluator is {})",
@@ -863,7 +865,7 @@ DWORD WINAPI install_thread(LPVOID) {
         if (g_research.load()) {
             static const uint8_t kLookupBytes[8] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x4C, 0x89, 0x44};
             p8_install_mid(g_base, secs, kLookupAt, 5, kLookupBytes, on_lookup, g_lookup_hook, "GuestXInter",
-                           "the stage lookup's entry 0x21C7370 (research)");
+                           "the stage lookup's entry 0x2282AE0 (research)");
             req_install(secs);
             CloseHandle(CreateThread(nullptr, 0, eval_log_thread, nullptr, 0, nullptr));
         }
@@ -890,7 +892,7 @@ DWORD WINAPI install_thread(LPVOID) {
             else for (SafetyHookMid& h : g_early_hook) h = {};
             log::info("GuestXInter: the early counters {} (3732 research, read only)",
                       ein == 4 ? "hooked" : "NOT all hooked: off");
-            static const uint8_t kAddBytes[5] = {0xE8, 0xAF, 0xBE, 0xD8, 0xFF}, kRemBytes[5] = {0xE8, 0xA3, 0xC0, 0xD8, 0xFF};
+            static const uint8_t kAddBytes[5] = {0xE8, 0xE4, 0x8F, 0xD7, 0xFF}, kRemBytes[5] = {0xE8, 0x4E, 0x92, 0xD7, 0xFF};
             const bool na = p8_install_mid(g_base, secs, kNodeAdd, 5, kAddBytes, &on_node<true>, g_node_add_hook,
                                            "GuestXInter", "the node's ADD call");
             const bool nr = p8_install_mid(g_base, secs, kNodeRemove, 5, kRemBytes, &on_node<false>, g_node_rem_hook,
@@ -930,7 +932,7 @@ void guest_x_interaction_host_probe_start() {
         return;
     }
     const bool ok = p8_install_mid(g_base, secs, isl::kEvalAt, isl::kEvalPatch, isl::kEvalBytes, on_host_eval,
-                                   g_host_eval_hook, "GuestXInter", "the host's evaluator probe 0x2360A4D");
+                                   g_host_eval_hook, "GuestXInter", "the host's evaluator probe 0x2433D98");
     req_install(secs);
     CloseHandle(CreateThread(nullptr, 0, eval_log_thread, nullptr, 0, nullptr));
     log::info("GuestXInter host probe (3732 research, read only): the evaluators of the host's own entries {}",

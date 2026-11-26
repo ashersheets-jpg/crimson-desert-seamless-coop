@@ -212,17 +212,17 @@ MoveDiag read_move_diag(uintptr_t user);
 
 // The opcodes the tracker follows (troc_messages_2976.csv).
 namespace mv {
-inline constexpr uint16_t kLoginCharacterReq = 3081;      // LoginCharacterToFieldServerReq
-inline constexpr uint16_t kGameLoadingStartReq = 2350;
-inline constexpr uint16_t kMoveFieldCompleteReq = 2723;
-inline constexpr uint16_t kLoadingCompleteReq = 2789;
-inline constexpr uint16_t kMoveFieldAck = 2364;
-inline constexpr uint16_t kMoveFieldCompleteAck = 2268;
-inline constexpr uint16_t kLoadingCompleteAck = 2891;
+inline constexpr uint16_t kLoginCharacterReq = 2894;      // LoginCharacterToFieldServerReq
+inline constexpr uint16_t kGameLoadingStartReq = 2804;
+inline constexpr uint16_t kMoveFieldCompleteReq = 2156;
+inline constexpr uint16_t kLoadingCompleteReq = 2777;
+inline constexpr uint16_t kMoveFieldAck = 2524;
+inline constexpr uint16_t kMoveFieldCompleteAck = 2682;
+inline constexpr uint16_t kLoadingCompleteAck = 2381;
 // Co-op+ (3732): a revive's load request (travel_probe_logic.h kOpReviveLoadingReq) and the server's answer to a load in
 // the same field (kOpLoadingFieldDataAck): the tracker ends a revive's reload there (MovePhaseTracker below).
-inline constexpr uint16_t kReviveLoadingReq = 2887;
-inline constexpr uint16_t kLoadingFieldDataAck = 2286;
+inline constexpr uint16_t kReviveLoadingReq = 2672;
+inline constexpr uint16_t kLoadingFieldDataAck = 3154;
 }  // namespace mv
 
 // The phase of user 2's login/move, from what crosses the tunnel only: the

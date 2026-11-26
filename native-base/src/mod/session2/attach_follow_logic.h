@@ -47,10 +47,10 @@ using u2f::parse_mode;
 
 // ---------------------------------------------------------------- formats (mirror-ack-formats.md §1, §2)
 
-inline constexpr uint16_t kOpMoveActorReq = 2790;
-inline constexpr uint16_t kOpMoveActorAck = 3008;
-inline constexpr uint16_t kOpStartActionReq = 2431;
-inline constexpr uint16_t kOpStartActionAck = 2800;
+inline constexpr uint16_t kOpMoveActorReq = 2561;
+inline constexpr uint16_t kOpMoveActorAck = 2890;
+inline constexpr uint16_t kOpStartActionReq = 2221;
+inline constexpr uint16_t kOpStartActionAck = 2408;
 inline constexpr size_t kMoveReqSize = 518;  // 2976: 514
 inline constexpr size_t kMoveAckSize = 239;  // 2976: 235
 inline constexpr size_t kActionSize = 729;  // Req and Ack; 2976: 725

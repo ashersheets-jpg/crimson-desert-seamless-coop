@@ -1284,7 +1284,7 @@ struct SeatState {
 // client in-game actor's; any other slot (or an unread local user) counts as local, so the seat is refused.
 // 2026-11-22 (the 3732 port audit, item 4): 3732's (vf178_3732.py on the archived exe: the same two bodies; the
 // guest's self-test read exe+0x5DF500 on its own character). 2976: 0x4FE260 / 0x8A67D0.
-inline constexpr uint32_t kVf178Actor = 0x5DF500, kVf178User = 0x9BEEB0;
+inline constexpr uint32_t kVf178Actor = 0x613250, kVf178User = 0x9FE740;
 inline bool seat_local_user(const SeatState& s) {
     if (s.vf178 == kVf178Actor) {
         return s.local_user == 0 || s.rider_user == 0 || (s.rider_user == s.local_user && s.rider_local != 0);
@@ -1516,7 +1516,7 @@ private:
 // Its output: float pos[3] at +0x0 (in-sector), int16 sector x / z at +0xC / +0xE (0x88E82A / 0x88E82E). Its own
 // current pose comes from 0x4F8220 on TS = [[actor+0x68]+0x1A0], whose fast path copies exactly TS+0xB4..+0xC3 (pos
 // 12 bytes, sector u16 x at +0xC0, z at +0xC2). The actor of mc is [[mc+0x60]+8].
-inline constexpr uint32_t kMcEmptyFlag = 0x430;  // 3549 (2976 0x3D0): UpdateInterpolation 0x976320 cmp byte [rcx+0x430],1
+inline constexpr uint32_t kMcEmptyFlag = 0x480;  /* 3840: UpdateInterpolation 0x9E4930 lea rbx,[rcx+0x480]; cmp byte [rbx],1 (3732: 0x430) */  // 3549 (2976 0x3D0): UpdateInterpolation 0x976320 cmp byte [rcx+0x430],1
 enum class HoldWho : uint8_t { None, Remote, Other };
 // Whose early return this is: the tracked remote player (never the local one), another 0xA actor, or nobody to count.
 inline HoldWho hold_who(bool early, uint32_t key, uint32_t remote, uint32_t local) {
@@ -1546,7 +1546,7 @@ inline HoldAct hold_decide(Mode m, HoldWho who, bool pose_read, const float pos[
 
 // A StartActionReq 2223 (u16 opcode | i8 slot | u16 len | u32 actor ...) this client sends for the remote rider (1) or
 // its horse (2); 0 = anything else. An observer must never request actions of the other player's pair (S18 §11.4).
-inline constexpr uint16_t kOpStartActionReq = 2431;
+inline constexpr uint16_t kOpStartActionReq = 2221;
 inline uint8_t self_check_hit(const uint8_t* packet, size_t size, uint32_t rider, uint32_t horse) {
     if (!packet || size < kHeader + 4 || (packet[0] | (packet[1] << 8)) != kOpStartActionReq) return 0;
     const uint32_t key = get32(packet + kHeader);

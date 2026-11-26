@@ -49,7 +49,7 @@ constexpr size_t kStartActionTs = 0x15F;
 constexpr size_t kRotateTs = 0x9C;
 
 // Co-op+ 2026-11-23 (T41 race): our own map waypoint (cdmp_own_waypoint at the end of the file).
-constexpr uint16_t kOpSelfDestinationReq = 2285;  // CreateOrChangeSelfDestinationReq: vec3 | u8 flag
+constexpr uint16_t kOpSelfDestinationReq = 2126;  // CreateOrChangeSelfDestinationReq: vec3 | u8 flag
 std::mutex g_wp_mutex;
 float g_wp[3]{};
 uint8_t g_wp_set = 0;
@@ -98,9 +98,9 @@ std::map<uint32_t, ActorSeen> g_actors;
 std::atomic<uint32_t> g_last_attack_hash{0};
 std::atomic<uint32_t> g_last_attack_target{0};
 std::set<uint32_t> g_has_hp;  // under g_actors_mutex
-constexpr uint16_t kOpVaryHPAck = 2608;
-constexpr uint16_t kOpNotifyHandleDeadAck = 2316;
-constexpr uint16_t kOpVaryStatByAccInputReq = 2284;
+constexpr uint16_t kOpVaryHPAck = 2202;
+constexpr uint16_t kOpNotifyHandleDeadAck = 3073;
+constexpr uint16_t kOpVaryStatByAccInputReq = 2971;
 constexpr uint32_t kStatHP = 0x000F4240;
 
 // World actors with hit points, from their loads and HP messages.
@@ -116,7 +116,7 @@ std::map<uint32_t, Enemy> g_enemies;  // under g_actors_mutex
 std::atomic<bool> g_damage_enabled{true};
 std::atomic<bool> g_key_alarm{false};
 uint64_t g_damage_sent = 0, g_damage_applied = 0, g_damage_unmatched = 0;
-constexpr uint16_t kOpAttackTargetAck = 2519;  // PostProcessAttackResult_AttackTargetAck
+constexpr uint16_t kOpAttackTargetAck = 2437;  // PostProcessAttackResult_AttackTargetAck
 
 // ---------------------------------------------------------------- writer-thread state
 game::PlayerReader g_reader;

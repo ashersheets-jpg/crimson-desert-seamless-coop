@@ -23,19 +23,19 @@
 
 namespace cdmp::session2::tpl {
 
-inline constexpr uint16_t kOpReloadStageStartReq = 3018;
-inline constexpr uint16_t kOpGameLoadingStartReq = 2350;
-inline constexpr uint16_t kOpMoveFieldAck = 2364;
-inline constexpr uint16_t kOpLoadingFieldDataAck = 2286;
-inline constexpr uint16_t kOpMoveFieldCompletePostAck = 2792;
-inline constexpr uint16_t kOpMoveFieldCompleteAck = 2268;
-inline constexpr uint16_t kOpPlayAllPreLoadSequencerAck = 2941;
-inline constexpr uint16_t kOpLoadingCompleteAck = 2891;
-inline constexpr uint16_t kOpLogoutCharacterAck = 3116;
+inline constexpr uint16_t kOpReloadStageStartReq = 2235;
+inline constexpr uint16_t kOpGameLoadingStartReq = 2804;
+inline constexpr uint16_t kOpMoveFieldAck = 2524;
+inline constexpr uint16_t kOpLoadingFieldDataAck = 3154;
+inline constexpr uint16_t kOpMoveFieldCompletePostAck = 2549;
+inline constexpr uint16_t kOpMoveFieldCompleteAck = 2682;
+inline constexpr uint16_t kOpPlayAllPreLoadSequencerAck = 2456;
+inline constexpr uint16_t kOpLoadingCompleteAck = 2381;
+inline constexpr uint16_t kOpLogoutCharacterAck = 2453;
 inline constexpr uint16_t kOpNak = 1013;
 // P8 S27 (docs/research/s25/reaparicion.md): the revive's load request; its handler 0x298C490 -> .xtls 0x1048FFC0
 // -> 0x2947E00 arms the reviving actor's own TS (+0x569: the 2437 is then answered by 0x2BCA3D0, as after a 2283).
-inline constexpr uint16_t kOpReviveLoadingReq = 2887;
+inline constexpr uint16_t kOpReviveLoadingReq = 2672;
 
 inline constexpr size_t kOwnerAt = 9;           // u32 owner, both 2174 and 2643 (payload offset, no Troc header)
 inline constexpr size_t kMoveFieldHead = 17;    // 2174: 17 + 48n
@@ -321,9 +321,9 @@ struct ReplyCounts {
 // StageBranchStateAck 2981 + ~21 PrepareSequencerAck 2661 (+149..+430 ms) and a 2322 (+460 ms) without having sent a
 // 2873 itself. The host client's packets (the sniffer) are counted for kHostBurstUs after user 2's 2873; a 2873 the
 // host's own client sent from kHostOwnBeforeUs before it makes the burst ambiguous (its own reload).
-inline constexpr uint16_t kOpPreLoadSequencerReq = 2372;
-inline constexpr uint16_t kOpPrepareSequencerAck = 2356;
-inline constexpr uint16_t kOpStageBranchStateAck = 2752;
+inline constexpr uint16_t kOpPreLoadSequencerReq = 2223;
+inline constexpr uint16_t kOpPrepareSequencerAck = 2362;
+inline constexpr uint16_t kOpStageBranchStateAck = 2455;
 inline constexpr uint64_t kHostBurstUs = 3'000'000;
 inline constexpr uint64_t kHostOwnBeforeUs = 1'000'000;
 

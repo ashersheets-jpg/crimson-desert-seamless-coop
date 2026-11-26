@@ -73,12 +73,12 @@ struct BagSnap {
 bool snap_bag(uintptr_t picker, BagSnap& b) noexcept {
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     __try {
-        const uintptr_t slot = *reinterpret_cast<uintptr_t*>(base + 0x724B6E8);
+        const uintptr_t slot = *reinterpret_cast<uintptr_t*>(base + 0x73F10E8);
         const uintptr_t root = *reinterpret_cast<uintptr_t*>(slot);
         const uintptr_t info = *reinterpret_cast<uintptr_t*>(root + 8);
         const uintptr_t mgr = *reinterpret_cast<uintptr_t*>(info + 0x220);  // 3663 (3576 +0x240)
-        const uint16_t bag = *reinterpret_cast<uint16_t*>(mgr + 0x7A);  // 3663 (3576 +0xA2)
-        const uintptr_t holder = reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t)>(base + 0x23643B0)(picker);
+        const uint16_t bag = *reinterpret_cast<uint16_t*>(mgr + 0x72);  // 3840 (3732 +0x7A, 3576 +0xA2)
+        const uintptr_t holder = reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t)>(base + 0x2437980)(picker);
         if (!holder) return false;
         const uintptr_t list = *reinterpret_cast<uintptr_t*>(holder + 0x18);
         const uint32_t cnt = *reinterpret_cast<uint32_t*>(holder + 0x20);
@@ -99,12 +99,13 @@ bool snap_bag(uintptr_t picker, BagSnap& b) noexcept {
     }
     return false;
 }
-// The item row (exe+0x3DD8A0): its key at +8 (tcB326: idx 0x50D -> key 0x0B8D0E).
+// The item row (3840: getter exe+0x3EA540, table exe+0x73F21D8; 3732: exe+0x3DB320): its key at +0 (3732: +8; tcB326:
+// idx 0x50D -> key 0x0B8D0E).
 uint32_t item_key_of(uint16_t idx) noexcept {
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     __try {
-        const uintptr_t row = game::info_row(base + 0x3DB320, idx);
-        return row ? *reinterpret_cast<uint32_t*>(row + 8) : 0;
+        const uintptr_t row = game::info_row(base + 0x3EA540, base + 0x73F21D8, idx);
+        return row ? *reinterpret_cast<uint32_t*>(row) : 0;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return 0;
     }
@@ -190,7 +191,7 @@ struct Seen {
     // in the level, 0x16 = a player dropped it from the inventory, 0x15 = thrown out by a gimmick's Drop event,
     // 0x1A / 0x1B from a dead body, 0x2A never set. 0xFF = unreadable.
     uint8_t reason = 0xFF;
-    uint32_t spawner = 0;  // u32 comp+0x288: who spawned it (0 for level gimmicks)
+    uint32_t spawner = 0;  // u32 comp+0x290 (3732: +0x288): who spawned it (0 for level gimmicks)
 };
 int drop_handler(uintptr_t base, uintptr_t b, uint8_t& mode) noexcept;
 void read_pickup(Seen& s, uintptr_t comp, uintptr_t picker) noexcept {
@@ -198,11 +199,11 @@ void read_pickup(Seen& s, uintptr_t comp, uintptr_t picker) noexcept {
         {
             const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
             s.row = *reinterpret_cast<uint16_t*>(comp + 0x48);
-            s.state = *reinterpret_cast<uint32_t*>(comp + 0x270);
+            s.state = *reinterpret_cast<uint32_t*>(comp + 0x278);  // 3840 (3732: +0x270)
             uint8_t mode = 0xFF;
             s.has_drop = drop_handler(base, *reinterpret_cast<uintptr_t*>(comp + 0x40), mode);
-            const uintptr_t row = game::info_row(base + 0x3DB080, s.row);
-            const uintptr_t h = row ? *reinterpret_cast<uintptr_t*>(row + 8) : 0;
+            // 3840: the gimmick row's name object is in its table entry (3732: *(row + 8) of exe+0x3DB080's row).
+            const uintptr_t h = game::info_name(base + 0x73F2200, s.row);
             const char* text = h ? *reinterpret_cast<const char**>(h) : nullptr;
             for (size_t c = 0; text && c + 1 < sizeof s.name && text[c]; ++c) s.name[c] = text[c];
         }
@@ -214,7 +215,7 @@ void read_pickup(Seen& s, uintptr_t comp, uintptr_t picker) noexcept {
             const uintptr_t status = comps ? *reinterpret_cast<uintptr_t*>(comps + 0x20) : 0;
             if (status) s.reason = *reinterpret_cast<uint8_t*>(status + 0x2F0);
         }
-        s.spawner = *reinterpret_cast<uint32_t*>(comp + 0x288);
+        s.spawner = *reinterpret_cast<uint32_t*>(comp + 0x290);  // 3840 (3732: +0x288)
         const uintptr_t rec = *reinterpret_cast<uintptr_t*>(comp + 0xC0);
         if (rec) {
             s.idx = *reinterpret_cast<uint16_t*>(rec + 8);
@@ -321,9 +322,11 @@ std::atomic<uint64_t> c_body_first{0}, c_body_second{0}, c_body_refused{0}, c_bo
 thread_local bool t_keep_body = false;
 safetyhook::MidHook g_keep_body_hook;
 alignas(16) uint8_t g_zero_row[0x40] = {};
-void on_keep_body(safetyhook::Context& ctx) {  // exe+0x2E22885: rax = the character row, dil = a
+// 3840 exe+0x2FD23BA: RCX = the character row (the getter's result after its NULL -> default cmov), dil = a; the game
+// then tests byte [rcx+0x16] (3732 exe+0x2E8E723: rax and [rax+0x1A]).
+void on_keep_body(safetyhook::Context& ctx) {
     if (!t_keep_body) return;
-    ctx.rax = reinterpret_cast<uintptr_t>(g_zero_row);  // row+0x1A reads 0: the game's own "not removed" branch
+    ctx.rcx = reinterpret_cast<uintptr_t>(g_zero_row);  // row+0x16 reads 0: the game's own "not removed" branch
     ctx.rdi &= ~static_cast<uintptr_t>(0xFF);
 }
 void body_keep_host(uint32_t body, bool on) noexcept {
@@ -342,14 +345,14 @@ bool body_trim(uintptr_t comp, uint32_t n, uint32_t s, uint32_t* removed) noexce
     __try {
         uint32_t count = *reinterpret_cast<uint32_t*>(comp + 0x60);
         while (count > n && count < 4096) {
-            reinterpret_cast<void (__fastcall*)(uintptr_t, uint32_t)>(base + 0x23823B0)(comp + 0x58, count - 1);
+            reinterpret_cast<void (__fastcall*)(uintptr_t, uint32_t)>(base + 0x2458B50)(comp + 0x58, count - 1);
             const uint32_t now = *reinterpret_cast<uint32_t*>(comp + 0x60);
             if (now >= count) break;  // nothing went: stop
             count = now;
             ++*removed;
         }
         if (*reinterpret_cast<uint32_t*>(comp + 0x50) > s) *reinterpret_cast<uint32_t*>(comp + 0x50) = s;
-        reinterpret_cast<void (__fastcall*)(uintptr_t)>(base + 0x2E91F20)(comp);
+        reinterpret_cast<void (__fastcall*)(uintptr_t)>(base + 0x2FD5E30)(comp);
         return true;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return false;
@@ -402,7 +405,7 @@ int* body_loot_per_player(uintptr_t comp, int* err, uintptr_t looter, uint8_t a,
     *handled = true;
     if (role == 3) {
         int none = 0;
-        game::fast_read(base + 0x71D6EC4, &none, sizeof none);  // "nothing to loot"
+        game::fast_read(base + 0x737C100, &none, sizeof none);  // "nothing to loot"
         *err = none ? none : 1;
         c_body_refused.fetch_add(1);
         return err;
@@ -664,7 +667,8 @@ uint32_t* __fastcall drop_detour(uintptr_t comp, uint32_t* err, uintptr_t field,
 // (sam = [[exe+0x71C0608]], u32 count +0x9C, array +0xB0, entry -> actor at +8); a gimmick has type byte
 // [[actor+0x88]+1] == 7, its component [[actor+0x68]+0x30] holds the info index (u16 +0x48), the save key (+0x30) and
 // the state data B (+0x40) whose handler lists tell a Drop event (vtable exe+0x5D7CC28). Walk B: the field's sync
-// scene objects ([field+0x80]: u32 count +0x64, array +0x78, entry: key16 +8, data +0x18 with u32 +0x10C rolls left).
+// scene objects ([field+0x88] on 3840, 3732 +0x80: u32 count +0x64, array +0x78, entry: key16 +8, data +0x18 with u32
+// +0x10C rolls left).
 struct ChestFound {
     uint32_t key = 0;
     uint16_t idx = 0xFFFF;
@@ -703,7 +707,7 @@ bool actor_pos(uintptr_t base, uintptr_t actor, float& x, float& y, float& z) no
     const uintptr_t ts = comps ? *reinterpret_cast<uintptr_t*>(comps + 0x1A0) : 0;
     if (!ts) return false;
     alignas(16) uint8_t buf[0x80] = {};
-    reinterpret_cast<void* (__fastcall*)(uintptr_t, void*)>(base + 0x5D8880)(ts, buf);
+    reinterpret_cast<void* (__fastcall*)(uintptr_t, void*)>(base + 0x60C480)(ts, buf);
     const float* f = reinterpret_cast<const float*>(buf);
     x = f[0] + 1000.0f * static_cast<float>(*reinterpret_cast<int16_t*>(buf + 0xC));
     y = f[1];
@@ -713,7 +717,7 @@ bool actor_pos(uintptr_t base, uintptr_t actor, float& x, float& y, float& z) no
 // 0 = no Drop handler, 1 = has one (mode = its delivery byte).
 int drop_handler(uintptr_t base, uintptr_t b, uint8_t& mode) noexcept {
     if (!b) return 0;
-    const uintptr_t vt = base + 0x5DFE398;
+    const uintptr_t vt = base + 0x5F8F148;
     auto list = [&](uintptr_t p, uint32_t cnt) {
         if (!p || cnt > 64) return false;
         for (uint32_t j = 0; j < cnt; ++j) {
@@ -748,7 +752,7 @@ void chest_scan_read(ChestScan& s, uintptr_t base, uintptr_t host) noexcept {
     __try {
         if (!actor_pos(base, host, s.hx, s.hy, s.hz)) return;
         s.stage = 1;
-        const uintptr_t slot = *reinterpret_cast<uintptr_t*>(base + 0x724B860);
+        const uintptr_t slot = *reinterpret_cast<uintptr_t*>(base + 0x73F1260);
         const uintptr_t sam = slot ? *reinterpret_cast<uintptr_t*>(slot) : 0;
         if (!sam) return;
         const uint32_t n = *reinterpret_cast<uint32_t*>(sam + 0x9C);
@@ -775,7 +779,7 @@ void chest_scan_read(ChestScan& s, uintptr_t base, uintptr_t host) noexcept {
                 ChestFound g = f;
                 g.key = *reinterpret_cast<uint32_t*>(actor + 0x60);
                 g.idx = *reinterpret_cast<uint16_t*>(comp + 0x48);
-                g.left = *reinterpret_cast<uint32_t*>(comp + 0x270);
+                g.left = *reinterpret_cast<uint32_t*>(comp + 0x278);  // 3840 (3732: +0x270)
                 g.row_rolls = has_drop ? 1 : 0;
                 s.near_[s.near_n++] = g;
             }
@@ -802,9 +806,7 @@ void chest_scan_read(ChestScan& s, uintptr_t base, uintptr_t host) noexcept {
         }
         for (int k = 0; k < s.near_n; ++k) {
             ChestFound& f = s.near_[k];
-            const uintptr_t row =
-                game::info_row(base + 0x3DB080, f.idx);
-            const uintptr_t h = row ? *reinterpret_cast<uintptr_t*>(row + 8) : 0;
+            const uintptr_t h = game::info_name(base + 0x73F2200, f.idx);  // 3840: the table entry's name object
             const char* text = h ? *reinterpret_cast<const char**>(h) : nullptr;
             for (size_t c = 0; text && c + 1 < sizeof f.name && text[c]; ++c) f.name[c] = text[c];
         }
@@ -812,11 +814,11 @@ void chest_scan_read(ChestScan& s, uintptr_t base, uintptr_t host) noexcept {
         // The rows (name, starting rolls): only for the kept ones (the call may load a row).
         for (int k = 0; k < s.n; ++k) {
             ChestFound& f = s.f[k];
-            const uintptr_t row =
-                game::info_row(base + 0x3DB080, f.idx);
+            const uintptr_t row =  // 3840: the gimmick getter + its table (3732: 0x3DB080)
+                game::info_row(base + 0x3EAD20, base + 0x73F2200, f.idx);
             if (!row) continue;
             f.row_rolls = *reinterpret_cast<uint32_t*>(row + 0x268);
-            const uintptr_t h = *reinterpret_cast<uintptr_t*>(row + 8);
+            const uintptr_t h = game::info_name(base + 0x73F2200, f.idx);  // 3840 (3732: *(row + 8))
             const char* text = h ? *reinterpret_cast<const char**>(h) : nullptr;
             for (size_t c = 0; text && c + 1 < sizeof f.name && text[c]; ++c) f.name[c] = text[c];
         }
@@ -825,8 +827,8 @@ void chest_scan_read(ChestScan& s, uintptr_t base, uintptr_t host) noexcept {
         const uintptr_t hc = *reinterpret_cast<uintptr_t*>(host + 0x68);
         const uintptr_t ts = hc ? *reinterpret_cast<uintptr_t*>(hc + 0x1A0) : 0;
         if (!ts || *reinterpret_cast<uint8_t*>(ts + 0x550) != 0) return;
-        const uintptr_t field = *reinterpret_cast<uintptr_t*>(ts + 0x518);
-        const uintptr_t ssom = field ? *reinterpret_cast<uintptr_t*>(field + 0x80) : 0;
+        const uintptr_t field = *reinterpret_cast<uintptr_t*>(ts + 0x528);  // 3840 (3732: +0x518)
+        const uintptr_t ssom = field ? *reinterpret_cast<uintptr_t*>(field + 0x88) : 0;  // 3840 (3732: +0x80)
         if (!ssom) return;
         const uint32_t m = *reinterpret_cast<uint32_t*>(ssom + 0x64);
         const uintptr_t oarr = *reinterpret_cast<uintptr_t*>(ssom + 0x78);
@@ -857,9 +859,7 @@ void chest_scan_read(ChestScan& s, uintptr_t base, uintptr_t host) noexcept {
                 RowName& rn = g_row_names[at];
                 rn = RowName{};
                 rn.idx = idx;
-                const uintptr_t row =
-                    game::info_row(base + 0x3DB080, idx);
-                const uintptr_t h = row ? *reinterpret_cast<uintptr_t*>(row + 8) : 0;
+                const uintptr_t h = game::info_name(base + 0x73F2200, idx);  // 3840: the table entry's name object
                 const char* text = h ? *reinterpret_cast<const char**>(h) : nullptr;
                 char low[sizeof rn.name] = {};
                 for (size_t c = 0; text && c + 1 < sizeof rn.name && text[c]; ++c) {
@@ -1021,7 +1021,7 @@ int players_now(PlayerAt* out, int cap) noexcept {
     int n = 0;
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     __try {
-        const uintptr_t slot = *reinterpret_cast<uintptr_t*>(base + 0x724B860);
+        const uintptr_t slot = *reinterpret_cast<uintptr_t*>(base + 0x73F1260);
         const uintptr_t sam = slot ? *reinterpret_cast<uintptr_t*>(slot) : 0;
         if (!sam) return 0;
         const uint32_t cnt = *reinterpret_cast<uint32_t*>(sam + 0x9C);
@@ -1037,7 +1037,7 @@ int players_now(PlayerAt* out, int cap) noexcept {
             p.key = key;
             p.actor = actor;
             if (!actor_pos(base, actor, p.x, p.y, p.z)) continue;
-            p.holder = reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t)>(base + 0x23643B0)(actor);
+            p.holder = reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t)>(base + 0x2437980)(actor);
             if (p.holder) out[n++] = p;
         }
     } __except (EXCEPTION_EXECUTE_HANDLER) {
@@ -2105,23 +2105,24 @@ void lootr_start(bool on, bool probe, bool guest, bool bodies) {
     if (!g_on && !g_probe) return;
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     uint8_t head[2]{};
-    if (!game::safe_read(base + 0x2DA2F90, head, sizeof head)) return;
-    if (auto h = safetyhook::InlineHook::create(reinterpret_cast<void*>(base + 0x2DA2F90), pickup_detour)) {
+    if (!game::safe_read(base + 0x2EE0B20, head, sizeof head)) return;
+    if (auto h = safetyhook::InlineHook::create(reinterpret_cast<void*>(base + 0x2EE0B20), pickup_detour)) {
         g_pickup = std::move(*h);
     }
     if (g_probe || g_bodies_on || (g_on && g_body_share_on)) {
         static const uint8_t kHead[10] = {0x48, 0x89, 0x5C, 0x24, 0x18, 0x44, 0x88, 0x4C, 0x24, 0x20};
         uint8_t got[10] = {};
-        if (game::safe_read(base + 0x2E8E390, got, sizeof got) && std::memcmp(got, kHead, sizeof got) == 0) {
-            if (auto h = safetyhook::InlineHook::create(reinterpret_cast<void*>(base + 0x2E8E390), body_loot_detour)) {
+        if (game::safe_read(base + 0x2FD2010, got, sizeof got) && std::memcmp(got, kHead, sizeof got) == 0) {
+            if (auto h = safetyhook::InlineHook::create(reinterpret_cast<void*>(base + 0x2FD2010), body_loot_detour)) {
                 g_body_loot = std::move(*h);
             }
         }
         if (g_bodies_on && g_body_loot) {
-            static const uint8_t kLea[7] = {0x48, 0x8D, 0x35, 0x96, 0xF2, 0x0D, 0x03};
+            // 3840: lea rsi,[rip+0x3127F37] right after the character row's getter (3732 0x2E8E723: ...96 F2 0D 03)
+            static const uint8_t kLea[7] = {0x48, 0x8D, 0x35, 0x37, 0x7F, 0x12, 0x03};
             uint8_t at[7] = {};
-            if (game::safe_read(base + 0x2E8E723, at, sizeof at) && std::memcmp(at, kLea, sizeof at) == 0) {
-                if (auto h = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x2E8E723), on_keep_body)) {
+            if (game::safe_read(base + 0x2FD23BA, at, sizeof at) && std::memcmp(at, kLea, sizeof at) == 0) {
+                if (auto h = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x2FD23BA), on_keep_body)) {
                     g_keep_body_hook = std::move(*h);
                 }
             }
@@ -2138,13 +2139,13 @@ void lootr_start(bool on, bool probe, bool guest, bool bodies) {
         static const uint8_t kRoll[15] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x18, 0x48, 0x89, 0x7C,
                                           0x24, 0x20};
         uint8_t got[15] = {};
-        if (game::safe_read(base + 0x2DBA1A0, got, sizeof got) && std::memcmp(got, kDrop, sizeof got) == 0) {
-            if (auto h = safetyhook::InlineHook::create(reinterpret_cast<void*>(base + 0x2DBA1A0), drop_detour)) {
+        if (game::safe_read(base + 0x2EF8240, got, sizeof got) && std::memcmp(got, kDrop, sizeof got) == 0) {
+            if (auto h = safetyhook::InlineHook::create(reinterpret_cast<void*>(base + 0x2EF8240), drop_detour)) {
                 g_drop = std::move(*h);
             }
         }
-        if (g_probe && game::safe_read(base + 0x2DB93D0, got, sizeof got) && std::memcmp(got, kRoll, sizeof got) == 0) {
-            if (auto h = safetyhook::InlineHook::create(reinterpret_cast<void*>(base + 0x2DB93D0), drop_roll_detour)) {
+        if (g_probe && game::safe_read(base + 0x2EF74D0, got, sizeof got) && std::memcmp(got, kRoll, sizeof got) == 0) {
+            if (auto h = safetyhook::InlineHook::create(reinterpret_cast<void*>(base + 0x2EF74D0), drop_roll_detour)) {
                 g_drop_roll = std::move(*h);
             }
         }
@@ -2163,7 +2164,7 @@ bool lootr_on_guest_out(std::vector<uint8_t>& p) noexcept {
     if (!g_on) return false;
     try {
         std::lock_guard lk(g_mu);
-        if (lrl::opcode_of(p) == 2106) {  // LootDropCharacterRewardListAck: u8 4 | u32 body | ...
+        if (lrl::opcode_of(p) == 2164) {  // LootDropCharacterRewardListAck: u8 4 | u32 body | ...
             if (p.size() < lrl::kHeader + 5) return false;
             const uint32_t body = lrl::rd32(p.data() + lrl::kHeader + 1);
             for (const BodyEntry& e : g_bodies) {
@@ -2232,7 +2233,7 @@ void lootr_tick(std::vector<std::vector<uint8_t>>& to_server) noexcept {
             std::memcpy(&pl[14], &kHostCharacter, 4);
             std::memcpy(&pl[18], &kHostCharacter, 4);
             std::memcpy(&pl[26], &entry, 4);
-            net::sniffer_inject_c2s(lrl::make(3104, pl, 0x00));
+            net::sniffer_inject_c2s(lrl::make(2238, pl, 0x00));
         }
         static uint64_t next_scan = 0;
         if (g_probe && g_chest_scans.load() < 8 && now >= next_scan) {  // the host's own request: the server thread
@@ -2244,7 +2245,7 @@ void lootr_tick(std::vector<std::vector<uint8_t>>& to_server) noexcept {
                 std::memcpy(&pl[14], &kHostCharacter, 4);
                 std::memcpy(&pl[18], &kHostCharacter, 4);
                 std::memcpy(&pl[26], &entry, 4);
-                net::sniffer_inject_c2s(lrl::make(3104, pl, 0x00));
+                net::sniffer_inject_c2s(lrl::make(2238, pl, 0x00));
             }
         }
         std::lock_guard lk(g_mu);
@@ -2253,11 +2254,11 @@ void lootr_tick(std::vector<std::vector<uint8_t>>& to_server) noexcept {
             std::memcpy(pl, &b.key, 4);
             if (b.step == 0 && now - b.at >= 3000) {
                 b.step = 1;
-                const bool ok = net::sniffer_inject_c2s(lrl::make(2382, pl, 0x00));
+                const bool ok = net::sniffer_inject_c2s(lrl::make(2998, pl, 0x00));
                 log::info("Lootr probe: [dev] the host loots body 0x{:08X} (2491){}", b.key, ok ? "" : " NOT sent");
             } else if (b.step == 1 && now - b.at >= 6000 && g_kill_hits.load() == 1) {
                 b.step = 2;
-                to_server.push_back(lrl::make(2382, pl, 0x00));
+                to_server.push_back(lrl::make(2998, pl, 0x00));
                 log::info("Lootr probe: [dev] the guest loots body 0x{:08X} (2491, as its own request)", b.key);
             }
         }
@@ -2300,7 +2301,7 @@ void lootr_tick(std::vector<std::vector<uint8_t>>& to_server) noexcept {
                 std::memcpy(&pl[22], &none, 2);
                 std::memcpy(&pl[24], &none, 2);
                 std::memcpy(&pl[26], &kLootrGiveEntry, 4);
-                const bool sent = net::sniffer_inject_c2s(lrl::make(3104, pl, 0x00));
+                const bool sent = net::sniffer_inject_c2s(lrl::make(2238, pl, 0x00));
                 size_t replayed = 0;
                 for (HostHeld& h : g_host_held) {
                     if (h.g.load() != t.g || h.size < lrl::kHeader) continue;
@@ -2331,7 +2332,7 @@ void lootr_tick(std::vector<std::vector<uint8_t>>& to_server) noexcept {
                 std::memcpy(&pl[22], &none, 2);
                 std::memcpy(&pl[24], &none, 2);
                 std::memcpy(&pl[26], &kLootrGiveEntry, 4);
-                to_server.push_back(lrl::make(3104, pl, 0x00));  // a client Req
+                to_server.push_back(lrl::make(2238, pl, 0x00));  // a client Req
                 for (const auto& h : t.held) server_push_extra(h);
                 c_given.fetch_add(1);
                 log::info("Lootr: the guest took gimmick 0x{:08X} too: item key {} x{} for 0x{:08X}, {} packet(s) "
@@ -2389,7 +2390,7 @@ std::string lootr_describe() {
 void lootr_host_recv(uint8_t* packet, uint16_t size) noexcept {
     if (!g_on || size < lrl::kHeader + 4) return;
     const uint16_t op = static_cast<uint16_t>(packet[0] | (packet[1] << 8));
-    if (op == 2106 && size >= lrl::kHeader + 5) {  // the leftover list of a body the guest looted first
+    if (op == 2164 && size >= lrl::kHeader + 5) {  // the leftover list of a body the guest looted first
         const uint32_t body = lrl::rd32(packet + lrl::kHeader + 1);
         if (!body) return;
         for (auto& k : g_body_keep_host) {
@@ -2401,7 +2402,7 @@ void lootr_host_recv(uint8_t* packet, uint16_t size) noexcept {
         }
         return;
     }
-    if (op == 2946 && size >= lrl::kHeader + 8) {  // InteractionPreemptionStepFailAck: u32 actor | u32 target | ...
+    if (op == 2929 && size >= lrl::kHeader + 8) {  // InteractionPreemptionStepFailAck: u32 actor | u32 target | ...
         uint8_t* fl = packet + lrl::kHeader;
         const uint32_t target = lrl::rd32(fl + 4);
         for (KeepHost& k : g_keep) {
@@ -2476,7 +2477,7 @@ void kill_hits(const uint8_t* packet, size_t size) noexcept {
             if (done.size() < 256) done.push_back(k);
             uint8_t pl[8] = {};
             std::memcpy(pl, &k, 4);
-            const bool ok = net::sniffer_inject_c2s(lrl::make(2322, pl, 0x00));
+            const bool ok = net::sniffer_inject_c2s(lrl::make(2303, pl, 0x00));
             log::info("Lootr probe: [dev] the host's hit on 0x{:08X} kills it{}", k, ok ? "" : " (NOT sent)");
             if (g_kill_hits.load() == 1 || g_kill_hits.load() == 3) {  // then loot it without the UI: the host 3 s
                                                                        // later, (mode 1) the guest 6 s later
@@ -2494,8 +2495,8 @@ void lootr_host_sniffed(const uint8_t* packet, size_t size, bool server_to_clien
     if (g_kill_hits.load() && !server_to_client && op == agl::kOpDoFrameEventReq) kill_hits(packet, size);
     if (g_on && !server_to_client && (op == lrl::kOpPreemptReq || op == lrl::kOpDoStepReq)) host_take(op, packet, size);
     if (!g_probe || !g_pickup) return;
-    if (!server_to_client && (op == 2642 || op == 2304)) g_watch_until = GetTickCount64() + 3000;  // its answers
-    static const uint16_t kWatch[] = {2642, 2304, 2308, 2363, 2066};
+    if (!server_to_client && (op == 2641 || op == 2526)) g_watch_until = GetTickCount64() + 3000;  // its answers
+    static const uint16_t kWatch[] = {2641, 2526, 3168, 2612, 2066};
     bool watched = false;
     for (const uint16_t w : kWatch) watched = watched || w == op;
     // Only the players' interactions (tcB330: NPCs' own 3008 / 2120 used the whole budget).
@@ -2510,7 +2511,7 @@ void lootr_host_sniffed(const uint8_t* packet, size_t size, bool server_to_clien
     if (after ? n_after.fetch_add(1) > 800 : n_watch.fetch_add(1) > 100) return;
     if (op == 2002 || op == 1001) return;
     char hex[3 * 120 + 1] = {};
-    const size_t m = size < 120 ? size : (op == 2210 ? 120 : 40);
+    const size_t m = size < 120 ? size : (op == 2502 ? 120 : 40);
     for (size_t i = 0; i < m; ++i) std::snprintf(hex + i * 3, 4, "%02X ", packet[i]);
     log::info("Lootr probe: {} {} ({} bytes): {}", server_to_client ? "S>C" : "C>S", op, size, hex);
 }

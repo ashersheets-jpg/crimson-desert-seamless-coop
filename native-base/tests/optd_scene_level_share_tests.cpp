@@ -32,18 +32,19 @@ std::vector<uint8_t> hex(const char* s) {
 
 // Real frames (whole Reqs, 5-byte header), from the captures named (game 2976). 2026-11-21: their opcodes rewritten to
 // 3732's (the logic's kOpLoad 2720 = a00a, kOpUnload 2948 = 840b, kOpResync 2623 = 3f0a; 2976: 2598 / 2834 / 2104),
+// 2026-11-26 to 3840's (kOpLoad 2339 = 2309, kOpUnload 2233 = b908, kOpResync 2363 = 3b09),
 // the payloads as captured (the same layouts on 3732: the logic's parsers).
 // cdmp_packets.guest_20261015-155255.bin t=4458.501: the guest's first 2598 of the tavern's level.
-const char* k2598Tavern = "a00a000800010000 00aa527bde";
+const char* k2598Tavern = "2309000800010000 00aa527bde";
 // ... t=4430.611: one of the four 2598 with u32 = 3 at the game's load.
-const char* k2598Start = "a00a000800030000 00ec635e2a";
+const char* k2598Start = "2309000800030000 00ec635e2a";
 // ... t=4502.479: the guest's 2834 of the tavern's level (type 0, flag 1).
-const char* k2834Tavern = "840b000a00010000 0000aa527bde01";
+const char* k2834Tavern = "b908000a00010000 0000aa527bde01";
 // cdmp_packets.host_20261015-155239.bin t=4416.494: a host 2834 with flag 0.
-const char* k2834Flag0 = "840b000a00010000 0000cca4ef2100";
+const char* k2834Flag0 = "b908000a00010000 0000cca4ef2100";
 // cdmp_packets.host_20261015-083504.bin t=69.252 (offset 22161498): the host's Resync after its 2283/2437, 86 hashes.
 const char* k2104 =
-    "3f0a005901046dd0f604402d6a98c9269a8b9292fe28ec635e2af4ba161bf4036a058057a8c92599f12bd8fd1f923089109c79bc812976ad"
+    "3b09005901046dd0f604402d6a98c9269a8b9292fe28ec635e2af4ba161bf4036a058057a8c92599f12bd8fd1f923089109c79bc812976ad"
     "0240cfe54abea8266c1fc76fc8f7a7efbd817fea585d0aa73a510c980254d56b848767dc319e0eeea03a40ce62705bcc5fba01d97d3dd00f"
     "4fb2c1fef74997dd8150682b215ed7ce899629fe1e0fb6a587633171853b5cc484fee86e935da5d6a72e9147969d1fe852f3553e85bf45cd"
     "b9cef2b3f64dcdda76a4985e69d4e098e7b7041fcac8d41da27e50c7590614b361f7b40822edd9b37f9ea661825df4cbad730fa9e7c96047"
@@ -107,8 +108,8 @@ void test_parsers() {
     // 3732: reload / revive / game loading / logout (2976's 2283 / 2362 / 2437 / 2001).
     for (const uint16_t op : {sls::kOpReloadStage, sls::kOpRevive, sls::kOpGameLoading, sls::kOpLogout})
         CHECK(frame(make(op, {1, 2, 3})).kind == sls::Kind::Flush);
-    CHECK(frame(make(2772, {4, 1, 0, 0, 0})).kind == sls::Kind::None);  // the door's own request (3732; 2976 2928)
-    CHECK(!sls::relevant(2772) && sls::relevant(sls::kOpResync));
+    CHECK(frame(make(2481, {4, 1, 0, 0, 0})).kind == sls::Kind::None);  // the door's own request (3732; 2976 2928)
+    CHECK(!sls::relevant(2481) && sls::relevant(sls::kOpResync));
 }
 
 void test_hashes() {
@@ -260,7 +261,7 @@ void test_gate() {
     g.actor = 0x9999;
     CHECK(sls::decide_gate(g) == W::OtherSubject);
     g = gate_base(sls::Mode::On);
-    g.opcode = 2772;  // the door's own request (3732)
+    g.opcode = 2481;  // the door's own request (3732)
     CHECK(sls::decide_gate(g) == W::WrongOpcode);
 }
 

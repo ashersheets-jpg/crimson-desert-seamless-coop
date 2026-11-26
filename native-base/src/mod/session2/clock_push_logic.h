@@ -24,9 +24,9 @@
 
 namespace cdmp::session2::ckp {
 
-inline constexpr uint16_t kOpLoadingCompleteAck = 2891;
-inline constexpr uint16_t kOpSetFieldTimeAck = 3145;
-inline constexpr uint16_t kOpSyncWeatherStateReq = 2959;
+inline constexpr uint16_t kOpLoadingCompleteAck = 2381;
+inline constexpr uint16_t kOpSetFieldTimeAck = 2142;
+inline constexpr uint16_t kOpSyncWeatherStateReq = 2590;
 inline constexpr size_t kHeader = 5;          // u16 opcode | i8 slot (-1) | u16 payload length
 inline constexpr size_t kFieldTimeMem = 32;
 inline constexpr size_t kFieldTimeWire = 31;
@@ -39,15 +39,15 @@ inline constexpr size_t kLoadingAckPayload = 13;
 // store): `vmovups [0x6F31C98], ymm0` (server) or `[0x6F31C78]` (client), on one flag; 0x6F31C98 is clock_gate.h's
 // kWorldTime; the world system slot is offsets.h's kWorldSystemSlot. The bias (2188) is read by the probe only:
 // 0x7245468 = the world system slot + 0x2A8 as in 2976, 138 rip-relative reads; not checked further.
-inline constexpr uintptr_t kServerClock = 0x6F37C98;   // server FieldTime (the host's world clock)
-inline constexpr uintptr_t kClientClock = 0x6F37C78;   // client FieldTime (what this client's sky follows)
-inline constexpr uintptr_t kWorldSystem = 0x724B350;   // [exe+] -> world system; +0x28 -> the time manager
+inline constexpr uintptr_t kServerClock = 0x70DC148;   // server FieldTime (the host's world clock)
+inline constexpr uintptr_t kClientClock = 0x70DC128;   // client FieldTime (what this client's sky follows)
+inline constexpr uintptr_t kWorldSystem = 0x73F0D50;   // [exe+] -> world system; +0x28 -> the time manager
 inline constexpr uint32_t kWorldTimeMgr = 0x28;
 inline constexpr uint32_t kMgrFlags = 0x28;            // +0x28 active (set by the 2762), +0x29 private calendar,
                                                        // +0x2A its previous value, +0x2B off
 inline constexpr uint32_t kMgrPrivateTime = 0x30;      // FieldTime of the private calendar (+0x30..+0x4F)
 inline constexpr uint32_t kMgrDumpSize = 0x30;         // +0x28 .. +0x57
-inline constexpr uintptr_t kClockBias = 0x724B5F8;     // i64: server tick - this client's FrameClock (2188; probe only)
+inline constexpr uintptr_t kClockBias = 0x73F0FF8;     // i64: server tick - this client's FrameClock (2188; probe only)
 
 struct FieldTime {
     uint32_t day = 0, hour = 0, minute = 0, second = 0, ms = 0;

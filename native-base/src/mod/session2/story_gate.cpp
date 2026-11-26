@@ -26,8 +26,8 @@ namespace {
 
 // 3663: SequencerTriggerVolumeInOutReq 2808 and StageBranchStateReq 2644 both start with the u64 sequencer id (an
 // id of the sender's own stage manager: the host's and user 2's ids are separate spaces).
-constexpr uint16_t kOpTriggerVolume = 2808, kOpStageBranch = 2644;
-constexpr uint16_t kOpGameLoadingStart = 2350;  // 3663 (a recording: "C>S GameLoadingStartReq 2350"): a player's load
+constexpr uint16_t kOpTriggerVolume = 3004, kOpStageBranch = 2726;
+constexpr uint16_t kOpGameLoadingStart = 2804;  // 3663 (a recording: "C>S GameLoadingStartReq 2350"): a player's load
 constexpr size_t kHeader = 5;
 
 std::atomic<int> g_mode{0};  // 0 off, 1 probe, 2 hold
@@ -416,15 +416,15 @@ int sg_unwind(uint64_t rip, uint64_t rsp, const uint64_t nv[8], uint64_t* out, i
 // (rcx sequencer, dl in, r8d the volume's kind, r9 the character, [rsp+0x20] u8 facing): it posts the 2808 AND starts
 // the scene locally. 0x7025DD: right after the frame's event flush (0x162E570(.., 0x1C)), on the game thread.
 namespace {
-constexpr uintptr_t kVolCall = 0xE04E19;  // 3663
-constexpr uint8_t kVolCallBytes[] = {0xE8, 0x32, 0xF7, 0x8E, 0xFF};
-constexpr uintptr_t kFrameAfter = 0x70296D;  // 3663
+constexpr uintptr_t kVolCall = 0xE5FFF9;  // 3663
+constexpr uint8_t kVolCallBytes[] = {0xE8, 0x72, 0xBC, 0x8C, 0xFF};
+constexpr uintptr_t kFrameAfter = 0x73A75D;  // 3663
 constexpr uint8_t kFrameAfterBytes[] = {0x48, 0x8B, 0x47, 0x08, 0x48, 0x8B, 0x40, 0x60};
 SafetyHookMid g_vol_hook, g_frame_hook, g_lookup_hook;
 // 0xE04260 (3663): right after the delegate's sequencer lookup 0xE04460 (rsp+0xE0 the sequencer object or 0, rsp+0xD0
 // the volume's kind, rsp+0x48 the character, r12b in / out). Research: does this game find a sequencer for a player's
 // volume event (the guest's game never reported the cabin's cinematic)?
-constexpr uintptr_t kLookupAfter = 0xE04C90;
+constexpr uintptr_t kLookupAfter = 0xE5FE70;
 constexpr uint8_t kLookupAfterBytes[] = {0x48, 0x8B, 0xBC, 0x24, 0xE0, 0x00, 0x00, 0x00};
 struct VolCall {
     uintptr_t seq = 0;
@@ -602,7 +602,7 @@ void on_frame(safetyhook::Context&) {
         calls.swap(g_client_replay);
     }
     for (const ClientHeld& c : dropped) obj_ref(c.seq, -1);
-    const uintptr_t fn = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)) + 0x6F4550;  // 3663: the call's target
+    const uintptr_t fn = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)) + 0x72BC70;  // 3840: kVolCall's target (3732 0x6F4550; 3663: the call's target)
     for (const ClientHeld& c : calls) {
         // A stage the game has let go of while the call waited (a load, a fast travel: no volume exit seen): only our
         // reference is left on the sequencer object; its call is not played, the object goes with our release.
@@ -634,12 +634,12 @@ void install_client() {
         return;
     }
     p8_install_mid(base, secs, kVolCall, sizeof kVolCallBytes, kVolCallBytes, on_vol_call, g_vol_hook, "StoryGate",
-                   "the client's volume call 0xE04E19 (0xE04C10 -> 0x6F4550)");
+                   "the client's volume call 0xE5FFF9 (0xE5FDF0 -> 0x72BC70)");
     p8_install_mid(base, secs, kFrameAfter, sizeof kFrameAfterBytes, kFrameAfterBytes, on_frame, g_frame_hook, "StoryGate",
-                   "after the frame's event flush 0x70296D");
+                   "after the frame's event flush 0x73A75D");
     if (g_mode.load() == 1 || g_mode.load() == 3) {
         p8_install_mid(base, secs, kLookupAfter, sizeof kLookupAfterBytes, kLookupAfterBytes, on_lookup, g_lookup_hook, "StoryGate",
-                       "after the volume delegate's sequencer lookup 0xE04C90 (research)");
+                       "after the volume delegate's sequencer lookup 0xE5FE70 (research)");
     }
 }
 
@@ -739,7 +739,7 @@ void story_gate_host_stack(const uint8_t* packet, size_t size, uint64_t rsp, uin
     const int nf = sg_unwind(rip, rsp, nv, frames, 24);
     std::string chain;
     for (int i = 0; i < nf; ++i) {
-        chain += frames[i] >= base && frames[i] < base + 0x13C7E000 ? std::format(" exe+0x{:X}", frames[i] - base)
+        chain += frames[i] >= base && frames[i] < base + 0x13D05000 ? std::format(" exe+0x{:X}", frames[i] - base)
                                                                     : std::format(" 0x{:X}", frames[i]);
     }
     log::info("StoryGate [stack] the host's {} for '{}' | unwound callers:{}",

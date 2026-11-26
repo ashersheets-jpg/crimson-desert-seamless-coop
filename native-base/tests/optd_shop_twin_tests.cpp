@@ -85,10 +85,10 @@ int main() {
     if (a.size() == 3) {
         uint16_t op = 0;
         std::span<const uint8_t> p;
-        CHECK(stl::split(a[0], op, p) && op == 2698 && p.size() == 18 && p[13] == 1 && stl::rd32(p.data() + 14) == guest);
-        CHECK(stl::split(a[1], op, p) && op == 2369 && p.size() == 18 && p[0] == 4 && stl::rd32(p.data() + 1) == guest &&
+        CHECK(stl::split(a[0], op, p) && op == 2307 && p.size() == 18 && p[13] == 1 && stl::rd32(p.data() + 14) == guest);
+        CHECK(stl::split(a[1], op, p) && op == 2239 && p.size() == 18 && p[0] == 4 && stl::rd32(p.data() + 1) == guest &&
               stl::rd64(p.data() + 5) == tid && stl::rd32(p.data() + 13) == 6 && p[17] == 0);
-        CHECK(stl::split(a[2], op, p) && op == 2752 && p.size() == 21 && stl::rd32(p.data() + 13) == 1 &&
+        CHECK(stl::split(a[2], op, p) && op == 2455 && p.size() == 21 && stl::rd32(p.data() + 13) == 1 &&
               stl::rd32(p.data() + 17) == 6);
     }
     stl::wr32(br.data() + 8, 0);  // the greeting ends: the menu (the host's own answer, tcB116)
@@ -97,9 +97,9 @@ int main() {
     if (a.size() == 3) {
         uint16_t op = 0;
         std::span<const uint8_t> p;
-        CHECK(stl::split(a[0], op, p) && op == 2369 && stl::rd32(p.data() + 13) == 0);
-        CHECK(stl::split(a[1], op, p) && op == 2698 && p[13] == 0);
-        CHECK(stl::split(a[2], op, p) && op == 2752 && p.size() == 29 && stl::rd32(p.data() + 13) == 2 &&
+        CHECK(stl::split(a[0], op, p) && op == 2239 && stl::rd32(p.data() + 13) == 0);
+        CHECK(stl::split(a[1], op, p) && op == 2307 && p[13] == 0);
+        CHECK(stl::split(a[2], op, p) && op == 2455 && p.size() == 29 && stl::rd32(p.data() + 13) == 2 &&
               stl::rd32(p.data() + 17) == 0 && stl::rd32(p.data() + 21) == 0x979C909Du && stl::rd32(p.data() + 25) == 0);
     }
     // Buy from the menu: the store opens (type 3, no root, no 2708); closing it: the menu again (host, 566.4 / 573.6)
@@ -110,11 +110,11 @@ int main() {
         if (r.empty()) return;
         uint16_t op = 0;
         std::span<const uint8_t> p;
-        CHECK(stl::split(r.back(), op, p) && op == 2752 && p.size() == len && stl::rd32(p.data() + 13) == type &&
+        CHECK(stl::split(r.back(), op, p) && op == 2455 && p.size() == len && stl::rd32(p.data() + 13) == type &&
               stl::rd32(p.data() + 17) == branch);
         if (len == 29) CHECK(stl::rd32(p.data() + 21) == 0x979C909Du);
         bool ev = false;
-        for (const auto& m : r) ev = ev || (stl::split(m, op, p) && op == 2369 && stl::rd32(p.data() + 13) == branch);
+        for (const auto& m : r) ev = ev || (stl::split(m, op, p) && op == 2239 && stl::rd32(p.data() + 13) == branch);
         CHECK(ev);
     };
     expect(0, 3, 21, 2);  // Buy
@@ -133,9 +133,9 @@ int main() {
     if (a.size() == 1) {
         uint16_t op = 0;
         std::span<const uint8_t> p;
-        CHECK(stl::split(a[0], op, p) && op == 2105 && p.size() == 22 && p[17] == 1 && p[21] == 1);
+        CHECK(stl::split(a[0], op, p) && op == 2308 && p.size() == 22 && p[17] == 1 && p[21] == 1);
     }
-    CHECK(stl::local_answers(2672, ce, guest).empty());
+    CHECK(stl::local_answers(2432, ce, guest).empty());
     // shop dialog choices: the host's 3086 for Renee (tcB116) and the guest's (tcB161)
     const auto hostd = hexs("04010010a0f30110b040440f000a00000040440f000b00000001000000e4110000");
     uint32_t npc = 0;
@@ -186,28 +186,28 @@ int main() {
         uint16_t op = 0;
         std::span<const uint8_t> p;
         if (r.now.size() == 2) {
-            CHECK(stl::split(r.now[0], op, p) && op == 2369 && stl::rd32(p.data() + 13) == 5 && p[17] == 0 &&
+            CHECK(stl::split(r.now[0], op, p) && op == 2239 && stl::rd32(p.data() + 13) == 5 && p[17] == 0 &&
                   stl::rd64(p.data() + 5) == aid);
-            CHECK(stl::split(r.now[1], op, p) && op == 2752 && p.size() == 29 && stl::rd32(p.data() + 13) == 1 &&
+            CHECK(stl::split(r.now[1], op, p) && op == 2455 && p.size() == 29 && stl::rd32(p.data() + 13) == 1 &&
                   stl::rd32(p.data() + 17) == 5 && stl::rd32(p.data() + 21) == root && stl::rd32(p.data() + 1) == guest);
         }
         r = stl::table_answers(chart, req(0, 1), guest, root, ast);  // Participate: the state held for the 2654
         CHECK(r.known && ast == 3 && r.now.size() == 2 && r.later.size() == 2);
         if (r.now.size() == 2) {
-            CHECK(stl::split(r.now[0], op, p) && op == 2698 && p[13] == 1);
-            CHECK(stl::split(r.now[1], op, p) && op == 2369 && stl::rd32(p.data() + 13) == 0 && p[17] == 1);
+            CHECK(stl::split(r.now[0], op, p) && op == 2307 && p[13] == 1);
+            CHECK(stl::split(r.now[1], op, p) && op == 2239 && stl::rd32(p.data() + 13) == 0 && p[17] == 1);
         }
         if (r.later.size() == 2) {
-            CHECK(stl::split(r.later[0], op, p) && op == 2752 && stl::rd32(p.data() + 13) == 3 &&
+            CHECK(stl::split(r.later[0], op, p) && op == 2455 && stl::rd32(p.data() + 13) == 3 &&
                   stl::rd32(p.data() + 17) == 0);
-            CHECK(stl::split(r.later[1], op, p) && op == 2698 && p[13] == 0);  // its AvoidOff after it
+            CHECK(stl::split(r.later[1], op, p) && op == 2307 && p[13] == 0);  // its AvoidOff after it
         }
         r = stl::table_answers(chart, req(0, 0), guest, root, ast);  // 3 -> 4: on, event, off, state
         CHECK(r.known && ast == 4 && r.now.size() == 4 && r.later.empty());
         if (r.now.size() == 4) {
-            CHECK(stl::split(r.now[0], op, p) && op == 2698 && p[13] == 1);
-            CHECK(stl::split(r.now[2], op, p) && op == 2698 && p[13] == 0);
-            CHECK(stl::split(r.now[3], op, p) && op == 2752 && stl::rd32(p.data() + 13) == 4);
+            CHECK(stl::split(r.now[0], op, p) && op == 2307 && p[13] == 1);
+            CHECK(stl::split(r.now[2], op, p) && op == 2307 && p[13] == 0);
+            CHECK(stl::split(r.now[3], op, p) && op == 2455 && stl::rd32(p.data() + 13) == 4);
         }
         for (const auto& [b, want] : {std::pair<uint32_t, uint32_t>{1, 5}, {0, 6}, {0, 7}, {1, 9}, {0, 10}}) {
             r = stl::table_answers(chart, req(b, 0), guest, root, ast);  // a lost match
@@ -225,7 +225,7 @@ int main() {
         CHECK(r.known && ast == 0);
         r = stl::table_answers(chart, req(3, 0), guest, root, ast);  // not in the table: back to the start
         CHECK(!r.known && ast == 0 && r.now.size() == 2);
-        if (r.now.size() == 2) CHECK(stl::split(r.now[1], op, p) && op == 2752 && stl::rd32(p.data() + 13) == 0);
+        if (r.now.size() == 2) CHECK(stl::split(r.now[1], op, p) && op == 2455 && stl::rd32(p.data() + 13) == 0);
         r = stl::table_answers(chart, req(5, 0), guest, root, ast);  // the menu again, then Back
         r = stl::table_answers(chart, req(1, 0), guest, root, ast);
         CHECK(r.known && ast == 2 && r.now.size() == 4);
@@ -233,39 +233,39 @@ int main() {
         CHECK(r.known && ast == 0);
         // the minigame requests: the twin's id -> the host's, and the client's own Ack back
         auto spawn = hexs("041f030010000000004042" "51d50000" "06000020");
-        CHECK(stl::minigame_req_to_host(2281, spawn) == 0x31F && stl::rd64(spawn.data() + 1) == 0x31F);
-        CHECK(stl::minigame_req_to_host(2281, spawn) == 0);  // the host's id already: unchanged
+        CHECK(stl::minigame_req_to_host(2863, spawn) == 0x31F && stl::rd64(spawn.data() + 1) == 0x31F);
+        CHECK(stl::minigame_req_to_host(2863, spawn) == 0);  // the host's id already: unchanged
         auto unsp = hexs("041f03001000000000" "4042" "5c0a10b0");
-        CHECK(stl::minigame_req_to_host(2361, unsp) == 0x31F);
-        CHECK(stl::minigame_req_to_host(2204, unsp) == 0);
+        CHECK(stl::minigame_req_to_host(2553, unsp) == 0x31F);
+        CHECK(stl::minigame_req_to_host(2423, unsp) == 0);
         auto ack = hexs("04" "040210a0" "1f03000000000000" "06000020" "5c0a10b0" "050000");
         const uint32_t own = 0xA0100204u;
-        CHECK(stl::minigame_ack_to_twin(2810, ack, own, [](uint64_t h) { return h == 0x31F; }) == aid &&
+        CHECK(stl::minigame_ack_to_twin(2616, ack, own, [](uint64_t h) { return h == 0x31F; }) == aid &&
               stl::rd64(ack.data() + 5) == aid);
         auto ack2 = hexs("04" "010010a0" "1f03000000000000" "06000020" "5c0a10b0" "050000");  // the host's own: no
-        CHECK(stl::minigame_ack_to_twin(2810, ack2, own, [](uint64_t) { return true; }) == 0);
+        CHECK(stl::minigame_ack_to_twin(2616, ack2, own, [](uint64_t) { return true; }) == 0);
         // twin_extra_chart (cs92): the twin's state-7 chart event to the host's scene, the server's 2105 back to the twin
         auto creq = hexs("1f03001000000000" "070000000000000001");
-        CHECK(stl::chart_req_to_host(2200, creq) == 0x31F && stl::rd64(creq.data()) == 0x31F);
-        CHECK(stl::chart_req_to_host(2200, creq) == 0);  // the host's id already: unchanged
+        CHECK(stl::chart_req_to_host(2811, creq) == 0x31F && stl::rd64(creq.data()) == 0x31F);
+        CHECK(stl::chart_req_to_host(2811, creq) == 0);  // the host's id already: unchanged
         auto chart_short = hexs("1f03001000000000" "0700000000000000");
-        CHECK(stl::chart_req_to_host(2200, chart_short) == 0);
-        CHECK(stl::chart_req_to_host(2644, creq) == 0);
+        CHECK(stl::chart_req_to_host(2811, chart_short) == 0);
+        CHECK(stl::chart_req_to_host(2726, creq) == 0);
         std::vector<stl::ForwardedChart> pending(1);
         pending[0].host = 0x31F;
         std::memcpy(pending[0].ev, creq.data() + 8, 9);
         pending[0].at_ms = 1000;
         auto cack = hexs("04" "040210a0" "1f03000000000000" "070000000000000001");
         auto other = hexs("04" "040210a0" "1f03000000000000" "070000000100000001");  // event 7/1: not forwarded
-        CHECK(stl::chart_ack_to_twin(2105, other, pending, 1500, 3000) == 0 && pending.size() == 1);
-        CHECK(stl::chart_ack_to_twin(2105, cack, pending, 5000, 3000) == 0 && pending.size() == 1);  // too old
-        CHECK(stl::chart_ack_to_twin(2105, cack, pending, 1500, 3000) == aid && stl::rd64(cack.data() + 5) == aid &&
+        CHECK(stl::chart_ack_to_twin(2308, other, pending, 1500, 3000) == 0 && pending.size() == 1);
+        CHECK(stl::chart_ack_to_twin(2308, cack, pending, 5000, 3000) == 0 && pending.size() == 1);  // too old
+        CHECK(stl::chart_ack_to_twin(2308, cack, pending, 1500, 3000) == aid && stl::rd64(cack.data() + 5) == aid &&
               pending.empty());
         auto cack2 = hexs("04" "040210a0" "1f03000000000000" "070000000000000001");
-        CHECK(stl::chart_ack_to_twin(2105, cack2, pending, 1500, 3000) == 0);  // used up: the next one is the host's
+        CHECK(stl::chart_ack_to_twin(2308, cack2, pending, 1500, 3000) == 0);  // used up: the next one is the host's
         // twin_extra_chart=3: the grip made here (cs92's 55 bytes, catcher and target replaced) and the 2810's opponent
         const auto grip = stl::catch_result(0xA0100066u, 0xB0100AF8u);
-        CHECK(grip.size() == 5 + 55 && grip[0] == (2562 & 0xFF) && grip[1] == (2562 >> 8));
+        CHECK(grip.size() == 5 + 55 && grip[0] == (2560 & 0xFF) && grip[1] == (2560 >> 8));
         CHECK(stl::rd32(grip.data() + 5) == 0xA0100066u && stl::rd32(grip.data() + 9) == 0xB0100AF8u);
         CHECK(stl::rd32(grip.data() + 5 + 31) == 0x18F128E3u && stl::rd32(grip.data() + 5 + 50) == 0x63F9EFFDu &&
               grip[5 + 54] == 0x17);

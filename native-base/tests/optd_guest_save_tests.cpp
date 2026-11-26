@@ -362,20 +362,20 @@ void test_slot_layout() {
 // ---------------------------------------------------------------- callers
 
 void test_callers() {
-    // 3732's (guest_save_logic.h: kCallSites + 5); 2976's are other callers now.
-    CHECK(gsv::load_caller(0x2F28800) == LoadCaller::UserLogin);
-    CHECK(gsv::load_caller(0x2F4F576) == LoadCaller::Lobby3093);
-    CHECK(gsv::load_caller(0xE274364) == LoadCaller::Character3093);
+    // 3840's (guest_save_logic.h: kCallSites + 5; pins84.py); 2976's are other callers now.
+    CHECK(gsv::load_caller(0x306EE70) == LoadCaller::UserLogin);
+    CHECK(gsv::load_caller(0x3095B26) == LoadCaller::Lobby3093);
+    CHECK(gsv::load_caller(0xE2874B5) == LoadCaller::Character3093);
     CHECK(gsv::load_caller(0x2C17886) == LoadCaller::Other);   // 2976's UserLogin: not this build's
     CHECK(gsv::load_caller(0x1042ABF8) == LoadCaller::Other);  // 2976's character
-    CHECK(gsv::load_caller(0x2F287FB) == LoadCaller::Other);   // the call itself, not its return
+    CHECK(gsv::load_caller(0x306EE6B) == LoadCaller::Other);   // the call itself, not its return
     CHECK(gsv::load_caller(0) == LoadCaller::Other);
-    CHECK(gsv::save_caller(0xB6A4AA5) == gsv::SaveCaller::Autosave);
-    CHECK(gsv::save_caller(0xE214B65) == gsv::SaveCaller::Manual2910);
+    CHECK(gsv::save_caller(0xB7D9D98) == gsv::SaveCaller::Autosave);
+    CHECK(gsv::save_caller(0xE23E2F5) == gsv::SaveCaller::Manual2910);
     CHECK(gsv::save_caller(0xCBD86D3) == gsv::SaveCaller::Other);  // 2976's autosave
     CHECK(gsv::save_caller(0x186E450) == gsv::SaveCaller::Other);
-    CHECK(std::string(gsv::flush_caller_name(0x2BC548F)) == "logout phase");
-    CHECK(std::string(gsv::flush_caller_name(0xE584ACD)) == "flush timer");
+    CHECK(std::string(gsv::flush_caller_name(0x2CFB48F)) == "logout phase");
+    CHECK(std::string(gsv::flush_caller_name(0xE5A257D)) == "flush timer");
     CHECK(std::string(gsv::flush_caller_name(1)) == "OTHER");
 }
 

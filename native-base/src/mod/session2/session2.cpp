@@ -229,7 +229,7 @@ DWORD WINAPI probe_thread(LPVOID) {
 // client's copy, as it is, goes to user 2 too, so the host's character is dyed on the guest's screen as well. On the
 // guest (no server) the push simply fails.
 void dye_share_host_sniffed(const uint8_t* packet, size_t size, bool server_to_client) noexcept {
-    constexpr uint16_t kOpDyeItemListByEquipSlotAck = 2463;
+    constexpr uint16_t kOpDyeItemListByEquipSlotAck = 3071;
     if (!server_to_client || size < 5 + 4 || static_cast<uint16_t>(packet[0] | packet[1] << 8) != kOpDyeItemListByEquipSlotAck) {
         return;
     }
@@ -323,9 +323,9 @@ void kill_tunnel(const std::string& why) {
 // 2004 (pointers), and the client-local connect/disconnect 1001-1008. Also
 // SetFieldTimeReq 2125 (sleep, explicit time): the world clock is the host's
 // (reloj.md §5.1, 0x2BC8970 publishes for any field owner).
-constexpr uint16_t kOpSetFieldTimeReq = 2150;
+constexpr uint16_t kOpSetFieldTimeReq = 2704;
 bool never_from_guest(uint16_t opcode) {
-    return opcode == 2447 || opcode == 2042 || opcode == 2004 || opcode == kOpSetFieldTimeReq ||
+    return opcode == 2404 || opcode == 2042 || opcode == 2004 || opcode == kOpSetFieldTimeReq ||
            (opcode >= 1001 && opcode <= 1008);
 }
 // P8 session 25, W1 (block_guest_weather, research/noche/clima-hora.md §5.2): user 2's SyncWeatherStateReq 2560

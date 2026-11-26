@@ -102,7 +102,8 @@ inline bool is_real_code_section(const Section& s) { return s.va == kRealCodeVa;
 // Denuvo's section (calls into it are the game's own): .xtls on 2976, .xpdata on 3549, .tls$ on 3576.
 // 3663: the protection is ".data1" (and ".tls$" is now a small data section, so it is no longer in the list).
 // 3732: ".text1".
-inline bool is_denuvo_name(std::string_view n) { return n == ".data1" || n == ".text1"; }
+// 3840: ".reloc".
+inline bool is_denuvo_name(std::string_view n) { return n == ".data1" || n == ".text1" || n == ".reloc"; }
 inline bool in_real_code(std::span<const Section> secs, uint32_t rva, uint32_t len) {
     const Section* s = section_of(secs, rva);
     if (!s || !is_real_code_section(*s) || len == 0) return false;

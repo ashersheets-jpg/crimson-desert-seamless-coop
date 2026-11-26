@@ -46,23 +46,23 @@ void handle_guard_start() {
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     static const uint8_t kBytes[8] = {0x90, 0x48, 0x8B, 0x00, 0x48, 0x8B, 0x48, 0x08};
     uint8_t got[8] = {};
-    if (!game::safe_read(base + 0x37603AA, got, sizeof got) || std::memcmp(got, kBytes, sizeof got) != 0) {
-        log::warn("HandleGuard: exe+0x37603AA is not this build's code; no guard");
+    if (!game::safe_read(base + 0x38B821A, got, sizeof got) || std::memcmp(got, kBytes, sizeof got) != 0) {
+        log::warn("HandleGuard: exe+0x38B821A is not this build's code; no guard");
         return;
     }
-    g_out = base + 0x376052A;
-    if (auto h = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x37603AA), on_handle)) g_hook = std::move(*h);
-    log::info("HandleGuard {}: an empty handle in exe+0x3760350 leaves the function instead of crashing (tcB342)",
+    g_out = base + 0x38B839A;
+    if (auto h = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x38B821A), on_handle)) g_hook = std::move(*h);
+    log::info("HandleGuard {}: an empty handle in exe+0x38B81C0 leaves the function instead of crashing (tcB342)",
               g_hook ? "ON" : "NOT installed");
     static const uint8_t kLen[6] = {0x8D, 0x58, 0xFF, 0x48, 0x03, 0xDA};
     uint8_t at[6] = {};
-    if (game::safe_read(base + 0x40AF98E, at, sizeof at) && std::memcmp(at, kLen, sizeof at) == 0) {
-        g_text_out = base + 0x40AF9B1;
-        if (auto h = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x40AF98E), on_text_len)) {
+    if (game::safe_read(base + 0x421EA1E, at, sizeof at) && std::memcmp(at, kLen, sizeof at) == 0) {
+        g_text_out = base + 0x421EA41;
+        if (auto h = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x421EA1E), on_text_len)) {
             g_text_hook = std::move(*h);
         }
     }
-    log::info("TextGuard {}: an empty text in exe+0x40AF810 takes its \"no bracket\" path instead of crashing (tcB347)",
+    log::info("TextGuard {}: an empty text in exe+0x421E8A0 takes its \"no bracket\" path instead of crashing (tcB347)",
               g_text_hook ? "ON" : "NOT installed");
 }
 

@@ -69,7 +69,7 @@ inline const char* mode_name(Mode m) {
 
 // ---------------------------------------------------------------- the 2283 payload
 
-inline constexpr uint16_t kOpReloadStageStartReq = 3018;
+inline constexpr uint16_t kOpReloadStageStartReq = 2235;
 inline constexpr size_t kReloadPayload = 53;
 
 // The server's handler 0x2A5F580 reads, in order (0x2A5F64B..0x2A5F77B): u32 a, u32 b, u32 c, float3 position
@@ -104,7 +104,8 @@ inline std::optional<Reload> parse_reload(std::span<const uint8_t> p) {
 // ---------------------------------------------------------------- F2: the host's gate on user 2's 2283
 
 // Where user 2's character is, read on the network thread just before the 2283 would be handed to the server:
-// the owner (u32 +0x180) of the field its TransformSync's field mover holds (TS+0x4F0+0x10).
+// the owner (u32 +0x158 on 3840; 3732 +0x180) of the field its TransformSync's field mover holds (TS+0x518+0x10 on
+// 3840; 3732 TS+0x508+0x10; 2976 TS+0x4F0+0x10): fast_travel.cpp kFieldOwner / kTsFieldMoverField.
 enum class Where : uint8_t { Unknown, HostField, OwnField, OtherField };
 
 inline Where where_is(bool read_ok, uint32_t owner, uint32_t host_user, uint32_t user2_user) {
@@ -208,14 +209,14 @@ std::optional<uintptr_t> seq_manager_of(const Mem& m, uintptr_t actor, uintptr_t
 
 // The vf48 call of the 2283 handler: `mov rcx,[rbp-0x28] ; mov rax,[rcx] ; call [rax+0x48]` at 0x2A5F7F2, the
 // return address 0x2A5F7FC, then `mov rcx,rax ; call 0x2896120` (0x2A5F829 / 0x2A5F82C).
-inline constexpr uint32_t kReloadVf48Ret = 0x2D59EA5;  // 3576 (2976 0x2A5F7FC)
+inline constexpr uint32_t kReloadVf48Ret = 0x2E973E5;  // 3576 (2976 0x2A5F7FC)
 // The second vf48 of the same 2283, inside 0x2BC4950 (called from 0x2896974): `mov rcx,[rbp-0x21] ; mov rax,[rcx] ;
 // call [rax+0x48]` at 0x2BC4C49 on the field of the TRAVELLER's field mover (0x2BBF340(TS+0x4F0) at 0x2BC4C3D: for
 // user 2, the shared field -> the OWNER's manager), then `mov rbx,rax`, a reference on [mgr+8] (0x393650: lock xadd
 // [obj+8], vf30, vf18; [mgr+8] must be a live object, a null manager crashes at 0x2BC4C69) and
 // `mov byte [rbx+0x6A0],0` (0x2BC4C80). It always runs for a 2283: 0x2896120 builds the destination with +0x19 = 1
 // and 0x2BC4C23 takes this block when it is not 0.
-inline constexpr uint32_t kApplyVf48Ret = 0x2ED481D;  // 3576 (2976 0x2BC4C53)
+inline constexpr uint32_t kApplyVf48Ret = 0x301976C;  /* 3840: in 0x3019530, call [rax+0x48] at 0x3019769 (3732 0x2ED481D) */  // 3576 (2976 0x2BC4C53)
 
 // The block F3 hands 0x2896120 when user 2's own manager cannot be read: 0x2896120 reads its manager once,
 // `mov r13,[rcx+0x18]` at 0x2896155, and never keeps rcx (overwritten at 0x289615E); the handler only does
@@ -286,7 +287,7 @@ inline ApplyOut decide_apply(uint32_t ret_rva, uintptr_t armed_mgr, bool block_u
 // F4 answers that vf48 with user 2's OWN manager (vtable and back pointer checked, as F3): its +0x6A0 (already 0 in
 // the host's field) is the one reset, as the game does for the owner's own revive. Same hooked function as F3
 // (ServerField::vf48's inline hook at its entry); nothing else is patched.
-inline constexpr uint16_t kOpReviveLoadingReq = 2887;
+inline constexpr uint16_t kOpReviveLoadingReq = 2672;
 
 enum class F4Out : uint8_t {
     NotHere,          // another return address, no subject, or F3 answered this Troc: not F4's

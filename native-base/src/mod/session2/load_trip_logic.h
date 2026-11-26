@@ -29,9 +29,9 @@
 
 namespace cdmp::session2::ltr {
 
-inline constexpr uint16_t kOpMoveFieldAck = 2364, kOpMoveFieldCompleteAck = 2268, kOpPostAck = 2792,
-                          kOpMilestone = 2941, kOpLoadingCompleteAck = 2891, kOpBundle = 2046,
-                          kOpMoveFieldCompleteReq = 2723, kOpLoadingCompleteReq = 2789;
+inline constexpr uint16_t kOpMoveFieldAck = 2524, kOpMoveFieldCompleteAck = 2682, kOpPostAck = 2549,
+                          kOpMilestone = 2456, kOpLoadingCompleteAck = 2381, kOpBundle = 2046,
+                          kOpMoveFieldCompleteReq = 2156, kOpLoadingCompleteReq = 2777;
 
 constexpr bool followed_in(uint16_t op) {
     return op == kOpMoveFieldAck || op == kOpMoveFieldCompleteAck || op == kOpPostAck || op == kOpMilestone ||

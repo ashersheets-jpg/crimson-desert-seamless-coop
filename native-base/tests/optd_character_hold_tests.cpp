@@ -906,7 +906,7 @@ void fake_notify_race(uintptr_t flag, const GameVec* s, const GameVec* k) {
     const auto* sd = static_cast<const uintptr_t*>(s->data);
     const auto* kd = static_cast<const uint32_t*>(k->data);
     if (s->count == 1 && sd[0] == kS1 && k->count == 1 && kd[0] == kHostChar) {
-        take(actor_packet(3008, kHostChar, 7));
+        take(actor_packet(2890, kHostChar, 7));
     }
 }
 
@@ -930,7 +930,7 @@ void test_acks_with_character() {
         CHECK(g_out.size() == 2);
         if (g_out.size() == 2) {
             CHECK(op_of(g_out[0]) == 2005 && key_of(g_out[0]) == kHostChar);
-            CHECK(op_of(g_out[1]) == 3008 && g_out[1][9] == 7);
+            CHECK(op_of(g_out[1]) == 2890 && g_out[1][9] == 7);
         }
         CHECK(observer_hold_acks_keys() == 0);
     }
@@ -961,9 +961,9 @@ void test_acks_with_character() {
         g_out.clear();
         w.appear({kHostChar});  // withheld from user 2: its packets wait
         CHECK(g_out.empty() && observer_hold_acks_keys() == 1);
-        take(actor_packet(3008, kHostChar, 1));  // MoveActorAck
-        take(actor_packet(2800, kHostChar, 2));  // StartActionAck
-        take(actor_packet(3008, kUser2Char, 9)); // user 2's own character: passes
+        take(actor_packet(2890, kHostChar, 1));  // MoveActorAck
+        take(actor_packet(2408, kHostChar, 2));  // StartActionAck
+        take(actor_packet(2890, kUser2Char, 9)); // user 2's own character: passes
         CHECK(g_out.size() == 1 && key_of(g_out[0]) == kUser2Char);
         w.kliff1.set_restore(1);
         g_now = 1100;
@@ -972,7 +972,7 @@ void test_acks_with_character() {
         CHECK(g_out.size() == 4);
         if (g_out.size() == 4) {
             CHECK(op_of(g_out[1]) == 2005 && key_of(g_out[1]) == kHostChar);
-            CHECK(op_of(g_out[2]) == 3008 && g_out[2][9] == 1 && op_of(g_out[3]) == 2800 && g_out[3][9] == 2);
+            CHECK(op_of(g_out[2]) == 2890 && g_out[2][9] == 1 && op_of(g_out[3]) == 2408 && g_out[3][9] == 2);
         }
         CHECK(observer_hold_acks_keys() == 0);
     }
@@ -983,7 +983,7 @@ void test_acks_with_character() {
         w.kliff1.set_restore(0);
         g_out.clear();
         w.appear({kHostChar});
-        take(actor_packet(3008, kHostChar, 1));
+        take(actor_packet(2890, kHostChar, 1));
         CHECK(g_out.empty() && observer_hold_acks_keys() == 1);
         w.sector.set({w.host.a()});
         FakeReq other(0xB0100555);
@@ -1003,7 +1003,7 @@ void test_acks_with_character() {
     // The route's key: NPCs (as before) and characters; npc_key_of itself is unchanged.
     std::vector<uint8_t> payload(8, 0);
     put(payload.data(), 0, kHostChar);
-    CHECK(oha::held_key_of(3008, payload) == std::optional<uint32_t>(kHostChar));
+    CHECK(oha::held_key_of(2890, payload) == std::optional<uint32_t>(kHostChar));
     CHECK(!oha::npc_key_of(2697, payload));
     put(payload.data(), 0, uint32_t{0x90100000});
     CHECK(!oha::held_key_of(2697, payload));

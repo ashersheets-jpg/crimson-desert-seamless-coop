@@ -52,26 +52,26 @@ struct HookSite {
 // functions at the same offsets: setPos 0x1386C00 +0x3E, updPos +0x27 of its chunk 0x13870A3, setRot 0x1387310 +0x50,
 // updRot; same destination registers, now = rax+rbx / rcx as on 2976).
 constexpr HookSite kHooks[rip::kSites] = {
-    {0x13C760E, {0x4C, 0x63, 0x15, 0x83, 0xD5, 0xDC, 0x05}, Site::SetPos, rip::kPosBuffer,
+    {0x144DA4E, {0x4C, 0x63, 0x15, 0x43, 0xB8, 0xEE, 0x05}, Site::SetPos, rip::kPosBuffer,
      "the delay read of setInterpolatePositionData 0x11B1FD0"},
-    {0x13C7D30, {0x4C, 0x63, 0x1D, 0x61, 0xCE, 0xDC, 0x05}, Site::SetRot, rip::kRotBuffer,
+    {0x144E170, {0x4C, 0x63, 0x1D, 0x21, 0xB1, 0xEE, 0x05}, Site::SetRot, rip::kRotBuffer,  // 3840 (3732 0x13C7D30)
      "the delay read of setInterpolateRotateData 0x11B26E0"},
-    {0x13C7A9A, {0x48, 0x63, 0x05, 0xF7, 0xD0, 0xDC, 0x05}, Site::UpdPos, rip::kPosBuffer,
+    {0x144DEDA, {0x48, 0x63, 0x05, 0xB7, 0xB3, 0xEE, 0x05}, Site::UpdPos, rip::kPosBuffer,
      "the delay read of updateInterpolatePositionData 0x11B2420"},
-    {0x13C8162, {0x48, 0x63, 0x05, 0x2F, 0xCA, 0xDC, 0x05}, Site::UpdRot, rip::kRotBuffer,
+    {0x144E612, {0x48, 0x63, 0x05, 0x7F, 0xAC, 0xEE, 0x05}, Site::UpdRot, rip::kRotBuffer,
      "the delay read of updateInterpolateRotateData 0x11B2AF0"},
 };
 constexpr uint32_t kHookLen = 7;
-constexpr uintptr_t kDelayGlobal = 0x7194B98;  // GlobalVariableInt value, default 200 (Co-op+ port 3549; 2976 0x6CB9548)
+constexpr uintptr_t kDelayGlobal = 0x7339298;  // GlobalVariableInt value, default 200 (Co-op+ port 3549; 2976 0x6CB9548)
 
 // The emptying threshold: cmp r8,0x3E8 right before `jbe` (0x11B207A / 0x11B277C).
-constexpr uintptr_t kThreshold[2] = {0x13C7673, 0x13C7D75};  // 3549 (2976 0x11B2073, 0x11B2775)
+constexpr uintptr_t kThreshold[2] = {0x144DAB3, 0x144E1B5};  // 3549 (2976 0x11B2073, 0x11B2775)
 constexpr uint8_t kThresholdOrig[7] = {0x49, 0x81, 0xF8, 0xE8, 0x03, 0x00, 0x00};
 constexpr uint8_t kThresholdNew[7] = {0x49, 0x81, 0xF8, 0xC4, 0x09, 0x00, 0x00};  // 2500
 static_assert(rip::kPatchedThreshold == 0x9C4);
 
 // The rule of the task: hooks and patches only inside [0x1000, 0x51EB000) (never .xtls).
-constexpr uintptr_t kCodeBegin = 0x1000, kCodeEnd = 0x5618000;  // Co-op+ port: end of .xtext on 1.0.0.3549 (2976: .rsrc ends at 0x51EB000)
+constexpr uintptr_t kCodeBegin = 0x1000, kCodeEnd = 0x57A5000;  // Co-op+ port: end of .xtext on 1.0.0.3549 (2976: .rsrc ends at 0x51EB000)
 
 constexpr uint64_t kSummaryMs = 60000;
 
@@ -387,7 +387,7 @@ std::atomic<uintptr_t> g_vis_last_caller{0};
 // against the PC's. The game's "now" is its frame clock + the client -> server offset that each ServerTimeInfoAck 2474
 // sets (offset = the server's tick - this client's now, no allowance for the Ack's own travel time). On ONE PC the
 // QPC is shared by both copies, so (the guest's game now - QPC) - (the host's game now - QPC) is the guest clock's error.
-constexpr uintptr_t kClockBase = 0x71661A0, kClockFrac = 0x71661B0, kClockBias = 0x724B5F8;  // combat_follow's (3732)
+constexpr uintptr_t kClockBase = 0x730A170, kClockFrac = 0x730A178, kClockBias = 0x73F0FF8;  // combat_follow's (3732)
 void clock_line() noexcept {
     uint64_t base = 0, frac = 0;
     int64_t bias = 0;
@@ -452,7 +452,7 @@ void remote_character_line() noexcept {
                                   game::safe_read(cc + 0xE8, &vis, sizeof vis) && vis &&
                                   game::safe_read(vis + 0x100, &alpha, sizeof alpha);
             return std::format("Status 0x{:X} (vtable {}) +0x3B8 0x{:X} +0x3C0 0x{:X} | alpha {}", status,
-                               vt == this_base + 0x599DC40 ? "ClientStatusActorComponent" : std::format("exe+0x{:X}", vt - this_base),
+                               vt == this_base + 0x5B2C230 ? "ClientStatusActorComponent" : std::format("exe+0x{:X}", vt - this_base),
                                f[0], f[1], alpha_ok ? std::format("{:.2f}", alpha) : std::string("unreadable"));
         };
         log::info("RemoteInterp [actor flags] remote character: {} | a visible NPC: {}", status_flags(actor),
@@ -696,7 +696,7 @@ bool write_code(uintptr_t rva, const uint8_t* bytes, size_t len) {
 // [rax+0x10],rbx: 7 bytes, whole instructions, the function start): for the other player's character (key class 0xA,
 // local mark actor+0x96 == 0) a SET of bit 20 is stripped, and any CLEAR also clears bit 20, so the game's own next
 // flag change brings the alpha back natively (slot 79 runs because the combined value changes).
-constexpr uintptr_t kFlagSetter = 0x1934810;
+constexpr uintptr_t kFlagSetter = 0x19C5470;
 constexpr uint8_t kFlagSetterBytes[] = {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x10, 0x48, 0x89, 0x68, 0x18, 0x48, 0x89, 0x70, 0x20};
 constexpr uint64_t kHideBit = 0x100000;
 constexpr uint32_t kStatusActor = 0x08, kActorLocalMark = 0x96;
@@ -745,7 +745,7 @@ void on_flag_setter(safetyhook::Context& c) noexcept {
 bool install_hooks() {
     if (bytes_at(kFlagSetter, kFlagSetterBytes) &&
         p8_install_mid(g_base, g_secs, kFlagSetter, 7, kFlagSetterBytes, on_flag_setter, g_flag_hook, "RemoteInterp",
-                       "the Status flag setter 0x1934810 (the other player stays visible)")) {
+                       "the Status flag setter 0x19C5470 (the other player stays visible)")) {
         log::info("RemoteInterp: the other player's character stays visible: Status flag bit 0x100000 is never set on "
                   "it, and cleared with the game's next flag clear (hook exe+0x{:X})", kFlagSetter);
     } else {
@@ -1188,7 +1188,7 @@ static void conversation_check() noexcept {
 void remote_interp_on_host_packet(uint16_t opcode, std::span<const uint8_t> payload) noexcept {
     if (g_on.load(std::memory_order_relaxed) && g_guest) conversation_check();
     if (!g_combat.load(std::memory_order_relaxed)) return;
-    if (opcode == 2844) {  // MainPlayerDataStartAck: this client's character, u32 at +0 (guest.cpp, mount_sync)
+    if (opcode == 2660) {  // MainPlayerDataStartAck: this client's character, u32 at +0 (guest.cpp, mount_sync)
         if (payload.size() >= 4) {
             const uint32_t key = cfl::rd32(payload, 0);
             if (cfl::is_a(key)) g_own_char.store(key, std::memory_order_relaxed);

@@ -70,21 +70,21 @@ inline constexpr size_t kFamilies = static_cast<size_t>(Family::Count);
 constexpr Family family_of(uint16_t op) {
     switch (op) {
         // Sequencers: 2661, 2810, 2322 (option A copies these today), 2797, 2224, 2226, 2140, 2675, 2222, 2918, 2416.
-        case 2356: case 2659: case 2941: case 2341: case 2370: case 2851: case 3035: case 3044: case 2585:
-        case 2469: case 2536:
+        case 2362: case 3046: case 2456: case 2252: case 2656: case 2599: case 2815: case 2587: case 2753:
+        case 2806: case 3034:
             return Family::Sequencer;
         // Schedules: 2126, 2958, 2909, 2499, 2127, 2839.
-        case 2338: case 3099: case 2509: case 2935: case 2940: case 2514:
+        case 3098: case 2687: case 2133: case 3078: case 3085: case 2136:
             return Family::Schedule;
         // Faction: 2195, 2130.
-        case 3130: case 2693:
+        case 2585: case 2211:
             return Family::Faction;
         // Doubtful (the owner's missions): 2264, 2165, 2724.
-        case 2713: case 3036: case 2185:
+        case 2386: case 2578: case 2915:
             return Family::Doubtful;
         // Excluded: quest / inventory UI, answers to whoever asked, the controller's AI.
-        case 2730: case 2558: case 3135: case 2559: case 2819: case 2290: case 2883: case 2527: case 2308:
-        case 2363: case 2180: case 2963: case 2960: case 2861:
+        case 2478: case 2489: case 2976: case 2581: case 2678: case 2617: case 2099: case 2250: case 3168:
+        case 2612: case 2877: case 2889: case 3012: case 2315:
             return Family::Excluded;
         default:
             return Family::Other;
@@ -96,7 +96,7 @@ constexpr bool listed(Family f) { return f == Family::Sequencer || f == Family::
 
 // What option A copies to user 2 today, for the comparison: observer_seq_copy's 2661/2810/2322 and, with
 // observer_sched_copy=1 (p8-impl-horarios-snapshot.md), the schedules' 2126/2958/2909 (0 queued when it is off).
-inline constexpr uint16_t kCopiedByA[] = {2356, 2659, 2941, 2338, 3099, 2509};
+inline constexpr uint16_t kCopiedByA[] = {2362, 3046, 2456, 3098, 2687, 2133};
 constexpr bool copied_by_a(uint16_t op) {
     for (const uint16_t a : kCopiedByA) {
         if (a == op) return true;

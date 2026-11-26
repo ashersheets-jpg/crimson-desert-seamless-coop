@@ -40,13 +40,13 @@ struct Site {
 };
 // Co-op+ port 1.0.0.3549: the three client functions found together by their heads and spacing (update, post +0x11F0,
 // restore +0x4CD0; 2976: +0x1190 / +0x4B30), the only such triple; pending near the restore byte's writer (log only).
-constexpr Site kCcUpdate = {0x9730E0, {0x48, 0x89, 0x5C, 0x24, 0x10, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55,
+constexpr Site kCcUpdate = {0x9B0460, {0x48, 0x89, 0x5C, 0x24, 0x10, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55,
                                        0x41, 0x56, 0x41, 0x57}, "CC update"};
-constexpr Site kCcPost = {0x9742D0, {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x6C, 0x24, 0x18, 0x56, 0x57,
+constexpr Site kCcPost = {0x9B1690, {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x6C, 0x24, 0x18, 0x56, 0x57,
                                      0x41, 0x56, 0x48, 0x83}, "CC post-update"};
-constexpr Site kRestore = {0x977FD0, {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x20, 0x48, 0x89, 0x50, 0x10, 0x55,
+constexpr Site kRestore = {0x9B5280, {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x20, 0x48, 0x89, 0x50, 0x10, 0x55,
                                       0x56, 0x57, 0x41, 0x54}, "restore actions"};
-constexpr Site kPending = {0x258F230, {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x6C, 0x24, 0x18, 0x48, 0x89,
+constexpr Site kPending = {0x2671390, {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x6C, 0x24, 0x18, 0x48, 0x89,
                                        0x74, 0x24, 0x20, 0x57}, "pending actions"};
 
 SafetyHookMid g_cc_hook, g_post_hook, g_restore_hook, g_pending_hook;
@@ -517,7 +517,7 @@ void ip_on_entry(safetyhook::Context& ctx) {
             game::fast_read(player + 0xA0, &owner, 8);
             game::fast_read(player + 0x94, &b94, 1);
         }
-        game::fast_read(base + 0x724B350, &g, 8);
+        game::fast_read(base + 0x73F0D50, &g, 8);
         if (g) game::fast_read(g + 0x30, &g30, 8);
         if (g30) game::fast_read(g30 + 0x58, &local, 8);
         uint32_t owner_key = 0, local_key = 0;
@@ -525,7 +525,7 @@ void ip_on_entry(safetyhook::Context& ctx) {
         if (local) game::fast_read(local + 0x60, &local_key, 4);
         (void)local_key_obj;
         log::info("InteractProbe [is local] player 0x{:08X} +0xA0 0x{:X} (key 0x{:08X}) +0x94 {} | client local "
-                  "[[0x724B350]+0x30]+0x58 0x{:X} (key 0x{:08X}) -> {}", ip_key_of(player), owner, owner_key, b94, local,
+                  "[[0x73F0D50]+0x30]+0x58 0x{:X} (key 0x{:08X}) -> {}", ip_key_of(player), owner, owner_key, b94, local,
                   local_key, owner == local && b94 ? "LOCAL" : "NOT LOCAL");
     }
 }
@@ -764,7 +764,7 @@ void ip_on_eval(safetyhook::Context& ctx) {  // 0x1940AD0 entry: rcx target, dl 
         if (game::fast_read(state + 0x10, &ip, 8) && ip) game::fast_read(ip, &idx, 2);
     }
     game::fast_read(ctx.r8, &want, 4);
-    log::info("InteractProbe [eval 0x19A7FC0] target 0x{:08X} filter {} want 0x{:X} | server list {} | AI 0x{:X} state 0x{:X} "
+    log::info("InteractProbe [eval 0x1A3D150] target 0x{:08X} filter {} want 0x{:X} | server list {} | AI 0x{:X} state 0x{:X} "
               "graph 0x{:X} index 0x{:04X}", key, static_cast<uint32_t>(ctx.rdx & 0xFF), want, count, ai, state, graph, idx);
 }
 void ip_on_call(safetyhook::Context& ctx) {  // 0xAC0330 call 0xABF5A0 (r8 = the entry)
@@ -778,7 +778,7 @@ uint64_t g_tc_seen[64] = {};
 void tc_on_fail(safetyhook::Context& ctx) {  // 0x25FA549: the store of eErrNoInteractionTargetConditionCheckFail
     if (g_oc_override.load(std::memory_order_relaxed) && t_entry_idx == 0x0055 && remote_npc(t_oc_target)) {
         g_tc_overridden.fetch_add(1, std::memory_order_relaxed);
-        ctx.rip = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)) + 0x266C73F;
+        ctx.rip = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)) + 0x2756B7F;
         return;
     }
     // Server side (the host's process): a target condition failing for ANOTHER player's character (user 2's request
@@ -787,7 +787,7 @@ void tc_on_fail(safetyhook::Context& ctx) {  // 0x25FA549: the store of eErrNoIn
     {
         const auto base1 = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
         uintptr_t g = 0, g30 = 0, local = 0, ch = 0;
-        game::fast_read(base1 + 0x724B350, &g, 8);
+        game::fast_read(base1 + 0x73F0D50, &g, 8);
         if (g) game::fast_read(g + 0x30, &g30, 8);
         if (g30) game::fast_read(g30 + 0x58, &local, 8);
         if (local) game::fast_read(local + 0x50, &ch, 8);  // the local user's character (0x99EA20)
@@ -807,7 +807,7 @@ void tc_on_fail(safetyhook::Context& ctx) {  // 0x25FA549: the store of eErrNoIn
     }
     if (g_tc_lines.fetch_add(1) >= 24) return;
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-    log::info("InteractProbe [{} target condition FAILED 0x266C729] player 0x{:08X} target 0x{:08X} | condition ...{:07X}{}",
+    log::info("InteractProbe [{} target condition FAILED 0x2756B69] player 0x{:08X} target 0x{:08X} | condition ...{:07X}{}",
               server_user2 ? "SERVER for another player" : shop ? std::format("SHOP entry 0x{:04X}", t_entry_idx) : "GREET",
               ip_key_of(t_oc_player), target, c & 0xFFFFFFF,
               cond_dump(c, base));
@@ -1054,7 +1054,7 @@ void cond_tree(uintptr_t obj, uintptr_t base, int depth, int& budget, std::strin
         uint16_t idx = 0;
         uintptr_t table = 0, arr = 0, info = 0, inner = 0;
         game::safe_read(obj + 0x10, &idx, 2);
-        game::safe_read(base + 0x724D4A0, &table, 8);
+        game::safe_read(base + 0x73F2898, &table, 8);
         if (table) game::safe_read(table + 0x58, &arr, 8);
         if (arr) game::safe_read(arr + 8ull * idx, &info, 8);
         if (info) game::safe_read(info + 0x10, &inner, 8);
@@ -1065,7 +1065,7 @@ void cond_tree(uintptr_t obj, uintptr_t base, int depth, int& budget, std::strin
         uintptr_t np = 0;
         char fn[40] = {};
         game::safe_read(obj + 8, &type, 2);
-        if (game::safe_read(base + 0x5D83B20 + 8ull * type, &np, 8) && np) game::safe_read(np, fn, sizeof fn - 1);
+        if (game::safe_read(base + 0x5F11CE0 + 8ull * type, &np, 8) && np) game::safe_read(np, fn, sizeof fn - 1);
         out += std::format(" fn 0x{:X} '{}' f", type, fn);
         for (uint32_t o = 0x10; o < 0x48; o += 8) {
             uint64_t q = 0;
@@ -1100,7 +1100,7 @@ bool remote_npc(uintptr_t actor) {
     const auto base0 = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     uintptr_t g = 0, g30 = 0, local = 0;
     uint32_t local_key = 0, ctrl = 0;
-    game::safe_read(base0 + 0x724B350, &g, 8);
+    game::safe_read(base0 + 0x73F0D50, &g, 8);
     if (g) game::safe_read(g + 0x30, &g30, 8);
     if (g30) game::safe_read(g30 + 0x58, &local, 8);
     if (local) game::safe_read(local + 0x60, &local_key, 4);
@@ -1112,7 +1112,7 @@ void oc_on_fail(safetyhook::Context& ctx) {  // 0x25FA3DA: the store of eErrNoIn
     // client's user key), the owner condition passes: resume at 0x25FA55F (mov al,1 ; the epilogue).
     if (g_oc_override.load(std::memory_order_relaxed) && t_entry_idx == 0x0055 && remote_npc(t_oc_target)) {
         g_oc_overridden.fetch_add(1, std::memory_order_relaxed);
-        ctx.rip = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)) + 0x266C73F;
+        ctx.rip = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)) + 0x2756B7F;
         return;
     }
     const uintptr_t c = t_oc_cond;
@@ -1149,12 +1149,12 @@ void oc_on_fail(safetyhook::Context& ctx) {  // 0x25FA3DA: the store of eErrNoIn
     for (uintptr_t slot : {c, c + 8}) {
         uintptr_t p1 = 0, obj = 0, vt = 0;
         if (!game::fast_read(slot, &p1, 8) || !p1 || !game::fast_read(p1, &obj, 8) || !obj ||
-            !game::fast_read(obj, &vt, 8) || rva(vt) != 0x5D8A8D8)
+            !game::fast_read(obj, &vt, 8) || rva(vt) != 0x5F18BC8)
             continue;
         uint16_t idx = 0;
         uintptr_t table = 0, arr = 0, info = 0, inner = 0, inner_vt = 0;
         game::fast_read(obj + 8, &idx, 2);
-        game::fast_read(base + 0x724D4A0, &table, 8);
+        game::fast_read(base + 0x73F2898, &table, 8);
         if (table) game::fast_read(table + 0x58, &arr, 8);
         if (arr) game::fast_read(arr + 8ull * idx, &info, 8);
         if (info) game::fast_read(info + 0x10, &inner, 8);
@@ -1234,8 +1234,8 @@ DWORD WINAPI interact_probe_thread(LPVOID) {
             static uint64_t last = 0;
             if (c_sc_found.load() != last) {
                 last = c_sc_found.load();
-                log::info("InteractProbe [scene check 0x23607D0] scene found {} | +0x168 set {} | past the focus check "
-                          "0x21CABF0 {} (no mission {}, last mission 0x{:X}) | past the character-type checks {} | past "
+                log::info("InteractProbe [scene check 0x2433AF0] scene found {} | +0x168 set {} | past the focus check "
+                          "0x2286490 {} (no mission {}, last mission 0x{:X}) | past the character-type checks {} | past "
                           "the mission check 0x1C9FBB0 {} | target condition passed {} failed {}",
                           last, c_sc_168.load(), c_sc_focus_ok.load(), c_sc_no_mission.load(), g_sc_mission.load(),
                           c_sc_type_ok.load(), c_sc_mission_ok.load(), c_sc_cond_pass.load(), c_sc_cond_fail.load());
@@ -1273,13 +1273,13 @@ DWORD WINAPI interact_probe_thread(LPVOID) {
             }
             if (any) {
                 s_codes = true;
-                log::info("InteractProbe: the refusal codes of 0x2359460 / 0xAF58E0 (globals):{}", codes);
+                log::info("InteractProbe: the refusal codes of 0x242C360 / 0xB3D640 (globals):{}", codes);
                 // Where the guest's refusal 0x6467532C lives: every dword of .sdata/.rodata (0x6CD2000..0x7824000)
                 // holding it (the code globals are filled at run time).
                 std::string at;
                 int hits = 0;
                 std::vector<uint32_t> chunk(0x4000);
-                for (uintptr_t r = 0x6D5C000; r < 0x78AA000 && hits < 16; r += chunk.size() * 4) {
+                for (uintptr_t r = 0x6F00000; r < 0x7A57000 && hits < 16; r += chunk.size() * 4) {
                     if (!game::safe_read(base + r, chunk.data(), chunk.size() * 4)) continue;
                     for (size_t i = 0; i < chunk.size() && hits < 16; ++i) {
                         if (chunk[i] == 0x6467532Cu) {
@@ -1288,7 +1288,7 @@ DWORD WINAPI interact_probe_thread(LPVOID) {
                         }
                     }
                 }
-                log::info("InteractProbe: 0x6467532C is held at:{}", at.empty() ? " nowhere in 0x6D5C000..0x78AA000" : at);
+                log::info("InteractProbe: 0x6467532C is held at:{}", at.empty() ? " nowhere in 0x6F00000..0x7A57000" : at);
             }
         }
         std::sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) { return a.d > b.d; });
@@ -1330,7 +1330,7 @@ std::atomic<uintptr_t> g_ks_host_comp{0};
 bool ks_server_thread() {
     __try {
         const auto tls = reinterpret_cast<uintptr_t*>(__readgsqword(0x58));
-        return tls && tls[0] && *reinterpret_cast<const uint8_t*>(tls[0] + 0x1EB) != 0;
+        return tls && tls[0] && *reinterpret_cast<const uint8_t*>(tls[0] + 0x1FB) != 0  /* 3840 (3732: 0x1EB) */;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return false;
     }
@@ -1571,70 +1571,70 @@ void interact_probe_hide_watch(uint32_t mode) {
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     const uint8_t want[] = {0x41, 0x80, 0xFE, 0x04, 0x74, 0x47};
     uint8_t got[sizeof want] = {};
-    if (!game::safe_read(base + 0xD6D64E, got, sizeof got) || std::memcmp(got, want, sizeof want) != 0) {
-        log::warn("HideWatch: the 2380 point 0xD6D64E has other bytes; only the probe's own arming");
+    if (!game::safe_read(base + 0xDC689E, got, sizeof got) || std::memcmp(got, want, sizeof want) != 0) {
+        log::warn("HideWatch: the 2380 point 0xDC689E has other bytes; only the probe's own arming");
         return;
     }
-    g_hw_2380 = safetyhook::create_mid(reinterpret_cast<void*>(base + 0xD6D64E), &hw_on_2380);
-    log::info("HideWatch ON (hide_watch=1, test builds): 2380 point 0xD6D64E {}", g_hw_2380 ? "hooked" : "NOT hooked");
+    g_hw_2380 = safetyhook::create_mid(reinterpret_cast<void*>(base + 0xDC689E), &hw_on_2380);
+    log::info("HideWatch ON (hide_watch=1, test builds): 2380 point 0xDC689E {}", g_hw_2380 ? "hooked" : "NOT hooked");
 }
 void interact_probe_start(bool on, bool owner_override) {
     g_oc_override.store(owner_override);
     if (owner_override) log::warn("InteractProbe: interact_owner_override=1 (TEST): an owner condition that fails for an "
-                                  "NPC another user controls passes on this client (0x266C5BA -> 0x266C73F)");
+                                  "NPC another user controls passes on this client (0x27569FA -> 0x2756B7F)");
     if (!on && owner_override) on = true;  // the override needs the hooks
     if (!on || g_ip_on.exchange(true)) return;
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     int n = 0;
-    n += ip_hook(base, 0xAF6490, {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x18}, g_ip_entry, ip_on_entry);
+    n += ip_hook(base, 0xB3E1D0, {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x18}, g_ip_entry, ip_on_entry);
     n += ip_hook(base, 0xAF65BB, {0x44, 0x39, 0x20, 0x0F, 0x85, 0xC0, 0x01, 0x00, 0x00}, g_ip_gate, ip_on_gate);
     n += ip_hook(base, 0xAF6624, {0x48, 0x8B, 0x5D, 0x80, 0x8B, 0x45, 0x88}, g_ip_count, ip_on_count);
     n += ip_hook(base, 0xAF6675, {0x80, 0x7C, 0x24, 0x30, 0x00, 0x74, 0x32}, g_ip_keep, ip_on_keep);
-    n += ip_hook(base, 0x266C3E0, {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x18}, g_oc_entry, oc_on_entry);
+    n += ip_hook(base, 0x2756820, {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x18}, g_oc_entry, oc_on_entry);
     n += ip_hook(base, 0xAF6670, {0xE8, 0x6B, 0xF2, 0xFF, 0xFF}, g_ip_call, ip_on_call);
     n += ip_hook(base, 0x236097A, {0x83, 0xBF, 0x68, 0x01, 0x00, 0x00, 0x00}, g_sc_found, sc_on_found);
     n += ip_hook(base, 0x22F00BE, {0x41, 0x8B, 0x7E, 0x78, 0x83, 0xFF, 0xFF}, g_sc_focus_ok, sc_on_focus_ok);
     n += ip_hook(base, 0x2360A2A, {0x8B, 0xD7, 0x48, 0x8B, 0x4C, 0x24, 0x30}, g_sc_type_ok, sc_on_type_ok);
     n += ip_hook(base, 0x2360A3E, {0x48, 0x8B, 0x8D, 0xE0, 0x08, 0x00, 0x00}, g_sc_mission_ok, sc_on_mission_ok);
-    n += ip_hook(base, 0x2360ADF, {0x0F, 0xB6, 0xF8, 0x4C, 0x89, 0x75, 0x20}, g_sc_cond, sc_on_cond);
-    n += ip_hook(base, 0x266C729, {0x48, 0x8B, 0x8D, 0xB0, 0x07, 0x00, 0x00, 0x88, 0x01}, g_tc_fail, tc_on_fail);
-    n += ip_hook(base, 0x266C5BA, {0x48, 0x8B, 0x8D, 0xB0, 0x07, 0x00, 0x00, 0x88, 0x01}, g_oc_fail, oc_on_fail);
-    n += ip_hook(base, 0x266C741, {0x4C, 0x8D, 0x9C, 0x24, 0x60, 0x08, 0x00, 0x00}, g_oc_exit, oc_on_exit);
+    n += ip_hook(base, 0x2433E2A, {0x0F, 0xB6, 0xF8, 0x4C, 0x89, 0x75, 0x20}, g_sc_cond, sc_on_cond);
+    n += ip_hook(base, 0x2756B69, {0x48, 0x8B, 0x8D, 0xB0, 0x07, 0x00, 0x00, 0x88, 0x01}, g_tc_fail, tc_on_fail);
+    n += ip_hook(base, 0x27569FA, {0x48, 0x8B, 0x8D, 0xB0, 0x07, 0x00, 0x00, 0x88, 0x01}, g_oc_fail, oc_on_fail);
+    n += ip_hook(base, 0x2756B81, {0x4C, 0x8D, 0x9C, 0x24, 0x60, 0x08, 0x00, 0x00}, g_oc_exit, oc_on_exit);
     {
         uint8_t h[9] = {};
-        game::safe_read(base + 0x248B3F0, h, 9);
+        game::safe_read(base + 0x2567D90, h, 9);
         static constexpr uint8_t want[9] = {0x48, 0x83, 0x79, 0x10, 0x00, 0x4C, 0x8B, 0xCA, 0x74};
         if (std::memcmp(h, want, 9) == 0)
-            g_leaf_hook = safetyhook::create_inline(reinterpret_cast<void*>(base + 0x248B3F0),
+            g_leaf_hook = safetyhook::create_inline(reinterpret_cast<void*>(base + 0x2567D90),
                                                     reinterpret_cast<void*>(&leaf_detour));
-        log::info("InteractProbe: leaf results 0x248B3F0 {}", g_leaf_hook ? "hooked" : "NOT hooked (bytes differ)");
+        log::info("InteractProbe: leaf results 0x2567D90 {}", g_leaf_hook ? "hooked" : "NOT hooked (bytes differ)");
         uint8_t q[7] = {};
-        game::safe_read(base + 0x25B2500, q, 7);
+        game::safe_read(base + 0x2696AD0, q, 7);
         static constexpr uint8_t qwant[7] = {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x10};
         if (std::memcmp(q, qwant, 7) == 0)
-            g_req_hook = safetyhook::create_inline(reinterpret_cast<void*>(base + 0x25B2500),
+            g_req_hook = safetyhook::create_inline(reinterpret_cast<void*>(base + 0x2696AD0),
                                                    reinterpret_cast<void*>(&req_detour));
-        log::info("InteractProbe: dialog requirements 0x25B2500 {}", g_req_hook ? "hooked" : "NOT hooked");
+        log::info("InteractProbe: dialog requirements 0x2696AD0 {}", g_req_hook ? "hooked" : "NOT hooked");
         uint8_t hq[15] = {};
-        game::safe_read(base + 0x1C9B4C0, hq, 15);
+        game::safe_read(base + 0x1D40DD0, hq, 15);
         static constexpr uint8_t hqwant[15] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74,
                                                0x24, 0x10, 0x48, 0x89, 0x7C, 0x24, 0x20};
         if (std::memcmp(hq, hqwant, 15) == 0)
-            g_hqd_hook = safetyhook::create_inline(reinterpret_cast<void*>(base + 0x1C9B4C0),
+            g_hqd_hook = safetyhook::create_inline(reinterpret_cast<void*>(base + 0x1D40DD0),
                                                    reinterpret_cast<void*>(&hqd_detour));
-        log::info("InteractProbe: quest dialog search 0x1C9B4C0 {}", g_hqd_hook ? "hooked" : "NOT hooked");
+        log::info("InteractProbe: quest dialog search 0x1D40DD0 {}", g_hqd_hook ? "hooked" : "NOT hooked");
     }
     {
         uint8_t h[5] = {};
-        game::safe_read(base + 0x19A7FC0, h, 5);
-        log::info("InteractProbe: 0x19A7FC0 head {:02X} {:02X} {:02X} {:02X} {:02X}", h[0], h[1], h[2], h[3], h[4]);
-        if (auto m = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x19A7FC0), ip_on_eval)) {
+        game::safe_read(base + 0x1A3D150, h, 5);
+        log::info("InteractProbe: 0x1A3D150 head {:02X} {:02X} {:02X} {:02X} {:02X}", h[0], h[1], h[2], h[3], h[4]);
+        if (auto m = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x1A3D150), ip_on_eval)) {
             g_ip_eval = std::move(*m);
             ++n;
         }
     }
     if (HANDLE t = CreateThread(nullptr, 0, interact_probe_thread, nullptr, 0, nullptr)) CloseHandle(t);
-    log::info("InteractProbe ON (interact_probe=1, read only): {}/5 points in the candidate collector 0xAF6490 (+ 0x19A7FC0)", n);
+    log::info("InteractProbe ON (interact_probe=1, read only): {}/5 points in the candidate collector 0xB3E1D0 (+ 0x1A3D150)", n);
     // 0xABF5A0's refusal codes are loaded from globals: their values, to name a refusal by its path.
     std::string codes;
     for (uintptr_t g : {0x714C018ull, 0x714AF0Cull, 0x7137FC8ull, 0x714BE54ull, 0x714AF14ull}) {
@@ -1642,8 +1642,8 @@ void interact_probe_start(bool on, bool owner_override) {
         game::safe_read(base + g, &v, 4);
         codes += std::format(" [0x{:X}]=0x{:X}", g, v);
     }
-    log::info("InteractProbe: 0xAF58E0 refusal codes:{} (0x71D6F3C the 0xAF3050 path, 0x71D5E30 0x8D0FE70, 0x71C2998 the "
-              "target's +0x120 flag, 0x71D6D7C the user's current interaction, 0x71D5E38 the target's action flag +0x116 & 4)",
+    log::info("InteractProbe: 0xB3D640 refusal codes:{} (0x71D6F3C the 0xAF3050 path, 0x71D5E30 0x8D0FE70, 0x7367888 the "
+              "target's +0x120 flag, 0x71D6D7C the user's current interaction, 0x737B068 the target's action flag +0x116 & 4)",
               codes);
 }
 
@@ -1711,11 +1711,11 @@ void knowledge_share_start(bool on) {
     if (!on || g_ks_hook) return;
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     uint8_t h[8] = {};
-    game::safe_read(base + 0x237B620, h, sizeof h);
+    game::safe_read(base + 0x2451650, h, sizeof h);
     // 0x2308FC0: mov [rsp+8],rbx ; push rdi ; sub rsp,20 ... (checked by its first bytes)
-    log::info("KnowledgeShare: 0x237B620 head {:02X} {:02X} {:02X} {:02X} {:02X} {:02X} {:02X} {:02X}", h[0], h[1], h[2],
+    log::info("KnowledgeShare: 0x2451650 head {:02X} {:02X} {:02X} {:02X} {:02X} {:02X} {:02X} {:02X}", h[0], h[1], h[2],
               h[3], h[4], h[5], h[6], h[7]);
-    g_ks_hook = safetyhook::create_inline(reinterpret_cast<void*>(base + 0x237B620), reinterpret_cast<void*>(&ks_detour));
+    g_ks_hook = safetyhook::create_inline(reinterpret_cast<void*>(base + 0x2451650), reinterpret_cast<void*>(&ks_detour));
     log::warn("KnowledgeShare {} (user2_knowledge_share=1, TEST, host): a server-side knowledge check that fails for "
               "another player's character asks the host's character's knowledge too (read only)",
               g_ks_hook ? "ON" : "NOT installed");
