@@ -179,8 +179,11 @@ inline constexpr uint32_t kCcRestore = 0x40;         // CC -> restore state (0x2
 inline constexpr uint32_t kRestoreByte = 0x30;       // u8: 1 once the first action was accepted (0x2328894)
 inline constexpr uint32_t kTsActor = 0x08;           // TS -> its actor
 inline constexpr uint32_t kTsSector = 0x558;         // TS -> current sector. 3840: +0x558 (the TransformSync block from +0x508 on moved +0x10: hand/G1.md, G2.md; with 3732's +0x548 every held NPC read "observer out of range" and was dropped, pp67-shop: 525 of 551). 3576..3732: +0x548 (live probe 2026-11-08: +0x540 is 0, +0x548 is the sector whose observer list holds user 2); 2976 +0x540 (.xtls 0x10648425)
-inline constexpr uint32_t kSectorObservers = 0x68;   // {ServerUserActor*, refs}[n] (0x2AF2F24)
-inline constexpr uint32_t kSectorObserverCount = 0x70;
+// 1.0.0.3840: the sector grew 8 bytes before its observer list: OnActorSectorChanged 0x2F3B97E `mov rax,[rbx+0x70]`,
+// `mov ecx,[rbx+0x78]`, `shl rcx,4` (3732 0x2DFB3DF: +0x68 / +0x70). With 3732's offsets the count read the list
+// pointer: every observer test "unreadable" and the observer hold released none (pp69-shop's decision probe).
+inline constexpr uint32_t kSectorObservers = 0x70;   // {ServerUserActor*, refs}[n] (0x2AF2F24); 3732: 0x68
+inline constexpr uint32_t kSectorObserverCount = 0x78;  // 3732: 0x70
 inline constexpr uint32_t kObserverStride = 0x10;
 inline constexpr uint32_t kMaxObservers = 256;
 inline constexpr uint32_t kUserKey = 0x60;
