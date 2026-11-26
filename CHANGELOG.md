@@ -5,7 +5,9 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
-Next build (not posted yet), from Brycecco's and Arcticwolf's notes of 25 Nov (their fourth session) and their logs:
+Posted 2026-11-26 04:21 as 0.1.0-alpha+ee0cecf0 (checklist pp64: all 31 steps with the new u2revive, 1370 checks; the
+host's ride in mounts was lost once to the test spot's flower patch (its E took a peony) and passed on its re-run,
+pp64b 53 / 0; one PC), from Brycecco's and Arcticwolf's notes of 25 Nov (their fourth session) and their logs:
 - **The joined player's own townsfolk while the host is high above (an Abyss island).** Far from the host the joined
   player's game runs its own townsfolk and shops. The Abyss island of their session hangs about 1.2 km straight above
   Hernand: the mod measured "far" on the map only, so the town below counted as next to the host while the host's game

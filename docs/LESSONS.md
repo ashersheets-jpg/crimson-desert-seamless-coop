@@ -928,6 +928,12 @@ on 3576"); player_hits.cpp, which reads the same packet for the duel, kept 2976'
 When a port finds a packet's new size or layout, grep every module for that opcode and its old size, not only the
 one that showed the bug.
 
+## A packet right after an event is not that event's until its id says so (2026-11-25, the grindstone)
+I told the testers the grindstone's "little scene went to the host" because a stage branch to the host's character
+came 0.3 s after the joined player's grindstone request. That sequencer (0xB82) had been prepared for the host 18
+minutes earlier: an unrelated long-lived scene. Before naming a cause to testers, trace the id in the evidence back to
+its creation (its prepare line) and check it belongs to the event; a correction costs another message and some trust.
+
 ## During a test, a wanted shell command goes on a list, never into a neutered Bash call (2026-11-25, cs130a / cs129a)
 The rule "no Bash while a test runs" was broken three more times in one afternoon, always the same way: a Bash call
 was begun for something useful (a grep of our logs, a look at a file's tail, a timestamp), the rule came to mind
@@ -936,3 +942,10 @@ each was still a Bash call during a test. What works instead: Read / Grep / Glob
 cover the logs, the live game-folder logs and the screenshots), the browser's `new Date()` for the time, and for
 anything that really needs a shell (curl, python, git, a build) a line in a scratchpad file, run after the test. If
 the next tool call would be Bash and a test is running, the call is not made at all.
+
+## After asking testers a question, read the channel again before drafting the next reply (2026-11-26)
+On 25 Nov I asked Brycecco two questions (the windows, the portal chest) at 21:52; he answered both at 21:54. My next
+reply draft asked them again two hours later, because I had read the channel only before posting. Testers often answer
+within minutes. Before writing a follow-up that asks anything: read the channel since my last post, and answer what
+they already said (here the answer also closed a question by itself: the journal line it led to showed the quest had
+moved, so the "portal chest" was the known host-only-place gap).

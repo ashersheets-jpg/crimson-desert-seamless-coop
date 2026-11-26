@@ -5,7 +5,14 @@ One-PC testing uses the echo peer ("stand-in"): build/port3479/*.sh; after every
 test save Out, shipped cdmp.ini restored.
 
 ## Waiting on the user (kept current)
-- 2026-11-25 21:52 NOTHING NEW TO DECIDE. DONE: b95eef38 POSTED in #download-here by me (pp62: all 30 steps, 1320
+- 2026-11-26 04:23 NOTHING NEW TO DECIDE. DONE: ee0cecf0 POSTED in #download-here by me (pp64: all 31 steps, 1370
+  checks; mounts' host ride lost once to the flower patch, clean on its re-run pp64b 53 / 0; both zips checked file by
+  file, 25/25 and 10/10; message 1575441380128460881): the joined player's townsfolk with the host high above (an Abyss
+  island) and after a checkpoint revive, the townsfolk duplicate guard (offsets read 8 bytes off since 3576), duel hits
+  stagger. Replied to Brycecco + Arcticwolf (1575441709234524241: the grindstone correction, their windows / portal
+  answers, the T-pose question). Next: the level-state share for the host's story places (built, then cs135), the
+  grindstone / church window / Edward's pad tests.
+- 2026-11-25 21:52 (superseded 2026-11-26 04:23) NOTHING NEW TO DECIDE. DONE: b95eef38 POSTED in #download-here by me (pp62: all 30 steps, 1320
   checks; farfight's luck check re-run and passed; message 1575343130708934797; the slot off, the island fall guard,
   the hand-over fault told to both games, no friend prompt in cutscenes). Replied to Brycecco + Arcticwolf (their
   fourth session: the Abyss townsfolk, the revive, the stage offsets, the duel, the grindstone; asked about windows and
@@ -11906,3 +11913,36 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   (after the revive), no abort, the tracker's revive reload counted. It did not exercise the abort case (nothing armed
   at the revive), so the step goes back to the early departure (26 s after the kill: armed while the guest lies dead,
   the revive must drain it, then a re-arm after the revive): 23:33 pp63c.
+- 23:33-23:42 pp63c u2revive 51 / 0: dead 23:39:59, the host away 26 s later, U-1 ARMED 23:40:29 while the guest lay
+  dead, the revive's step 1 (2972) at 23:40:46 drained it with no abort, ARMED again 23:40:49 after the revive. Commit
+  ee0cecf (pushed). 23:43 #general 1575371472296345613: PapiHongo (looking for a Steam partner) pointed to
+  #find-a-co-op-partner and the zips. 23:44 packaged ee0cecf0 (= the build tree's DLLs); pp64 started: the full
+  checklist, 31 steps (u2revive fall armwrest shop chest first).
+- 2026-11-26 00:05 pp64 u2revive 51 / 0 (23:54). Discord (reads): Brycecco had answered both questions at 21:54 (two
+  minutes after my reply; missed until now): the windows are the church's 2nd floor at the Bianca bounty contract;
+  the portal chest is the mystical key mission's, after the host left the room whose door locked behind them. From
+  their zips: the portal's chest is 0xB0100B0A (17:25:06) and the joined player's journal has "Go through the shining
+  gate (ours too)" one second later: its quest moved with the host's (shared credit); the gate itself is a place of
+  the host's story, the same gap as the prologue's island (research doc: the plan for a guest-side level mirror). The
+  windows: no request from either game. The reply draft (scratchpad replies_next_build.txt) says so. Tests written
+  for after the pass: cs133 (the grindstone: the joined player's use, then the host's own, packet captures on), cs134
+  (the church windows, the host alone, twelve directions).
+- 00:40 A lead for the host's story places (a read-only subagent's survey of the notes + my decomp reads): the server's
+  ChangeGameLevelStateAck (3732 opcode 2669, the world's 333 game-level states) goes to the field owner only; the
+  joined player gets the list once at its entry, never a change after it (ByJunter's untried R1). The client applies it
+  to the named character's own component, so a copy must carry the joined player's key. Drafted (scratchpad lss/):
+  [session2] level_state_share = 0 | probe | 1 (dye_share's shape), unit tests, the apply script, cs135.sh (cs93's camp
+  kill with both captures). Research doc and ROADMAP B10 updated.
+- 04:10 pp64 DONE: 1370 pass, 2 fail, 31 steps. The 2 fails are mounts: the host's E presses took peonies ("Peony: E
+  Take" in its shot h0; the guest's g1 shows it on foot beside its horse while the guest rides): the flower-patch flaw
+  of pp14d, not this build. All 29 other steps clean (u2revive 51, fall 53, armwrest 52, shop 25, chest 49, static 12,
+  real 14, fresh 45, xess 46, fsr 46, latehook 61, display 7, lowsave 50, stall 56, revive 51, loot 50, crime 53, leave
+  27, door 49, farfight 49, farfight2 48, newsave 104, solostart 51, mountfight 49, nosave 7, retry 49, stuck 53,
+  mismatch 9, hostrevive 53, lagrun 50; SAVES OK and the install 5/5 in every step). 04:12 pp64b: mounts again, same build.
+- 04:12 gls_cmp (python over the cs103 / cs93 captures): the host's and the joined player's full lists are identical
+  (333 keys, 0 different states) although their saves differ: these are the world's states, which the server gives the
+  joined player at its entry anyway; a copy of the host's later changes keeps it in step and overrides nothing of its own.
+- 04:19 pp64b mounts 53 / 0 (the host rode this time): all 31 steps passed on ee0cecf0. 04:21 POSTED in #download-here
+  (1575441380128460881; stage_post 1738 characters; both zips = dist file by file, 25/25 and 10/10; the build tree's
+  DLLs = the package's, dllswap). 04:22 reply in #play-testing-feedback (1575441709234524241, tags Brycecco +
+  Arcticwolf). Records: CHANGELOG posted line, download-ee0cecf0.txt.

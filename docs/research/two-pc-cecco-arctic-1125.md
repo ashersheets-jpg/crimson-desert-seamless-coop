@@ -169,9 +169,52 @@ replied 15:17 (message 1575243949344432129). Kept in the session scratchpad (dl-
     cells / back at 2 or 0).
   - Duel: every "the other player hit us ... -N hp" without ", reaction" (g_react off), as read from the code.
   - The grindstone: the joined player's interaction 0x2BA1 on 0xB04022F6 (18:08:20) was accepted (preemption and do
-    step SuccessAcks to user 2), and the next stage branch (sequencer 0xB82) went to the HOST's character: the
-    interaction's little scene runs as the field owner's, the same class as the shops before ShopTwin. Not fixed.
-  - Windows: no refused interaction of either player in the log; asked the testers what they mean.
+    step SuccessAcks to user 2), and then nothing more came for user 2's character (no sequencer prepared for it in
+    the next seconds). The stage branch of sequencer 0xB82 to the host right after is NOT the grindstone's: 0xB82 was
+    prepared for the host at 17:50:12, 18 minutes earlier (a long-lived host scene). Corrected 25 Nov 23:50 (the reply
+    of 21:52 said "its scene went to the host": to be corrected in the next reply). Next: what the host's own use of
+    a grindstone sends (a one-PC test with the host at a grindstone), then the same for user 2.
+  - Windows: no refused interaction of either player in the log; asked the testers what they mean. Brycecco's answer
+    (02:54 UTC 26 Nov, two minutes after the question; first read 25 Nov 23:59): the church windows with a prompt on
+    the 2nd floor, where the Bianca bounty contract is. No request in either log means the prompt's own client check
+    stopped it before any request: to try in a one-PC run, the host alone first (the game's own behaviour?).
+  - The portal chest (Brycecco, same message): the mystical key mission (Hernand Castle, the door of 25 Nov 17:11
+    that opened after a reload); the host opened the chest that makes the portal, then left the room whose door had
+    locked behind them; the joined player, still inside, could not trigger the portal. In the host log the castle's
+    chests: 0xB0100E93 at (-10550.0, 649.5, -3792.7) at 17:21:29 (2 kinds, 75002 / 75001, kept and handed to the
+    joined player at 17:25:03), then 0xB0100B0A (17:25:06) and 0xB010274A (17:25:58), both "nothing we can see" (a
+    portal chest gives no items). The shared credit was on (QuestRoute "shared passes"). READ (26 Nov 00:05): the
+    portal's chest is 0xB0100B0A: one second later the joined player's journal has "<host> completed 1001761 'Go
+    through the shining gate' (ours too)" (17:25:07), then "Activate the Abyss Nexus (ours too)" 17:25:55 and the
+    Abyss steps after it, all credited. So the joined player's quest did move with the host's; what it lacked is the
+    gate itself: the shining gate is a place of the HOST's story (its quest's stage), which the joined player's game
+    does not have, the same open item as the prologue's Abyss island (B10: getting the joined player onto the host's
+    story-only places). Not a chest fault.
+  - Next for those places (plan, 26 Nov): a client loads its levels itself (2598 SceneLevelLoadCompleteSync... and
+    2834 SceneLevelUnloadReq are both C->S; the server only registers), so the joined player's game never loads a
+    level that only the host's story stage asks for (SceneLevelShare's "owner native" lines, never "ready for user
+    2"). A guest-side mirror in the shape of guest_sched_load (ByJunter's: the guest's own loader called on its
+    network thread before the packet that needs the file): the host's native names its story levels (it has the name
+    at the registry) to the joined player's game when that player comes near or follows with Go to my friend, and
+    the joined player's game loads them through its own client loader. To find first (decomp, after the pass): the
+    client's level request by name (what the stage's level action calls before its 2598).
+  - A simpler lead first (26 Nov 00:40, a read-only subagent's survey + my reads): ChangeGameLevelStateAck (3732
+    opcode 2669; the sniffer names it at runtime from RTTI) lists the world's game levels and their states (payload
+    u8 4 | u32 a character's key | u32 1 | u8 1 | n x {u32 level key 0x0F42xx, u32 state hash, u8}; 3007 bytes = 333
+    entries). It is written with a ToTarget finder (owner_fanout_writers.h) to one character. In every two-copy
+    capture (cs83w3 .. cs103) the joined player got it once, at its entry (its own key 0xA0100066); the host got it
+    again later in the session. ByJunter's R1 (pendientes/p8-s9-cinematica.md 136-140, 318-319): the prologue camp's
+    level state changed for the owner only; copying it was left untried. The client's handler (3576 decomp,
+    TrocTrChangeGameLevelStateAck vf3 0xCADB30) looks up the named character and, only when that actor exists and
+    passes [[a+0x88]+1] == 1 and a+0x96 != 0, hands the entries to [[a+0x68]+0x1A0] (0xB017C0), which maps each level
+    key and state hash through two global tables and applies each pair (0x236D8D0). So a copy must name the joined
+    player's own character. The level keys share the quests' id range (the camp's quest is 0x0F42D9): quest steps
+    likely set them. Drafted (scratchpad lss/, not applied during the pass): [session2] level_state_share = 0 | probe
+    | 1 on the host (dye_share's shape: the sniffer's tap, server_push_extra, the key rewritten, only while user 2 is
+    in the world) and build/native/cs135.sh (cs93's camp kill with captures on both sides, the share in probe).
+  - Tests written for after the pass: build/native/cs133.sh (the grindstone: the joined player's use, then the
+    host's own, both captures on) and cs134.sh (the church's 2nd floor at the bounty notice: the host alone, twelve
+    directions, E held).
 - **T-posed "?" shopkeepers nobody can use**, the **joined player's grindstone** (prompt, hold, nothing), the
   **portal chest** left open after the host left (the joined player cannot trigger the portal), **windows neither
   player can open**: to read in the zips.

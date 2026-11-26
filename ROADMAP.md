@@ -357,6 +357,11 @@ build, two-copy test, savecheck, notes, commit. Status key as above.
   story-phase levels near user 2, or the story scene together moving both). Also seen: the HOST took no damage in the
   prologue's fights (381 NPC blows, HP full) while the joined player did: to verify (the game's own prologue
   protection of the hero?). docs/research/two-pc-cecco-arctic-1125.md.)
+  (2026-11-26, their fourth session: the same gap at Hernand Castle: the host's chest made the "shining gate" and the
+  host went through; the joined player's step was credited one second later ("Go through the shining gate (ours
+  too)"), but the gate is the host's story place and the joined player was left in the locked room. Plan: a guest-side
+  level mirror (the host names its story levels, the joined player's game loads them through its own client loader,
+  in the shape of ByJunter's guest_sched_load); first the client's load-by-name in the decomp.)
   **Design (user 2026-11-08, after a Discord poll):** option 3 as the base -- each player keeps and plays their OWN
   quests and story in the shared world (start / finish individually, fight together); option 2 as an optional "do it
   together" bonus -- when both are on the SAME step of the same quest, one completing it checks it off for both
