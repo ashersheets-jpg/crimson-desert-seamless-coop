@@ -5731,10 +5731,15 @@ void logout_drain(uintptr_t chr, uint8_t reason) noexcept {
 // Review 3: its character leaves the server: every NPC still given to it goes (after the drain above, if any).
 void logout_cleanup(uint8_t reason) noexcept { ctl_cleanup(0, kCleanItsLogout, static_cast<uint16_t>(0xF000 | reason)); }
 
-bool is_load(uint16_t op) noexcept { return op == kOp2283 || op == kOp2362 || op == kOp2437; }
+// Co-op+ (2026-11-25, pp63a): a checkpoint revive's first request, ReviveLoadingStartReq 2972 (the layer's U, step 1),
+// resets user 2's manager to state 0 before its ReviveLoadingReq 2887 arrives; armed, the watchdog read "not in state 2"
+// and ABORTED U-1 for the rest of the session (no own townsfolk again). The in-place revive (Q) sends ReviveReq 2869
+// alone. Both now drain an armed manager at their entry, as its loads do (it re-arms after the dwell).
+constexpr uint16_t kOpReviveStart = 2972, kOpReviveInPlace = 2869;
+bool is_load(uint16_t op) noexcept { return op == kOp2283 || op == kOp2362 || op == kOp2437 || op == kOpReviveStart; }
 // The Reqs whose ExecuteTroc entry drains its armed manager at once: its loads and its goodbye (if the 2001 runs as a
 // Troc of its character; the OnRecvPacket path only counts it, see user2_stages_server_packet).
-bool drains_at_entry(uint16_t op) noexcept { return is_load(op) || op == kOp2001; }
+bool drains_at_entry(uint16_t op) noexcept { return is_load(op) || op == kOp2001 || op == kOpReviveInPlace; }
 
 // ---------------------------------------------------------------- the module's thread: the players
 
