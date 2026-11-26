@@ -23,13 +23,13 @@ namespace cdmp::net {
 namespace {
 
 // 3479 opcodes (layouts: weather_sync.cpp, NOTES/LOG.md 2026-11-02 17:10).
-constexpr uint16_t kOpPrepareSequencerAck = 2356;
-constexpr uint16_t kOpDeleteSequencerAck = 2659;
-constexpr uint16_t kOpStageBranchStateAck = 2752;
-constexpr uint16_t kOpStageOnBranchEventAck = 2369;
-constexpr uint16_t kOpUpdateStageChartEventReq = 2200;
-constexpr uint16_t kOpUpdateStageChartEventAck = 2105;
-constexpr uint16_t kOpSetAvoidByCutSceneAck = 2698;  // u8 4 | u32 player | u64 stage | u8 on | u32 player
+constexpr uint16_t kOpPrepareSequencerAck = 2362;
+constexpr uint16_t kOpDeleteSequencerAck = 3046;
+constexpr uint16_t kOpStageBranchStateAck = 2455;
+constexpr uint16_t kOpStageOnBranchEventAck = 2239;
+constexpr uint16_t kOpUpdateStageChartEventReq = 2811;
+constexpr uint16_t kOpUpdateStageChartEventAck = 2308;
+constexpr uint16_t kOpSetAvoidByCutSceneAck = 2307;  // u8 4 | u32 player | u64 stage | u8 on | u32 player
 constexpr uint64_t kFakeIdBase = 0x7D000000;
 constexpr float kNearM = 100.0f;          // the user's cutscene range
 constexpr uint32_t kMaxMs = 180000;       // a copy never outlives this

@@ -37,7 +37,7 @@
 
 namespace cdmp::net {
 namespace {
-namespace off = game::build_3732;
+namespace off = game::build_3840;
 using Bytes = std::vector<uint8_t>;
 
 // Fresh keys for the puppet. Real serials seen so far are below 0x1000, so
@@ -656,7 +656,7 @@ bool g_rope_lookup_faulted = false;
 // 0xB5BD60 -> 0x5A7A10; the game's own releases use reason 2).
 // Co-op+: message numbers for game 1.0.0.3460, read from the live Troc table (every
 // TrocTr handler instance: RTTI name, opcode). The values here before were 2976-era.
-constexpr uint16_t kOpReleaseRemoteCatchResultAck = 3041;
+constexpr uint16_t kOpReleaseRemoteCatchResultAck = 2800;
 constexpr uint8_t kReleaseReason = 2;
 
 std::string scene_text(const SceneId& id) {
@@ -2267,7 +2267,7 @@ uint64_t rope_piece_of(uintptr_t base, const uint8_t* scene) {
     bool attached = false;
     g_rope_lookup_faulted = true;  // stays so if the game code below faults
     __try {
-        reinterpret_cast<Find>(base + 0x18B83B0)(mgr, att, scene);
+        reinterpret_cast<Find>(base + 0x1946960)(mgr, att, scene);
         attached = true;
         uintptr_t obj = 0;
         std::memcpy(&obj, att + 8, sizeof obj);
@@ -2367,7 +2367,7 @@ bool bend_tree(uintptr_t base, uintptr_t copy, uintptr_t own, float copy_x, floa
         const auto vt = *reinterpret_cast<const uintptr_t* const*>(obj);
         const uintptr_t p = reinterpret_cast<CanBend>(vt[0x328 / 8])(obj);
         if (!p || *reinterpret_cast<const uint8_t*>(p + 0x18) == 0) return true;
-        const uintptr_t tree = reinterpret_cast<Tree>(base + 0x491ED0)(node);
+        const uintptr_t tree = reinterpret_cast<Tree>(base + 0x4B4AE0)(node);
         if (!tree) return true;
         alignas(16) uint8_t out[0x40] = {};
         if (!reinterpret_cast<Point>(base + 0x5A4AA0)(comp, 0, out)) return true;
@@ -2444,7 +2444,7 @@ bool rope_effect(uintptr_t copy, bool hooked) {
 bool node_world(uintptr_t base, uintptr_t node, float out[3]) {
     using Get = void*(__fastcall*)(uintptr_t, void*);
     alignas(16) uint8_t xf[0x30] = {};
-    reinterpret_cast<Get>(base + 0x26D60A0)(node, xf);
+    reinterpret_cast<Get>(base + 0x27C6190)(node, xf);
     float p[3];
     int16_t sx, sz;
     std::memcpy(p, xf + 0x1C, sizeof p);
@@ -2477,7 +2477,7 @@ bool rope_end(uintptr_t comp, uint8_t slot) {
         alignas(16) uint8_t xf[0x30] = {};
         const float unit[7] = {1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
         std::memcpy(xf, unit, sizeof unit);
-        if (!reinterpret_cast<Target>(base + 0x5A4420)(comp, 0, xf)) return true;
+        if (!reinterpret_cast<Target>(base + 0x5D62B9)(comp, 0, xf)) return true;
         float t[3], b[3];
         std::memcpy(t, xf + 0x1C, sizeof t);
         if (node_world(base, o - 0x28, b)) {
@@ -2487,8 +2487,8 @@ bool rope_end(uintptr_t comp, uint8_t slot) {
         }
         if (!is_copy) return true;  // ours: measured only
         std::memset(xf + 0x28, 0, 4);
-        reinterpret_cast<Split>(base + 0x50EE10)(xf);
-        reinterpret_cast<SetWorld>(base + 0x26D72A0)(o - 0x28, xf, 0, 1);
+        reinterpret_cast<Split>(base + 0x53EE90)(xf);
+        reinterpret_cast<SetWorld>(base + 0x27C7390)(o - 0x28, xf, 0, 1);
         g_rope_end_sets.fetch_add(1, std::memory_order_relaxed);
         return true;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
@@ -2564,12 +2564,12 @@ bool puppet_install_rope_bend() {
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     static const uint8_t kHead[] = {0x48, 0x8B, 0x8E, 0xC8, 0x00, 0x00, 0x00, 0xE8};  // mov rcx,[rsi+0xC8]; call
     uint8_t head[sizeof kHead];
-    if (base != off::kImageBase || !game::safe_read(base + 0x897916, head, sizeof head) ||
+    if (base != off::kImageBase || !game::safe_read(base + 0x8D2BA6, head, sizeof head) ||
         std::memcmp(head, kHead, sizeof head) != 0) {
         log::warn("Puppet: actor update not recognised; the tree will not bend for the other player");
         return false;
     }
-    g_bend_hook = safetyhook::create_mid(reinterpret_cast<void*>(base + 0x897916), on_actor_update);
+    g_bend_hook = safetyhook::create_mid(reinterpret_cast<void*>(base + 0x8D2BA6), on_actor_update);
     g_rope_bend = static_cast<bool>(g_bend_hook);
     g_rope_effect = g_rope_bend.load();
     log::info("Puppet: tree bend and rope effect for the other player's rope {}",
@@ -2577,9 +2577,9 @@ bool puppet_install_rope_bend() {
     // R5 (arbol-cuerda-5.md): movzx r8d,sil; vmovaps xmm1,xmm6; mov rcx,rdi; call 0x5AEAA0.
     static const uint8_t kSlotTick[] = {0x44, 0x0F, 0xB6, 0xC6, 0xC5, 0xF8, 0x28, 0xCE, 0x48, 0x8B, 0xCF, 0xE8};
     uint8_t at[sizeof kSlotTick];
-    if (g_rope_bend && !g_rope_end_hook && game::safe_read(base + 0x5C953A, at, sizeof at) &&
+    if (g_rope_bend && !g_rope_end_hook && game::safe_read(base + 0x5FCBBA, at, sizeof at) &&
         std::memcmp(at, kSlotTick, sizeof at) == 0) {
-        g_rope_end_hook = safetyhook::create_mid(reinterpret_cast<void*>(base + 0x5C953A), on_rope_slot_tick);
+        g_rope_end_hook = safetyhook::create_mid(reinterpret_cast<void*>(base + 0x5FCBBA), on_rope_slot_tick);
         g_rope_end = static_cast<bool>(g_rope_end_hook);
     }
     log::info("Puppet: the other player's rope end on the tree: {}", g_rope_end ? "installed" : "NOT installed");
@@ -2795,10 +2795,10 @@ void puppet_scrub_c2s(uint8_t* packet, uint16_t size) {
     uint16_t op = 0;
     std::memcpy(&op, packet, 2);
     size_t at = 0;
-    if (op == 3119 && size >= 5 + 9) at = 5;            // GamePlayTriggerInfoEnterReq: u32 actor | u32 trigger | u8 in
-    else if (op == 3140 && size >= 5 + 8) at = 5;       // RegionInOutReq: u32 actor | u32 region | ... (the pub region)
-    else if (op == 2808 && size >= 5 + 18) at = 5 + 13;  // SequencerTriggerVolumeInOutReq: u64 | u32 | u8 | u32 actor | u8
-    else if ((op == 3134 || op == 2996) && size >= 5 + 28) {
+    if (op == 2960 && size >= 5 + 9) at = 5;            // GamePlayTriggerInfoEnterReq: u32 actor | u32 trigger | u8 in
+    else if (op == 2222 && size >= 5 + 8) at = 5;       // RegionInOutReq: u32 actor | u32 region | ... (the pub region)
+    else if (op == 3004 && size >= 5 + 18) at = 5 + 13;  // SequencerTriggerVolumeInOutReq: u64 | u32 | u8 | u32 actor | u8
+    else if ((op == 2701 || op == 3127) && size >= 5 + 28) {
         // UpdateGimmickReq 2787 / GimmickExecuteFrameEventReq 2155 that a copy caused (it bumped a stool, sat on a bench):
         // u32 gimmick first, the copy as its user further in. The gimmick key goes to 0: our server ignores it.
         bool by_copy = false;

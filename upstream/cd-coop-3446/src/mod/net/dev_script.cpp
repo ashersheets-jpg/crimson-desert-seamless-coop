@@ -81,20 +81,20 @@ static std::vector<NpcRow> npcs_near(float radius, float from, std::optional<pro
             if (const auto info = game::read_ptr(*actor + 0x88)) {
                 if (const auto t = game::read<uint8_t>(*info + 1)) r.type = *t;
             }
-            const auto comps = game::read_ptr(*actor + game::build_3732::kActor_ComponentTable);
-            const auto status = comps ? game::read_ptr(*comps + game::build_3732::kComponents_Status) : std::nullopt;
+            const auto comps = game::read_ptr(*actor + game::build_3840::kActor_ComponentTable);
+            const auto status = comps ? game::read_ptr(*comps + game::build_3840::kComponents_Status) : std::nullopt;
             const auto vt = status ? game::read_ptr(*status) : std::nullopt;
-            if (status && vt && *vt == exe + game::build_3732::kVtStatusComponent) {
-                const auto cont = game::read_ptr(*status + game::build_3732::kStatus_StatContainer);
-                const auto entries = cont ? game::read_ptr(*cont + game::build_3732::kStatContainer_Entries) : std::nullopt;
-                const auto count = cont ? game::read<uint32_t>(*cont + game::build_3732::kStatContainer_Count) : std::nullopt;
-                if (entries && count && *count <= game::build_3732::kMaxStatEntries) {
+            if (status && vt && *vt == exe + game::build_3840::kVtStatusComponent) {
+                const auto cont = game::read_ptr(*status + game::build_3840::kStatus_StatContainer);
+                const auto entries = cont ? game::read_ptr(*cont + game::build_3840::kStatContainer_Entries) : std::nullopt;
+                const auto count = cont ? game::read<uint32_t>(*cont + game::build_3840::kStatContainer_Count) : std::nullopt;
+                if (entries && count && *count <= game::build_3840::kMaxStatEntries) {
                     for (uint32_t i = 0; i < *count; ++i) {
-                        const uintptr_t e = *entries + static_cast<uintptr_t>(i) * game::build_3732::kStatEntry_Size;
-                        const auto id = game::read<uint64_t>(e + game::build_3732::kStatEntry_Id);
-                        if (!id || *id != game::build_3732::kStatId_Health) continue;
-                        const auto cur = game::read<int64_t>(e + game::build_3732::kStatEntry_Current);
-                        const auto max = game::read<int64_t>(e + game::build_3732::kStatEntry_Max);
+                        const uintptr_t e = *entries + static_cast<uintptr_t>(i) * game::build_3840::kStatEntry_Size;
+                        const auto id = game::read<uint64_t>(e + game::build_3840::kStatEntry_Id);
+                        if (!id || *id != game::build_3840::kStatId_Health) continue;
+                        const auto cur = game::read<int64_t>(e + game::build_3840::kStatEntry_Current);
+                        const auto max = game::read<int64_t>(e + game::build_3840::kStatEntry_Max);
                         if (cur && max) {
                             r.hp = static_cast<float>(*cur) / 1000.0f;
                             r.hp_max = static_cast<float>(*max) / 1000.0f;
@@ -131,7 +131,7 @@ static void kill_nearest_person(float radius) {
         if (hunt_animal_name(r.variant) || r.hp_max < 40.0f || r.hp <= 0.0f) continue;
         std::vector<uint8_t> pl(8, 0);
         std::memcpy(pl.data(), &r.key, 4);
-        const bool ok = sniffer_inject_c2s(dev_c2s(2322, pl));
+        const bool ok = sniffer_inject_c2s(dev_c2s(2303, pl));
         g_last_killnear = r.key;
         log::info("Dev script: killnear: KillCheatReq on 0x{:08X} (variant 0x{:08X}, {:.1f} m, hp {:.0f}/{:.0f}){}", r.key,
                   r.variant, r.d, r.hp, r.hp_max, ok ? "" : " NOT sent");
@@ -147,7 +147,7 @@ static void loot_last_killed() {
     }
     std::vector<uint8_t> pl = {0, 0, 0, 0, 0, 1};
     std::memcpy(pl.data(), &key, 4);
-    constexpr uint16_t kLootReq = 2382;  // 3732 (2976: 2491)
+    constexpr uint16_t kLootReq = 2998;  // 3732 (2976: 2491)
     const bool ok = sniffer_inject_c2s(dev_c2s(kLootReq, pl));
     log::info("Dev script: lootlast: the body 0x{:08X} looted as our own request ({}){}", key, kLootReq,
               ok ? "" : " NOT sent");
@@ -549,7 +549,7 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
             if (in >> slot) {}
             try {
                 st.kind = Step::C2S;
-                st.op = 3104;
+                st.op = 2238;
                 st.addr = 0x3111;  // marks the giver key to fill in at run time
                 const uint32_t it = static_cast<uint32_t>(std::stoul(item, nullptr, 16));
                 const uint64_t n = std::stoull(count);
@@ -833,7 +833,7 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                 } else {
                     std::vector<uint8_t> pay(8, 0);  // KillCheatReq: u32 key | u32 option (0 = at once)
                     std::memcpy(pay.data(), &friend_key, 4);
-                    const bool ok = sniffer_inject_c2s(make_c2s(2322, pay));
+                    const bool ok = sniffer_inject_c2s(make_c2s(2303, pay));
                     log::info("Dev script: killfriend: KillCheatReq on the other player's character 0x{:08X}{}", friend_key,
                               ok ? "" : " NOT sent");
                 }
@@ -844,7 +844,7 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                 } else {
                     std::vector<uint8_t> pay(8, 0);  // KillCheatReq: u32 key | u32 option (0 = at once)
                     std::memcpy(pay.data(), &horse, 4);
-                    const bool ok = sniffer_inject_c2s(make_c2s(2322, pay));
+                    const bool ok = sniffer_inject_c2s(make_c2s(2303, pay));
                     log::info("Dev script: killhorse: KillCheatReq on our horse 0x{:08X}{}", horse, ok ? "" : " NOT sent");
                 }
             } else if (st.kind == Step::KillAll) {
@@ -853,7 +853,7 @@ int dev_script_run(const std::string& path, uint32_t own_player, float x, float 
                     if (hunt_animal_name(variant) || (key & 0xFF000000) != 0xB0000000 || sent >= 40) continue;
                     std::vector<uint8_t> pay(8, 0);  // KillCheatReq: u32 key | u32 option (0 = at once)
                     std::memcpy(pay.data(), &key, 4);
-                    sent += sniffer_inject_c2s(make_c2s(2322, pay)) ? 1 : 0;
+                    sent += sniffer_inject_c2s(make_c2s(2303, pay)) ? 1 : 0;
                     log::info("Dev script: KillCheatReq on 0x{:08X} (variant {})", key, variant);
                     Sleep(150);
                 }

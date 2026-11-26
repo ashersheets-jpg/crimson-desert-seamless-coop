@@ -18,33 +18,33 @@
 
 namespace cdmp::net {
 namespace {
-namespace off = game::build_3732;
+namespace off = game::build_3840;
 
 // The state steps on 3460 (each: cmp word [rcx+0x5E], from / jnz / mov word [rcx+0x5E], to / ret).
 struct Step {
     uintptr_t rva;
     uint16_t from, to;
 };
-constexpr Step kSteps[] = {{0x165D0B0, 2, 4}, {0x165D0C0, 4, 8}, {0x165D0D0, 8, 0x10}};  // 3576 (3549: -0x820)
+constexpr Step kSteps[] = {{0x16E5D10, 2, 4}, {0x16E5D20, 4, 8}, {0x16E5D30, 8, 0x10}};  // 3576 (3549: -0x820)
 
 // Finishes an actor tree: collects the root and its children, then runs the 8 -> 0x10 step
 // (vf 0x78) and vf 0x140 on each (exe+0x5B1AA6).
-constexpr uintptr_t kFinishTree = 0x5DE300;  // 3549: 0x5B2240
+constexpr uintptr_t kFinishTree = 0x612050;  // 3549: 0x5B2240
 constexpr uint8_t kFinishTreeHead[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55};
 
 // In the "prepare" step (exe+0x5B0CD0), right after `call [rax+0x80]` on each component of each
 // actor of the tree: al != 0 means "this component is still loading", which keeps the actor
 // out of the finish step. rdi = the component entry ([rdi] = component), r14 = tree entry
 // ([r14+8] = actor).
-constexpr uintptr_t kComponentBusy = 0x5DD89F;  // 3549: 0x5B17DF
+constexpr uintptr_t kComponentBusy = 0x6115EF;  // 3549: 0x5B17DF
 constexpr uint8_t kComponentBusyHead[] = {0x84, 0xC0, 0x75, 0x43};  // test al,al / jnz
 
 // ClientCharacterControlActorComponent vtable slots 18 (resource load complete: sets the hide
 // bits on 2976) and 24 (end of login: clears them), entry; rcx = component, [rcx+8] = actor.
-constexpr uintptr_t kCcSlot18 = 0x971B80, kCcSlot24 = 0x971ED0;  // 3576, vtable slots (3549: 0x943910, 0x943C60)
+constexpr uintptr_t kCcSlot18 = 0x971B80, kCcSlot24 = 0x9AF230;  // 3576, vtable slots (3549: 0x943910, 0x943C60)
 // ICharacterMovementMethod vf2 (slot 2 of Normal/AnimationAll/...): the per-frame step that,
 // for a remote actor, interpolates its network samples. rcx = method, [rcx+0x20] = actor.
-constexpr uintptr_t kMethodStep = 0xBF5C00;  // 3576 (3549: 0xBBD5F0)
+constexpr uintptr_t kMethodStep = 0xC41380;  // 3576 (3549: 0xBBD5F0)
 SafetyHookMid g_step_hook;
 std::atomic<uint64_t> g_step_own{0}, g_step_copy{0};
 SafetyHookMid g_cc18_hook, g_cc24_hook;
@@ -89,7 +89,7 @@ int exe_frames(uintptr_t rsp, uintptr_t* out, int max) {
         const auto* sp = reinterpret_cast<const uintptr_t*>(rsp);
         for (int i = 0; i < 96 && n < max; ++i) {
             const uintptr_t v = sp[i];
-            if (v > g_base + 0x1000 && v < g_base + 0x5617000) out[n++] = v - g_base;
+            if (v > g_base + 0x1000 && v < g_base + 0x57A4070) out[n++] = v - g_base;
         }
     } __except (EXCEPTION_EXECUTE_HANDLER) {
     }

@@ -499,7 +499,7 @@ void dev_ptrscan(uint32_t key) {
         log::info("Dev ptrscan: actor 0x{:08X} not loaded", key);
         return;
     }
-    const auto table = game::read_ptr(*actor + game::build_3732::kActor_ComponentTable);
+    const auto table = game::read_ptr(*actor + game::build_3840::kActor_ComponentTable);
     uintptr_t at = 0;
     size_t size = 0;
     if (!data_section(at, size)) return;
@@ -532,8 +532,8 @@ namespace cdmp::net {
 void dev_watch_status(int offset, int len, int hits) {
     const uint32_t own = capture_own_player_key();
     const auto actor = own ? game::find_actor(own) : std::nullopt;
-    const auto table = actor ? game::read_ptr(*actor + game::build_3732::kActor_ComponentTable) : std::nullopt;
-    const auto status = table ? game::read_ptr(*table + game::build_3732::kComponents_Status) : std::nullopt;
+    const auto table = actor ? game::read_ptr(*actor + game::build_3840::kActor_ComponentTable) : std::nullopt;
+    const auto status = table ? game::read_ptr(*table + game::build_3840::kComponents_Status) : std::nullopt;
     if (!status) {
         log::warn("Dev watchstatus: our status component not found");
         return;
@@ -550,9 +550,9 @@ void dev_dump_item_move() {
     const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     uintptr_t table = 0;
     uint32_t count = 0;
-    if (!game::safe_read(base + 0x724C4F0, &table, sizeof table) || !table ||
+    if (!game::safe_read(base + 0x73F21B8, &table, sizeof table) || !table ||
         !game::safe_read(table + 8, &count, sizeof count)) {
-        log::warn("Dev script: dumpitemmove: the table [exe+0x724C4F0] is not readable");
+        log::warn("Dev script: dumpitemmove: the table [exe+0x73F21B8] is not readable");
         return;
     }
     uintptr_t defs = 0;
@@ -561,8 +561,8 @@ void dev_dump_item_move() {
     // The request handlers' "disabled" byte (+0x21: 1 = the server answers 0 and does nothing, as for the cheats):
     // 3111 MoveItemInventoryToOtherInventoryReq (exe+0x6EB9870), MoveItemInventoryToVehicleReq (exe+0x6EB9900),
     // AddMinusItemReq (exe+0x6EBA5F0, a cheat: expected 1).
-    for (const auto& [name, at] : {std::pair<const char*, uintptr_t>{"MoveItemInventoryToOtherInventoryReq", 0x6F43B90},
-                                   {"MoveItemInventoryToVehicleReq", 0x6F43C20}, {"AddMinusItemReq", 0x6F44910}}) {
+    for (const auto& [name, at] : {std::pair<const char*, uintptr_t>{"MoveItemInventoryToOtherInventoryReq", 0x70E8310},
+                                   {"MoveItemInventoryToVehicleReq", 0x70E83A0}, {"AddMinusItemReq", 0x70E8DC0}}) {
         uint8_t off = 0xFF;
         game::safe_read(base + at + 0x21, &off, 1);
         log::info("Dev script: dumpitemmove: handler {} +0x21 = {}", name, off);

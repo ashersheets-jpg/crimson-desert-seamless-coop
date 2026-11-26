@@ -55,7 +55,7 @@
 
 namespace cdmp::net {
 namespace {
-namespace off = game::build_3732;
+namespace off = game::build_3840;
 using Bytes = std::vector<uint8_t>;
 
 // Keys our own puppet uses (remote_puppet.cpp): never learn templates from those.
@@ -121,10 +121,10 @@ std::atomic<uint32_t> g_last_attack_target{0};
 std::set<uint32_t> g_has_hp;  // under g_actors_mutex
 // Co-op+: message numbers for game 1.0.0.3460, read from the live Troc table (every
 // TrocTr handler instance: RTTI name, opcode). The values here before were 2976-era.
-constexpr uint16_t kOpVaryHPAck = 2608;
-constexpr uint16_t kOpNotifyHandleDeadAck = 2316;
-constexpr uint16_t kOpCreateOrChangeSelfDestinationReq = 2285;  // Co-op+: vec3 | u8 (our map waypoint)
-constexpr uint16_t kOpVaryStatByAccInputReq = 2284;
+constexpr uint16_t kOpVaryHPAck = 2202;
+constexpr uint16_t kOpNotifyHandleDeadAck = 3073;
+constexpr uint16_t kOpCreateOrChangeSelfDestinationReq = 2126;  // Co-op+: vec3 | u8 (our map waypoint)
+constexpr uint16_t kOpVaryStatByAccInputReq = 2971;
 constexpr uint32_t kStatHP = 0x000F4240;
 
 // World actors with hit points, from their loads and HP messages.
@@ -141,9 +141,9 @@ std::map<uint32_t, Enemy> g_enemies;  // under g_actors_mutex
 std::atomic<bool> g_damage_enabled{false};
 std::atomic<bool> g_key_alarm{false};
 uint64_t g_damage_sent = 0, g_damage_applied = 0, g_damage_unmatched = 0;
-constexpr uint16_t kOpAttackTargetAck = 2519;  // PostProcessAttackResult_AttackTargetAck
-constexpr uint16_t kOpChangedEquipByQuickSlotAck = 2273;  // 6 B: u32 player | u16 weapon set
-constexpr uint16_t kOpSetAvoidByCutSceneAck = 2698;       // boss_safe.h: stage cinematic on/off
+constexpr uint16_t kOpAttackTargetAck = 2437;  // PostProcessAttackResult_AttackTargetAck
+constexpr uint16_t kOpChangedEquipByQuickSlotAck = 2823;  // 6 B: u32 player | u16 weapon set
+constexpr uint16_t kOpSetAvoidByCutSceneAck = 2307;       // boss_safe.h: stage cinematic on/off
 
 // ---------------------------------------------------------------- writer-thread state
 game::PlayerReader g_reader;

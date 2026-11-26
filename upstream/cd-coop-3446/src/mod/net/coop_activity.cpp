@@ -50,11 +50,11 @@
 namespace cdmp::net {
 namespace {
 
-constexpr uint16_t kOpActivateMiniGameReq = 2359;  // u16 minigame id | u32 our player
-constexpr uint16_t kOpLeaveMiniGameReq = 2443;     // u8 4 | u32 actor | 14 x 0 | u32 stage key
-constexpr uint16_t kOpSpawnMiniGameCharacterReq = 2281;  // every match: the NPC opponent is spawned
-constexpr uint16_t kOpJoinMiniGameReq = 2204;     // u8 4 | u16 minigame id | u32 actor (us, then the NPC opponent)
-constexpr uint16_t kOpStartActionReq = 2431;      // our client also sends the NPC opponent's actions
+constexpr uint16_t kOpActivateMiniGameReq = 3042;  // u16 minigame id | u32 our player
+constexpr uint16_t kOpLeaveMiniGameReq = 3087;     // u8 4 | u32 actor | 14 x 0 | u32 stage key
+constexpr uint16_t kOpSpawnMiniGameCharacterReq = 2863;  // every match: the NPC opponent is spawned
+constexpr uint16_t kOpJoinMiniGameReq = 2423;     // u8 4 | u16 minigame id | u32 actor (us, then the NPC opponent)
+constexpr uint16_t kOpStartActionReq = 2221;      // our client also sends the NPC opponent's actions
 constexpr float kNearM = 100.0f;                   // the user's rule: cutscenes are shared within 100 m
 constexpr uint32_t kSkipTestDelayMs = 6000;
 
@@ -1004,7 +1004,7 @@ void activity_observe_s2c(const uint8_t* packet, size_t size) {
     if (size < 5) return;
     uint16_t op = 0;
     std::memcpy(&op, packet, 2);
-    if (op == 2356 && size >= 5 + 23) {  // PrepareSequencerAck: u32 stage at +19 (weather_sync.cpp kPrepKeyAt)
+    if (op == 2362 && size >= 5 + 23) {  // PrepareSequencerAck: u32 stage at +19 (weather_sync.cpp kPrepKeyAt)
         uint32_t key = 0;
         std::memcpy(&key, packet + 5 + 19, 4);
         if (const char* n = event_name(key)) {
@@ -1017,7 +1017,7 @@ void activity_observe_s2c(const uint8_t* packet, size_t size) {
         }
         return;
     }
-    if (op != 2120 && op != 2550 && op != 2828) return;
+    if (op != 2770 && op != 2543 && op != 2999) return;
     const uint32_t now = GetTickCount();
     const uint32_t last = g_wanted_sent_at.load();
     if (last && now - last < 60000) return;  // one notice a minute is plenty

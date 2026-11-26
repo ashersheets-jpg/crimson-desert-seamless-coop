@@ -33,15 +33,15 @@
 
 namespace cdmp::net {
 namespace {
-namespace off = game::build_3732;
+namespace off = game::build_3840;
 
-constexpr uint16_t kOpReviveReq = 2869;             // u32 player | u8 type | u8 x3
-constexpr uint16_t kOpReviveLoadingStartReq = 2972;  // 04 | u8 type | 00
-constexpr uint16_t kOpReviveLoadingReq = 2887;       // u8 type
-constexpr uint16_t kOpGameLoadingStartReq = 2350;    // empty: the client starts loading a field
-constexpr uint16_t kOpLoadingFieldDataAck = 2286;    // 04 | u32 player | ... | +28 vec3, quat, scale
-constexpr uint16_t kOpNotifyHandleDeadAck = 2316;   // u32 dead | u32 killer | type | ...
-constexpr uint16_t kOpDoTeleportAck = 2379;          // u32 actor | vec3 | 8 bytes (handler reads 4, 12, 8)
+constexpr uint16_t kOpReviveReq = 2568;             // u32 player | u8 type | u8 x3
+constexpr uint16_t kOpReviveLoadingStartReq = 3044;  // 04 | u8 type | 00
+constexpr uint16_t kOpReviveLoadingReq = 2672;       // u8 type
+constexpr uint16_t kOpGameLoadingStartReq = 2804;    // empty: the client starts loading a field
+constexpr uint16_t kOpLoadingFieldDataAck = 3154;    // 04 | u32 player | ... | +28 vec3, quat, scale
+constexpr uint16_t kOpNotifyHandleDeadAck = 3073;   // u32 dead | u32 killer | type | ...
+constexpr uint16_t kOpDoTeleportAck = 3025;          // u32 actor | vec3 | 8 bytes (handler reads 4, 12, 8)
 constexpr uint8_t kInstant = 1, kCheckpoint = 2;
 constexpr uint32_t kWaitForGameMs = 4000;   // the game's own screen shows ~2 s after the death
 constexpr uint32_t kLoadingStepMs = 1000;   // the game's gap between its two checkpoint requests
@@ -199,8 +199,8 @@ void request_move(float x, float y, float z, bool check_bad = true) {
 // The hops stay for short moves, for the last metres, and as the way out when this does not take.
 // The FieldInfoKey of the field we are in: on the host from the native base (cdmp_field_info_key), on the guest from
 // the host (coop_lobby's kMsgFieldKey: both are in the host's field). 0 = not known: hops as before.
-constexpr uint16_t kOpReloadStageStartReq = 3018;
-constexpr uint16_t kOpTeleportRevivePointAck = 3072;
+constexpr uint16_t kOpReloadStageStartReq = 2235;
+constexpr uint16_t kOpTeleportRevivePointAck = 2664;
 // Farther than this: the game's travel. 250 m, not 80 (pp10-revive, 2026-11-12): the travel is a load of about 9 s on
 // the server whatever the distance (the traveller cannot be hit, or revived, while it lasts: the step's kill came 7 s
 // after a 112 m travel and did nothing), and a few hops cover 250 m in less than that.
@@ -643,7 +643,7 @@ bool send(uint16_t op, const std::vector<uint8_t>& body);
 // checkpoint choice; never a friend's revive or a boss's "we get up"). The host's server applies ITS death penalty
 // to our own money (the native's trade_probe worker, entry 0xC0DE0009; native death_penalty_logic.h's request_body):
 // a 3104 on our own connection, giver = receiver = our character. On a host with the penalty off it only logs.
-constexpr uint16_t kOpMoveItem = 3104;
+constexpr uint16_t kOpMoveItem = 2238;
 constexpr uint32_t kDeathPenaltyEntry = 0xC0DE0009;
 uint32_t g_own_deaths = 0;
 std::atomic<int> g_penalty_shown{0};

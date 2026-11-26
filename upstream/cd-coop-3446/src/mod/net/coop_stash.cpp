@@ -22,12 +22,12 @@
 namespace cdmp::net {
 namespace {
 
-namespace off = game::build_3732;
+namespace off = game::build_3840;
 
 constexpr uint8_t kStashType = 29;  // coop_activity's kStash
 constexpr uint8_t kOpAsk = 1, kOpPage = 2;
 constexpr size_t kPerPage = 100;
-constexpr uint16_t kOpMoveItem = 3104;
+constexpr uint16_t kOpMoveItem = 2238;
 constexpr uint32_t kWithdrawEntry = 0xC0DE0003;  // the native's stash withdraw (upstream/cdmp-native trade_probe)
 constexpr uint32_t kHostCharacter = 0xA0100001;
 constexpr uint32_t kAskEveryMs = 4000;
@@ -55,7 +55,7 @@ uint64_t now64() { return GetTickCount64(); }
 bool warehouse_index(uint16_t& wh) {
     const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     // The game's own chain (exe+0xEC03A0): *(*(*(*[exe+0x71C04A0]) + 8) + 0x240) + 0xB2.
-    auto slot = game::read_ptr(base + 0x724B6F0);
+    auto slot = game::read_ptr(base + 0x73F10F0);
     if (!slot || !*slot) return false;
     auto root = game::read_ptr(*slot);
     if (!root || !*root) return false;

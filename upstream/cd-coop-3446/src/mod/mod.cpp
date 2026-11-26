@@ -199,7 +199,7 @@ bool game_build_supported() {
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
     const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(base + dos->e_lfanew);
-    return base == game::build_3732::kImageBase && nt->FileHeader.TimeDateStamp == game::build_3732::kPeTimestamp;
+    return base == game::build_3840::kImageBase && nt->FileHeader.TimeDateStamp == game::build_3840::kPeTimestamp;
 }
 
 bool log_process_info() {
@@ -240,7 +240,7 @@ public:
     explicit LocalSource(bool in_game) : in_game_(in_game) {
         if (!in_game_) return;
         if (reader_.init()) {
-            log::info("Game reader enabled (build 1.0.0.3732 offsets)");
+            log::info("Game reader enabled (build 1.0.0.3840 offsets)");
         } else {
             log::warn("Game reader DISABLED: {}. Only networking will run.",
                       reader_.last_failure());
@@ -1954,7 +1954,7 @@ void minimap_cycle_loop() {
         if (down && !was_down) {
             const bool back = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
             int at = net::puppet_minimap_offset();
-            if (at < 0xEA || at > 0x16C) at = game::build_3732::kMinimapIconPlayerArrow;
+            if (at < 0xEA || at > 0x16C) at = game::build_3840::kMinimapIconPlayerArrow;
             else at += back ? -2 : 2;
             if (at > 0x16C) at = 0xEA;
             if (at < 0xEA) at = 0x16C;
@@ -2008,7 +2008,7 @@ void combat_test_loop() {
                 std::memcpy(b.data(), &npc->key, 4);
                 std::memcpy(b.data() + 4, &hp_stat, 4);
                 std::memcpy(b.data() + 8, &delta, 8);
-                const bool ok = net::sniffer_inject_c2s(packet(2284, b));  // VaryStatByAccInputReq on 3460 (2976: 2181)
+                const bool ok = net::sniffer_inject_c2s(packet(2971, b));  // VaryStatByAccInputReq on 3460 (2976: 2181)
                 log::info("Combat test T2: VaryStatByAccInputReq(0x{:08X} at {:.1f} m, HP, -5) {}",
                           npc->key, npc->distance, ok ? "queued" : "NOT queued");
             } else {
@@ -2026,7 +2026,7 @@ void combat_test_loop() {
                 std::memcpy(b.data() + 12, pos, 12);
                 std::memcpy(b.data() + 24, dir, 12);
                 std::memcpy(b.data() + 36, &hash, 4);
-                const bool ok = net::sniffer_inject_c2s(packet(2315, b));  // AttackByCollisionReq on 3460 (2976: 2815)
+                const bool ok = net::sniffer_inject_c2s(packet(2927, b));  // AttackByCollisionReq on 3460 (2976: 2815)
                 log::info("Combat test T3: AttackByCollisionReq(0x{:08X} at {:.1f} m, hash 0x{:08X}) {}",
                           npc->key, npc->distance, hash, ok ? "queued" : "NOT queued");
             }
@@ -2091,7 +2091,7 @@ DWORD WINAPI late_init(LPVOID param) {
     if (init->in_game) {
         log::info("Late init: waiting for the game to finish starting up");
         const auto world_slot = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)) +
-                                game::build_3732::kWorldSystemSlot;
+                                game::build_3840::kWorldSystemSlot;
         // WorldSystem exists from the title screen on, i.e. after the game
         // created its device and swap chain and started presenting.
         while (!stop_requested(500)) {
@@ -2341,7 +2341,7 @@ DWORD WINAPI worker(LPVOID) {
         const bool build_ok = !in_game || game_build_supported();
         std::string build_problem;
         if (!build_ok) {
-            build_problem = std::format("Co-op+ is off: this mod was made for game version 1.0.0.3732, not {}. "
+            build_problem = std::format("Co-op+ is off: this mod was made for game version 1.0.0.3840, not {}. "
                                         "The game runs normally; update Co-op+ to play together.",
                                         file_version(module_path(nullptr)));
             log::warn("{}", build_problem);

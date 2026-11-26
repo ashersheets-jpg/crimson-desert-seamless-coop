@@ -23,24 +23,24 @@
 
 namespace cdmp::net {
 namespace {
-namespace off = game::build_3732;
+namespace off = game::build_3840;
 
 constexpr uint32_t kPuppetPlayer = 0xA010F001;
 // Co-op+: message numbers for game 1.0.0.3460, read from the live Troc table (every
 // TrocTr handler instance: RTTI name, opcode). The values here before were 2976-era.
-constexpr uint16_t kOpCurrentTargetChangeReq = 2918;   // u32 actor | u32 target | u64 seq | u8 | u8 reason
-constexpr uint16_t kOpCurrentTargetChangedAck = 2859;  // same 18 B; u8 at +0x10 = force
-constexpr uint16_t kOpDoFrameEventReq = 2460;
+constexpr uint16_t kOpCurrentTargetChangeReq = 2842;   // u32 actor | u32 target | u64 seq | u8 | u8 reason
+constexpr uint16_t kOpCurrentTargetChangedAck = 2771;  // same 18 B; u8 at +0x10 = force
+constexpr uint16_t kOpDoFrameEventReq = 3090;
 
 // Co-op+ (3527): all three moved (+0x3940, +0x3940, +0x3970); heads unchanged but the jmp's.
 // Co-op+ (3479): these were still the 2976 addresses. Re-found on 3479: SetCurrentTarget is slot 40 of
 // CommonTargetActorComponent's vtable (and ServerTargetActorComponent's), head unchanged; IsTargetable keeps
 // its 0x30B0 gap below it, head unchanged, 52 callers, the only one there reading actor+0x96 ("local
 // character"); CheckAIBattleType is slot 1 of AICondition_CheckAIBattleType's vtable (0x5C76508).
-constexpr uintptr_t kIsTargetable = 0x245CE50;    // (target comp, actor* candidate, u8 mode); 3549: 0x23E8580
+constexpr uintptr_t kIsTargetable = 0x2539160;    // (target comp, actor* candidate, u8 mode); 3549: 0x23E8580
 constexpr uint8_t kIsTargetableHead[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74,
                                          0x24, 0x18, 0x48, 0x89, 0x7C, 0x24, 0x20, 0x55};
-constexpr uintptr_t kSetCurrentTarget = 0x24606A0;  // (comp, int* res, u32 target, u64* seq, ...); 3479: 0x23E84C0
+constexpr uintptr_t kSetCurrentTarget = 0x253CE60;  // (comp, int* res, u32 target, u64* seq, ...); 3479: 0x23E84C0
 constexpr uint8_t kSetCurrentTargetHead[] = {0x48, 0x8B, 0xC4, 0x4C, 0x89, 0x48, 0x20, 0x44,
                                              0x89, 0x40, 0x18, 0x48, 0x89, 0x50, 0x10, 0x55};
 
@@ -71,7 +71,7 @@ constexpr uint64_t kTurnMs = 4000;  // how long a pair of enemies keeps its turn
 // after writing the tag exe+0x5AC58E0 at out+0 (as the game does). With the old offsets the copy was never seen
 // ("copy 0 ... others 1376", played test xs3): the host's enemies targeted the guest's copy but never attacked it.
 constexpr uintptr_t kCtxTarget = 0x268, kCtxTargetValid = 0x270;
-constexpr uintptr_t kHandleToActor = 0x1996230, kHandleRelease = 0x165AF00, kHandleReleaseTag = 0x5B45300;
+constexpr uintptr_t kHandleToActor = 0x1A2B060, kHandleRelease = 0x16E3B60, kHandleReleaseTag = 0x5CD4A08;
 using HandleToActorFn = void*(__fastcall*)(uintptr_t handle, void* out);
 using HandleReleaseFn = void(__fastcall*)(void* out);
 uintptr_t exe_base() {
