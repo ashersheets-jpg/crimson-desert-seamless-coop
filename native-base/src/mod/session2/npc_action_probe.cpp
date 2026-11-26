@@ -19,8 +19,11 @@ uintptr_t g_base = 0;  // fijado antes de habilitar los hooks
 SafetyHookInline g_action, g_node;
 std::atomic<uint64_t> g_actions{0}, g_applied{0}, g_nodes{0}, g_vetoes{0}, g_unreadable{0};
 // AOB únicas en el PE 2976. Ambas son entradas .pdata de .rsrc. Primer parche: un MOV de 5 bytes.
-constexpr uint8_t kActionBytes[] = {0x48,0x89,0x5C,0x24,0x10,0x55,0x56,0x57,0x41,0x54,0x41,0x55,0x41,0x56,0x41,0x57,
-  0x48,0x8D,0xAC,0x24,0x50,0xFF,0xFF,0xFF,0x48,0x81,0xEC,0xB0,0x01,0x00,0x00,0x4D,0x8B,0xE9,0x4D,0x8B,0xE0,0x48,0x8B,0xF2};
+// 1.0.0.3840: 0x30A69C0 (ServerActorMoveSyncProcessor slot 4): mov [rsp+0x10],rbx ; mov [rsp+8],rcx ; 7 pushes ;
+// lea rbp,[rsp-0xB0] ; sub rsp,0x1B0 ; mov r12,r9 ; mov rdi,r8 ; mov r14,rdx (3732: no rcx home, r13/r12/rsi).
+constexpr uint8_t kActionBytes[] = {0x48,0x89,0x5C,0x24,0x10,0x48,0x89,0x4C,0x24,0x08,0x55,0x56,0x57,0x41,0x54,0x41,
+  0x55,0x41,0x56,0x41,0x57,0x48,0x8D,0xAC,0x24,0x50,0xFF,0xFF,0xFF,0x48,0x81,0xEC,0xB0,0x01,0x00,0x00,0x4D,0x8B,0xE1,
+  0x49,0x8B,0xF8,0x4C,0x8B,0xF2};
 constexpr uint8_t kNodeBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x4C, 0x89, 0x4C, 0x24, 0x20, 0x4C, 0x89, 0x44, 0x24, 0x18, 0x55,
   0x56, 0x57, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8D, 0xAC, 0x24, 0x60, 0xE6};
 // La pila TLS de llamadas en curso (npcact::PendingCall: reentrada anidada, H1b marca sólo la más interna).
@@ -35,12 +38,12 @@ struct FastRead {
 // destructores C++, y t_pending quedaría apuntando a un marco muerto (H1b escribiría allí). El original se llama
 // dentro de __try/__finally: el __finally restaura la pila TLS durante el desenrollado SIN tragarse la excepción
 // (sigue su camino hasta los manejadores del juego). Sin objetos con destructor en esta función (C2712).
-int* call_original(npcact::PendingCall* current, uintptr_t cc, int* result, uintptr_t layers, uintptr_t context,
+int* call_original(npcact::PendingCall* current, uintptr_t processor, int* result, uintptr_t layers, uintptr_t context,
                    uintptr_t block, uintptr_t extra) noexcept {
     int* returned = nullptr;
     t_pending = current;
     __try {
-        returned = g_action.unsafe_call<int*>(cc, result, layers, context, block, extra);
+        returned = g_action.unsafe_call<int*>(processor, result, layers, context, block, extra);
     } __finally {
         t_pending = current->previous;
     }
@@ -55,7 +58,7 @@ int* call_original(npcact::PendingCall* current, uintptr_t cc, int* result, uint
 // esa vtable: actor+0x90 se lee antes y después como controlador ESPERADO (npcact::classify). La lectura S34
 // (context+0x90 -> +0x60, el «emisor» que salía 0 en 843/843 líneas) se conserva sólo para npc_action_evidence=0 /
 // probe y para la línea (emisor_s34); es una lectura protegida de un objeto que no es una sesión.
-int* __fastcall action_detour(uintptr_t cc, int* result, uintptr_t layers, uintptr_t context,
+int* __fastcall action_detour(uintptr_t processor, int* result, uintptr_t layers, uintptr_t context,
                              uintptr_t block, uintptr_t extra) noexcept {
     npcact::PendingCall current{};
     // Defensa adicional: un marco vivo exterior está siempre por ENCIMA (direcciones mayores) del nuestro; un t_pending
@@ -65,6 +68,8 @@ int* __fastcall action_detour(uintptr_t cc, int* result, uintptr_t layers, uintp
         g_stale_tls.fetch_add(1, std::memory_order_relaxed);
     }
     const FastRead rd;
+    // 1.0.0.3840: `this` is the actor's ServerActorMoveSyncProcessor; the readers (and H1b's mark) use the control.
+    const uintptr_t cc = npcact::cc_of_processor(rd, processor);
     npcact::ActionEntry entry = npcact::read_action_key(rd, cc);
     const auto token = user2_stages_npc_birth_token(entry.key);
     if (token) npcact::read_action_entry(rd, cc, context, block, entry);
@@ -72,7 +77,7 @@ int* __fastcall action_detour(uintptr_t cc, int* result, uintptr_t layers, uintp
     current.key = entry.key;
     current.previous = t_pending;
     g_actions.fetch_add(1, std::memory_order_relaxed);
-    int* returned = call_original(&current, cc, result, layers, context, block, extra);
+    int* returned = call_original(&current, processor, result, layers, context, block, extra);
     if (!token) return returned;
     // Lecturas posteriores revalidadas: un resultado jamás pertenece a una clave reutilizada.
     const npcact::ActionExit exit = npcact::read_action_exit(rd, cc, entry, reinterpret_cast<uintptr_t>(returned));
@@ -133,7 +138,7 @@ bool npc_action_probe_wanted() noexcept {return g_wanted.load() && user2_stages_
 void npc_action_probe_install(uintptr_t base,std::span<const gad::Section> sections,bool applied_mid_ready) {
     if (!npc_action_probe_wanted()) return;
     g_base=base;
-    const bool action=install(base,sections,0x2D73B60,  // 3576 (2976 0x2A78CA0), same head
+    const bool action=install(base,sections,0x30A69C0,  // 3840: ServerActorMoveSyncProcessor slot 4 (3732 0x2D73B60; 2976 0x2A78CA0)
                                   kActionBytes,reinterpret_cast<void*>(&action_detour),g_action);
     const bool node=install(base,sections,0x2BF1ED0,  // 3576 (2976 0x281CEE0), same head
                                 kNodeBytes,reinterpret_cast<void*>(&node_detour),g_node);
