@@ -5,6 +5,26 @@
 One world for both players, on the native shared-world base. Tested with two copies of the game on one PC unless a
 line says otherwise; two PCs, AMD / Intel graphics cards and long sessions are what the playtest is for.
 
+Next build (not posted yet), from Brycecco's and Arcticwolf's notes of 25 Nov (their fourth session) and their logs:
+- **The joined player's own townsfolk while the host is high above (an Abyss island).** Far from the host the joined
+  player's game runs its own townsfolk and shops. The Abyss island of their session hangs about 1.2 km straight above
+  Hernand: the mod measured "far" on the map only, so the town below counted as next to the host while the host's game
+  made no townsfolk up there, and the joined player's town was empty until the host jumped back. Players 300 m or more
+  apart in height now count as far.
+- **The joined player's own townsfolk right after a checkpoint revive.** After a checkpoint revive (U) the shared world
+  did not count the joined player as "in the world" again until its next travel (12 minutes in their log): the revive
+  reloads in place and the game sends nothing more, and the native base waited for a message that never comes. Its own
+  townsfolk, the clock, the weather and the world anchor waited with it. A revive's reload now ends there. New
+  checklist step u2revive (the checklist only revived with Q before).
+- **The joined player's townsfolk: the duplicate guard works again.** Since the 3576 port the mod read the game's
+  townsfolk "stage" data 8 bytes off (its position, owner and people), so the guard that keeps the host's and the
+  joined player's townsfolk from being made twice never matched anything, and the per-person bookkeeping of the joined
+  player's townsfolk never found their stage. Read at the right places now (checked against the game's own code).
+- **Duel hits stagger in the shared world.** A duel hit took health but showed no hit: the hit reaction was switched on
+  only in the old two-worlds mode, and the stagger a hit carries (the one its attacker last took from an enemy) was
+  never learnt in the shared world. Now on, learnt from the server's own hit on you, and the player who is hit uses
+  their own when the attacker has none yet. Still none while neither player has been hit by an enemy in the session.
+
 Posted 2026-11-25 21:51 as 0.1.0-alpha+b95eef38 (checklist pp62: all 30 steps, 1320 checks; farfight's kill check
 failed once on the fight's luck and passed on its re-run, pp62b 49 / 0; one PC), from Brycecco's and Arcticwolf's
 two-PC session of 25 Nov (a New Co-op Save through the prologue, on 614591d0):

@@ -178,6 +178,16 @@ replied 15:17 (message 1575243949344432129). Kept in the session scratchpad (dl-
 - **The second player's pickup of a ground item plays no animation** (the item is taken and the inventory is right,
   "each their own" loot): cosmetic.
 
+### 3b. The check behind eErrNoGimmickNotInteractableState (read 25 Nov evening, scratchpad xref73.py)
+The global 0x71D7024 is loaded at one site, exe+0x2359205, in the server's interaction check 0x2359110 (3732). With
+rsi the gimmick and bpl the interaction's kind: the record [rsi+0x88] holds a state byte at +1; states 3-9 go to a
+jump table, state 1 passes; any other state (0, 2, 10+) with kind 7 asks [[[rsi+0x68]+0x30]]'s vf 0x7A8 and, when that
+says no, refuses with this error. (Just before it, flags [comp+0x3B8] | [comp+0x3C0] >= 0x80 refuse with the error
+at 0x71D7020.) So the pendant's gimmick sat in a state other than 1 when the host picked it up 23 times: the host's
+own client had deleted the level holding it (the 2834 at 15:34:36.5) and the next branch re-made it; a reload put the
+state back. Whether a03a63b9's per-player focus slot (on in that session, off since b95eef38) led there is not shown.
+If it comes back on b95eef38: the gimmick's state byte at the refusal (a probe at 0x23591E5) is the next thing to log.
+
 ## Smaller things seen
 
 - The host's crash log has first-chance AVs at cdmp.asi+0x959DB / +0x959E3 at startup: the guarded reads (our pp60

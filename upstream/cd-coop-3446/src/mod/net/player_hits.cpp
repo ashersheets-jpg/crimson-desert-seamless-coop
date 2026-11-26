@@ -21,6 +21,7 @@
 #include "mod/net/enemy_relay.h"
 #include "common/keys.h"
 #include "mod/net/local_capture.h"
+#include "mod/native_layer.h"
 #include "mod/net/remote_puppet.h"
 #include "mod/net/troc_sniffer.h"
 
@@ -123,6 +124,19 @@ std::map<uint64_t, Reaction> g_reactions;     // variant << 32 | hash -> templat
 std::map<uint32_t, uint64_t> g_variant_batch;  // variant -> key of its latest complete staggering batch
 uint64_t g_last_batch_key = 0;                  // the latest complete staggering batch of any enemy
 uint64_t g_learnt_reactions = 0;
+// Co-op+ (Brycecco + Arcticwolf 25 Nov, two PCs: "Duel: hits do not register stagger or a hit visually but health is
+// affected"): a duel hit carries the stagger its attacker last took from an enemy, and in the shared world none was
+// ever learnt: blows on us are keyed by the frame event of ours that named them (pending_key_locked), and the native
+// base hands the layer no client-to-server frame event (the enemy's attack is the host client's anyway). The server's
+// batch for a blow on us is the real reaction all the same: there such a blow is kept under one key, and the latest
+// complete staggering batch of any blow is the duel's sample, with the enemy that gave it.
+constexpr uint64_t kUnkeyedBlow = 0xFFFFFFFF00000000ull;  // a blow on us no frame event of ours named
+struct StaggerSample {
+    Bytes ata, aar, buff;
+    uint32_t attacker = 0;
+};
+StaggerSample g_stagger;
+uint64_t g_stagger_samples = 0;
 struct OpenBatch {
     uint64_t key = 0, ms = 0;
     uint32_t attacker = 0, instance = 0;
@@ -226,19 +240,19 @@ std::vector<uint8_t> hits_make_pvp(uint32_t hash, int64_t damage) {
     std::memcpy(ev.data(), &kOurCharacterThere, 4);
     std::memcpy(ev.data() + 4, &hash, 4);
     std::memcpy(ev.data() + 8, &damage, 8);
-    // The stagger we last took from an enemy blow, as our blow's effect on them (the attacker named in it is us).
-    const auto r = g_last_batch_key ? g_reactions.find(g_last_batch_key) : g_reactions.end();
-    if (r != g_reactions.end() && r->second.ata.size() >= kMinAtaSize && r->second.ata.size() <= kMaxAtaSize) {
-        const bool staggers = r->second.aar.size() == kBatchSize && r->second.buff.size() == kBatchSize;
-        Bytes t = r->second.ata;
+    // The stagger we last took from an enemy blow, as our blow's effect on them: every mention of that enemy is us
+    // (in the shared world the enemy is an actor in their game too, and a template naming one is refused there).
+    const StaggerSample& s = g_stagger;
+    if (s.ata.size() >= kMinAtaSize && s.ata.size() <= kMaxAtaSize && s.aar.size() == kBatchSize &&
+        s.buff.size() == kBatchSize) {
+        Bytes t = s.ata;
+        t.insert(t.end(), s.aar.begin(), s.aar.end());
+        t.insert(t.end(), s.buff.begin(), s.buff.end());
+        replace_u32(t, s.attacker, kOurCharacterThere);
         std::memcpy(t.data() + 4, &kOurCharacterThere, 4);
-        if (staggers) {
-            t.insert(t.end(), r->second.aar.begin(), r->second.aar.end());
-            t.insert(t.end(), r->second.buff.begin(), r->second.buff.end());
-        }
         if (own) replace_u32(t, own, proto::kSelfMarker);
-        const auto n_ata = static_cast<uint16_t>(r->second.ata.size());
-        ev.push_back(kHitHasTemplates | (staggers ? kHitStaggers : 0));
+        const auto n_ata = static_cast<uint16_t>(s.ata.size());
+        ev.push_back(kHitHasTemplates | kHitStaggers);
         ev.resize(ev.size() + 2);
         std::memcpy(ev.data() + ev.size() - 2, &n_ata, 2);
         ev.insert(ev.end(), t.begin(), t.end());
@@ -280,20 +294,38 @@ int64_t hits_on_pvp(const std::vector<uint8_t>& payload, int64_t floor) {
     if (damage <= 0) damage = static_cast<int64_t>(static_cast<double>(max) * 0.06);
     damage = std::clamp<int64_t>(damage, max / 50, max / 4);  // 2% .. 25% of our health a blow
     damage = std::min(damage, hp - std::max<int64_t>(floor, 1000));
+    // The other player's character here: in the shared world their own actor, which both games have (0 when it is
+    // not found: a stagger from nobody still staggers, live test R1c); on the old base our copy of them.
+    const uint32_t their = kNativeLayer ? partner_actor_key() : kTheirCharacterHere;
     proto::GameEvent ev;
     ev.kind = proto::EventKind::PlayerHit;
     ev.payload = payload;
-    const bool reacted = g_react && inject_reaction(ev, own, kTheirCharacterHere, server_ms);
+    if (their != kTheirCharacterHere) replace_u32(ev.payload, kTheirCharacterHere, their);
+    bool reacted = g_react && inject_reaction(ev, own, their, server_ms);
+    bool ours = false;
+    if (g_react && !reacted) {
+        // Co-op+ (25 Nov): they sent no stagger (they took none from an enemy yet), or it was refused: ours stands in.
+        ev.payload = hits_make_pvp(hash, 0);
+        if (their != kTheirCharacterHere) replace_u32(ev.payload, kTheirCharacterHere, their);
+        ours = reacted = inject_reaction(ev, own, their, server_ms);
+    }
     if (damage <= 0) return 0;
     const bool ok = hits_vary_own_hp(-damage);
     log::info("Duel: the other player hit us (attack 0x{:08X}): -{:.1f} hp{}{}", hash, damage / 1000.0,
-              reacted ? ", reaction" : "", ok ? "" : " (NOT applied)");
+              reacted ? (ours ? ", reaction (our own stagger)" : ", reaction")
+                      : (g_react ? ", no reaction (no stagger taken from an enemy on either side yet)" : ""),
+              ok ? "" : " (NOT applied)");
     return ok ? damage : 0;
 }
 
 void hits_set_react(bool on, bool lethal) {
     g_react = on;
     g_lethal = lethal;
+    if (kNativeLayer) {
+        log::info("Co-op: the other player's duel hits {} our player ([coop] player_hit_react)",
+                  on ? "stagger" : "do not stagger");
+        return;
+    }
     log::info("Co-op: our player {} to the other player's enemies' blows, and {} die from them",
               on ? "reacts" : "does not react", lethal ? "can" : "cannot");
 }
@@ -408,7 +440,8 @@ void learn_reaction_locked(uint16_t op, const uint8_t* p, size_t n, uint32_t own
     if (n < 8 || u32_at(p) != own) return;
     if (op == kOpAttackTargetAck && n >= 0x30) {
         const uint32_t attacker = u32_at(p + 4);
-        const uint64_t key = pending_key_locked(attacker);
+        uint64_t key = pending_key_locked(attacker);
+        if (!key && kNativeLayer && attacker && attacker != own) key = kUnkeyedBlow;  // (g_stagger)
         if (!key) return;
         Reaction& r = g_reactions[key];
         ++r.blows;
@@ -425,12 +458,21 @@ void learn_reaction_locked(uint16_t op, const uint8_t* p, size_t n, uint32_t own
         Reaction& r = g_reactions[g_open.key];
         r.aar = std::move(g_open.aar);
         r.buff.assign(p, p + n);
-        g_variant_batch[static_cast<uint32_t>(g_open.key >> 32)] = g_open.key;
-        if (g_learnt_reactions++ < 30) {
-            log::info("Co-op: learnt how we react to attack 0x{:08X} of enemy type {} (buff {})",
-                      static_cast<uint32_t>(g_open.key), g_open.key >> 32, buff);
+        if (r.ata.size() >= kMinAtaSize && r.ata.size() <= kMaxAtaSize) {
+            g_stagger = {r.ata, r.aar, r.buff, g_open.attacker};
+            if (g_stagger_samples++ < 3) {
+                log::info("Co-op: our player's stagger from 0x{:08X} (buff {}, restriction 0x{:08X}) is kept for the "
+                          "duel's hits", g_open.attacker, buff, u32_at(r.aar.data() + 0x34));
+            }
         }
-        g_last_batch_key = g_open.key;
+        if (g_open.key != kUnkeyedBlow) {
+            g_variant_batch[static_cast<uint32_t>(g_open.key >> 32)] = g_open.key;
+            if (g_learnt_reactions++ < 30) {
+                log::info("Co-op: learnt how we react to attack 0x{:08X} of enemy type {} (buff {})",
+                          static_cast<uint32_t>(g_open.key), g_open.key >> 32, buff);
+            }
+            g_last_batch_key = g_open.key;
+        }
         g_open = {};
     }
 }
@@ -480,7 +522,7 @@ void hits_learnt_get(LearntCombat& out) {
     out.enemy_hits.insert(g_damage.begin(), g_damage.end());
     out.enemy_types.insert(g_by_variant.begin(), g_by_variant.end());
     for (const auto& [key, r] : g_reactions) {
-        if (r.blows) out.reactions[key] = {r.blows, r.staggers};
+        if (r.blows && key != kUnkeyedBlow) out.reactions[key] = {r.blows, r.staggers};
     }
 }
 

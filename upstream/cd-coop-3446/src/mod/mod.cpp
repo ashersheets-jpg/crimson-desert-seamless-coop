@@ -2122,6 +2122,9 @@ DWORD WINAPI late_init(LPVOID param) {
         // what the layer adds (activities, chat, waypoints, the party frame's state), so it is ready at once.
         net::coop_set_ready();
         log::info("Native layer: the co-op link is ready (no sniffer, no copies: the native base shares the world)");
+        // Co-op+ (Brycecco + Arcticwolf 25 Nov: duel hits took health but never staggered): the duel's hit reactions
+        // were switched on only on the old base's path below, so here they were always off.
+        net::hits_set_react(init->player_hit_react, false);
     } else if ((init->coop || init->clone_hotkeys) && !sniffer_ok) {
         log::warn("Co-op and the mirror need the sniffer ([sniffer] enabled=1); not active");
     } else if (init->coop) {

@@ -817,6 +817,28 @@ mismatch)
     hasnot "$N/$NAME.coopplus.$r.log" "in the shared world" "$r: nothing started"
   done
   info "LOOK: $NAME-mismatch-host and $NAME-mismatch-guest: the bottom line of both menus, Start Co-op greyed on the host" ;;
+u2revive)
+  head_step "the guest revives at its checkpoint (U), then the host goes 430 m away: the guest's own townsfolk arm"
+  # 2026-11-25 (Brycecco + Arcticwolf, two PCs: the joined player's town empty while the host was on an Abyss island
+  # 3 km away). The layer's checkpoint revive sends the game's revive requests and a GameLoadingStartReq itself; the
+  # server answers with a reload in the same field and the client sends nothing more, so the native base kept user 2's
+  # move phase at MOVE_ASKED until its next travel (12 minutes there) and U-1 (the joined player's own townsfolk far
+  # from the host) never armed meanwhile. The tracker now ends such a reload at its LoadingFieldDataAck. The host stands
+  # 108 m from the guest (under U-1's 4 cells) until after the revive, so an arm can only come after it.
+  { printf 'tp -10343.4 535.9 -3989.6\nwait 10000\nwait 10000\nwait 8000\nkillfriend\nwait 10000\nwait 10000\nwait 6000\n'
+    printf 'tp -10665 634.5 -3701\nwait 5000\nnpcs 30\n'; for i in 1 2 3 4 5 6 7; do printf 'wait 6000\nnpcs 30\n'; done; } > $N/scan/u2rv_host.txt
+  G="w:9000_shot:$NAME-g0_w:24000_shot:$NAME-g1_k:U:300_w:12000_shot:$NAME-g2_w:30000_shot:$NAME-g3_w:20000_shot:$NAME-g4"
+  run2 "$BASE -Hold 10 -HostScript $SCAN\\u2rv_host.txt -GuestScript $SCAN\\tp_dock_guest.txt -GuestKeys $G"; two_player_checks
+  L=$N/$NAME.coopplus.guest.log; H=$N/$NAME.host.log
+  has "$L" "our death notice goes to the client" "guest: went down (the host's KillCheatReq)"
+  has "$L" "Revive: checkpoint revive, step 3" "guest: U asked for the checkpoint revive"
+  has "$L" "Revive: we are alive again" "guest: alive again"
+  has "$H" "user 2 move phase STABLE \([^)]*\) \| revive reloads [1-9]" "host: the guest's revive reload ended its move (STABLE, revive reloads counted)"
+  info "user 2's move phases seen: $(grep -o 'user 2 move phase [A-Z_]*' "$H" | uniq -c | sed 's/user 2 move phase //' | tr -s ' ' | tr '\n' ';' | cut -c1-300)"
+  has "$H" "User2Stages \[ARMED\]" "host: the guest's own townsfolk armed after its revive, with the host 430 m away"
+  info "revive: $(grep -h 'Revive: ' "$L" | cut -d']' -f3- | tr '\n' ';' | cut -c1-300)"
+  info "U-1: $(grep -h 'User2Stages \[\(ARM requested\|ARMED\|DRAIN requested\|DRAINED\)' "$H" | cut -c2-13,60-200 | tr '\n' ';' | cut -c1-400)"
+  info "LOOK: $NAME-g1 (down), $NAME-g2 (the warp to the checkpoint), $NAME-g3 / -g4 (townsfolk around the guest)" ;;
 hostrevive)
   head_step "the host goes down beside the guest and revives at the checkpoint (its world reloads with the guest in it)"
   # tg2a (2026-11-12). A tester's host crashed here: a schedule timer ran while the reloading owner had no manager.
@@ -922,7 +944,7 @@ armwrest)
   [ "${n:-0}" -ge 1 ] && ok "host: its own talk to the organizer accepted after the joined player's match ($n)" || bad "host: no talk of its own accepted at the table"
   info "screenshots to LOOK AT (g2: the joined player's won match, h3: the host's): $(cd $N/shots && ls $NAME-*.png 2>/dev/null | tr '\n' ' ')" ;;
 summary)
-  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c "^== " "$R") (30 in the list)"; exit 0 ;;
+  cat "$R"; echo; echo "TOTAL: $(grep -c '^  PASS' "$R") pass, $(grep -c '^  FAIL' "$R") fail, steps run: $(grep -c "^== " "$R") (31 in the list)"; exit 0 ;;
 *) echo "unknown step $STEP"; exit 2 ;;
 esac
 sed -n "/^== $STEP /,\$p" "$R"
