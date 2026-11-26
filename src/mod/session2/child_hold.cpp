@@ -607,6 +607,42 @@ void probe_sector_layout_once(uintptr_t actor, uintptr_t observer_user) {
     log::warn("{}", s);
 }
 
+// 1.0.0.3840 port (pp68-shop: 1203 NPCs held, NONE released; dropped despawned x649, stale x407, out of range x87;
+// 3732's pp65-shop: 949 held, 904 released): the first decisions of each reason with every reading behind them, to
+// see which read differs on 3840. At most 4 lines per reason, 120 in all; the pass's own counters are unchanged.
+std::atomic<uint32_t> g_dec_probe_lines{0};
+std::mutex g_dec_probe_mu;
+std::vector<std::pair<std::string, uint32_t>> g_dec_probe_seen;  // guarded by g_dec_probe_mu
+template <class T>
+std::string opt_hex(const std::optional<T>& v) {
+    return v ? std::format("0x{:X}", static_cast<uint64_t>(*v)) : std::string("unreadable");
+}
+void npc_decision_probe(const HoldEntry& e, const NpcReleaseReadings& r, const char* why, uint64_t age) {
+    if (g_dec_probe_lines.load(std::memory_order_relaxed) >= 120) return;
+    try {
+        std::lock_guard lock(g_dec_probe_mu);
+        const std::string w = why ? why : "?";
+        uint32_t* seen = nullptr;
+        for (auto& [k, n] : g_dec_probe_seen) {
+            if (k == w) seen = &n;
+        }
+        if (!seen) {
+            g_dec_probe_seen.emplace_back(w, 0);
+            seen = &g_dec_probe_seen.back().second;
+        }
+        if (++*seen > 4) return;
+        g_dec_probe_lines.fetch_add(1, std::memory_order_relaxed);
+        log::info("Session2 observer hold [decision probe] NPC 0x{:08X} age {} ms: {} | actor {} (held 0x{:X}) owner {} "
+                  "controller {} (held 0x{:08X}) restore {} observes {} | observer user 0x{:X} (entry 0x{:X}) key "
+                  "0x{:08X} valid {} host {} | load_wait {} timeout_age {} user 2 key 0x{:08X}",
+                  e.key, age, w, opt_hex(r.actor), e.actor, opt_hex(r.owner), opt_hex(r.controller), e.controller,
+                  opt_hex(r.restore), r.observes ? (*r.observes ? "yes" : "NO") : "unreadable", r.observer_user,
+                  e.observer_user, r.observer_key, r.observer_valid, e.observer_host, r.load_wait,
+                  r.timeout_age_ms == UINT64_MAX ? std::string("-") : std::to_string(r.timeout_age_ms), r.user2_key);
+    } catch (...) {
+    }
+}
+
 NpcReleaseReadings read_npc_release(uintptr_t sam, uint32_t key, uintptr_t observer_user) {
     const game::FastReads m;
     NpcReleaseReadings r;
@@ -4070,6 +4106,7 @@ void npc_pass(uint32_t target, bool allow_release, const char* where) {
         // Review L2: an entry held through user 2's load gets its whole restore-0 timeout after the load.
         if (load_end && load_end > e.since_ms && !e.observer_host) r.timeout_age_ms = now >= load_end ? now - load_end : 0;
         d.step = npc_release_step(e, r, d.age, d.why, &d.kind, children);
+        npc_decision_probe(e, r, d.why, d.age);  // 3840 port diagnostic (capped)
         if (d.step == ReleaseStep::Keep && r.load_wait && d.age < hold::kLoadDeferMaxMs) {
             g_ld_kept.fetch_add(1, std::memory_order_relaxed);
         }
