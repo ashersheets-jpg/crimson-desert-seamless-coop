@@ -19,6 +19,7 @@
 #include "mod/log.h"
 #include "mod/net/aggro_test.h"
 #include "mod/net/enemy_relay.h"
+#include "mod/net/guest_hits.h"
 #include "common/keys.h"
 #include "mod/net/local_capture.h"
 #include "mod/native_layer.h"
@@ -36,11 +37,15 @@ constexpr uint16_t kOpDoFrameEventReq = 2460;
 constexpr uint16_t kOpVaryHPAck = 2608;
 constexpr uint16_t kOpVaryStatByAccInputReq = 2284;
 constexpr uint16_t kOpAttackTargetAck = 2519;            // +0 target | +4 attacker
-constexpr uint16_t kOpApplyActionRestrictionAck = 2183;  // 77 B: +0 target | +0x24 instance | +0x49 source
+constexpr uint16_t kOpApplyActionRestrictionAck = 2183;  // 3576 on: 69 B: +0 target | +0x1C instance | +0x2C key |
+                                                         // +0x41 source (2976: 77 B, +0x24, +0x34, +0x49)
 constexpr uint16_t kOpApplyBuffAck = 2148;               // 77 B: +0 holder | +4 buff | +0x14 instance |
                                                          // +0x18 source | +0x1C holder | +0x29 source pos |
                                                          // +0x39/+0x41 server ms
-constexpr size_t kBatchSize = 77;
+constexpr size_t kBatchSize = 77;  // the hit buff (ApplyBuffAck)
+// Co-op+ (2026-11-25, cs131b): the restriction's layout since 3576 (guest_hits.cpp kAarSize). With 2976's 77 bytes
+// here no restriction ever matched, so no stagger was ever learnt for the duel.
+constexpr size_t kAarSize = 69, kAarInstance = 0x1C, kAarKey = 0x2C, kAarSource = 0x41;
 constexpr size_t kMinAtaSize = 0xA0;   // real ones are 199 B (211 from a projectile or a rider)
 constexpr size_t kMaxAtaSize = 0x300;  // so a PlayerHit with its templates stays under kMaxEventPayload
 // PlayerHit wire (proto::EventKind::PlayerHit): u32 attacker copy | u32 action hash |
@@ -136,7 +141,7 @@ struct StaggerSample {
     uint32_t attacker = 0;
 };
 StaggerSample g_stagger;
-uint64_t g_stagger_samples = 0;
+uint64_t g_stagger_samples = 0, g_stand_in_said = 0;
 struct OpenBatch {
     uint64_t key = 0, ms = 0;
     uint32_t attacker = 0, instance = 0;
@@ -242,15 +247,28 @@ std::vector<uint8_t> hits_make_pvp(uint32_t hash, int64_t damage) {
     std::memcpy(ev.data() + 8, &damage, 8);
     // The stagger we last took from an enemy blow, as our blow's effect on them: every mention of that enemy is us
     // (in the shared world the enemy is an actor in their game too, and a template naming one is refused there).
-    const StaggerSample& s = g_stagger;
-    if (s.ata.size() >= kMinAtaSize && s.ata.size() <= kMaxAtaSize && s.aar.size() == kBatchSize &&
-        s.buff.size() == kBatchSize) {
+    // Nothing learnt yet: a real staggering blow's templates stand in (guest_hits.cpp, a player's sword on a bandit:
+    // that bandit plays our player, that player us).
+    auto complete = [](const StaggerSample& x) {
+        return x.ata.size() >= kMinAtaSize && x.ata.size() <= kMaxAtaSize && x.aar.size() == kAarSize &&
+               x.buff.size() == kBatchSize;
+    };
+    StaggerSample stand_in;
+    uint32_t victim = own;
+    if (!complete(g_stagger)) {
+        guest_hits_default_stagger(stand_in.ata, stand_in.aar, stand_in.buff, victim, stand_in.attacker);
+        if (g_stand_in_said++ == 0) {
+            log::info("Duel: no stagger taken from an enemy yet: our hits carry a stand-in (a real staggering blow)");
+        }
+    }
+    const StaggerSample& s = complete(g_stagger) ? g_stagger : stand_in;
+    if (complete(s)) {
         Bytes t = s.ata;
         t.insert(t.end(), s.aar.begin(), s.aar.end());
         t.insert(t.end(), s.buff.begin(), s.buff.end());
         replace_u32(t, s.attacker, kOurCharacterThere);
         std::memcpy(t.data() + 4, &kOurCharacterThere, 4);
-        if (own) replace_u32(t, own, proto::kSelfMarker);
+        if (victim) replace_u32(t, victim, proto::kSelfMarker);
         const auto n_ata = static_cast<uint16_t>(s.ata.size());
         ev.push_back(kHitHasTemplates | kHitStaggers);
         ev.resize(ev.size() + 2);
@@ -397,7 +415,7 @@ void hits_observe_c2s(const uint8_t* packet, size_t size) {
                 const bool known_soft = own_stats != g_reactions.end() && own_stats->second.blows >= 3 &&
                                         own_stats->second.staggers * 10 < own_stats->second.blows * 8;
                 const bool staggers = (borrowed ? !known_soft : (r->blows && r->staggers * 10 >= r->blows * 8)) &&
-                                      r->aar.size() == kBatchSize && r->buff.size() == kBatchSize;
+                                      r->aar.size() == kAarSize && r->buff.size() == kBatchSize;
                 Bytes t = r->ata;
                 if (staggers) {
                     t.insert(t.end(), r->aar.begin(), r->aar.end());
@@ -447,10 +465,10 @@ void learn_reaction_locked(uint16_t op, const uint8_t* p, size_t n, uint32_t own
         ++r.blows;
         r.ata.assign(p, p + n);
         g_open = {key, now_ms(), attacker, 0, {}};
-    } else if (op == kOpApplyActionRestrictionAck && n == kBatchSize) {
-        if (!g_open.key || u32_at(p + 0x49) != g_open.attacker || now_ms() - g_open.ms > 50) return;
+    } else if (op == kOpApplyActionRestrictionAck && n == kAarSize) {
+        if (!g_open.key || u32_at(p + kAarSource) != g_open.attacker || now_ms() - g_open.ms > 50) return;
         ++g_reactions[g_open.key].staggers;
-        g_open.instance = u32_at(p + 0x24);
+        g_open.instance = u32_at(p + kAarInstance);
         g_open.aar.assign(p, p + n);
     } else if (op == kOpApplyBuffAck && n == kBatchSize) {
         const uint32_t buff = u32_at(p + 4);
@@ -462,7 +480,7 @@ void learn_reaction_locked(uint16_t op, const uint8_t* p, size_t n, uint32_t own
             g_stagger = {r.ata, r.aar, r.buff, g_open.attacker};
             if (g_stagger_samples++ < 3) {
                 log::info("Co-op: our player's stagger from 0x{:08X} (buff {}, restriction 0x{:08X}) is kept for the "
-                          "duel's hits", g_open.attacker, buff, u32_at(r.aar.data() + 0x34));
+                          "duel's hits", g_open.attacker, buff, u32_at(r.aar.data() + kAarKey));
             }
         }
         if (g_open.key != kUnkeyedBlow) {
@@ -558,7 +576,7 @@ bool inject_reaction(const proto::GameEvent& ev, uint32_t own, uint32_t copy, ui
     std::memcpy(&n_ata, e.data() + kHitBaseSize + 1, 2);
     bool staggers = (e[kHitBaseSize] & kHitStaggers) != 0;
     const size_t at = kHitBaseSize + 3;
-    if (n_ata < kMinAtaSize || n_ata > kMaxAtaSize || at + n_ata + (staggers ? 2 * kBatchSize : 0) != e.size()) {
+    if (n_ata < kMinAtaSize || n_ata > kMaxAtaSize || at + n_ata + (staggers ? kAarSize + kBatchSize : 0) != e.size()) {
         return false;
     }
     // Our copy of that enemy may not be here (its copies are sent only while it
@@ -569,7 +587,7 @@ bool inject_reaction(const proto::GameEvent& ev, uint32_t own, uint32_t copy, ui
     replace_u32(t, proto::kSelfMarker, own);
     if (staggers) {
         // Only the hit buffs (CC_Push...) and their restrictions.
-        const uint32_t key = u32_at(t.data() + n_ata + 0x34), buff_id = u32_at(t.data() + n_ata + kBatchSize + 4);
+        const uint32_t key = u32_at(t.data() + n_ata + kAarKey), buff_id = u32_at(t.data() + n_ata + kAarSize + 4);
         if (!listed(kHitRestrictions, std::size(kHitRestrictions), key) ||
             !listed(kHitBuffs, std::size(kHitBuffs), buff_id)) {
             if (g_odd_templates++ < 20 || g_odd_templates % 100 == 0) {
@@ -583,16 +601,14 @@ bool inject_reaction(const proto::GameEvent& ev, uint32_t own, uint32_t copy, ui
     if (!copy && !staggers) return false;
     std::vector<std::pair<uint16_t, Bytes>> batch;
     if (staggers) {
-        Bytes aar(t.begin() + n_ata, t.begin() + n_ata + kBatchSize);
-        Bytes buff(t.begin() + n_ata + kBatchSize, t.end());
-        // Fixed in every real restriction: no delay (-1 would never end it) and
-        // the fixed slot, not the list.
-        std::memset(aar.data() + 0x14, 0, 8);
-        aar[0x44] = 0;
+        Bytes aar(t.begin() + n_ata, t.begin() + n_ata + kAarSize);
+        Bytes buff(t.begin() + n_ata + kAarSize, t.end());
+        // (2976 also cleared a delay at +0x14 and a slot at +0x44 here; since 3576 the template's own values stay, as in
+        // guest_hits.cpp's 69-byte restriction.)
         const uint32_t instance = 0x8000E000u + (g_next_instance++ & 0xFFF);
         std::memcpy(aar.data(), &own, 4);
-        std::memcpy(aar.data() + 0x24, &instance, 4);
-        std::memcpy(aar.data() + 0x49, &copy, 4);
+        std::memcpy(aar.data() + kAarInstance, &instance, 4);
+        std::memcpy(aar.data() + kAarSource, &copy, 4);
         std::memcpy(buff.data(), &own, 4);
         std::memcpy(buff.data() + 0x14, &instance, 4);
         std::memcpy(buff.data() + 0x18, &copy, 4);

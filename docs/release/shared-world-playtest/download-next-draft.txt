@@ -1,13 +1,12 @@
 **Update: shared world playtest 0.1.0-alpha+PKGID, for game 1.0.0.3732**
-Use this instead of a03a63b9; **both players need the same build**.
+Use this instead of b95eef38; **both players need the same build**.
 
-From <@816395856902357032> and <@535093164910968833>'s two-PC runs:
-- **Story stops on a03a63b9** (Shia's pendant, the castle door, a mission that wouldn't start): my main suspect is a03a63b9's fix for talking while the host talks, so it's **switched off again** (the joined player waits for the host's talk again). If anything still won't interact, reloading the save got you past it both times; please tell me if it happens on this build.
-- **Following the host into its story:** after "Into the Fog" the host goes up to an Abyss island that only exists in the host's game, and Go to my friend dropped the joined player through the world. Now that fall takes you back where you were, with a note. Joining the host on the island isn't solved yet.
-- **An NPC standing still after the joined player talked to it:** fixed.
-- **Cutscenes:** no co-op "hold to interact" prompt on your friend during cutscenes (on a controller it held back the game's button).
-- The joined player's own story scenes (e.g. a gate that starts a cutscene) need the host to turn on **Story scenes together** (Co-op tab, Saves & Story; experimental).
-- Still open: solo arm wrestling on a controller; the host taking no damage in the prologue's fights.
+From <@816395856902357032> and <@535093164910968833>'s two-PC sessions:
+- **The joined player's town no longer empties while the host is up on an Abyss island.** The island hangs about 1.2 km above Hernand; the mod measured "far" on the map only, so the town below counted as next to the host. Far apart in height now counts as far: the joined player's own townsfolk take over.
+- **The joined player's own townsfolk right after a checkpoint revive (U).** They stayed off until the next travel (12 minutes in your log); now they come back at once.
+- **Townsfolk made twice / broken where the two areas meet:** the mod read the game's townsfolk data 8 bytes off since an old patch, so its duplicate guard never worked. Fixed (checked against the game's own code).
+- **Duel hits stagger now** (once either player has been hit by an enemy in the session).
+- Still open: the joined player's grindstone (its little scene goes to the host); solo arm wrestling on a controller; the host taking no damage in the prologue's fights.
 
 Tested with two copies of the game on one PC (Nvidia): the full checklist on 1.0.0.3732 (CHECKLIST). Not covered: two PCs over Steam, real internet, AMD / Intel cards, long sessions.
 

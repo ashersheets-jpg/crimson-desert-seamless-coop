@@ -572,6 +572,15 @@ void guest_hits_set_enabled(bool on, bool stagger) {
               on && stagger ? " (with the stagger)" : "");
 }
 
+void guest_hits_default_stagger(std::vector<uint8_t>& ata, std::vector<uint8_t>& aar, std::vector<uint8_t>& buff,
+                                uint32_t& victim, uint32_t& attacker) {
+    ata.assign(std::begin(kDefaultAta), std::end(kDefaultAta));
+    aar.assign(std::begin(kDefaultAar), std::end(kDefaultAar));
+    buff.assign(std::begin(kDefaultBuff), std::end(kDefaultBuff));
+    victim = 0xB01006D7;    // the recording's bandit (+0 of all three)
+    attacker = 0xA0100001;  // the recording's player (the ATA's +4, the restriction's source, the buff's source)
+}
+
 void guest_hits_observe_c2s(const uint8_t* packet, size_t size) {
     // Learning runs even when we play alone; GuestHits only with [coop] guest_hits.
     if (size < 5) return;

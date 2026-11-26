@@ -56,6 +56,11 @@ bool guest_hits_finished_for_partner(uint32_t key, uint64_t within_ms);
 bool guest_hits_dev_hit(uint32_t hash, uint32_t frame);
 
 // Sniffer writer thread.
+// Co-op+ (2026-11-25): the templates of a real staggering blow (a player's sword on a bandit, 3576; the ones this module
+// uses until the host's own blows teach it): AttackTargetAck 219 B, restriction 69 B, hit buff 77 B, with the keys
+// they name. The duel's stand-in when its attacker has learnt no stagger of its own (player_hits.cpp).
+void guest_hits_default_stagger(std::vector<uint8_t>& ata, std::vector<uint8_t>& aar, std::vector<uint8_t>& buff,
+                                uint32_t& victim, uint32_t& attacker);
 void guest_hits_observe_c2s(const uint8_t* packet, size_t size);
 void guest_hits_observe_s2c(const uint8_t* packet, size_t size);
 

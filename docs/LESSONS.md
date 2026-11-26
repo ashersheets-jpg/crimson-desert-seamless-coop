@@ -915,6 +915,19 @@ townsfolk, the world anchor, the clock and the weather off for minutes after eac
 ways (two keys, two menus, two revive kinds), the checklist drives both; and a tracker with a "waiting" state needs a
 check that it leaves it (here: the phase back to STABLE after each revive).
 
+## -HostDev / -GuestDev: [dev] keys go before any other section (2026-11-25, cs131b)
+twocopy.ps1 turns "-HostDev a=1,[keys],K=V,[dev],b=1" into "[dev] a=1 / [keys] K=V / [dev] b=1" (and appends its own
+fps_cap=40 at the end). Windows' INI reader takes the FIRST [dev] section only, so b=1 and the fps cap were never
+read: cs131b's duel_test=1 did nothing (a swing at 134 degrees "missed"). Write every [dev] key first and the other
+sections after them ("duel_test=1,[keys],Challenge=Shift+F5,[dev]"). No checklist step passes [keys]; cs100-cs131
+did. And look for the switch's own log line before trusting a test that depends on it.
+
+## A port updates one copy of a packet layout and not the other (2026-11-25, the duel's restriction)
+guest_hits.cpp learnt on 3576 that ApplyActionRestrictionAck is 69 bytes ("with the old size no stagger was ever learnt
+on 3576"); player_hits.cpp, which reads the same packet for the duel, kept 2976's 77 bytes and offsets for weeks.
+When a port finds a packet's new size or layout, grep every module for that opcode and its old size, not only the
+one that showed the bug.
+
 ## During a test, a wanted shell command goes on a list, never into a neutered Bash call (2026-11-25, cs130a / cs129a)
 The rule "no Bash while a test runs" was broken three more times in one afternoon, always the same way: a Bash call
 was begun for something useful (a grep of our logs, a look at a file's tail, a timestamp), the rule came to mind

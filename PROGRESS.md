@@ -11856,3 +11856,11 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   docs/release/shared-world-playtest/download-b95eef38.txt). 21:52 replies: #play-testing-feedback 1575343389451358249
   (each item of their list and what the logs show; questions: windows, the portal chest); #general 1575343501120376853
   (PapiHongo's "game version 2.05.01": made for the current Steam version, the newest build).
+- 21:52 committed af0ff9d (the post's records, the layout tool), pushed. 21:53-21:58 applied the three fixes (native
+  revive phase + U-1 offsets / height, layer duel; the scripts made line-ending aware: the trees are CRLF), the
+  u2revive step (31 in the list). The stage tests' old pin (kSt_Pos == 0xAC) updated; the close's entry stride is
+  0x188 in 3576 / 3732 (imul in vf13; 2976's 0x168). Built: the 14 old native failures only (optd_c4's one failure is
+  the old note check at line 762, every new tracker check passes), layer tests pass. The pendant's refusal check read
+  (exe+0x2359205: the gimmick's state byte not 1 / 3-9 with interaction kind 7; written up in the research note).
+- 21:59 native f2995ba (synced, outer 85d9795), outer 0f15dd6 (duel, u2revive, docs), pushed; packaged 0f15dd65 (=
+  the build tree's DLLs). 22:00 cs131a (the duel test) started.
