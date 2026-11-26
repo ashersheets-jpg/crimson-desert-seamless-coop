@@ -191,7 +191,7 @@ constexpr uint32_t kComp_Flag = 0x3D8, kComp_Link = 0x320, kActor_Parent = 0xAC;
 constexpr uint32_t kMgr_N1D0 = 0x1E0, kMgr_NLive = 0x30, kMgr_NEngage = 0x19C;  /* 3663: +8 */
 constexpr uint32_t kWrap_Raw = 0x18;
 constexpr size_t kHeader = 5;
-constexpr uint16_t kOpMainPlayerDataStartAck = 2844;
+constexpr uint16_t kOpMainPlayerDataStartAck = 2660;
 
 // The client actor table (game/actor_lookup.cpp's replica, with this file's SEH reads: the 2322 point
 // only has the key).

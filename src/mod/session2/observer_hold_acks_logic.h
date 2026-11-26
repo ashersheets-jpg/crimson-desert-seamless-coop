@@ -44,17 +44,17 @@ inline constexpr uint32_t kNpcKeyClass = 0xB;     // key >> 28 of NPCs and child
 
 // The per-actor S>C messages held for a withheld key, u32 actor key at payload +0.
 inline constexpr std::array<uint16_t, 11> kHeldOps = {
-    3039,  // StartSpawnActionAck
-    2499,  // ChangeAIStateAck
-    2108,  // DataDefinedRegenerateValueAck
-    2800,  // StartActionAck
-    3008,  // MoveActorAck
-    2849,  // UpdateElementalAck
-    2148,  // ApplyBuffAck
-    3121,  // ClearAllyGroupDataAck
-    3042,  // SetMinStatRateAck
-    2914,  // VaryDataDefinedStaticStatAck
-    2824,  // GimmickCatcherUpdateAck: a carried piece's (observer_hold_family; p8-s14-viajeros.md §3 A.2)
+    2878,  // StartSpawnActionAck
+    2349,  // ChangeAIStateAck
+    2376,  // DataDefinedRegenerateValueAck
+    2408,  // StartActionAck
+    2890,  // MoveActorAck
+    2883,  // UpdateElementalAck
+    2989,  // ApplyBuffAck
+    2457,  // ClearAllyGroupDataAck
+    2876,  // SetMinStatRateAck
+    2897,  // VaryDataDefinedStaticStatAck
+    2431,  // GimmickCatcherUpdateAck: a carried piece's (observer_hold_family; p8-s14-viajeros.md §3 A.2)
 };
 inline constexpr size_t kOpCount = kHeldOps.size();
 

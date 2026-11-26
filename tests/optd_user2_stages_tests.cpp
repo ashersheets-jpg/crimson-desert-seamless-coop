@@ -922,8 +922,8 @@ void test_ctl_stats_and_abort() {
     for (size_t i = 0; i < static_cast<size_t>(u2s::CtlAbort::Count); ++i) {
         CHECK(std::string(u2s::ctl_abort_name(static_cast<u2s::CtlAbort>(i))) != "?");
     }
-    CHECK(u2s::ai_req(2790) && u2s::ai_req(2431) && u2s::ai_req(2766) && u2s::ai_req(2637) && u2s::ai_req(2346) &&
-          u2s::ai_req(2296));  // the logic's 3732 numbers (2976's list: 2556 2223 2734 2405 2291 2828)
+    CHECK(u2s::ai_req(2561) && u2s::ai_req(2221) && u2s::ai_req(2282) && u2s::ai_req(3043) && u2s::ai_req(2930) &&
+          u2s::ai_req(2582));  // the logic's 3732 numbers (2976's list: 2556 2223 2734 2405 2291 2828)
     CHECK(!u2s::ai_req(2005) && !u2s::ai_req(2380));
 }
 

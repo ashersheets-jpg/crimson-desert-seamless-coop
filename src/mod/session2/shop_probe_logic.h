@@ -209,20 +209,20 @@ inline uint32_t le32(const uint8_t* p) {
 }
 inline uint64_t le64(const uint8_t* p) { return static_cast<uint64_t>(le32(p)) | static_cast<uint64_t>(le32(p + 4)) << 32; }
 
-inline constexpr uint16_t kOpPreemptionReq = 2642;   // InteractionPreemptionStepReq: u32 requester | u32 NPC | u32 interaction | ...
-inline constexpr uint16_t kOpDoStepReq = 2304;       // InteractionDoStepReq: u32 requester | u32 NPC | u32 interaction | u32
-inline constexpr uint16_t kOpBranchReq = 2644;       // StageBranchStateReq: u64 sequencer | ... (the branch after it)
-inline constexpr uint16_t kOpChartEvent = 2200;      // StageChart event Req: u64 sequencer @0
-inline constexpr uint16_t kOpPreemptionOk = 2308;    // ...SuccessAck: u32 requester | u32 requester | u32 NPC | u32 interaction
-inline constexpr uint16_t kOpPreemptionFail = 2946;  // ...FailAck
-inline constexpr uint16_t kOpDoStepOk = 2363;        // InteractionDoStepSuccessAck
-inline constexpr uint16_t kOpDoInteraction = 2160;   // the interaction ran
-inline constexpr uint16_t kOpBranchAck = 2752;       // StageBranchStateAck: u8 kind | u32 actor | u64 seq | u32 state
+inline constexpr uint16_t kOpPreemptionReq = 2641;   // InteractionPreemptionStepReq: u32 requester | u32 NPC | u32 interaction | ...
+inline constexpr uint16_t kOpDoStepReq = 2526;       // InteractionDoStepReq: u32 requester | u32 NPC | u32 interaction | u32
+inline constexpr uint16_t kOpBranchReq = 2726;       // StageBranchStateReq: u64 sequencer | ... (the branch after it)
+inline constexpr uint16_t kOpChartEvent = 2811;      // StageChart event Req: u64 sequencer @0
+inline constexpr uint16_t kOpPreemptionOk = 3168;    // ...SuccessAck: u32 requester | u32 requester | u32 NPC | u32 interaction
+inline constexpr uint16_t kOpPreemptionFail = 2929;  // ...FailAck
+inline constexpr uint16_t kOpDoStepOk = 2612;        // InteractionDoStepSuccessAck
+inline constexpr uint16_t kOpDoInteraction = 3140;   // the interaction ran
+inline constexpr uint16_t kOpBranchAck = 2455;       // StageBranchStateAck: u8 kind | u32 actor | u64 seq | u32 state
 // Co-op+ 2026-11-24: PrepareSequencerAck on 3732 (hold_scene_order_logic.h kOpPrepare): u8 kind | u32 actor @1 | u32
 // owner @5 | u64 sequencer @9 | ...; to user 2 with owner = user 2's character: a scene of user 2's OWN. pp57-armwrest:
 // a server stage's +0x98 and [+0x48]+0x60 read 0 (no owner there), so the per-player focus slot knows user 2's scenes
 // by these ids (= the stage's +0x30).
-inline constexpr uint16_t kOpPrepareAck = 2356;
+inline constexpr uint16_t kOpPrepareAck = 2362;
 struct PrepareOwner {
     bool ok = false;
     uint32_t owner = 0;
@@ -236,7 +236,7 @@ inline PrepareOwner parse_prepare_owner(std::span<const uint8_t> p) {
     r.id = le64(p.data() + 9);
     return r;
 }
-inline constexpr uint16_t kOpOnBranchEvent = 2369;   // StageOnBranchEventAck
+inline constexpr uint16_t kOpOnBranchEvent = 2239;   // StageOnBranchEventAck
 
 struct Interaction {
     bool ok = false;

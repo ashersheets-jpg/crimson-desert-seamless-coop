@@ -47,10 +47,10 @@ struct Motion { uint32_t key = 0; float x = 0, y = 0, z = 0; bool position = fal
 inline bool motion(uint16_t op, std::span<const uint8_t> p, Motion& out) {
     out = {};
     if (p.size() < 4 || !npc(u32(p, 0))) return false;
-    if (op != 2431 && op != 2790 && op != 2766 && op != 2637 && op != 2346 && op != 2296 && op != 3008 && op != 2800) return false;
+    if (op != 2221 && op != 2561 && op != 2282 && op != 3043 && op != 2930 && op != 2582 && op != 2890 && op != 2408) return false;
     out.key = u32(p, 0);
-    const size_t off = op == 2431 ? 0x8E : op == 2800 ? 0x8F : 4;
-    if ((op == 2431 || op == 2800 || op == 2790 || op == 3008) && p.size() >= off + 12) {
+    const size_t off = op == 2221 ? 0x8E : op == 2408 ? 0x8F : 4;
+    if ((op == 2221 || op == 2408 || op == 2561 || op == 2890) && p.size() >= off + 12) {
         std::memcpy(&out.x, p.data() + off, 4); std::memcpy(&out.y, p.data() + off + 4, 4); std::memcpy(&out.z, p.data() + off + 8, 4);
         out.position = std::isfinite(out.x) && std::isfinite(out.y) && std::isfinite(out.z);
     }

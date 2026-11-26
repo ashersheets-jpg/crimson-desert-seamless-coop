@@ -104,7 +104,7 @@ constexpr uint32_t kLayer_Cur = 0x10, kLayer_Play = 0x18, kLayer_Chart = 0x110, 
 constexpr uint32_t kActor_State = 0x5E, kActor_C1 = 0xC1, kActor_C2 = 0xC2, kActor_CF = 0xCF, kActor_C8 = 0xC8;
 constexpr uint32_t kAck60_Flags = 0x10;
 
-constexpr uint16_t kOp2005 = 2005, kOp2723 = 3039, kOp2991 = 2800;
+constexpr uint16_t kOp2005 = 2005, kOp2723 = 2878, kOp2991 = 2408;
 
 // Budgets.
 constexpr size_t kRingSize = 8192;          // 1 MB

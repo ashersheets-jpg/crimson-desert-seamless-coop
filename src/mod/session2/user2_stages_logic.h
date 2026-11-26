@@ -1136,7 +1136,7 @@ inline bool ctl_undriven(const CtlStats& s) { return s.eligible >= 8 && s.eligib
 
 // The AI / movement Reqs whose payload starts with the actor's key (driven / the host's client drives).
 inline bool ai_req(uint16_t op) {
-    return op == 2790 || op == 2431 || op == 2766 || op == 2637 || op == 2346 || op == 2296;
+    return op == 2561 || op == 2221 || op == 2282 || op == 3043 || op == 2930 || op == 2582;
 }
 
 // A 2005 payload: [u16 length][record] repeated; a record: type u8 +0, key u32 +1, controller u32 +0x12. Calls

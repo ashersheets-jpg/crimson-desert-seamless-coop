@@ -35,8 +35,8 @@ using u2f::parse_mode;
 
 // ---------------------------------------------------------------- formats (mirror-ack-formats.md §1)
 
-inline constexpr uint16_t kOpMoveActorReq = 2790;
-inline constexpr uint16_t kOpMoveActorAck = 3008;
+inline constexpr uint16_t kOpMoveActorReq = 2561;
+inline constexpr uint16_t kOpMoveActorAck = 2890;
 // Co-op+ 2026-11-17: the 1.0.0.3460+ layout (3663 too). The 2976 sizes (514 / 235) matched no packet, so every rider's
 // Ack counted as "bad size" and no horse sample was ever made (playtest: the guest saw the host's horse away from the
 // host). From the Co-op+ layer's wire_layout.h (the client's own parser, confirmed on captures; as combat_follow):

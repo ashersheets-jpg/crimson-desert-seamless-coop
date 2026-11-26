@@ -2163,7 +2163,7 @@ bool lootr_on_guest_out(std::vector<uint8_t>& p) noexcept {
     if (!g_on) return false;
     try {
         std::lock_guard lk(g_mu);
-        if (lrl::opcode_of(p) == 2106) {  // LootDropCharacterRewardListAck: u8 4 | u32 body | ...
+        if (lrl::opcode_of(p) == 2164) {  // LootDropCharacterRewardListAck: u8 4 | u32 body | ...
             if (p.size() < lrl::kHeader + 5) return false;
             const uint32_t body = lrl::rd32(p.data() + lrl::kHeader + 1);
             for (const BodyEntry& e : g_bodies) {
@@ -2232,7 +2232,7 @@ void lootr_tick(std::vector<std::vector<uint8_t>>& to_server) noexcept {
             std::memcpy(&pl[14], &kHostCharacter, 4);
             std::memcpy(&pl[18], &kHostCharacter, 4);
             std::memcpy(&pl[26], &entry, 4);
-            net::sniffer_inject_c2s(lrl::make(3104, pl, 0x00));
+            net::sniffer_inject_c2s(lrl::make(2238, pl, 0x00));
         }
         static uint64_t next_scan = 0;
         if (g_probe && g_chest_scans.load() < 8 && now >= next_scan) {  // the host's own request: the server thread
@@ -2244,7 +2244,7 @@ void lootr_tick(std::vector<std::vector<uint8_t>>& to_server) noexcept {
                 std::memcpy(&pl[14], &kHostCharacter, 4);
                 std::memcpy(&pl[18], &kHostCharacter, 4);
                 std::memcpy(&pl[26], &entry, 4);
-                net::sniffer_inject_c2s(lrl::make(3104, pl, 0x00));
+                net::sniffer_inject_c2s(lrl::make(2238, pl, 0x00));
             }
         }
         std::lock_guard lk(g_mu);
@@ -2253,11 +2253,11 @@ void lootr_tick(std::vector<std::vector<uint8_t>>& to_server) noexcept {
             std::memcpy(pl, &b.key, 4);
             if (b.step == 0 && now - b.at >= 3000) {
                 b.step = 1;
-                const bool ok = net::sniffer_inject_c2s(lrl::make(2382, pl, 0x00));
+                const bool ok = net::sniffer_inject_c2s(lrl::make(2998, pl, 0x00));
                 log::info("Lootr probe: [dev] the host loots body 0x{:08X} (2491){}", b.key, ok ? "" : " NOT sent");
             } else if (b.step == 1 && now - b.at >= 6000 && g_kill_hits.load() == 1) {
                 b.step = 2;
-                to_server.push_back(lrl::make(2382, pl, 0x00));
+                to_server.push_back(lrl::make(2998, pl, 0x00));
                 log::info("Lootr probe: [dev] the guest loots body 0x{:08X} (2491, as its own request)", b.key);
             }
         }
@@ -2300,7 +2300,7 @@ void lootr_tick(std::vector<std::vector<uint8_t>>& to_server) noexcept {
                 std::memcpy(&pl[22], &none, 2);
                 std::memcpy(&pl[24], &none, 2);
                 std::memcpy(&pl[26], &kLootrGiveEntry, 4);
-                const bool sent = net::sniffer_inject_c2s(lrl::make(3104, pl, 0x00));
+                const bool sent = net::sniffer_inject_c2s(lrl::make(2238, pl, 0x00));
                 size_t replayed = 0;
                 for (HostHeld& h : g_host_held) {
                     if (h.g.load() != t.g || h.size < lrl::kHeader) continue;
@@ -2331,7 +2331,7 @@ void lootr_tick(std::vector<std::vector<uint8_t>>& to_server) noexcept {
                 std::memcpy(&pl[22], &none, 2);
                 std::memcpy(&pl[24], &none, 2);
                 std::memcpy(&pl[26], &kLootrGiveEntry, 4);
-                to_server.push_back(lrl::make(3104, pl, 0x00));  // a client Req
+                to_server.push_back(lrl::make(2238, pl, 0x00));  // a client Req
                 for (const auto& h : t.held) server_push_extra(h);
                 c_given.fetch_add(1);
                 log::info("Lootr: the guest took gimmick 0x{:08X} too: item key {} x{} for 0x{:08X}, {} packet(s) "
@@ -2389,7 +2389,7 @@ std::string lootr_describe() {
 void lootr_host_recv(uint8_t* packet, uint16_t size) noexcept {
     if (!g_on || size < lrl::kHeader + 4) return;
     const uint16_t op = static_cast<uint16_t>(packet[0] | (packet[1] << 8));
-    if (op == 2106 && size >= lrl::kHeader + 5) {  // the leftover list of a body the guest looted first
+    if (op == 2164 && size >= lrl::kHeader + 5) {  // the leftover list of a body the guest looted first
         const uint32_t body = lrl::rd32(packet + lrl::kHeader + 1);
         if (!body) return;
         for (auto& k : g_body_keep_host) {
@@ -2401,7 +2401,7 @@ void lootr_host_recv(uint8_t* packet, uint16_t size) noexcept {
         }
         return;
     }
-    if (op == 2946 && size >= lrl::kHeader + 8) {  // InteractionPreemptionStepFailAck: u32 actor | u32 target | ...
+    if (op == 2929 && size >= lrl::kHeader + 8) {  // InteractionPreemptionStepFailAck: u32 actor | u32 target | ...
         uint8_t* fl = packet + lrl::kHeader;
         const uint32_t target = lrl::rd32(fl + 4);
         for (KeepHost& k : g_keep) {
@@ -2476,7 +2476,7 @@ void kill_hits(const uint8_t* packet, size_t size) noexcept {
             if (done.size() < 256) done.push_back(k);
             uint8_t pl[8] = {};
             std::memcpy(pl, &k, 4);
-            const bool ok = net::sniffer_inject_c2s(lrl::make(2322, pl, 0x00));
+            const bool ok = net::sniffer_inject_c2s(lrl::make(2303, pl, 0x00));
             log::info("Lootr probe: [dev] the host's hit on 0x{:08X} kills it{}", k, ok ? "" : " (NOT sent)");
             if (g_kill_hits.load() == 1 || g_kill_hits.load() == 3) {  // then loot it without the UI: the host 3 s
                                                                        // later, (mode 1) the guest 6 s later
@@ -2494,8 +2494,8 @@ void lootr_host_sniffed(const uint8_t* packet, size_t size, bool server_to_clien
     if (g_kill_hits.load() && !server_to_client && op == agl::kOpDoFrameEventReq) kill_hits(packet, size);
     if (g_on && !server_to_client && (op == lrl::kOpPreemptReq || op == lrl::kOpDoStepReq)) host_take(op, packet, size);
     if (!g_probe || !g_pickup) return;
-    if (!server_to_client && (op == 2642 || op == 2304)) g_watch_until = GetTickCount64() + 3000;  // its answers
-    static const uint16_t kWatch[] = {2642, 2304, 2308, 2363, 2066};
+    if (!server_to_client && (op == 2641 || op == 2526)) g_watch_until = GetTickCount64() + 3000;  // its answers
+    static const uint16_t kWatch[] = {2641, 2526, 3168, 2612, 2066};
     bool watched = false;
     for (const uint16_t w : kWatch) watched = watched || w == op;
     // Only the players' interactions (tcB330: NPCs' own 3008 / 2120 used the whole budget).
@@ -2510,7 +2510,7 @@ void lootr_host_sniffed(const uint8_t* packet, size_t size, bool server_to_clien
     if (after ? n_after.fetch_add(1) > 800 : n_watch.fetch_add(1) > 100) return;
     if (op == 2002 || op == 1001) return;
     char hex[3 * 120 + 1] = {};
-    const size_t m = size < 120 ? size : (op == 2210 ? 120 : 40);
+    const size_t m = size < 120 ? size : (op == 2502 ? 120 : 40);
     for (size_t i = 0; i < m; ++i) std::snprintf(hex + i * 3, 4, "%02X ", packet[i]);
     log::info("Lootr probe: {} {} ({} bytes): {}", server_to_client ? "S>C" : "C>S", op, size, hex);
 }

@@ -33,7 +33,7 @@ constexpr uint8_t kRunnerHead[15] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0
 constexpr uint32_t kComp_Actor = 0x08, kActor_Key = 0x60, kActor_Controller = 0x90, kPlayer_User = 0xA0,
                    kUser_Key = 0x60;
 // 3732 opcodes (notes section 0 / 3.3): the summon at a cast, and the bite.
-constexpr uint16_t kOpSummon = 2594, kOpDoStep = 2304;
+constexpr uint16_t kOpSummon = 3010, kOpDoStep = 2526;
 constexpr size_t kHeader = 5;
 
 struct Slot {

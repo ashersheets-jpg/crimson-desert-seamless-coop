@@ -179,11 +179,11 @@ void interaction_line(Dir dir, const uint8_t* pkt, uint16_t size) {
     uint16_t op = 0;
     if (!guarded_copy(&op, pkt, 2)) return;
     switch (op) {
-        case 2642: case 2304: case 2751: case 2308: case 2946: case 2363: case 2160: case 2930: break;
+        case 2641: case 2526: case 2284: case 3168: case 2929: case 2612: case 3140: case 3115: break;
         default: return;
     }
     // 2946: u16 op | i8 | u16 len | u32 requester | u32 NPC | u32 interaction | u32 native error @12 (shop_probe_logic.h)
-    if (op == 2946 && dir == Dir::ServerToClient && size >= 5 + 16) {
+    if (op == 2929 && dir == Dir::ServerToClient && size >= 5 + 16) {
         uint32_t f[4] = {};
         if (guarded_copy(f, pkt + 5, sizeof f)) {
             if (f[3] == kBusyNpcError) {
@@ -302,7 +302,7 @@ void on_post_packet(safetyhook::Context& ctx) {
     if (op < 4096) g_post_args[op].store(packed, std::memory_order_relaxed);
     // Co-op+ 2026-11-14 (the ready check, story_gate.h): the host client's own story triggers, logged (probe) or held
     // (hold: the post is skipped by returning at the function's first instruction; a release posts it again).
-    if ((op == 2808 || op == 2644 || op == 2350) && session2::story_gate_on()) {  // 2350: a load ends a wait
+    if ((op == 3004 || op == 2726 || op == 2804) && session2::story_gate_on()) {  // 2350: a load ends a wait
         uint16_t size = 0;
         uint8_t buf[64] = {};
         if (guarded_copy(&size, reinterpret_cast<const void*>(ctx.rsp + off::kHookArgSizeStackOffset), sizeof size) &&
@@ -341,11 +341,11 @@ void on_post_packet(safetyhook::Context& ctx) {
         // log lines a second for hours (ff7: 654 lines in 9 minutes). Those: the first 10, then every 1000th; a
         // failure always.
         static std::atomic<uint64_t> own_3111{0};
-        const uint64_t nth = pop == 3104 ? own_3111.fetch_add(1) + 1 : 0;
-        if (!ok || pop != 3104 || nth <= 10 || nth % 1000 == 0)
+        const uint64_t nth = pop == 2238 ? own_3111.fetch_add(1) + 1 : 0;
+        if (!ok || pop != 2238 || nth <= 10 || nth % 1000 == 0)
             log::info("Inject C>S: opcode {} ({} bytes, channel {}, flags 0x{:X}) {}{}", pop, pkt.size(),
                       a & 0xFF, (a >> 8) & 0xFFFF, ok ? "posted" : "EXCEPTION",
-                      pop == 3104 && nth >= 10 ? std::format(" ({} of these so far; logged every 1000th from now)", nth) : "");
+                      pop == 2238 && nth >= 10 ? std::format(" ({} of these so far; logged every 1000th from now)", nth) : "");
         if (!ok) g_post_fn = nullptr;
     }
 }

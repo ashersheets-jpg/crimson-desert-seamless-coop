@@ -50,9 +50,9 @@ constexpr uint8_t k3141Site[] = {0x48, 0x8D, 0x8D, 0x88, 0x00, 0x00, 0x00, 0x48,
                                  0x80, 0x00, 0x00, 0x00, 0x4C, 0x8D, 0x45, 0xB8, 0x48, 0x8D, 0x55, 0x80, 0x48, 0x8B, 0xC8};
 constexpr uint8_t k3141Exit[] = {0x48, 0x8D, 0x05, 0xE3, 0x47, 0xFF, 0x02, 0x48, 0x89, 0x45, 0xC0, 0x80};
 constexpr Site kSites[] = {
-    {2808, "trigger volume enter / leave", 0x2C5884E, 0x2C5880E, k2808Site, sizeof k2808Site, k2808Exit, sizeof k2808Exit},
-    {2678, "sequencer delete", 0x2D549DA, 0x2D5498D, k2678Site, sizeof k2678Site, k2678Exit, sizeof k2678Exit},
-    {3141, "stage chart delayed event", 0x2D5663F, 0x2D56606, k3141Site, sizeof k3141Site, k3141Exit, sizeof k3141Exit},
+    {3004, "trigger volume enter / leave", 0x2C5884E, 0x2C5880E, k2808Site, sizeof k2808Site, k2808Exit, sizeof k2808Exit},
+    {2981, "sequencer delete", 0x2D549DA, 0x2D5498D, k2678Site, sizeof k2678Site, k2678Exit, sizeof k2678Exit},
+    {3149, "stage chart delayed event", 0x2D5663F, 0x2D56606, k3141Site, sizeof k3141Site, k3141Exit, sizeof k3141Exit},
 };
 constexpr size_t kN = std::size(kSites);
 

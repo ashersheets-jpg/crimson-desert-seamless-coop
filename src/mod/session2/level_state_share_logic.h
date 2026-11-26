@@ -20,7 +20,7 @@
 
 namespace cdmp::session2::lss {
 
-constexpr uint16_t kOpChangeGameLevelStateAck = 2669;  // 1.0.0.3732
+constexpr uint16_t kOpChangeGameLevelStateAck = 2189;  // 1.0.0.3732
 constexpr size_t kHeader = 5;                          // u16 opcode | u8 slot | u16 length (fog_share.cpp)
 constexpr size_t kHead = 10;                           // u8 4 | u32 character key | u32 1 | u8 1
 constexpr size_t kEntry = 9;                           // u32 game level key | u32 state hash | u8

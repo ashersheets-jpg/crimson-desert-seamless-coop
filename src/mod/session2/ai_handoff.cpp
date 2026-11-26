@@ -31,7 +31,7 @@ bool g_guest = false;
 bool g_fight = false;  // the fight rule (ai_handoff.h)
 
 constexpr uint32_t kHostCharacter = 0xA0100001;
-constexpr uint16_t kOpChangeAiControlAck = 2152;
+constexpr uint16_t kOpChangeAiControlAck = 2296;
 constexpr uint32_t kPrivateMagic = 0xC0DEA1C7;   // our 12-byte form of 2660: magic | actor key | new controller
 constexpr uint32_t kTickEntry = 0xC0DE0008;      // trade_probe's entry for the server-thread check
 constexpr uintptr_t kServerActorMgrSlot = 0x724B860;
@@ -613,7 +613,7 @@ void ai_handoff_tick() noexcept {
         std::memcpy(&pl[14], &kHostCharacter, 4);
         std::memcpy(&pl[18], &kHostCharacter, 4);
         std::memcpy(&pl[26], &kTickEntry, 4);
-        net::sniffer_inject_c2s(lrl::make(3104, pl, 0x00));
+        net::sniffer_inject_c2s(lrl::make(2238, pl, 0x00));
     } catch (...) {
     }
 }

@@ -163,8 +163,8 @@ constexpr uintptr_t kServerNetSlot = 0x724B848;   // [exe+...] = g_ServerNet (0x
 constexpr uintptr_t kPeriodSlot = 0x71E5478;      // i32: the 2043 period / 10 ms (0x287F139)
 constexpr uintptr_t kTroc2043Slot = 0x7484EB0;    // the periodic 2043's Troc (0x287F171; set by the host's 0x287EF60)
 constexpr uintptr_t kZeroCell = 0x5975BC8;        // the 8-byte zero cell copied into the payload (0x287F0DB)
-constexpr uint16_t kOp2322 = 2941, kOp2335 = 2224, kOp2126 = 2338, kOp2958 = 3099, kOp2909 = 2509;
-constexpr uint16_t kOp2283 = 3018, kOp2362 = 2887, kOp2437 = 2350, kOp2001 = 2001;
+constexpr uint16_t kOp2322 = 2456, kOp2335 = 2499, kOp2126 = 3098, kOp2958 = 2687, kOp2909 = 2133;
+constexpr uint16_t kOp2283 = 2235, kOp2362 = 2672, kOp2437 = 2804, kOp2001 = 2001;
 
 // U-c2 (the 2e38ce5 run, probe H: its id list [+0x150] stayed 0 while the host's held 52065): what the native
 // preparation 0x287EF60 builds right after its arm 0x287F450 (0x287F06F), and the minimal arm skipped:
@@ -5735,7 +5735,7 @@ void logout_cleanup(uint8_t reason) noexcept { ctl_cleanup(0, kCleanItsLogout, s
 // resets user 2's manager to state 0 before its ReviveLoadingReq 2887 arrives; armed, the watchdog read "not in state 2"
 // and ABORTED U-1 for the rest of the session (no own townsfolk again). The in-place revive (Q) sends ReviveReq 2869
 // alone. Both now drain an armed manager at their entry, as its loads do (it re-arms after the dwell).
-constexpr uint16_t kOpReviveStart = 2972, kOpReviveInPlace = 2869;
+constexpr uint16_t kOpReviveStart = 3044, kOpReviveInPlace = 2568;
 bool is_load(uint16_t op) noexcept { return op == kOp2283 || op == kOp2362 || op == kOp2437 || op == kOpReviveStart; }
 // The Reqs whose ExecuteTroc entry drains its armed manager at once: its loads and its goodbye (if the 2001 runs as a
 // Troc of its character; the OnRecvPacket path only counts it, see user2_stages_server_packet).
@@ -8216,7 +8216,7 @@ void user2_stages_server_packet(uint16_t opcode, bool from_user2, uintptr_t pack
     if (npc_probes() && packet && size >= 9) {
         uint32_t key = 0;
         if (rd(packet + 5, key)) npc_observe_req(opcode, key, true);
-        if (g_road_probe.load() && opcode == 3063) {
+        if (g_road_probe.load() && opcode == 2416) {
             // 2550 no empieza por una clave: u8 + f32 y entradas de24bytes (p8-s14-viajeros §1.1).
             for (uint16_t at = 10; static_cast<uint32_t>(at) + 24 <= size; at = static_cast<uint16_t>(at + 24)) {
                 uint8_t entry[24] = {};
@@ -8258,8 +8258,8 @@ void user2_stages_server_packet(uint16_t opcode, bool from_user2, uintptr_t pack
 
 static uint16_t npc_req_bit(uint16_t op) noexcept {
     switch (op) {
-        case 2431: return 1; case 2766: return 2; case 2790: return 4;
-        case 2637: return 8; case 2346: return 16; case 2296: return 32;
+        case 2221: return 1; case 2282: return 2; case 2561: return 4;
+        case 3043: return 8; case 2930: return 16; case 2582: return 32;
         default: return 0;
     }
 }

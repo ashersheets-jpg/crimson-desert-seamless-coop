@@ -93,17 +93,17 @@ inline constexpr uint32_t kTroc_Kind = 0x08;    // u32: 4 Req, 1 Ack/Nak, 2 auth
 inline constexpr uint32_t kTroc_Opcode = 0x0C;  // u16
 // Opcodes of this build (verified against the Troc table / RTTI at runtime).
 inline constexpr uint16_t kOpActorLoadDataAck = 2005;
-inline constexpr uint16_t kOpRemoveActorAck = 3037;
-inline constexpr uint16_t kOpMoveActorReq = 2790;
-inline constexpr uint16_t kOpMoveActorAck = 3008;
-inline constexpr uint16_t kOpStartActionReq = 2431;
-inline constexpr uint16_t kOpStartActionAck = 2800;
-inline constexpr uint16_t kOpRotateActorReq = 2296;
-inline constexpr uint16_t kOpRotateActorAck = 2664;
-inline constexpr uint16_t kOpUpdateWallUpDataAck = 2939;
-inline constexpr uint16_t kOpUnequipItemAck = 3155;
-inline constexpr uint16_t kOpOtherEquipItemAck = 2426;
-inline constexpr uint16_t kOpOtherUnequipItemAck = 2565;  // u32 key | u16 slot | u32 serial
+inline constexpr uint16_t kOpRemoveActorAck = 2157;
+inline constexpr uint16_t kOpMoveActorReq = 2561;
+inline constexpr uint16_t kOpMoveActorAck = 2890;
+inline constexpr uint16_t kOpStartActionReq = 2221;
+inline constexpr uint16_t kOpStartActionAck = 2408;
+inline constexpr uint16_t kOpRotateActorReq = 2582;
+inline constexpr uint16_t kOpRotateActorAck = 2198;
+inline constexpr uint16_t kOpUpdateWallUpDataAck = 2652;
+inline constexpr uint16_t kOpUnequipItemAck = 2622;
+inline constexpr uint16_t kOpOtherEquipItemAck = 2725;
+inline constexpr uint16_t kOpOtherUnequipItemAck = 2792;  // u32 key | u16 slot | u32 serial
 
 // Map pins (docs/research/mapa-minimapa.md §1; capture cdmp_packets_20261003-211630):
 //   CreateOrChangePinMarkerAck (6 + 22 N B): 04 | u32 owner | u8 group |
@@ -116,8 +116,8 @@ inline constexpr uint16_t kOpOtherUnequipItemAck = 2565;  // u32 key | u16 slot 
 // far outside its range. Re-sending an id moves the icon but not the stored
 // position (the UI rebuilds from it), so a move is Remove + Create. Pins
 // created by an Ack alone never reach the server, nor the save.
-inline constexpr uint16_t kOpCreateOrChangePinMarkerAck = 2267;
-inline constexpr uint16_t kOpRemovePinMarkerAck = 2579;
+inline constexpr uint16_t kOpCreateOrChangePinMarkerAck = 2350;
+inline constexpr uint16_t kOpRemovePinMarkerAck = 2482;
 inline constexpr uint64_t kCoopPinId = 0x7FDD00000000F001ull;
 inline constexpr uint8_t kPinGroupNormal = 0;
 inline constexpr uint8_t kPinShapeCount = 14, kPinColourCount = 15;
@@ -151,7 +151,7 @@ inline constexpr uint32_t kServerActor_Key = 0x60;
 // (combate-coop.md §3 and annex). rcx = server actor, r8 = FrameEventAccessor:
 // u8 type +0x08 (0 = action), u8 slot +0x10, u32 action hash +0x14,
 // u16 id +0x18, u32 frame-event index +0x1C.
-inline constexpr uint16_t kOpChangeDockingSocketByFrameEventAck = 2155;
+inline constexpr uint16_t kOpChangeDockingSocketByFrameEventAck = 2721;
 
 // Messages the MMO server sent to every nearby player ("ToNear"), the subject
 // included, so the sender's own client receives exactly the bytes the others
@@ -166,21 +166,21 @@ struct RelayedAck {
                         // killer); when they do, they are set to the copy. 0 = unused
 };
 inline constexpr RelayedAck kRelayedAcks[] = {
-    {2608, false, 92, {0x54}},              // VaryHPAck: HP; +0x54 = who caused it
-    {2108, false, 90, {0x54}},              // DataDefinedRegenerateValueAck; +0x54 = source
-    {2914, false, 41, {}},                  // VaryDataDefinedStaticStatAck
-    {2148, true, 77, {0x18, 0x1C, 0x21}},   // ApplyBuffAck: caster, target, tagged source (0x22 = actor)
-    {2899, true, 77, {0x18, 0x1C, 0x21}},   // UnapplyBuffAck
-    {2968, false, 42, {}},                  // UpdateChangeBuffLevelAck
-    {2849, false, 118, {0x28}},             // UpdateElementalAck (wet, burning...); +0x28 = source
-    {2316, true, 19, {0x04}},               // NotifyHandleDeadAck: +0 dead (the sender), +4 killer
-    {2863, true, 0, {}},                    // NotifyHandleFatalAck
-    {3163, true, 0, {}},                    // NotifyHandleReviveAck
-    {2158, true, 0, {}},                    // ReviveAck
-    {2357, true, 279, {}},                  // CharacterCustomizationAck
+    {2202, false, 92, {0x54}},              // VaryHPAck: HP; +0x54 = who caused it
+    {2376, false, 90, {0x54}},              // DataDefinedRegenerateValueAck; +0x54 = source
+    {2897, false, 41, {}},                  // VaryDataDefinedStaticStatAck
+    {2989, true, 77, {0x18, 0x1C, 0x21}},   // ApplyBuffAck: caster, target, tagged source (0x22 = actor)
+    {2484, true, 77, {0x18, 0x1C, 0x21}},   // UnapplyBuffAck
+    {2787, false, 42, {}},                  // UpdateChangeBuffLevelAck
+    {2883, false, 118, {0x28}},             // UpdateElementalAck (wet, burning...); +0x28 = source
+    {3073, true, 19, {0x04}},               // NotifyHandleDeadAck: +0 dead (the sender), +4 killer
+    {2492, true, 0, {}},                    // NotifyHandleFatalAck
+    {2261, true, 0, {}},                    // NotifyHandleReviveAck
+    {2676, true, 0, {}},                    // ReviveAck
+    {3097, true, 279, {}},                  // CharacterCustomizationAck
     // World interactions (interacciones-mundo.md): hooking a tree with the
     // rope. Carries a scene-object id (not an actor key), same on every PC.
-    {2701, true, 97, {}},                   // RemoteCatchResultAck
+    {2705, true, 97, {}},                   // RemoteCatchResultAck
 };
 inline constexpr uintptr_t kServerDockingWriter = 0x2969BC0;
 inline constexpr uint8_t kServerDockingWriterHead[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x55, 0x56, 0x57,

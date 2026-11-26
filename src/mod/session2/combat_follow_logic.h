@@ -59,9 +59,9 @@ using u2f::Mode;
 using u2f::mode_name;
 using u2f::parse_mode;
 
-inline constexpr uint16_t kOpMoveActorAck = 3008;
-inline constexpr uint16_t kOpStartActionAck = 2800;
-inline constexpr uint16_t kOpAttackTargetAck = 2519;  // PostProcessAttackResult_AttackTargetAck
+inline constexpr uint16_t kOpMoveActorAck = 2890;
+inline constexpr uint16_t kOpStartActionAck = 2408;
+inline constexpr uint16_t kOpAttackTargetAck = 2437;  // PostProcessAttackResult_AttackTargetAck
 inline constexpr size_t kHeader = 5;
 // Co-op+ 2026-11-17: the 1.0.0.3460+ layout (3663 too; cs45d: every MoveActorAck to user 2 was 239 B and every
 // StartActionAck 729 B, so the 2976 sizes 235 / 725 dropped them all and the stream never had an anchor). From the
@@ -75,8 +75,8 @@ inline constexpr size_t kStartParent = 0xCF, kStartTs = 0x15F, kStartTarget = 0x
 inline constexpr size_t kAttackMin = 8;
 // Liveness (review 2026-10-10) [V layouts, session 9 G1]: NotifyHandleDeadAck 2530 (19 B, +0x00 the dead actor,
 // +0x04 the killer); RemoveActorAck 2516 (10 B, `04 00 00 00 00 xx` then the key at +0x06; 8342 of 8342).
-inline constexpr uint16_t kOpNotifyHandleDeadAck = 2316;
-inline constexpr uint16_t kOpRemoveActorAck = 3037;
+inline constexpr uint16_t kOpNotifyHandleDeadAck = 3073;
+inline constexpr uint16_t kOpRemoveActorAck = 2157;
 inline constexpr size_t kDeadMin = 4, kRemoveSize = 10, kRemoveKey = 6;
 
 inline constexpr uint64_t kEngageMs = 8000;

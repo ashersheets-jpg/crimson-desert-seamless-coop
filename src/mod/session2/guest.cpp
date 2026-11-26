@@ -72,17 +72,17 @@ namespace {
 using OnRecvFn = void(__fastcall*)(void* net, void* session, uint64_t unused, const uint8_t* pkt, uint16_t size);
 using PushFn = void(__fastcall*)(void* queue, void** item);
 
-constexpr uint16_t kOpConnectCryptogramToServerReq = 2401;
+constexpr uint16_t kOpConnectCryptogramToServerReq = 3107;
 constexpr uint64_t kNoEpoch = 0x7FFFFFFFFFFFFFFFull;  // what PostPacket writes without a session
 constexpr uint32_t kHostReadyFreshMs = 3000;
 
 // G2/G3 (p8-preparacion.md §3): what is only counted and logged, never changed.
 constexpr uint16_t kOpScopeSenderAck = 2046;
 constexpr uint16_t kOpActorAppear = 2005;
-constexpr uint16_t kOpDataAck = 2896;
-constexpr uint16_t kOp2679 = 3116;
-constexpr uint16_t kOpLoginCharacterToFieldServerReq = 3081;  // u8 | u64 characterNo @1 | u32 slot @9
-constexpr uint16_t kOpReserveShutDownServerReq = 2447;
+constexpr uint16_t kOpDataAck = 2483;
+constexpr uint16_t kOp2679 = 2453;
+constexpr uint16_t kOpLoginCharacterToFieldServerReq = 2894;  // u8 | u64 characterNo @1 | u32 slot @9
+constexpr uint16_t kOpReserveShutDownServerReq = 2404;
 // g_ServerFrameworkMode (opcion-d-d0.md §1.1): the u32 the host's server writes
 // into its 2002 (0x1051F1E0); the client uses it as PostPacket's index (§1.3).
 constexpr uintptr_t kServerFrameworkMode = 0x6F2FB70;
@@ -215,7 +215,7 @@ uint64_t g_ll_seen_3093 = 0, g_ll_seen_2549 = 0;        // the diagnostics threa
 // never runs UserLogin). Armed by guest_send, run by guest_pump (both the
 // NetworkThread); the diagnostic is armed by the install thread.
 namespace sr = slot_refresh;
-constexpr uint16_t kOpLoginUserToFieldServerReq = 2554;
+constexpr uint16_t kOpLoginUserToFieldServerReq = 3072;
 constexpr uint64_t kSlotTestKey = ~0ull;  // the diagnostic's own key (never an epoch PostPacket writes)
 std::mutex g_refresh_mutex;
 sr::Planner g_refresh;                   // under g_refresh_mutex
@@ -274,14 +274,14 @@ void interaction_trace(const char* dir, std::span<const uint8_t> p) {
     const uint16_t op = opcode_of(p);
     const char* name = nullptr;
     switch (op) {
-        case 2642: name = "InteractionPreemptionStepReq"; break;
-        case 2304: name = "InteractionDoStepReq"; break;
-        case 2751: name = "InteractionResetReq"; break;
-        case 2308: name = "InteractionPreemptionStepSuccessAck"; break;
-        case 2946: name = "InteractionPreemptionStepFailAck"; break;
-        case 2363: name = "InteractionDoStepSuccessAck"; break;
-        case 2160: name = "InteractionDoStepDoInteractionSuccessAck"; break;
-        case 2930: name = "InteractionResetAck"; break;
+        case 2641: name = "InteractionPreemptionStepReq"; break;
+        case 2526: name = "InteractionDoStepReq"; break;
+        case 2284: name = "InteractionResetReq"; break;
+        case 3168: name = "InteractionPreemptionStepSuccessAck"; break;
+        case 2929: name = "InteractionPreemptionStepFailAck"; break;
+        case 2612: name = "InteractionDoStepSuccessAck"; break;
+        case 3140: name = "InteractionDoStepDoInteractionSuccessAck"; break;
+        case 3115: name = "InteractionResetAck"; break;
         default: return;
     }
     if (g_ia_lines.fetch_add(1, std::memory_order_relaxed) >= 400) return;
@@ -1797,7 +1797,7 @@ void guest_deliver(std::vector<uint8_t>&& packet) {
     }
     if (g_mode.load() != Mode::Remote || g_broken.load()) return;  // nothing to deliver to
     // P8 mounts: this client's own character key (its MainPlayerDataStartAck 2756, u32 at +0).
-    if (v && v->opcode == 2844 && v->payload.size() >= 4) {
+    if (v && v->opcode == 2660 && v->payload.size() >= 4) {
         mount_sync_set_local_key(msl::get32(v->payload.data()));
     }
     // P8 mounts (mode 1): held in order while a Begin of the host's character waits for its Commit.
@@ -1823,7 +1823,7 @@ void guest_deliver(std::vector<uint8_t>&& packet) {
 
 namespace {
 // guest_clock_fix (guest.h). The game's frame clock (3732; combat_follow's kClockBase / kClockFrac) without the offset.
-constexpr uint16_t kOpServerTimeInfo = 2474;
+constexpr uint16_t kOpServerTimeInfo = 3022;
 constexpr uintptr_t kFrameClockBase = 0x71661A0, kFrameClockFrac = 0x71661B0;
 constexpr uint64_t kClockWindowMs = 60000;
 std::atomic<bool> g_clock_fix{false};

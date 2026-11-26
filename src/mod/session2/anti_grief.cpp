@@ -248,7 +248,7 @@ void anti_grief_host_sniffed(const uint8_t* packet, size_t size, bool server_to_
         // enemies from the guest until the host hit each one. Now an NPC is protected only once the HOST has
         // interacted with it (InteractionDoStepReq 3073: u32 requester | u32 target | ..., a talk or a shop) AND it has
         // a dialog list; an NPC the host has fought is never protected again.
-        if (op == 2304 && size >= 5 + 8) {
+        if (op == 2526 && size >= 5 + 8) {
             try {
                 uint32_t target = 0;
                 std::memcpy(&target, packet + 5 + 4, 4);

@@ -438,7 +438,7 @@ void test_prepare_owner() {
     CHECK(po.ok && po.owner == 0xA0100066 && po.id == 0x29D);
     const std::vector<uint8_t> short_one(16, 0);
     CHECK(!shp::parse_prepare_owner(short_one).ok);
-    CHECK(shp::kOpPrepareAck == 2356);
+    CHECK(shp::kOpPrepareAck == 2362);
 }
 
 void test_packets() {

@@ -345,7 +345,7 @@ struct Config {
     // 2976: its 2nd is the move into the host's field), to test the stall lines, their stack samples and the layer's
     // far travel waiting on one PC. 0 (default): nothing.
     uint32_t s2_dev_server_stall_ms = 0;
-    uint32_t s2_dev_server_stall_op = 2723;
+    uint32_t s2_dev_server_stall_op = 2156;
     uint32_t s2_dev_server_stall_nth = 2;
     // P8 remote movement (session2/remote_interp.h, horse_follow.h; pendientes/p8-impl-interp-remota.md), each
     // "0" (default, nothing installed) | "probe" (measure only) | "1"; the raw ini values.

@@ -26,8 +26,8 @@ namespace {
 
 // 3663: SequencerTriggerVolumeInOutReq 2808 and StageBranchStateReq 2644 both start with the u64 sequencer id (an
 // id of the sender's own stage manager: the host's and user 2's ids are separate spaces).
-constexpr uint16_t kOpTriggerVolume = 2808, kOpStageBranch = 2644;
-constexpr uint16_t kOpGameLoadingStart = 2350;  // 3663 (a recording: "C>S GameLoadingStartReq 2350"): a player's load
+constexpr uint16_t kOpTriggerVolume = 3004, kOpStageBranch = 2726;
+constexpr uint16_t kOpGameLoadingStart = 2804;  // 3663 (a recording: "C>S GameLoadingStartReq 2350"): a player's load
 constexpr size_t kHeader = 5;
 
 std::atomic<int> g_mode{0};  // 0 off, 1 probe, 2 hold

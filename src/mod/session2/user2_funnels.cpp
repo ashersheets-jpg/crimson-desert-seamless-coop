@@ -883,7 +883,7 @@ uintptr_t troc_detour(uintptr_t res, uintptr_t troc, uintptr_t params, uintptr_t
     // P8 option U, U-1 (user2_stages.h): its 2283/2362/2437/2001 drain its own armed manager before the game sees them.
     user2_stages_troc_enter(now.actor, now.opcode);
     // S38 fase C (revisión §2): its AutoSpawnRoadReq's road classes, for the provenance of the births of this Troc.
-    if (now.opcode == 3063 && params) {
+    if (now.opcode == 2416 && params) {
         uintptr_t packet = 0;
         uint16_t size = 0;
         if (game::fast_read(params + 0x18, &packet, sizeof packet) && game::fast_read(params + 0x10, &size, sizeof size)) {
@@ -941,7 +941,7 @@ std::atomic<uint64_t> g_branch_own{0}, g_branch_own_unreadable{0};
 std::atomic<int> g_branch_said{0};
 void branch_line(const char* what, uint16_t op, uintptr_t ret, uint64_t arg, uintptr_t answer) noexcept {
     if (!g_branch_probe.load(std::memory_order_relaxed)) return;
-    if (op != 2644 && op != 2048 && op != 2654 && op != 2808 && op != 2059) return;
+    if (op != 2726 && op != 2048 && op != 2574 && op != 3004 && op != 2059) return;
     if (g_branch_said.fetch_add(1, std::memory_order_relaxed) >= 120) return;
     log::info("User2Funnels [branch probe] op {} | {} from exe+0x{:X} | arg 0x{:X} | answer 0x{:X}", op, what,
               rva_of(ret), arg, answer);
@@ -1913,7 +1913,7 @@ void summary() {
     log::info("User2Funnels subject: Reqs while user 2 is live {} | of user 2 {} ({}) | top Req opcodes of user 2: {}"
               " | interaction 3008x{} 3073x{} 2887x{}{}",
               g_reqs_total.load(), g_reqs_user2.load(), verdicts.empty() ? "none" : verdicts, ops_text(g_req_ops),
-              g_req_ops.at(2642), g_req_ops.at(2304), g_req_ops.at(2751),
+              g_req_ops.at(2641), g_req_ops.at(2526), g_req_ops.at(2284),
               wrong_vt ? std::format(" | last other class: vtable exe+0x{:X}", wrong_vt - g_base) : std::string{});
     struct Row {
         uint8_t f;

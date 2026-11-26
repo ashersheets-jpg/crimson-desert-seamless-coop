@@ -35,13 +35,13 @@ int main() {
     npcp::Motion m; std::vector<uint8_t> a(725); put(a,0,0xB0100450);
     fp(a,0x8E,-10588.9f); fp(a,0x92,599.5f); fp(a,0x96,-3903.7f);
     // 2026-11-21: the opcodes of the logic's 3732 list (2976's 2223 / 2291 / 2556 / 2697 were the old fixture's).
-    CHECK(npcp::motion(2431,a,m) && m.position && m.x == -10588.9f && m.z == -3903.7f);
-    CHECK(npcp::motion(2431,std::span<const uint8_t>(a).first(10),m) && !m.position);
-    put(a,0x8E,0x7FC00000); CHECK(npcp::motion(2431,a,m) && !m.position);
-    CHECK(npcp::motion(2766,a,m) && !m.position); CHECK(!npcp::motion(2005,a,m));
+    CHECK(npcp::motion(2221,a,m) && m.position && m.x == -10588.9f && m.z == -3903.7f);
+    CHECK(npcp::motion(2221,std::span<const uint8_t>(a).first(10),m) && !m.position);
+    put(a,0x8E,0x7FC00000); CHECK(npcp::motion(2221,a,m) && !m.position);
+    CHECK(npcp::motion(2282,a,m) && !m.position); CHECK(!npcp::motion(2005,a,m));
     std::vector<uint8_t> mv(514); put(mv,0,0xB0100450); fp(mv,4,15); fp(mv,8,2); fp(mv,12,30);
-    CHECK(npcp::motion(2790,mv,m) && m.position && m.z == 30);
-    CHECK(npcp::motion(3008,mv,m) && m.position && m.x == 15);
+    CHECK(npcp::motion(2561,mv,m) && m.position && m.z == 30);
+    CHECK(npcp::motion(2890,mv,m) && m.position && m.x == 15);
     npcp::Timeline t; t.hand(200); CHECK(t.present == 0 && t.first_req == 0);
     t.receive(100); t.receive(110); t.see(230); t.request(500); t.request(510);
     CHECK(t.received == 100 && t.handed == 200 && t.present == 230 && t.first_req == 500);

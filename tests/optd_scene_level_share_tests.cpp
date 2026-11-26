@@ -107,8 +107,8 @@ void test_parsers() {
     // 3732: reload / revive / game loading / logout (2976's 2283 / 2362 / 2437 / 2001).
     for (const uint16_t op : {sls::kOpReloadStage, sls::kOpRevive, sls::kOpGameLoading, sls::kOpLogout})
         CHECK(frame(make(op, {1, 2, 3})).kind == sls::Kind::Flush);
-    CHECK(frame(make(2772, {4, 1, 0, 0, 0})).kind == sls::Kind::None);  // the door's own request (3732; 2976 2928)
-    CHECK(!sls::relevant(2772) && sls::relevant(sls::kOpResync));
+    CHECK(frame(make(2481, {4, 1, 0, 0, 0})).kind == sls::Kind::None);  // the door's own request (3732; 2976 2928)
+    CHECK(!sls::relevant(2481) && sls::relevant(sls::kOpResync));
 }
 
 void test_hashes() {
@@ -260,7 +260,7 @@ void test_gate() {
     g.actor = 0x9999;
     CHECK(sls::decide_gate(g) == W::OtherSubject);
     g = gate_base(sls::Mode::On);
-    g.opcode = 2772;  // the door's own request (3732)
+    g.opcode = 2481;  // the door's own request (3732)
     CHECK(sls::decide_gate(g) == W::WrongOpcode);
 }
 

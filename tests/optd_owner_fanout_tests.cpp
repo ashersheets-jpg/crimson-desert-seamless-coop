@@ -93,7 +93,7 @@ void test_table() {
             CHECK(ofo::family_of(w.opcode) == Family::Other);
         }
     }
-    CHECK(by_control == (std::set<uint16_t>{2798, 2597, 3154, 2385, 2816, 3013, 2958}));
+    CHECK(by_control == (std::set<uint16_t>{2647, 2224, 2926, 2807, 2228, 2465, 2185}));
     CHECK(row_of(kRet2661) && row_of(kRet2661)->finders == ofo::kByToTarget);
     // The writers of §3.4, by their return address.
     struct Known {
@@ -127,22 +127,22 @@ void test_table() {
 }
 
 void test_families() {
-    CHECK(ofo::family_of(2356) == Family::Sequencer && ofo::family_of(2536) == Family::Sequencer);
-    CHECK(ofo::family_of(2338) == Family::Schedule && ofo::family_of(2514) == Family::Schedule);
-    CHECK(ofo::family_of(3130) == Family::Faction && ofo::family_of(2693) == Family::Faction);
-    CHECK(ofo::family_of(2713) == Family::Doubtful && ofo::family_of(2185) == Family::Doubtful);
+    CHECK(ofo::family_of(2362) == Family::Sequencer && ofo::family_of(3034) == Family::Sequencer);
+    CHECK(ofo::family_of(3098) == Family::Schedule && ofo::family_of(2136) == Family::Schedule);
+    CHECK(ofo::family_of(2585) == Family::Faction && ofo::family_of(2211) == Family::Faction);
+    CHECK(ofo::family_of(2386) == Family::Doubtful && ofo::family_of(2915) == Family::Doubtful);
     CHECK(ofo::family_of(2203) == Family::Excluded && ofo::family_of(2218) == Family::Excluded &&
-          ofo::family_of(2883) == Family::Excluded);
+          ofo::family_of(2099) == Family::Excluded);
     CHECK(ofo::family_of(2665) == Family::Other && ofo::family_of(2981) == Family::Other);  // ToField / ToNear
     CHECK(ofo::listed(Family::Sequencer) && ofo::listed(Family::Schedule) && ofo::listed(Family::Faction));
     CHECK(!ofo::listed(Family::Doubtful) && !ofo::listed(Family::Excluded) && !ofo::listed(Family::Other));
-    CHECK(ofo::copied_by_a(2356) && ofo::copied_by_a(2659) && ofo::copied_by_a(2941));
+    CHECK(ofo::copied_by_a(2362) && ofo::copied_by_a(3046) && ofo::copied_by_a(2456));
     // observer_sched_copy (p8-impl-horarios-snapshot.md): the schedules' live copies.
-    CHECK(ofo::copied_by_a(2338) && ofo::copied_by_a(3099) && ofo::copied_by_a(2509));
+    CHECK(ofo::copied_by_a(3098) && ofo::copied_by_a(2687) && ofo::copied_by_a(2133));
     CHECK(!ofo::copied_by_a(2981) && !ofo::copied_by_a(2335) && !ofo::copied_by_a(2499));
     const auto ops = ofo::compared_opcodes();
     CHECK(ops.size() >= 22 && ops[0] == 2661 && ops[1] == 2810 && ops[2] == 2322);
-    CHECK(ops[3] == 2338 && ops[4] == 3099 && ops[5] == 2509);
+    CHECK(ops[3] == 3098 && ops[4] == 2687 && ops[5] == 2133);
     CHECK(std::set<uint16_t>(ops.begin(), ops.end()).size() == ops.size());
     for (size_t i = 7; i < ops.size(); ++i) CHECK(ops[i - 1] < ops[i]);
 }
@@ -322,15 +322,15 @@ void test_counters() {
     c.count_control_host(0x1234000);
     const ofo::Snapshot s0 = ofo::snapshot(c);
     CHECK(s0.verdicts[static_cast<size_t>(Verdict::ControlUserHost)] == 6);
-    CHECK(ofo::count_of_opcode(s0.by_writer_control, 2897) == 4);
-    CHECK(ofo::count_of_opcode(s0.by_writer_control, 3083) == 1);
+    CHECK(ofo::count_of_opcode(s0.by_writer_control, 2538) == 4);
+    CHECK(ofo::count_of_opcode(s0.by_writer_control, 2564) == 1);
     CHECK(ofo::count_of_opcode(s0.by_writer, 3097) == 0);
     CHECK(c.unknown_control.rows().size() == 1);
     CHECK(s0.verdicts[static_cast<size_t>(Verdict::HostTarget)] == 27 + 22 + 1 + 23 + 350 + 327 + 5 + 3);
     CHECK(s0.verdicts[static_cast<size_t>(Verdict::ToUser2)] == 1);
-    CHECK(ofo::count_of_opcode(s0.by_writer, 2380) == 27);
-    CHECK(ofo::count_of_opcode(s0.by_writer, 2292) == 22);
-    CHECK(ofo::count_of_opcode(s0.by_writer, 2384) == 1);
+    CHECK(ofo::count_of_opcode(s0.by_writer, 2329) == 27);
+    CHECK(ofo::count_of_opcode(s0.by_writer, 2143) == 22);
+    CHECK(ofo::count_of_opcode(s0.by_writer, 2614) == 1);
     CHECK(ofo::count_of_opcode(s0.by_writer, 2981) == 0);
     const auto fam = ofo::family_totals(s0.by_writer);
     CHECK(fam[static_cast<size_t>(Family::Sequencer)] == 50);
@@ -347,9 +347,9 @@ void test_counters() {
     const ofo::Snapshot s1 = ofo::snapshot(c);
     const auto top = ofo::top_writers(s1.by_writer, s0.by_writer, 3);
     CHECK(top.size() == 3);
-    CHECK(ofo::kWriters[top[0].index].opcode == 3130 && top[0].total == 350 && top[0].delta == 0);
-    CHECK(ofo::kWriters[top[1].index].opcode == 2713 && top[1].total == 327);
-    CHECK(ofo::kWriters[top[2].index].opcode == 2356 && top[2].total == 37 && top[2].delta == 10);
+    CHECK(ofo::kWriters[top[0].index].opcode == 2585 && top[0].total == 350 && top[0].delta == 0);
+    CHECK(ofo::kWriters[top[1].index].opcode == 2386 && top[1].total == 327);
+    CHECK(ofo::kWriters[top[2].index].opcode == 2362 && top[2].total == 37 && top[2].delta == 10);
     CHECK(ofo::top_writers(s1.by_writer, {}, 100).size() == 7);  // an empty `before`: delta = total
     CHECK(ofo::top_writers(std::vector<uint32_t>(ofo::kWriterCount, 0), {}, 5).empty());
 }
@@ -369,8 +369,8 @@ void test_threads() {
     for (auto& t : ts) t.join();
     const ofo::Snapshot s = ofo::snapshot(c);
     CHECK(s.calls == 40000);
-    CHECK(ofo::count_of_opcode(s.by_writer, 2380) == 20000);
-    CHECK(ofo::count_of_opcode(s.by_writer, 2796) == 20000);
+    CHECK(ofo::count_of_opcode(s.by_writer, 2329) == 20000);
+    CHECK(ofo::count_of_opcode(s.by_writer, 2801) == 20000);
     CHECK(c.unknown.rows().size() == 4);
     uint64_t n = 0;
     for (const auto& r : c.unknown.rows()) n += r.second;

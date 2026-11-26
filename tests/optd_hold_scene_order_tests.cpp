@@ -41,7 +41,7 @@ constexpr uint16_t k2661 = hso::kOpPrepare, k2981 = hso::kOpBranch, k2524 = hso:
                    k2643 = hso::kOpLoadingField, k2756 = hso::kOpBoundary2756, k2111 = hso::kOpChartEvent;
 // two of oha::kHeldOps: 2976's 2723 is 3039 StartSpawnActionAck (tests/opmap_2976.h); 2404 is not in that map,
 // 3008 MoveActorAck stands in for it
-constexpr uint16_t k2723 = 3039, k2404 = 3008;
+constexpr uint16_t k2723 = 2878, k2404 = 2890;
 
 void put32(std::vector<uint8_t>& v, size_t at, uint32_t x) { std::memcpy(&v[at], &x, 4); }
 void put64(std::vector<uint8_t>& v, size_t at, uint64_t x) { std::memcpy(&v[at], &x, 8); }

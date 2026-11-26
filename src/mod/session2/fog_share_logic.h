@@ -12,7 +12,7 @@
 
 namespace cdmp::session2::fsl {
 
-inline constexpr uint16_t kOpFogDataAck = 2932;
+inline constexpr uint16_t kOpFogDataAck = 3104;
 inline constexpr size_t kFogHead = 5;  // u8 seq | u32 user
 inline constexpr size_t kMaxChunks = 64;
 
