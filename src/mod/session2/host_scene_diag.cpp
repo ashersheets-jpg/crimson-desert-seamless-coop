@@ -41,36 +41,42 @@ namespace p = p8p;
 // H1: ServerStartActionLogic 0x2A78CA0 (only caller 0x296CF02, StartActionReq::vf2):
 //   0x2A78D0D cmp byte [r15+0x281],0 ; je 0x2A78D28                                patch 8
 // 3576 (2026-11-09): ServerStartActionLogic 0x2D08190 (2976 0x2A78CA0), the same frame; the flag is +0x279.
-constexpr uintptr_t kH1 = 0x2D73BCD;
+// 1.0.0.3840: the logic is ServerActorMoveSyncProcessor slot 4, 0x30A69C0 (npc_action_probe.cpp): the same frame and
+// arguments in other registers (this rbx, actor rsi, res r14, context r12, layers rdi, block B r13, the control r15
+// = [[[this+8]+0x68]+0x40]); the OnServer out flag [rbp+0x108] (3732: r14 the control, rbx, rsi, r13, r12, r15, +0xF0).
+constexpr uintptr_t kH1 = 0x30A6A3E;  // 3840: cmp byte [r13+0x279],0 ; je (3732 0x2D73BCD, [r15+0x279])
 constexpr uint32_t kH1Patch = 8;
-constexpr uint8_t kH1Bytes[] = {0x41, 0x80, 0xBF, 0x79, 0x02, 0x00, 0x00, 0x00, 0x74, 0x11, 0x49, 0x8B, 0xCE, 0xE8, 0x51, 0x1A};
+constexpr uint8_t kH1Bytes[] = {0x41, 0x80, 0xBD, 0x79, 0x02, 0x00, 0x00, 0x00, 0x74, 0x12, 0x49, 0x8B, 0xCF, 0xE8, 0xA0, 0x0D};
 // 0x2A78CB0 lea rbp,[rsp-0xB0]
-constexpr uintptr_t kH1Frame = 0x2D73B70;
+constexpr uintptr_t kH1Frame = 0x30A69D5;  // 3840 (3732 0x2D73B70)
 constexpr uint8_t kH1FrameBytes[] = {0x48, 0x8D, 0xAC, 0x24, 0x50, 0xFF, 0xFF, 0xFF};
 // 0x2A78CBF mov r13,r9 (session) ; mov r12,r8 (-> the two action layers) ; mov rsi,rdx ; mov r14,rcx
-constexpr uintptr_t kH1Args = 0x2D73B7F;
-constexpr uint8_t kH1ArgsBytes[] = {0x4D, 0x8B, 0xE9, 0x4D, 0x8B, 0xE0, 0x48, 0x8B, 0xF2, 0x4C, 0x8B, 0xF1};
+// 3840: mov r12,r9 (context) ; mov rdi,r8 (layers) ; mov r14,rdx (res) ; mov rbx,rcx (this) (3732 0x2D73B7F).
+constexpr uintptr_t kH1Args = 0x30A69E4;
+constexpr uint8_t kH1ArgsBytes[] = {0x4D, 0x8B, 0xE1, 0x49, 0x8B, 0xF8, 0x4C, 0x8B, 0xF2, 0x48, 0x8B, 0xD9};
 // 0x2A78CCB mov rbx,[rcx+8] (the actor)
-constexpr uintptr_t kH1Actor = 0x2D73B92;  // 3576: after the block load
-constexpr uint8_t kH1ActorBytes[] = {0x48, 0x8B, 0x59, 0x08};
+constexpr uintptr_t kH1Actor = 0x30A69F0;  // 3840: mov rsi,[rcx+8] (3732 0x2D73B92 mov rbx,[rcx+8]; 3576: after the block load)
+constexpr uint8_t kH1ActorBytes[] = {0x48, 0x8B, 0x71, 0x08};
 // 0x2A78D06 mov r15,[rbp+0x110] (block B, the 5th argument)
-constexpr uintptr_t kH1B = 0x2D73B8B;  // 3576: before the actor load
-constexpr uint8_t kH1BBytes[] = {0x4C, 0x8B, 0xBD, 0x10, 0x01, 0x00, 0x00};
+constexpr uintptr_t kH1B = 0x30A6A37;  // 3840: mov r13,[rbp+0x110], after the control load (3732 0x2D73B8B mov r15,..)
+constexpr uint8_t kH1BBytes[] = {0x4C, 0x8B, 0xAD, 0x10, 0x01, 0x00, 0x00};
 // 0x2A78D15 je ; mov rcx,r14 ; call 0x232FF90 (-> .xtls) ; xor edi,edi ; mov [rsi],edi ; jmp (return: NO relay)
-constexpr uintptr_t kH1Local = 0x2D73BD5;
-constexpr uint8_t kH1LocalBytes[] = {0x74, 0x11, 0x49, 0x8B, 0xCE, 0xE8, 0x51, 0x1A, 0x82, 0xFF,
-                                     0x33, 0xFF, 0x89, 0x3E, 0xE9, 0x70, 0x03, 0x00, 0x00};
+// 3840: je ; mov rcx,r15 ; call 0x26777F0 ; xor esi,esi ; mov [r14],esi ; jmp (3732 0x2D73BD5, r14 / [rsi]).
+constexpr uintptr_t kH1Local = 0x30A6A46;
+constexpr uint8_t kH1LocalBytes[] = {0x74, 0x12, 0x49, 0x8B, 0xCF, 0xE8, 0xA0, 0x0D, 0x5D, 0xFF,
+                                     0x33, 0xF6, 0x41, 0x89, 0x36, 0xE9, 0x17, 0x04, 0x00, 0x00};
 //   0x2A79060 cmp byte [rbp+0xF0],0 ; jne 0x2A79082                                 patch 7
-constexpr uintptr_t kH1b = 0x2D73F20;
+constexpr uintptr_t kH1b = 0x30A6E37;  // 3840: cmp byte [rbp+0x108],0 ; jne (3732 0x2D73F20, [rbp+0xF0])
 constexpr uint32_t kH1bPatch = 7;
-constexpr uint8_t kH1bBytes[] = {0x80, 0xBD, 0xF0, 0x00, 0x00, 0x00, 0x00, 0x75, 0x19, 0xC6, 0x44, 0x24, 0x20, 0x00, 0x4D, 0x8B};
+constexpr uint8_t kH1bBytes[] = {0x80, 0xBD, 0x08, 0x01, 0x00, 0x00, 0x00, 0x75, 0x19, 0xC6, 0x44, 0x24, 0x20, 0x00, 0x4D, 0x8B};
 // 0x2A78FF8 lea rax,[rbp+0xF0] (ServerStartActionOnServer's out flag)
-constexpr uintptr_t kH1bOut = 0x2D73EB8;
-constexpr uint8_t kH1bOutBytes[] = {0x48, 0x8D, 0x85, 0xF0, 0x00, 0x00, 0x00};
+constexpr uintptr_t kH1bOut = 0x30A6CC8;  // 3840: lea rax,[rbp+0x108] (3732 0x2D73EB8, +0xF0)
+constexpr uint8_t kH1bOutBytes[] = {0x48, 0x8D, 0x85, 0x08, 0x01, 0x00, 0x00};
 // 0x2A7906E mov r9,r15 ; lea r8,[rsp+0x60] ; lea rdx,[rbp-0x40] ; mov rcx,r14 ; call 0x2A797C0 (the broadcast)
-constexpr uintptr_t kH1bCall = 0x2D73F2E;
-constexpr uint8_t kH1bCallBytes[] = {0x4D, 0x8B, 0xCF, 0x4C, 0x8D, 0x44, 0x24, 0x60, 0x48, 0x8D,
-                                     0x55, 0xC0, 0x49, 0x8B, 0xCE, 0xE8, 0x3E, 0x07, 0x00, 0x00};
+// 3840: mov r9,r13 ; lea r8,[rsp+0x60] ; lea rdx,[rbp-0x40] ; mov rcx,r15 ; call 0x2EB1AF0 (3732 0x2D73F2E, r15 / r14).
+constexpr uintptr_t kH1bCall = 0x30A6E45;
+constexpr uint8_t kH1bCallBytes[] = {0x4D, 0x8B, 0xCD, 0x4C, 0x8D, 0x44, 0x24, 0x60, 0x48, 0x8D,
+                                     0x55, 0xC0, 0x49, 0x8B, 0xCF, 0xE8, 0x97, 0xAC, 0xE0, 0xFF};
 
 // H2: 0x20853D0(ai, handle, &scene key, list): writes [[ai+0x90]] = key and the handle to [[ai+0x90]+8].
 //   0x20853D0 push rbx ; push rbp ; push rsi ; push rdi                            patch 5
@@ -273,7 +279,7 @@ bool budget(Kind k, p::KeyCounter<8192>& keys, uint32_t key, uint32_t first, uin
 // H1: 0x2A78D0D, every StartActionReq the server's logic handles.
 void on_h1(safetyhook::Context& ctx) noexcept {
     g_stats[kKH1].hits.fetch_add(1, std::memory_order_relaxed);
-    const uintptr_t actor = ctx.rbx, b = ctx.r15, layers = rdp(ctx.r12);
+    const uintptr_t actor = ctx.rsi, b = ctx.r13, layers = rdp(ctx.rdi);  // 3840 (3732: rbx, r15, r12)
     const uint32_t key = key_of(actor), control = actor ? rdv<uint32_t>(actor + kActor_Control) : 0;
     uint8_t flag = 0;
     const bool flag_ok = rd(b + kB_Flag, flag);
@@ -290,7 +296,7 @@ void on_h1(safetyhook::Context& ctx) noexcept {
     bool new_key = false;
     g_by_key.add(key ? key : 1u, col, 1, &new_key);
     g_by_hash.add(static_cast<uint64_t>(hash) | 1ull << 40, col);
-    t_h1 = PendingH1{ctx.r14, key, hash};
+    t_h1 = PendingH1{ctx.r15, key, hash};  // 3840: the control in r15 (3732: r14)
     // A line: each new key, and the first flagged actions of each NPC key.
     uint32_t nth = 0;
     if (!new_key && !(flag && scd::is_npc_key(key) && budget(kKH1, g_keys_h1, key, kFirstPerKey, nth))) return;
@@ -301,7 +307,7 @@ void on_h1(safetyhook::Context& ctx) noexcept {
              static_cast<uint64_t>(new_key) << 24;
     e.v[3] = h[0] | static_cast<uint64_t>(h[1]) << 32;
     e.v[4] = h[2] | static_cast<uint64_t>(h[3]) << 32;
-    e.v[5] = ctx.r13;
+    e.v[5] = ctx.r12;  // 3840: the context (3732: r13)
     e.v[6] = nth;
     e.v[7] = user_key_of(actor);
     emit(kKH1, e);
@@ -309,13 +315,13 @@ void on_h1(safetyhook::Context& ctx) noexcept {
 
 // H1: 0x2A79060, the plain actions that reached ServerStartActionOnServer with result 0.
 void on_h1b(safetyhook::Context& ctx) noexcept {
-    npc_action_probe_applied(ctx.r14, key_of(rdp(ctx.r14 + kComp_Actor)));
+    npc_action_probe_applied(ctx.r15, key_of(rdp(ctx.r15 + kComp_Actor)));  // 3840: the control in r15 (3732: r14)
     if (!g_on.load()) return;
     g_stats[kKH1b].hits.fetch_add(1, std::memory_order_relaxed);
-    const uintptr_t comp = ctx.r14, actor = rdp(comp + kComp_Actor);
+    const uintptr_t comp = ctx.r15, actor = rdp(comp + kComp_Actor);  // 3840 (3732: r14)
     const uint32_t key = key_of(actor);
     uint8_t out = 0;
-    const bool out_ok = rd(ctx.rbp + 0xF0, out);
+    const bool out_ok = rd(ctx.rbp + 0x108, out);  // 3840 (3732: +0xF0)
     const bool relayed = out_ok && out == 0;
     const size_t col = relayed ? scd::kBroadcast : scd::kNotBroadcast;
     g_by_key.add(key ? key : 1u, col);

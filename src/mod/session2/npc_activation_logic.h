@@ -253,6 +253,14 @@ struct ActionEntry {
     int restore = -1;
 };
 // Antes de la llamada: actor y clave siempre (la búsqueda del token la hace el llamador); el resto sólo con token.
+// 1.0.0.3840: the logic is slot 4 of ServerActorMoveSyncProcessor (this = the processor, its actor at +8); the
+// character control the readers want is [[actor+0x68]+0x40], what the game loads into r15 (0x30A6A2B..0x30A6A33).
+// 3732 and before: the first argument was the control itself.
+template <class Read> uintptr_t cc_of_processor(Read&& read, uintptr_t processor) noexcept {
+    const uintptr_t actor = read_ptr_with(read, processor + 0x08);
+    const uintptr_t comps = actor ? read_ptr_with(read, actor + 0x68) : 0;
+    return comps ? read_ptr_with(read, comps + 0x40) : 0;
+}
 template <class Read> ActionEntry read_action_key(Read&& read, uintptr_t cc, const ActionOffsets& o = {}) noexcept {
     ActionEntry e;
     e.actor = read_ptr_with(read, cc + o.cc_actor);
