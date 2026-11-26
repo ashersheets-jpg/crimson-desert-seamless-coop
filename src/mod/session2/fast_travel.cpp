@@ -40,7 +40,7 @@ constexpr uint32_t kActorComponents = 0x68;
 constexpr uint32_t kComponentsTransformSync = 0x1A0;
 constexpr uint32_t kTsFieldMoverField = 0x508 + 0x10;  // field_share.h kTsFieldMover + kFmField (Co-op+ port 3549; 2976: 0x4F0)
 constexpr uint32_t kFieldOwner = 0x180;
-constexpr uintptr_t kVtServerSequencerStageManager = 0x5F5FAF0;  // 3549 (2976 0x5B17A58)
+constexpr uintptr_t kVtServerSequencerStageManager = 0x60EC4D0;  // 3549 (2976 0x5B17A58)
 constexpr uint64_t kDropLines = 16;
 
 std::atomic<uint8_t> g_host_mode{0};

@@ -86,7 +86,7 @@ enum Kind : uint16_t { kEA, kEF, kEN, kER, kKindCount };
 p::EventRing<256> g_ring;
 p::WindowLimiter g_lim[kKindCount] = {{24, 5'000'000}, {24, 5'000'000}, {40, 5'000'000}, {40, 5'000'000}};
 // Nodes (research): the StageChart interaction node's ADD / REMOVE on this client (interaction_share's 3732 sites).
-constexpr uintptr_t kNodeAdd = 0x25D218C, kNodeRemove = 0x25D2368;
+constexpr uintptr_t kNodeAdd = 0x26B8387, kNodeRemove = 0x26B856D;
 SafetyHookMid g_node_add_hook, g_node_rem_hook;
 std::atomic<bool> g_nodes_on{false};
 std::atomic<uintptr_t> g_last_m{0};
@@ -306,7 +306,7 @@ struct CallerSeen {
 CallerSeen g_lookup_callers[16];
 std::atomic<uint64_t> g_lookup_m_x{0}, g_lookup_x{0};
 SafetyHookMid g_lookup_hook;
-constexpr uintptr_t kLookupAt = 0x21C7370;
+constexpr uintptr_t kLookupAt = 0x2282AE0;
 void on_lookup(safetyhook::Context& ctx) noexcept {
     const uintptr_t mgr = ctx.rcx;
     const uint32_t id = static_cast<uint32_t>(ctx.r8 & 0x1FFFFFFFull);
@@ -413,7 +413,7 @@ ReqSeen g_req[24];
 std::atomic<uint32_t> g_req_n{0};
 std::atomic<uint64_t> g_req_calls[2]{};
 SafetyHookMid g_req_hook[2];
-constexpr uintptr_t kReqAt[2] = {0xAF1530, 0xAF0D60};
+constexpr uintptr_t kReqAt[2] = {0xCA2BDC0, 0xAF0D60};
 constexpr uint8_t kReqBytes0[5] = {0x48, 0x89, 0x5C, 0x24, 0x10};  // mov [rsp+0x10],rbx
 constexpr uint8_t kReqBytes1[5] = {0xE9, 0x7B, 0x83, 0xBE, 0x08};  // jmp exe+0x96D90E0
 std::atomic<uint64_t> g_req_other{0};  // calls for a component whose actor is not a player character
@@ -450,7 +450,7 @@ void on_req(safetyhook::Context& ctx) noexcept {
 }
 void req_install(const std::vector<gad::Section>& secs) {
     const bool a = p8_install_mid(g_base, secs, kReqAt[0], 5, kReqBytes0, &on_req<0>, g_req_hook[0], "GuestXInter",
-                                  "the request sender +0x180 0xAF1530 (research)");
+                                  "the request sender +0x180 0xCA2BDC0 (research)");
     const bool b = p8_install_mid(g_base, secs, kReqAt[1], 5, kReqBytes1, &on_req<1>, g_req_hook[1], "GuestXInter",
                                   "the do-step thunk +0x188 0xAF0D60 (research)");
     log::info("GuestXInter: the player's request senders {} / {} (3732 research, read only)", a ? "hooked" : "NOT hooked",
@@ -789,14 +789,14 @@ void summary() {
     if (g_early_on.load())
         log::info("GuestXInter early (3732 research, every call of the prompt check): entered {} (the joined player's own "
                   "J 0xA0100066: {}; no stage id: {}; last id 0x{:X}, last J key 0x{:08X}) | past the stage-id / user "
-                  "returns {} | past [rbp-0x80] (0x2299FB0) {} | past [rsp+0x50] (0x19A14B0) {} | at A {}",
+                  "returns {} | past [rbp-0x80] (0x2363640) {} | past [rsp+0x50] (0x1A36450) {} | at A {}",
                   g_early_seen[0].load(), g_early_own.load(), g_early_no_id.load(), g_early_last_id.load(),
                   g_early_last_key.load(), g_early_seen[1].load(), g_early_seen[2].load(), g_early_seen[3].load(),
                   g_calls.load());
     if (g_gates_on.load())
         log::info("GuestXInter gates (3732 research): reached P0 {} (instance +0x168 not 0: {}, last {}) P1 {} (cond id "
                   "-1: {}, last 0x{:X}) P2 {} P3 {} P4 {} | refused with no gate reached {}, after P0 {} (the instance's "
-                  "+0x168, or its dead check 0x21CABF0 in X), after P1 {} (the player's condition 0x25B7F30), after P2 {} (the condition list), "
+                  "+0x168, or its dead check 0x2286490 in X), after P1 {} (the player's condition 0x25B7F30), after P2 {} (the condition list), "
                   "after P3 {} (0x1C9FBB0), after P4 {} (later)",
                   g_gate_seen[0].load(), g_busy_nonzero.load(), g_busy_last.load(), g_gate_seen[1].load(),
                   g_cond_minus1.load(), g_cond_last.load(), g_gate_seen[2].load(), g_gate_seen[3].load(),
@@ -863,7 +863,7 @@ DWORD WINAPI install_thread(LPVOID) {
         if (g_research.load()) {
             static const uint8_t kLookupBytes[8] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x4C, 0x89, 0x44};
             p8_install_mid(g_base, secs, kLookupAt, 5, kLookupBytes, on_lookup, g_lookup_hook, "GuestXInter",
-                           "the stage lookup's entry 0x21C7370 (research)");
+                           "the stage lookup's entry 0x2282AE0 (research)");
             req_install(secs);
             CloseHandle(CreateThread(nullptr, 0, eval_log_thread, nullptr, 0, nullptr));
         }

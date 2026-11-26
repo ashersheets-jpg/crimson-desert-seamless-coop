@@ -48,7 +48,7 @@ using gsr::Point;
 // Co-op+ port 1.0.0.3549 (2661/2981/2810/2524): the handlers are slot 2 of their TrocTr vtables (Prepare 0xD33880,
 // BranchState 0xD35330, Delete 0xD33FA0, OnBranchEvent 0xD35F10). The wrapper registers of 2976 are overwritten
 // before the points on 3549 (2661 r12 at 0xD33CD5, 2981 r14 at 0xD357FE), so those read r8's home slot instead.
-constexpr uintptr_t kP2661 = 0xD6D64E;  // cmp r14b,4 ; je (6 bytes; the kind is in R14B, 2976 BL)
+constexpr uintptr_t kP2661 = 0xDC689E;  // cmp r14b,4 ; je (6 bytes; the kind is in R14B, 2976 BL)
 constexpr uint8_t kP2661Bytes[] = {0x41, 0x80, 0xFE, 0x04, 0x74, 0x47, 0x48, 0x8D, 0x05, 0xC5, 0xCA, 0xC6, 0x04, 0x48, 0x89, 0x44};
 constexpr uint8_t kFrame2661Bytes[] = {0x48, 0x8D, 0xAC, 0x24, 0x50, 0xFF, 0xFF, 0xFF};  // 0xC05BC0
 constexpr uint8_t kKind2661Bytes[] = {0x44, 0x0F, 0xB6, 0xB5, 0x08, 0x01, 0x00, 0x00};          // 0xC060C6
@@ -56,13 +56,13 @@ constexpr uint8_t kActor2661Bytes[] = {0x4D, 0x89, 0x34, 0x24};                 
 constexpr uint8_t kVf48_2661Bytes[] = {0x48, 0x8B, 0x4D, 0xD8, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x48};  // 0xC06120
 constexpr uint8_t kWrap2661Bytes[] = {0x4C, 0x89, 0x44, 0x24, 0x18};  // 0xC05BCF mov r12,r8 (the wrapper)
 //   0xC07749 lea rcx,[rbp-0x80] ; mov [rsp+0x30],rcx (RAX = the manager; RAX reaches 0xC0776E mov rcx,rax)
-constexpr uintptr_t kP2981 = 0xD6F174;  // 3549
+constexpr uintptr_t kP2981 = 0xDC83C4;  // 3549
 constexpr uint8_t kP2981Bytes[] = {0x48, 0x8D, 0x4D, 0x80, 0x48, 0x89, 0x4C, 0x24, 0x30, 0x48, 0x8D, 0x4D, 0xD0, 0x48, 0x89, 0x4C};
 constexpr uint8_t kWrap2981Bytes[] = {0x4C, 0x89, 0x44, 0x24, 0x18};                                   // 0xC073BC mov r15,r8
 constexpr uint8_t kActor2981Bytes[] = {0x49, 0x89, 0x3E};                                  // 0xC076E6 mov [r15],rdi
 constexpr uint8_t kVf48_2981Bytes[] = {0x48, 0x8B, 0x4D, 0xF0, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x48};  // 0xC0773F
 //   0xC0659E movzx ecx,byte [rbp+0x70] ; mov [rsp+0x20],cl (RAX = the manager; RAX reaches 0xC065B2 mov rcx,rax)
-constexpr uintptr_t kP2810 = 0xD6DB45;  // 3549: movzx ecx,byte [rbp+0x80] (disp32: 7 bytes, the whole patch) ; mov [rsp+0x20],cl
+constexpr uintptr_t kP2810 = 0xDC6D95;  // 3549: movzx ecx,byte [rbp+0x80] (disp32: 7 bytes, the whole patch) ; mov [rsp+0x20],cl
 constexpr uint8_t kP2810Bytes[] = {0x0F, 0xB6, 0x8D, 0x80, 0x00, 0x00, 0x00, 0x88, 0x4C, 0x24, 0x20, 0x4C, 0x8D, 0x4D, 0xB0, 0x4C};
 constexpr uint8_t kVf48_2810Bytes[] = {0x48, 0x8B, 0x4D, 0xC8, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x48};  // 0xC06594
 constexpr uint8_t kFrame2810Bytes[] = {0x48, 0x8D, 0x6C, 0x24, 0xD0};                     // 0xC06340 lea rbp,[rsp-0x20]
@@ -78,7 +78,7 @@ constexpr uint8_t kSeq2810Bytes[] = {0x4C, 0x8B, 0x45, 0xB8};  // 0xC065AA mov r
 // vf48 at 0xC9CB91 on [rbp-0x48]; R14 = the raw packet from 0xC9C9D8; the handler's own lookup 0xC9CB0A
 // 0x98F8B0(rsi, &[rbp-8], key): found = byte [rbp+8], actor = [rbp], neither written again before 0xC9CB9B
 // (0x1939120 at 0xC9CB60 fills [rbp-0x50]..[rbp-0x28]).
-constexpr uintptr_t kP2322 = 0xCD608B;
+constexpr uintptr_t kP2322 = 0xD2B71B;
 constexpr uint8_t kP2322Bytes[] = {0xC6, 0x80, 0x61, 0x02, 0x00, 0x00, 0x02,
                                    0x48, 0x8D, 0x05, 0x57, 0x4D, 0x07, 0x05};
 constexpr uint8_t kVf48_2322Bytes[] = {0x48, 0x8B, 0x4D, 0xB8, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x48};  // 0xC9CB91
@@ -96,7 +96,7 @@ constexpr uint8_t kFind2322Bytes[] = {0x48, 0x8D, 0x55, 0xF8, 0x48, 0x8B, 0xCE, 
 //   0xC08178 lea rcx,[rbp-8] ; mov [rsp+0x28],rcx   THE POINT (9 bytes, two whole instructions, no branch into
 //            0xC0817C, no RIP-relative operand)
 //   0xC08188 ... 0xC08198 mov rcx,rax ; call 0xA9E480(M, field, seq, ...)   (RAX not written in between)
-constexpr uintptr_t kP2524 = 0xD6FCF0;  // 3549 (its inner check 0xA9E55B is not ported: refused)
+constexpr uintptr_t kP2524 = 0xDC8F40;  // 3549 (its inner check 0xA9E55B is not ported: refused)
 constexpr uint8_t kP2524Bytes[] = {0x48, 0x8D, 0x4D, 0x08, 0x48, 0x89, 0x4C, 0x24, 0x28, 0x0F, 0xB6, 0x8D, 0xB8, 0x10, 0x00, 0x00};
 constexpr uint8_t kWrap2524Bytes[] = {0x4D, 0x8B, 0xF8, 0x48, 0x8B, 0xFA, 0x48, 0x8B, 0xD9, 0x45, 0x33, 0xED, 0x4D, 0x8B, 0x70, 0x18};  // 0xC07D25
 constexpr uint8_t kFind2524Bytes[] = {0x44, 0x8B, 0x45, 0xB0, 0x48, 0x8D, 0x55, 0x18, 0x49, 0x8B, 0xCC, 0xE8, 0x67, 0xF2, 0xC4, 0xFF, 0x90, 0x80, 0x7D, 0x28, 0x00, 0x74, 0x29, 0x48, 0x8B, 0x5D, 0x20};  // 0xC080D1
@@ -118,7 +118,7 @@ constexpr uint8_t kUse2524Bytes[] = {0x88, 0x4C, 0x24, 0x20, 0x44, 0x8B, 0x4D, 0
 // 0xD3A4C1 key u64 @14 [rbp-0x48] -> [rbp-0x30]; resource u32 @9 [rbp-0x34]; kind u8 @0 [rbp+0x1100] -> BL (0xD3A8EE);
 // 0xD3A947 vf48 on [rbp]; THE POINT 0xD3A951 lea rcx,[rbp-0x28] ; mov [rsp+0x60],rcx (9 bytes); 0xD3A9AB the stage
 // call 0xBABA90 (2976 0xA9FEE0; 13 arguments now, the key &[rbp-0x30], the resource &[rbp-0x34]).
-constexpr uintptr_t kS2335 = 0xD73E51;  // 2976 0xC0B5C1
+constexpr uintptr_t kS2335 = 0xDCD0A1;  // 2976 0xC0B5C1
 constexpr uint8_t kS2335Bytes[] = {0x48, 0x8D, 0x4D, 0xD8, 0x48, 0x89, 0x4C, 0x24, 0x60, 0x48, 0x8D, 0x4D, 0x30, 0x48, 0x89, 0x4C};
 constexpr uint8_t kS2335Frame[] = {0x48, 0x8D, 0xAC, 0x24, 0x50, 0xEF, 0xFF, 0xFF};           // 0xC0AFD0 lea rbp,[rsp-0x10A0]
 constexpr uint8_t kS2335Wrap[] = {0x4D, 0x8B, 0xF8};                                          // 0xC0AFE5
@@ -137,7 +137,7 @@ constexpr uint8_t kS2335Use[] = {0x48, 0x8B, 0x55, 0x00, 0x48, 0x8B, 0xC8, 0xE8,
 // 0xD3B06F find (found [rbp+8], actor [rbp], u32 actor @0 [rbp+0x80]); 0xD3B101 vf48 on [rbp-0x48]; THE POINT
 // 0xD3B10B lea rdx,[rbp+0x88] ; mov rcx,[rax+0x170] (14 bytes: the manager's schedule container is +0x170 on 3576)
 // ; call 0x4E1740 (2976 0x43C750).
-constexpr uintptr_t kS2126 = 0xD7460B;  // 2976 0xC0BA4E
+constexpr uintptr_t kS2126 = 0xDCD85B;  // 2976 0xC0BA4E
 constexpr uint8_t kS2126Bytes[] = {0x48, 0x8D, 0x95, 0x88, 0x00, 0x00, 0x00, 0x48, 0x8B, 0x88, 0x78, 0x01, 0x00, 0x00, 0xE8, 0x82, 0x8F, 0x79, 0xFF};
 constexpr uint8_t kS2126Frame[] = {0x48, 0x8D, 0x6C, 0x24, 0xD0};                             // 0xC0B850 lea rbp,[rsp-0x20]
 constexpr uint8_t kS2126Key[] = {0x48, 0x8B, 0x85, 0x88, 0x00, 0x00, 0x00, 0x48, 0x89, 0x85, 0x88, 0x00, 0x00, 0x00};               // 0xC0B98E
@@ -154,7 +154,7 @@ constexpr uint8_t kS2126Vf48[] = {0x48, 0x8B, 0x4D, 0xB8, 0x48, 0x8B, 0x01, 0xFF
 // EvadeObstacleAck (3576 2297) 0xD3C300, the same body +0x750: key u64 @9 [rbp-0x50], resource u32 @5 [rbp-0x48], find
 // (found [rbp+0x28], actor [rbp+0x20], u32 actor @1 [rbp+0x10B8]), vf48 on [rbp-0x38], THE POINT 0xD3C047 / 0xD3C797
 // lea r9,[rbp+8] ; lea r8,[rbp-0x50] (8 bytes) ; then lea rdx,[rbp-0x48] ; mov rcx,rax ; call 0xBACB10 / 0xBAD460.
-constexpr uintptr_t kS2958 = 0xD75547, kS2909 = 0xD75C97;  // 2976 0xC0C761 / 0xC0CC91
+constexpr uintptr_t kS2958 = 0xDCE797, kS2909 = 0xDCEEE7;  // 2976 0xC0C761 / 0xC0CC91
 constexpr uint8_t kSChangeBytes[] = {0x4C, 0x8D, 0x4D, 0x08, 0x4C, 0x8D, 0x45, 0xB0, 0x48, 0x8D, 0x55, 0xB8, 0x48, 0x8B, 0xC8, 0xE8};
 constexpr uint8_t kSChangeFrame[] = {0x48, 0x8D, 0xAC, 0x24, 0xA0, 0xEF, 0xFF, 0xFF};  // 0xC0C400 / 0xC0C930 lea rbp,[rsp-0x1050]
 constexpr uint8_t kSChangeKey[] = {0x48, 0x8B, 0x45, 0xB0, 0x48, 0x89, 0x45, 0xB0};
@@ -164,7 +164,7 @@ constexpr uint8_t kSChangeVf48[] = {0x48, 0x8B, 0x4D, 0xC8, 0x48, 0x8B, 0x01, 0x
 constexpr uint8_t kS2958Use[] = {0x48, 0x8D, 0x55, 0xB8, 0x48, 0x8B, 0xC8, 0xE8, 0x75, 0xFB, 0xE6, 0xFF};  // 0xC0C769
 constexpr uint8_t kS2909Use[] = {0x48, 0x8D, 0x55, 0xB8, 0x48, 0x8B, 0xC8, 0xE8, 0x75, 0xFD, 0xE6, 0xFF};  // 0xC0CC99
 // The schedule container and the stage (p8-impl-horarios-x.md §5; gsr::SchedCensus).
-constexpr uint32_t kMgr_Sched = 0x178 /* 3663; 3576 (2976 0x148; 0xBE4060, 0xD74612) */, kSched_Vec = 0x18, kSched_Count = 0x20;
+constexpr uint32_t kMgr_Sched = 0x178 /* 3663; 3576 (2976 0x148; 0xC2F550, 0xDCD862) */, kSched_Vec = 0x18, kSched_Count = 0x20;
 constexpr uint32_t kStage_Mgr = 0x28, kStage_Key = 0x30, kStage_Active = 0x180 /* 3576 (2976 0x178) */, kStage_Nodes = 0x140 /* 3576 (2976 0x138) */,
                    kStage_NodeCount = 0x148 /* 3576 (2976 0x140) */, kNodeStride = 0x188 /* 3576 (2976 0x168) */, kNode_Npc = 0x28;
 constexpr uint32_t kComp_Stage = 0x318, kComp_Wait = 0x3D9;
@@ -174,8 +174,8 @@ constexpr uint32_t kComp_Stage = 0x318, kComp_Wait = 0x3D9;
 // 2524 [rbp-0x48]; nothing writes it between that call and the point.
 constexpr uint32_t kFieldSlot[gsr::kPoints] = {0x28, 0x10, 0x38, 0x48, 0x38};  // 3549 (2976 0x40, 0x38, 0x48, 0x58, 0x48)
 
-constexpr uintptr_t kVtStageManager = 0x59DA8A8;  // 3549 (2976 0x55C9720)  // pa::ClientSequencerStageManager (RTTI)
-constexpr uintptr_t kVtSeqPlayComp = 0x59D0850;  // 3549 (2976 0x55BEE78)   // pa::ClientSequencerPlayDataActorComponent (RTTI)
+constexpr uintptr_t kVtStageManager = 0x5B68E68;  // 3549 (2976 0x55C9720)  // pa::ClientSequencerStageManager (RTTI)
+constexpr uintptr_t kVtSeqPlayComp = 0x5B5EDB8;  // 3549 (2976 0x55BEE78)   // pa::ClientSequencerPlayDataActorComponent (RTTI)
 
 // Structure offsets (guest_stage_diag.cpp; p8-s1-escenas-npc.md §2.1).
 constexpr uint32_t kActor_Key = 0x60, kActor_Comps = 0x68, kComps_Seq = 0xA8, kSeqComp_Mgr = 0x18, kComps_Play = 0xB0;
@@ -1034,20 +1034,20 @@ std::vector<SchedDef> sched_points() {
     return {
         // Co-op+ port 3576 (2026-11-08): the handlers 0xD3A1B0 / 0xD3AEE0 / 0xD3BBB0 / 0xD3C300.
         {gsr::SchedPoint::P2335, kS2335, 9, kS2335Bytes,
-         {{0xD736C0, kS2335Frame}, {0xD736D5, kS2335Wrap}, {0xD739C1, kS2335Key}, {0xD73D97, kS2335Find},
-          {0xD73DEE, kS2335Kind}, {0xD73E47, kS2335Vf48}, {0xD73EAB, kS2335Use}},
+         {{0xDCC910, kS2335Frame}, {0xDCC925, kS2335Wrap}, {0xDCCC11, kS2335Key}, {0xDCCFE7, kS2335Find},
+          {0xDCD03E, kS2335Kind}, {0xDCD097, kS2335Vf48}, {0xDCD0FB, kS2335Use}},
          on_s2335},
         {gsr::SchedPoint::P2126, kS2126, 7, kS2126Bytes,  // 3576: the hook patches the first 7-byte instruction; the
          // second (mov rcx,[rax+0x170]) runs in place after it, with the RAX the hook may have set
-         {{0xD743F0, kS2126Frame}, {0xD74542, kS2126Key}, {0xD7456F, kS2126Find}, {0xD74601, kS2126Vf48}},
+         {{0xDCD640, kS2126Frame}, {0xDCD792, kS2126Key}, {0xDCD7BF, kS2126Find}, {0xDCD851, kS2126Vf48}},
          on_s2126},
         {gsr::SchedPoint::P2958, kS2958, 8, kSChangeBytes,
-         {{0xD750C0, kSChangeFrame}, {0xD7530F, kSChangeKey}, {0xD7549D, kS2958Find}, {0xD7553D, kSChangeVf48},
-          {0xD7554F, kS2958Use}},
+         {{0xDCE310, kSChangeFrame}, {0xDCE55F, kSChangeKey}, {0xDCE6ED, kS2958Find}, {0xDCE78D, kSChangeVf48},
+          {0xDCE79F, kS2958Use}},
          on_s2958},
         {gsr::SchedPoint::P2909, kS2909, 8, kSChangeBytes,
-         {{0xD75810, kSChangeFrame}, {0xD75A5F, kSChangeKey}, {0xD75BED, kS2909Find}, {0xD75C8D, kSChangeVf48},
-          {0xD75C9F, kS2909Use}},
+         {{0xDCEA60, kSChangeFrame}, {0xDCECAF, kSChangeKey}, {0xDCEE3D, kS2909Find}, {0xDCEEDD, kSChangeVf48},
+          {0xDCEEEF, kS2909Use}},
          on_s2909},
     };
 }
@@ -1055,22 +1055,22 @@ std::vector<SchedDef> sched_points() {
 std::vector<PointDef> points() {
     return {
         {Point::P2661, kP2661, 6, kP2661Bytes,
-         {{0xD6D1B5, kFrame2661Bytes}, {0xD6D5E9, kKind2661Bytes}, {0xD6D5E5, kActor2661Bytes},
-          {0xD6D644, kVf48_2661Bytes}, {0xD6D1A5, kWrap2661Bytes}},
+         {{0xDC6405, kFrame2661Bytes}, {0xDC6839, kKind2661Bytes}, {0xDC6835, kActor2661Bytes},
+          {0xDC6894, kVf48_2661Bytes}, {0xDC63F5, kWrap2661Bytes}},
          on_p2661},
         {Point::P2981, kP2981, 9, kP2981Bytes,
-         {{0xD6EC55, kWrap2981Bytes}, {0xD6F111, kActor2981Bytes}, {0xD6F16A, kVf48_2981Bytes}},
+         {{0xDC7EA5, kWrap2981Bytes}, {0xDC8361, kActor2981Bytes}, {0xDC83BA, kVf48_2981Bytes}},
          on_p2981},
         {Point::P2810, kP2810, 7, kP2810Bytes,
-         {{0xD6DB3B, kVf48_2810Bytes}, {0xD6D8D0, kFrame2810Bytes}, {0xD6DAA9, kFind2810Bytes},
-          {0xD6DB54, kSeq2810Bytes}},
+         {{0xDC6D8B, kVf48_2810Bytes}, {0xDC6B20, kFrame2810Bytes}, {0xDC6CF9, kFind2810Bytes},
+          {0xDC6DA4, kSeq2810Bytes}},
          on_p2810},
         {Point::P2322, kP2322, 7, kP2322Bytes,
-         {{0xCD6081, kVf48_2322Bytes}, {0xCD5EBC, kRaw2322Bytes}, {0xCD5FFA, kFind2322Bytes}},
+         {{0xD2B711, kVf48_2322Bytes}, {0xD2B54C, kRaw2322Bytes}, {0xD2B68A, kFind2322Bytes}},
          on_p2322},
         {Point::P2524, kP2524, 9, kP2524Bytes,
-         {{0xD6F855, kWrap2524Bytes}, {0xD6FC49, kFind2524Bytes}, {0xD6FC86, kActor2524Bytes},
-          {0xD6FCE6, kVf48_2524Bytes}, {0xD6FD00, kUse2524Bytes}},
+         {{0xDC8AA5, kWrap2524Bytes}, {0xDC8E99, kFind2524Bytes}, {0xDC8ED6, kActor2524Bytes},
+          {0xDC8F36, kVf48_2524Bytes}, {0xDC8F50, kUse2524Bytes}},
          on_p2524},
     };
 }

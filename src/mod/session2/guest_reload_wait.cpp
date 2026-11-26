@@ -50,11 +50,11 @@ constexpr uint8_t kWaitRemoveBytes[] = {0x8B, 0x87, 0x80, 0x00, 0x00, 0x00, 0x83
                                         0x00, 0x00, 0xFF, 0x75, 0xBC, 0x48, 0x8B, 0x03, 0x48, 0x8B, 0xCB, 0xFF,
                                         0x50, 0x10};
 // vf1D8 = 0x4FE240: cmp byte [rcx+0xC2],0 ; jne ; xor al,al ; ret ; movzx eax,byte [rcx+0xCF] ; ret
-constexpr uintptr_t kReady = 0x5DF4E0;
+constexpr uintptr_t kReady = 0x613230;
 constexpr uint8_t kReadyBytes[] = {0x80, 0xB9, 0xC2, 0x00, 0x00, 0x00, 0x00, 0x75, 0x03, 0x32, 0xC0, 0xC3,
                                    0x0F, 0xB6, 0x81, 0xCF, 0x00, 0x00, 0x00, 0xC3};
 // ClientActorContainer::Find 0x464290 (replayed by gad::container_find, never called).
-constexpr uintptr_t kFind = 0x535BF0;
+constexpr uintptr_t kFind = 0x566370;
 constexpr uint8_t kFindBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x83, 0xB9, 0x8C, 0x00, 0x00, 0x00, 0x00,
                                   0x44, 0x8B, 0xC2, 0x4C, 0x8B, 0xD1, 0x74, 0x4F, 0x8B, 0x89, 0x88, 0x00,
                                   0x00, 0x00};
@@ -66,8 +66,8 @@ constexpr uint32_t kActor_State = 0x5E, kActor_C2 = 0xC2, kActor_C3 = 0xC3, kAct
 constexpr uint32_t kActor_Parent = 0xAC, kActor_Children = 0xB0, kActor_ChildCount = 0xB8;
 constexpr uint32_t kVf_Ready = 0x1D8;
 // The guest character's own ClientSequencerStageManager (guest_seq_play.cpp): [[[A+0x68]+0xA8]+0x18], +0x259 (2976 +0x231).
-constexpr uint32_t kActor_Comps = 0x68, kComps_Seq = 0xA8, kSeqComp_Mgr = 0x18, kMgr_Ready = 0x261 /* 3663 (3576 0x259); Co-op+ port 3549: the stage manager's load state moved to +0x259 (0x883498 checks >= 2, the 2322 handler 0xCD608B writes 2); 2976 0x231 */;
-constexpr uintptr_t kVtStageManager = 0x59DA8A8;  // .?AVClientSequencerStageManager@pa@@ (Co-op+ port 3549; 2976 0x55C9720)
+constexpr uint32_t kActor_Comps = 0x68, kComps_Seq = 0xA8, kSeqComp_Mgr = 0x18, kMgr_Ready = 0x261 /* 3663 (3576 0x259); Co-op+ port 3549: the stage manager's load state moved to +0x259 (0x883498 checks >= 2, the 2322 handler 0xD2B71B writes 2); 2976 0x231 */;
+constexpr uintptr_t kVtStageManager = 0x5B68E68;  // .?AVClientSequencerStageManager@pa@@ (Co-op+ port 3549; 2976 0x55C9720)
 
 constexpr uint32_t kSnapMax = 1024;
 // S15 had 75 orphan children in one session (S14: 106): the cap only bounds a runaway; more than kWarnDrops in one

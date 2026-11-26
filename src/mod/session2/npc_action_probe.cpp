@@ -135,7 +135,7 @@ void npc_action_probe_install(uintptr_t base,std::span<const gad::Section> secti
     g_base=base;
     const bool action=install(base,sections,0x2D73B60,  // 3576 (2976 0x2A78CA0), same head
                                   kActionBytes,reinterpret_cast<void*>(&action_detour),g_action);
-    const bool node=install(base,sections,0x2AC8490,  // 3576 (2976 0x281CEE0), same head
+    const bool node=install(base,sections,0x2BF1ED0,  // 3576 (2976 0x281CEE0), same head
                                 kNodeBytes,reinterpret_cast<void*>(&node_detour),g_node);
     user2_stages_npc_action_probe_ready(action && applied_mid_ready);
     user2_stages_npc_node_probe_ready(node);

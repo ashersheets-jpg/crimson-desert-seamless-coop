@@ -168,19 +168,19 @@ inline constexpr uint8_t kReqId = 5, kTimerId = 3;
 // matched by opcode for a vf48 called from the protected section (site_matches).
 inline constexpr uint32_t kProtectedBegin = 0x7ACB000, kProtectedEnd = 0x137DB000;
 inline constexpr Site kSites[] = {
-    {2726, 0x2D55B39, kReqId, "StageBranchStateReq (-> 0x2891FB0)"},
+    {2726, 0x2E93079, kReqId, "StageBranchStateReq (-> 0x2891FB0)"},
     {2811, 0, kReqId, "UpdateStageChartEventReq (0x2C4A8A0 -> 0x2936060)"},
-    {2574, 0x2D55F20, kReqId, "StageBranchStateDelayEndReq (-> 0x2892210)"},
-    {3149, 0x2D5663F, kReqId, "UpdateStageChartDelayedEventReq (-> 0x28928D0)"},
-    {2432, 0x2D5569A, kReqId, "UpdateSequencerGamePlayDataEventReq (-> 0x2891CE0)"},
-    {2981, 0x2D549DA, kReqId, "DeleteSequencerReq (-> 0x2879320)"},
-    {3004, 0x2C5884E, kReqId, "SequencerTriggerVolumeInOutReq (0x1F6C190 at 0x2978E6E)"},
+    {2574, 0x2E93460, kReqId, "StageBranchStateDelayEndReq (-> 0x2892210)"},
+    {3149, 0x2E93B7F, kReqId, "UpdateStageChartDelayedEventReq (-> 0x28928D0)"},
+    {2432, 0x2E92BDA, kReqId, "UpdateSequencerGamePlayDataEventReq (-> 0x2891CE0)"},
+    {2981, 0x2E91F1A, kReqId, "DeleteSequencerReq (-> 0x2879320)"},
+    {3004, 0x2D90DDE, kReqId, "SequencerTriggerVolumeInOutReq (0x1F6C190 at 0x2978E6E)"},
     {2899, 0, kReqId, "SequencerStageFailReq (.xtls 0x1089F230)"},
-    {3033, 0x2D57B3F, kReqId, "ChangeSequencerPivotReq (-> 0x28952F0)"},
-    {2525, 0x2D57489, kReqId, "StageQuitReq (-> 0x28934F0)"},
-    {2210, 0x2D56CA9, kReqId, "SubTimelinePauseReq (-> 0x2892FE0)"},
-    {2803, 0x2D57099, kReqId, "SubTimelineResumeReq (-> 0x2893260)"},
-    {2521, 0x2D552F3, kReqId, "SetNextBranchTypeFromAIReq (-> 0x2895DC0)"},
+    {3033, 0x2E9507F, kReqId, "ChangeSequencerPivotReq (-> 0x28952F0)"},
+    {2525, 0x2E949C9, kReqId, "StageQuitReq (-> 0x28934F0)"},
+    {2210, 0x2E941E9, kReqId, "SubTimelinePauseReq (-> 0x2892FE0)"},
+    {2803, 0x2E945D9, kReqId, "SubTimelineResumeReq (-> 0x2893260)"},
+    {2521, 0x2E92833, kReqId, "SetNextBranchTypeFromAIReq (-> 0x2895DC0)"},
     {2048, 0, kTimerId, "StageBranchStateOnceTimer (.xtls 0x1082FB80 -> 0x2895820)"},
     // The deferred delete (tiendas-u2.md 12.2): without it a delete of one of user 2's scenes reached the host's
     // manager and was lost (an orphan scene in user 2's manager and in the guest's M).

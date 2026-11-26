@@ -325,7 +325,7 @@ inline const char* excl_name(Excl e) {
         case Excl::ThisScene: return "its current stage IS this scene: not blocked";
         case Excl::Another:
             return "ANOTHER live stage is the manager's current one: an exclusive node is refused for it (unless "
-                   "0x21CABF0's group / type-6 checks clear it)";
+                   "0x2286490's group / type-6 checks clear it)";
     }
     return "?";
 }

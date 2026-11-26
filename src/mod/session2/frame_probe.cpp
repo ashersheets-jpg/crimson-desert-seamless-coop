@@ -27,7 +27,7 @@ namespace g2976 = game::build_2976;
 // Entry: mov [rsp+8],rbx | mov [rsp+0x10],rsi | mov [rsp+0x18],rdi (three 5-byte instructions; the patch takes the
 // first). rcx = the component ([rcx+8] = the gimmick actor), r8 = the local player ([[r8+0xA0]+0x60] = its user); its
 // test at +0x6E: cmp [gimmick+0x90],eax; jne -> a silent return.
-constexpr uintptr_t kRunner = 0xA0CB80;
+constexpr uintptr_t kRunner = 0xA4AF50;
 constexpr uint8_t kRunnerHead[15] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74, 0x24, 0x10,
                                      0x48, 0x89, 0x7C, 0x24, 0x18};
 constexpr uint32_t kComp_Actor = 0x08, kActor_Key = 0x60, kActor_Controller = 0x90, kPlayer_User = 0xA0,
@@ -143,12 +143,12 @@ void frame_probe_start(uint32_t on, bool guest) {
         return;
     }
     if (!p8_install_mid(base, secs, kRunner, 5, kRunnerHead, &runner_mid, g_mid, "FrameProbe",
-                        "the client's gimmick frame-event runner 0xA0CB80 (entry)")) {
+                        "the client's gimmick frame-event runner 0xA4AF50 (entry)")) {
         return;
     }
     if (!guest) g_server_on.store(true);
     if (HANDLE h = CreateThread(nullptr, 0, worker, nullptr, 0, nullptr)) CloseHandle(h);
-    log::info("FrameProbe ON ({}, frame_probe=1, log only): every run of 0xA0CB80 (a gimmick's frame events on this "
+    log::info("FrameProbe ON ({}, frame_probe=1, log only): every run of 0xA4AF50 (a gimmick's frame events on this "
               "game) counted per gimmick, with whether its controller check would stop it{}; a summary every 30 s",
               guest ? "guest" : "host",
               guest ? "" : "; at the server's receive every summon 2594 and bite 2304 by origin");

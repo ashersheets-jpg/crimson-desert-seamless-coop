@@ -19,7 +19,7 @@
 // (rcx = component, edx = key) -> 0x22EBF00 -> 0xCADEB10, which deletes EVERY dynamic entry of that key.
 namespace cdmp::session2 {
 namespace {
-constexpr uintptr_t kAddCall = 0x25D218C, kRemoveCall = 0x25D2368, kRemoveNext = 0x25D236D;
+constexpr uintptr_t kAddCall = 0x26B8387, kRemoveCall = 0x26B856D, kRemoveNext = 0x26B8572;
 SafetyHookMid g_add, g_remove;
 std::mutex g_mu;
 ishare::Ledger g_ledger;

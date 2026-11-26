@@ -101,7 +101,7 @@ std::atomic<uint64_t> c_dialog_frames_out{0}, c_dialog_frames_in{0}, c_dialog_re
 uint32_t own_key() {
     uintptr_t g = 0, g30 = 0, user = 0, ch = 0;
     uint32_t k = 0;
-    if (game::safe_read(g_base + 0x724B350, &g, 8) && g && game::safe_read(g + 0x30, &g30, 8) && g30 &&
+    if (game::safe_read(g_base + 0x73F0D50, &g, 8) && g && game::safe_read(g + 0x30, &g30, 8) && g30 &&
         game::safe_read(g30 + 0x58, &user, 8) && user && game::safe_read(user + 0xD0, &ch, 8) && ch)
         game::safe_read(ch + 0x60, &k, 4);
     return (k >> 28) == 0xA ? k : 0;
@@ -110,7 +110,7 @@ uint32_t own_key() {
 // This client's own ClientSequencerStageManager M: its character's [[[actor+0x68]+0xA8]+0x18], vtable checked.
 uintptr_t own_manager() {
     uintptr_t g = 0, g30 = 0, user = 0, ch = 0, comps = 0, seq = 0, m = 0, vt = 0;
-    if (!game::safe_read(g_base + 0x724B350, &g, 8) || !g || !game::safe_read(g + 0x30, &g30, 8) || !g30 ||
+    if (!game::safe_read(g_base + 0x73F0D50, &g, 8) || !g || !game::safe_read(g + 0x30, &g30, 8) || !g30 ||
         !game::safe_read(g30 + 0x58, &user, 8) || !user || !game::safe_read(user + 0xD0, &ch, 8) || !ch ||
         !game::safe_read(ch + 0x68, &comps, 8) || !comps || !game::safe_read(comps + 0xA8, &seq, 8) || !seq ||
         !game::safe_read(seq + 0x18, &m, 8) || !m || !game::safe_read(m, &vt, 8))

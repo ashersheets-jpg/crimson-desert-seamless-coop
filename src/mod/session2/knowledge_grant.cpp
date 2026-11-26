@@ -28,10 +28,10 @@ namespace {
 //   The knowledge comp: [[character + 0x68] + 0x150]; its +8 is the actor; +0x18 an array of 0x18-byte entries by key,
 //   the level at +0 (horse_diag.cpp's user2_knowledge_share read it on the server).
 //   SAM::FindActor / the scope release: as user2_stages.cpp (kFindActorFn ...).
-constexpr uintptr_t kLearnCore = 0x2E80970, kLearnEntry = 0x2E82950;
+constexpr uintptr_t kLearnCore = 0x2FC4430, kLearnEntry = 0x2E82950;
 constexpr uint8_t kLearnCoreHead[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x44, 0x89, 0x4C, 0x24, 0x20};
 constexpr uint8_t kLearnEntryHead[] = {0xE9};
-constexpr uintptr_t kFindActorFn = 0x2D7D8D0, kScopeDtorFn = 0x165AF00, kLookupSlot = 0x724B860, kVtScopeBase = 0x5B45300;
+constexpr uintptr_t kFindActorFn = 0x2EBAE40, kScopeDtorFn = 0x16E3B60, kLookupSlot = 0x73F1260, kVtScopeBase = 0x5CD4A08;
 constexpr uint8_t kFindActorHead[] = {0x44, 0x89, 0x44, 0x24, 0x18, 0x48, 0x89, 0x54, 0x24, 0x10};
 constexpr uint32_t kActorKey = 0x60;
 constexpr uint32_t kActorComps = 0x68, kCompsKnowledge = 0x150, kKnowledgeArray = 0x18, kEntrySize = 0x18;

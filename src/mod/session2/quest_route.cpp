@@ -17,17 +17,17 @@ namespace cdmp::session2 {
 namespace {
 
 // The quest component's game-event callback, as registered (ServerQuestActorComponent vfB0 0x2B744B0 stores it).
-constexpr uintptr_t kThunk = 0x2C06090;
+constexpr uintptr_t kThunk = 0x2D3DBA0;
 constexpr uint8_t kThunkBytes[] = {0xE9, 0x9B, 0xD0, 0xFD, 0xFF};  // jmp 0x2B7A7A0
 // In 0x2B7A7A0: mov rcx,[rsp+0x30] | mov rax,[rcx] | call [rax+0x40] | mov rsi,rax | test rax,rax | je +0x4D
-constexpr uintptr_t kCtx = 0x2BE3160, kPoint = 0x2BE316B;
+constexpr uintptr_t kCtx = 0x2D19550, kPoint = 0x2D1955B;
 constexpr uint8_t kCtxBytes[] = {0x48, 0x8B, 0x4C, 0x24, 0x30, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x40,
                                  0x48, 0x8B, 0xF0, 0x48, 0x85, 0xC0, 0x74, 0x4D};
 // The callback's next instructions read the component's actor (mov rbx,[rbx+8]): rbx = the component here.
 constexpr uint32_t kCompActor = 0x08;
 constexpr uint32_t kActorComponents = 0x68, kComponentsQuest = 0x138, kQuestManager = 0x18;
 constexpr uint32_t kActorUser = 0xA0, kUserMain = 0xD0;
-constexpr uintptr_t kVtQuestComponent = 0x5F67C10, kVtQuestManager = 0x5F67D60;  // 3576 RTTI
+constexpr uintptr_t kVtQuestComponent = 0x60F4680, kVtQuestManager = 0x60F44F8;  // 3576 RTTI
 
 uintptr_t g_base = 0;
 bool g_own = false, g_shared = false;

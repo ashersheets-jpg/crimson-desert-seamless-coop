@@ -1284,7 +1284,7 @@ struct SeatState {
 // client in-game actor's; any other slot (or an unread local user) counts as local, so the seat is refused.
 // 2026-11-22 (the 3732 port audit, item 4): 3732's (vf178_3732.py on the archived exe: the same two bodies; the
 // guest's self-test read exe+0x5DF500 on its own character). 2976: 0x4FE260 / 0x8A67D0.
-inline constexpr uint32_t kVf178Actor = 0x5DF500, kVf178User = 0x9BEEB0;
+inline constexpr uint32_t kVf178Actor = 0x613250, kVf178User = 0x9FE740;
 inline bool seat_local_user(const SeatState& s) {
     if (s.vf178 == kVf178Actor) {
         return s.local_user == 0 || s.rider_user == 0 || (s.rider_user == s.local_user && s.rider_local != 0);

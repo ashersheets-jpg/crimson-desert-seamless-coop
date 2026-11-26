@@ -463,8 +463,8 @@ inline Owner classify_owner(const UserFacts& f) {
 // (static_assert there; the port had moved the call sites but not these, so every caller read "OTHER"). A login on
 // 3732: exe+0x2F28800 the user actor, exe+0x2F4F576 the user actor, exe+0xE274364 the character (cs86f, pp43-fresh).
 // 2976's in brackets.
-inline constexpr uint64_t kRetUserLogin = 0x2F28800;      // UserLogin 2490, call at 0x2F287FB [2976: 0x2C17886]
-inline constexpr uint64_t kRetLobby3093 = 0x2F4F576;      // 3093, the lobby reload, call at 0x2F4F571 [0x2C3E1D3]
+inline constexpr uint64_t kRetUserLogin = 0x306EE70;      // UserLogin 2490, call at 0x2F287FB [2976: 0x2C17886]
+inline constexpr uint64_t kRetLobby3093 = 0x3095B26;      // 3093, the lobby reload, call at 0x2F4F571 [0x2C3E1D3]
 inline constexpr uint64_t kRetCharacter3093 = 0xE274364;  // 3093, SetupCharacter, call at 0xE27435F [0x1042ABF8]
 enum class LoadCaller : uint8_t { UserLogin, Lobby3093, Character3093, Other };
 inline LoadCaller load_caller(uint64_t return_rva) {
@@ -503,7 +503,7 @@ inline const char* save_caller_name(SaveCaller c) {
 }
 
 // The two callers of FlushPendingSaveData 0x1871930 (probe only; 3732's, kCallSites + 5).
-inline constexpr uint64_t kRetFlushLogout = 0x2BC548F;  // the character's logout phase, call at 0x2BC548A [0x28F273F]
+inline constexpr uint64_t kRetFlushLogout = 0x2CFB48F;  // the character's logout phase, call at 0x2BC548A [0x28F273F]
 inline constexpr uint64_t kRetFlushTimer = 0xE584ACD;   // the flush timer, call at 0xE584AC8 [0x108393CD]
 inline const char* flush_caller_name(uint64_t return_rva) {
     if (return_rva == kRetFlushLogout) return "logout phase";

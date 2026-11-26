@@ -45,7 +45,7 @@ using rmo::Mode;
 //   57                    push rdi
 //   48 81 EC 80 00 00 00  sub rsp,0x80
 // No RIP-relative operand; rcx = the method, dl = "same method" (al = result).
-constexpr uintptr_t kPointClimbEnter = 0x78DA40;  // 3549: vf7 of PointClimbMovementMethod 0x5924730 (2976 0x691400)
+constexpr uintptr_t kPointClimbEnter = 0x7C7280;  // 3549: vf7 of PointClimbMovementMethod 0x5924730 (2976 0x691400)
 constexpr uint8_t kPointClimbHead[] = {0x4C, 0x8B, 0xDC, 0x49, 0x89, 0x5B, 0x10, 0x49, 0x89, 0x6B, 0x18, 0x49,
                                        0x89, 0x73, 0x20, 0x57, 0x48, 0x81, 0xEC, 0x80, 0x00, 0x00, 0x00};
 constexpr uint32_t kPointClimbBoundaries[] = {7, 11, 15, 16, 23};
@@ -55,7 +55,7 @@ constexpr uint32_t kPointClimbBoundaries[] = {7, 11, 15, 16, 23};
 // [mc+0x68] has an owning user (+0x90 != 0), else further checks. Only reads.
 // Its whole body 0x88E8E0..0x88E9B4, its jump table 0x88E9B4 (7 x u32 RVA),
 // its callee 0x17F2A50..0x17F2A9A and that one's table 0x17F2A9C.
-constexpr uintptr_t kModeFn = 0x9A5B90;  // 3549 (2976 0x88E8E0), same body
+constexpr uintptr_t kModeFn = 0x9E4B70;  // 3549 (2976 0x88E8E0), same body
 constexpr uint8_t kModeFnBytes[] = {
     0x48, 0x83, 0xEC, 0x28, 0x4C, 0x8B, 0x51, 0x68, 0x4C, 0x8B, 0xD9, 0x49, 0x8B, 0xCA, 0xE8, 0x8D, 0x3C,
     0xFF, 0x00, 0x84, 0xC0, 0x0F, 0x85, 0xB2, 0x00, 0x00, 0x00, 0x49, 0x8B, 0x43, 0x60, 0x48, 0x8B, 0x48,
@@ -74,7 +74,7 @@ constexpr uintptr_t kModeFnTable = 0x9A5C64;  // 3549
 constexpr uint8_t kModeFnTableBytes[] = {0x30, 0x5C, 0x9A, 0x00, 0x30, 0x5C, 0x9A, 0x00, 0x30, 0x5C, 0x9A,
                                          0x00, 0x30, 0x5C, 0x9A, 0x00, 0x2B, 0x5C, 0x9A, 0x00, 0x30, 0x5C,
                                          0x9A, 0x00, 0x30, 0x5C, 0x9A, 0x00};
-constexpr uintptr_t kIsLocalFn = 0x1999830;  // 3549 (2976 0x17F2A50), same body
+constexpr uintptr_t kIsLocalFn = 0x1A2E950;  // 3549 (2976 0x17F2A50), same body
 constexpr uint8_t kIsLocalFnBytes[] = {
     0x48, 0x8B, 0x81, 0x88, 0x00, 0x00, 0x00, 0x44, 0x0F, 0xB6, 0x40, 0x01, 0x41, 0x8D, 0x40, 0xFD, 0x83,
     0xF8, 0x06, 0x77, 0x16, 0x4C, 0x8D, 0x0D, 0xB4, 0x67, 0x66, 0xFE, 0x48, 0x98, 0x41, 0x8B, 0x94, 0x81,
@@ -103,7 +103,7 @@ constexpr uintptr_t kWallUpCmp = 0x99478F;  // 44 38 35 <disp32>: 7 bytes
 constexpr uint32_t kWallUpCmpDispAt = 3;
 // Its call site: only for a character (type byte 1) whose actor+0x96 != 0
 // (the locally controlled one).
-constexpr uintptr_t kWallUpCall = 0x992DCB;
+constexpr uintptr_t kWallUpCall = 0x9D1525;
 constexpr uint8_t kWallUpCallBytes[] = {0x48, 0x8B, 0x47, 0x60, 0x48, 0x8B, 0x48, 0x08, 0x48, 0x8B, 0x81,
                                         0x88, 0x00, 0x00, 0x00, 0x80, 0x78, 0x01, 0x01, 0x75, 0x11, 0x80,
                                         0xB9, 0x96, 0x00, 0x00, 0x00, 0x00, 0x74, 0x08, 0x48, 0x8B, 0xCF,
@@ -186,10 +186,10 @@ std::atomic<uint32_t> g_tracked_n{0}, g_tracked_key0{0};
 std::atomic<uint64_t> g_trig_count[3] = {};
 
 // 4. divergence (pendientes/p8-impl-log-async.md §3)
-constexpr uintptr_t kClockBase = 0x71661A0;  // u64 ms (ui_pause.cpp; 3549, 2976 0x6C8CD68)
-constexpr uintptr_t kClockFrac = 0x71661B0;  // u64 us (3549)
-constexpr uintptr_t kClockBias = 0x724B5F8;  // 3549 (2976 0x6D69438): setPos 0x1386C1C mov rbx,[rip+...]  // i64 client -> server offset (ServerTimeInfoAck), added on client threads
-constexpr uintptr_t kDelayGlobal = 0x7194B98;  // int, the interpolation delay (remote_interp.cpp), default 200 (3549; 2976 0x6CB9548)
+constexpr uintptr_t kClockBase = 0x730A170;  // u64 ms (ui_pause.cpp; 3549, 2976 0x6C8CD68)
+constexpr uintptr_t kClockFrac = 0x730A178;  // u64 us (3549)
+constexpr uintptr_t kClockBias = 0x73F0FF8;  // 3549 (2976 0x6D69438): setPos 0x1386C1C mov rbx,[rip+...]  // i64 client -> server offset (ServerTimeInfoAck), added on client threads
+constexpr uintptr_t kDelayGlobal = 0x7339298;  // int, the interpolation delay (remote_interp.cpp), default 200 (3549; 2976 0x6CB9548)
 std::atomic<bool> g_div_wanted{false}, g_div_on{false};
 bool g_mode_ok = false;  // 0x88E8E0 and its callee verified: the control mode may be asked
 SRWLOCK g_chan_lock = SRWLOCK_INIT;

@@ -85,7 +85,7 @@ constexpr uint16_t kOpLoginCharacterToFieldServerReq = 2894;  // u8 | u64 charac
 constexpr uint16_t kOpReserveShutDownServerReq = 2404;
 // g_ServerFrameworkMode (opcion-d-d0.md §1.1): the u32 the host's server writes
 // into its 2002 (0x1051F1E0); the client uses it as PostPacket's index (§1.3).
-constexpr uintptr_t kServerFrameworkMode = 0x6F2FB70;
+constexpr uintptr_t kServerFrameworkMode = 0x70DBFE4;
 constexpr uint64_t kMaxDecisionLogged = 32, kMaxInternalLogged = 16, kMaxLoginLogged = 8;
 
 uintptr_t g_base = 0;
@@ -1824,7 +1824,7 @@ void guest_deliver(std::vector<uint8_t>&& packet) {
 namespace {
 // guest_clock_fix (guest.h). The game's frame clock (3732; combat_follow's kClockBase / kClockFrac) without the offset.
 constexpr uint16_t kOpServerTimeInfo = 3022;
-constexpr uintptr_t kFrameClockBase = 0x71661A0, kFrameClockFrac = 0x71661B0;
+constexpr uintptr_t kFrameClockBase = 0x730A170, kFrameClockFrac = 0x730A178;
 constexpr uint64_t kClockWindowMs = 60000;
 std::atomic<bool> g_clock_fix{false};
 std::atomic<uint32_t> g_link_rtt_x10{0};

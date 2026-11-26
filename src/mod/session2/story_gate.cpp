@@ -416,15 +416,15 @@ int sg_unwind(uint64_t rip, uint64_t rsp, const uint64_t nv[8], uint64_t* out, i
 // (rcx sequencer, dl in, r8d the volume's kind, r9 the character, [rsp+0x20] u8 facing): it posts the 2808 AND starts
 // the scene locally. 0x7025DD: right after the frame's event flush (0x162E570(.., 0x1C)), on the game thread.
 namespace {
-constexpr uintptr_t kVolCall = 0xE04E19;  // 3663
+constexpr uintptr_t kVolCall = 0xE5FFF9;  // 3663
 constexpr uint8_t kVolCallBytes[] = {0xE8, 0x32, 0xF7, 0x8E, 0xFF};
-constexpr uintptr_t kFrameAfter = 0x70296D;  // 3663
+constexpr uintptr_t kFrameAfter = 0x73A75D;  // 3663
 constexpr uint8_t kFrameAfterBytes[] = {0x48, 0x8B, 0x47, 0x08, 0x48, 0x8B, 0x40, 0x60};
 SafetyHookMid g_vol_hook, g_frame_hook, g_lookup_hook;
 // 0xE04260 (3663): right after the delegate's sequencer lookup 0xE04460 (rsp+0xE0 the sequencer object or 0, rsp+0xD0
 // the volume's kind, rsp+0x48 the character, r12b in / out). Research: does this game find a sequencer for a player's
 // volume event (the guest's game never reported the cabin's cinematic)?
-constexpr uintptr_t kLookupAfter = 0xE04C90;
+constexpr uintptr_t kLookupAfter = 0xE5FE70;
 constexpr uint8_t kLookupAfterBytes[] = {0x48, 0x8B, 0xBC, 0x24, 0xE0, 0x00, 0x00, 0x00};
 struct VolCall {
     uintptr_t seq = 0;
@@ -634,12 +634,12 @@ void install_client() {
         return;
     }
     p8_install_mid(base, secs, kVolCall, sizeof kVolCallBytes, kVolCallBytes, on_vol_call, g_vol_hook, "StoryGate",
-                   "the client's volume call 0xE04E19 (0xE04C10 -> 0x6F4550)");
+                   "the client's volume call 0xE5FFF9 (0xE5FDF0 -> 0x6F4550)");
     p8_install_mid(base, secs, kFrameAfter, sizeof kFrameAfterBytes, kFrameAfterBytes, on_frame, g_frame_hook, "StoryGate",
-                   "after the frame's event flush 0x70296D");
+                   "after the frame's event flush 0x73A75D");
     if (g_mode.load() == 1 || g_mode.load() == 3) {
         p8_install_mid(base, secs, kLookupAfter, sizeof kLookupAfterBytes, kLookupAfterBytes, on_lookup, g_lookup_hook, "StoryGate",
-                       "after the volume delegate's sequencer lookup 0xE04C90 (research)");
+                       "after the volume delegate's sequencer lookup 0xE5FE70 (research)");
     }
 }
 

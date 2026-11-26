@@ -68,21 +68,21 @@ void give_raw(Give& g, uintptr_t self, uint32_t item, uint64_t count, uint32_t r
         g.item_key = item;
         if (g.inv_idx == 0xFFFF || (item && g.item_idx == 0xFFFF)) return;
         if (!item && slot == 0xFFFF) return;  // "whatever the slot holds" needs a slot
-        const uintptr_t mgr = *reinterpret_cast<uintptr_t*>(*reinterpret_cast<uintptr_t*>(base + 0x724B868) + 0x50);
+        const uintptr_t mgr = *reinterpret_cast<uintptr_t*>(*reinterpret_cast<uintptr_t*>(base + 0x73F1268) + 0x50);
         uint64_t scope[8] = {};
-        reinterpret_cast<void* (__fastcall*)(uintptr_t, uint64_t*, uint64_t)>(base + 0x2D7D270)(mgr, scope, receiver);
+        reinterpret_cast<void* (__fastcall*)(uintptr_t, uint64_t*, uint64_t)>(base + 0x2EBA7E0)(mgr, scope, receiver);
         g.actor = scope[1];
         const bool valid = (scope[2] & 0xFF) != 0;
         if (valid && g.actor) {
             g.stage = 1;
-            g.holder = reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t)>(base + 0x23643B0)(g.actor);
+            g.holder = reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t)>(base + 0x2437980)(g.actor);
             const uintptr_t giver_actor = *reinterpret_cast<uintptr_t*>(self + 8);
             if (g.holder && g.holder != self && giver_actor) {
                 g.stage = 2;
-                g.giver_holder = reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t)>(base + 0x23643B0)(giver_actor);
-                reinterpret_cast<int* (__fastcall*)(uintptr_t, int*, uintptr_t, uintptr_t, float)>(base + 0x23744D0)(
+                g.giver_holder = reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t)>(base + 0x2437980)(giver_actor);
+                reinterpret_cast<int* (__fastcall*)(uintptr_t, int*, uintptr_t, uintptr_t, float)>(base + 0x244A090)(
                     mgr, &g.e_dist, giver_actor, g.actor, 0.0f);
-                const auto entry_of = reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t, int16_t, int16_t)>(base + 0x236A320);
+                const auto entry_of = reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t, int16_t, int16_t)>(base + 0x243E800);
                 if (slot == 0xFFFF) {  // no slot named: the first one that holds enough of the item
                     for (int16_t i = 0; i < 512; ++i) {
                         const uintptr_t e = entry_of(self, static_cast<int16_t>(g.inv_idx), i);
@@ -151,7 +151,7 @@ void give_raw(Give& g, uintptr_t self, uint32_t item, uint64_t count, uint32_t r
                     g.stage = 3;
                     // The transform the discard handler builds: identity, position (+0xC0) zero = "do not drop".
                     alignas(16) uint8_t tf[0x200] = {};
-                    reinterpret_cast<void* (__fastcall*)(void*)>(base + 0x670B30)(tf);
+                    reinterpret_cast<void* (__fastcall*)(void*)>(base + 0x6A5610)(tf);
                     const float one = 1.0f;
                     std::memcpy(tf + 0x88, &one, 4);
                     std::memcpy(tf + 0x8C, &one, 4);
@@ -168,13 +168,13 @@ void give_raw(Give& g, uintptr_t self, uint32_t item, uint64_t count, uint32_t r
                     g.drop = drop;
                     if (row && drop != -1) *reinterpret_cast<int16_t*>(row + 0x52) = -1;
                     reinterpret_cast<int* (__fastcall*)(uintptr_t, int*, uintptr_t, uint16_t, int16_t, int64_t, void*)>(
-                        base + 0x2E6EFC0)(self, &g.e_discard, giver_actor, inv, static_cast<int16_t>(slot),
+                        base + 0x2FB2DE0)(self, &g.e_discard, giver_actor, inv, static_cast<int16_t>(slot),
                                           static_cast<int64_t>(count), tf);
                     if (row && drop != -1) *reinterpret_cast<int16_t*>(row + 0x52) = drop;
                     if (g.e_discard == 0) {
                         g.stage = 4;
-                        const auto add = reinterpret_cast<int* (__fastcall*)(uintptr_t, int*, void*)>(base + 0x2E449C0);
-                        const auto make = reinterpret_cast<void* (__fastcall*)(void*)>(base + 0x26B2AC0);
+                        const auto add = reinterpret_cast<int* (__fastcall*)(uintptr_t, int*, void*)>(base + 0x2F870A0);
+                        const auto make = reinterpret_cast<void* (__fastcall*)(void*)>(base + 0x27A2790);
                         alignas(16) static uint8_t v[0x400];
                         std::memset(v, 0, sizeof v);
                         make(v);
@@ -195,7 +195,7 @@ void give_raw(Give& g, uintptr_t self, uint32_t item, uint64_t count, uint32_t r
                 }
             }
         }
-        reinterpret_cast<void (__fastcall*)(uint64_t*)>(base + 0x165AF00)(scope);  // the scope's own release
+        reinterpret_cast<void (__fastcall*)(uint64_t*)>(base + 0x16E3B60)(scope);  // the scope's own release
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         g.stage = -1;
     }
@@ -249,10 +249,10 @@ const char* err_name(int code) noexcept {
     if (code == -1) return "-";
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     __try {
-        const uintptr_t table = reinterpret_cast<uintptr_t (__fastcall*)()>(base + 0x164DFA0)();
+        const uintptr_t table = reinterpret_cast<uintptr_t (__fastcall*)()>(base + 0x16D6C00)();
         if (!table) return "?";
         uint32_t c = static_cast<uint32_t>(code);
-        const auto e = reinterpret_cast<uintptr_t* (__fastcall*)(uintptr_t, uint32_t*)>(base + 0x164E4F0)(table, &c);
+        const auto e = reinterpret_cast<uintptr_t* (__fastcall*)(uintptr_t, uint32_t*)>(base + 0x16D7150)(table, &c);
         if (!e || !*e) return "?";
         const char* s = *reinterpret_cast<const char**>(*e);
         return s ? s : "?";
@@ -275,7 +275,7 @@ uint16_t stash_inventory_index(uintptr_t base) noexcept;
 bool inventory_indices(uintptr_t base, uint16_t& bag, uint16_t& wh) noexcept {
     __try {
         // The game's own chain (exe+0xEC03A0, exe+0x2D45EE0): *(*(*(*[exe+0x71C0498]) + 8) + 0x240) + 0xA2 / +0xB2.
-        const uintptr_t slot = *reinterpret_cast<uintptr_t*>(base + 0x724B6E8);
+        const uintptr_t slot = *reinterpret_cast<uintptr_t*>(base + 0x73F10E8);
         if (!slot) return false;
         const uintptr_t root = *reinterpret_cast<uintptr_t*>(slot);
         if (!root) return false;
@@ -324,7 +324,7 @@ struct StashSlot {
 StashSlot stash_slot(uintptr_t base, uintptr_t holder, uint16_t inv, uint16_t slot) noexcept {
     StashSlot out;
     __try {
-        const uintptr_t e = reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t, int16_t, int16_t)>(base + 0x236A320)(
+        const uintptr_t e = reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t, int16_t, int16_t)>(base + 0x243E800)(
             holder, static_cast<int16_t>(inv), static_cast<int16_t>(slot));
         if (!e) return out;
         out.idx = *reinterpret_cast<uint16_t*>(e + 8);
@@ -383,9 +383,9 @@ void give_move(GiveMove& m, uintptr_t self, uint32_t receiver, uint16_t inv_key,
         *reinterpret_cast<uint16_t*>(g_give_route + 4) = m.bag;
         m.stage = 2;
         const uintptr_t giver_actor = *reinterpret_cast<uintptr_t*>(self + 8);
-        const uintptr_t mgr = *reinterpret_cast<uintptr_t*>(*reinterpret_cast<uintptr_t*>(base + 0x724B868) + 0x50);
+        const uintptr_t mgr = *reinterpret_cast<uintptr_t*>(*reinterpret_cast<uintptr_t*>(base + 0x73F1268) + 0x50);
         uint64_t scope[8] = {};
-        reinterpret_cast<void* (__fastcall*)(uintptr_t, uint64_t*, uint64_t)>(base + 0x2D7D270)(mgr, scope, receiver);
+        reinterpret_cast<void* (__fastcall*)(uintptr_t, uint64_t*, uint64_t)>(base + 0x2EBA7E0)(mgr, scope, receiver);
         const uintptr_t receiver_actor = scope[1];
         if ((scope[2] & 0xFF) != 0 && receiver_actor && giver_actor && receiver_actor != giver_actor) {
             m.stage = 3;
@@ -415,14 +415,14 @@ void give_move(GiveMove& m, uintptr_t self, uint32_t receiver, uint16_t inv_key,
                 // The count goes BY VALUE (the 3111 worker exe+0x2E0B2B0 passes its own count argument; tcB318-320:
                 // a pointer here read as a huge count -> eErrNoItemIsLack "Not enough items.").
                 reinterpret_cast<int* (__fastcall*)(uintptr_t, int*, uintptr_t, uintptr_t, uintptr_t, uint16_t, uint32_t,
-                                                    uint16_t, int64_t)>(base + 0x2E5C470)(
+                                                    uint16_t, int64_t)>(base + 0x2F9EFF0)(
                     self, &m.err, giver_actor, receiver_actor, reinterpret_cast<uintptr_t>(g_give_route), m.slot,
                     m.idx, m.sub, n);
                 t_owner_pass = false;
                 if (m.err == 0) m.stage = 5;
             }
         }
-        reinterpret_cast<void (__fastcall*)(uint64_t*)>(base + 0x165AF00)(scope);
+        reinterpret_cast<void (__fastcall*)(uint64_t*)>(base + 0x16E3B60)(scope);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         t_owner_pass = false;
         m.stage = -2;
@@ -433,7 +433,7 @@ void give_move(GiveMove& m, uintptr_t self, uint32_t receiver, uint16_t inv_key,
 // this holder) and every move route of the bag and the warehouse (from, to, the first bytes of the entry).
 uintptr_t inventory_manager(uintptr_t base) noexcept {
     __try {
-        const uintptr_t slot = *reinterpret_cast<uintptr_t*>(base + 0x724B6E8);
+        const uintptr_t slot = *reinterpret_cast<uintptr_t*>(base + 0x73F10E8);
         const uintptr_t root = slot ? *reinterpret_cast<uintptr_t*>(slot) : 0;
         const uintptr_t info = root ? *reinterpret_cast<uintptr_t*>(root + 8) : 0;
         return info ? *reinterpret_cast<uintptr_t*>(info + 0x220) : 0;  // 3663 (3576 +0x240)
@@ -593,14 +593,14 @@ void stash_move(Stash& s, uintptr_t self, bool deposit, uint32_t g, uint32_t r, 
     }
     s.stage = 2;
     __try {
-        const uintptr_t mgr = *reinterpret_cast<uintptr_t*>(*reinterpret_cast<uintptr_t*>(base + 0x724B868) + 0x50);
+        const uintptr_t mgr = *reinterpret_cast<uintptr_t*>(*reinterpret_cast<uintptr_t*>(base + 0x73F1268) + 0x50);
         uint64_t scope[8] = {};
-        reinterpret_cast<void* (__fastcall*)(uintptr_t, uint64_t*, uint64_t)>(base + 0x2D7D270)(mgr, scope, kHostCharacter);
+        reinterpret_cast<void* (__fastcall*)(uintptr_t, uint64_t*, uint64_t)>(base + 0x2EBA7E0)(mgr, scope, kHostCharacter);
         const uintptr_t host_actor = scope[1];
         if ((scope[2] & 0xFF) != 0 && host_actor && (s.requester != kHostCharacter || host_actor == me)) {
             s.stage = 3;
             const uintptr_t giver_actor = deposit ? me : host_actor, receiver_actor = deposit ? host_actor : me;
-            const uintptr_t src = reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t)>(base + 0x23643B0)(giver_actor);
+            const uintptr_t src = reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t)>(base + 0x2437980)(giver_actor);
             auto fits = [&](const StashSlot& x) {
                 return x.idx != 0xFFFF && x.n >= static_cast<int64_t>(count) && (hint == 0xFFFF || x.idx == hint);
             };
@@ -625,7 +625,7 @@ void stash_move(Stash& s, uintptr_t self, bool deposit, uint32_t g, uint32_t r, 
                 t_owner_receiver = receiver_actor;
                 t_owner_pass = giver_actor != receiver_actor;
                 reinterpret_cast<int* (__fastcall*)(uintptr_t, int*, uintptr_t, uintptr_t, uintptr_t, uint16_t, uint32_t,
-                                                    uint16_t, int64_t)>(base + 0x2E5C470)(
+                                                    uint16_t, int64_t)>(base + 0x2F9EFF0)(
                     self, &s.err, giver_actor, receiver_actor, route, s.slot, s.have_idx, s.sub, n);  // count by value
                 t_owner_pass = false;
                 if (s.err == 0) s.stage = 5;
@@ -635,7 +635,7 @@ void stash_move(Stash& s, uintptr_t self, bool deposit, uint32_t g, uint32_t r, 
         } else {
             s.why = "the host's character is not on the server";
         }
-        reinterpret_cast<void (__fastcall*)(uint64_t*)>(base + 0x165AF00)(scope);
+        reinterpret_cast<void (__fastcall*)(uint64_t*)>(base + 0x16E3B60)(scope);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         t_owner_pass = false;
         s.stage = -2;
@@ -647,8 +647,8 @@ void stash_move(Stash& s, uintptr_t self, bool deposit, uint32_t g, uint32_t r, 
 int lootr_add(uintptr_t base, uintptr_t holder, uint32_t key, uint64_t count) noexcept {
     int e = -1;
     __try {
-        const auto add = reinterpret_cast<int* (__fastcall*)(uintptr_t, int*, void*)>(base + 0x2E449C0);
-        const auto make = reinterpret_cast<void* (__fastcall*)(void*)>(base + 0x26B2AC0);
+        const auto add = reinterpret_cast<int* (__fastcall*)(uintptr_t, int*, void*)>(base + 0x2F870A0);
+        const auto make = reinterpret_cast<void* (__fastcall*)(void*)>(base + 0x27A2790);
         alignas(16) static uint8_t v[0x400];
         std::memset(v, 0, sizeof v);
         make(v);
@@ -704,7 +704,7 @@ std::string item_name_at(uintptr_t base, uint16_t idx) {
 }
 uintptr_t inventory_holder(uintptr_t base, uintptr_t actor) noexcept {  // stash_move's src
     __try {
-        return reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t)>(base + 0x23643B0)(actor);
+        return reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t)>(base + 0x2437980)(actor);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return 0;
     }
@@ -733,8 +733,8 @@ int penalty_remove(uintptr_t base, uintptr_t actor, uint16_t inv, uint16_t slot,
         reinterpret_cast<void* (__fastcall*)(uintptr_t, uint64_t*)>(base + 0x2EC97A0)(
             *reinterpret_cast<uintptr_t*>(tls0 + 0x250), scope);
         const int64_t when = _time64(nullptr) + (*reinterpret_cast<uint8_t*>(tls0 + 0x1EB)
-                                                     ? *reinterpret_cast<int64_t*>(base + 0x71661A8)
-                                                     : *reinterpret_cast<int64_t*>(base + 0x724B5F0));
+                                                     ? *reinterpret_cast<int64_t*>(base + 0x730A188)
+                                                     : *reinterpret_cast<int64_t*>(base + 0x73F0FF0));
         reinterpret_cast<int* (__fastcall*)(uintptr_t, int*, uintptr_t, void*, int64_t, uint8_t, uint16_t, uint8_t)>(
             base + 0x2A54010)(static_cast<uintptr_t>(scope[2]), &e, actor, &list, when, 0, 0x2F, 1);
         if (scope[1]) --*reinterpret_cast<int*>(scope[1]);  // the scope's release, as the handler does
@@ -936,7 +936,7 @@ int* __fastcall worker_detour(uintptr_t self, int* err, uint32_t item, uint16_t 
                   st.sub, *st.why ? " | " : "", st.why);
         const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
         int bad = 0;
-        game::fast_read(base + 0x71B89BC, &bad, sizeof bad);
+        game::fast_read(base + 0x735D6C0, &bad, sizeof bad);
         *err = st.stage == 5 ? 0 : st.err > 0 ? st.err : bad;
         return err;
     }
@@ -970,7 +970,7 @@ int* __fastcall worker_detour(uintptr_t self, int* err, uint32_t item, uint16_t 
         }
         const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
         int bad = 0;
-        game::fast_read(base + 0x71B89BC, &bad, sizeof bad);
+        game::fast_read(base + 0x735D6C0, &bad, sizeof bad);
         *err = gv.stage == 5 ? 0 : gv.e_discard > 0 ? gv.e_discard : gv.e_add > 0 ? gv.e_add : bad;
         return err;
     }
@@ -1009,8 +1009,8 @@ int* __fastcall worker_detour(uintptr_t self, int* err, uint32_t item, uint16_t 
         // (0x712E058); anything else comes from the distance check or the move itself.
         const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
         int bad = 0, actor = 0;
-        game::fast_read(base + 0x71B89BC, &bad, sizeof bad);
-        game::fast_read(base + 0x71B8A28, &actor, sizeof actor);
+        game::fast_read(base + 0x735D6C0, &bad, sizeof bad);
+        game::fast_read(base + 0x735D72C, &actor, sizeof actor);
         log::info("TradeProbe [worker out] err {} (0x{:X}) = {}", e, static_cast<uint32_t>(e),
                   e == 0 ? "none" : e == bad ? "bad item / inventory / entry" : e == actor ? "actor missing"
                                                                                            : "distance or move");
@@ -1034,10 +1034,10 @@ void on_handler(SafetyHookContext&) {
     if (g_left.load() > 0 && said.fetch_add(1) < 16) log::info("TradeProbe [handler] 3111 reached the server's handler");
 }
 void on_move(SafetyHookContext&) {
-    if (g_left.load() > 0) log::info("TradeProbe [move] 0x2E5C470 entered (kind 1)");
+    if (g_left.load() > 0) log::info("TradeProbe [move] 0x2F9EFF0 entered (kind 1)");
 }
 void on_move2(SafetyHookContext&) {
-    if (g_left.load() > 0) log::info("TradeProbe [move] 0x2E5E4F0 entered (kind 2)");
+    if (g_left.load() > 0) log::info("TradeProbe [move] 0x2FA1480 entered (kind 2)");
 }
 SafetyHookMid g_node, g_lookup;
 std::atomic<int> g_node_left{600}, g_lookup_left{80};
@@ -1091,12 +1091,12 @@ int lootr_add_item(uintptr_t holder, uint32_t key, uint64_t count) noexcept {
 void inter_probe_start() {
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     uint8_t head[2]{};
-    if (!game::safe_read(base + 0x25D1E30, head, sizeof head)) {
+    if (!game::safe_read(base + 0x26B8030, head, sizeof head)) {
         log::warn("InterProbe: the node is unreadable; off");
         return;
     }
-    if (auto h = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x25D1E30), on_node)) g_node = std::move(*h);
-    if (auto h = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x19A7FC0), on_lookup)) {
+    if (auto h = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x26B8030), on_node)) g_node = std::move(*h);
+    if (auto h = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x1A3D150), on_lookup)) {
         g_lookup = std::move(*h);
     }
     log::info("InterProbe: node {} lookup {} (read only)", static_cast<bool>(g_node), static_cast<bool>(g_lookup));
@@ -1140,18 +1140,18 @@ void trade_probe_set_death_penalty(int percent, uint32_t item_key) {
 void trade_probe_start() {
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     uint8_t head[2]{};
-    if (!game::safe_read(base + 0x2E76F70, head, sizeof head)) {
+    if (!game::safe_read(base + 0x2FBA830, head, sizeof head)) {
         log::warn("TradeProbe: the worker is unreadable; off");
         return;
     }
-    if (auto h = safetyhook::InlineHook::create(reinterpret_cast<void*>(base + 0x2E76F70), worker_detour)) {
+    if (auto h = safetyhook::InlineHook::create(reinterpret_cast<void*>(base + 0x2FBA830), worker_detour)) {
         g_worker = std::move(*h);
     }
-    if (auto h = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x2CFFDD0), on_handler)) {
+    if (auto h = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x2E3D070), on_handler)) {
         g_handler = std::move(*h);
     }
-    if (auto h = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x2E5C470), on_move)) g_move = std::move(*h);
-    if (auto h = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x2E5E4F0), on_move2)) g_move2 = std::move(*h);
+    if (auto h = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x2F9EFF0), on_move)) g_move = std::move(*h);
+    if (auto h = safetyhook::MidHook::create(reinterpret_cast<void*>(base + 0x2FA1480), on_move2)) g_move2 = std::move(*h);
     {
         static const uint8_t kOwnerCmp[9] = {0x48, 0x39, 0x82, 0xA0, 0x00, 0x00, 0x00, 0x74, 0x0B};
         uint8_t got[9] = {};
@@ -1164,8 +1164,8 @@ void trade_probe_start() {
                   g_owner_hook ? "hooked: passes for the mod's own give / stash moves only" : "NOT hooked (bytes differ)");
     }
     {  // which check of the move gives which error (live values of its error constants)
-        static const uintptr_t kErr[] = {0x71D6F00, 0x71D5D08, 0x71D63A4, 0x71D6E8C, 0x71D6F68, 0x71D6F6C, 0x71D62EC,
-                                         0x71B89BC, 0x71D6078, 0x71B8978};
+        static const uintptr_t kErr[] = {0x737C13C, 0x71D5D08, 0x737B5D4, 0x737C0C8, 0x71D6F68, 0x71D6F6C, 0x737B51C,
+                                         0x735D6C0, 0x737B2A8, 0x735D67C};
         std::string line;
         for (const uintptr_t a : kErr) {
             int v = 0;

@@ -73,12 +73,12 @@ struct BagSnap {
 bool snap_bag(uintptr_t picker, BagSnap& b) noexcept {
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     __try {
-        const uintptr_t slot = *reinterpret_cast<uintptr_t*>(base + 0x724B6E8);
+        const uintptr_t slot = *reinterpret_cast<uintptr_t*>(base + 0x73F10E8);
         const uintptr_t root = *reinterpret_cast<uintptr_t*>(slot);
         const uintptr_t info = *reinterpret_cast<uintptr_t*>(root + 8);
         const uintptr_t mgr = *reinterpret_cast<uintptr_t*>(info + 0x220);  // 3663 (3576 +0x240)
         const uint16_t bag = *reinterpret_cast<uint16_t*>(mgr + 0x7A);  // 3663 (3576 +0xA2)
-        const uintptr_t holder = reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t)>(base + 0x23643B0)(picker);
+        const uintptr_t holder = reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t)>(base + 0x2437980)(picker);
         if (!holder) return false;
         const uintptr_t list = *reinterpret_cast<uintptr_t*>(holder + 0x18);
         const uint32_t cnt = *reinterpret_cast<uint32_t*>(holder + 0x20);
@@ -342,14 +342,14 @@ bool body_trim(uintptr_t comp, uint32_t n, uint32_t s, uint32_t* removed) noexce
     __try {
         uint32_t count = *reinterpret_cast<uint32_t*>(comp + 0x60);
         while (count > n && count < 4096) {
-            reinterpret_cast<void (__fastcall*)(uintptr_t, uint32_t)>(base + 0x23823B0)(comp + 0x58, count - 1);
+            reinterpret_cast<void (__fastcall*)(uintptr_t, uint32_t)>(base + 0x2458B50)(comp + 0x58, count - 1);
             const uint32_t now = *reinterpret_cast<uint32_t*>(comp + 0x60);
             if (now >= count) break;  // nothing went: stop
             count = now;
             ++*removed;
         }
         if (*reinterpret_cast<uint32_t*>(comp + 0x50) > s) *reinterpret_cast<uint32_t*>(comp + 0x50) = s;
-        reinterpret_cast<void (__fastcall*)(uintptr_t)>(base + 0x2E91F20)(comp);
+        reinterpret_cast<void (__fastcall*)(uintptr_t)>(base + 0x2FD5E30)(comp);
         return true;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return false;
@@ -402,7 +402,7 @@ int* body_loot_per_player(uintptr_t comp, int* err, uintptr_t looter, uint8_t a,
     *handled = true;
     if (role == 3) {
         int none = 0;
-        game::fast_read(base + 0x71D6EC4, &none, sizeof none);  // "nothing to loot"
+        game::fast_read(base + 0x737C100, &none, sizeof none);  // "nothing to loot"
         *err = none ? none : 1;
         c_body_refused.fetch_add(1);
         return err;
@@ -703,7 +703,7 @@ bool actor_pos(uintptr_t base, uintptr_t actor, float& x, float& y, float& z) no
     const uintptr_t ts = comps ? *reinterpret_cast<uintptr_t*>(comps + 0x1A0) : 0;
     if (!ts) return false;
     alignas(16) uint8_t buf[0x80] = {};
-    reinterpret_cast<void* (__fastcall*)(uintptr_t, void*)>(base + 0x5D8880)(ts, buf);
+    reinterpret_cast<void* (__fastcall*)(uintptr_t, void*)>(base + 0x60C480)(ts, buf);
     const float* f = reinterpret_cast<const float*>(buf);
     x = f[0] + 1000.0f * static_cast<float>(*reinterpret_cast<int16_t*>(buf + 0xC));
     y = f[1];
@@ -713,7 +713,7 @@ bool actor_pos(uintptr_t base, uintptr_t actor, float& x, float& y, float& z) no
 // 0 = no Drop handler, 1 = has one (mode = its delivery byte).
 int drop_handler(uintptr_t base, uintptr_t b, uint8_t& mode) noexcept {
     if (!b) return 0;
-    const uintptr_t vt = base + 0x5DFE398;
+    const uintptr_t vt = base + 0x5F8F148;
     auto list = [&](uintptr_t p, uint32_t cnt) {
         if (!p || cnt > 64) return false;
         for (uint32_t j = 0; j < cnt; ++j) {
@@ -748,7 +748,7 @@ void chest_scan_read(ChestScan& s, uintptr_t base, uintptr_t host) noexcept {
     __try {
         if (!actor_pos(base, host, s.hx, s.hy, s.hz)) return;
         s.stage = 1;
-        const uintptr_t slot = *reinterpret_cast<uintptr_t*>(base + 0x724B860);
+        const uintptr_t slot = *reinterpret_cast<uintptr_t*>(base + 0x73F1260);
         const uintptr_t sam = slot ? *reinterpret_cast<uintptr_t*>(slot) : 0;
         if (!sam) return;
         const uint32_t n = *reinterpret_cast<uint32_t*>(sam + 0x9C);
@@ -1021,7 +1021,7 @@ int players_now(PlayerAt* out, int cap) noexcept {
     int n = 0;
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     __try {
-        const uintptr_t slot = *reinterpret_cast<uintptr_t*>(base + 0x724B860);
+        const uintptr_t slot = *reinterpret_cast<uintptr_t*>(base + 0x73F1260);
         const uintptr_t sam = slot ? *reinterpret_cast<uintptr_t*>(slot) : 0;
         if (!sam) return 0;
         const uint32_t cnt = *reinterpret_cast<uint32_t*>(sam + 0x9C);
@@ -1037,7 +1037,7 @@ int players_now(PlayerAt* out, int cap) noexcept {
             p.key = key;
             p.actor = actor;
             if (!actor_pos(base, actor, p.x, p.y, p.z)) continue;
-            p.holder = reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t)>(base + 0x23643B0)(actor);
+            p.holder = reinterpret_cast<uintptr_t (__fastcall*)(uintptr_t)>(base + 0x2437980)(actor);
             if (p.holder) out[n++] = p;
         }
     } __except (EXCEPTION_EXECUTE_HANDLER) {
@@ -2105,15 +2105,15 @@ void lootr_start(bool on, bool probe, bool guest, bool bodies) {
     if (!g_on && !g_probe) return;
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     uint8_t head[2]{};
-    if (!game::safe_read(base + 0x2DA2F90, head, sizeof head)) return;
-    if (auto h = safetyhook::InlineHook::create(reinterpret_cast<void*>(base + 0x2DA2F90), pickup_detour)) {
+    if (!game::safe_read(base + 0x2EE0B20, head, sizeof head)) return;
+    if (auto h = safetyhook::InlineHook::create(reinterpret_cast<void*>(base + 0x2EE0B20), pickup_detour)) {
         g_pickup = std::move(*h);
     }
     if (g_probe || g_bodies_on || (g_on && g_body_share_on)) {
         static const uint8_t kHead[10] = {0x48, 0x89, 0x5C, 0x24, 0x18, 0x44, 0x88, 0x4C, 0x24, 0x20};
         uint8_t got[10] = {};
-        if (game::safe_read(base + 0x2E8E390, got, sizeof got) && std::memcmp(got, kHead, sizeof got) == 0) {
-            if (auto h = safetyhook::InlineHook::create(reinterpret_cast<void*>(base + 0x2E8E390), body_loot_detour)) {
+        if (game::safe_read(base + 0x2FD2010, got, sizeof got) && std::memcmp(got, kHead, sizeof got) == 0) {
+            if (auto h = safetyhook::InlineHook::create(reinterpret_cast<void*>(base + 0x2FD2010), body_loot_detour)) {
                 g_body_loot = std::move(*h);
             }
         }
@@ -2138,13 +2138,13 @@ void lootr_start(bool on, bool probe, bool guest, bool bodies) {
         static const uint8_t kRoll[15] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x18, 0x48, 0x89, 0x7C,
                                           0x24, 0x20};
         uint8_t got[15] = {};
-        if (game::safe_read(base + 0x2DBA1A0, got, sizeof got) && std::memcmp(got, kDrop, sizeof got) == 0) {
-            if (auto h = safetyhook::InlineHook::create(reinterpret_cast<void*>(base + 0x2DBA1A0), drop_detour)) {
+        if (game::safe_read(base + 0x2EF8240, got, sizeof got) && std::memcmp(got, kDrop, sizeof got) == 0) {
+            if (auto h = safetyhook::InlineHook::create(reinterpret_cast<void*>(base + 0x2EF8240), drop_detour)) {
                 g_drop = std::move(*h);
             }
         }
-        if (g_probe && game::safe_read(base + 0x2DB93D0, got, sizeof got) && std::memcmp(got, kRoll, sizeof got) == 0) {
-            if (auto h = safetyhook::InlineHook::create(reinterpret_cast<void*>(base + 0x2DB93D0), drop_roll_detour)) {
+        if (g_probe && game::safe_read(base + 0x2EF74D0, got, sizeof got) && std::memcmp(got, kRoll, sizeof got) == 0) {
+            if (auto h = safetyhook::InlineHook::create(reinterpret_cast<void*>(base + 0x2EF74D0), drop_roll_detour)) {
                 g_drop_roll = std::move(*h);
             }
         }

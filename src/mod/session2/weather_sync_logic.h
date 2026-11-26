@@ -50,15 +50,15 @@ namespace cdmp::session2::wsy {
 // not checked any more. The blocks moved: A = [holder+0x20], B = [holder+0x28]; A's fields +4 from 0x13C, B's +4;
 // the wind direction is A+0x198 / +0x19C (+8; the update's scroll reads (A-0x28)+0x1C0 / +0x1C4 with A = [holder+0x20]
 // in rdi, 0x4143B8E / 0x4143CAA; cs16c). Block C (2976's under-water colours) carries no field on 3663.
-inline constexpr uintptr_t kModuleSlot = 0x71662E0;  // [exe+] -> M; M.vf60 = 0x7D7940 returns [M+0x60] (2976 0x6C8CEC8)
+inline constexpr uintptr_t kModuleSlot = 0x730A2C8;  // [exe+] -> M; M.vf60 = 0x7D7940 returns [M+0x60] (2976 0x6C8CEC8)
 inline constexpr uint32_t kModuleScene = 0x60;       // S = [M+0x60]
 inline constexpr uint32_t kSceneWeather = 0xF70;     // X = [S+0xF70] (2976 +0xF68)
 inline constexpr uint32_t kVtGetterSlot = 0x60;      // [[M]+0x60] = the getter the simulators call
-inline constexpr uintptr_t kGetterVf60 = 0x7D8060;   // (2976 0x6DA0A0)
+inline constexpr uintptr_t kGetterVf60 = 0x8105D0;   // (2976 0x6DA0A0)
 inline constexpr uint8_t kGetterVf60Bytes[5] = {0x48, 0x8B, 0x41, 0x60, 0xC3};  // mov rax,[rcx+0x60]; ret
 inline constexpr uintptr_t kClientSlot = 0;          // 2976's second path to X (0x6D69198 +0x38 +0x38): not found on 3663
 inline constexpr uint32_t kClientHop1 = 0x38, kClientHop2 = 0x38;
-inline constexpr uintptr_t kVtWeatherSystem = 0x61A2430;  // [X] (2976 0x5D51268)
+inline constexpr uintptr_t kVtWeatherSystem = 0x632DBA0;  // [X] (2976 0x5D51268)
 
 inline constexpr uint32_t kXViewer = 0x31;   // u8: 1 = the Weather Viewer's external values
 inline constexpr uint32_t kXHolder = 0x60;
@@ -67,7 +67,7 @@ inline constexpr uint32_t kXScroll = 0x13C;  // 2 floats: the cloud scroll accum
 inline constexpr uint32_t kHolderA = 0x20, kHolderB = 0x28, kHolderC = 0;  // (2976 0x18 / 0x20 / 0x28); C: none
 inline constexpr uint32_t kATempSample = 0x1A0;  // the ClimateTexture sample at the local camera (local, never sent; 2976 0x198)
 
-inline constexpr uintptr_t kUpdate = 0x4148010;  // (2976 0x3DC4730)
+inline constexpr uintptr_t kUpdate = 0x42B6590;  // (2976 0x3DC4730)
 // mov rax,rsp | push rbx | push rbp | push rsi | push rdi | push r12 | push r14 | push r15 | sub rsp,0x90
 inline constexpr uint8_t kUpdateHead[20] = {0x48, 0x8B, 0xC4, 0x53, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41,
                                             0x56, 0x41, 0x57, 0x48, 0x81, 0xEC, 0x90, 0x00, 0x00, 0x00};
@@ -77,7 +77,7 @@ inline constexpr uint8_t kUpdateCallBytes[5] = {0xE8, 0, 0, 0, 0};  // not check
 
 // The server tick as the game's client threads compute it (combat_follow.cpp, remote_motion.cpp): frame ms +
 // frame us / 1000 + the 2188 bias (ServerTimeInfoAck). On the guest it is the host's server tick.
-inline constexpr uintptr_t kClockBase = 0x71661A0, kClockFrac = 0x71661B0, kClockBias = 0x724B5F8;  // remote_motion.cpp's (3549+)
+inline constexpr uintptr_t kClockBase = 0x730A170, kClockFrac = 0x730A178, kClockBias = 0x73F0FF8;  // remote_motion.cpp's (3549+)
 
 // ---------------------------------------------------------------- the vector (v1)
 

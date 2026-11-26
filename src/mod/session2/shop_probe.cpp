@@ -50,13 +50,13 @@ using shp::Who;
 //   E 0x288B7A0  mov rax,rsp ; mov [rax+0x10],rbx                    7 bytes, the entry of 0x288B7A0 (.pdata
 //                                                                    0x288B7A0-0x288BE21); rcx = mgr, rdx = field,
 //                                                                    r8 = the manager's character
-constexpr uintptr_t kE = 0x2B4FDA0;  // 3576 (2976 0x288B7A0), same head
+constexpr uintptr_t kE = 0x2C7E310;  // 3576 (2976 0x288B7A0), same head
 constexpr uint32_t kEPatch = 7;
 constexpr uint8_t kEBytes[] = {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x10};
 //   G 0x288B87A  cmp [r15+0x180],eax                                 7 bytes (the jne rel32 after it is not
 //                                                                    patched); a jmp target at its first byte
 //                (0x288B876). Context 0x288B867: mov rax,[r13+0xA0] ; test ; je ; mov eax,[rax+0x60] ; jmp ; mov eax,esi
-constexpr uintptr_t kG = 0x2B4FE7A, kGCtx = 0x2B4FE66;  // 3576: as user2_stages' gate (4th argument in rsi)
+constexpr uintptr_t kG = 0x2C7E3EA, kGCtx = 0x2C7E3D6;  // 3576: as user2_stages' gate (4th argument in rsi)
 constexpr uint32_t kGPatch = 7;
 constexpr uint8_t kGBytes[] = {0x41, 0x39, 0x87, 0x80, 0x01, 0x00, 0x00, 0x0F, 0x85, 0x80, 0x05, 0x00, 0x00};
 constexpr uint8_t kGCtxBytes[] = {0x49, 0x8B, 0x85, 0xA0, 0x00, 0x00, 0x00, 0x48, 0x85, 0xC0,
@@ -66,7 +66,7 @@ constexpr uint8_t kGCtxBytes[] = {0x49, 0x8B, 0x85, 0xA0, 0x00, 0x00, 0x00, 0x48
 //                vzeroupper ; call 0x287C200 (E8 11 17 FF FF)
 // 3576: in the element 0x2AE8700, after call 0x2AD8E60: nop ; mov r12,[rbp-0x69]. There rcx = r14 (the manager), rdx =
 // r15 (the result), the element in RBX (2976: r15 / r14 / rdi); the frame is unchanged (playData rbp-0x51, inst rbp+0x77).
-constexpr uintptr_t kP = 0x2B4EFB5, kPCtx = 0x2B4EF9C;
+constexpr uintptr_t kP = 0x2B4EFB5, kPCtx = 0x2C7D46E;
 constexpr uint32_t kPPatch = 5;
 constexpr uint8_t kPBytes[] = {0x90, 0x4C, 0x8B, 0x65, 0x87};
 constexpr uint8_t kPCtxBytes[] = {0x4C, 0x8B, 0x8B, 0x00, 0x02, 0x00, 0x00, 0x4C, 0x8D, 0x45, 0xAF, 0x49, 0x8B,
@@ -74,7 +74,7 @@ constexpr uint8_t kPCtxBytes[] = {0x4C, 0x8B, 0x8B, 0x00, 0x02, 0x00, 0x00, 0x4C
 //   C 0x29E9282  mov ebx,[rbp-0x58] ; test ebx,ebx                   5 bytes (the je rel32 after it is not patched)
 //                Context 0x29E9276: mov rcx,[rcx+0x98] ; call 0x2B36860 (E8 DE D5 14 00)
 // 3576: TrocTrInteractionPreemptionStepReq (vtable 0x5EEC638) slot 2 0x2C70910: mov ebx,[rbp-0x80] after call 0x2DD0720.
-constexpr uintptr_t kC = 0x2CDC149, kCCtx = 0x2CDC13D;
+constexpr uintptr_t kC = 0x2E19309, kCCtx = 0x2E192FD;
 constexpr uint32_t kCPatch = 5;
 constexpr uint8_t kCBytes[] = {0x8B, 0x5D, 0x80, 0x85, 0xDB};
 constexpr uint8_t kCCtxBytes[] = {0x48, 0x8B, 0x89, 0x98, 0x00, 0x00, 0x00, 0xE8, 0x37, 0x00, 0x16, 0x00};
@@ -83,7 +83,7 @@ constexpr uint8_t kCCtxBytes[] = {0x48, 0x8B, 0x89, 0x98, 0x00, 0x00, 0x00, 0xE8
 // actor (C's user key comes from it: the friend's own character for its talks), the frame as at C. With the per-player
 // slot on, user 2's talk runs that check with its own focus triple in the host's manager; C closes the window. Installed
 // after C (C's context check reads these bytes first).
-constexpr uintptr_t kC0 = 0x2CDC13D;
+constexpr uintptr_t kC0 = 0x2E192FD;
 constexpr uint32_t kC0Patch = 7;
 constexpr uint8_t kC0Bytes[] = {0x48, 0x8B, 0x89, 0x98, 0x00, 0x00, 0x00};
 // B (Co-op+ 2026-11-21, the taming freeze: user 2's StageBranchStateReq "then 2" of its taming scene got no Ack and no
@@ -94,7 +94,7 @@ constexpr uint8_t kC0Bytes[] = {0x48, 0x8B, 0x89, 0x98, 0x00, 0x00, 0x00};
 //   B2 0x2D55B6A  mov ebx,[rbp-0x80] ; test ebx,ebx        5 bytes: the result (the je rel32 after it is not patched)
 //   Context 0x2D55B36: call [rax+0x48] ; movzx ecx,byte [rbp+0x80]; 0x2D55B5E: lea rdx,[rbp-0x80] ; mov rcx,rax ;
 //   call 0x2B56870 (E8 06 0D E0 FF).
-constexpr uintptr_t kB1 = 0x2D55B56, kB2 = 0x2D55B6A, kBCtx = 0x2D55B36, kBCallCtx = 0x2D55B5E;
+constexpr uintptr_t kB1 = 0x2E93096, kB2 = 0x2E930AA, kBCtx = 0x2E93076, kBCallCtx = 0x2E9309E;
 constexpr uint32_t kB1Patch = 8, kB2Patch = 5;
 constexpr uint8_t kB1Bytes[] = {0x4C, 0x8B, 0x4D, 0x80, 0x4C, 0x8B, 0x45, 0xC8};
 constexpr uint8_t kB2Bytes[] = {0x8B, 0x5D, 0x80, 0x85, 0xDB};
@@ -105,7 +105,7 @@ constexpr int32_t kB_Seq = -0x80, kB_Then = -0x48, kB_Field = -0x38, kB_U8a = 0x
 // 0x71BB2E8, hooked right after the load (eax = the code). BF1 after 2C0BFD7 (a node entry of kind 2 and the element's
 // [+0x88]+0x75 set), BF2 after 2C0C03A (the condition call 0x25C82A0 returned false). The frame: rbp as in the step;
 // [rbp+0xCE0] = the scene (its first argument's spill), [rbp] = the target node, [rbp-0x70] = the element (BF1).
-constexpr uintptr_t kBF1 = 0x2C0BFDD, kBF2 = 0x2C0C040, kBF1Ctx = 0x2C0BFD7, kBF2Ctx = 0x2C0C03A;
+constexpr uintptr_t kBF1 = 0x2D43E4A, kBF2 = 0x2D43EAD, kBF1Ctx = 0x2D43E44, kBF2Ctx = 0x2D43EA7;
 constexpr uint32_t kBFPatch = 7;
 constexpr uint8_t kBFBytes[] = {0x4C, 0x8B, 0xBD, 0xE8, 0x0C, 0x00, 0x00};  // mov r15,[rbp+0xCE8]
 constexpr uint8_t kBF1CtxBytes[] = {0x8B, 0x05, 0x0B, 0xF3, 0x5A, 0x04};     // mov eax,[rip+0x45AF30B] (0x71BB2E8)
@@ -133,7 +133,7 @@ constexpr uint32_t kMaxProcEntries = 256;
 //   FR 0x2A10B89 / 0x2A10B9A              around ServerRunThread's one call of ServerNet::OnRecvPacket (its session
 //                                         r8 = [r15+0x18]): a thread-local "inside a request of user 2's session"
 // None of their functions branches into the patched bytes (focus73c.py).
-constexpr uintptr_t kFS = 0x2271252, kFU = 0x21CAF10, kFD = 0x21CB970, kFR1 = 0x2A10B89, kFR2 = 0x2A10B9A;
+constexpr uintptr_t kFS = 0x2339E20, kFU = 0x22867D0, kFD = 0x2287270, kFR1 = 0x2B37AA9, kFR2 = 0x2B37ABA;
 constexpr uint8_t kFSBytes[] = {0x48, 0x89, 0x91, 0xA0, 0x00, 0x00, 0x00};
 constexpr uint8_t kFUBytes[] = {0x40, 0x53, 0x48, 0x83, 0xEC, 0x20};
 constexpr uint8_t kFDBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x18};
@@ -239,7 +239,7 @@ thread_local uint32_t t_recv_u2 = 0, t_recv_any = 0;
 // hooks at their entries;
 // each takes 3 or fewer register arguments and reads no stack argument (checked in the exe). Only the host's manager
 // (refreshed every second from the host's character); the server's thread only.
-constexpr uintptr_t kFSetFn = 0x2271150, kFTickFn = 0x226DA80, kFEndFn = kFD;
+constexpr uintptr_t kFSetFn = 0x2339D20, kFTickFn = 0x23366A0, kFEndFn = kFD;
 constexpr uint8_t kFSetHead[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x4C, 0x89, 0x44, 0x24, 0x18};
 constexpr uint8_t kFTickHead[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x55, 0x56, 0x57, 0x41, 0x54};
 constexpr uint8_t kFEndHead[] = {0x48, 0x89, 0x5C, 0x24, 0x18, 0x48, 0x89, 0x6C, 0x24, 0x20};
@@ -1101,14 +1101,14 @@ std::string line_of(const p::Event& e) {
             std::string q;
             for (int i = 4; i < 12; ++i)
                 q += (v[i] >> 63) ? std::format(" vt exe+0x{:X}", v[i] & 0x7FFFFFFFFFFFFFFFull) : std::format(" 0x{:X}", v[i]);
-            return std::format("ShopProbe [branch fail] {} T{} | the branch step 0x2C0B8B0 refused {}'s branch of sequencer "
+            return std::format("ShopProbe [branch fail] {} T{} | the branch step 0x2D436F0 refused {}'s branch of sequencer "
                                "0x{:X} to 0x{:08X} with 0x{:08X} at {} | scene +0x30 0x{:X}, [[scene+0x28]+0x60] 0x{:08X} "
                                "(+0x28 is the scene's manager, not an actor) | target node:{}",
                                when, e.tid, (v[0] >> 16) & 1 ? "USER 2" : "the host / another", v[1],
                                static_cast<uint32_t>(v[3] >> 32), static_cast<uint32_t>(v[0] >> 32),
                                (v[0] & 0xFF) == 0 ? std::format("2C0BFD7 (a node entry of kind 2; the element's flag "
                                                                 "+0x75 = {})", (v[0] >> 8) & 0xFF)
-                                                  : std::string("2C0C03A (the condition call 0x25C82A0 said no)"),
+                                                  : std::string("2C0C03A (the condition call 0x26AE1B0 said no)"),
                                v[2], static_cast<uint32_t>(v[3]), q);
         }
         case kEBranchWhy: {
@@ -1243,7 +1243,7 @@ void summary() {
 // with 0x58C8345D while the host talks. The two preempt errors' globals (filled at start from their names): the
 // requester already holding a preemption ([comp+0xF0], 0x2359089 / 0xC958F21) and the NPC's reserve 0x235D030
 // failing (0x235BDB9 / 0x2A33ED0). Their values, once, name which one it is.
-constexpr uintptr_t kErrAlreadyPreempted = 0x71D6974, kErrAlreadyPreempting = 0x71D6978;
+constexpr uintptr_t kErrAlreadyPreempted = 0x71D6974, kErrAlreadyPreempting = 0x737BBB0;
 void preempt_errors_once() {
     static bool said = false;
     if (said || !g_base) return;
@@ -1263,7 +1263,7 @@ void preempt_errors_once() {
     constexpr uint32_t kCodes[] = {0x58C8345Du, 0x7B1E861Cu};
     std::string hits[std::size(kCodes)];
     int n[std::size(kCodes)] = {};
-    for (uintptr_t rva = 0x71B0000; rva < 0x71E0000; rva += 0x1000) {
+    for (uintptr_t rva = 0x7354B88; rva < 0x71E0000; rva += 0x1000) {
         uint32_t page[0x400];
         if (!game::fast_read(g_base + rva, page, sizeof page)) continue;
         for (size_t i = 0; i < std::size(page); ++i) {
@@ -1361,9 +1361,9 @@ bool install_focus_slot(std::span<const gad::Section> secs) {
         const char* what;
     };
     const One ones[] = {
-        {kFSetFn, kFSetHead, reinterpret_cast<void*>(&fset_detour), &g_fset_hook, "the focus setter 0x2271150"},
-        {kFTickFn, kFTickHead, reinterpret_cast<void*>(&ftick_detour), &g_ftick_hook, "the stage processor's tick 0x226DA80"},
-        {kFEndFn, kFEndHead, reinterpret_cast<void*>(&fend_detour), &g_fend_hook, "a stage's end 0x21CB970"},
+        {kFSetFn, kFSetHead, reinterpret_cast<void*>(&fset_detour), &g_fset_hook, "the focus setter 0x2339D20"},
+        {kFTickFn, kFTickHead, reinterpret_cast<void*>(&ftick_detour), &g_ftick_hook, "the stage processor's tick 0x23366A0"},
+        {kFEndFn, kFEndHead, reinterpret_cast<void*>(&fend_detour), &g_fend_hook, "a stage's end 0x2287270"},
     };
     const bool fr = g_fr1_on.load() && g_fr2_on.load();
     std::vector<std::pair<SafetyHookInline*, SafetyHookInline>> ready;  // prepared, disabled
@@ -1446,18 +1446,18 @@ void install(std::span<const gad::Section> secs) {
                 "C0, before the 2642 handler's check 0x2E3C180 (the talk window)");
         }
     }
-    if (context_ok(secs, kBCtx, kBCtxBytes, "the StageBranchStateReq handler's vf48 0x2D55B36") &&
+    if (context_ok(secs, kBCtx, kBCtxBytes, "the StageBranchStateReq handler's vf48 0x2E93076") &&
         context_ok(secs, kBCallCtx, kBCallCtxBytes, "the handler's call 0x2B56870")) {
         mid(kB1, kB1Patch, kB1Bytes, on_b1, g_b1_hook, g_b1_on, "B1, before the branch 0x2B56870");
         if (g_b1_on.load()) mid(kB2, kB2Patch, kB2Bytes, on_b2, g_b2_hook, g_b2_on, "B2, the branch's result");
     }
     // Co-op+ 2026-11-24: why a branch is refused (BF1 / BF2; read only, needs B1 for whose branch it is).
-    if (g_b1_on.load() && context_ok(secs, kBF1Ctx, kBF1CtxBytes, "the branch step's error load 0x2C0BFD7") &&
-        context_ok(secs, kBF2Ctx, kBF2CtxBytes, "the branch step's error load 0x2C0C03A")) {
+    if (g_b1_on.load() && context_ok(secs, kBF1Ctx, kBF1CtxBytes, "the branch step's error load 0x2D43E44") &&
+        context_ok(secs, kBF2Ctx, kBF2CtxBytes, "the branch step's error load 0x2D43EA7")) {
         mid(kBF1, kBFPatch, kBFBytes, on_bf1, g_bf1_hook, g_bf1_on, "BF1, the branch step's refusal (a)");
         mid(kBF2, kBFPatch, kBFBytes, on_bf2, g_bf2_hook, g_bf2_on, "BF2, the branch step's refusal (the condition)");
     }
-    log::info("ShopProbe: BF 0x2C0BFDD/0x2C0C040 (why the branch step refuses) {}/{}", g_bf1_on.load() ? "hooked" : "off",
+    log::info("ShopProbe: BF 0x2D43E4A/0x2D43EAD (why the branch step refuses) {}/{}", g_bf1_on.load() ? "hooked" : "off",
               g_bf2_on.load() ? "hooked" : "off");
     // Co-op+ 2026-11-24 (late): the focus slot's writers and whose request is running (read only).
     mid(kFR1, kFR1Patch, kFR1Bytes, on_fr1, g_fr1_hook, g_fr1_on, "FR1, before ServerNet::OnRecvPacket's call");
@@ -1465,19 +1465,19 @@ void install(std::span<const gad::Section> secs) {
         mid(kFR2, kFR2Patch, kFR2Bytes, on_fr2, g_fr2_hook, g_fr2_on, "FR2, after it");
         if (!g_fr2_on.load()) g_fr1_on.store(false, std::memory_order_release);  // a window that never closes: none
     }
-    mid(kFS, kFSPatch, kFSBytes, on_fs, g_fs_hook, g_fs_on, "FS, the focus setter's store 0x2271252");
-    mid(kFU, kFUPatch, kFUBytes, on_fu, g_fu_hook, g_fu_on, "FU, the focus undo 0x21CAF10");
+    mid(kFS, kFSPatch, kFSBytes, on_fs, g_fs_hook, g_fs_on, "FS, the focus setter's store 0x2339E20");
+    mid(kFU, kFUPatch, kFUBytes, on_fu, g_fu_hook, g_fu_on, "FU, the focus undo 0x22867D0");
     // With the per-player slot, 0x21CB970's entry takes an inline hook instead (its detour logs the same events);
     // without it, or when that hook could not be placed, the mid hook.
     const bool end_hooked = g_slot_wanted.load() && install_focus_slot(secs);
     if (!end_hooked) {
-        mid(kFD, kFDPatch, kFDBytes, on_fd, g_fd_hook, g_fd_on, "FD, the focus clear at a stage's end 0x21CB970");
+        mid(kFD, kFDPatch, kFDBytes, on_fd, g_fd_hook, g_fd_on, "FD, the focus clear at a stage's end 0x2287270");
     }
-    log::info("ShopProbe: focus probe (read only): FR 0x2A10B89/0x2A10B9A {}/{} | FS 0x2271252 {} | FU 0x21CAF10 {} | FD "
-              "0x21CB970 {}",
+    log::info("ShopProbe: focus probe (read only): FR 0x2B37AA9/0x2B37ABA {}/{} | FS 0x2339E20 {} | FU 0x22867D0 {} | FD "
+              "0x2287270 {}",
               g_fr1_on.load() ? "hooked" : "off", g_fr2_on.load() ? "hooked" : "off", g_fs_on.load() ? "hooked" : "off",
               g_fu_on.load() ? "hooked" : "off", g_fd_on.load() ? "hooked" : "off");
-    log::info("ShopProbe: B 0x2D55B56/0x2D55B6A (the StageBranchStateReq handler's result) {}/{}",
+    log::info("ShopProbe: B 0x2E93096/0x2E930AA (the StageBranchStateReq handler's result) {}/{}",
               g_b1_on.load() ? "hooked" : "REFUSED", g_b2_on.load() ? "hooked" : "REFUSED");
     if (context_ok(secs, isl::kCtxLookup, isl::kCtxLookupBytes, "the entry check's lookup call 0x2126A5C") &&
         context_ok(secs, isl::kCtxA, isl::kCtxABytes, "the entry check's vf48 call 0x2126A14")) {
