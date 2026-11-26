@@ -372,10 +372,13 @@ def heads(tree, dry):
                 lead = re.match(r'\s*', r).group(0)
                 tail = ',' if r.rstrip().endswith(',') else ''
                 new_rows.append(lead + ', '.join('0x%02X' % next(it) for _ in range(c)) + tail)
-            out.append((mm.start(3), mm.end(3), '\n'.join(new_rows)))   # group 3 = the bytes (2 is a std::array's name)
             import fmap
             so, sn = fmap.shape_len(p.OLD, a + off, len(b)), fmap.shape_len(p.NEW, mp[a] + off, len(b))
             tag = 'numbers' if so == sn else 'SHAPE'
+            # 3840 (2026-11-26): only the same instructions with other numbers are re-read; a SHAPE change would make
+            # the check accept whatever is at the mapped address now: listed for a hand decision, the old bytes kept
+            if tag == 'numbers':
+                out.append((mm.start(3), mm.end(3), '\n'.join(new_rows)))   # group 3 = the bytes (2: an array's name)
             changed.append('%-7s %s:%d %s @0x%X%+d' % (tag, f, line, mm.group(1) or mm.group(2), mp[a], off) +
                            ('' if so == sn else ' || old: %s || new: %s' % (
                                fmap.text_len(p.OLD, a + off, len(b)), fmap.text_len(p.NEW, mp[a] + off, len(b)))))
