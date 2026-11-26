@@ -61,6 +61,16 @@ void test_cells() {
     CHECK(u2s::cheb(b, a) == 10);
     CHECK(u2s::cheb(a, a) == 0);
     CHECK(u2s::cheb({0, 0}, {-3, 7}) == 7);
+    // Co-op+ 2026-11-25: far apart in height counts as far (the host on the Abyss island above Hernand).
+    CHECK(u2s::u1_distance(1, 1795.0, 612.0) == u2s::kFarCells);
+    CHECK(u2s::u1_distance(0, 612.0, 1795.0) == u2s::kFarCells);
+    CHECK(u2s::u1_distance(2, 650.0, 612.0) == 2);    // a hill
+    CHECK(u2s::u1_distance(20, 1795.0, 612.0) == 20);  // already farther
+    CHECK(u2s::u1_distance(0, 911.9, 612.0) == 0 && u2s::u1_distance(0, 912.0, 612.0) == u2s::kFarCells);
+    static_assert(u2s::kFarCells >= u2s::Thresholds{}.on_cells);
+    // The stage's fields as the 3576 / 3732 constructor stores them (stage_layout.py).
+    static_assert(u2s::kSt_Owner == 0x58 && u2s::kSt_Data == 0x68 && u2s::kSt_Pos == 0xB4 && u2s::kSt_Scale + 28 == u2s::kSt_Pos);
+    static_assert(u2s::kSt_Entries == 0x140 && u2s::kSt_EntryCount == 0x148 && u2s::kSt_EntrySize == 0x188);
 }
 
 bool near_eq(double a, double b, double eps = 1e-3) { return std::fabs(a - b) < eps; }
@@ -238,9 +248,10 @@ void test_fields_and_offsets() {
     CHECK(u2s::field_rel(0x1000, 0) == u2s::FieldRel::Unknown);
     CHECK(u2s::field_rel(0x1000, 0x1000) == u2s::FieldRel::Same);
     CHECK(u2s::field_rel(0x1000, 0x2000) == u2s::FieldRel::Different);
-    // The stage transform: scale at +0x90 (S28 read (1, 1) there), rotation 16 bytes, then the position.
+    // The stage transform: scale (2976: +0x90, S28 read (1, 1) there; 3576 / 3732: +0x98), rotation 16 bytes, then the
+    // position (Co-op+ 2026-11-25, stage_layout.py).
     static_assert(u2s::kSt_Pos == u2s::kSt_Scale + 12 + 16);
-    static_assert(u2s::kSt_Pos == 0xAC);
+    static_assert(u2s::kSt_Pos == 0xB4);
     // The published cells: (0, 0) is a valid cell and never packs to 0 ("unknown").
     CHECK(u2s::pack_cell({0, 0}) != 0);
     const u2s::Cell cs[] = {{0, 0}, {-168, -62}, {3200, -3200}, {-1, 1}};

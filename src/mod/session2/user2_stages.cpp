@@ -6451,7 +6451,8 @@ void sample(bool force_log) {
     // U-0b (S29): the distance only counts with both players in the same ServerField.
     const u2s::FieldRel rel = u2s::field_rel(host.field, u2.field);
     const bool known = host.pos_ok && u2.pos_ok && rel == u2s::FieldRel::Same;
-    const uint32_t dist = known ? u2s::cheb(host.cell, u2.cell) : 0;
+    const uint32_t cells = known ? u2s::cheb(host.cell, u2.cell) : 0;
+    const uint32_t dist = known ? u2s::u1_distance(cells, host.w.y, u2.w.y) : 0;  // far apart in height: far
     g_dist.store(known ? dist : UINT32_MAX);
     const uint64_t now = p8_now_us();
     cadence(host, now);
@@ -6471,7 +6472,10 @@ void sample(bool force_log) {
     const u2s::Step st = u2s::step(g_machine, known && u2.chr && settled, dist, now, kThresholds);
     const u2s::Arm arm = u2s::arm_verdict(u2.f);
     const std::string dist_text =
-        known ? std::format("{} cells (Chebyshev, 64 m; U on at >= {} for {} s, off at <= {} for {} s; {})", dist,
+        known ? std::format("{} cells{} (Chebyshev, 64 m; U on at >= {} for {} s, off at <= {} for {} s; {})", dist,
+                            dist != cells ? std::format(" ({} on the map, {:.0f} m apart in height: counted as far)", cells,
+                                                        u2s::height_apart(host.w.y, u2.w.y))
+                                          : std::string(),
                             kThresholds.on_cells, kThresholds.on_dwell_us / 1'000'000, kThresholds.off_cells,
                             kThresholds.off_dwell_us / 1'000'000, u2s::field_rel_name(rel))
               : std::format("unknown ({})", rel != u2s::FieldRel::Same ? u2s::field_rel_name(rel)
