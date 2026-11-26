@@ -731,8 +731,8 @@ int penalty_remove(uintptr_t base, uintptr_t actor, uint16_t inv, uint16_t slot,
         } list = {entry, 1, 1};
         uint64_t scope[8] = {};
         reinterpret_cast<void* (__fastcall*)(uintptr_t, uint64_t*)>(base + 0x2EC97A0)(
-            *reinterpret_cast<uintptr_t*>(tls0 + 0x250), scope);
-        const int64_t when = _time64(nullptr) + (*reinterpret_cast<uint8_t*>(tls0 + 0x1EB)
+            *reinterpret_cast<uintptr_t*>(tls0 + 0x260), scope);  /* 3840 (3732: 0x250) */
+        const int64_t when = _time64(nullptr) + (*reinterpret_cast<uint8_t*>(tls0 + 0x1FB)  /* 3840 (3732: 0x1EB) */
                                                      ? *reinterpret_cast<int64_t*>(base + 0x730A188)
                                                      : *reinterpret_cast<int64_t*>(base + 0x73F0FF0));
         reinterpret_cast<int* (__fastcall*)(uintptr_t, int*, uintptr_t, void*, int64_t, uint8_t, uint16_t, uint8_t)>(

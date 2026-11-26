@@ -101,7 +101,7 @@ constexpr uint32_t kActor_Key = 0x60, kActor_User = 0xA0, kActor_Comp = 0x68, kC
 constexpr uint32_t kTS_Field = 0x508 + 0x10;  // the field mover's field (field_share.h kTsFieldMover + kFmField; Co-op+ port 3549, 2976: 0x4F0)
 constexpr uint32_t kUser_Key = 0x60, kUser_Main = 0xD0, kUser_Session = 0x1F8;
 constexpr uint32_t kField_Owner = 0x180, kField_Key = 0x2D0;  // 3549 key (2976 0x2C8)
-constexpr uint32_t kTls_Realm = 0x1EB, kTls_SendCtx = 0x250;  // 3549 realm byte (2976 0x1EC)
+constexpr uint32_t kTls_Realm = 0x1FB, kTls_SendCtx = 0x260;  /* 3840 (3732: 0x1EB, 0x250) */  // 3549 realm byte (2976 0x1EC)
 constexpr uint32_t kCtx_ScopeCount = 0x2A0, kCtx_ScopeCurrent = 0x2A8, kCtx_ScopeMode = 0x2AC;
 
 using CtorFn = void*(__fastcall*)(void* finder, uintptr_t actor);

@@ -235,7 +235,7 @@ bool on_server_thread() {
     uintptr_t block = 0;
     uint8_t flag = 0;
     return game::safe_read(tls_array, &block, sizeof block) && block &&
-           game::safe_read(block + 0x1EB, &flag, sizeof flag)  /* Co-op+ port 3549: ServerRunThread 0x2B37856 sets +0x1EB (2976: +0x1EC) */ && flag != 0;
+           game::safe_read(block + 0x1FB, &flag, sizeof flag)  /* 3840 (3732: 0x1EB) */  /* Co-op+ port 3549: ServerRunThread 0x2B37856 sets +0x1EB (2976: +0x1EC) */ && flag != 0;
 }
 
 std::string thread_text() {

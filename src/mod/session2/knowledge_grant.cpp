@@ -56,7 +56,7 @@ bool head_is(uintptr_t rva, const uint8_t* bytes, size_t n) {
 bool server_thread() {
     __try {
         const auto tls = reinterpret_cast<uintptr_t*>(__readgsqword(0x58));
-        return tls && tls[0] && *reinterpret_cast<const uint8_t*>(tls[0] + 0x1EB) != 0;
+        return tls && tls[0] && *reinterpret_cast<const uint8_t*>(tls[0] + 0x1FB) != 0  /* 3840 (3732: 0x1EB) */;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return false;
     }

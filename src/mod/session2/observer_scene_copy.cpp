@@ -126,7 +126,7 @@ const Region kRegions[] = {
 };
 
 constexpr uint32_t kActor_Key = 0x60, kActor_User = 0xA0, kUser_Main = 0xD0;
-constexpr uint32_t kTls_Realm = 0x1EC, kTls_SendCtx = 0x250;
+constexpr uint32_t kTls_Realm = 0x1FB, kTls_SendCtx = 0x260;  /* 3840 (2976: 0x1EC, 3732: 0x250) */
 constexpr uint32_t kCtx_ScopeCount = 0x2A0, kCtx_ScopeMode = 0x2AC;
 constexpr uint32_t kStack_Fifth = 0x28;  // at the callee's entry: [rsp] return, +8..+0x20 home, +0x28 the 5th
 
