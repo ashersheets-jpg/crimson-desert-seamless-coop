@@ -12182,3 +12182,21 @@ pressing Y once, 48 s after the lobby shows ([dev] title_pad). SAVES OK, 5/5 in 
   buckets +0x98 / +0xA8, holders +0xB0, 0x100-byte buckets), CC +8 = actor, CC +0x40 -> +0x30 restore, and the NPC
   action probe (19223 actions, 521 applied: as 3732). Native 9f8dfe5: a capped decision probe in the release pass
   (the first 4 decisions per reason with every reading, 120 lines). Package 58b5503b; 18:40 pp69-shop started.
+- 18:50 pp69-shop's decision probe: NPCs with restore 1 kept for "observers unreadable" (then stale / despawned).
+  OnActorSectorChanged (3732 0x2DFB230 / 3840 0x2F3B7C0, hand/sectorchg84.py) reads the sector's observer list at
+  +0x70 (data) / +0x78 (count) on 3840 (3732 +0x68 / +0x70; entries still 16 bytes): the sector grew 8 bytes. child_hold
+  read the list pointer as the count. Native 0a827a5 (kSectorObservers 0x70, kSectorObserverCount 0x78), synced,
+  pushed (c0e832b). Package c0e832b6.
+- 19:09 *** pp70-shop PASSED (25/0) on c0e832b6 *** the friend's shop requests 2/2 accepted, its twin of the butcher
+  scene, the menu answered locally, the talk rule; shots a0 / a2: Renee's Buy / Sell / Leave on the joined player's
+  game alone (host 336 m) and with the host beside it. The observer hold: held 1034, released 989 (888 NotifyAppear),
+  dropped only despawned x27 (3732's pp65-shop: 949 / 904 / 27). The NPCs reach the joined player again.
+- 19:11 cs138 (solo arm wrestling on a pad, Edward) started on c0e832b6. (Rule slip ~19:12: a second no-op `echo`
+  through Bash during a test, cs138. The LESSONS rule stands: while a test runs, Read / Grep / Glob / Write / Edit only.)
+  Then the full checklist pp71 on c0e832b6 (pp65's order: the town steps first; ~4.5 h).
+- 19:15 cs138 inconclusive: the held Space closed the rewards popup (10b), but the tp to the Hernand inn table put
+  the character in a stone room with barrels (h0, "Stranger: Greet"), the sweep found nothing to talk to, no match ran.
+  A test-place question (the inn on 3840), not the mod; the checklist's armwrest step goes there its own way.
+- 19:17 pp71 (the full checklist, 31 steps) started on c0e832b6: hostrevive u2revive fall armwrest shop chest static real
+  fresh xess fsr latehook display lowsave stall revive loot crime leave door farfight farfight2 newsave solostart mounts
+  mountfight nosave retry stuck mismatch lagrun.
